@@ -11,7 +11,7 @@ Imagine typing questions like these directly into your Shiny dashboard, and seei
 ## Installation
 
 ```bash
-pip install "querychat @ git+https://github.com/posit-dev/querychat?subdirectory=python-package"
+pip install "querychat @ git+https://github.com/posit-dev/querychat#subdirectory=python-package"
 ```
 
 ## How to use
@@ -93,15 +93,9 @@ You can configure which LLM provider to use through chatlas:
 ```python
 import chatlas
 
-my_chat_func = lambda system: chatlas.Chat(
-    provider="anthropic",
-    model="claude-3-5-sonnet",
-    system=system
-)
-
 querychat_config = querychat.init(
     df=my_dataframe,
-    create_chat_func=my_chat_func
+    create_chat_func=lambda x: chatlas.ChatAnthropic(system_prompt=x)
 )
 ```
 

@@ -20,6 +20,7 @@ dependencies = [
     "htmltools",
     "chatlas",
     "narwhals",
+    "chevron",
 ]
 
 [project.urls]

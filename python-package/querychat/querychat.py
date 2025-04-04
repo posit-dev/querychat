@@ -1,19 +1,13 @@
 from __future__ import annotations
 
-import sys
 import os
-import re
-import pandas as pd
-import duckdb
-import json
+import sys
 from functools import partial
-from typing import List, Dict, Any, Callable, Optional, Union, Protocol
+from typing import Any, Dict, Optional, Protocol
 
 import chatlas
-from htmltools import TagList, tags, HTML
-from shiny import module, reactive, ui, Inputs, Outputs, Session
-import narwhals as nw
-from narwhals.typing import IntoFrame
+import chevron
+from shiny import Inputs, Outputs, Session, module, reactive, ui
 
 from .datasource import DataSource
 
@@ -64,25 +58,14 @@ def system_prompt(
     with open(prompt_path, "r") as f:
         prompt_text = f.read()
 
-    # Simple template replacement (a more robust template engine could be used)
-    if data_description:
-        data_description_section = (
-            "Additional helpful info about the data:\n\n"
-            "<data_description>\n"
-            f"{data_description}\n"
-            "</data_description>"
-        )
-    else:
-        data_description_section = ""
-
-    # Replace variables in the template
-    prompt_text = prompt_text.replace("{{schema}}", schema)
-    prompt_text = prompt_text.replace("{{data_description}}", data_description_section)
-    prompt_text = prompt_text.replace(
-        "{{extra_instructions}}", extra_instructions or ""
+    return chevron.render(
+        prompt_text,
+        {
+            "schema": schema,
+            "data_description": data_description,
+            "extra_instructions": extra_instructions,
+        },
     )
-
-    return prompt_text
 
 
 def df_to_html(df: IntoFrame, maxrows: int = 5) -> str:

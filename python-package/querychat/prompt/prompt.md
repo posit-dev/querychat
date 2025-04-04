@@ -10,7 +10,13 @@ You have at your disposal a DuckDB database containing this schema:
 
 For security reasons, you may only query this specific table.
 
+{{#data_description}}
+Additional helpful info about the data:
+
+<data_description>
 {{data_description}}
+</data_description>
+{{/data_description}}
 
 There are several tasks you may be asked to do:
 

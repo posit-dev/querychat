@@ -15,29 +15,49 @@ from shiny import module, reactive, ui, Inputs, Outputs, Session
 import narwhals as nw
 from narwhals.typing import IntoFrame
 
+from .datasource import DataSource
+
+
+class CreateChatCallback(Protocol):
+    def __call__(self, system_prompt: str) -> chatlas.Chat: ...
+
+
+class QueryChatConfig:
+    """
+    Configuration class for querychat.
+    """
+
+    def __init__(
+        self,
+        data_source: DataSource,
+        system_prompt: str,
+        greeting: Optional[str],
+        create_chat_callback: CreateChatCallback,
+    ):
+        self.data_source = data_source
+        self.system_prompt = system_prompt
+        self.greeting = greeting
+        self.create_chat_callback = create_chat_callback
+
 
 def system_prompt(
-    df: IntoFrame,
-    table_name: str,
+    data_source: DataSource,
     data_description: Optional[str] = None,
     extra_instructions: Optional[str] = None,
-    categorical_threshold: int = 10,
 ) -> str:
     """
-    Create a system prompt for the chat model based on a data frame's
+    Create a system prompt for the chat model based on a data source's
     schema and optional additional context and instructions.
 
     Args:
-        df: A DataFrame to generate schema information from
-        table_name: A string containing the name of the table in SQL queries
+        data_source: A data source to generate schema information from
         data_description: Optional description of the data, in plain text or Markdown format
         extra_instructions: Optional additional instructions for the chat model, in plain text or Markdown format
-        categorical_threshold: The maximum number of unique values for a text column to be considered categorical
 
     Returns:
         A string containing the system prompt for the chat model
     """
-    schema = df_to_schema(df, table_name, categorical_threshold)
+    schema = data_source.get_schema()
 
     # Read the prompt file
     prompt_path = os.path.join(os.path.dirname(__file__), "prompt", "prompt.md")
@@ -63,62 +83,6 @@ def system_prompt(
     )
 
     return prompt_text
-
-
-def df_to_schema(df: IntoFrame, table_name: str, categorical_threshold: int) -> str:
-    """
-    Convert a DataFrame schema to a string representation for the system prompt.
-
-    Args:
-        df: The DataFrame to extract schema from
-        table_name: The name of the table in SQL queries
-        categorical_threshold: The maximum number of unique values for a text column to be considered categorical
-
-    Returns:
-        A string containing the schema information
-    """
-
-    ndf = nw.from_native(df)
-
-    schema = [f"Table: {table_name}", "Columns:"]
-
-    for column in ndf.columns:
-        # Map pandas dtypes to SQL-like types
-        dtype = ndf[column].dtype
-        if dtype.is_integer():
-            sql_type = "INTEGER"
-        elif dtype.is_float():
-            sql_type = "FLOAT"
-        elif dtype == nw.Boolean:
-            sql_type = "BOOLEAN"
-        elif dtype == nw.Datetime:
-            sql_type = "TIME"
-        elif dtype == nw.Date:
-            sql_type = "DATE"
-        else:
-            sql_type = "TEXT"
-
-        column_info = [f"- {column} ({sql_type})"]
-
-        # For TEXT columns, check if they're categorical
-        if sql_type == "TEXT":
-            unique_values = ndf[column].drop_nulls().unique()
-            if unique_values.len() <= categorical_threshold:
-                categories = unique_values.to_list()
-                categories_str = ", ".join([f"'{c}'" for c in categories])
-                column_info.append(f"  Categorical values: {categories_str}")
-
-        # For numeric columns, include range
-        elif sql_type in ["INTEGER", "FLOAT", "DATE", "TIME"]:
-            rng = ndf[column].min(), ndf[column].max()
-            if rng[0] is None and rng[1] is None:
-                column_info.append("  Range: NULL to NULL")
-            else:
-                column_info.append(f"  Range: {rng[0]} to {rng[1]}")
-
-        schema.extend(column_info)
-
-    return "\n".join(schema)
 
 
 def df_to_html(df: IntoFrame, maxrows: int = 5) -> str:
@@ -149,45 +113,18 @@ def df_to_html(df: IntoFrame, maxrows: int = 5) -> str:
     return table_html + rows_notice
 
 
-class CreateChatCallback(Protocol):
-    def __call__(self, system_prompt: str) -> chatlas.Chat: ...
-
-
-class QueryChatConfig:
-    """
-    Configuration class for querychat.
-    """
-
-    def __init__(
-        self,
-        df: pd.DataFrame,
-        conn: duckdb.DuckDBPyConnection,
-        system_prompt: str,
-        greeting: Optional[str],
-        create_chat_callback: CreateChatCallback,
-    ):
-        self.df = df
-        self.conn = conn
-        self.system_prompt = system_prompt
-        self.greeting = greeting
-        self.create_chat_callback = create_chat_callback
-
-
 def init(
-    df: pd.DataFrame,
-    table_name: str,
+    data_source: DataSource,
     greeting: Optional[str] = None,
     data_description: Optional[str] = None,
     extra_instructions: Optional[str] = None,
     create_chat_callback: Optional[CreateChatCallback] = None,
     system_prompt_override: Optional[str] = None,
 ) -> QueryChatConfig:
-    """
-    Call this once outside of any server function to initialize querychat.
+    """Initialize querychat with any compliant data source.
 
     Args:
-        df: A data frame
-        table_name: A string containing a valid table name for the data frame
+        data_source: A DataSource implementation that provides schema and query execution
         greeting: A string in Markdown format, containing the initial message
         data_description: Description of the data in plain text or Markdown
         extra_instructions: Additional instructions for the chat model
@@ -197,12 +134,6 @@ def init(
     Returns:
         A QueryChatConfig object that can be passed to server()
     """
-    # Validate table name (must begin with letter, contain only letters, numbers, underscores)
-    if not re.match(r"^[a-zA-Z][a-zA-Z0-9_]*$", table_name):
-        raise ValueError(
-            "Table name must begin with a letter and contain only letters, numbers, and underscores"
-        )
-
     # Process greeting
     if greeting is None:
         print(
@@ -211,26 +142,18 @@ def init(
             file=sys.stderr,
         )
 
-    # Create the system prompt
-    if system_prompt_override is None:
-        _system_prompt = system_prompt(
-            df, table_name, data_description, extra_instructions
-        )
-    else:
-        _system_prompt = system_prompt_override
-
-    # Set up DuckDB connection and register the data frame
-    conn = duckdb.connect(database=":memory:")
-    conn.register(table_name, df)
+    # Create the system prompt, or use the override
+    _system_prompt = system_prompt_override or system_prompt(
+        data_source, data_description, extra_instructions
+    )
 
     # Default chat function if none provided
     create_chat_callback = create_chat_callback or partial(
-        chatlas.ChatOpenAI, model="gpt-4o"
+        chatlas.ChatOpenAI, model="gpt-4"
     )
 
     return QueryChatConfig(
-        df=df,
-        conn=conn,
+        data_source=data_source,
         system_prompt=_system_prompt,
         greeting=greeting,
         create_chat_callback=create_chat_callback,
@@ -306,8 +229,7 @@ def server(
         pass
 
     # Extract config parameters
-    df = querychat_config.df
-    conn = querychat_config.conn
+    data_source = querychat_config.data_source
     system_prompt = querychat_config.system_prompt
     greeting = querychat_config.greeting
     create_chat_callback = querychat_config.create_chat_callback
@@ -319,9 +241,9 @@ def server(
     @reactive.Calc
     def filtered_df():
         if current_query.get() == "":
-            return df
+            return data_source.get_data()
         else:
-            return conn.execute(current_query.get()).fetch_df()
+            return data_source.execute_query(current_query.get())
 
     # This would handle appending messages to the chat UI
     async def append_output(text):
@@ -345,7 +267,7 @@ def server(
 
         try:
             # Try the query to see if it errors
-            conn.execute(query)
+            data_source.execute_query(query)
         except Exception as e:
             error_msg = str(e)
             await append_output(f"> Error: {error_msg}\n\n")
@@ -370,7 +292,7 @@ def server(
         await append_output(f"\n```sql\n{query}\n```\n\n")
 
         try:
-            result_df = conn.execute(query).fetch_df()
+            result_df = data_source.execute_query(query)
         except Exception as e:
             error_msg = str(e)
             await append_output(f"> Error: {error_msg}\n\n")

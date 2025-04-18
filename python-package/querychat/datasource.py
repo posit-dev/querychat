@@ -1,13 +1,16 @@
 from __future__ import annotations
 
-from typing import Protocol
-import pandas as pd
-import duckdb
 import sqlite3
+from typing import ClassVar, Protocol
+
+import duckdb
 import narwhals as nw
+import pandas as pd
 
 
 class DataSource(Protocol):
+    db_engine: ClassVar[str]
+
     def get_schema(self) -> str:
         """Return schema information about the table as a string.
 
@@ -39,6 +42,8 @@ class DataSource(Protocol):
 
 class DataFrameSource:
     """A DataSource implementation that wraps a pandas DataFrame using DuckDB."""
+
+    db_engine: ClassVar[str] = "DuckDB"
 
     def __init__(self, df: pd.DataFrame, table_name: str):
         """Initialize with a pandas DataFrame.
@@ -127,6 +132,8 @@ class DataFrameSource:
 
 class SQLiteSource:
     """A DataSource implementation that wraps a SQLite connection."""
+
+    db_engine: ClassVar[str] = "SQLite"
 
     def __init__(self, conn: sqlite3.Connection, table_name: str):
         """Initialize with a SQLite connection.

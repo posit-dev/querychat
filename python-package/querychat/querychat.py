@@ -51,7 +51,6 @@ def system_prompt(
     Returns:
         A string containing the system prompt for the chat model
     """
-    schema = data_source.get_schema()
 
     # Read the prompt file
     prompt_path = os.path.join(os.path.dirname(__file__), "prompt", "prompt.md")
@@ -61,7 +60,8 @@ def system_prompt(
     return chevron.render(
         prompt_text,
         {
-            "schema": schema,
+            "db_engine": data_source.db_engine,
+            "schema": data_source.get_schema(),
             "data_description": data_description,
             "extra_instructions": extra_instructions,
         },

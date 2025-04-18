@@ -23,6 +23,11 @@ dependencies = [
     "chevron",
 ]
 
+[project.optional-dependencies]
+sqlalchemy = [
+    "sqlalchemy>=2.0.0",  # Using 2.0+ for improved type hints and API
+]
+
 [project.urls]
 Homepage = "https://github.com/posit-dev/querychat"
 Issues = "https://github.com/posit-dev/querychat/issues"

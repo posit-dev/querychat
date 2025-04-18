@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-import sqlite3
 from typing import ClassVar, Protocol
 
 import duckdb
 import narwhals as nw
 import pandas as pd
+from sqlalchemy import inspect, text
+from sqlalchemy.engine import Engine, Connection
+from sqlalchemy.sql import sqltypes
 
 
 class DataSource(Protocol):
@@ -130,64 +132,93 @@ class DataFrameSource:
         return self._df.copy()
 
 
-class SQLiteSource:
-    """A DataSource implementation that wraps a SQLite connection."""
+class SQLAlchemySource:
+    """A DataSource implementation that supports multiple SQL databases via SQLAlchemy.
 
-    db_engine: ClassVar[str] = "SQLite"
+    Supports various databases including PostgreSQL, MySQL, SQLite, Snowflake, and Databricks.
+    """
 
-    def __init__(self, conn: sqlite3.Connection, table_name: str):
-        """Initialize with a SQLite connection.
+    db_engine: ClassVar[str] = "SQLAlchemy"
+
+    def __init__(self, engine: Engine, table_name: str):
+        """Initialize with a SQLAlchemy engine.
 
         Args:
-            conn: SQLite database connection
+            engine: SQLAlchemy engine
+            table_name: Name of the table to query
         """
-        self._conn = conn
+        self._engine = engine
         self._table_name = table_name
 
+        # Validate table exists
+        inspector = inspect(self._engine)
+        if table_name not in inspector.get_table_names():
+            raise ValueError(f"Table '{table_name}' not found in database")
+
     def get_schema(self) -> str:
-        """Generate schema information from SQLite table.
+        """Generate schema information from database table.
 
         Returns:
             String describing the schema
         """
-        # Get column info
-        cursor = self._conn.execute(f"PRAGMA table_info({self._table_name})")
-        columns = cursor.fetchall()
+        inspector = inspect(self._engine)
+        columns = inspector.get_columns(self._table_name)
 
         schema = [f"Table: {self._table_name}", "Columns:"]
 
         for col in columns:
-            # col format: (cid, name, type, notnull, dflt_value, pk)
-            column_info = [f"- {col[1]} ({col[2].upper()})"]
+            # Get SQL type name
+            sql_type = self._get_sql_type_name(col["type"])
+            column_info = [f"- {col['name']} ({sql_type})"]
 
             # For numeric columns, try to get range
-            if col[2].upper() in ["INTEGER", "FLOAT", "REAL", "NUMERIC"]:
+            if isinstance(
+                col["type"],
+                (
+                    sqltypes.Integer,
+                    sqltypes.Numeric,
+                    sqltypes.Float,
+                    sqltypes.Date,
+                    sqltypes.Time,
+                    sqltypes.DateTime,
+                    sqltypes.BigInteger,
+                    sqltypes.SmallInteger,
+                    # sqltypes.Interval,
+                ),
+            ):
                 try:
-                    cursor = self._conn.execute(
-                        f"SELECT MIN({col[1]}), MAX({col[1]}) FROM {self._table_name}"
+                    query = text(
+                        f"SELECT MIN({col['name']}), MAX({col['name']}) FROM {self._table_name}"
                     )
-                    min_val, max_val = cursor.fetchone()
-                    if min_val is not None and max_val is not None:
-                        column_info.append(f"  Range: {min_val} to {max_val}")
-                except sqlite3.Error:
+                    with self._get_connection() as conn:
+                        result = conn.execute(query).fetchone()
+                        if result and result[0] is not None and result[1] is not None:
+                            column_info.append(f"  Range: {result[0]} to {result[1]}")
+                except Exception:
                     pass  # Skip range info if query fails
 
-            # For text columns, check if categorical (limited distinct values)
-            elif col[2].upper() == "TEXT":
+            # For string/text columns, check if categorical
+            elif isinstance(
+                col["type"], (sqltypes.String, sqltypes.Text, sqltypes.Enum)
+            ):
                 try:
-                    cursor = self._conn.execute(
-                        f"SELECT COUNT(DISTINCT {col[1]}) FROM {self._table_name}"
+                    count_query = text(
+                        f"SELECT COUNT(DISTINCT {col['name']}) FROM {self._table_name}"
                     )
-                    distinct_count = cursor.fetchone()[0]
-                    if distinct_count <= 10:  # Use fixed threshold for simplicity
-                        cursor = self._conn.execute(
-                            f"SELECT DISTINCT {col[1]} FROM {self._table_name} "
-                            f"WHERE {col[1]} IS NOT NULL"
-                        )
-                        values = [str(row[0]) for row in cursor.fetchall()]
-                        values_str = ", ".join([f"'{v}'" for v in values])
-                        column_info.append(f"  Categorical values: {values_str}")
-                except sqlite3.Error:
+                    with self._get_connection() as conn:
+                        distinct_count = conn.execute(count_query).scalar()
+                        if distinct_count and distinct_count <= 10:
+                            values_query = text(
+                                f"SELECT DISTINCT {col['name']} FROM {self._table_name} "
+                                f"WHERE {col['name']} IS NOT NULL"
+                            )
+                            values = [
+                                str(row[0])
+                                for row in conn.execute(values_query).fetchall()
+                            ]
+                            values_str = ", ".join([f"'{v}'" for v in values])
+                            column_info.append(f"  Categorical values: {values_str}")
+                except Exception:
                     pass  # Skip categorical info if query fails
 
             schema.extend(column_info)
@@ -195,7 +226,7 @@ class SQLiteSource:
         return "\n".join(schema)
 
     def execute_query(self, query: str) -> pd.DataFrame:
-        """Execute query using SQLite.
+        """Execute SQL query and return results as DataFrame.
 
         Args:
             query: SQL query to execute
@@ -203,7 +234,8 @@ class SQLiteSource:
         Returns:
             Query results as pandas DataFrame
         """
-        return pd.read_sql_query(query, self._conn)
+        with self._get_connection() as conn:
+            return pd.read_sql_query(text(query), conn)
 
     def get_data(self) -> pd.DataFrame:
         """Return the unfiltered data as a DataFrame.
@@ -211,4 +243,29 @@ class SQLiteSource:
         Returns:
             The complete dataset as a pandas DataFrame
         """
-        return pd.read_sql_query(f"SELECT * FROM {self._table_name}", self._conn)
+        return self.execute_query(f"SELECT * FROM {self._table_name}")
+
+    def _get_sql_type_name(self, type_: sqltypes.TypeEngine) -> str:
+        """Convert SQLAlchemy type to SQL type name."""
+        if isinstance(type_, sqltypes.Integer):
+            return "INTEGER"
+        elif isinstance(type_, sqltypes.Float):
+            return "FLOAT"
+        elif isinstance(type_, sqltypes.Numeric):
+            return "NUMERIC"
+        elif isinstance(type_, sqltypes.Boolean):
+            return "BOOLEAN"
+        elif isinstance(type_, sqltypes.DateTime):
+            return "TIMESTAMP"
+        elif isinstance(type_, sqltypes.Date):
+            return "DATE"
+        elif isinstance(type_, sqltypes.Time):
+            return "TIME"
+        elif isinstance(type_, (sqltypes.String, sqltypes.Text)):
+            return "TEXT"
+        else:
+            return type_.__class__.__name__.upper()
+
+    def _get_connection(self) -> Connection:
+        """Get a connection to use for queries."""
+        return self._engine.connect()

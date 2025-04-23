@@ -6,7 +6,7 @@ import duckdb
 import narwhals as nw
 import pandas as pd
 from sqlalchemy import inspect, text
-from sqlalchemy.engine import Engine, Connection
+from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.sql import sqltypes
 
 
@@ -152,7 +152,7 @@ class SQLAlchemySource:
 
         # Validate table exists
         inspector = inspect(self._engine)
-        if table_name not in inspector.get_table_names():
+        if not inspector.has_table(table_name):
             raise ValueError(f"Table '{table_name}' not found in database")
 
     def get_schema(self) -> str:

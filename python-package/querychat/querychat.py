@@ -7,6 +7,7 @@ from typing import Any, Dict, Optional, Protocol
 
 import chatlas
 import chevron
+import narwhals as nw
 from shiny import Inputs, Outputs, Session, module, reactive, ui
 
 from .datasource import DataSource

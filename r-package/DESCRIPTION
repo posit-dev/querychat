@@ -24,6 +24,8 @@ Imports:
     purrr,
     rlang,
     shiny,
-    shinychat,
+    shinychat (>= 0.1.1.9001),
     whisker,
     xtable
+Remotes:  
+    posit-dev/shinychat

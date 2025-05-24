@@ -2,6 +2,7 @@ __pycache__/
 animation.screenflow/
 README_files/
 README.html
+.quarto
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

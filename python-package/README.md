@@ -237,6 +237,6 @@ For a complete working example, see the [examples/app.py](examples/app.py) file 
 - Displaying the filtered data in the main panel
 
 If you have Shiny installed, and want to get started right away, you can use our
-[querrychat template](https://shiny.posit.co/py/templates/querychat/)
+[querychat template](https://shiny.posit.co/py/templates/querychat/)
 or
 [sidebot template](https://shiny.posit.co/py/templates/sidebot/).

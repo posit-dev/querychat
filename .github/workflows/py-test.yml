@@ -23,6 +23,7 @@ jobs:
           - { python-version: "3.11", test_google: false, test_azure: false }
           - { python-version: "3.12", test_google: true, test_azure: true }
           - { python-version: "3.13", test_google: false, test_azure: false }
+      fail-fast: false
 
     steps:
       - uses: actions/checkout@v4

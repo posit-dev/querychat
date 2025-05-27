@@ -17,7 +17,7 @@ check: check-format check-types ## [py] Run python checks
 check-types:  ## [py] Run python type checks
 	@echo ""
 	@echo "📝 Checking types with pyright"
-	uv run pyright
+	uv run --with pyright pyright
 
 .PHONY: check-format
 check-format:

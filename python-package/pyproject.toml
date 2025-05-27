@@ -7,11 +7,9 @@ name = "querychat"
 version = "0.1.0"
 description = "Chat with your data using natural language"
 readme = "README.md"
-requires-python = ">=3.8"
-license = {file = "LICENSE"}
-authors = [
-    {name = "Posit", email = "info@posit.co"},
-]
+requires-python = ">=3.9"
+license = { file = "LICENSE" }
+authors = [{ name = "Posit", email = "info@posit.co" }]
 dependencies = [
     "duckdb",
     "pandas",
@@ -30,8 +28,67 @@ Issues = "https://github.com/posit-dev/querychat/issues"
 packages = ["querychat"]
 
 [tool.hatch.build.targets.sdist]
-include = [
-    "querychat",
-    "LICENSE",
-    "README.md",
+include = ["querychat", "LICENSE", "README.md"]
+
+[tool.uv]
+dev-dependencies = ["ruff>=0.6.5"]
+
+[tool.ruff]
+src = ["querychat"]
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pyenv",
+    ".pytest_cache",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    ".vscode",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "site-packages",
+    "venv",
+    "app.py",             # ignore examples for now
 ]
+
+line-length = 88
+indent-width = 4
+
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ['E', 'F', 'W', 'A', 'PLC', 'PLE', 'PLW', 'I']
+ignore = ["E501", "A002"]
+
+# Allow fix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = []
+
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = true
+docstring-code-line-length = "dynamic"
+
+[tool.pyright]
+include = ["querychat"]
+# exclude = ["examples", ".venv"]

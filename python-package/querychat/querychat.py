@@ -1,19 +1,17 @@
 from __future__ import annotations
 
-import sys
 import os
 import re
-import pandas as pd
-import duckdb
-import json
+import sys
 from functools import partial
-from typing import List, Dict, Any, Callable, Optional, Union, Protocol
+from typing import Any, Dict, Optional, Protocol
 
 import chatlas
-from htmltools import TagList, tags, HTML
-from shiny import module, reactive, ui, Inputs, Outputs, Session
+import duckdb
 import narwhals as nw
+import pandas as pd
 from narwhals.typing import IntoFrame
+from shiny import Inputs, Outputs, Session, module, reactive, ui
 
 
 def system_prompt(
@@ -136,7 +134,9 @@ def df_to_html(df: IntoFrame, maxrows: int = 5) -> str:
     df_short = nw.from_native(df).head(maxrows)
 
     # Generate HTML table
-    table_html = df_short.to_pandas().to_html(index=False, classes="table table-striped")
+    table_html = df_short.to_pandas().to_html(
+        index=False, classes="table table-striped"
+    )
 
     # Add note about truncated rows if needed
     if len(df_short) != len(ndf):
@@ -299,7 +299,7 @@ def server(
             - chat: The chat object
     """
 
-    @reactive.Effect
+    @reactive.effect
     def _():
         # This will be triggered when the module is initialized
         # Here we would set up the chat interface, initialize the chat model, etc.
@@ -313,10 +313,10 @@ def server(
     create_chat_callback = querychat_config.create_chat_callback
 
     # Reactive values to store state
-    current_title = reactive.Value(None)
-    current_query = reactive.Value("")
+    current_title = reactive.value[str | None](None)
+    current_query = reactive.value("")
 
-    @reactive.Calc
+    @reactive.calc
     def filtered_df():
         if current_query.get() == "":
             return df

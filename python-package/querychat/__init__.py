@@ -1,3 +1,3 @@
-from querychat.querychat import init, ui, sidebar, server
+from querychat.querychat import init, server, sidebar, ui
 
 __all__ = ["init", "ui", "sidebar", "server"]

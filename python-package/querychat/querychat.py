@@ -4,7 +4,7 @@ import re
 import sys
 from functools import partial
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, Optional, Protocol
+from typing import TYPE_CHECKING, Any, Optional, Protocol
 
 import chatlas
 import duckdb
@@ -298,7 +298,7 @@ def server(  # noqa: D417
     output: Outputs,
     session: Session,
     querychat_config: QueryChatConfig,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Initialize the querychat server.
 

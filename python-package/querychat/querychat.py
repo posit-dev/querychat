@@ -4,14 +4,16 @@ import os
 import re
 import sys
 from functools import partial
-from typing import Any, Dict, Optional, Protocol
+from typing import TYPE_CHECKING, Any, Dict, Optional, Protocol
 
 import chatlas
 import duckdb
 import narwhals as nw
-import pandas as pd
-from narwhals.typing import IntoFrame
 from shiny import Inputs, Outputs, Session, module, reactive, ui
+
+if TYPE_CHECKING:
+    import pandas as pd
+    from narwhals.typing import IntoFrame
 
 
 def system_prompt(
@@ -282,7 +284,10 @@ def sidebar(id: str, width: int = 400, height: str = "100%", **kwargs) -> ui.Sid
 
 @module.server
 def server(
-    input: Inputs, output: Outputs, session: Session, querychat_config: QueryChatConfig
+    input: Inputs,
+    output: Outputs,
+    session: Session,
+    querychat_config: QueryChatConfig,
 ) -> Dict[str, Any]:
     """
     Initialize the querychat server.

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import os
 import re
 import sys
 from functools import partial
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, Optional, Protocol
 
 import chatlas
@@ -41,9 +41,8 @@ def system_prompt(
     schema = df_to_schema(df, table_name, categorical_threshold)
 
     # Read the prompt file
-    prompt_path = os.path.join(os.path.dirname(__file__), "prompt", "prompt.md")
-    with open(prompt_path, "r") as f:
-        prompt_text = f.read()
+    prompt_path = Path(__file__).parent / "prompt" / "prompt.md"
+    prompt_text = prompt_path.read_text()
 
     # Simple template replacement (a more robust template engine could be used)
     if data_description:
@@ -261,7 +260,7 @@ def mod_ui() -> ui.TagList:
 
     """
     # Include CSS
-    css_path = os.path.join(os.path.dirname(__file__), "static", "css", "styles.css")
+    css_path = Path(__file__).parent / "static" / "css" / "styles.css"
 
     return ui.TagList(
         ui.include_css(css_path),

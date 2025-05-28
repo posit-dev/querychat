@@ -131,6 +131,7 @@ extend-select = [
     "T10",    # T10; flake8-dbugger: https://docs.astral.sh/ruff/rules/#flake8-debugger-t10
     "TC",     # TC; flake8-type-checking: https://docs.astral.sh/ruff/rules/#flake8-type-checking-tch
     "ARG",    # ARG; flake8-argparse: https://docs.astral.sh/ruff/rules/#flake8-unused-arguments-arg
+    "PTH",    # PTH; flake8-use-pathlib: https://docs.astral.sh/ruff/rules/#flake8-use-pathlib-pth
     # "FIX", # FIX; flake8-fixme: https://docs.astral.sh/ruff/rules/#flake8-fixme-fix
     # "PGH", # PGH; pygrep-hooks: https://docs.astral.sh/ruff/rules/#pygrep-hooks-pgh
     "NPY",    # NPY; NumPy-specific rules: https://docs.astral.sh/ruff/rules/#numpy-specific-rules-npy

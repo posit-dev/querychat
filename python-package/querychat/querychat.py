@@ -24,8 +24,8 @@ def system_prompt(
     categorical_threshold: int = 10,
 ) -> str:
     """
-    Create a system prompt for the chat model based on a data frame's
-    schema and optional additional context and instructions.
+    Create a system prompt for the chat model based on a data frame's schema and
+    optional additional context and instructions.
 
     Args:
         df: A DataFrame to generate schema information from
@@ -36,6 +36,7 @@ def system_prompt(
 
     Returns:
         A string containing the system prompt for the chat model
+
     """
     schema = df_to_schema(df, table_name, categorical_threshold)
 
@@ -59,7 +60,8 @@ def system_prompt(
     prompt_text = prompt_text.replace("{{schema}}", schema)
     prompt_text = prompt_text.replace("{{data_description}}", data_description_section)
     prompt_text = prompt_text.replace(
-        "{{extra_instructions}}", extra_instructions or ""
+        "{{extra_instructions}}",
+        extra_instructions or "",
     )
 
     return prompt_text
@@ -76,8 +78,8 @@ def df_to_schema(df: IntoFrame, table_name: str, categorical_threshold: int) -> 
 
     Returns:
         A string containing the schema information
-    """
 
+    """
     ndf = nw.from_native(df)
 
     schema = [f"Table: {table_name}", "Columns:"]
@@ -131,13 +133,15 @@ def df_to_html(df: IntoFrame, maxrows: int = 5) -> str:
 
     Returns:
         HTML string representation of the table
+
     """
     ndf = nw.from_native(df)
     df_short = nw.from_native(df).head(maxrows)
 
     # Generate HTML table
     table_html = df_short.to_pandas().to_html(
-        index=False, classes="table table-striped"
+        index=False,
+        classes="table table-striped",
     )
 
     # Add note about truncated rows if needed
@@ -198,11 +202,12 @@ def init(
 
     Returns:
         A QueryChatConfig object that can be passed to server()
+
     """
     # Validate table name (must begin with letter, contain only letters, numbers, underscores)
     if not re.match(r"^[a-zA-Z][a-zA-Z0-9_]*$", table_name):
         raise ValueError(
-            "Table name must begin with a letter and contain only letters, numbers, and underscores"
+            "Table name must begin with a letter and contain only letters, numbers, and underscores",
         )
 
     # Process greeting
@@ -216,7 +221,10 @@ def init(
     # Create the system prompt
     if system_prompt_override is None:
         _system_prompt = system_prompt(
-            df, table_name, data_description, extra_instructions
+            df,
+            table_name,
+            data_description,
+            extra_instructions,
         )
     else:
         _system_prompt = system_prompt_override
@@ -227,7 +235,8 @@ def init(
 
     # Default chat function if none provided
     create_chat_callback = create_chat_callback or partial(
-        chatlas.ChatOpenAI, model="gpt-4o"
+        chatlas.ChatOpenAI,
+        model="gpt-4o",
     )
 
     return QueryChatConfig(
@@ -249,6 +258,7 @@ def mod_ui() -> ui.TagList:
 
     Returns:
         A UI component
+
     """
     # Include CSS
     css_path = os.path.join(os.path.dirname(__file__), "static", "css", "styles.css")
@@ -273,6 +283,7 @@ def sidebar(id: str, width: int = 400, height: str = "100%", **kwargs) -> ui.Sid
 
     Returns:
         A sidebar UI component
+
     """
     return ui.sidebar(
         mod_ui(id),
@@ -283,7 +294,7 @@ def sidebar(id: str, width: int = 400, height: str = "100%", **kwargs) -> ui.Sid
 
 
 @module.server
-def server(
+def server(  # noqa: D417
     input: Inputs,
     output: Outputs,
     session: Session,
@@ -302,6 +313,7 @@ def server(
             - title: A reactive that returns the current title
             - df: A reactive that returns the filtered data frame
             - chat: The chat object
+
     """
 
     @reactive.effect
@@ -336,7 +348,7 @@ def server(
     # The function that updates the dashboard with a new SQL query
     async def update_dashboard(query: str, title: str):
         """
-        Modifies the data presented in the data dashboard, based on the given SQL query, and also updates the title.
+        Modify the data presented in the data dashboard, based on the given SQL query, and also updates the title.
 
         Parameters
         ----------
@@ -344,8 +356,8 @@ def server(
             A DuckDB SQL query; must be a SELECT statement.
         title
             A title to display at the top of the data dashboard, summarizing the intent of the SQL query.
-        """
 
+        """
         await append_output(f"\n```sql\n{query}\n```\n\n")
 
         try:
@@ -370,8 +382,8 @@ def server(
         ----------
         query
             A DuckDB SQL query; must be a SELECT statement.
-        """
 
+        """
         await append_output(f"\n```sql\n{query}\n```\n\n")
 
         try:

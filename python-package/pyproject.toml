@@ -31,7 +31,7 @@ packages = ["querychat"]
 include = ["querychat", "LICENSE", "README.md"]
 
 [tool.uv]
-dev-dependencies = ["ruff>=0.6.5", "pyright>=1.1.401"]
+dev-dependencies = ["ruff>=0.6.5", "pyright>=1.1.401", "tox-uv>=1.11.4"]
 
 [tool.ruff]
 src = ["querychat"]
@@ -154,4 +154,18 @@ docstring-code-line-length = "dynamic"
 
 [tool.pyright]
 include = ["querychat"]
-# exclude = ["examples", ".venv"]
+
+
+# For more tox testing usage (in addition to typing), see:
+# https://github.com/posit-dev/chatlas/blob/b91c020a555917c1be5ae2462496de25d82c529d/pyproject.toml#L122-L139
+[tool.tox]
+legacy_tox_ini = """
+[tox]
+env_list = py3{9,10,11,12}
+isolated_build = True
+
+[testenv]
+package = wheel
+wheel_build_env = .pkg
+commands = pyright
+"""

@@ -30,6 +30,12 @@ format: ## [py] Format python code
 	uv run --with ruff ruff check --fix querychat --config pyproject.toml
 	uv run --with ruff ruff format querychat --config pyproject.toml
 
+.PHONY: check-tox
+check-tox:  ## [py] Run python 3.9 - 3.12 checks with tox
+	@echo ""
+	@echo "🔄 Running tests and type checking with tox for Python 3.9--3.12"
+	uv run tox run-parallel
+
 .PHONY: help
 help:  ## Show help messages for make targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; { \

@@ -4,7 +4,7 @@ import re
 import sys
 from functools import partial
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Optional, Protocol
+from typing import TYPE_CHECKING, Any, Optional, Protocol, Union
 
 import chatlas
 import duckdb
@@ -329,7 +329,7 @@ def server(  # noqa: D417
     create_chat_callback = querychat_config.create_chat_callback
 
     # Reactive values to store state
-    current_title = reactive.value[str | None](None)
+    current_title = reactive.value[Union[str, None]](None)
     current_query = reactive.value("")
 
     @reactive.calc

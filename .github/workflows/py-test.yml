@@ -1,0 +1,53 @@
+name: Test - Python
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main", "rc-*"]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        config:
+          - { python-version: "3.9", test_google: false, test_azure: false }
+          - { python-version: "3.10", test_google: false, test_azure: false }
+          - { python-version: "3.11", test_google: false, test_azure: false }
+          - { python-version: "3.12", test_google: true, test_azure: true }
+          - { python-version: "3.13", test_google: false, test_azure: false }
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 🚀 Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: 🐍 Set up Python ${{ matrix.config.python-version }}
+        working-directory: ./python-package
+        run: uv python install ${{matrix.config.python-version }}
+
+      - name: 📦 Install the project
+        working-directory: ./python-package
+        run: uv sync --python ${{ matrix.config.python-version }} --all-extras
+
+      #   - name: 🧪 Check tests
+      #     working-directory: ./python-package
+      #     run: make check-tests
+
+      - name: 📝 Check types
+        # if: ${{ matrix.config.python-version != '3.9' }}
+        working-directory: ./python-package
+        run: make check-types
+
+      - name: 📐 Check formatting
+        working-directory: ./python-package
+        run: make check-format

@@ -1,0 +1,93 @@
+:root {
+  --bslib-sidebar-main-bg: #f8f8f8;
+}
+
+.querychat-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+.querychat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+}
+
+.querychat-input-container {
+  display: flex;
+  padding: 10px;
+  border-top: 1px solid #ccc;
+}
+
+.querychat-input {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  resize: none;
+  min-height: 40px;
+  margin-right: 8px;
+}
+
+.querychat-send-button {
+  padding: 8px 16px;
+  background-color: #0d6efd;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.querychat-send-button:hover {
+  background-color: #0a58ca;
+}
+
+.querychat-message {
+  max-width: 85%;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  word-wrap: break-word;
+}
+
+.querychat-user-message {
+  align-self: flex-end;
+  background-color: #0d6efd;
+  color: white;
+}
+
+.querychat-assistant-message {
+  align-self: flex-start;
+  background-color: #e9ecef;
+}
+
+.querychat-message table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 10px 0;
+}
+
+.querychat-message table td,
+.querychat-message table th {
+  border: 1px solid #ccc;
+  padding: 3px;
+}
+
+.querychat-message table th {
+  background-color: #f0f0f0;
+}
+
+.querychat-message pre {
+  background-color: #f4f4f4;
+  padding: 8px;
+  border-radius: 4px;
+  overflow-x: auto;
+}
+
+.querychat-message code {
+  font-family: monospace;
+}

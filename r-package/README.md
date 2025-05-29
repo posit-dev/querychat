@@ -102,7 +102,6 @@ For example:
 
 These suggestions appear in the greeting and automatically populate the chat text box when clicked.
 This gives the user a few ideas to explore on their own.
-You can see this behavior in our [`querychat template`](https://shiny.posit.co/py/templates/querychat/).
 
 If you need help coming up with a greeting, your own app can help you! Just launch it and paste this into the chat interface:
 

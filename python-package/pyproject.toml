@@ -36,7 +36,7 @@ Issues = "https://github.com/posit-dev/querychat/issues"
 Source = "https://github.com/posit-dev/querychat/tree/main/python-package"
 
 [tool.hatch.build.targets.wheel]
-packages = ["querychat"]
+packages = ["src/querychat"]
 
 [tool.hatch.build.targets.sdist]
 include = ["src/querychat", "LICENSE", "README.md"]

@@ -1,3 +1,12 @@
 {
-  "python.autoComplete.extraPaths": ["${workspaceFolder}/python-package"]
+  "python.autoComplete.extraPaths": ["${workspaceFolder}/python-package"],
+  "[python]": {
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll": "explicit",
+      "source.organizeImports": "explicit"
+    },
+    "editor.defaultFormatter": "charliermarsh.ruff",
+  },
+  "flake8.args": ["--max-line-length=120"]
 }

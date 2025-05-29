@@ -5,15 +5,14 @@ Authors@R: c(
     person("Joe", "Cheng", , "joe@posit.co", role = c("aut", "cre")),
     person("Posit Software, PBC", role = c("cph", "fnd"))
   )
-Description: Adds an LLM-powered chatbot to your 'shiny' app, that can turn your
-  users' natural language questions into SQL queries that run against your data,
-  and return the result as a reactive dataframe. Use it to drive reactive
-  calculations, visualizations, downloads, etc.
+Description: Adds an LLM-powered chatbot to your 'shiny' app, that can
+    turn your users' natural language questions into SQL queries that run
+    against your data, and return the result as a reactive dataframe. Use
+    it to drive reactive calculations, visualizations, downloads, etc.
 License: MIT + file LICENSE
-Encoding: UTF-8
-Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.2
-Imports: 
+Depends: 
+    R (>= 4.1.0)
+Imports:
     bslib,
     DBI,
     duckdb,
@@ -27,3 +26,6 @@ Imports:
     shinychat,
     whisker,
     xtable
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2

@@ -1,19 +1,19 @@
 from __future__ import annotations
 
-import sys
-import os
 import re
-import pandas as pd
-import duckdb
-import json
+import sys
 from functools import partial
-from typing import List, Dict, Any, Callable, Optional, Union, Protocol
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Optional, Protocol, Union
 
 import chatlas
-from htmltools import TagList, tags, HTML
-from shiny import module, reactive, ui, Inputs, Outputs, Session
+import duckdb
 import narwhals as nw
-from narwhals.typing import IntoFrame
+from shiny import Inputs, Outputs, Session, module, reactive, ui
+
+if TYPE_CHECKING:
+    import pandas as pd
+    from narwhals.typing import IntoFrame
 
 
 def system_prompt(
@@ -44,13 +44,13 @@ def system_prompt(
     -------
     str
         The system prompt for the chat model.
+
     """
     schema = df_to_schema(df, table_name, categorical_threshold)
 
     # Read the prompt file
-    prompt_path = os.path.join(os.path.dirname(__file__), "prompt", "prompt.md")
-    with open(prompt_path, "r") as f:
-        prompt_text = f.read()
+    prompt_path = Path(__file__).parent / "prompt" / "prompt.md"
+    prompt_text = prompt_path.read_text()
 
     # Simple template replacement (a more robust template engine could be used)
     if data_description:
@@ -67,7 +67,8 @@ def system_prompt(
     prompt_text = prompt_text.replace("{{schema}}", schema)
     prompt_text = prompt_text.replace("{{data_description}}", data_description_section)
     prompt_text = prompt_text.replace(
-        "{{extra_instructions}}", extra_instructions or ""
+        "{{extra_instructions}}",
+        extra_instructions or "",
     )
 
     return prompt_text
@@ -90,8 +91,8 @@ def df_to_schema(df: IntoFrame, table_name: str, categorical_threshold: int) -> 
     -------
     str
         A string containing the schema information.
-    """
 
+    """
     ndf = nw.from_native(df)
 
     schema = [f"Table: {table_name}", "Columns:"]
@@ -150,12 +151,16 @@ def df_to_html(df: IntoFrame, maxrows: int = 5) -> str:
     -------
     str
         HTML string representation of the table
+
     """
     ndf = nw.from_native(df)
     df_short = nw.from_native(df).head(maxrows)
 
     # Generate HTML table
-    table_html = df_short.to_pandas().to_html(index=False, classes="table table-striped")
+    table_html = df_short.to_pandas().to_html(
+        index=False,
+        classes="table table-striped",
+    )
 
     # Add note about truncated rows if needed
     if len(df_short) != len(ndf):
@@ -225,11 +230,12 @@ def init(
     -------
     QueryChatConfig
         A QueryChatConfig object that can be passed to server()
+
     """
     # Validate table name (must begin with letter, contain only letters, numbers, underscores)
     if not re.match(r"^[a-zA-Z][a-zA-Z0-9_]*$", table_name):
         raise ValueError(
-            "Table name must begin with a letter and contain only letters, numbers, and underscores"
+            "Table name must begin with a letter and contain only letters, numbers, and underscores",
         )
 
     # Process greeting
@@ -243,7 +249,10 @@ def init(
     # Create the system prompt
     if system_prompt_override is None:
         _system_prompt = system_prompt(
-            df, table_name, data_description, extra_instructions
+            df,
+            table_name,
+            data_description,
+            extra_instructions,
         )
     else:
         _system_prompt = system_prompt_override
@@ -254,7 +263,8 @@ def init(
 
     # Default chat function if none provided
     create_chat_callback = create_chat_callback or partial(
-        chatlas.ChatOpenAI, model="gpt-4o"
+        chatlas.ChatOpenAI,
+        model="gpt-4o",
     )
 
     return QueryChatConfig(
@@ -271,13 +281,19 @@ def mod_ui() -> ui.TagList:
     """
     Create the UI for the querychat component.
 
+    Parameters
+    ----------
+    id : str
+        The module ID
+
     Returns
     -------
     ui.TagList
         A UI component.
+
     """
     # Include CSS
-    css_path = os.path.join(os.path.dirname(__file__), "static", "css", "styles.css")
+    css_path = Path(__file__).parent / "static" / "css" / "styles.css"
 
     return ui.TagList(
         ui.include_css(css_path),
@@ -306,6 +322,7 @@ def sidebar(id: str, width: int = 400, height: str = "100%", **kwargs) -> ui.Sid
     -------
     ui.Sidebar
         A sidebar UI component.
+
     """
     return ui.sidebar(
         mod_ui(id),
@@ -316,9 +333,12 @@ def sidebar(id: str, width: int = 400, height: str = "100%", **kwargs) -> ui.Sid
 
 
 @module.server
-def server(
-    input: Inputs, output: Outputs, session: Session, querychat_config: QueryChatConfig
-) -> Dict[str, Any]:
+def server(  # noqa: D417
+    input: Inputs,
+    output: Outputs,
+    session: Session,
+    querychat_config: QueryChatConfig,
+) -> dict[str, Any]:
     """
     Initialize the querychat server.
 
@@ -329,15 +349,16 @@ def server(
 
     Returns
     -------
-    Dict[str, Any]
+    dict[str, Any]
         A dictionary with reactive components:
             - sql: A reactive that returns the current SQL query.
             - title: A reactive that returns the current title.
             - df: A reactive that returns the filtered data frame.
             - chat: The chat object.
+
     """
 
-    @reactive.Effect
+    @reactive.effect
     def _():
         # This will be triggered when the module is initialized
         # Here we would set up the chat interface, initialize the chat model, etc.
@@ -351,10 +372,10 @@ def server(
     create_chat_callback = querychat_config.create_chat_callback
 
     # Reactive values to store state
-    current_title = reactive.Value(None)
-    current_query = reactive.Value("")
+    current_title = reactive.value[Union[str, None]](None)
+    current_query = reactive.value("")
 
-    @reactive.Calc
+    @reactive.calc
     def filtered_df():
         if current_query.get() == "":
             return df
@@ -369,7 +390,7 @@ def server(
     # The function that updates the dashboard with a new SQL query
     async def update_dashboard(query: str, title: str):
         """
-        Modifies the data presented in the data dashboard, based on the given SQL query,
+        Modify the data presented in the data dashboard, based on the given SQL query,
         and also updates the title.
 
         Parameters
@@ -378,8 +399,8 @@ def server(
             A DuckDB SQL query; must be a SELECT statement.
         title : str
             A title to display at the top of the data dashboard, summarizing the intent of the SQL query.
-        """
 
+        """
         await append_output(f"\n```sql\n{query}\n```\n\n")
 
         try:
@@ -404,8 +425,8 @@ def server(
         ----------
         query
             A DuckDB SQL query; must be a SELECT statement.
-        """
 
+        """
         await append_output(f"\n```sql\n{query}\n```\n\n")
 
         try:

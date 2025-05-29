@@ -20,21 +20,32 @@ dependencies = [
     "narwhals",
 ]
 
+classifiers = [
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+
 [project.urls]
 Homepage = "https://github.com/posit-dev/querychat"
 Issues = "https://github.com/posit-dev/querychat/issues"
+Source = "https://github.com/posit-dev/querychat/tree/main/python-package"
 
 [tool.hatch.build.targets.wheel]
 packages = ["querychat"]
 
 [tool.hatch.build.targets.sdist]
-include = ["querychat", "LICENSE", "README.md"]
+include = ["src/querychat", "LICENSE", "README.md"]
 
 [tool.uv]
 dev-dependencies = ["ruff>=0.6.5", "pyright>=1.1.401", "tox-uv>=1.11.4"]
 
 [tool.ruff]
-src = ["querychat"]
+src = ["src/querychat"]
 exclude = [
     ".bzr",
     ".direnv",
@@ -153,7 +164,7 @@ docstring-code-format = true
 docstring-code-line-length = "dynamic"
 
 [tool.pyright]
-include = ["querychat"]
+include = ["src/querychat"]
 
 
 # For more tox testing usage (in addition to typing), see:

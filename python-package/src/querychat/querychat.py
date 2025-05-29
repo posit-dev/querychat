@@ -24,18 +24,26 @@ def system_prompt(
     categorical_threshold: int = 10,
 ) -> str:
     """
-    Create a system prompt for the chat model based on a data frame's schema and
-    optional additional context and instructions.
+    Create a system prompt for the chat model based on a DataFrame's
+    schema and optional context and instructions.
 
-    Args:
-        df: A DataFrame to generate schema information from
-        table_name: A string containing the name of the table in SQL queries
-        data_description: Optional description of the data, in plain text or Markdown format
-        extra_instructions: Optional additional instructions for the chat model, in plain text or Markdown format
-        categorical_threshold: The maximum number of unique values for a text column to be considered categorical
+    Parameters
+    ----------
+    df : IntoFrame
+        Input data to generate schema information from.
+    table_name : str
+        Name of the table to be used in SQL queries.
+    data_description : str, optional
+        Description of the data, in plain text or Markdown format.
+    extra_instructions : str, optional
+        Additional instructions for the chat model, in plain text or Markdown format.
+    categorical_threshold : int, default=10
+        Maximum number of unique values for a text column to be considered categorical.
 
-    Returns:
-        A string containing the system prompt for the chat model
+    Returns
+    -------
+    str
+        The system prompt for the chat model.
 
     """
     schema = df_to_schema(df, table_name, categorical_threshold)
@@ -70,13 +78,19 @@ def df_to_schema(df: IntoFrame, table_name: str, categorical_threshold: int) -> 
     """
     Convert a DataFrame schema to a string representation for the system prompt.
 
-    Args:
-        df: The DataFrame to extract schema from
-        table_name: The name of the table in SQL queries
-        categorical_threshold: The maximum number of unique values for a text column to be considered categorical
+    Parameters
+    ----------
+    df : IntoFrame
+        The DataFrame to extract schema from
+    table_name : str
+        The name of the table in SQL queries
+    categorical_threshold : int
+        The maximum number of unique values for a text column to be considered categorical
 
-    Returns:
-        A string containing the schema information
+    Returns
+    -------
+    str
+        A string containing the schema information.
 
     """
     ndf = nw.from_native(df)
@@ -126,11 +140,16 @@ def df_to_html(df: IntoFrame, maxrows: int = 5) -> str:
     """
     Convert a DataFrame to an HTML table for display in chat.
 
-    Args:
-        df: The DataFrame to convert
-        maxrows: Maximum number of rows to display
+    Parameters
+    ----------
+    df : IntoFrame
+        The DataFrame to convert
+    maxrows : int, default=5
+        Maximum number of rows to display
 
-    Returns:
+    Returns
+    -------
+    str
         HTML string representation of the table
 
     """
@@ -190,16 +209,26 @@ def init(
     """
     Call this once outside of any server function to initialize querychat.
 
-    Args:
-        df: A data frame
-        table_name: A string containing a valid table name for the data frame
-        greeting: A string in Markdown format, containing the initial message
-        data_description: Description of the data in plain text or Markdown
-        extra_instructions: Additional instructions for the chat model
-        create_chat_callback: A function that creates a chat object
-        system_prompt_override: A custom system prompt to use instead of the default
+    Parameters
+    ----------
+    df : pd.DataFrame
+        A data frame
+    table_name : str
+        A string containing a valid table name for the data frame
+    greeting : str, optional
+        A string in Markdown format, containing the initial message
+    data_description : str, optional
+        Description of the data in plain text or Markdown
+    extra_instructions : str, optional
+        Additional instructions for the chat model
+    create_chat_callback : CreateChatCallback, optional
+        A function that creates a chat object
+    system_prompt_override : str, optional
+        A custom system prompt to use instead of the default
 
-    Returns:
+    Returns
+    -------
+    QueryChatConfig
         A QueryChatConfig object that can be passed to server()
 
     """
@@ -252,11 +281,15 @@ def mod_ui() -> ui.TagList:
     """
     Create the UI for the querychat component.
 
-    Args:
-        id: The module ID
+    Parameters
+    ----------
+    id : str
+        The module ID
 
-    Returns:
-        A UI component
+    Returns
+    -------
+    ui.TagList
+        A UI component.
 
     """
     # Include CSS
@@ -274,14 +307,21 @@ def sidebar(id: str, width: int = 400, height: str = "100%", **kwargs) -> ui.Sid
     """
     Create a sidebar containing the querychat UI.
 
-    Args:
-        id: The module ID
-        width: Width of the sidebar in pixels
-        height: Height of the sidebar
-        **kwargs: Additional arguments to pass to the sidebar component
+    Parameters
+    ----------
+    id : str
+        The module ID.
+    width : int, default=400
+        Width of the sidebar in pixels.
+    height : str, default="100%"
+        Height of the sidebar.
+    **kwargs
+        Additional arguments to pass to the sidebar component.
 
-    Returns:
-        A sidebar UI component
+    Returns
+    -------
+    ui.Sidebar
+        A sidebar UI component.
 
     """
     return ui.sidebar(
@@ -302,16 +342,19 @@ def server(  # noqa: D417
     """
     Initialize the querychat server.
 
-    Args:
-        id: The module ID
-        querychat_config: Configuration object from init()
+    Parameters
+    ----------
+    querychat_config : QueryChatConfig
+        Configuration object from init().
 
-    Returns:
+    Returns
+    -------
+    dict[str, Any]
         A dictionary with reactive components:
-            - sql: A reactive that returns the current SQL query
-            - title: A reactive that returns the current title
-            - df: A reactive that returns the filtered data frame
-            - chat: The chat object
+            - sql: A reactive that returns the current SQL query.
+            - title: A reactive that returns the current title.
+            - df: A reactive that returns the filtered data frame.
+            - chat: The chat object.
 
     """
 
@@ -347,13 +390,14 @@ def server(  # noqa: D417
     # The function that updates the dashboard with a new SQL query
     async def update_dashboard(query: str, title: str):
         """
-        Modify the data presented in the data dashboard, based on the given SQL query, and also updates the title.
+        Modify the data presented in the data dashboard, based on the given SQL query,
+        and also updates the title.
 
         Parameters
         ----------
-        query
+        query : str
             A DuckDB SQL query; must be a SELECT statement.
-        title
+        title : str
             A title to display at the top of the data dashboard, summarizing the intent of the SQL query.
 
         """

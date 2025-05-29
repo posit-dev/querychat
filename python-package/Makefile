@@ -10,6 +10,10 @@ build:   ## [py] Build python package
 	@[ -d dist ] && rm -r dist || true
 	uv build
 
+.PHONY: publish
+publish:
+	hatch publish
+
 .PHONY: check
 check: check-format check-types ## [py] Run python checks
 
@@ -23,12 +27,12 @@ check-types:  ## [py] Run python type checks
 check-format:
 	@echo ""
 	@echo "📐 Checking format with ruff"
-	uv run --with ruff ruff check querychat --config pyproject.toml
+	uv run --with ruff ruff check src/querychat --config pyproject.toml
 
 .PHONY: format
 format: ## [py] Format python code
-	uv run --with ruff ruff check --fix querychat --config pyproject.toml
-	uv run --with ruff ruff format querychat --config pyproject.toml
+	uv run --with ruff ruff check --fix src/querychat --config pyproject.toml
+	uv run --with ruff ruff format src/querychat --config pyproject.toml
 
 .PHONY: check-tox
 check-tox:  ## [py] Run python 3.9 - 3.12 checks with tox

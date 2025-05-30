@@ -28,31 +28,31 @@ jobs:
         uses: astral-sh/setup-uv@v3
 
       - name: 🐍 Set up Python ${{ env.PYTHON_VERSION }}
-        working-directory: ./python-package
+        working-directory: ./pkg-py
         run: uv python install ${{ env.PYTHON_VERSION }}
 
       - name: 📦 Install the project
-        working-directory: ./python-package
+        working-directory: ./pkg-py
         run: uv sync --python ${{ env.PYTHON_VERSION }} --all-extras
 
       #   - name: 🧪 Check tests
-      #     working-directory: ./python-package
+      #     working-directory: ./pkg-py
       #     run: make check-tests
 
       - name: 📝 Check types
-        working-directory: ./python-package
+        working-directory: ./pkg-py
         run: make check-types
 
       - name: 📐 Check formatting
-        working-directory: ./python-package
+        working-directory: ./pkg-py
         run: make check-format
 
       - name: 🧳 Build package
-        working-directory: ./python-package
+        working-directory: ./pkg-py
         run: make build
 
       # TODO: https://pypi.org/manage/project/querychat/settings/publishing/
       - name: 🚢 Publish release on PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          packages-dir: ./python-package/dist
+          packages-dir: ./pkg-py/dist

@@ -33,7 +33,7 @@ classifiers = [
 [project.urls]
 Homepage = "https://github.com/posit-dev/querychat"
 Issues = "https://github.com/posit-dev/querychat/issues"
-Source = "https://github.com/posit-dev/querychat/tree/main/python-package"
+Source = "https://github.com/posit-dev/querychat/tree/main/pkg-py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/querychat"]

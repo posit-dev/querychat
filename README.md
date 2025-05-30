@@ -3,7 +3,7 @@
 querychat is a multilingual package that allows you to chat with your data using natural language queries. It's available for:
 
 - [R - Shiny](r-package/README.md)
-- [Python - Shiny for Python](python-package/README.md)
+- [Python - Shiny for Python](pkg-py/README.md)
 
 ## Overview
 
@@ -43,4 +43,4 @@ Currently, querychat uses DuckDB for its SQL engine. It's extremely fast and has
 For detailed information on how to use querychat in your preferred language, see the language-specific READMEs:
 
 - [R Documentation](r-package/README.md)
-- [Python Documentation](python-package/README.md)
+- [Python Documentation](pkg-py/README.md)

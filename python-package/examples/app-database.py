@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import querychat
-from querychat.datasource import SQLAlchemySource
 from seaborn import load_dataset
 from shiny import App, render, ui
 from sqlalchemy import create_engine
@@ -23,7 +22,8 @@ with open(Path(__file__).parent / "data_description.md", "r") as f:
 
 # 1. Configure querychat
 querychat_config = querychat.init(
-    SQLAlchemySource(engine, "titanic"),
+    engine,
+    "titanic",
     greeting=greeting,
     data_description=data_desc,
 )

@@ -1,7 +1,6 @@
 from pathlib import Path
 
 import querychat
-from querychat.datasource import DataFrameSource
 from seaborn import load_dataset
 from shiny import App, render, ui
 
@@ -14,7 +13,8 @@ with open(Path(__file__).parent / "data_description.md", "r") as f:
 
 # 1. Configure querychat
 querychat_config = querychat.init(
-    DataFrameSource(titanic, "titanic"),
+    titanic,
+    "titanic",
     greeting=greeting,
     data_description=data_desc,
 )

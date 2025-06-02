@@ -9,10 +9,11 @@ import chatlas
 import chevron
 import narwhals as nw
 import pandas as pd
+import sqlalchemy
 from narwhals.typing import IntoFrame
 from shiny import Inputs, Outputs, Session, module, reactive, ui
 
-from .datasource import DataSource
+from .datasource import DataFrameSource, DataSource, SQLAlchemySource
 
 
 class CreateChatCallback(Protocol):
@@ -73,7 +74,7 @@ class QueryChat:
         Returns:
             The chat object
         """
-        return self._chat()
+        return self._chat
 
     def sql(self) -> str:
         """
@@ -187,7 +188,8 @@ def df_to_html(df: IntoFrame, maxrows: int = 5) -> str:
 
 
 def init(
-    data_source: DataSource,
+    data_source: IntoFrame | sqlalchemy.Engine,
+    table_name: str,
     greeting: Optional[str] = None,
     data_description: Optional[str] = None,
     extra_instructions: Optional[str] = None,
@@ -207,6 +209,13 @@ def init(
     Returns:
         A QueryChatConfig object that can be passed to server()
     """
+
+    data_source_obj: DataSource
+    if isinstance(data_source, sqlalchemy.Engine):
+        data_source_obj = SQLAlchemySource(data_source, table_name)
+    else:
+        data_source_obj = DataFrameSource(nw.from_native(data_source).to_pandas(), table_name)
+
     # Process greeting
     if greeting is None:
         print(
@@ -217,7 +226,7 @@ def init(
 
     # Create the system prompt, or use the override
     _system_prompt = system_prompt_override or system_prompt(
-        data_source, data_description, extra_instructions
+        data_source_obj, data_description, extra_instructions
     )
 
     # Default chat function if none provided
@@ -226,7 +235,7 @@ def init(
     )
 
     return QueryChatConfig(
-        data_source=data_source,
+        data_source=data_source_obj,
         system_prompt=_system_prompt,
         greeting=greeting,
         create_chat_callback=create_chat_callback,

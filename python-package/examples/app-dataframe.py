@@ -1,10 +1,9 @@
 from pathlib import Path
 
-from seaborn import load_dataset
-from shiny import App, render, ui
-
 import querychat
 from querychat.datasource import DataFrameSource
+from seaborn import load_dataset
+from shiny import App, render, ui
 
 titanic = load_dataset("titanic")
 
@@ -43,7 +42,7 @@ def server(input, output, session):
     @render.data_frame
     def data_table():
         # Access filtered data via chat.df() reactive
-        return chat["df"]()
+        return chat.df()
 
 
 # Create Shiny app

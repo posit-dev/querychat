@@ -3,11 +3,13 @@ from __future__ import annotations
 import os
 import sys
 from functools import partial
-from typing import Any, Dict, Optional, Protocol
+from typing import Any, Callable, Optional, Protocol
 
 import chatlas
 import chevron
 import narwhals as nw
+import pandas as pd
+from narwhals.typing import IntoFrame
 from shiny import Inputs, Outputs, Session, module, reactive, ui
 
 from .datasource import DataSource
@@ -33,6 +35,93 @@ class QueryChatConfig:
         self.system_prompt = system_prompt
         self.greeting = greeting
         self.create_chat_callback = create_chat_callback
+
+
+class QueryChat:
+    """
+    An object representing a query chat session. This is created within a Shiny
+    server function or Shiny module server function by using
+    `querychat.server()`. Use this object to bridge the chat interface with the
+    rest of the Shiny app, for example, by displaying the filtered data.
+    """
+
+    def __init__(
+        self,
+        chat: chatlas.Chat,
+        sql: Callable[[], str],
+        title: Callable[[], str | None],
+        df: Callable[[], pd.DataFrame],
+    ):
+        """
+        Initialize a QueryChat object.
+
+        Args:
+            chat: The chat object for the session
+            sql: Reactive that returns the current SQL query
+            title: Reactive that returns the current title
+            df: Reactive that returns the filtered data frame
+        """
+        self._chat = chat
+        self._sql = sql
+        self._title = title
+        self._df = df
+
+    def chat(self) -> chatlas.Chat:
+        """
+        Get the chat object for this session.
+
+        Returns:
+            The chat object
+        """
+        return self._chat()
+
+    def sql(self) -> str:
+        """
+        Reactively read the current SQL query that is in effect.
+
+        Returns:
+            The current SQL query as a string, or `""` if no query has been set.
+        """
+        return self._sql()
+
+    def title(self) -> str | None:
+        """
+        Reactively read the current title that is in effect. The title is a
+        short description of the current query that the LLM provides to us
+        whenever it generates a new SQL query. It can be used as a status string
+        for the data dashboard.
+
+        Returns:
+            The current title as a string, or `None` if no title has been set
+            due to no SQL query being set.
+        """
+        return self._title()
+
+    def df(self) -> pd.DataFrame:
+        """
+        Reactively read the current filtered data frame that is in effect.
+
+        Returns:
+            The current filtered data frame as a pandas DataFrame. If no query
+            has been set, this will return the unfiltered data frame from the
+            data source.
+        """
+        return self._df()
+
+    def __getitem__(self, key: str) -> Any:
+        """
+        Allow access to configuration parameters like a dictionary. For
+        backwards compatibility only; new code should use the attributes
+        directly instead.
+        """
+        if key == "chat":
+            return self.chat
+        elif key == "sql":
+            return self.sql
+        elif key == "title":
+            return self.title
+        elif key == "df":
+            return self.df
 
 
 def system_prompt(
@@ -190,7 +279,7 @@ def sidebar(id: str, width: int = 400, height: str = "100%", **kwargs) -> ui.Sid
 @module.server
 def server(
     input: Inputs, output: Outputs, session: Session, querychat_config: QueryChatConfig
-) -> Dict[str, Any]:
+) -> QueryChat:
     """
     Initialize the querychat server.
 
@@ -219,8 +308,8 @@ def server(
     create_chat_callback = querychat_config.create_chat_callback
 
     # Reactive values to store state
-    current_title = reactive.Value(None)
-    current_query = reactive.Value("")
+    current_title: reactive.Value[str | None] = reactive.Value(None)
+    current_query: reactive.Value[str] = reactive.Value("")
 
     @reactive.Calc
     def filtered_df():
@@ -326,9 +415,4 @@ def server(
             await chat_ui.append_message_stream(stream)
 
     # Return the interface for other components to use
-    return {
-        "chat": chat,
-        "sql": current_query.get,
-        "title": current_title.get,
-        "df": filtered_df,
-    }
+    return QueryChat(chat, current_query.get, current_title.get, filtered_df)

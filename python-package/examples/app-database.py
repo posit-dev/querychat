@@ -1,4 +1,3 @@
-import sqlite3
 from pathlib import Path
 
 import querychat
@@ -10,8 +9,12 @@ from sqlalchemy import create_engine
 # Load titanic data and create SQLite database
 db_path = Path(__file__).parent / "titanic.db"
 engine = create_engine("sqlite:///" + str(db_path))
-# titanic = load_dataset("titanic")
-# titanic.to_sql("titanic", conn, if_exists="replace", index=False)
+
+if not db_path.exists():
+    # For example purposes, we'll create the database if it doesn't exist. Don't
+    # do this in your app!
+    titanic = load_dataset("titanic")
+    titanic.to_sql("titanic", engine, if_exists="replace", index=False)
 
 with open(Path(__file__).parent / "greeting.md", "r") as f:
     greeting = f.read()

@@ -6,9 +6,9 @@ build-backend = "hatchling.build"
 name = "querychat"
 version = "0.1.0"
 description = "Chat with your data using natural language"
-readme = "README.md"
+readme = "pkg-py/README.md"
 requires-python = ">=3.9"
-license = { file = "LICENSE" }
+license = { file = "pkg-py/LICENSE" }
 authors = [{ name = "Posit", email = "info@posit.co" }]
 dependencies = [
     "duckdb",
@@ -31,21 +31,22 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/posit-dev/querychat"
+Homepage = "https://github.com/posit-dev/querychat" # TODO update when we have docs
+Repository = "https://github.com/posit-dev/querychat"
 Issues = "https://github.com/posit-dev/querychat/issues"
 Source = "https://github.com/posit-dev/querychat/tree/main/pkg-py"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/querychat"]
+packages = ["pkg-py/src/querychat"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src/querychat", "LICENSE", "README.md"]
+include = ["pkg-py/src/querychat", "pkg-py/LICENSE", "pkg-py/README.md"]
 
 [tool.uv]
 dev-dependencies = ["ruff>=0.6.5", "pyright>=1.1.401", "tox-uv>=1.11.4"]
 
 [tool.ruff]
-src = ["src/querychat"]
+src = ["pkg-py/src/querychat"]
 exclude = [
     ".bzr",
     ".direnv",
@@ -164,7 +165,7 @@ docstring-code-format = true
 docstring-code-line-length = "dynamic"
 
 [tool.pyright]
-include = ["src/querychat"]
+include = ["pkg-py/src/querychat"]
 
 
 # For more tox testing usage (in addition to typing), see:

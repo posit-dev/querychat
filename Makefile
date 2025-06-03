@@ -27,12 +27,12 @@ check-types:  ## [py] Run python type checks
 check-format:
 	@echo ""
 	@echo "📐 Checking format with ruff"
-	uv run --with ruff ruff check src/querychat --config pyproject.toml
+	uv run --with ruff ruff check pkg-py/src/querychat --config pyproject.toml
 
 .PHONY: format
 format: ## [py] Format python code
-	uv run --with ruff ruff check --fix src/querychat --config pyproject.toml
-	uv run --with ruff ruff format src/querychat --config pyproject.toml
+	uv run --with ruff ruff check --fix pkg-py/src/querychat --config pyproject.toml
+	uv run --with ruff ruff format pkg-py/src/querychat --config pyproject.toml
 
 .PHONY: check-tox
 check-tox:  ## [py] Run python 3.9 - 3.12 checks with tox

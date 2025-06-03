@@ -30,7 +30,7 @@
 #' @returns An object that can be passed to `querychat_server()` as the
 #'   `querychat_config` argument. By convention, this object should be named
 #'   `querychat_config`.
-#' 
+#'
 #' @export
 querychat_init <- function(
   df,
@@ -39,7 +39,12 @@ querychat_init <- function(
   data_description = NULL,
   extra_instructions = NULL,
   create_chat_func = purrr::partial(ellmer::chat_openai, model = "gpt-4o"),
-  system_prompt = querychat_system_prompt(df, tbl_name, data_description = data_description, extra_instructions = extra_instructions)
+  system_prompt = querychat_system_prompt(
+    df,
+    tbl_name,
+    data_description = data_description,
+    extra_instructions = extra_instructions
+  )
 ) {
   is_tbl_name_ok <- is.character(tbl_name) &&
     length(tbl_name) == 1 &&
@@ -124,28 +129,28 @@ querychat_ui <- function(id) {
   ns <- shiny::NS(id)
   htmltools::tagList(
     # TODO: Make this into a proper HTML dependency
-    shiny::includeCSS(system.file("www","styles.css", package = "querychat")),
+    shiny::includeCSS(system.file("www", "styles.css", package = "querychat")),
     shinychat::chat_ui(ns("chat"), height = "100%", fill = TRUE)
   )
 }
 
 #' Initalize the querychat server
-#' 
+#'
 #' @param id The ID of the module instance. Must match the ID passed to
 #'   the corresponding call to `querychat_ui()`.
 #' @param querychat_config An object created by `querychat_init()`.
-#' 
+#'
 #' @returns A querychat instance, which is a named list with the following
 #' elements:
-#' 
+#'
 #' - `sql`: A reactive that returns the current SQL query.
 #' - `title`: A reactive that returns the current title.
 #' - `df`: A reactive that returns the data frame, filtered and sorted by the
 #'   current SQL query.
 #' - `chat`: The [ellmer::Chat] object that powers the chat interface.
-#' 
+#'
 #' By convention, this object should be named `querychat_config`.
-#' 
+#'
 #' @export
 querychat_server <- function(id, querychat_config) {
   shiny::moduleServer(id, function(input, output, session) {

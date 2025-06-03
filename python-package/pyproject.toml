@@ -7,11 +7,9 @@ name = "querychat"
 version = "0.1.0"
 description = "Chat with your data using natural language"
 readme = "README.md"
-requires-python = ">=3.8"
-license = {file = "LICENSE"}
-authors = [
-    {name = "Posit", email = "info@posit.co"},
-]
+requires-python = ">=3.9"
+license = { file = "LICENSE" }
+authors = [{ name = "Posit", email = "info@posit.co" }]
 dependencies = [
     "duckdb",
     "pandas",
@@ -22,16 +20,163 @@ dependencies = [
     "narwhals",
 ]
 
+classifiers = [
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+
 [project.urls]
 Homepage = "https://github.com/posit-dev/querychat"
 Issues = "https://github.com/posit-dev/querychat/issues"
+Source = "https://github.com/posit-dev/querychat/tree/main/python-package"
 
 [tool.hatch.build.targets.wheel]
-packages = ["querychat"]
+packages = ["src/querychat"]
 
 [tool.hatch.build.targets.sdist]
-include = [
-    "querychat",
-    "LICENSE",
-    "README.md",
+include = ["src/querychat", "LICENSE", "README.md"]
+
+[tool.uv]
+dev-dependencies = ["ruff>=0.6.5", "pyright>=1.1.401", "tox-uv>=1.11.4"]
+
+[tool.ruff]
+src = ["src/querychat"]
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pyenv",
+    ".pytest_cache",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    ".vscode",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "site-packages",
+    "venv",
+    "app.py",             # ignore examples for now
 ]
+
+line-length = 88
+indent-width = 4
+
+target-version = "py39"
+
+# [tool.ruff.lint]
+# select = ['E', 'F', 'W', 'A', 'PLC', 'PLE', 'PLW', 'I']
+[tool.ruff.lint]
+extend-ignore = [
+    "A002",    # Shadowing a built-in
+    "ARG001",  # Unused argument
+    "D200",    # One-line docstring should fit on one line with quotes
+    "D203",    # 1 blank line required before class docstring
+    "D212",    # Multi-line docstring summary should start at the first line
+    "E501",    # Line too long
+    "ISC001",  # single-line-implicit-string-concatenation
+    "ISC002",  # multi-line-implicit-string-concatenation
+    "PD901",   # Avoid using the generic variable name `df` for DataFrames
+    "PLR0913", # Too many arguments in function definition
+    "PLR0915", # Too many statements in function
+    "RET504",  # Unnecessary assignment to `{name}` before `return` statement
+    "RET505",  # Unnecessary branch after `return` statement
+    "UP007",   # Use `X | Y` for type annotations (or Optional[X])
+    # TODO: Remove in the future, when we have docstrings.
+    "D100", # Missing docstring in public module
+    "D101", # Missing docstring in public class
+    "D102", # Missing docstring in public method
+    "D104", # Missing docstring in public package
+    "D107", # Missing docstring in __init__
+    "D205", # 1 blank line required between summary line and description
+]
+extend-select = [
+    # "C90", # C90; mccabe: https://docs.astral.sh/ruff/rules/complex-structure/
+    "ASYNC",  # ASYNC; flake8-async: https://docs.astral.sh/ruff/rules/#flake8-async-async
+    "S",      # S; flake8-bandit: https://docs.astral.sh/ruff/rules/#flake8-bandit-s
+    "FBT",    # FBT; flake8-boolean-trap: https://docs.astral.sh/ruff/rules/#flake8-boolean-trap-fbt
+    "B",      # B; flake8-bugbear: https://docs.astral.sh/ruff/rules/#flake8-bugbear-b
+    "A",      # A; flake8-builtins: https://docs.astral.sh/ruff/rules/#flake8-builtins-a
+    "COM",    # COM; Commas: https://docs.astral.sh/ruff/rules/#flake8-commas-com
+    "C4",     # C4; flake8-comprehensions: https://docs.astral.sh/ruff/rules/#flake8-comprehensions-c4
+    "DTZ",    # DTZ; flake8-datetimez: https://docs.astral.sh/ruff/rules/#flake8-datetimez-dtz
+    "T10",    # T10; flake8-dbugger: https://docs.astral.sh/ruff/rules/#flake8-debugger-t10
+    "FA",     # FA; flake8-future-annotations: https://docs.astral.sh/ruff/rules/#flake8-future-annotations-fa
+    "ISC",    # ISC; flake8-implicit-str-concat: https://docs.astral.sh/ruff/rules/#flake8-implicit-str-concat-isc
+    "ICN",    # ICN; flake8-import-conventions: https://docs.astral.sh/ruff/rules/#flake8-import-conventions-icn
+    "PIE",    # PIE; flake8-pie: https://docs.astral.sh/ruff/rules/#flake8-pie-pie
+    "PYI",    # PYI; flake8-pyi : https://docs.astral.sh/ruff/rules/#flake8-pyi-pyi
+    "PT",     # PT; flake8-pytest-style: https://docs.astral.sh/ruff/rules/#flake8-pytest-style-pt
+    "Q",      # Q; flake8-quotes: https://docs.astral.sh/ruff/rules/#flake8-quotes-q
+    "RET",    # RET; flake8-return: https://docs.astral.sh/ruff/rules/#flake8-return-ret
+    "SIM",    # SIM; flake8-simplify: https://docs.astral.sh/ruff/rules/#flake8-simplify-sim
+    "TID253", # banned-module-level-imports: https://docs.astral.sh/ruff/rules/banned-module-level-imports/#banned-module-level-imports-tid253
+    "TC",     # TC; flake8-type-checking: https://docs.astral.sh/ruff/rules/#flake8-type-checking-tch
+    "TD",     # TD; flake8-todos: https://docs.astral.sh/ruff/rules/#flake8-todosimports-td
+    "ARG",    # ARG; flake8-argparse: https://docs.astral.sh/ruff/rules/#flake8-unused-arguments-arg
+    "PTH",    # PTH; flake8-use-pathlib: https://docs.astral.sh/ruff/rules/#flake8-use-pathlib-pth
+    "I",      # I; isort: https://docs.astral.sh/ruff/rules/#isort-i
+    "NPY",    # NPY; NumPy-specific rules: https://docs.astral.sh/ruff/rules/#numpy-specific-rules-npy
+    "PD",     # PD; pandas-vet: https://docs.astral.sh/ruff/rules/#pandas-vet-pd
+    "N",      # N; pep8-naming: https://docs.astral.sh/ruff/rules/#pep8-naming-n
+    "PERF",   # PERF; flake8-performance: https://docs.astral.sh/ruff/rules/#flake8-performance-perf
+    "E",      # E; pycodestyle: https://docs.astral.sh/ruff/rules/#pycodestyle-e-w
+    "W",      # W; pycodestyle: https://docs.astral.sh/ruff/rules/#pycodestyle-e-w
+    "D",      # D; pydocstyle: https://docs.astral.sh/ruff/rules/#pydocstyle-d
+    "F",      # F; Pyflakes: https://docs.astral.sh/ruff/rules/#pyflakes-f
+    "PGH",    # PGH; pygrep-hooks: https://docs.astral.sh/ruff/rules/#pygrep-hooks-pgh
+    "PL",     # PL; pylint: https://docs.astral.sh/ruff/rules/#pylint-pl
+    "UP",     # UP; pyupgrade: https://docs.astral.sh/ruff/rules/#pyupgrade-up
+    "FURB",   # FURB; refurb: https://docs.astral.sh/ruff/rules/#refurb-furb
+    "RUF",    # RUF; Ruff specific rules: https://docs.astral.sh/ruff/rules/#ruff-specific-rules-ruf
+]
+
+# Allow fix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = []
+
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = true
+docstring-code-line-length = "dynamic"
+
+[tool.pyright]
+include = ["src/querychat"]
+
+
+# For more tox testing usage (in addition to typing), see:
+# https://github.com/posit-dev/chatlas/blob/b91c020a555917c1be5ae2462496de25d82c529d/pyproject.toml#L122-L139
+[tool.tox]
+legacy_tox_ini = """
+[tox]
+env_list = py3{9,10,11,12}
+isolated_build = True
+
+[testenv]
+package = wheel
+wheel_build_env = .pkg
+commands = pyright
+"""

@@ -1,5 +1,5 @@
 #' Create a system prompt for the chat model
-#' 
+#'
 #' This function generates a system prompt for the chat model based on a data frame's
 #' schema and optional additional context and instructions.
 #'
@@ -8,11 +8,17 @@
 #' @param data_description Optional description of the data, in plain text or Markdown format.
 #' @param extra_instructions Optional additional instructions for the chat model, in plain text or Markdown format.
 #' @param categorical_threshold The maximum number of unique values for a text column to be considered categorical.
-#' 
+#'
 #' @return A string containing the system prompt for the chat model.
 #'
 #' @export
-querychat_system_prompt <- function(df, name, data_description = NULL, extra_instructions = NULL, categorical_threshold = 10) {
+querychat_system_prompt <- function(
+  df,
+  name,
+  data_description = NULL,
+  extra_instructions = NULL,
+  categorical_threshold = 10
+) {
   schema <- df_to_schema(df, name, categorical_threshold)
 
   if (!is.null(data_description)) {
@@ -27,14 +33,21 @@ querychat_system_prompt <- function(df, name, data_description = NULL, extra_ins
   prompt_content <- readLines(prompt_path, warn = FALSE)
   prompt_text <- paste(prompt_content, collapse = "\n")
 
-  whisker::whisker.render(prompt_text, list(
-    schema = schema,
-    data_description = data_description,
-    extra_instructions = extra_instructions
-  ))
+  whisker::whisker.render(
+    prompt_text,
+    list(
+      schema = schema,
+      data_description = data_description,
+      extra_instructions = extra_instructions
+    )
+  )
 }
 
-df_to_schema <- function(df, name = deparse(substitute(df)), categorical_threshold) {
+df_to_schema <- function(
+  df,
+  name = deparse(substitute(df)),
+  categorical_threshold
+) {
   schema <- c(paste("Table:", name), "Columns:")
 
   column_info <- lapply(names(df), function(column) {

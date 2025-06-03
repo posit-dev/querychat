@@ -7,7 +7,6 @@
   flex-direction: column;
   height: 100%;
   width: 100%;
-  background-color: var(--bslib-sidebar-main-bg);
 }
 
 .querychat-messages {

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-import os
+import re
 import sys
 from functools import partial
-from typing import Any, Callable, Optional, Protocol
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Callable, Optional, Protocol, Union
 
 import chatlas
 import chevron
@@ -12,6 +13,11 @@ import pandas as pd
 import sqlalchemy
 from narwhals.typing import IntoFrame
 from shiny import Inputs, Outputs, Session, module, reactive, ui
+
+if TYPE_CHECKING:
+    import pandas as pd
+    from narwhals.typing import IntoFrame
+
 
 from .datasource import DataFrameSource, DataSource, SQLAlchemySource
 
@@ -50,7 +56,7 @@ class QueryChat:
         self,
         chat: chatlas.Chat,
         sql: Callable[[], str],
-        title: Callable[[], str | None],
+        title: Callable[[], Union[str, None]],
         df: Callable[[], pd.DataFrame],
     ):
         """
@@ -61,6 +67,7 @@ class QueryChat:
             sql: Reactive that returns the current SQL query
             title: Reactive that returns the current title
             df: Reactive that returns the filtered data frame
+
         """
         self._chat = chat
         self._sql = sql
@@ -73,6 +80,7 @@ class QueryChat:
 
         Returns:
             The chat object
+
         """
         return self._chat
 
@@ -82,10 +90,11 @@ class QueryChat:
 
         Returns:
             The current SQL query as a string, or `""` if no query has been set.
+
         """
         return self._sql()
 
-    def title(self) -> str | None:
+    def title(self) -> Union[str, None]:
         """
         Reactively read the current title that is in effect. The title is a
         short description of the current query that the LLM provides to us
@@ -95,6 +104,7 @@ class QueryChat:
         Returns:
             The current title as a string, or `None` if no title has been set
             due to no SQL query being set.
+
         """
         return self._title()
 
@@ -106,6 +116,7 @@ class QueryChat:
             The current filtered data frame as a pandas DataFrame. If no query
             has been set, this will return the unfiltered data frame from the
             data source.
+
         """
         return self._df()
 
@@ -129,30 +140,42 @@ def system_prompt(
     data_source: DataSource,
     data_description: Optional[str] = None,
     extra_instructions: Optional[str] = None,
+    categorical_threshold: int = 10,
 ) -> str:
     """
-    Create a system prompt for the chat model based on a data source's
-    schema and optional additional context and instructions.
+    Create a system prompt for the chat model based on a data source's schema
+    and optional additional context and instructions.
 
-    Args:
-        data_source: A data source to generate schema information from
-        data_description: Optional description of the data, in plain text or Markdown format
-        extra_instructions: Optional additional instructions for the chat model, in plain text or Markdown format
+    Parameters
+    ----------
+    data_source : DataSource
+        A data source to generate schema information from
+    data_description : str, optional
+        Optional description of the data, in plain text or Markdown format
+    extra_instructions : str, optional
+        Optional additional instructions for the chat model, in plain text or
+        Markdown format
+    categorical_threshold : int, default=10
+        Threshold for determining if a column is categorical based on number of
+        unique values
 
-    Returns:
-        A string containing the system prompt for the chat model
+    Returns
+    -------
+    str
+        The system prompt for the chat model.
+
     """
-
     # Read the prompt file
-    prompt_path = os.path.join(os.path.dirname(__file__), "prompt", "prompt.md")
-    with open(prompt_path, "r") as f:
-        prompt_text = f.read()
+    prompt_path = Path(__file__).parent / "prompt" / "prompt.md"
+    prompt_text = prompt_path.read_text()
 
     return chevron.render(
         prompt_text,
         {
             "db_engine": data_source.db_engine,
-            "schema": data_source.get_schema(),
+            "schema": data_source.get_schema(
+                categorical_threshold=categorical_threshold,
+            ),
             "data_description": data_description,
             "extra_instructions": extra_instructions,
         },
@@ -163,18 +186,27 @@ def df_to_html(df: IntoFrame, maxrows: int = 5) -> str:
     """
     Convert a DataFrame to an HTML table for display in chat.
 
-    Args:
-        df: The DataFrame to convert
-        maxrows: Maximum number of rows to display
+    Parameters
+    ----------
+    df : IntoFrame
+        The DataFrame to convert
+    maxrows : int, default=5
+        Maximum number of rows to display
 
-    Returns:
+    Returns
+    -------
+    str
         HTML string representation of the table
+
     """
     ndf = nw.from_native(df)
     df_short = nw.from_native(df).head(maxrows)
 
     # Generate HTML table
-    table_html = df_short.to_pandas().to_html(index=False)
+    table_html = df_short.to_pandas().to_html(
+        index=False,
+        classes="table table-striped",
+    )
 
     # Add note about truncated rows if needed
     if len(df_short) != len(ndf):
@@ -196,26 +228,50 @@ def init(
     create_chat_callback: Optional[CreateChatCallback] = None,
     system_prompt_override: Optional[str] = None,
 ) -> QueryChatConfig:
-    """Initialize querychat with any compliant data source.
-
-    Args:
-        data_source: A DataSource implementation that provides schema and query execution
-        greeting: A string in Markdown format, containing the initial message
-        data_description: Description of the data in plain text or Markdown
-        extra_instructions: Additional instructions for the chat model
-        create_chat_callback: A function that creates a chat object
-        system_prompt_override: A custom system prompt to use instead of the default
-
-    Returns:
-        A QueryChatConfig object that can be passed to server()
     """
+    Initialize querychat with any compliant data source.
+
+    Parameters
+    ----------
+    data_source : IntoFrame | sqlalchemy.Engine
+        Either a Narwhals-compatible data frame (e.g., Polars or Pandas) or a
+        SQLAlchemy engine containing the table to query against.
+    table_name : str
+        If a data_source is a data frame, a name to use to refer to the table in
+        SQL queries (usually the variable name of the data frame, but it doesn't
+        have to be). If a data_source is a SQLAlchemy engine, the table_name is
+        the name of the table in the database to query against.
+    greeting : str, optional
+        A string in Markdown format, containing the initial message
+    data_description : str, optional
+        Description of the data in plain text or Markdown
+    extra_instructions : str, optional
+        Additional instructions for the chat model
+    create_chat_callback : CreateChatCallback, optional
+        A function that creates a chat object
+    system_prompt_override : str, optional
+        A custom system prompt to use instead of the default
+
+    Returns
+    -------
+    QueryChatConfig
+        A QueryChatConfig object that can be passed to server()
+
+    """
+    # Validate table name (must begin with letter, contain only letters, numbers, underscores)
+    if not re.match(r"^[a-zA-Z][a-zA-Z0-9_]*$", table_name):
+        raise ValueError(
+            "Table name must begin with a letter and contain only letters, numbers, and underscores",
+        )
 
     data_source_obj: DataSource
     if isinstance(data_source, sqlalchemy.Engine):
         data_source_obj = SQLAlchemySource(data_source, table_name)
     else:
-        data_source_obj = DataFrameSource(nw.from_native(data_source).to_pandas(), table_name)
-
+        data_source_obj = DataFrameSource(
+            nw.from_native(data_source).to_pandas(),
+            table_name,
+        )
     # Process greeting
     if greeting is None:
         print(
@@ -226,12 +282,15 @@ def init(
 
     # Create the system prompt, or use the override
     _system_prompt = system_prompt_override or system_prompt(
-        data_source_obj, data_description, extra_instructions
+        data_source_obj,
+        data_description,
+        extra_instructions,
     )
 
     # Default chat function if none provided
     create_chat_callback = create_chat_callback or partial(
-        chatlas.ChatOpenAI, model="gpt-4"
+        chatlas.ChatOpenAI,
+        model="gpt-4.1",
     )
 
     return QueryChatConfig(
@@ -247,14 +306,19 @@ def mod_ui() -> ui.TagList:
     """
     Create the UI for the querychat component.
 
-    Args:
-        id: The module ID
+    Parameters
+    ----------
+    id : str
+        The module ID
 
-    Returns:
-        A UI component
+    Returns
+    -------
+    ui.TagList
+        A UI component.
+
     """
     # Include CSS
-    css_path = os.path.join(os.path.dirname(__file__), "static", "css", "styles.css")
+    css_path = Path(__file__).parent / "static" / "css" / "styles.css"
 
     return ui.TagList(
         ui.include_css(css_path),
@@ -268,14 +332,22 @@ def sidebar(id: str, width: int = 400, height: str = "100%", **kwargs) -> ui.Sid
     """
     Create a sidebar containing the querychat UI.
 
-    Args:
-        id: The module ID
-        width: Width of the sidebar in pixels
-        height: Height of the sidebar
-        **kwargs: Additional arguments to pass to the sidebar component
+    Parameters
+    ----------
+    id : str
+        The module ID.
+    width : int, default=400
+        Width of the sidebar in pixels.
+    height : str, default="100%"
+        Height of the sidebar.
+    **kwargs
+        Additional arguments to pass to the sidebar component.
 
-    Returns:
-        A sidebar UI component
+    Returns
+    -------
+    ui.Sidebar
+        A sidebar UI component.
+
     """
     return ui.sidebar(
         mod_ui(id),
@@ -286,25 +358,32 @@ def sidebar(id: str, width: int = 400, height: str = "100%", **kwargs) -> ui.Sid
 
 
 @module.server
-def server(
-    input: Inputs, output: Outputs, session: Session, querychat_config: QueryChatConfig
+def server(  # noqa: D417
+    input: Inputs,
+    output: Outputs,
+    session: Session,
+    querychat_config: QueryChatConfig,
 ) -> QueryChat:
     """
     Initialize the querychat server.
 
-    Args:
-        id: The module ID
-        querychat_config: Configuration object from init()
+    Parameters
+    ----------
+    querychat_config : QueryChatConfig
+        Configuration object from init().
 
-    Returns:
+    Returns
+    -------
+    dict[str, Any]
         A dictionary with reactive components:
-            - sql: A reactive that returns the current SQL query
-            - title: A reactive that returns the current title
-            - df: A reactive that returns the filtered data frame
-            - chat: The chat object
+            - sql: A reactive that returns the current SQL query.
+            - title: A reactive that returns the current title.
+            - df: A reactive that returns the filtered data frame.
+            - chat: The chat object.
+
     """
 
-    @reactive.Effect
+    @reactive.effect
     def _():
         # This will be triggered when the module is initialized
         # Here we would set up the chat interface, initialize the chat model, etc.
@@ -317,10 +396,10 @@ def server(
     create_chat_callback = querychat_config.create_chat_callback
 
     # Reactive values to store state
-    current_title: reactive.Value[str | None] = reactive.Value(None)
-    current_query: reactive.Value[str] = reactive.Value("")
+    current_title = reactive.value[Union[str, None]](None)
+    current_query = reactive.value("")
 
-    @reactive.Calc
+    @reactive.calc
     def filtered_df():
         if current_query.get() == "":
             return data_source.get_data()
@@ -335,16 +414,17 @@ def server(
     # The function that updates the dashboard with a new SQL query
     async def update_dashboard(query: str, title: str):
         """
-        Modifies the data presented in the data dashboard, based on the given SQL query, and also updates the title.
+        Modify the data presented in the data dashboard, based on the given SQL query,
+        and also updates the title.
 
         Parameters
         ----------
-        query
+        query : str
             A DuckDB SQL query; must be a SELECT statement.
-        title
+        title : str
             A title to display at the top of the data dashboard, summarizing the intent of the SQL query.
-        """
 
+        """
         await append_output(f"\n```sql\n{query}\n```\n\n")
 
         try:
@@ -369,8 +449,8 @@ def server(
         ----------
         query
             A DuckDB SQL query; must be a SELECT statement.
-        """
 
+        """
         await append_output(f"\n```sql\n{query}\n```\n\n")
 
         try:

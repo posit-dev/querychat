@@ -1,15 +1,14 @@
 from pathlib import Path
 
-import querychat
 from seaborn import load_dataset
 from shiny import App, render, ui
 
+import querychat
+
 titanic = load_dataset("titanic")
 
-with open(Path(__file__).parent / "greeting.md", "r") as f:
-    greeting = f.read()
-with open(Path(__file__).parent / "data_description.md", "r") as f:
-    data_desc = f.read()
+greeting = (Path(__file__).parent / "greeting.md").read_text()
+data_desc = (Path(__file__).parent / "data_description.md").read_text()
 
 # 1. Configure querychat
 querychat_config = querychat.init(

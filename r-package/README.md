@@ -84,6 +84,25 @@ Currently, querychat uses DuckDB for its SQL engine. It's extremely fast and has
 
 When the querychat UI first appears, you will usually want it to greet the user with some basic instructions. By default, these instructions are auto-generated every time a user arrives; this is slow, wasteful, and unpredictable. Instead, you should create a file called `greeting.md`, and when calling `querychat_init`, pass `greeting = readLines("greeting.md")`.
 
+You can provide suggestions to the user by using the `<span class="suggestion"> </span>` tag.
+
+For example:
+
+```markdown
+* **Filter and sort the data:**
+  * <span class="suggestion">Show only survivors</span>
+  * <span class="suggestion">Filter to first class passengers under 30</span>
+  * <span class="suggestion">Sort by fare from highest to lowest</span>
+
+* **Answer questions about the data:**
+  * <span class="suggestion">What was the survival rate by gender?</span>
+  * <span class="suggestion">What's the average age of children who survived?</span>
+  * <span class="suggestion">How many passengers were traveling alone?</span>
+```
+
+These suggestions appear in the greeting and automatically populate the chat text box when clicked.
+This gives the user a few ideas to explore on their own.
+
 If you need help coming up with a greeting, your own app can help you! Just launch it and paste this into the chat interface:
 
 > Help me create a greeting for your future users. Include some example questions. Format your suggested greeting as Markdown, in a code block.
@@ -110,7 +129,11 @@ If you give querychat your dataset and nothing else, it will provide the LLM wit
 - For text columns with less than 10 unique values, we assume they are categorical variables and include the list of values
 - For integer and float columns, we include the range
 
-And that's all the LLM will know about your data. If the column names are usefully descriptive, it may be able to make a surprising amount of sense out of the data. But if your data frame's columns are `x`, `V1`, `value`, etc., then the model will need to be given more background info--just like a human would.
+And that's all the LLM will know about your data.
+The actual data does not get passed into the LLM.
+We calculate these values before we pass the schema information into the LLM.
+
+If the column names are usefully descriptive, it may be able to make a surprising amount of sense out of the data. But if your data frame's columns are `x`, `V1`, `value`, etc., then the model will need to be given more background info--just like a human would.
 
 To provide this information, use the `data_description` argument. For example, the `mtcars` data frame used in the example above has pretty minimal column names. You might create a `data_description.md` like this:
 
@@ -161,12 +184,31 @@ You can also put these instructions in a separate file and use `readLines()` to 
 
 ### Use a different LLM provider
 
-Provide a `create_chat_func` function that takes a `system_prompt` parameter, and returns an Ellmer chat object. A convenient way to do this is with `purrr::partial`:
+By default, querychat uses GPT-4o via the OpenAI API. If you want to use a different model, you can provide a `create_chat_func` function that takes a `system_prompt` parameter, and returns an Ellmer chat object. A convenient way to do this is with `purrr::partial`:
 
 ```r
+library(ellmer)
+
+# Option 1: Define a function
+my_chat_func <- function(system_prompt) {
+  return(
+    chat_claude(
+      model="claude-3-7-sonnet-latest",
+      system_prompt=system_prompt
+    )
+  )
+}
+```
+
+```r
+library(ellmer)
+library(purrr)
+
+# Option 2: Use partial
 querychat_config <- querychat_init(mtcars,
   create_chat_func = purrr::partial(ellmer::chat_claude, model = "claude-3-7-sonnet-latest")
 )
 ```
 
-This would use Claude 3.7 Sonnet instead, which would require you to provide an API key. See the [instructions from Ellmer](https://ellmer.tidyverse.org/reference/chat_claude.html).
+This would use Claude 3.7 Sonnet instead, which would require you to provide an API key.
+See the [instructions from Ellmer](https://ellmer.tidyverse.org/reference/chat_claude.html) for more information on how to authenticate with different providers.

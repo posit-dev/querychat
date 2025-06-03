@@ -1,0 +1,58 @@
+name: Python - Release
+
+on:
+  release:
+    types: [published]
+
+env:
+  PYTHON_VERSION: 3.12
+
+jobs:
+  pypi-release:
+    name: Build and release Python package
+    runs-on: ubuntu-latest
+
+    if: startsWith(github.ref, 'refs/tags/py-v')
+
+    environment:
+      name: pypi
+      url: https://pypi.org/project/querychat/
+
+    permissions: # for trusted publishing
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 🚀 Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: 🐍 Set up Python ${{ env.PYTHON_VERSION }}
+        working-directory: ./python-package
+        run: uv python install ${{ env.PYTHON_VERSION }}
+
+      - name: 📦 Install the project
+        working-directory: ./python-package
+        run: uv sync --python ${{ env.PYTHON_VERSION }} --all-extras
+
+      #   - name: 🧪 Check tests
+      #     working-directory: ./python-package
+      #     run: make check-tests
+
+      - name: 📝 Check types
+        working-directory: ./python-package
+        run: make check-types
+
+      - name: 📐 Check formatting
+        working-directory: ./python-package
+        run: make check-format
+
+      - name: 🧳 Build package
+        working-directory: ./python-package
+        run: make build
+
+      # TODO: https://pypi.org/manage/project/querychat/settings/publishing/
+      - name: 🚢 Publish release on PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: ./python-package/dist

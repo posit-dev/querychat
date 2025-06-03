@@ -13,31 +13,41 @@ from sqlalchemy.sql import sqltypes
 class DataSource(Protocol):
     db_engine: ClassVar[str]
 
-    def get_schema(self) -> str:
-        """Return schema information about the table as a string.
+    def get_schema(self, *, categorical_threshold) -> str:
+        """
+        Return schema information about the table as a string.
+
+        Args:
+            categorical_threshold: Maximum number of unique values for a text
+                column to be considered categorical
 
         Returns:
             A string containing the schema information in a format suitable for
             prompting an LLM about the data structure
+
         """
         ...
 
     def execute_query(self, query: str) -> pd.DataFrame:
-        """Execute SQL query and return results as DataFrame.
+        """
+        Execute SQL query and return results as DataFrame.
 
         Args:
             query: SQL query to execute
 
         Returns:
             Query results as a pandas DataFrame
+
         """
         ...
 
     def get_data(self) -> pd.DataFrame:
-        """Return the unfiltered data as a DataFrame.
+        """
+        Return the unfiltered data as a DataFrame.
 
         Returns:
             The complete dataset as a pandas DataFrame
+
         """
         ...
 
@@ -48,19 +58,22 @@ class DataFrameSource:
     db_engine: ClassVar[str] = "DuckDB"
 
     def __init__(self, df: pd.DataFrame, table_name: str):
-        """Initialize with a pandas DataFrame.
+        """
+        Initialize with a pandas DataFrame.
 
         Args:
             df: The DataFrame to wrap
             table_name: Name of the table in SQL queries
+
         """
         self._conn = duckdb.connect(database=":memory:")
         self._df = df
         self._table_name = table_name
         self._conn.register(table_name, df)
 
-    def get_schema(self, categorical_threshold: int = 10) -> str:
-        """Generate schema information from DataFrame.
+    def get_schema(self, *, categorical_threshold: int) -> str:
+        """
+        Generate schema information from DataFrame.
 
         Args:
             table_name: Name to use for the table in schema description
@@ -69,6 +82,7 @@ class DataFrameSource:
 
         Returns:
             String describing the schema
+
         """
         ndf = nw.from_native(self._df)
 
@@ -113,27 +127,32 @@ class DataFrameSource:
         return "\n".join(schema)
 
     def execute_query(self, query: str) -> pd.DataFrame:
-        """Execute query using DuckDB.
+        """
+        Execute query using DuckDB.
 
         Args:
             query: SQL query to execute
 
         Returns:
             Query results as pandas DataFrame
+
         """
         return self._conn.execute(query).df()
 
     def get_data(self) -> pd.DataFrame:
-        """Return the unfiltered data as a DataFrame.
+        """
+        Return the unfiltered data as a DataFrame.
 
         Returns:
             The complete dataset as a pandas DataFrame
+
         """
         return self._df.copy()
 
 
 class SQLAlchemySource:
-    """A DataSource implementation that supports multiple SQL databases via SQLAlchemy.
+    """
+    A DataSource implementation that supports multiple SQL databases via SQLAlchemy.
 
     Supports various databases including PostgreSQL, MySQL, SQLite, Snowflake, and Databricks.
     """
@@ -141,11 +160,13 @@ class SQLAlchemySource:
     db_engine: ClassVar[str] = "SQLAlchemy"
 
     def __init__(self, engine: Engine, table_name: str):
-        """Initialize with a SQLAlchemy engine.
+        """
+        Initialize with a SQLAlchemy engine.
 
         Args:
             engine: SQLAlchemy engine
             table_name: Name of the table to query
+
         """
         self._engine = engine
         self._table_name = table_name
@@ -155,11 +176,13 @@ class SQLAlchemySource:
         if not inspector.has_table(table_name):
             raise ValueError(f"Table '{table_name}' not found in database")
 
-    def get_schema(self) -> str:
-        """Generate schema information from database table.
+    def get_schema(self, *, categorical_threshold: int) -> str:
+        """
+        Generate schema information from database table.
 
         Returns:
             String describing the schema
+
         """
         inspector = inspect(self._engine)
         columns = inspector.get_columns(self._table_name)
@@ -188,7 +211,7 @@ class SQLAlchemySource:
             ):
                 try:
                     query = text(
-                        f"SELECT MIN({col['name']}), MAX({col['name']}) FROM {self._table_name}"
+                        f"SELECT MIN({col['name']}), MAX({col['name']}) FROM {self._table_name}",
                     )
                     with self._get_connection() as conn:
                         result = conn.execute(query).fetchone()
@@ -199,18 +222,19 @@ class SQLAlchemySource:
 
             # For string/text columns, check if categorical
             elif isinstance(
-                col["type"], (sqltypes.String, sqltypes.Text, sqltypes.Enum)
+                col["type"],
+                (sqltypes.String, sqltypes.Text, sqltypes.Enum),
             ):
                 try:
                     count_query = text(
-                        f"SELECT COUNT(DISTINCT {col['name']}) FROM {self._table_name}"
+                        f"SELECT COUNT(DISTINCT {col['name']}) FROM {self._table_name}",
                     )
                     with self._get_connection() as conn:
                         distinct_count = conn.execute(count_query).scalar()
-                        if distinct_count and distinct_count <= 10:
+                        if distinct_count and distinct_count <= categorical_threshold:
                             values_query = text(
                                 f"SELECT DISTINCT {col['name']} FROM {self._table_name} "
-                                f"WHERE {col['name']} IS NOT NULL"
+                                f"WHERE {col['name']} IS NOT NULL",
                             )
                             values = [
                                 str(row[0])
@@ -226,22 +250,26 @@ class SQLAlchemySource:
         return "\n".join(schema)
 
     def execute_query(self, query: str) -> pd.DataFrame:
-        """Execute SQL query and return results as DataFrame.
+        """
+        Execute SQL query and return results as DataFrame.
 
         Args:
             query: SQL query to execute
 
         Returns:
             Query results as pandas DataFrame
+
         """
         with self._get_connection() as conn:
             return pd.read_sql_query(text(query), conn)
 
     def get_data(self) -> pd.DataFrame:
-        """Return the unfiltered data as a DataFrame.
+        """
+        Return the unfiltered data as a DataFrame.
 
         Returns:
             The complete dataset as a pandas DataFrame
+
         """
         return self.execute_query(f"SELECT * FROM {self._table_name}")
 

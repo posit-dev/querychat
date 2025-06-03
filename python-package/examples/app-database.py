@@ -1,9 +1,10 @@
 from pathlib import Path
 
-import querychat
 from seaborn import load_dataset
 from shiny import App, render, ui
 from sqlalchemy import create_engine
+
+import querychat
 
 # Load titanic data and create SQLite database
 db_path = Path(__file__).parent / "titanic.db"
@@ -15,10 +16,8 @@ if not db_path.exists():
     titanic = load_dataset("titanic")
     titanic.to_sql("titanic", engine, if_exists="replace", index=False)
 
-with open(Path(__file__).parent / "greeting.md", "r") as f:
-    greeting = f.read()
-with open(Path(__file__).parent / "data_description.md", "r") as f:
-    data_desc = f.read()
+greeting = (Path(__file__).parent / "greeting.md").read_text()
+data_desc = (Path(__file__).parent / "data_description.md").read_text()
 
 # 1. Configure querychat
 querychat_config = querychat.init(

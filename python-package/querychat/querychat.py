@@ -133,7 +133,7 @@ def init(
 
     # Default chat function if none provided
     create_chat_callback = create_chat_callback or partial(
-        chatlas.ChatOpenAI, model="gpt-4"
+        chatlas.ChatOpenAI, model="gpt-4.1"
     )
 
     return QueryChatConfig(

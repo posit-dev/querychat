@@ -75,7 +75,7 @@ exclude = [
     "node_modules",
     "site-packages",
     "venv",
-    "app.py",             # ignore examples for now
+    "app-*.py",             # ignore example apps for now
 ]
 
 line-length = 88
@@ -83,8 +83,6 @@ indent-width = 4
 
 target-version = "py39"
 
-# [tool.ruff.lint]
-# select = ['E', 'F', 'W', 'A', 'PLC', 'PLE', 'PLW', 'I']
 [tool.ruff.lint]
 extend-ignore = [
     "A002",    # Shadowing a built-in
@@ -101,6 +99,8 @@ extend-ignore = [
     "RET504",  # Unnecessary assignment to `{name}` before `return` statement
     "RET505",  # Unnecessary branch after `return` statement
     "UP007",   # Use `X | Y` for type annotations (or Optional[X])
+    # This package trusts the user
+    "S608", # Possible SQL injection vector through string-based query construction
     # TODO: Remove in the future, when we have docstrings.
     "D100", # Missing docstring in public module
     "D101", # Missing docstring in public class

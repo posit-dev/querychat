@@ -1,13 +1,15 @@
 from __future__ import annotations
 
-from typing import ClassVar, Protocol
+from typing import TYPE_CHECKING, ClassVar, Protocol
 
 import duckdb
 import narwhals as nw
 import pandas as pd
 from sqlalchemy import inspect, text
-from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.sql import sqltypes
+
+if TYPE_CHECKING:
+    from sqlalchemy.engine import Connection, Engine
 
 
 class DataSource(Protocol):
@@ -217,8 +219,8 @@ class SQLAlchemySource:
                         result = conn.execute(query).fetchone()
                         if result and result[0] is not None and result[1] is not None:
                             column_info.append(f"  Range: {result[0]} to {result[1]}")
-                except Exception:
-                    pass  # Skip range info if query fails
+                except Exception:  # noqa: S110
+                    pass  # Silently skip range info if query fails
 
             # For string/text columns, check if categorical
             elif isinstance(
@@ -242,8 +244,8 @@ class SQLAlchemySource:
                             ]
                             values_str = ", ".join([f"'{v}'" for v in values])
                             column_info.append(f"  Categorical values: {values_str}")
-                except Exception:
-                    pass  # Skip categorical info if query fails
+                except Exception:  # noqa: S110
+                    pass  # Silently skip categorical info if query fails
 
             schema.extend(column_info)
 
@@ -273,7 +275,7 @@ class SQLAlchemySource:
         """
         return self.execute_query(f"SELECT * FROM {self._table_name}")
 
-    def _get_sql_type_name(self, type_: sqltypes.TypeEngine) -> str:
+    def _get_sql_type_name(self, type_: sqltypes.TypeEngine) -> str:  # noqa: PLR0911
         """Convert SQLAlchemy type to SQL type name."""
         if isinstance(type_, sqltypes.Integer):
             return "INTEGER"

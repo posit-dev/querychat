@@ -18,7 +18,6 @@ if TYPE_CHECKING:
     import pandas as pd
     from narwhals.typing import IntoFrame
 
-
 from .datasource import DataFrameSource, DataSource, SQLAlchemySource
 
 
@@ -126,7 +125,7 @@ class QueryChat:
         backwards compatibility only; new code should use the attributes
         directly instead.
         """
-        if key == "chat":
+        if key == "chat":  # noqa: SIM116
             return self.chat
         elif key == "sql":
             return self.sql
@@ -134,6 +133,11 @@ class QueryChat:
             return self.title
         elif key == "df":
             return self.df
+
+        raise KeyError(
+            f"`QueryChat` does not have a key `'{key}'`. "
+            "Use the attributes `chat`, `sql`, `title`, or `df` instead.",
+        )
 
 
 def system_prompt(

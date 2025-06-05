@@ -1,5 +1,5 @@
 {
-  "python.autoComplete.extraPaths": ["${workspaceFolder}/python-package"],
+  "python.autoComplete.extraPaths": ["${workspaceFolder}/pkg-py"],
   "[python]": {
     "editor.formatOnSave": true,
     "editor.codeActionsOnSave": {

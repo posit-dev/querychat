@@ -13,7 +13,7 @@ querychat is a drop-in component for Shiny that allows users to query a data fra
 ## Installation
 
 ```bash
-pip install "querychat @ git+https://github.com/posit-dev/querychat#subdirectory=python-package"
+pip install "querychat @ git+https://github.com/posit-dev/querychat#subdirectory=pkg-py"
 ```
 
 ## How to use

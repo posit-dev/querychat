@@ -32,22 +32,16 @@ jobs:
         uses: astral-sh/setup-uv@v3
 
       - name: 🐍 Set up Python ${{ matrix.config.python-version }}
-        working-directory: ./python-package
         run: uv python install ${{matrix.config.python-version }}
 
       - name: 📦 Install the project
-        working-directory: ./python-package
-        run: uv sync --python ${{ matrix.config.python-version }} --all-extras
+        run: uv sync --python ${{matrix.config.python-version }} --all-extras
 
       #   - name: 🧪 Check tests
-      #     working-directory: ./python-package
-      #     run: make check-tests
+      #     run: make py-check-tests
 
       - name: 📝 Check types
-        # if: ${{ matrix.config.python-version != '3.9' }}
-        working-directory: ./python-package
-        run: make check-types
+        run: make py-check-types
 
       - name: 📐 Check formatting
-        working-directory: ./python-package
-        run: make check-format
+        run: make py-check-format

@@ -12,7 +12,7 @@ jobs:
     name: Build and release Python package
     runs-on: ubuntu-latest
 
-    if: startsWith(github.ref, 'refs/tags/py-v')
+    if: startsWith(github.ref, 'refs/tags/py/v')
 
     environment:
       name: pypi
@@ -28,28 +28,23 @@ jobs:
         uses: astral-sh/setup-uv@v3
 
       - name: 🐍 Set up Python ${{ env.PYTHON_VERSION }}
-        working-directory: ./pkg-py
         run: uv python install ${{ env.PYTHON_VERSION }}
 
       - name: 📦 Install the project
-        working-directory: ./pkg-py
-        run: uv sync --python ${{ env.PYTHON_VERSION }} --all-extras
+        run: make py-setup
 
       #   - name: 🧪 Check tests
-      #     working-directory: ./pkg-py
-      #     run: make check-tests
-
+      #     run: make py-check-tests
       - name: 📝 Check types
         working-directory: ./pkg-py
-        run: make check-types
+        run: make py-check-types
 
       - name: 📐 Check formatting
         working-directory: ./pkg-py
-        run: make check-format
-
+        run: make py-check-format
       - name: 🧳 Build package
         working-directory: ./pkg-py
-        run: make build
+        run: make py-build
 
       # TODO: https://pypi.org/manage/project/querychat/settings/publishing/
       - name: 🚢 Publish release on PyPI

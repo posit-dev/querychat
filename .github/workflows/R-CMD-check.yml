@@ -12,10 +12,10 @@ on:
 name: Package checks
 
 jobs:
-  website:
-    uses: rstudio/shiny-workflows/.github/workflows/website.yaml@v1
-    with:
-      working-directory: ./pkg-r
+  # website:
+  #   uses: rstudio/shiny-workflows/.github/workflows/website.yaml@v1
+  #   with:
+  #     working-directory: ./pkg-r
   routine:
     uses: rstudio/shiny-workflows/.github/workflows/routine.yaml@v1
     with:

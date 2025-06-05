@@ -18,8 +18,9 @@ dependencies = [
     "htmltools",
     "chatlas",
     "narwhals",
+    "chevron",
+    "sqlalchemy>=2.0.0" # Using 2.0+ for improved type hints and API
 ]
-
 classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3.8",

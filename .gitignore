@@ -2,6 +2,8 @@ __pycache__/
 animation.screenflow/
 README_files/
 README.html
+.DS_Store
+python-package/examples/titanic.db
 .quarto
 
 # Byte-compiled / optimized / DLL files

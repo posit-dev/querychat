@@ -193,10 +193,10 @@ class SQLAlchemySource:
         select_parts = []
         numeric_columns = []
         text_columns = []
-        
+
         for col in columns:
-            col_name = col['name']
-            
+            col_name = col["name"]
+
             # Check if column is numeric
             if isinstance(
                 col["type"],
@@ -212,24 +212,30 @@ class SQLAlchemySource:
                 ),
             ):
                 numeric_columns.append(col_name)
-                select_parts.extend([
-                    f"MIN({col_name}) as {col_name}_min",
-                    f"MAX({col_name}) as {col_name}_max"
-                ])
-            
+                select_parts.extend(
+                    [
+                        f"MIN({col_name}) as {col_name}_min",
+                        f"MAX({col_name}) as {col_name}_max",
+                    ]
+                )
+
             # Check if column is text/string
             elif isinstance(
                 col["type"],
                 (sqltypes.String, sqltypes.Text, sqltypes.Enum),
             ):
                 text_columns.append(col_name)
-                select_parts.append(f"COUNT(DISTINCT {col_name}) as {col_name}_distinct_count")
+                select_parts.append(
+                    f"COUNT(DISTINCT {col_name}) as {col_name}_distinct_count"
+                )
 
         # Execute single query to get all statistics
         column_stats = {}
         if select_parts:
             try:
-                stats_query = text(f"SELECT {', '.join(select_parts)} FROM {self._table_name}")
+                stats_query = text(
+                    f"SELECT {', '.join(select_parts)} FROM {self._table_name}"
+                )
                 with self._get_connection() as conn:
                     result = conn.execute(stats_query).fetchone()
                     if result:
@@ -243,11 +249,13 @@ class SQLAlchemySource:
         text_cols_to_query = []
         for col_name in text_columns:
             distinct_count_key = f"{col_name}_distinct_count"
-            if (distinct_count_key in column_stats and 
-                column_stats[distinct_count_key] and 
-                column_stats[distinct_count_key] <= categorical_threshold):
+            if (
+                distinct_count_key in column_stats
+                and column_stats[distinct_count_key]
+                and column_stats[distinct_count_key] <= categorical_threshold
+            ):
                 text_cols_to_query.append(col_name)
-        
+
         # Get categorical values in a single query if needed
         if text_cols_to_query:
             try:
@@ -259,7 +267,7 @@ class SQLAlchemySource:
                         f"FROM {self._table_name} WHERE {col_name} IS NOT NULL "
                         f"GROUP BY {col_name}"
                     )
-                
+
                 if union_parts:
                     categorical_query = text(" UNION ALL ".join(union_parts))
                     with self._get_connection() as conn:
@@ -274,7 +282,7 @@ class SQLAlchemySource:
 
         # Build schema description using collected statistics
         for col in columns:
-            col_name = col['name']
+            col_name = col["name"]
             sql_type = self._get_sql_type_name(col["type"])
             column_info = [f"- {col_name} ({sql_type})"]
 
@@ -282,9 +290,15 @@ class SQLAlchemySource:
             if col_name in numeric_columns:
                 min_key = f"{col_name}_min"
                 max_key = f"{col_name}_max"
-                if (min_key in column_stats and max_key in column_stats and
-                    column_stats[min_key] is not None and column_stats[max_key] is not None):
-                    column_info.append(f"  Range: {column_stats[min_key]} to {column_stats[max_key]}")
+                if (
+                    min_key in column_stats
+                    and max_key in column_stats
+                    and column_stats[min_key] is not None
+                    and column_stats[max_key] is not None
+                ):
+                    column_info.append(
+                        f"  Range: {column_stats[min_key]} to {column_stats[max_key]}"
+                    )
 
             # Add categorical values for text columns
             elif col_name in categorical_values:

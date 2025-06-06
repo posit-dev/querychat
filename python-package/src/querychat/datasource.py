@@ -1,13 +1,15 @@
 from __future__ import annotations
 
-from typing import ClassVar, Protocol
+from typing import TYPE_CHECKING, ClassVar, Protocol
 
 import duckdb
 import narwhals as nw
 import pandas as pd
 from sqlalchemy import inspect, text
-from sqlalchemy.engine import Connection, Engine
 from sqlalchemy.sql import sqltypes
+
+if TYPE_CHECKING:
+    from sqlalchemy.engine import Connection, Engine
 
 
 class DataSource(Protocol):
@@ -176,7 +178,7 @@ class SQLAlchemySource:
         if not inspector.has_table(table_name):
             raise ValueError(f"Table '{table_name}' not found in database")
 
-    def get_schema(self, *, categorical_threshold: int) -> str:
+    def get_schema(self, *, categorical_threshold: int) -> str:  # noqa: PLR0912
         """
         Generate schema information from database table.
 
@@ -216,7 +218,7 @@ class SQLAlchemySource:
                     [
                         f"MIN({col_name}) as {col_name}_min",
                         f"MAX({col_name}) as {col_name}_max",
-                    ]
+                    ],
                 )
 
             # Check if column is text/string
@@ -226,7 +228,7 @@ class SQLAlchemySource:
             ):
                 text_columns.append(col_name)
                 select_parts.append(
-                    f"COUNT(DISTINCT {col_name}) as {col_name}_distinct_count"
+                    f"COUNT(DISTINCT {col_name}) as {col_name}_distinct_count",
                 )
 
         # Execute single query to get all statistics
@@ -234,14 +236,14 @@ class SQLAlchemySource:
         if select_parts:
             try:
                 stats_query = text(
-                    f"SELECT {', '.join(select_parts)} FROM {self._table_name}"
+                    f"SELECT {', '.join(select_parts)} FROM {self._table_name}",  # noqa: S608
                 )
                 with self._get_connection() as conn:
                     result = conn.execute(stats_query).fetchone()
                     if result:
                         # Convert result to dict for easier access
                         column_stats = dict(zip(result._fields, result))
-            except Exception:
+            except Exception:  # noqa: S110
                 pass  # Fall back to no statistics if query fails
 
         # Get categorical values for text columns that are below threshold
@@ -260,13 +262,12 @@ class SQLAlchemySource:
         if text_cols_to_query:
             try:
                 # Build UNION query for all categorical columns
-                union_parts = []
-                for col_name in text_cols_to_query:
-                    union_parts.append(
-                        f"SELECT '{col_name}' as column_name, {col_name} as value "
-                        f"FROM {self._table_name} WHERE {col_name} IS NOT NULL "
-                        f"GROUP BY {col_name}"
-                    )
+                union_parts = [
+                    f"SELECT '{col_name}' as column_name, {col_name} as value "  # noqa: S608
+                    f"FROM {self._table_name} WHERE {col_name} IS NOT NULL "
+                    f"GROUP BY {col_name}"
+                    for col_name in text_cols_to_query
+                ]
 
                 if union_parts:
                     categorical_query = text(" UNION ALL ".join(union_parts))
@@ -277,7 +278,7 @@ class SQLAlchemySource:
                             if col_name not in categorical_values:
                                 categorical_values[col_name] = []
                             categorical_values[col_name].append(str(value))
-            except Exception:
+            except Exception:  # noqa: S110
                 pass  # Skip categorical values if query fails
 
         # Build schema description using collected statistics
@@ -297,7 +298,7 @@ class SQLAlchemySource:
                     and column_stats[max_key] is not None
                 ):
                     column_info.append(
-                        f"  Range: {column_stats[min_key]} to {column_stats[max_key]}"
+                        f"  Range: {column_stats[min_key]} to {column_stats[max_key]}",
                     )
 
             # Add categorical values for text columns
@@ -334,9 +335,9 @@ class SQLAlchemySource:
             The complete dataset as a pandas DataFrame
 
         """
-        return self.execute_query(f"SELECT * FROM {self._table_name}")
+        return self.execute_query(f"SELECT * FROM {self._table_name}")  # noqa: S608
 
-    def _get_sql_type_name(self, type_: sqltypes.TypeEngine) -> str:
+    def _get_sql_type_name(self, type_: sqltypes.TypeEngine) -> str:  # noqa: PLR0911
         """Convert SQLAlchemy type to SQL type name."""
         if isinstance(type_, sqltypes.Integer):
             return "INTEGER"

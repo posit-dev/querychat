@@ -126,14 +126,12 @@ class QueryChat:
         backwards compatibility only; new code should use the attributes
         directly instead.
         """
-        if key == "chat":
-            return self.chat
-        elif key == "sql":
-            return self.sql
-        elif key == "title":
-            return self.title
-        elif key == "df":
-            return self.df
+        return {
+            "chat": self.chat,
+            "sql": self.sql,
+            "title": self.title,
+            "df": self.df,
+        }.get(key)
 
 
 def system_prompt(

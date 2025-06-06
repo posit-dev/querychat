@@ -256,7 +256,8 @@ class SQLAlchemySource:
                 for col_name in text_cols_to_query:
                     union_parts.append(
                         f"SELECT '{col_name}' as column_name, {col_name} as value "
-                        f"FROM {self._table_name} WHERE {col_name} IS NOT NULL"
+                        f"FROM {self._table_name} WHERE {col_name} IS NOT NULL "
+                        f"GROUP BY {col_name}"
                     )
                 
                 if union_parts:

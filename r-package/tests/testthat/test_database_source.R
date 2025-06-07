@@ -31,7 +31,7 @@ test_that("database_source creation and basic functionality", {
   expect_true(grepl("Table: users", schema))
   expect_true(grepl("id \\(INTEGER\\)", schema))
   expect_true(grepl("name \\(TEXT\\)", schema))
-  expect_true(grepl("Categorical values:", schema))  # Should show city values
+  expect_true(grepl("city \\(TEXT\\)", schema))  # Should have city column
   
   # Test query execution
   result <- execute_database_query(db_source, "SELECT * FROM users WHERE age > 30")

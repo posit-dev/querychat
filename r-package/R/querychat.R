@@ -195,8 +195,10 @@ querychat_ui <- function(id) {
 #'
 #' - `sql`: A reactive that returns the current SQL query.
 #' - `title`: A reactive that returns the current title.
-#' - `df`: A reactive that returns the data frame, filtered and sorted by the
-#'   current SQL query.
+#' - `df`: A reactive that returns the filtered data. For data frame sources,
+#'   this returns a data.frame. For database sources, this returns a lazy
+#'   dbplyr tbl that can be further manipulated with dplyr verbs before
+#'   calling collect() to materialize the results.
 #' - `chat`: The [ellmer::Chat] object that powers the chat interface.
 #'
 #' By convention, this object should be named `querychat_config`.
@@ -220,15 +222,21 @@ querychat_server <- function(id, querychat_config) {
     filtered_df <- shiny::reactive({
       if (current_query() == "") {
         if (is_database_source) {
-          # For database sources, get all data when no filter is applied
+          # For database sources, return lazy tbl (no data transfer)
           get_database_data(db_source)
         } else {
           # For data frames, return the original data frame
           df
         }
       } else {
-        # Execute the current query against the appropriate connection
-        DBI::dbGetQuery(conn, current_query())
+        if (is_database_source) {
+          # For database sources, return lazy tbl with custom query
+          # Parse and create a lazy tbl from the SQL query
+          dplyr::tbl(conn, dplyr::sql(current_query()))
+        } else {
+          # For data frames, execute query and return result
+          DBI::dbGetQuery(conn, current_query())
+        }
       }
     })
 
@@ -279,15 +287,9 @@ querychat_server <- function(id, querychat_config) {
 
       tryCatch(
         {
-          # Return a lazy dbplyr tbl instead of executing the query
-          df <- DBI::dbGetQuery(conn, query)
-          if (inherits(df, "tbl_dbi")) {
-            # If we already have a tbl_dbi, just return it
-            return(df)
-          } else {
-            # Otherwise create a new tbl_dbi from the connection
-            return(DBI::dbGetQuery(conn, query) |> dbplyr::tbl())
-          }
+          # Execute the query and return the results as a data frame
+          # This tool is for answering questions, so we need actual results
+          DBI::dbGetQuery(conn, query)
         },
         error = function(e) {
           append_output("> Error: ", conditionMessage(e), "\n\n")

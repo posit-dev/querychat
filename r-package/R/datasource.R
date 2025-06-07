@@ -191,18 +191,18 @@ execute_database_query <- function(source, query) {
   DBI::dbGetQuery(source$conn, query)
 }
 
-#' Get all data from database source
+#' Get lazy database table reference
 #'
 #' @param source A database_source object
-#' @return A data frame with all data from the table
+#' @return A lazy dbplyr tbl object that can be further manipulated with dplyr verbs
 #' @export  
 get_database_data <- function(source) {
   if (!inherits(source, "database_source")) {
     rlang::abort("`source` must be a database_source object")
   }
   
-  query <- glue::glue_sql("SELECT * FROM {`source$table_name`}", .con = source$conn)
-  DBI::dbGetQuery(source$conn, query)
+  # Return a lazy tbl that can be chained with further dplyr operations
+  dplyr::tbl(source$conn, source$table_name)
 }
 
 # Helper function to map R classes to SQL types

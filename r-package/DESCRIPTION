@@ -24,7 +24,7 @@ Imports:
     purrr,
     rlang,
     shiny,
-    shinychat,
+    shinychat (>= 0.2.0),
     whisker,
     xtable
 Encoding: UTF-8

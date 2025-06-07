@@ -243,7 +243,7 @@ querychat_server <- function(id, querychat_config) {
     append_output <- function(...) {
       txt <- paste0(...)
       shinychat::chat_append_message(
-        session$ns("chat"),
+        "chat",
         list(role = "assistant", content = txt),
         chunk = TRUE,
         operation = "append",
@@ -324,11 +324,11 @@ querychat_server <- function(id, querychat_config) {
     # the chat model to see.
     if (!is.null(greeting)) {
       if (isTRUE(any(nzchar(greeting)))) {
-        shinychat::chat_append(session$ns("chat"), greeting)
+        shinychat::chat_append("chat", greeting)
       }
     } else {
       shinychat::chat_append(
-        session$ns("chat"),
+        "chat",
         chat$stream_async(
           "Please give me a friendly greeting. Include a few sample prompts in a two-level bulleted list."
         )
@@ -339,7 +339,7 @@ querychat_server <- function(id, querychat_config) {
     shiny::observeEvent(input$chat_user_input, {
       # Add user message to the chat history
       shinychat::chat_append(
-        session$ns("chat"),
+        "chat",
         chat$stream_async(input$chat_user_input)
       )
     })

@@ -13,10 +13,6 @@ conn <- dbConnect(RSQLite::SQLite(), temp_db)
 iris_data <- iris
 dbWriteTable(conn, "iris", iris_data, overwrite = TRUE)
 
-# Create another sample table
-mtcars_data <- mtcars[1:20, ]  # First 20 rows for demo
-dbWriteTable(conn, "mtcars", mtcars_data, overwrite = TRUE)
-
 # Disconnect temporarily - we'll reconnect in the app
 dbDisconnect(conn)
 
@@ -24,15 +20,14 @@ dbDisconnect(conn)
 greeting <- "
 # Welcome to the Database Query Assistant! 📊
 
-I can help you explore and analyze data from the connected database. 
-Ask me questions about the iris or mtcars datasets, and I'll generate 
-SQL queries to get the answers.
+I can help you explore and analyze the iris dataset from the connected database. 
+Ask me questions about the iris flowers, and I'll generate SQL queries to get the answers.
 
 Try asking:
 - Show me the first 10 rows of the iris dataset
 - What's the average sepal length by species?
-- Which cars have the highest miles per gallon?
-- Create a summary of the mtcars data grouped by number of cylinders
+- Which species has the largest petals?
+- Create a summary of measurements grouped by species
 "
 
 # Create database source
@@ -44,7 +39,7 @@ iris_source <- database_source(db_conn, "iris")
 querychat_config <- querychat_init(
   data_source = iris_source,
   greeting = greeting,
-  data_description = "This database contains the famous iris flower dataset with measurements of sepal and petal dimensions across three species, and a subset of the mtcars dataset with automobile specifications.",
+  data_description = "This database contains the famous iris flower dataset with measurements of sepal and petal dimensions across three species (setosa, versicolor, and virginica).",
   extra_instructions = "When showing results, always explain what the data represents and highlight any interesting patterns you observe."
 )
 
@@ -58,11 +53,11 @@ ui <- page_sidebar(
   h3("Current SQL Query"),
   verbatimTextOutput("sql_query"),
   br(),
-  h3("Available Tables"),
+  h3("Dataset Information"),
   p("This demo database contains:"),
   tags$ul(
     tags$li("iris - Famous iris flower dataset (150 rows, 5 columns)"),
-    tags$li("mtcars - Motor car specifications (20 rows, 11 columns)")
+    tags$li("Columns: Sepal.Length, Sepal.Width, Petal.Length, Petal.Width, Species")
   )
 )
 

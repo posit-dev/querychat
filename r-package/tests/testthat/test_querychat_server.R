@@ -1,6 +1,7 @@
 library(testthat)
 library(DBI)
 library(RSQLite)
+library(dplyr)
 library(dbplyr)
 library(querychat)
 
@@ -28,10 +29,23 @@ test_that("database source query functionality", {
   expect_equal(nrow(result), 2)  # Charlie and Eve
   expect_equal(result$name, c("Charlie", "Eve"))
   
-  # Test that we can get all data
+  # Test that we can get all data as lazy dbplyr table
   all_data <- get_database_data(db_source)
-  expect_s3_class(all_data, "data.frame")
-  expect_equal(nrow(all_data), 5)
+  expect_s3_class(all_data, c("tbl_SQLiteConnection", "tbl_dbi", "tbl_sql", "tbl_lazy", "tbl"))
+  
+  # Test that it can be chained with dbplyr operations before collect()
+  filtered_data <- all_data |>
+    dplyr::filter(age >= 30) |>
+    dplyr::select(name, age) |>
+    dplyr::collect()
+  
+  expect_s3_class(filtered_data, "data.frame")
+  expect_equal(nrow(filtered_data), 3)  # Bob, Charlie, Eve
+  
+  # Test that the lazy table can be collected to get all data
+  collected_data <- dplyr::collect(all_data)
+  expect_s3_class(collected_data, "data.frame")
+  expect_equal(nrow(collected_data), 5)
   expect_equal(ncol(all_data), 3)
   
   # Test ordering works

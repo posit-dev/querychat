@@ -1,6 +1,7 @@
 library(testthat)
 library(DBI)
 library(RSQLite)
+library(dplyr)
 library(querychat)
 
 test_that("database_source creation and basic functionality", {
@@ -38,10 +39,24 @@ test_that("database_source creation and basic functionality", {
   expect_s3_class(result, "data.frame")
   expect_equal(nrow(result), 2)  # Charlie and Eve
   
-  # Test get all data
+  # Test get all data returns lazy dbplyr table
   all_data <- get_database_data(db_source)
-  expect_s3_class(all_data, "data.frame")
-  expect_equal(nrow(all_data), 5)
+  expect_s3_class(all_data, c("tbl_SQLiteConnection", "tbl_dbi", "tbl_sql", "tbl_lazy", "tbl"))
+  
+  # Test that it can be chained with dbplyr operations before collect()
+  filtered_data <- all_data |>
+    dplyr::filter(age > 30) |>
+    dplyr::arrange(dplyr::desc(age)) |>
+    dplyr::collect()
+  
+  expect_s3_class(filtered_data, "data.frame")
+  expect_equal(nrow(filtered_data), 2)  # Charlie and Eve
+  expect_equal(filtered_data$name, c("Charlie", "Eve"))
+  
+  # Test that the lazy table can be collected to get all data
+  collected_data <- dplyr::collect(all_data)
+  expect_s3_class(collected_data, "data.frame")
+  expect_equal(nrow(collected_data), 5)
   expect_equal(ncol(all_data), 4)
   
   # Clean up
@@ -108,6 +123,78 @@ test_that("querychat_init with database_source", {
   expect_identical(config$db_source, db_source)
   expect_type(config$system_prompt, "character")
   expect_true(nchar(config$system_prompt) > 0)
+  
+  # Clean up
+  dbDisconnect(conn)
+  unlink(temp_db)
+})
+
+test_that("lazy dbplyr table behavior and chaining", {
+  # Create temporary SQLite database with more complex data
+  temp_db <- tempfile(fileext = ".db")
+  conn <- dbConnect(RSQLite::SQLite(), temp_db)
+  
+  # Create test table with varied data
+  test_data <- data.frame(
+    id = 1:10,
+    name = paste0("User", 1:10),
+    age = c(25, 30, 35, 28, 32, 45, 22, 38, 41, 29),
+    department = rep(c("Sales", "Engineering", "Marketing"), length.out = 10),
+    salary = c(50000, 75000, 85000, 60000, 80000, 120000, 45000, 90000, 110000, 65000),
+    stringsAsFactors = FALSE
+  )
+  
+  dbWriteTable(conn, "employees", test_data, overwrite = TRUE)
+  
+  # Create database source
+  db_source <- database_source(conn, "employees")
+  
+  # Test that get_database_data returns a lazy table
+  lazy_table <- get_database_data(db_source)
+  expect_s3_class(lazy_table, c("tbl_SQLiteConnection", "tbl_dbi", "tbl_sql", "tbl_lazy", "tbl"))
+  
+  # Test complex chaining operations before collect()
+  complex_result <- lazy_table |>
+    dplyr::filter(age > 30, salary > 70000) |>
+    dplyr::select(name, department, age, salary) |>
+    dplyr::arrange(dplyr::desc(salary)) |>
+    dplyr::mutate(senior = age > 35) |>
+    dplyr::collect()
+  
+  expect_s3_class(complex_result, "data.frame")
+  expect_true(nrow(complex_result) > 0)
+  expect_true(all(complex_result$age > 30))
+  expect_true(all(complex_result$salary > 70000))
+  expect_true("senior" %in% names(complex_result))
+  
+  # Test grouping and summarizing operations
+  summary_result <- lazy_table |>
+    dplyr::group_by(department) |>
+    dplyr::summarise(
+      avg_age = mean(age, na.rm = TRUE),
+      avg_salary = mean(salary, na.rm = TRUE),
+      count = dplyr::n(),
+      .groups = "drop"
+    ) |>
+    dplyr::collect()
+  
+  expect_s3_class(summary_result, "data.frame")
+  expect_equal(nrow(summary_result), 3)  # Three departments
+  expect_true(all(c("department", "avg_age", "avg_salary", "count") %in% names(summary_result)))
+  
+  # Test that the lazy table can be reused for different operations
+  young_employees <- lazy_table |>
+    dplyr::filter(age < 30) |>
+    dplyr::collect()
+  
+  senior_employees <- lazy_table |>
+    dplyr::filter(age >= 40) |>
+    dplyr::collect()
+  
+  expect_s3_class(young_employees, "data.frame")
+  expect_s3_class(senior_employees, "data.frame")
+  expect_true(all(young_employees$age < 30))
+  expect_true(all(senior_employees$age >= 40))
   
   # Clean up
   dbDisconnect(conn)

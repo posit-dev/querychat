@@ -88,3 +88,48 @@ df_to_schema <- function(
   schema <- c(schema, unlist(column_info))
   return(paste(schema, collapse = "\n"))
 }
+
+#' Create a system prompt for the chat model using database source
+#'
+#' This function generates a system prompt for the chat model based on a database
+#' source's schema and optional additional context and instructions.
+#'
+#' @param db_source A database_source object to generate schema information from.
+#' @param data_description Optional description of the data, in plain text or Markdown format.
+#' @param extra_instructions Optional additional instructions for the chat model, in plain text or Markdown format.
+#'
+#' @return A string containing the system prompt for the chat model.
+#'
+#' @export
+querychat_system_prompt_database <- function(
+  db_source,
+  data_description = NULL,
+  extra_instructions = NULL
+) {
+  if (!inherits(db_source, "database_source")) {
+    rlang::abort("`db_source` must be a database_source object")
+  }
+  
+  schema <- get_database_schema(db_source)
+
+  if (!is.null(data_description)) {
+    data_description <- paste(data_description, collapse = "\n")
+  }
+  if (!is.null(extra_instructions)) {
+    extra_instructions <- paste(extra_instructions, collapse = "\n")
+  }
+
+  # Read the prompt file
+  prompt_path <- system.file("prompt", "prompt.md", package = "querychat")
+  prompt_content <- readLines(prompt_path, warn = FALSE)
+  prompt_text <- paste(prompt_content, collapse = "\n")
+
+  whisker::whisker.render(
+    prompt_text,
+    list(
+      schema = schema,
+      data_description = data_description,
+      extra_instructions = extra_instructions
+    )
+  )
+}

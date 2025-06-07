@@ -5,23 +5,27 @@
 \title{Call this once outside of any server function}
 \usage{
 querychat_init(
-  df,
-  tbl_name = deparse(substitute(df)),
+  data_source = NULL,
+  df = NULL,
+  tbl_name = NULL,
   greeting = NULL,
   data_description = NULL,
   extra_instructions = NULL,
   create_chat_func = purrr::partial(ellmer::chat_openai, model = "gpt-4o"),
-  system_prompt = querychat_system_prompt(df, tbl_name, data_description =
-    data_description, extra_instructions = extra_instructions)
+  system_prompt = NULL
 )
 }
 \arguments{
-\item{df}{A data frame.}
+\item{data_source}{Either a data frame or a database_source object created by
+\code{database_source()}. For backwards compatibility, \code{df} can also be used.}
+
+\item{df}{Deprecated. Use \code{data_source} instead. A data frame.}
 
 \item{tbl_name}{A string containing a valid table name for the data frame,
 that will appear in SQL queries. Ensure that it begins with a letter, and
 contains only letters, numbers, and underscores. By default, querychat will
-try to infer a table name using the name of the \code{df} argument.}
+try to infer a table name using the name of the \code{df} argument. Not used
+when \code{data_source} is a database_source object.}
 
 \item{greeting}{A string in Markdown format, containing the initial message
 to display to the user upon first loading the chatbot. If not provided, the

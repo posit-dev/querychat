@@ -56,7 +56,7 @@ def server(input, output, session):
     #    chat["df"]() reactive.
     @render.data_frame
     def data_table():
-        return chat["df"]()
+        return chat.df()
 
 
 # Create Shiny app
@@ -171,8 +171,8 @@ which you can then pass via:
 
 ```python
 querychat_config = querychat.init(
-    df=titanic,
-    table_name="titanic",
+    titanic,
+    "titanic",
     data_description=Path("data_description.md").read_text()
 )
 ```
@@ -185,8 +185,8 @@ You can add additional instructions of your own to the end of the system prompt,
 
 ```python
 querychat_config = querychat.init(
-    df=titanic,
-    table_name="titanic",
+    titanic,
+    "titanic",
     extra_instructions=[
         "You're speaking to a British audience--please use appropriate spelling conventions.",
         "Use lots of emojis! 😃 Emojis everywhere, 🌍 emojis forever. ♾️",
@@ -218,8 +218,8 @@ def my_chat_func(system_prompt: str) -> chatlas.Chat:
 my_chat_func = partial(chatlas.ChatAnthropic, model="claude-3-7-sonnet-latest")
 
 querychat_config = querychat.init(
-    df=titanic,
-    table_name="titanic",
+    titanic,
+    "titanic",
     create_chat_callback=my_chat_func
 )
 ```

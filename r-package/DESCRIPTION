@@ -33,5 +33,6 @@ RoxygenNote: 7.3.2
 Suggests: 
     DT,
     RSQLite,
+    shinytest2,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3

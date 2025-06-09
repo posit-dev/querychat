@@ -34,7 +34,7 @@ database_source <- function(conn, table_name, categorical_threshold = 20) {
   }
   
   if (!DBI::dbExistsTable(conn, table_name)) {
-    rlang::abort(glue::glue("Table '{table_name}' not found in database"))
+    rlang::abort(glue::glue("Table '{table_name}' not found in database. If you're using databricks, try setting the 'Catalog' and 'Schema' arguments to DBI::dbConnect"))
   }
   
   structure(

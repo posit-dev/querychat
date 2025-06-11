@@ -46,6 +46,7 @@ include = ["pkg-py/src/querychat", "pkg-py/LICENSE", "pkg-py/README.md"]
 [dependency-groups]
 dev = ["ruff>=0.6.5", "pyright>=1.1.401", "tox-uv>=1.11.4"]
 docs = ["quartodoc>=0.11.1"]
+examples = ["seaborn"]
 
 [tool.ruff]
 src = ["pkg-py/src/querychat"]

@@ -31,11 +31,6 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 
-[project.optional-dependencies]
-docs = [
-    "quartodoc",
-]
-
 [project.urls]
 Homepage = "https://github.com/posit-dev/querychat" # TODO update when we have docs
 Repository = "https://github.com/posit-dev/querychat"
@@ -48,8 +43,9 @@ packages = ["pkg-py/src/querychat"]
 [tool.hatch.build.targets.sdist]
 include = ["pkg-py/src/querychat", "pkg-py/LICENSE", "pkg-py/README.md"]
 
-[tool.uv]
-dev-dependencies = ["ruff>=0.6.5", "pyright>=1.1.401", "tox-uv>=1.11.4"]
+[dependency-groups]
+dev = ["ruff>=0.6.5", "pyright>=1.1.401", "tox-uv>=1.11.4"]
+docs = ["quartodoc>=0.11.1"]
 
 [tool.ruff]
 src = ["pkg-py/src/querychat"]

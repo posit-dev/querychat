@@ -1,8 +1,7 @@
 ---
 pagetitle: "Get Started"
+title: "querychat: Chat with Shiny apps (Python)"
 ---
-
-# querychat: Chat with Shiny apps (Python)
 
 Imagine typing questions like these directly into your Shiny dashboard, and seeing the results in realtime:
 

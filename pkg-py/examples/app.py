@@ -6,13 +6,16 @@ import querychat as qc
 
 titanic = load_dataset("titanic")
 
-# 1. Configure querychat. This is where you specify the dataset and can also
+# 1. Configure querychat.
+#    This is where you specify the dataset and can also
 #    override options like the greeting message, system prompt, model, etc.
 
 
 def use_github_models(system_prompt: str) -> chatlas.Chat:
+    # GitHub models give us free rate-limited access to the latest LLMs
+    # you will need to have GITHUB_PAT defined in your environment
     return chatlas.ChatGithub(
-        model="gpt-4o",
+        model="gpt-4.1",
         system_prompt=system_prompt,
     )
 
@@ -20,7 +23,6 @@ def use_github_models(system_prompt: str) -> chatlas.Chat:
 querychat_config = qc.init(
     data_source=titanic,
     table_name="titanic",
-    greeting="Hello, welcome to querychat! Ask me about your data.",
     create_chat_callback=use_github_models,
 )
 
@@ -40,7 +42,7 @@ def server(input, output, session):
     chat = qc.server("chat", querychat_config)
 
     # 4. Use the filtered/sorted data frame anywhere you wish, via the
-    #    chat["df"]() reactive.
+    #    chat.df() reactive.
     @render.data_frame
     def data_table():
         return chat.df()

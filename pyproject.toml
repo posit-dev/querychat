@@ -31,6 +31,11 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 
+[project.optional-dependencies]
+docs = [
+    "quartodoc",
+]
+
 [project.urls]
 Homepage = "https://github.com/posit-dev/querychat" # TODO update when we have docs
 Repository = "https://github.com/posit-dev/querychat"

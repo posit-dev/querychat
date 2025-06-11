@@ -165,39 +165,39 @@ py-format: ## [py] Format python code
 # 	@echo "📸 Updating pytest snapshots"
 # 	uv run pytest --snapshot-update
 
-# .PHONY: py-docs
-# py-docs: py-docs-api py-docs-render ## [py] Build python docs
+.PHONY: py-docs
+py-docs: py-docs-api py-docs-render ## [py] Build python docs
 
-# .PHONY: py-docs-render
-# py-docs-render:  ## [py] Render python docs
-# 	@echo "📖 Rendering python docs with quarto"
-# 	@$(eval export IN_QUARTODOC=true)
-# 	${QUARTO_PATH} render pkg-py/docs
+.PHONY: py-docs-render
+py-docs-render:  ## [py] Render python docs
+	@echo "📖 Rendering python docs with quarto"
+	@$(eval export IN_QUARTODOC=true)
+	${QUARTO_PATH} render pkg-py/docs
 
-# .PHONY: py-docs-preview
-# py-docs-preview:  ## [py] Preview python docs
-# 	@echo "📖 Rendering python docs with quarto"
-# 	@$(eval export IN_QUARTODOC=true)
-# 	${QUARTO_PATH} preview pkg-py/docs
+.PHONY: py-docs-preview
+py-docs-preview:  ## [py] Preview python docs
+	@echo "📖 Rendering python docs with quarto"
+	@$(eval export IN_QUARTODOC=true)
+	${QUARTO_PATH} preview pkg-py/docs
 
-# .PHONY: py-docs-api
-# py-docs-api:  ## [py] Update python API docs
-# 	@echo "📖 Generating python docs with quartodoc"
-# 	@$(eval export IN_QUARTODOC=true)
-# 	cd pkg-py/docs && uv run quartodoc build
-# 	cd pkg-py/docs && uv run quartodoc interlinks
+.PHONY: py-docs-api
+py-docs-api:  ## [py] Update python API docs
+	@echo "📖 Generating python docs with quartodoc"
+	@$(eval export IN_QUARTODOC=true)
+	cd pkg-py/docs && uv run quartodoc build
+	cd pkg-py/docs && uv run quartodoc interlinks
 
-# .PHONY: py-docs-api-watch
-# py-docs-api-watch:  ## [py] Update python docs
-# 	@echo "📖 Generating python docs with quartodoc"
-# 	@$(eval export IN_QUARTODOC=true)
-# 	uv run quartodoc build --config pkg-py/docs/_quarto.yml --watch
+.PHONY: py-docs-api-watch
+py-docs-api-watch:  ## [py] Update python docs
+	@echo "📖 Generating python docs with quartodoc"
+	@$(eval export IN_QUARTODOC=true)
+	uv run quartodoc build --config pkg-py/docs/_quarto.yml --watch
 
-# .PHONY: py-docs-clean
-# py-docs-clean:   ## [py] Clean python docs
-# 	@echo "🧹 Cleaning python docs"
-# 	rm -r pkg-py/docs/api
-# 	find pkg-py/docs/py -name '*.quarto_ipynb' -delete
+.PHONY: py-docs-clean
+py-docs-clean:   ## [py] Clean python docs
+	@echo "🧹 Cleaning python docs"
+	rm -r pkg-py/docs/api
+	find pkg-py/docs/py -name '*.quarto_ipynb' -delete
 
 .PHONY: py-build
 py-build:   ## [py] Build python package

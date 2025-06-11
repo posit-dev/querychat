@@ -1,0 +1,84 @@
+project:
+  type: website
+  output-dir: ../../docs/py
+
+website:
+  title: "querychat"
+  site-url: https://posit-dev.github.io/querychat/py
+  description: Chat with your data in Shiny apps
+
+  bread-crumbs: true
+  open-graph: true
+  twitter-card: true
+
+  repo-url: https://github.com/posit-dev/querychat/
+  repo-actions: [issue, edit]
+  repo-subdir: pkg-py/docs
+
+  page-footer:
+    left: |
+      Proudly supported by
+      [![](https://posit.co/wp-content/uploads/2024/06/Posit-Logos-2024_horiz-full-color.svg){fig-alt="Posit" width=65px}](https://posit.co)
+
+  navbar:
+    left:
+      - text: Get Started
+        href: index.qmd
+      - text: API Reference
+        href: reference/index.qmd
+
+    tools:
+      - icon: github
+        menu:
+          - text: Source code
+            href:  https://github.com/posit-dev/querychat/pkg-py
+          - text: Report a bug
+            href:  https://github.com/posit-dev/querychat/issues/new
+
+
+format:
+  html:
+    theme: [brand]
+    highlight-style: github
+    toc: true
+
+lightbox: auto
+
+metadata-files:
+  - reference/_sidebar.yml
+
+quartodoc:
+  package: querychat
+
+  sidebar: reference/_sidebar.yml
+  css: reference/_styles-quartodoc.css
+
+  sections:
+    - title: Shiny Core
+      desc: Functions to inspect docstrings.
+      options:
+        signature_name: relative
+        include_imports: false
+        include_inherited: false
+        include_attributes: true
+        include_classes: true
+        include_functions: true
+      contents:
+        - init
+        - server
+        - sidebar
+        #- ui # KeyError: 'shiny' _griffe.exceptions.AliasResolutionError: Could not resolve alias querychat.querychat.ui pointing at shiny.ui (in /Users/danielchen/git/rstudio/querychat/pkg-py/src/querychat/querychat.py:15)
+
+interlinks:
+  fast: true
+  sources:
+    pydantic:
+      url: https://docs.pydantic.dev/latest/
+    python:
+      url: https://docs.python.org/3/
+
+editor:
+  render-on-save: true
+  markdown:
+    canonical: true
+    wrap: sentence

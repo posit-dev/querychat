@@ -195,7 +195,8 @@ This would use Claude 3.7 Sonnet instead, which would require you to provide an 
 
 ## Complete example
 
-For a complete working example, see the [examples/app.py](examples/app.py) file in the repository. This example includes:
+For a complete working example, see the [examples/app-dataframe.py](examples/app-dataframe.py) file in the repository.
+This example includes:
 
 - Loading a dataset
 - Reading greeting and data description from files

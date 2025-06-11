@@ -5,6 +5,7 @@ README.html
 .DS_Store
 python-package/examples/titanic.db
 .quarto
+*.db
 
 docs/r
 docs/py

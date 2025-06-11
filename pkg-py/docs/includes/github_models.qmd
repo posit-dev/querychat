@@ -1,0 +1,15 @@
+<!--
+text for talking about using a GitHub Model. Most likely this text is in a callout
+-->
+
+This example does not use the default OpenAI model directly from OpenAI,
+which would require you to create an OpenAI API key and save it as an environment variable named `OPENAI_API_KEY`.
+Instead we are using [GitHub Models](https://github.com/marketplace/models)
+as a free way to access the latest LLMs, with a [rate-limit](https://docs.github.com/en/github-models/use-github-models/prototyping-with-ai-models#rate-limits).
+You can follow the instructions on the
+[GitHub Docs](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-personal-access-token-classic)
+or
+[Axure AI Demo](https://github.com/Azure-Samples/python-ai-agent-frameworks-demos/tree/main?tab=readme-ov-file#configuring-github-models)
+on creating a PAT.
+
+We suggest you save your PAT into 2 environment variables: `GITHUB_TOKEN`, and `GITHUB_PAT`.

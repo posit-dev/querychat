@@ -27,8 +27,14 @@ First, you'll need access to an LLM that supports tools/function calling. queryc
 Here's a very minimal example that shows the three function calls you need to make:
 
 ```python
-{{< include examples/app.py >}}
+{{< include /../examples/app.py >}}
 ```
+
+:::{.callout-note}
+## GitHub Models and GitHub Personal Access Tokens
+
+{{< include /includes/github_models.qmd >}}
+:::
 
 ## How it works
 

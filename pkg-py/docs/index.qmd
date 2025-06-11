@@ -27,44 +27,7 @@ First, you'll need access to an LLM that supports tools/function calling. queryc
 Here's a very minimal example that shows the three function calls you need to make:
 
 ```python
-from pathlib import Path
-
-from seaborn import load_dataset
-from shiny import App, render, ui
-
-import querychat
-
-# 1. Configure querychat. This is where you specify the dataset and can also
-#    override options like the greeting message, system prompt, model, etc.
-titanic = load_dataset("titanic")
-querychat_config = querychat.init(titanic, "titanic")
-
-# Create UI
-app_ui = ui.page_sidebar(
-    # 2. Use querychat.sidebar(id) in a ui.page_sidebar.
-    #    Alternatively, use querychat.ui(id) elsewhere if you don't want your
-    #    chat interface to live in a sidebar.
-    querychat.sidebar("chat"),
-    ui.output_data_frame("data_table"),
-    title="querychat with Python",
-    fillable=True,
-)
-
-
-# Define server logic
-def server(input, output, session):
-    # 3. Create a querychat object using the config from step 1.
-    chat = querychat.server("chat", querychat_config)
-
-    # 4. Use the filtered/sorted data frame anywhere you wish, via the
-    #    chat["df"]() reactive.
-    @render.data_frame
-    def data_table():
-        return chat.df()
-
-
-# Create Shiny app
-app = App(app_ui, server)
+{{< include examples/app.py >}}
 ```
 
 ## How it works

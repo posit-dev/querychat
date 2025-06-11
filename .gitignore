@@ -9,6 +9,8 @@ python-package/examples/titanic.db
 docs/r
 docs/py
 
+!pkg-py/docs
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

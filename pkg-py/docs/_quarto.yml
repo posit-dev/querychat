@@ -67,6 +67,7 @@ quartodoc:
         - init
         - server
         - sidebar
+        - system_prompt
         #- ui # KeyError: 'shiny' _griffe.exceptions.AliasResolutionError: Could not resolve alias querychat.querychat.ui pointing at shiny.ui (in /Users/danielchen/git/rstudio/querychat/pkg-py/src/querychat/querychat.py:15)
 
 interlinks:

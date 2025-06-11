@@ -31,7 +31,7 @@ website:
       - icon: github
         menu:
           - text: Source code
-            href:  https://github.com/posit-dev/querychat/pkg-py
+            href:  https://github.com/posit-dev/querychat/tree/main/pkg-py
           - text: Report a bug
             href:  https://github.com/posit-dev/querychat/issues/new
 

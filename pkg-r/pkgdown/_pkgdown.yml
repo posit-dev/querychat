@@ -1,0 +1,39 @@
+url: https://posit-dev.github.io/querychat
+
+destination: "../docs/r"
+
+development:
+  mode: auto
+
+authors:
+  Posit Software, PBC:
+    href: https://www.posit.co
+    html: >-
+      <img src='https://www.tidyverse.org/posit-logo.svg' alt='Posit' height='16' width='62' style="margin-bottom: 3px;" />
+  Joe Cheng:
+    href: https://github.com/jcheng5
+  Carson Sievert:
+    href: https://cpsievert.me
+  Garrick Aden-Buie:
+    href: https://garrickadenbuie.com
+  Barret Schloerke:
+    href: https://schloerke.com/
+  Daniel Chen:
+    href: https://chendaniely.github.io
+
+template:
+  bootstrap: 5
+  light-switch: true
+  theme: github-light
+  theme-dark: github-dark
+  bslib:
+    brand: pkgdown/_brand.yml
+
+reference:
+- title: Chat interfaces
+  contents:
+  - querychat_init
+  - querychat_server
+  - querychat_sidebar
+  - querychat_system_prompt
+  - querychat_ui

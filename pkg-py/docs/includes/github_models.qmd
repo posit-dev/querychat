@@ -1,7 +1,3 @@
-<!--
-text for talking about using a GitHub Model. Most likely this text is in a callout
--->
-
 This example does not use the default OpenAI model directly from OpenAI,
 which would require you to create an OpenAI API key and save it as an environment variable named `OPENAI_API_KEY`.
 Instead we are using [GitHub Models](https://github.com/marketplace/models)

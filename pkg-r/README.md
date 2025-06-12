@@ -13,7 +13,7 @@ querychat is a drop-in component for Shiny that allows users to query a data fra
 ## Installation
 
 ```r
-pak::pak("posit-dev/querychat/r-package")
+pak::pak("posit-dev/querychat/pkg-r")
 ```
 
 ## How to use

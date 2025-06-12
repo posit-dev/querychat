@@ -6,9 +6,9 @@ build-backend = "hatchling.build"
 name = "querychat"
 version = "0.1.0"
 description = "Chat with your data using natural language"
-readme = "README.md"
+readme = "pkg-py/README.md"
 requires-python = ">=3.9"
-license = { file = "LICENSE" }
+license = { file = "pkg-py/LICENSE" }
 authors = [{ name = "Posit", email = "info@posit.co" }]
 dependencies = [
     "duckdb",
@@ -32,15 +32,16 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/posit-dev/querychat"
+Homepage = "https://github.com/posit-dev/querychat" # TODO update when we have docs
+Repository = "https://github.com/posit-dev/querychat"
 Issues = "https://github.com/posit-dev/querychat/issues"
-Source = "https://github.com/posit-dev/querychat/tree/main/python-package"
+Source = "https://github.com/posit-dev/querychat/tree/main/pkg-py"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/querychat"]
+packages = ["pkg-py/src/querychat"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src/querychat", "LICENSE", "README.md"]
+include = ["pkg-py/src/querychat", "pkg-py/LICENSE", "pkg-py/README.md"]
 
 [tool.uv]
 dev-dependencies = [
@@ -51,7 +52,7 @@ dev-dependencies = [
 ]
 
 [tool.ruff]
-src = ["src/querychat"]
+src = ["pkg-py/src/querychat"]
 exclude = [
     ".bzr",
     ".direnv",
@@ -79,7 +80,7 @@ exclude = [
     "node_modules",
     "site-packages",
     "venv",
-    "app.py",             # ignore examples for now
+    "app-*.py",             # ignore example apps for now
 ]
 
 line-length = 88
@@ -87,8 +88,6 @@ indent-width = 4
 
 target-version = "py39"
 
-# [tool.ruff.lint]
-# select = ['E', 'F', 'W', 'A', 'PLC', 'PLE', 'PLW', 'I']
 [tool.ruff.lint]
 extend-ignore = [
     "A002",    # Shadowing a built-in
@@ -105,6 +104,8 @@ extend-ignore = [
     "RET504",  # Unnecessary assignment to `{name}` before `return` statement
     "RET505",  # Unnecessary branch after `return` statement
     "UP007",   # Use `X | Y` for type annotations (or Optional[X])
+    # This package trusts the user
+    "S608", # Possible SQL injection vector through string-based query construction
     # TODO: Remove in the future, when we have docstrings.
     "D100", # Missing docstring in public module
     "D101", # Missing docstring in public class
@@ -170,7 +171,7 @@ docstring-code-format = true
 docstring-code-line-length = "dynamic"
 
 [tool.pyright]
-include = ["src/querychat"]
+include = ["pkg-py/src/querychat"]
 
 
 # For more tox testing usage (in addition to typing), see:

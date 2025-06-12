@@ -24,6 +24,8 @@ website:
     left:
       - text: Get Started
         href: index.qmd
+      - text: "Examples"
+        href: examples/index.qmd
       - text: API Reference
         href: reference/index.qmd
 
@@ -35,6 +37,22 @@ website:
           - text: Report a bug
             href:  https://github.com/posit-dev/querychat/issues/new
 
+
+  sidebar:
+    - id: examples
+      title: "Examples"
+      style: docked
+      type: light
+      background: light
+      foreground: dark
+      contents:
+      - href: examples/index.qmd
+      - section: "DataFrames"
+        contents:
+          - href: examples/pandas.qmd
+      - section: "Databases"
+        contents:
+          - href: examples/sqlite.qmd
 
 format:
   html:

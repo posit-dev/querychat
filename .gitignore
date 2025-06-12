@@ -244,6 +244,7 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+python-package/CLAUDE.md
 
 uv.lock
 _dev

@@ -125,19 +125,12 @@ class QueryChat:
         backwards compatibility only; new code should use the attributes
         directly instead.
         """
-        if key == "chat":  # noqa: SIM116
-            return self.chat
-        elif key == "sql":
-            return self.sql
-        elif key == "title":
-            return self.title
-        elif key == "df":
-            return self.df
-
-        raise KeyError(
-            f"`QueryChat` does not have a key `'{key}'`. "
-            "Use the attributes `chat`, `sql`, `title`, or `df` instead.",
-        )
+        return {
+            "chat": self.chat,
+            "sql": self.sql,
+            "title": self.title,
+            "df": self.df,
+        }.get(key)
 
 
 def system_prompt(

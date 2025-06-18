@@ -20,6 +20,11 @@
 #'   any additional instructions for the chat model. These will be appended at
 #'   the end of the system prompt. If a `system_prompt` argument is provided,
 #'   the `extra_instructions` argument will be ignored.
+#' @param prompt_path A string containing the path to a custom prompt file. If
+#'   NULL, the default prompt file in the package will be used. This file should
+#'   contain a template for the system prompt, with placeholders for the schema,
+#'   data description, and extra instructions. The default prompt file is
+#'   located in the `inst/prompt/` directory of the package.
 #' @param create_chat_func A function that takes a system prompt and returns a
 #'   chat object. The default uses `ellmer::chat_openai()`.
 #' @param system_prompt A string containing the system prompt for the chat model.
@@ -33,19 +38,20 @@
 #'
 #' @export
 querychat_init <- function(
-  df,
-  tbl_name = deparse(substitute(df)),
-  greeting = NULL,
-  data_description = NULL,
-  extra_instructions = NULL,
-  create_chat_func = purrr::partial(ellmer::chat_openai, model = "gpt-4o"),
-  system_prompt = querychat_system_prompt(
     df,
-    tbl_name,
-    data_description = data_description,
-    extra_instructions = extra_instructions
-  )
-) {
+    tbl_name = deparse(substitute(df)),
+    greeting = NULL,
+    data_description = NULL,
+    extra_instructions = NULL,
+    prompt_path = NULL,
+    create_chat_func = purrr::partial(ellmer::chat_openai, model = "gpt-4o"),
+    system_prompt = querychat_system_prompt(
+      df,
+      tbl_name,
+      data_description = data_description,
+      extra_instructions = extra_instructions,
+      prompt_path = prompt_path
+    )) {
   is_tbl_name_ok <- is.character(tbl_name) &&
     length(tbl_name) == 1 &&
     grepl("^[a-zA-Z][a-zA-Z0-9_]*$", tbl_name, perl = TRUE)

@@ -8,17 +8,18 @@
 #' @param data_description Optional description of the data, in plain text or Markdown format.
 #' @param extra_instructions Optional additional instructions for the chat model, in plain text or Markdown format.
 #' @param categorical_threshold The maximum number of unique values for a text column to be considered categorical.
+#' @param prompt_path Optional path to a custom prompt file. If NULL, the default prompt file in the package will be used.
 #'
 #' @return A string containing the system prompt for the chat model.
 #'
 #' @export
 querychat_system_prompt <- function(
-  df,
-  name,
-  data_description = NULL,
-  extra_instructions = NULL,
-  categorical_threshold = 10
-) {
+    df,
+    name,
+    data_description = NULL,
+    extra_instructions = NULL,
+    categorical_threshold = 10,
+    prompt_path = NULL) {
   schema <- df_to_schema(df, name, categorical_threshold)
 
   if (!is.null(data_description)) {
@@ -29,7 +30,12 @@ querychat_system_prompt <- function(
   }
 
   # Read the prompt file
-  prompt_path <- system.file("prompt", "prompt.md", package = "querychat")
+  if (is.null(prompt_path)) {
+    prompt_path <- system.file("prompt", "prompt.md", package = "querychat")
+  }
+  if (!file.exists(prompt_path)) {
+    stop("Prompt file not found at: ", prompt_path)
+  }
   prompt_content <- readLines(prompt_path, warn = FALSE)
   prompt_text <- paste(prompt_content, collapse = "\n")
 
@@ -44,10 +50,9 @@ querychat_system_prompt <- function(
 }
 
 df_to_schema <- function(
-  df,
-  name = deparse(substitute(df)),
-  categorical_threshold
-) {
+    df,
+    name = deparse(substitute(df)),
+    categorical_threshold) {
   schema <- c(paste("Table:", name), "Columns:")
 
   column_info <- lapply(names(df), function(column) {

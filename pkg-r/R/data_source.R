@@ -281,6 +281,34 @@ get_lazy_data.querychat_data_source <- function(source, query = NULL, ...) {
   
 }
 
+#' Get type information for a data source
+#'
+#' @param source A querychat_data_source object
+#' @param ... Additional arguments passed to methods
+#' @return A character string containing the type information
+#' @export
+get_db_type <- function(source, ...) {
+  UseMethod("get_db_type")
+}
+
+#' @export 
+get_db_type.data_frame_source <- function(source, ...) {
+  return("DuckDB")
+}
+
+#' @export 
+get_db_type.dbi_source <- function(source, ...){
+  conn <- source$conn
+  conn_info <- DBI::dbGetInfo(conn)
+  # default to 'POSIX' if dbms name not found
+  dbms_name <- purrr::pluck(conn_info, "dbms.name", .default = "POSIX")
+  # Special handling for known database types
+  if (inherits(conn, "SQLiteConnection")) {
+    return("SQLite")
+  }
+  # remove ' SQL', if exists (SQL is already in the prompt)
+  return(gsub(" SQL", "", dbms_name))
+}
 
 
 #' Create a system prompt for the data source
@@ -311,6 +339,9 @@ create_system_prompt.querychat_data_source <- function(source, data_description 
 
   # Get schema for the data source
   schema <- get_schema(source)
+
+  # Examine the data source and get the type for the prompt
+  db_type <- get_db_type(source)
 
   whisker::whisker.render(
     prompt_text,

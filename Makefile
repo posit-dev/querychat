@@ -7,21 +7,21 @@ PATH_PKG_R := pkg-r
 PATH_PKG_PY := pkg-py
 PATH_PKG_JS := js
 
-# .PHONY: install-quarto
-# install-quarto:
-# 	@echo "🔵 Installing quarto"
-# 	@if ! [ -z $(command -v qvm)]; then \
-# 		@echo "Error: qvm is not installed. Please visit https://github.com/dpastoor/qvm/releases/ to install it." >&2 \
-# 		exit 1; \
-# 	fi
-# 	qvm install v${QUARTO_VERSION}
-# 	@echo "🔹 Updating .vscode/settings.json"
-# 	@awk -v path="${QUARTO_PATH}" '/"quarto.path":/ {gsub(/"quarto.path": ".*"/, "\"quarto.path\": \"" path "\"")} 1' .vscode/settings.json > .vscode/settings.json.tmp && mv .vscode/settings.json.tmp .vscode/settings.json
-# 	@echo "🔹 Updating .github/workflows/quartodoc.yaml"
-# 	@awk -v ver="${QUARTO_VERSION}" '/QUARTO_VERSION:/ {gsub(/QUARTO_VERSION: .*/, "QUARTO_VERSION: " ver)} 1' .github/workflows/quartodoc.yaml > .github/workflows/quartodoc.yaml.tmp && mv .github/workflows/quartodoc.yaml.tmp .github/workflows/quartodoc.yaml
+.PHONY: install-quarto
+install-quarto:
+	@echo "🔵 Installing quarto"
+	@if ! [ -z $(command -v qvm)]; then \
+		@echo "Error: qvm is not installed. Please visit https://github.com/dpastoor/qvm/releases/ to install it." >&2 \
+		exit 1; \
+	fi
+	qvm install v${QUARTO_VERSION}
+	@echo "🔹 Updating .vscode/settings.json"
+	@awk -v path="${QUARTO_PATH}" '/"quarto.path":/ {gsub(/"quarto.path": ".*"/, "\"quarto.path\": \"" path "\"")} 1' .vscode/settings.json > .vscode/settings.json.tmp && mv .vscode/settings.json.tmp .vscode/settings.json
+	@echo "🔹 Updating .github/workflows/quartodoc.yaml"
+	@awk -v ver="${QUARTO_VERSION}" '/QUARTO_VERSION:/ {gsub(/QUARTO_VERSION: .*/, "QUARTO_VERSION: " ver)} 1' .github/workflows/quartodoc.yaml > .github/workflows/quartodoc.yaml.tmp && mv .github/workflows/quartodoc.yaml.tmp .github/workflows/quartodoc.yaml
 
-# .PHONY: docs
-# docs: r-docs-render py-docs-render ## [docs] Build the documentation
+.PHONY: docs
+docs: r-docs py-docs-render ## [docs] Build the documentation
 
 # .PHONY: docs-preview
 # docs-preview:  ## [docs] Preview the documentation

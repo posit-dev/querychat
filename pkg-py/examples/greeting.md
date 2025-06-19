@@ -1,4 +1,5 @@
-Hello! I'm here to assist you with analyzing the Titanic dataset. Here are some examples of what you can ask me to do:
+Hello! I'm here to assist you with analyzing the Titanic dataset.
+Here are some examples of what you can ask me to do:
 
 - **Filtering and Sorting:**
   - Show only passengers who boarded in Cherbourg.

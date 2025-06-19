@@ -33,7 +33,7 @@ dbDisconnect(conn)
 
 # Setup database source
 db_conn <- dbConnect(RSQLite::SQLite(), temp_db)
-iris_source <- database_source(db_conn, "iris")
+iris_source <- querychat_data_source(db_conn, "iris")
 
 # Configure querychat with mock
 querychat_config <- querychat_init(
@@ -106,7 +106,7 @@ test_that("database reactive functionality works correctly", {
   
   # Test database source creation
   db_conn <- dbConnect(RSQLite::SQLite(), temp_db)
-  iris_source <- database_source(db_conn, "iris")
+  iris_source <- querychat_data_source(db_conn, "iris")
   
   # Mock chat function
   mock_chat_func <- function(system_prompt) {
@@ -123,11 +123,11 @@ test_that("database reactive functionality works correctly", {
     create_chat_func = mock_chat_func
   )
   
-  expect_true(config$is_database_source)
-  expect_s3_class(config$db_source, "database_source")
+  expect_s3_class(config$data_source, "dbi_source")
+  expect_s3_class(config$data_source, "querychat_data_source")
   
-  # Test that get_database_data returns lazy table
-  lazy_data <- get_database_data(config$db_source)
+  # Test that get_lazy_data returns lazy table
+  lazy_data <- get_lazy_data(config$data_source)
   expect_s3_class(lazy_data, c("tbl_SQLiteConnection", "tbl_dbi", 
                                "tbl_sql", "tbl_lazy", "tbl"))
   
@@ -153,7 +153,7 @@ test_that("database reactive functionality works correctly", {
 })
 
 test_that("app example file exists and is valid R code", {
-  app_file <- system.file("../examples/app-database.R", package = "querychat")
+  app_file <- "../../examples/app-database.R"
   
   # Check file exists
   expect_true(file.exists(app_file))
@@ -164,7 +164,7 @@ test_that("app example file exists and is valid R code", {
   
   expect_true(grepl("library\\(shiny\\)", app_text))
   expect_true(grepl("library\\(querychat\\)", app_text))
-  expect_true(grepl("database_source", app_text))
+  expect_true(grepl("querychat_data_source", app_text))
   expect_true(grepl("querychat_init", app_text))
   expect_true(grepl("querychat_server", app_text))
   expect_true(grepl("shinyApp", app_text))

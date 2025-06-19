@@ -27,12 +27,14 @@ library(shiny)
 library(bslib)
 library(querychat)
 
-# 1. Configure querychat. This is where you specify the dataset and can also
-#    override options like the greeting message, system prompt, model, etc.
-querychat_config <- querychat_init(mtcars)
+# 1. Create a data source for querychat
+mtcars_source <- querychat_data_source(mtcars, tbl_name = "cars")
+
+# 2. Configure querychat with the data source
+querychat_config <- querychat_init(mtcars_source)
 
 ui <- page_sidebar(
-  # 2. Use querychat_sidebar(id) in a bslib::page_sidebar.
+  # 3. Use querychat_sidebar(id) in a bslib::page_sidebar.
   #    Alternatively, use querychat_ui(id) elsewhere if you don't want your
   #    chat interface to live in a sidebar.
   sidebar = querychat_sidebar("chat"),
@@ -41,17 +43,40 @@ ui <- page_sidebar(
 
 server <- function(input, output, session) {
 
-  # 3. Create a querychat object using the config from step 1.
+  # 4. Create a querychat object using the config from step 2.
   querychat <- querychat_server("chat", querychat_config)
 
   output$dt <- DT::renderDT({
-    # 4. Use the filtered/sorted data frame anywhere you wish, via the
+    # 5. Use the filtered/sorted data frame anywhere you wish, via the
     #    querychat$df() reactive.
     DT::datatable(querychat$df())
   })
 }
 
 shinyApp(ui, server)
+```
+
+## Using Database Sources
+
+In addition to data frames, querychat can connect to external databases via DBI:
+
+```r
+library(shiny)
+library(bslib)
+library(querychat)
+library(DBI)
+library(RSQLite)
+
+# 1. Connect to a database
+conn <- DBI::dbConnect(RSQLite::SQLite(), "path/to/database.db")
+
+# 2. Create a database data source for querychat
+db_source <- querychat_data_source(conn, "table_name")
+
+# 3. Configure querychat with the database source
+querychat_config <- querychat_init(db_source)
+
+# Then use querychat_config in your Shiny app as shown above
 ```
 
 ## How it works
@@ -76,7 +101,7 @@ querychat does not have direct access to the raw data; it can _only_ read or fil
 - **Transparency:** querychat always displays the SQL to the user, so it can be vetted instead of blindly trusted.
 - **Reproducibility:** The SQL query can be easily copied and reused.
 
-Currently, querychat uses DuckDB for its SQL engine. It's extremely fast and has a surprising number of [statistical functions](https://duckdb.org/docs/stable/sql/functions/aggregates.html#statistical-aggregates).
+Currently, querychat uses DuckDB for its SQL engine when working with data frames. For database sources, it uses the native SQL dialect of the connected database. DuckDB is extremely fast and has a surprising number of [statistical functions](https://duckdb.org/docs/stable/sql/functions/aggregates.html#statistical-aggregates).
 
 ## Customizing querychat
 
@@ -116,7 +141,7 @@ Alternatively, you can completely suppress the greeting by passing `greeting = "
 In LLM parlance, the _system prompt_ is the set of instructions and specific knowledge you want the model to use during a conversation. querychat automatically creates a system prompt which is comprised of:
 
 1. The basic set of behaviors the LLM must follow in order for querychat to work properly. (See `inst/prompt/prompt.md` if you're curious what this looks like.)
-2. The SQL schema of the data frame you provided.
+2. The SQL schema of the data source you provided.
 3. (Optional) Any additional description of the data you choose to provide.
 4. (Optional) Any additional instructions you want to use to guide querychat's behavior.
 
@@ -125,7 +150,7 @@ In LLM parlance, the _system prompt_ is the set of instructions and specific kno
 If you give querychat your dataset and nothing else, it will provide the LLM with the basic schema of your data:
 
 - Column names
-- DuckDB data type (integer, float, boolean, datetime, text)
+- SQL data type (integer, float, boolean, datetime, text)
 - For text columns with less than 10 unique values, we assume they are categorical variables and include the list of values
 - For integer and float columns, we include the range
 
@@ -158,8 +183,12 @@ performance for 32 automobiles (1973–74 models).
 which you can then pass via:
 
 ```r
+# Create data source first
+mtcars_source <- querychat_data_source(mtcars, tbl_name = "cars")
+
+# Then initialize with the data source and description
 querychat_config <- querychat_init(
-  mtcars,
+  data_source = mtcars_source,
   data_description = readLines("data_description.md")
 )
 ```
@@ -171,11 +200,18 @@ querychat doesn't need this information in any particular format; just put whate
 You can add additional instructions of your own to the end of the system prompt, by passing `extra_instructions` into `query_init`.
 
 ```r
-querychat_config <- querychat_init(mtcars, extra_instructions = c(
+# Create data source first
+mtcars_source <- querychat_data_source(mtcars, tbl_name = "cars")
+
+# Then initialize with instructions
+querychat_config <- querychat_init(
+  data_source = mtcars_source,
+  extra_instructions = c(
     "You're speaking to a British audience--please use appropriate spelling conventions.",
     "Use lots of emojis! 😃 Emojis everywhere, 🌍 emojis forever. ♾️",
     "Stay on topic, only talk about the data dashboard and refuse to answer other questions."
-))
+  )
+)
 ```
 
 You can also put these instructions in a separate file and use `readLines()` to load them, as we did for `data_description` above.
@@ -204,8 +240,12 @@ my_chat_func <- function(system_prompt) {
 library(ellmer)
 library(purrr)
 
+# Create data source first
+mtcars_source <- querychat_data_source(mtcars, tbl_name = "cars")
+
 # Option 2: Use partial
-querychat_config <- querychat_init(mtcars,
+querychat_config <- querychat_init(
+  data_source = mtcars_source,
   create_chat_func = purrr::partial(ellmer::chat_claude, model = "claude-3-7-sonnet-latest")
 )
 ```

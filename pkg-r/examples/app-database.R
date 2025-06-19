@@ -13,9 +13,6 @@ conn <- dbConnect(RSQLite::SQLite(), temp_db)
 iris_data <- iris
 dbWriteTable(conn, "iris", iris_data, overwrite = TRUE)
 
-# Disconnect temporarily - we'll reconnect in the app
-dbDisconnect(conn)
-
 # Define a custom greeting for the database app
 greeting <- "
 # Welcome to the Database Query Assistant! 📊
@@ -30,10 +27,8 @@ Try asking:
 - Create a summary of measurements grouped by species
 "
 
-# Create database source
-# Note: In a production app, you would use your actual database credentials
-db_conn <- dbConnect(RSQLite::SQLite(), temp_db)
-iris_source <- database_source(db_conn, "iris")
+# Create data source using querychat_data_source
+iris_source <- querychat_data_source(conn, table_name = "iris")
 
 # Configure querychat for database
 querychat_config <- querychat_init(
@@ -65,7 +60,13 @@ server <- function(input, output, session) {
   chat <- querychat_server("chat", querychat_config)
   
   output$data_table <- DT::renderDT({
-    chat$df()
+    df <- chat$df()
+    # Collect data from lazy tbl if needed
+    if (inherits(df, "tbl_lazy")) {
+      dplyr::collect(df)
+    } else {
+      df
+    }
   }, options = list(pageLength = 10, scrollX = TRUE))
   
   output$sql_query <- renderText({
@@ -79,8 +80,8 @@ server <- function(input, output, session) {
   
   # Clean up database connection when app stops
   session$onSessionEnded(function() {
-    if (dbIsValid(db_conn)) {
-      dbDisconnect(db_conn)
+    if (dbIsValid(conn)) {
+      dbDisconnect(conn)
     }
     if (file.exists(temp_db)) {
       unlink(temp_db)

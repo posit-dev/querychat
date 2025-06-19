@@ -5,9 +5,7 @@
 \title{Call this once outside of any server function}
 \usage{
 querychat_init(
-  data_source = NULL,
-  df = NULL,
-  tbl_name = NULL,
+  data_source,
   greeting = NULL,
   data_description = NULL,
   extra_instructions = NULL,
@@ -16,16 +14,12 @@ querychat_init(
 )
 }
 \arguments{
-\item{data_source}{Either a data frame or a database_source object created by
-\code{database_source()}. For backwards compatibility, \code{df} can also be used.}
-
-\item{df}{Deprecated. Use \code{data_source} instead. A data frame.}
-
-\item{tbl_name}{A string containing a valid table name for the data frame,
-that will appear in SQL queries. Ensure that it begins with a letter, and
-contains only letters, numbers, and underscores. By default, querychat will
-try to infer a table name using the name of the \code{df} argument. Not used
-when \code{data_source} is a database_source object.}
+\item{data_source}{A querychat_data_source object created by \code{querychat_data_source()}.
+To create a data source:
+\itemize{
+\item For data frame: \code{querychat_data_source(df, tbl_name = "my_table")}
+\item For database: \code{querychat_data_source(conn, "table_name")}
+}}
 
 \item{greeting}{A string in Markdown format, containing the initial message
 to display to the user upon first loading the chatbot. If not provided, the
@@ -46,7 +40,7 @@ the \code{extra_instructions} argument will be ignored.}
 chat object. The default uses \code{ellmer::chat_openai()}.}
 
 \item{system_prompt}{A string containing the system prompt for the chat model.
-The default uses \code{querychat_system_prompt()} to generate a generic prompt,
+The default uses \code{create_system_prompt()} to generate a generic prompt,
 which you can enhance via the \code{data_description} and \code{extra_instructions}
 arguments.}
 }

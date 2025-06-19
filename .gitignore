@@ -5,6 +5,12 @@ README.html
 .DS_Store
 python-package/examples/titanic.db
 .quarto
+*.db
+
+docs/r
+docs/py
+
+!pkg-py/docs
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -237,7 +243,7 @@ vignettes/*.pdf
 .Renviron
 
 # pkgdown site
-docs/
+#docs/
 
 # translation temp files
 po/*~
@@ -247,3 +253,5 @@ rsconnect/
 
 uv.lock
 _dev
+
+/.quarto/

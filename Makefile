@@ -7,21 +7,21 @@ PATH_PKG_R := pkg-r
 PATH_PKG_PY := pkg-py
 PATH_PKG_JS := js
 
-# .PHONY: install-quarto
-# install-quarto:
-# 	@echo "🔵 Installing quarto"
-# 	@if ! [ -z $(command -v qvm)]; then \
-# 		@echo "Error: qvm is not installed. Please visit https://github.com/dpastoor/qvm/releases/ to install it." >&2 \
-# 		exit 1; \
-# 	fi
-# 	qvm install v${QUARTO_VERSION}
-# 	@echo "🔹 Updating .vscode/settings.json"
-# 	@awk -v path="${QUARTO_PATH}" '/"quarto.path":/ {gsub(/"quarto.path": ".*"/, "\"quarto.path\": \"" path "\"")} 1' .vscode/settings.json > .vscode/settings.json.tmp && mv .vscode/settings.json.tmp .vscode/settings.json
-# 	@echo "🔹 Updating .github/workflows/quartodoc.yaml"
-# 	@awk -v ver="${QUARTO_VERSION}" '/QUARTO_VERSION:/ {gsub(/QUARTO_VERSION: .*/, "QUARTO_VERSION: " ver)} 1' .github/workflows/quartodoc.yaml > .github/workflows/quartodoc.yaml.tmp && mv .github/workflows/quartodoc.yaml.tmp .github/workflows/quartodoc.yaml
+.PHONY: install-quarto
+install-quarto:
+	@echo "🔵 Installing quarto"
+	@if ! [ -z $(command -v qvm)]; then \
+		@echo "Error: qvm is not installed. Please visit https://github.com/dpastoor/qvm/releases/ to install it." >&2 \
+		exit 1; \
+	fi
+	qvm install v${QUARTO_VERSION}
+	@echo "🔹 Updating .vscode/settings.json"
+	@awk -v path="${QUARTO_PATH}" '/"quarto.path":/ {gsub(/"quarto.path": ".*"/, "\"quarto.path\": \"" path "\"")} 1' .vscode/settings.json > .vscode/settings.json.tmp && mv .vscode/settings.json.tmp .vscode/settings.json
+	@echo "🔹 Updating .github/workflows/quartodoc.yaml"
+	@awk -v ver="${QUARTO_VERSION}" '/QUARTO_VERSION:/ {gsub(/QUARTO_VERSION: .*/, "QUARTO_VERSION: " ver)} 1' .github/workflows/quartodoc.yaml > .github/workflows/quartodoc.yaml.tmp && mv .github/workflows/quartodoc.yaml.tmp .github/workflows/quartodoc.yaml
 
-# .PHONY: docs
-# docs: r-docs-render py-docs-render ## [docs] Build the documentation
+.PHONY: docs
+docs: r-docs py-docs-render ## [docs] Build the documentation
 
 # .PHONY: docs-preview
 # docs-preview:  ## [docs] Preview the documentation
@@ -111,7 +111,7 @@ r-docs-preview: ## [r] Build R docs
 
 .PHONY: py-setup
 py-setup:  ## [py] Setup python environment
-	uv sync --all-extras
+	uv sync --all-extras --all-groups
 
 .PHONY: py-check
 # py-check:  py-check-format py-check-types py-check-tests ## [py] Run python checks
@@ -165,39 +165,39 @@ py-format: ## [py] Format python code
 # 	@echo "📸 Updating pytest snapshots"
 # 	uv run pytest --snapshot-update
 
-# .PHONY: py-docs
-# py-docs: py-docs-api py-docs-render ## [py] Build python docs
+.PHONY: py-docs
+py-docs: py-docs-api py-docs-render ## [py] Build python docs
 
-# .PHONY: py-docs-render
-# py-docs-render:  ## [py] Render python docs
-# 	@echo "📖 Rendering python docs with quarto"
-# 	@$(eval export IN_QUARTODOC=true)
-# 	${QUARTO_PATH} render pkg-py/docs
+.PHONY: py-docs-render
+py-docs-render:  ## [py] Render python docs
+	@echo "📖 Rendering python docs with quarto"
+	@$(eval export IN_QUARTODOC=true)
+	${QUARTO_PATH} render pkg-py/docs
 
-# .PHONY: py-docs-preview
-# py-docs-preview:  ## [py] Preview python docs
-# 	@echo "📖 Rendering python docs with quarto"
-# 	@$(eval export IN_QUARTODOC=true)
-# 	${QUARTO_PATH} preview pkg-py/docs
+.PHONY: py-docs-preview
+py-docs-preview:  ## [py] Preview python docs
+	@echo "📖 Rendering python docs with quarto"
+	@$(eval export IN_QUARTODOC=true)
+	${QUARTO_PATH} preview pkg-py/docs
 
-# .PHONY: py-docs-api
-# py-docs-api:  ## [py] Update python API docs
-# 	@echo "📖 Generating python docs with quartodoc"
-# 	@$(eval export IN_QUARTODOC=true)
-# 	cd pkg-py/docs && uv run quartodoc build
-# 	cd pkg-py/docs && uv run quartodoc interlinks
+.PHONY: py-docs-api
+py-docs-api:  ## [py] Update python API docs
+	@echo "📖 Generating python docs with quartodoc"
+	@$(eval export IN_QUARTODOC=true)
+	cd pkg-py/docs && uv run quartodoc build
+	cd pkg-py/docs && uv run quartodoc interlinks
 
-# .PHONY: py-docs-api-watch
-# py-docs-api-watch:  ## [py] Update python docs
-# 	@echo "📖 Generating python docs with quartodoc"
-# 	@$(eval export IN_QUARTODOC=true)
-# 	uv run quartodoc build --config pkg-py/docs/_quarto.yml --watch
+.PHONY: py-docs-api-watch
+py-docs-api-watch:  ## [py] Update python docs
+	@echo "📖 Generating python docs with quartodoc"
+	@$(eval export IN_QUARTODOC=true)
+	uv run quartodoc build --config pkg-py/docs/_quarto.yml --watch
 
-# .PHONY: py-docs-clean
-# py-docs-clean:   ## [py] Clean python docs
-# 	@echo "🧹 Cleaning python docs"
-# 	rm -r pkg-py/docs/api
-# 	find pkg-py/docs/py -name '*.quarto_ipynb' -delete
+.PHONY: py-docs-clean
+py-docs-clean:   ## [py] Clean python docs
+	@echo "🧹 Cleaning python docs"
+	rm -r pkg-py/docs/api
+	find pkg-py/docs/py -name '*.quarto_ipynb' -delete
 
 .PHONY: py-build
 py-build:   ## [py] Build python package

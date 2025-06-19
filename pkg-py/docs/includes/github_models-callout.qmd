@@ -1,0 +1,5 @@
+:::{.callout-note}
+## GitHub Models and GitHub Personal Access Tokens
+
+{{< include /includes/github_models.qmd >}}
+:::

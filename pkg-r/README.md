@@ -28,7 +28,7 @@ library(bslib)
 library(querychat)
 
 # 1. Create a data source for querychat
-mtcars_source <- querychat_data_source(mtcars, tbl_name = "cars")
+mtcars_source <- querychat_data_source(mtcars)
 
 # 2. Configure querychat with the data source
 querychat_config <- querychat_init(mtcars_source)

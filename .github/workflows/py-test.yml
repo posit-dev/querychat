@@ -35,7 +35,7 @@ jobs:
         run: uv python install ${{matrix.config.python-version }}
 
       - name: 📦 Install the project
-        run: uv sync --python ${{matrix.config.python-version }} --all-extras
+        run: uv sync --python ${{matrix.config.python-version }} --all-extras --all-groups
 
       #   - name: 🧪 Check tests
       #     run: make py-check-tests

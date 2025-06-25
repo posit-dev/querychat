@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Package Landing - Choose Your Language</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body, html {
+            height: 100%;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #fffbf0;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+            position: relative;
+            background: #fffbf0;
+        }
+
+        /* Center Overlay - Now centered vertically and horizontally */
+        .center-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 500px;
+            max-width: 90vw;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            z-index: 10;
+            box-shadow:
+                0 20px 60px rgba(0, 0, 0, 0.1),
+                0 0 0 1px rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            animation: slideInCenter 0.8s ease-out;
+        }
+
+        @keyframes slideInCenter {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+
+        .package-logos {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin: 0 auto 15px;
+        }
+
+        .lang-logo {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+            cursor: pointer;
+            text-decoration: none;
+            background: #fffbf0;
+            border: 2px solid rgba(160, 140, 120, 0.2);
+        }
+
+        .lang-logo:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .logo-img {
+            width: 32px;
+            height: 32px;
+            object-fit: contain;
+        }
+
+        .package-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        .package-subtitle {
+            font-size: 1rem;
+            color: #4a5568;
+            margin-bottom: 15px;
+            font-weight: 300;
+        }
+
+        .package-description {
+            font-size: 0.9rem;
+            color: #718096;
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+
+        .package-gif {
+            width: 100%;
+            max-width: 400px;
+            height: auto;
+            border-radius: 12px;
+            margin: 0 auto 20px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        /* Documentation Buttons */
+        .doc-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .doc-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            border: 2px solid transparent;
+            background: #fffbf0;
+            color: #2d3748;
+        }
+
+        .doc-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+            border-color: rgba(160, 140, 120, 0.3);
+        }
+
+        .r-button {
+            border-color: rgba(30, 60, 114, 0.3);
+        }
+
+        .r-button:hover {
+            border-color: rgba(30, 60, 114, 0.5);
+            color: #1e3c72;
+        }
+
+        .python-button {
+            border-color: rgba(55, 118, 171, 0.3);
+        }
+
+        .python-button:hover {
+            border-color: rgba(55, 118, 171, 0.5);
+            color: #3776ab;
+        }
+
+        .button-icon {
+            width: 16px;
+            height: 16px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .center-overlay {
+                width: 400px;
+                padding: 25px;
+            }
+
+            .package-title {
+                font-size: 1.3rem;
+            }
+
+            .doc-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .doc-button {
+                width: 100%;
+                max-width: 200px;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <!-- Center Overlay -->
+        <div class="center-overlay">
+            <div class="package-logos">
+                <a href="./r/index.html" class="lang-logo r-logo">
+                    <img src="logo-r.svg"
+                         alt="R Logo"
+                         class="logo-img">
+                </a>
+                <a href="./py/index.html" class="lang-logo python-logo">
+                    <img src="logo-python.svg"
+                         alt="Python Logo"
+                         class="logo-img"
+                         onerror="this.style.display='none'; this.parentNode.innerHTML='🐍';">
+                </a>
+            </div>
+            <h1 class="package-title">querychat</h1>
+            <p class="package-subtitle">Chat with your data in any language</p>
+            <p class="package-description">
+                A drop-in component for Shiny that allows you to chat with your data using natural language queries.
+                Available for both R and Python.
+            </p>
+            <img src="animation.gif"
+                 alt="Package Demo"
+                 class="package-gif"
+                 loading="lazy">
+
+            <!-- Documentation Buttons -->
+            <div class="doc-buttons">
+                <a href="./r/index.html" class="doc-button r-button">
+                    <img src="logo-r.svg" alt="R" class="button-icon" onerror="this.style.display='none'">
+                    R Documentation
+                </a>
+                <a href="./py/index.html" class="doc-button python-button">
+                    <img src="logo-python.svg" alt="Python" class="button-icon" onerror="this.style.display='none'">
+                    Python Documentation
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Add click functionality for logo buttons
+        document.querySelector('.r-logo').addEventListener('click', function(e) {
+            e.preventDefault();
+            this.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                this.style.transform = '';
+                window.open('./r/index.html', '_blank');
+            }, 150);
+        });
+
+        document.querySelector('.python-logo').addEventListener('click', function(e) {
+            e.preventDefault();
+            this.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                this.style.transform = '';
+                window.open('./py/index.html', '_blank');
+            }, 150);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,47 @@
+color:
+  palette:
+    blue: "#007bc2"
+    indigo: "#4b00c1"
+    purple: "#74149c"
+    pink: "#bf007f"
+    red: "#c10000"
+    orange: "#f45100"
+    yellow: "#f9b928"
+    green: "#00891a"
+    teal: "#00bf7f"
+    cyan: "#03c7e8"
+    white: "#ffffff"
+    black: "#1D1F21"
+
+  foreground: black
+  background: white
+  primary: blue
+  secondary: gray
+  success: green
+  info: cyan
+  warning: yellow
+  danger: red
+  light: "#f8f8f8"
+  dark: "#212529"
+
+typography:
+  fonts:
+    - family: Open Sans
+      source: bunny
+    - family: Source Code Pro
+      source: bunny
+
+  headings:
+    family: Open Sans
+    weight: 400
+  monospace: Source Code Pro
+  monospace-inline:
+    color: pink
+    background-color: transparent
+    size: 0.95em
+
+defaults:
+  bootstrap:
+    defaults:
+      navbar-bg: $brand-blue
+      code-color-dark: "#fa88d4"

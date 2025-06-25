@@ -14,6 +14,7 @@
         body, html {
             height: 100%;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #fffbf0;
             overflow: hidden;
         }
 
@@ -21,88 +22,7 @@
             display: flex;
             height: 100vh;
             position: relative;
-        }
-
-        .side {
-            flex: 1;
-            position: relative;
-            overflow: hidden;
-            cursor: pointer;
-            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        }
-
-        .side::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.2);
-            transition: all 0.4s ease;
-            z-index: 2;
-        }
-
-        .side:hover::before {
-            background: rgba(0, 0, 0, 0.05);
-        }
-
-        .side:hover {
-            flex: 1.1;
-            transform: scale(1.01);
-        }
-
-        .r-side {
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            background-image:
-                radial-gradient(circle at 20% 80%, rgba(120, 160, 255, 0.3) 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
-        }
-
-        .python-side {
-            background: linear-gradient(135deg, #ffd89b 0%, #19547b 100%);
-            background-image:
-                radial-gradient(circle at 20% 20%, rgba(255, 216, 155, 0.4) 0%, transparent 50%),
-                radial-gradient(circle at 80% 80%, rgba(25, 84, 123, 0.3) 0%, transparent 50%);
-        }
-
-        .floating-particles {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 1;
-        }
-
-        .particle {
-            position: absolute;
-            width: 4px;
-            height: 4px;
-            background: rgba(255, 255, 255, 0.6);
-            border-radius: 50%;
-            animation: float 6s ease-in-out infinite;
-        }
-
-        .particle:nth-child(1) { left: 10%; animation-delay: 0s; }
-        .particle:nth-child(2) { left: 20%; animation-delay: 1s; }
-        .particle:nth-child(3) { left: 30%; animation-delay: 2s; }
-        .particle:nth-child(4) { left: 70%; animation-delay: 0.5s; }
-        .particle:nth-child(5) { left: 80%; animation-delay: 1.5s; }
-        .particle:nth-child(6) { left: 90%; animation-delay: 2.5s; }
-
-        @keyframes float {
-            0%, 100% {
-                transform: translateY(100vh) rotate(0deg);
-                opacity: 0;
-            }
-            10%, 90% {
-                opacity: 1;
-            }
-            50% {
-                transform: translateY(-20px) rotate(180deg);
-            }
+            background: #fffbf0;
         }
 
         /* Center Overlay - Now centered vertically and horizontally */
@@ -156,18 +76,13 @@
             transition: transform 0.3s ease;
             cursor: pointer;
             text-decoration: none;
+            background: #fffbf0;
+            border: 2px solid rgba(160, 140, 120, 0.2);
         }
 
         .lang-logo:hover {
             transform: translateY(-3px);
-        }
-
-        .r-logo {
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-        }
-
-        .python-logo {
-            background: linear-gradient(135deg, #3776ab 0%, #ffd43b 100%);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
         }
 
         .logo-img {
@@ -228,30 +143,32 @@
             transition: all 0.3s ease;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
             border: 2px solid transparent;
+            background: #fffbf0;
+            color: #2d3748;
         }
 
         .doc-button:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+            border-color: rgba(160, 140, 120, 0.3);
         }
 
         .r-button {
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            color: white;
+            border-color: rgba(30, 60, 114, 0.3);
         }
 
         .r-button:hover {
-            background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
+            border-color: rgba(30, 60, 114, 0.5);
+            color: #1e3c72;
         }
 
         .python-button {
-            background: linear-gradient(135deg, #3776ab 0%, #ffd43b 100%);
-            color: #2d3748;
+            border-color: rgba(55, 118, 171, 0.3);
         }
 
         .python-button:hover {
-            background: linear-gradient(135deg, #ffd43b 0%, #3776ab 100%);
-            color: white;
+            border-color: rgba(55, 118, 171, 0.5);
+            color: #3776ab;
         }
 
         .button-icon {
@@ -288,23 +205,6 @@
 </head>
 <body>
     <div class="container">
-        <!-- R Side -->
-        <div class="side r-side">
-            <div class="floating-particles">
-                <div class="particle"></div>
-                <div class="particle"></div>
-                <div class="particle"></div>
-            </div>
-        </div>
-
-        <!-- Python Side -->
-        <div class="side python-side">
-            <div class="floating-particles">
-                <div class="particle"></div>
-                <div class="particle"></div>
-                <div class="particle"></div>
-            </div>
-        </div>
 
         <!-- Center Overlay -->
         <div class="center-overlay">
@@ -347,30 +247,19 @@
     </div>
 
     <script>
-        // Add some interactive polish for particles
-        document.querySelectorAll('.side').forEach(side => {
-            side.addEventListener('mouseenter', function() {
-                this.style.zIndex = '5';
-            });
-
-            side.addEventListener('mouseleave', function() {
-                this.style.zIndex = '1';
-            });
-        });
-
-        // Add click functionality for background sides
-        document.querySelector('.r-side').addEventListener('click', function() {
-            // Visual feedback
-            this.style.transform = 'scale(0.98)';
+        // Add click functionality for logo buttons
+        document.querySelector('.r-logo').addEventListener('click', function(e) {
+            e.preventDefault();
+            this.style.transform = 'scale(0.95)';
             setTimeout(() => {
                 this.style.transform = '';
                 window.open('./r/index.html', '_blank');
             }, 150);
         });
 
-        document.querySelector('.python-side').addEventListener('click', function() {
-            // Visual feedback
-            this.style.transform = 'scale(0.98)';
+        document.querySelector('.python-logo').addEventListener('click', function(e) {
+            e.preventDefault();
+            this.style.transform = 'scale(0.95)';
             setTimeout(() => {
                 this.style.transform = '';
                 window.open('./py/index.html', '_blank');

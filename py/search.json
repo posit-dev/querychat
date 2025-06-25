@@ -1,0 +1,391 @@
+[
+  {
+    "objectID": "examples/sqlite.html",
+    "href": "examples/sqlite.html",
+    "title": "SQLite",
+    "section": "",
+    "text": "This example and walkthrough has the following features:",
+    "crumbs": [
+      "Examples",
+      "Databases",
+      "SQLite"
+    ]
+  },
+  {
+    "objectID": "examples/sqlite.html#data",
+    "href": "examples/sqlite.html#data",
+    "title": "SQLite",
+    "section": "Data",
+    "text": "Data\nThis example uses the seaborn library to load up the titanic dataset, and then write the dataframe into a SQLite database, titanic.db. It then uses SQLAlchemy to connect to the SQLite database.\nIf the titanic.db file does not exist in the same directory as the app.py file, it will create the SQLite database file.",
+    "crumbs": [
+      "Examples",
+      "Databases",
+      "SQLite"
+    ]
+  },
+  {
+    "objectID": "examples/sqlite.html#greeting-file",
+    "href": "examples/sqlite.html#greeting-file",
+    "title": "SQLite",
+    "section": "Greeting file",
+    "text": "Greeting file\nSave this file as greeting.md:\nHello! I'm here to assist you with analyzing the Titanic dataset.\nHere are some examples of what you can ask me to do:\n\n- **Filtering and Sorting:**\n  - Show only passengers who boarded in Cherbourg.\n  - Sort passengers by age in descending order.\n\n- **Data Analysis:**\n  - What is the survival rate for each passenger class?\n  - How many children were aboard the Titanic?\n\n- **General Statistics:**\n  - Calculate the average age of female passengers.\n  - Find the total fare collected from passengers who did not survive.",
+    "crumbs": [
+      "Examples",
+      "Databases",
+      "SQLite"
+    ]
+  },
+  {
+    "objectID": "examples/sqlite.html#data-description-file",
+    "href": "examples/sqlite.html#data-description-file",
+    "title": "SQLite",
+    "section": "Data description file",
+    "text": "Data description file\nSave this file as data_description.md:\n# Data Dictionary\n\n- **survival**: Survival status  \n  - 0 = No  \n  - 1 = Yes  \n\n- **pclass**: Ticket class  \n  - 1 = 1st class  \n  - 2 = 2nd class  \n  - 3 = 3rd class  \n\n- **sex**: Sex of the passenger  \n\n- **age**: Age in years  \n\n- **sibsp**: Number of siblings or spouses aboard the Titanic  \n\n- **parch**: Number of parents or children aboard the Titanic  \n\n- **ticket**: Ticket number  \n\n- **fare**: Passenger fare  \n\n- **cabin**: Cabin number  \n\n- **embarked**: Port of embarkation  \n  - C = Cherbourg  \n  - Q = Queenstown  \n  - S = Southampton  \n\n## Variable Notes\n\n- **pclass** is a proxy for socio-economic status (SES):  \n  - 1st = Upper class  \n  - 2nd = Middle class  \n  - 3rd = Lower class  \n\n- **age**:  \n  - If less than 1 year old, age is fractional.  \n  - Estimated ages are represented as `xx.5`.  \n\n- **sibsp**: Family relations are defined as:  \n  - Sibling = brother, sister, stepbrother, stepsister  \n  - Spouse = husband, wife (mistresses and fiancés were ignored)  \n\n- **parch**: Family relations are defined as:  \n  - Parent = mother, father  \n  - Child = daughter, son, stepdaughter, stepson  \n  - Some children traveled only with a nanny, so `parch = 0` for them.",
+    "crumbs": [
+      "Examples",
+      "Databases",
+      "SQLite"
+    ]
+  },
+  {
+    "objectID": "examples/sqlite.html#the-application",
+    "href": "examples/sqlite.html#the-application",
+    "title": "SQLite",
+    "section": "The application",
+    "text": "The application\nOur application will read the the greeting.md and data_description.md files and pass them along to the querychat.init() function. Also, instead of passing in a dataframe object to the data_source parameter in querychat.init(), we pass in the database connection, along with the table in the database as table_name.\nHere is our SQLite example app, save the contents to app.py.\n\n\n\n\n\n\nGitHub Models and GitHub Personal Access Tokens\n\n\n\nThis example does not use the default OpenAI model directly from OpenAI, which would require you to create an OpenAI API key and save it as an environment variable named OPENAI_API_KEY. Instead we are using GitHub Models as a free way to access the latest LLMs, with a rate-limit. You can follow the instructions on the GitHub Docs or Axure AI Demo on creating a PAT.\nWe suggest you save your PAT into 2 environment variables: GITHUB_TOKEN, and GITHUB_PAT.\n\n\nfrom pathlib import Path\n\nimport chatlas\nfrom seaborn import load_dataset\nfrom shiny import App, render, ui\nfrom sqlalchemy import create_engine\n\nimport querychat as qc\n\n# Load titanic data and create SQLite database\ndb_path = Path(__file__).parent / \"titanic.db\"\nengine = create_engine(\"sqlite:///\" + str(db_path))\n\nif not db_path.exists():\n    # For example purposes, we'll create the database if it doesn't exist. Don't\n    # do this in your app!\n    titanic = load_dataset(\"titanic\")\n    titanic.to_sql(\"titanic\", engine, if_exists=\"replace\", index=False)\n\ngreeting = (Path(__file__).parent / \"greeting.md\").read_text()\ndata_desc = (Path(__file__).parent / \"data_description.md\").read_text()\n\n# 1. Configure querychat\n\ndef use_github_models(system_prompt: str) -&gt; chatlas.Chat:\n    # GitHub models give us free rate-limited access to the latest LLMs\n    # you will need to have GITHUB_PAT defined in your environment\n    return chatlas.ChatGithub(\n        model=\"gpt-4.1\",\n        system_prompt=system_prompt,\n    )\n\nquerychat_config = qc.init(\n    engine,\n    \"titanic\",\n    greeting=greeting,\n    data_description=data_desc,\n    create_chat_callback=use_github_models,\n)\n\n# Create UI\napp_ui = ui.page_sidebar(\n    # 2. Place the chat component in the sidebar\n    qc.sidebar(\"chat\"),\n    # Main panel with data viewer\n    ui.card(\n        ui.output_data_frame(\"data_table\"),\n        fill=True,\n    ),\n    title=\"querychat with Python (SQLite)\",\n    fillable=True,\n)\n\n\n# Define server logic\ndef server(input, output, session):\n    # 3. Initialize querychat server with the config from step 1\n    chat = qc.server(\"chat\", querychat_config)\n\n    # 4. Display the filtered dataframe\n    @render.data_frame\n    def data_table():\n        # Access filtered data via chat.df() reactive\n        return chat[\"df\"]()\n\n\n# Create Shiny app\napp = App(app_ui, server)",
+    "crumbs": [
+      "Examples",
+      "Databases",
+      "SQLite"
+    ]
+  },
+  {
+    "objectID": "examples/pandas.html",
+    "href": "examples/pandas.html",
+    "title": "Pandas",
+    "section": "",
+    "text": "This example and walkthrough has the following features:",
+    "crumbs": [
+      "Examples",
+      "DataFrames",
+      "Pandas"
+    ]
+  },
+  {
+    "objectID": "examples/pandas.html#data",
+    "href": "examples/pandas.html#data",
+    "title": "Pandas",
+    "section": "Data",
+    "text": "Data\nThis examples uses the seaborn library to load the titanic dataset.",
+    "crumbs": [
+      "Examples",
+      "DataFrames",
+      "Pandas"
+    ]
+  },
+  {
+    "objectID": "examples/pandas.html#greeting-file",
+    "href": "examples/pandas.html#greeting-file",
+    "title": "Pandas",
+    "section": "Greeting file",
+    "text": "Greeting file\nSave this file as greeting.md:\nHello! I'm here to assist you with analyzing the Titanic dataset.\nHere are some examples of what you can ask me to do:\n\n- **Filtering and Sorting:**\n  - Show only passengers who boarded in Cherbourg.\n  - Sort passengers by age in descending order.\n\n- **Data Analysis:**\n  - What is the survival rate for each passenger class?\n  - How many children were aboard the Titanic?\n\n- **General Statistics:**\n  - Calculate the average age of female passengers.\n  - Find the total fare collected from passengers who did not survive.",
+    "crumbs": [
+      "Examples",
+      "DataFrames",
+      "Pandas"
+    ]
+  },
+  {
+    "objectID": "examples/pandas.html#data-description-file",
+    "href": "examples/pandas.html#data-description-file",
+    "title": "Pandas",
+    "section": "Data description file",
+    "text": "Data description file\nSave this file as data_description.md:\n# Data Dictionary\n\n- **survival**: Survival status  \n  - 0 = No  \n  - 1 = Yes  \n\n- **pclass**: Ticket class  \n  - 1 = 1st class  \n  - 2 = 2nd class  \n  - 3 = 3rd class  \n\n- **sex**: Sex of the passenger  \n\n- **age**: Age in years  \n\n- **sibsp**: Number of siblings or spouses aboard the Titanic  \n\n- **parch**: Number of parents or children aboard the Titanic  \n\n- **ticket**: Ticket number  \n\n- **fare**: Passenger fare  \n\n- **cabin**: Cabin number  \n\n- **embarked**: Port of embarkation  \n  - C = Cherbourg  \n  - Q = Queenstown  \n  - S = Southampton  \n\n## Variable Notes\n\n- **pclass** is a proxy for socio-economic status (SES):  \n  - 1st = Upper class  \n  - 2nd = Middle class  \n  - 3rd = Lower class  \n\n- **age**:  \n  - If less than 1 year old, age is fractional.  \n  - Estimated ages are represented as `xx.5`.  \n\n- **sibsp**: Family relations are defined as:  \n  - Sibling = brother, sister, stepbrother, stepsister  \n  - Spouse = husband, wife (mistresses and fiancés were ignored)  \n\n- **parch**: Family relations are defined as:  \n  - Parent = mother, father  \n  - Child = daughter, son, stepdaughter, stepson  \n  - Some children traveled only with a nanny, so `parch = 0` for them.",
+    "crumbs": [
+      "Examples",
+      "DataFrames",
+      "Pandas"
+    ]
+  },
+  {
+    "objectID": "examples/pandas.html#the-application",
+    "href": "examples/pandas.html#the-application",
+    "title": "Pandas",
+    "section": "The application",
+    "text": "The application\nOur application will read the the greeting.md and data_description.md files and pass them along to the querychat.init() function.\nHere is our pandas example app, save the contents to app.py.\n\n\n\n\n\n\nGitHub Models and GitHub Personal Access Tokens\n\n\n\nThis example does not use the default OpenAI model directly from OpenAI, which would require you to create an OpenAI API key and save it as an environment variable named OPENAI_API_KEY. Instead we are using GitHub Models as a free way to access the latest LLMs, with a rate-limit. You can follow the instructions on the GitHub Docs or Axure AI Demo on creating a PAT.\nWe suggest you save your PAT into 2 environment variables: GITHUB_TOKEN, and GITHUB_PAT.\n\n\nfrom pathlib import Path\n\nimport chatlas\nfrom seaborn import load_dataset\nfrom shiny import App, render, ui\n\nimport querychat as qc\n\ntitanic = load_dataset(\"titanic\")\n\ngreeting = (Path(__file__).parent / \"greeting.md\").read_text()\ndata_desc = (Path(__file__).parent / \"data_description.md\").read_text()\n\n# 1. Configure querychat\n\ndef use_github_models(system_prompt: str) -&gt; chatlas.Chat:\n    # GitHub models give us free rate-limited access to the latest LLMs\n    # you will need to have GITHUB_PAT defined in your environment\n    return chatlas.ChatGithub(\n        model=\"gpt-4.1\",\n        system_prompt=system_prompt,\n    )\n\nquerychat_config = qc.init(\n    titanic,\n    \"titanic\",\n    greeting=greeting,\n    data_description=data_desc,\n    create_chat_callback=use_github_models,\n)\n\n# Create UI\napp_ui = ui.page_sidebar(\n    # 2. Place the chat component in the sidebar\n    qc.sidebar(\"chat\"),\n    # Main panel with data viewer\n    ui.card(\n        ui.output_data_frame(\"data_table\"),\n        fill=True,\n    ),\n    title=\"querychat with Python\",\n    fillable=True,\n)\n\n\n# Define server logic\ndef server(input, output, session):\n    # 3. Initialize querychat server with the config from step 1\n    chat = qc.server(\"chat\", querychat_config)\n\n    # 4. Display the filtered dataframe\n    @render.data_frame\n    def data_table():\n        # Access filtered data via chat.df() reactive\n        return chat.df()\n\n\n# Create Shiny app\napp = App(app_ui, server)",
+    "crumbs": [
+      "Examples",
+      "DataFrames",
+      "Pandas"
+    ]
+  },
+  {
+    "objectID": "reference/ui.html",
+    "href": "reference/ui.html",
+    "title": "ui",
+    "section": "",
+    "text": "ui()\nCreate the UI for the querychat component.\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nid\nstr\nThe module ID\nrequired\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\nui.TagList\nA UI component.",
+    "crumbs": [
+      "API Reference",
+      "Shiny Core",
+      "ui"
+    ]
+  },
+  {
+    "objectID": "reference/ui.html#parameters",
+    "href": "reference/ui.html#parameters",
+    "title": "ui",
+    "section": "",
+    "text": "Name\nType\nDescription\nDefault\n\n\n\n\nid\nstr\nThe module ID\nrequired",
+    "crumbs": [
+      "API Reference",
+      "Shiny Core",
+      "ui"
+    ]
+  },
+  {
+    "objectID": "reference/ui.html#returns",
+    "href": "reference/ui.html#returns",
+    "title": "ui",
+    "section": "",
+    "text": "Name\nType\nDescription\n\n\n\n\n\nui.TagList\nA UI component.",
+    "crumbs": [
+      "API Reference",
+      "Shiny Core",
+      "ui"
+    ]
+  },
+  {
+    "objectID": "reference/sidebar.html",
+    "href": "reference/sidebar.html",
+    "title": "sidebar",
+    "section": "",
+    "text": "sidebar(id, width=400, height='100%', **kwargs)\nCreate a sidebar containing the querychat UI.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nid\nstr\nThe module ID.\nrequired\n\n\nwidth\nint\nWidth of the sidebar in pixels.\n400\n\n\nheight\nstr\nHeight of the sidebar.\n\"100%\"\n\n\n**kwargs\n\nAdditional arguments to pass to the sidebar component.\n{}\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\nui.Sidebar\nA sidebar UI component.",
+    "crumbs": [
+      "API Reference",
+      "Shiny Core",
+      "sidebar"
+    ]
+  },
+  {
+    "objectID": "reference/sidebar.html#parameters",
+    "href": "reference/sidebar.html#parameters",
+    "title": "sidebar",
+    "section": "",
+    "text": "Name\nType\nDescription\nDefault\n\n\n\n\nid\nstr\nThe module ID.\nrequired\n\n\nwidth\nint\nWidth of the sidebar in pixels.\n400\n\n\nheight\nstr\nHeight of the sidebar.\n\"100%\"\n\n\n**kwargs\n\nAdditional arguments to pass to the sidebar component.\n{}",
+    "crumbs": [
+      "API Reference",
+      "Shiny Core",
+      "sidebar"
+    ]
+  },
+  {
+    "objectID": "reference/sidebar.html#returns",
+    "href": "reference/sidebar.html#returns",
+    "title": "sidebar",
+    "section": "",
+    "text": "Name\nType\nDescription\n\n\n\n\n\nui.Sidebar\nA sidebar UI component.",
+    "crumbs": [
+      "API Reference",
+      "Shiny Core",
+      "sidebar"
+    ]
+  },
+  {
+    "objectID": "reference/server.html",
+    "href": "reference/server.html",
+    "title": "server",
+    "section": "",
+    "text": "server(input, output, session, querychat_config)\nInitialize the querychat server.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nquerychat_config\nQueryChatConfig\nConfiguration object from init().\nrequired\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\ndict[str, Any]\nA dictionary with reactive components: - sql: A reactive that returns the current SQL query. - title: A reactive that returns the current title. - df: A reactive that returns the filtered data frame. - chat: The chat object.",
+    "crumbs": [
+      "API Reference",
+      "Shiny Core",
+      "server"
+    ]
+  },
+  {
+    "objectID": "reference/server.html#parameters",
+    "href": "reference/server.html#parameters",
+    "title": "server",
+    "section": "",
+    "text": "Name\nType\nDescription\nDefault\n\n\n\n\nquerychat_config\nQueryChatConfig\nConfiguration object from init().\nrequired",
+    "crumbs": [
+      "API Reference",
+      "Shiny Core",
+      "server"
+    ]
+  },
+  {
+    "objectID": "reference/server.html#returns",
+    "href": "reference/server.html#returns",
+    "title": "server",
+    "section": "",
+    "text": "Name\nType\nDescription\n\n\n\n\n\ndict[str, Any]\nA dictionary with reactive components: - sql: A reactive that returns the current SQL query. - title: A reactive that returns the current title. - df: A reactive that returns the filtered data frame. - chat: The chat object.",
+    "crumbs": [
+      "API Reference",
+      "Shiny Core",
+      "server"
+    ]
+  },
+  {
+    "objectID": "includes/github_models-callout.html",
+    "href": "includes/github_models-callout.html",
+    "title": "querychat",
+    "section": "",
+    "text": "GitHub Models and GitHub Personal Access Tokens\n\n\n\nThis example does not use the default OpenAI model directly from OpenAI, which would require you to create an OpenAI API key and save it as an environment variable named OPENAI_API_KEY. Instead we are using GitHub Models as a free way to access the latest LLMs, with a rate-limit. You can follow the instructions on the GitHub Docs or Axure AI Demo on creating a PAT.\nWe suggest you save your PAT into 2 environment variables: GITHUB_TOKEN, and GITHUB_PAT."
+  },
+  {
+    "objectID": "includes/github_models.html",
+    "href": "includes/github_models.html",
+    "title": "querychat",
+    "section": "",
+    "text": "This example does not use the default OpenAI model directly from OpenAI, which would require you to create an OpenAI API key and save it as an environment variable named OPENAI_API_KEY. Instead we are using GitHub Models as a free way to access the latest LLMs, with a rate-limit. You can follow the instructions on the GitHub Docs or Axure AI Demo on creating a PAT.\nWe suggest you save your PAT into 2 environment variables: GITHUB_TOKEN, and GITHUB_PAT."
+  },
+  {
+    "objectID": "reference/system_prompt.html",
+    "href": "reference/system_prompt.html",
+    "title": "system_prompt",
+    "section": "",
+    "text": "system_prompt(\n    data_source,\n    data_description=None,\n    extra_instructions=None,\n    categorical_threshold=10,\n)\nCreate a system prompt for the chat model based on a data source’s schema and optional additional context and instructions.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata_source\nDataSource\nA data source to generate schema information from\nrequired\n\n\ndata_description\nstr\nOptional description of the data, in plain text or Markdown format\nNone\n\n\nextra_instructions\nstr\nOptional additional instructions for the chat model, in plain text or Markdown format\nNone\n\n\ncategorical_threshold\nint\nThreshold for determining if a column is categorical based on number of unique values\n10\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\nstr\nThe system prompt for the chat model.",
+    "crumbs": [
+      "API Reference",
+      "Shiny Core",
+      "system_prompt"
+    ]
+  },
+  {
+    "objectID": "reference/system_prompt.html#parameters",
+    "href": "reference/system_prompt.html#parameters",
+    "title": "system_prompt",
+    "section": "",
+    "text": "Name\nType\nDescription\nDefault\n\n\n\n\ndata_source\nDataSource\nA data source to generate schema information from\nrequired\n\n\ndata_description\nstr\nOptional description of the data, in plain text or Markdown format\nNone\n\n\nextra_instructions\nstr\nOptional additional instructions for the chat model, in plain text or Markdown format\nNone\n\n\ncategorical_threshold\nint\nThreshold for determining if a column is categorical based on number of unique values\n10",
+    "crumbs": [
+      "API Reference",
+      "Shiny Core",
+      "system_prompt"
+    ]
+  },
+  {
+    "objectID": "reference/system_prompt.html#returns",
+    "href": "reference/system_prompt.html#returns",
+    "title": "system_prompt",
+    "section": "",
+    "text": "Name\nType\nDescription\n\n\n\n\n\nstr\nThe system prompt for the chat model.",
+    "crumbs": [
+      "API Reference",
+      "Shiny Core",
+      "system_prompt"
+    ]
+  },
+  {
+    "objectID": "reference/init.html",
+    "href": "reference/init.html",
+    "title": "init",
+    "section": "",
+    "text": "init(\n    data_source,\n    table_name,\n    greeting=None,\n    data_description=None,\n    extra_instructions=None,\n    create_chat_callback=None,\n    system_prompt_override=None,\n)\nInitialize querychat with any compliant data source.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata_source\nIntoFrame | sqlalchemy.Engine\nEither a Narwhals-compatible data frame (e.g., Polars or Pandas) or a SQLAlchemy engine containing the table to query against.\nrequired\n\n\ntable_name\nstr\nIf a data_source is a data frame, a name to use to refer to the table in SQL queries (usually the variable name of the data frame, but it doesn’t have to be). If a data_source is a SQLAlchemy engine, the table_name is the name of the table in the database to query against.\nrequired\n\n\ngreeting\nstr\nA string in Markdown format, containing the initial message\nNone\n\n\ndata_description\nstr\nDescription of the data in plain text or Markdown\nNone\n\n\nextra_instructions\nstr\nAdditional instructions for the chat model\nNone\n\n\ncreate_chat_callback\nCreateChatCallback\nA function that creates a chat object\nNone\n\n\nsystem_prompt_override\nstr\nA custom system prompt to use instead of the default\nNone\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\nQueryChatConfig\nA QueryChatConfig object that can be passed to server()",
+    "crumbs": [
+      "API Reference",
+      "Shiny Core",
+      "init"
+    ]
+  },
+  {
+    "objectID": "reference/init.html#parameters",
+    "href": "reference/init.html#parameters",
+    "title": "init",
+    "section": "",
+    "text": "Name\nType\nDescription\nDefault\n\n\n\n\ndata_source\nIntoFrame | sqlalchemy.Engine\nEither a Narwhals-compatible data frame (e.g., Polars or Pandas) or a SQLAlchemy engine containing the table to query against.\nrequired\n\n\ntable_name\nstr\nIf a data_source is a data frame, a name to use to refer to the table in SQL queries (usually the variable name of the data frame, but it doesn’t have to be). If a data_source is a SQLAlchemy engine, the table_name is the name of the table in the database to query against.\nrequired\n\n\ngreeting\nstr\nA string in Markdown format, containing the initial message\nNone\n\n\ndata_description\nstr\nDescription of the data in plain text or Markdown\nNone\n\n\nextra_instructions\nstr\nAdditional instructions for the chat model\nNone\n\n\ncreate_chat_callback\nCreateChatCallback\nA function that creates a chat object\nNone\n\n\nsystem_prompt_override\nstr\nA custom system prompt to use instead of the default\nNone",
+    "crumbs": [
+      "API Reference",
+      "Shiny Core",
+      "init"
+    ]
+  },
+  {
+    "objectID": "reference/init.html#returns",
+    "href": "reference/init.html#returns",
+    "title": "init",
+    "section": "",
+    "text": "Name\nType\nDescription\n\n\n\n\n\nQueryChatConfig\nA QueryChatConfig object that can be passed to server()",
+    "crumbs": [
+      "API Reference",
+      "Shiny Core",
+      "init"
+    ]
+  },
+  {
+    "objectID": "reference/index.html",
+    "href": "reference/index.html",
+    "title": "Function reference",
+    "section": "",
+    "text": "init\nInitialize querychat with any compliant data source.\n\n\nsidebar\nCreate a sidebar containing the querychat UI.\n\n\nserver\nInitialize the querychat server.\n\n\nsystem_prompt\nCreate a system prompt for the chat model based on a data source’s schema\n\n\nui\nCreate the UI for the querychat component.",
+    "crumbs": [
+      "API Reference",
+      "Function reference"
+    ]
+  },
+  {
+    "objectID": "reference/index.html#shiny-core",
+    "href": "reference/index.html#shiny-core",
+    "title": "Function reference",
+    "section": "",
+    "text": "init\nInitialize querychat with any compliant data source.\n\n\nsidebar\nCreate a sidebar containing the querychat UI.\n\n\nserver\nInitialize the querychat server.\n\n\nsystem_prompt\nCreate a system prompt for the chat model based on a data source’s schema\n\n\nui\nCreate the UI for the querychat component.",
+    "crumbs": [
+      "API Reference",
+      "Function reference"
+    ]
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "querychat: Chat with Shiny apps (Python)",
+    "section": "",
+    "text": "Imagine typing questions like these directly into your Shiny dashboard, and seeing the results in realtime:\nquerychat is a drop-in component for Shiny that allows users to query a data frame using natural language. The results are available as a reactive data frame, so they can be easily used from Shiny outputs, reactive expressions, downloads, etc.\nThis is not as terrible an idea as you might think! We need to be very careful when bringing LLMs into data analysis, as we all know that they are prone to hallucinations and other classes of errors. querychat is designed to excel in reliability, transparency, and reproducibility by using this one technique: denying it raw access to the data, and forcing it to write SQL queries instead. See the section below on “How it works” for more."
+  },
+  {
+    "objectID": "index.html#installation",
+    "href": "index.html#installation",
+    "title": "querychat: Chat with Shiny apps (Python)",
+    "section": "Installation",
+    "text": "Installation\npip install querychat"
+  },
+  {
+    "objectID": "index.html#how-to-use",
+    "href": "index.html#how-to-use",
+    "title": "querychat: Chat with Shiny apps (Python)",
+    "section": "How to use",
+    "text": "How to use\nFirst, you’ll need access to an LLM that supports tools/function calling. querychat uses chatlas to interface with various providers.\nHere’s a very minimal example that shows the three function calls you need to make:\nimport chatlas\nfrom seaborn import load_dataset\nfrom shiny import App, render, ui\n\nimport querychat as qc\n\ntitanic = load_dataset(\"titanic\")\n\n# 1. Configure querychat.\n#    This is where you specify the dataset and can also\n#    override options like the greeting message, system prompt, model, etc.\n\n\ndef use_github_models(system_prompt: str) -&gt; chatlas.Chat:\n    # GitHub models give us free rate-limited access to the latest LLMs\n    # you will need to have GITHUB_PAT defined in your environment\n    return chatlas.ChatGithub(\n        model=\"gpt-4.1\",\n        system_prompt=system_prompt,\n    )\n\n\nquerychat_config = qc.init(\n    data_source=titanic,\n    table_name=\"titanic\",\n    create_chat_callback=use_github_models,\n)\n\n# Create UI\napp_ui = ui.page_sidebar(\n    # 2. Use qc.sidebar(id) in a ui.page_sidebar.\n    #    Alternatively, use qc.ui(id) elsewhere if you don't want your\n    #    chat interface to live in a sidebar.\n    qc.sidebar(\"chat\"),\n    ui.output_data_frame(\"data_table\"),\n)\n\n\n# Define server logic\ndef server(input, output, session):\n    # 3. Create a querychat object using the config from step 1.\n    chat = qc.server(\"chat\", querychat_config)\n\n    # 4. Use the filtered/sorted data frame anywhere you wish, via the\n    #    chat.df() reactive.\n    @render.data_frame\n    def data_table():\n        return chat.df()\n\n\n# Create Shiny app\napp = App(app_ui, server)\n\n\n\n\n\n\nGitHub Models and GitHub Personal Access Tokens\n\n\n\nThis example does not use the default OpenAI model directly from OpenAI, which would require you to create an OpenAI API key and save it as an environment variable named OPENAI_API_KEY. Instead we are using GitHub Models as a free way to access the latest LLMs, with a rate-limit. You can follow the instructions on the GitHub Docs or Axure AI Demo on creating a PAT.\nWe suggest you save your PAT into 2 environment variables: GITHUB_TOKEN, and GITHUB_PAT."
+  },
+  {
+    "objectID": "index.html#how-it-works",
+    "href": "index.html#how-it-works",
+    "title": "querychat: Chat with Shiny apps (Python)",
+    "section": "How it works",
+    "text": "How it works\n\nPowered by LLMs\nquerychat’s natural language chat experience is powered by LLMs. You may use any model that chatlas supports that has the ability to do tool calls, but we currently recommend (as of March 2025):\n\nGPT-4o\nClaude 3.5 Sonnet\nClaude 3.7 Sonnet\n\nIn our testing, we’ve found that those models strike a good balance between accuracy and latency. Smaller models like GPT-4o-mini are fine for simple queries but make surprising mistakes with moderately complex ones; and reasoning models like o3-mini slow down responses without providing meaningfully better results.\nThe small open source models (8B and below) we’ve tested have fared extremely poorly. Sorry. 🤷\n\n\nPowered by SQL\nquerychat does not have direct access to the raw data; it can only read or filter the data by writing SQL SELECT statements. This is crucial for ensuring relability, transparency, and reproducibility:\n\nReliability: Today’s LLMs are excellent at writing SQL, but bad at direct calculation.\nTransparency: querychat always displays the SQL to the user, so it can be vetted instead of blindly trusted.\nReproducibility: The SQL query can be easily copied and reused.\n\nCurrently, querychat uses DuckDB for its SQL engine. It’s extremely fast and has a surprising number of statistical functions."
+  },
+  {
+    "objectID": "index.html#customizing-querychat",
+    "href": "index.html#customizing-querychat",
+    "title": "querychat: Chat with Shiny apps (Python)",
+    "section": "Customizing querychat",
+    "text": "Customizing querychat\n\nProvide a greeting (recommended)\nWhen the querychat UI first appears, you will usually want it to greet the user with some basic instructions. By default, these instructions are auto-generated every time a user arrives; this is slow, wasteful, and unpredictable. Instead, you should create a file called greeting.md, and when calling querychat.init, pass greeting=Path(\"greeting.md\").read_text().\nYou can provide suggestions to the user by using the &lt;span class=\"suggestion\"&gt; &lt;/span&gt; tag.\nFor example:\n* **Filter and sort the data:**\n  * &lt;span class=\"suggestion\"&gt;Show only survivors&lt;/span&gt;\n  * &lt;span class=\"suggestion\"&gt;Filter to first class passengers under 30&lt;/span&gt;\n  * &lt;span class=\"suggestion\"&gt;Sort by fare from highest to lowest&lt;/span&gt;\n\n* **Answer questions about the data:**\n  * &lt;span class=\"suggestion\"&gt;What was the survival rate by gender?&lt;/span&gt;\n  * &lt;span class=\"suggestion\"&gt;What's the average age of children who survived?&lt;/span&gt;\n  * &lt;span class=\"suggestion\"&gt;How many passengers were traveling alone?&lt;/span&gt;\nThese suggestions appear in the greeting and automatically populate the chat text box when clicked. This gives the user a few ideas to explore on their own. You can see this behavior in our querychat template.\nIf you need help coming up with a greeting, your own app can help you! Just launch it and paste this into the chat interface:\n\nHelp me create a greeting for your future users. Include some example questions. Format your suggested greeting as Markdown, in a code block.\n\nAnd keep giving it feedback until you’re happy with the result, which will then be ready to be pasted into greeting.md.\nAlternatively, you can completely suppress the greeting by passing greeting=\"\".\n\n\nAugment the system prompt (recommended)\nIn LLM parlance, the system prompt is the set of instructions and specific knowledge you want the model to use during a conversation. querychat automatically creates a system prompt which is comprised of:\n\nThe basic set of behaviors the LLM must follow in order for querychat to work properly. (See querychat/prompt/prompt.md if you’re curious what this looks like.)\nThe SQL schema of the data frame you provided.\n(Optional) Any additional description of the data you choose to provide.\n(Optional) Any additional instructions you want to use to guide querychat’s behavior.\n\n\nData description\nIf you give querychat your dataset and nothing else, it will provide the LLM with the basic schema of your data:\n\nColumn names\nDuckDB data type (integer, float, boolean, datetime, text)\nFor text columns with less than 10 unique values, we assume they are categorical variables and include the list of values. This threshold is configurable.\nFor integer and float columns, we include the range\n\nAnd that’s all the LLM will know about your data. The actual data does not get passed into the LLM. We calculate these values before we pass the schema information into the LLM.\nIf the column names are usefully descriptive, it may be able to make a surprising amount of sense out of the data. But if your data frame’s columns are x, V1, value, etc., then the model will need to be given more background info–just like a human would.\nTo provide this information, use the data_description argument. For example, if you’re using the titanic dataset, you might create a data_description.md like this:\nThis dataset contains information about Titanic passengers, collected for predicting survival.\n\n- survived: Survival (0 = No, 1 = Yes)\n- pclass: Ticket class (1 = 1st, 2 = 2nd, 3 = 3rd)\n- sex: Sex of passenger\n- age: Age in years\n- sibsp: Number of siblings/spouses aboard\n- parch: Number of parents/children aboard\n- fare: Passenger fare\n- embarked: Port of embarkation (C = Cherbourg, Q = Queenstown, S = Southampton)\n- class: Same as pclass but as text\n- who: Man, woman, or child\n- adult_male: Boolean for adult males\n- deck: Deck of the ship\n- embark_town: Town of embarkation\n- alive: Survival status as text\n- alone: Whether the passenger was alone\nwhich you can then pass via:\nquerychat_config = querychat.init(\n    titanic,\n    \"titanic\",\n    data_description=Path(\"data_description.md\").read_text()\n)\nquerychat doesn’t need this information in any particular format; just put whatever information, in whatever format, you think a human would find helpful.\n\n\nAdditional instructions\nYou can add additional instructions of your own to the end of the system prompt, by passing extra_instructions into querychat.init.\nquerychat_config = querychat.init(\n    titanic,\n    \"titanic\",\n    extra_instructions=[\n        \"You're speaking to a British audience--please use appropriate spelling conventions.\",\n        \"Use lots of emojis! 😃 Emojis everywhere, 🌍 emojis forever. ♾️\",\n        \"Stay on topic, only talk about the data dashboard and refuse to answer other questions.\"\n    ]\n)\nYou can also put these instructions in a separate file and use Path(\"instructions.md\").read_text() to load them, as we did for data_description above.\nWarning: It is not 100% guaranteed that the LLM will always—or in many cases, ever—obey your instructions, and it can be difficult to predict which instructions will be a problem. So be sure to test extensively each time you change your instructions, and especially, if you change the model you use.\n\n\n\nUse a different LLM provider\nBy default, querychat uses GPT-4o via the OpenAI API. If you want to use a different model, you can provide a create_chat_callback function that takes a system_prompt parameter, and returns a chatlas Chat object:\nimport chatlas\nfrom functools import partial\n\n# Option 1: Define a function\ndef my_chat_func(system_prompt: str) -&gt; chatlas.Chat:\n    return chatlas.ChatAnthropic(\n        model=\"claude-3-7-sonnet-latest\",\n        system_prompt=system_prompt\n    )\n\n# Option 2: Use partial\nmy_chat_func = partial(chatlas.ChatAnthropic, model=\"claude-3-7-sonnet-latest\")\n\nquerychat_config = querychat.init(\n    titanic,\n    \"titanic\",\n    create_chat_callback=my_chat_func\n)\nThis would use Claude 3.7 Sonnet instead, which would require you to provide an API key. See the chatlas documentation for more information on how to authenticate with different providers."
+  },
+  {
+    "objectID": "index.html#complete-example",
+    "href": "index.html#complete-example",
+    "title": "querychat: Chat with Shiny apps (Python)",
+    "section": "Complete example",
+    "text": "Complete example\nFor a complete working example, see the examples/app-dataframe.py file in the repository. This example includes:\n\nLoading a dataset\nReading greeting and data description from files\nSetting up the querychat configuration\nCreating a Shiny UI with the chat sidebar\nDisplaying the filtered data in the main panel\n\nIf you have Shiny installed, and want to get started right away, you can use our querychat template or sidebot template."
+  },
+  {
+    "objectID": "examples/index.html",
+    "href": "examples/index.html",
+    "title": "Basic Example",
+    "section": "",
+    "text": "Here’s the basic example that uses the titanic dataset.\n\n\n\n\n\n\nGitHub Models and GitHub Personal Access Tokens\n\n\n\nThis example does not use the default OpenAI model directly from OpenAI, which would require you to create an OpenAI API key and save it as an environment variable named OPENAI_API_KEY. Instead we are using GitHub Models as a free way to access the latest LLMs, with a rate-limit. You can follow the instructions on the GitHub Docs or Axure AI Demo on creating a PAT.\nWe suggest you save your PAT into 2 environment variables: GITHUB_TOKEN, and GITHUB_PAT.\n\n\nimport chatlas\nfrom seaborn import load_dataset\nfrom shiny import App, render, ui\n\nimport querychat as qc\n\ntitanic = load_dataset(\"titanic\")\n\n# 1. Configure querychat.\n#    This is where you specify the dataset and can also\n#    override options like the greeting message, system prompt, model, etc.\n\n\ndef use_github_models(system_prompt: str) -&gt; chatlas.Chat:\n    # GitHub models give us free rate-limited access to the latest LLMs\n    # you will need to have GITHUB_PAT defined in your environment\n    return chatlas.ChatGithub(\n        model=\"gpt-4.1\",\n        system_prompt=system_prompt,\n    )\n\n\nquerychat_config = qc.init(\n    data_source=titanic,\n    table_name=\"titanic\",\n    create_chat_callback=use_github_models,\n)\n\n# Create UI\napp_ui = ui.page_sidebar(\n    # 2. Use qc.sidebar(id) in a ui.page_sidebar.\n    #    Alternatively, use qc.ui(id) elsewhere if you don't want your\n    #    chat interface to live in a sidebar.\n    qc.sidebar(\"chat\"),\n    ui.output_data_frame(\"data_table\"),\n)\n\n\n# Define server logic\ndef server(input, output, session):\n    # 3. Create a querychat object using the config from step 1.\n    chat = qc.server(\"chat\", querychat_config)\n\n    # 4. Use the filtered/sorted data frame anywhere you wish, via the\n    #    chat.df() reactive.\n    @render.data_frame\n    def data_table():\n        return chat.df()\n\n\n# Create Shiny app\napp = App(app_ui, server)",
+    "crumbs": [
+      "Examples",
+      "Basic Example"
+    ]
+  }
+]

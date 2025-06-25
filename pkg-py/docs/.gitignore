@@ -1,0 +1,11 @@
+/.quarto/
+/_site
+/_inv
+*.quarto_ipynb
+objects.txt
+objects.json
+
+# Ignore quartodoc artifacts, these are built in CI
+_sidebar-python.yml
+api/
+reference/

@@ -362,7 +362,7 @@ def sidebar(id: str, width: int = 400, height: str = "100%", **kwargs) -> ui.Sid
 
 
 @module.server
-def server(  # noqa: D417
+def mod_server(  # noqa: D417
     input: Inputs,
     output: Outputs,
     session: Session,

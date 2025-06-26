@@ -69,12 +69,7 @@ server <- function(input, output, session) {
   
   output$data_table <- DT::renderDT({
     df <- chat$df()
-    # Collect data from lazy tbl if needed
-    if (inherits(df, "tbl_lazy")) {
-      dplyr::collect(df)
-    } else {
-      df
-    }
+    df
   }, options = list(pageLength = 10, scrollX = TRUE))
   
   output$sql_query <- renderText({

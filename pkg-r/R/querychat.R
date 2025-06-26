@@ -41,6 +41,11 @@ querychat_init <- function(
   auto_close_data_source = TRUE
 ) {
   force(create_chat_func)
+
+  # If the user passes a data.frame to data_source, create a correct data source for them
+  if (inherits(data_source, "data.frame")){
+    data_source <- querychat_data_source(data_source, table_name = deparse(substitute(data_source)))
+  }
   
   # Check that data_source is a querychat_data_source object
   if (!inherits(data_source, "querychat_data_source")) {
@@ -159,6 +164,9 @@ querychat_server <- function(id, querychat_config) {
     current_title <- shiny::reactiveVal(NULL)
     current_query <- shiny::reactiveVal("")
     filtered_df <- shiny::reactive({
+      execute_query(data_source, query = dplyr::sql(current_query()))
+    })
+    filtered_tbl <- shiny::reactive({
       get_lazy_data(data_source, query = dplyr::sql(current_query()))
     })
 
@@ -184,7 +192,7 @@ querychat_server <- function(id, querychat_config) {
       tryCatch(
         {
           # Try it to see if it errors; if so, the LLM will see the error
-          execute_query(data_source, query)
+          test_query(data_source, query)
         },
         error = function(err) {
           append_output("> Error: ", conditionMessage(err), "\n\n")
@@ -269,7 +277,8 @@ querychat_server <- function(id, querychat_config) {
       chat = chat,
       sql = shiny::reactive(current_query()),
       title = shiny::reactive(current_title()),
-      df = filtered_df
+      df = filtered_df,
+      tbl = filtered_tbl
     )
   })
 }

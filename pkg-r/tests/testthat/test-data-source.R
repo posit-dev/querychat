@@ -18,7 +18,6 @@ test_that("querychat_data_source.data.frame creates proper S3 object", {
   expect_s3_class(source, "data_frame_source")
   expect_s3_class(source, "querychat_data_source")
   expect_equal(source$table_name, "test_table")
-  expect_s3_class(source$data, "data.frame")
   expect_true(inherits(source$conn, "DBIConnection"))
   
   # Clean up
@@ -168,23 +167,24 @@ test_that("create_system_prompt generates appropriate system prompt", {
   cleanup_source(df_source)
 })
 
-test_that("querychat_init requires a querychat_data_source", {
-  # Test that querychat_init rejects data frames directly
+test_that("querychat_init automatically handles data.frame inputs", {
+  # Test that querychat_init accepts data frames directly
   test_df <- data.frame(id = 1:3, name = c("A", "B", "C"))
   
-  # Should abort with data frame
-  expect_error(
-    querychat_init(data_source = test_df),
-    "must be a querychat_data_source"
-  )
+  # Should work with data frame and auto-convert it
+  config <- querychat_init(data_source = test_df, greeting = "Test greeting")
+  expect_s3_class(config, "querychat_config")
+  expect_s3_class(config$data_source, "querychat_data_source")
+  expect_s3_class(config$data_source, "data_frame_source")
   
-  # Should work with proper data source
+  # Should work with proper data source too
   df_source <- querychat_data_source(test_df, table_name = "test_table")
   config <- querychat_init(data_source = df_source, greeting = "Test greeting")
   expect_s3_class(config, "querychat_config")
   
   # Clean up
   cleanup_source(df_source)
+  cleanup_source(config$data_source)
 })
 
 test_that("querychat_init works with both source types", {

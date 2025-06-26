@@ -82,6 +82,26 @@ execute_query.dbi_source <- function(source, query, ...) {
   DBI::dbGetQuery(source$conn, query)
 }
 
+#' Test a SQL query on a data source.
+#'
+#' @param source A querychat_data_source object
+#' @param query SQL query string
+#' @param ... Additional arguments passed to methods
+#' @return Result of the query, limited to one row of data.
+#' @export
+test_query <- function(source, query, ...) {
+  UseMethod("test_query")
+}
+
+#' @export
+test_query.dbi_source <- function(source, query, ...) {
+  rs <- DBI::dbSendQuery(source$conn, query)
+  df <- DBI::dbFetch(rs, n=1)
+  DBI::dbClearResult(rs)
+  df
+}
+
+
 #' Get a lazy representation of a data source
 #'
 #' @param source A querychat_data_source object
@@ -172,7 +192,8 @@ create_system_prompt.querychat_data_source <- function(source, data_description 
     list(
       schema = schema,
       data_description = data_description,
-      extra_instructions = extra_instructions
+      extra_instructions = extra_instructions,
+      db_type = db_type
     )
   )
 }
@@ -236,14 +257,14 @@ get_schema.dbi_source <- function(source, ...) {
       numeric_columns <- c(numeric_columns, col)
       select_parts <- c(
         select_parts,
-        glue::glue_sql("MIN({`col`}) as {`col`}_min", .con = conn),
-        glue::glue_sql("MAX({`col`}) as {`col`}_max", .con = conn)
+        glue::glue_sql("MIN({`col`}) as {`col`}__min", .con = conn),
+        glue::glue_sql("MAX({`col`}) as {`col`}__max", .con = conn)
       )
     } else if (col_class %in% c("character", "factor")) {
       text_columns <- c(text_columns, col)
       select_parts <- c(
         select_parts, 
-        glue::glue_sql("COUNT(DISTINCT {`col`}) as {`col`}_distinct_count", .con = conn)
+        glue::glue_sql("COUNT(DISTINCT {`col`}) as {`col`}__distinct_count", .con = conn)
       )
     }
   }
@@ -272,7 +293,7 @@ get_schema.dbi_source <- function(source, ...) {
   }
 
   for (col_name in text_columns) {
-    distinct_count_key <- paste0(col_name, "_distinct_count")
+    distinct_count_key <- paste0(col_name, "__distinct_count")
     if (distinct_count_key %in% names(column_stats) && 
         !is.na(column_stats[[distinct_count_key]]) &&
         column_stats[[distinct_count_key]] <= categorical_threshold) {
@@ -310,8 +331,8 @@ get_schema.dbi_source <- function(source, ...) {
     
     # Add range info for numeric columns
     if (col %in% numeric_columns) {
-      min_key <- paste0(col, "_min")
-      max_key <- paste0(col, "_max")
+      min_key <- paste0(col, "__min")
+      max_key <- paste0(col, "__max")
       if (min_key %in% names(column_stats) && max_key %in% names(column_stats) &&
           !is.na(column_stats[[min_key]]) && !is.na(column_stats[[max_key]])) {
         range_info <- glue::glue("  Range: {column_stats[[min_key]]} to {column_stats[[max_key]]}")

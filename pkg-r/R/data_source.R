@@ -37,12 +37,11 @@ querychat_data_source.data.frame <- function(x, table_name = NULL, categorical_t
   
   structure(
     list(
-      data = x,
       conn = conn,
       table_name = table_name,
       categorical_threshold = categorical_threshold
     ),
-    class = c("data_frame_source", "querychat_data_source")
+    class = c("data_frame_source", "dbi_source", "querychat_data_source")
   )
 }
 
@@ -67,7 +66,6 @@ querychat_data_source.DBIConnection <- function(x, table_name, categorical_thres
   )
 }
 
-
 #' Execute a SQL query on a data source
 #'
 #' @param source A querychat_data_source object
@@ -80,7 +78,7 @@ execute_query <- function(source, query, ...) {
 }
 
 #' @export
-execute_query.querychat_data_source <- function(source, query, ...) {
+execute_query.dbi_source <- function(source, query, ...) {
   DBI::dbGetQuery(source$conn, query)
 }
 
@@ -96,7 +94,7 @@ get_lazy_data <- function(source, ...) {
 }
 
 #' @export
-get_lazy_data.querychat_data_source <- function(source, query = NULL, ...) {
+get_lazy_data.dbi_source <- function(source, query = NULL, ...) {
   if (is.null(query) || query == ""){
     # For a null or empty query, default to returning the whole table (ie SELECT *)
     dplyr::tbl(source$conn, source$table_name)
@@ -190,7 +188,7 @@ cleanup_source <- function(source, ...) {
 }
 
 #' @export
-cleanup_source.querychat_data_source <- function(source, ...) {
+cleanup_source.dbi_source <- function(source, ...) {
   if (!is.null(source$conn) && DBI::dbIsValid(source$conn)) {
     DBI::dbDisconnect(source$conn)
   }
@@ -209,8 +207,8 @@ get_schema <- function(source, ...) {
 }
 
 #' @export
-get_schema.querychat_data_source <- function(source, ...) {
-    conn <- source$conn
+get_schema.dbi_source <- function(source, ...) {
+  conn <- source$conn
   table_name <- source$table_name
   categorical_threshold <- source$categorical_threshold
   
@@ -327,15 +325,6 @@ get_schema.querychat_data_source <- function(source, ...) {
       if (length(values) > 0) {
         values_str <- paste0("'", values, "'", collapse = ", ")
         cat_info <- glue::glue("  Categorical values: {values_str}")
-        column_info <- paste(column_info, cat_info, sep = "\n")
-      }
-    } else if (col %in% text_columns) {
-      # For text columns that are not categorical (too many values), still indicate they are categorical
-      # but don't list all the values
-      distinct_count_key <- paste0(col, "_distinct_count")
-      if (distinct_count_key %in% names(column_stats) && !is.na(column_stats[[distinct_count_key]])) {
-        count <- column_stats[[distinct_count_key]]
-        cat_info <- glue::glue("  Categorical values: {count} unique values (exceeds threshold of {categorical_threshold})")
         column_info <- paste(column_info, cat_info, sep = "\n")
       }
     }

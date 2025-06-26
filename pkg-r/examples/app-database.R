@@ -7,7 +7,15 @@ library(RSQLite)
 # Create a sample SQLite database for demonstration
 # In a real app, you would connect to your existing database
 temp_db <- tempfile(fileext = ".db")
+onStop(function() {
+  if (file.exists(temp_db)) {
+    unlink(temp_db)
+  }
+})
+
 conn <- dbConnect(RSQLite::SQLite(), temp_db)
+# The connection will automatically be closed when the app stops, thanks to
+# querychat_init
 
 # Create sample data in the database
 iris_data <- iris
@@ -77,16 +85,6 @@ server <- function(input, output, session) {
       query
     }
   })
-  
-  # Clean up database connection when app stops
-  session$onSessionEnded(function() {
-    if (dbIsValid(conn)) {
-      dbDisconnect(conn)
-    }
-    if (file.exists(temp_db)) {
-      unlink(temp_db)
-    }
-  })
 }
-
+  
 shinyApp(ui = ui, server = server)

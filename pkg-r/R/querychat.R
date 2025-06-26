@@ -37,13 +37,23 @@ querychat_init <- function(
   data_description = NULL,
   extra_instructions = NULL,
   create_chat_func = purrr::partial(ellmer::chat_openai, model = "gpt-4o"),
-  system_prompt = NULL
+  system_prompt = NULL,
+  auto_close_data_source = TRUE
 ) {
   force(create_chat_func)
   
   # Check that data_source is a querychat_data_source object
   if (!inherits(data_source, "querychat_data_source")) {
     rlang::abort("`data_source` must be a querychat_data_source object. Use querychat_data_source() to create one.")
+  }
+
+  if (auto_close_data_source) {
+    # Close the data source when the Shiny app stops (or, if some reason the
+    # querychat_init call is within a specific session, when the session ends)
+    shiny::onStop(function() {
+      message("Closing data source...")
+      cleanup_source(data_source)
+    })
   }
   
   # Generate system prompt if not provided
@@ -145,12 +155,11 @@ querychat_server <- function(id, querychat_config) {
     system_prompt <- querychat_config[["system_prompt"]]
     greeting <- querychat_config[["greeting"]]
     create_chat_func <- querychat_config[["create_chat_func"]]
-    conn <- data_source$conn
 
     current_title <- shiny::reactiveVal(NULL)
     current_query <- shiny::reactiveVal("")
     filtered_df <- shiny::reactive({
-      querychat::get_lazy_data(data_source, query = dplyr::sql(current_query()))
+      get_lazy_data(data_source, query = dplyr::sql(current_query()))
     })
 
     append_output <- function(...) {
@@ -254,11 +263,6 @@ querychat_server <- function(id, querychat_config) {
         "chat",
         chat$stream_async(input$chat_user_input)
       )
-    })
-
-    # Add session cleanup
-    shiny::onStop(function() {
-      cleanup_source(data_source)
     })
 
     list(

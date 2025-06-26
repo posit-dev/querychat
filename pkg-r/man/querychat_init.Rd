@@ -10,7 +10,8 @@ querychat_init(
   data_description = NULL,
   extra_instructions = NULL,
   create_chat_func = purrr::partial(ellmer::chat_openai, model = "gpt-4o"),
-  system_prompt = NULL
+  system_prompt = NULL,
+  auto_close_data_source = TRUE
 )
 }
 \arguments{

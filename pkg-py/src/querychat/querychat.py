@@ -137,8 +137,8 @@ class QueryChat:
 
 def system_prompt(
     data_source: DataSource,
-    data_description: Optional[str] = None,
-    extra_instructions: Optional[str] = None,
+    data_description: Optional[str | Path] = None,
+    extra_instructions: Optional[str | Path] = None,
     categorical_threshold: int = 10,
 ) -> str:
     """
@@ -222,11 +222,11 @@ def init(
     data_source: IntoFrame | sqlalchemy.Engine,
     table_name: str,
     *,
-    greeting: Optional[str] = None,
-    data_description: Optional[str] = None,
-    extra_instructions: Optional[str] = None,
+    greeting: Optional[str | Path] = None,
+    data_description: Optional[str | Path] = None,
+    extra_instructions: Optional[str | Path] = None,
     create_chat_callback: Optional[CreateChatCallback] = None,
-    system_prompt_override: Optional[str] = None,
+    system_prompt_override: Optional[str | Path] = None,
 ) -> QueryChatConfig:
     """
     Initialize querychat with any compliant data source.
@@ -241,12 +241,18 @@ def init(
         SQL queries (usually the variable name of the data frame, but it doesn't
         have to be). If a data_source is a SQLAlchemy engine, the table_name is
         the name of the table in the database to query against.
-    greeting : str, optional
-        A string in Markdown format, containing the initial message
-    data_description : str, optional
-        Description of the data in plain text or Markdown
-    extra_instructions : str, optional
-        Additional instructions for the chat model
+    greeting : str | Path, optional
+        A string in Markdown format, containing the initial message.
+        If a pathlib.Path object is passed,
+        querychat will read the contents of the path into a string with `.read_text()`.
+    data_description : str | Path, optional
+        Description of the data in plain text or Markdown.
+        If a pathlib.Path object is passed,
+        querychat will read the contents of the path into a string with `.read_text()`.
+    extra_instructions : str | Path, optional
+        Additional instructions for the chat model.
+        If a pathlib.Path object is passed,
+        querychat will read the contents of the path into a string with `.read_text()`.
     create_chat_callback : CreateChatCallback, optional
         A function that creates a chat object
     system_prompt_override : str, optional
@@ -280,11 +286,28 @@ def init(
             file=sys.stderr,
         )
 
+    # quality of life improvement to do the Path.read_text() for user or pass along the string
+    greeting_str: str | None = (
+        greeting.read_text() if isinstance(greeting, Path) else greeting
+    )
+
+    data_description_str: str | None = (
+        data_description.read_text()
+        if isinstance(data_description, Path)
+        else data_description
+    )
+
+    extra_instructions_str: str | None = (
+        extra_instructions.read_text()
+        if isinstance(extra_instructions, Path)
+        else extra_instructions
+    )
+
     # Create the system prompt, or use the override
     _system_prompt = system_prompt_override or system_prompt(
         data_source_obj,
-        data_description,
-        extra_instructions,
+        data_description_str,
+        extra_instructions_str,
     )
 
     # Default chat function if none provided

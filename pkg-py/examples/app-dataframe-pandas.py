@@ -8,8 +8,8 @@ import querychat as qc
 
 titanic = load_dataset("titanic")
 
-greeting = (Path(__file__).parent / "greeting.md").read_text()
-data_desc = (Path(__file__).parent / "data_description.md").read_text()
+greeting = (Path(__file__).parent / "greeting.md")
+data_desc = (Path(__file__).parent / "data_description.md")
 
 # 1. Configure querychat
 

@@ -304,7 +304,7 @@ def init(
     )
 
     # Create the system prompt, or use the override
-    _system_prompt = system_prompt_override or system_prompt(
+    system_prompt_ = system_prompt_override or system_prompt(
         data_source_obj,
         data_description_str,
         extra_instructions_str,
@@ -318,7 +318,7 @@ def init(
 
     return QueryChatConfig(
         data_source=data_source_obj,
-        system_prompt=_system_prompt,
+        system_prompt=system_prompt_,
         greeting=greeting,
         create_chat_callback=create_chat_callback,
     )

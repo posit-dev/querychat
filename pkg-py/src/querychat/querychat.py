@@ -351,7 +351,12 @@ def mod_ui() -> ui.TagList:
     )
 
 
-def sidebar(id: str, width: int = 400, height: str = "100%", **kwargs) -> ui.Sidebar:
+def sidebar(
+    id: str,
+    width: int = 400,
+    height: str = "100%",
+    **kwargs,
+) -> ui.Sidebar:
     """
     Create a sidebar containing the querychat UI.
 

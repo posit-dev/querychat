@@ -226,6 +226,7 @@ def df_to_html(df: IntoFrame, maxrows: int = 5) -> str:
 def init(
     data_source: IntoFrame | sqlalchemy.Engine,
     table_name: str,
+    *,
     greeting: Optional[str] = None,
     data_description: Optional[str] = None,
     extra_instructions: Optional[str] = None,

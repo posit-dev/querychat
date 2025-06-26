@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import sys
+from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Optional, Protocol, Union
@@ -25,22 +26,16 @@ class CreateChatCallback(Protocol):
     def __call__(self, system_prompt: str) -> chatlas.Chat: ...
 
 
+@dataclass
 class QueryChatConfig:
     """
     Configuration class for querychat.
     """
 
-    def __init__(
-        self,
-        data_source: DataSource,
-        system_prompt: str,
-        greeting: Optional[str],
-        create_chat_callback: CreateChatCallback,
-    ):
-        self.data_source = data_source
-        self.system_prompt = system_prompt
-        self.greeting = greeting
-        self.create_chat_callback = create_chat_callback
+    data_source: DataSource
+    system_prompt: str
+    greeting: Optional[str]
+    create_chat_callback: CreateChatCallback
 
 
 class QueryChat:

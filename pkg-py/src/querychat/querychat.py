@@ -319,7 +319,7 @@ def init(
     return QueryChatConfig(
         data_source=data_source_obj,
         system_prompt=system_prompt_,
-        greeting=greeting,
+        greeting=greeting_str,
         create_chat_callback=create_chat_callback,
     )
 

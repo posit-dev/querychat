@@ -43,13 +43,18 @@ querychat_init <- function(
   force(create_chat_func)
 
   # If the user passes a data.frame to data_source, create a correct data source for them
-  if (inherits(data_source, "data.frame")){
-    data_source <- querychat_data_source(data_source, table_name = deparse(substitute(data_source)))
+  if (inherits(data_source, "data.frame")) {
+    data_source <- querychat_data_source(
+      data_source,
+      table_name = deparse(substitute(data_source))
+    )
   }
-  
+
   # Check that data_source is a querychat_data_source object
   if (!inherits(data_source, "querychat_data_source")) {
-    rlang::abort("`data_source` must be a querychat_data_source object. Use querychat_data_source() to create one.")
+    rlang::abort(
+      "`data_source` must be a querychat_data_source object. Use querychat_data_source() to create one."
+    )
   }
 
   if (auto_close_data_source) {
@@ -60,16 +65,16 @@ querychat_init <- function(
       cleanup_source(data_source)
     })
   }
-  
+
   # Generate system prompt if not provided
   if (is.null(system_prompt)) {
     system_prompt <- create_system_prompt(
-      data_source, 
+      data_source,
       data_description = data_description,
       extra_instructions = extra_instructions
     )
   }
-  
+
   # Validate system prompt and create_chat_func
   stopifnot(
     "system_prompt must be a string" = is.character(system_prompt),

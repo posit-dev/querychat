@@ -236,7 +236,7 @@ class SQLAlchemySource:
         if select_parts:
             try:
                 stats_query = text(
-                    f"SELECT {', '.join(select_parts)} FROM {self._table_name}",  # noqa: S608
+                    f"SELECT {', '.join(select_parts)} FROM {self._table_name}",
                 )
                 with self._get_connection() as conn:
                     result = conn.execute(stats_query).fetchone()
@@ -263,7 +263,7 @@ class SQLAlchemySource:
             try:
                 # Build UNION query for all categorical columns
                 union_parts = [
-                    f"SELECT '{col_name}' as column_name, {col_name} as value "  # noqa: S608
+                    f"SELECT '{col_name}' as column_name, {col_name} as value "
                     f"FROM {self._table_name} WHERE {col_name} IS NOT NULL "
                     f"GROUP BY {col_name}"
                     for col_name in text_cols_to_query
@@ -335,7 +335,7 @@ class SQLAlchemySource:
             The complete dataset as a pandas DataFrame
 
         """
-        return self.execute_query(f"SELECT * FROM {self._table_name}")  # noqa: S608
+        return self.execute_query(f"SELECT * FROM {self._table_name}")
 
     def _get_sql_type_name(self, type_: sqltypes.TypeEngine) -> str:  # noqa: PLR0911
         """Convert SQLAlchemy type to SQL type name."""

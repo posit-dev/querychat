@@ -50,7 +50,9 @@ ui <- page_sidebar(
   title = "Database Query Chat",
   sidebar = querychat_sidebar("chat"),
   h2("Current Data View"),
-  p("The table below shows the current filtered data based on your chat queries:"),
+  p(
+    "The table below shows the current filtered data based on your chat queries:"
+  ),
   DT::DTOutput("data_table"),
   br(),
   h3("Current SQL Query"),
@@ -60,18 +62,23 @@ ui <- page_sidebar(
   p("This demo database contains:"),
   tags$ul(
     tags$li("iris - Famous iris flower dataset (150 rows, 5 columns)"),
-    tags$li("Columns: Sepal.Length, Sepal.Width, Petal.Length, Petal.Width, Species")
+    tags$li(
+      "Columns: Sepal.Length, Sepal.Width, Petal.Length, Petal.Width, Species"
+    )
   )
 )
 
 server <- function(input, output, session) {
   chat <- querychat_server("chat", querychat_config)
-  
-  output$data_table <- DT::renderDT({
-    df <- chat$df()
-    df
-  }, options = list(pageLength = 10, scrollX = TRUE))
-  
+
+  output$data_table <- DT::renderDT(
+    {
+      df <- chat$df()
+      df
+    },
+    options = list(pageLength = 10, scrollX = TRUE)
+  )
+
   output$sql_query <- renderText({
     query <- chat$sql()
     if (query == "") {
@@ -81,5 +88,5 @@ server <- function(input, output, session) {
     }
   })
 }
-  
+
 shinyApp(ui = ui, server = server)

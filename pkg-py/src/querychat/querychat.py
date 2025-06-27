@@ -4,7 +4,7 @@ import re
 import sys
 from functools import partial
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Optional, Protocol, Union
+from typing import TYPE_CHECKING, Any, Callable, Protocol, Union
 
 import chatlas
 import chevron
@@ -34,129 +34,7 @@ class QueryChatConfig:
         self,
         data_source: DataSource,
         system_prompt: str,
-        greeting: Optional[str],
-        create_chat_callback: CreateChatCallback,
-    ):
-        self.data_source = data_source
-        self.system_prompt = system_prompt
-        self.greeting = greeting
-        self.create_chat_callback = create_chat_callback
-
-
-class QueryChat:
-    """
-    An object representing a query chat session. This is created within a Shiny
-    server function or Shiny module server function by using
-    `querychat.server()`. Use this object to bridge the chat interface with the
-    rest of the Shiny app, for example, by displaying the filtered data.
-    """
-
-    def __init__(
-        self,
-        chat: chatlas.Chat,
-        sql: Callable[[], str],
-        title: Callable[[], Union[str, None]],
-        df: Callable[[], pd.DataFrame],
-    ):
-        """
-        Initialize a QueryChat object.
-
-        Args:
-            chat: The chat object for the session
-            sql: Reactive that returns the current SQL query
-            title: Reactive that returns the current title
-            df: Reactive that returns the filtered data frame
-
-        """
-        self._chat = chat
-        self._sql = sql
-        self._title = title
-        self._df = df
-
-    def chat(self) -> chatlas.Chat:
-        """
-        Get the chat object for this session.
-
-        Returns:
-            The chat object
-
-        """
-        return self._chat
-
-    def sql(self) -> str:
-        """
-        Reactively read the current SQL query that is in effect.
-
-        Returns:
-            The current SQL query as a string, or `""` if no query has been set.
-
-        """
-        return self._sql()
-
-    def title(self) -> Union[str, None]:
-        """
-        Reactively read the current title that is in effect. The title is a
-        short description of the current query that the LLM provides to us
-        whenever it generates a new SQL query. It can be used as a status string
-        for the data dashboard.
-
-        Returns:
-            The current title as a string, or `None` if no title has been set
-            due to no SQL query being set.
-
-        """
-        return self._title()
-
-    def df(self) -> pd.DataFrame:
-        """
-        Reactively read the current filtered data frame that is in effect.
-
-        Returns:
-            The current filtered data frame as a pandas DataFrame. If no query
-            has been set, this will return the unfiltered data frame from the
-            data source.
-
-        """
-        return self._df()
-
-    def __getitem__(self, key: str) -> Any:
-        """
-        Allow access to configuration parameters like a dictionary. For
-        backwards compatibility only; new code should use the attributes
-        directly instead.
-        """
-        if key == "chat":  # noqa: SIM116
-            return self.chat
-        elif key == "sql":
-            return self.sql
-        elif key == "title":
-            return self.title
-        elif key == "df":
-            return self.df
-
-        raise KeyError(
-            f"`QueryChat` does not have a key `'{key}'`. "
-            "Use the attributes `chat`, `sql`, `title`, or `df` instead.",
-        )
-
-
-from .datasource import DataFrameSource, DataSource, SQLAlchemySource
-
-
-class CreateChatCallback(Protocol):
-    def __call__(self, system_prompt: str) -> chatlas.Chat: ...
-
-
-class QueryChatConfig:
-    """
-    Configuration class for querychat.
-    """
-
-    def __init__(
-        self,
-        data_source: DataSource,
-        system_prompt: str,
-        greeting: Optional[str],
+        greeting: str | None,
         create_chat_callback: CreateChatCallback,
     ):
         self.data_source = data_source
@@ -257,8 +135,8 @@ class QueryChat:
 
 def system_prompt(
     data_source: DataSource,
-    data_description: Optional[str] = None,
-    extra_instructions: Optional[str] = None,
+    data_description: str | None = None,
+    extra_instructions: str | None = None,
     categorical_threshold: int = 10,
 ) -> str:
     """
@@ -341,11 +219,11 @@ def df_to_html(df: IntoFrame, maxrows: int = 5) -> str:
 def init(
     data_source: IntoFrame | sqlalchemy.Engine,
     table_name: str,
-    greeting: Optional[str] = None,
-    data_description: Optional[str] = None,
-    extra_instructions: Optional[str] = None,
-    create_chat_callback: Optional[CreateChatCallback] = None,
-    system_prompt_override: Optional[str] = None,
+    greeting: str | None = None,
+    data_description: str | None = None,
+    extra_instructions: str | None = None,
+    create_chat_callback: CreateChatCallback | None = None,
+    system_prompt_override: str | None = None,
 ) -> QueryChatConfig:
     """
     Initialize querychat with any compliant data source.

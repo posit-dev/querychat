@@ -63,6 +63,20 @@ querychat_system_prompt <- function(
   processed_template
 }
 
+#' Generate a schema description from a data frame
+#'
+#' This function generates a schema description for a data frame, including
+#' the column names, their types, and additional information such as ranges for
+#' numeric columns and unique values for text columns.
+#'
+#' @param df A data frame to generate schema information from.
+#' @param tbl_name A string containing the name of the table in SQL queries.
+#' @param categorical_threshold The maximum number of unique values for a text column to be considered categorical.
+#'
+#' @return A string containing the schema description for the data frame.
+#' The schema includes the table name, column names, their types, and additional
+#' information such as ranges for numeric columns and unique values for text columns.
+#' @export
 df_to_schema <- function(
   df,
   tbl_name = deparse(substitute(df)),

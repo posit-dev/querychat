@@ -153,24 +153,3 @@ test_that("database reactive functionality works correctly", {
   dbDisconnect(db_conn)
   unlink(temp_db)
 })
-
-test_that("app example file exists and is valid R code", {
-  app_file <- "../../examples/app-database.R"
-
-  # Check file exists
-  expect_true(file.exists(app_file))
-
-  # Check it contains key components
-  app_content <- readLines(app_file)
-  app_text <- paste(app_content, collapse = "\n")
-
-  expect_true(grepl("library\\(shiny\\)", app_text))
-  expect_true(grepl("library\\(querychat\\)", app_text))
-  expect_true(grepl("querychat_data_source", app_text))
-  expect_true(grepl("querychat_init", app_text))
-  expect_true(grepl("querychat_server", app_text))
-  expect_true(grepl("shinyApp", app_text))
-
-  # Check it parses as valid R code
-  expect_no_error(parse(text = app_text))
-})

@@ -78,6 +78,7 @@ exclude = [
     "site-packages",
     "venv",
     "app-*.py",             # ignore example apps for now
+    "app.py",
 ]
 
 line-length = 88
@@ -158,6 +159,10 @@ unfixable = []
 
 # Allow unused variables when underscore-prefixed.
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+# disable S101 (flagging asserts) for tests
+[tool.ruff.lint.per-file-ignores]
+"pkg-py/tests/*.py" = ["S101"]
 
 [tool.ruff.format]
 quote-style = "double"

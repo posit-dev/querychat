@@ -44,6 +44,9 @@ chat object. The default uses \code{ellmer::chat_openai()}.}
 The default uses \code{create_system_prompt()} to generate a generic prompt,
 which you can enhance via the \code{data_description} and \code{extra_instructions}
 arguments.}
+
+\item{auto_close_data_source}{Should the data source connection be automatically
+closed when the shiny app stops? Defaults to TRUE.}
 }
 \value{
 An object that can be passed to \code{querychat_server()} as the

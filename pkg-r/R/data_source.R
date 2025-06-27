@@ -125,7 +125,7 @@ test_query.dbi_source <- function(source, query, ...) {
 #' @param ... Additional arguments passed to methods
 #' @return A lazy representation (typically a dbplyr tbl)
 #' @export
-get_lazy_data <- function(source, ...) {
+get_lazy_data <- function(source, query, ...) {
   UseMethod("get_lazy_data")
 }
 

@@ -25,6 +25,8 @@
 #'   The default uses `create_system_prompt()` to generate a generic prompt,
 #'   which you can enhance via the `data_description` and `extra_instructions`
 #'   arguments.
+#' @param auto_close_data_source Should the data source connection be automatically
+#'   closed when the shiny app stops? Defaults to TRUE.
 #'
 #' @returns An object that can be passed to `querychat_server()` as the
 #'   `querychat_config` argument. By convention, this object should be named

@@ -255,4 +255,8 @@ python-package/CLAUDE.md
 uv.lock
 _dev
 
+# R ignores
 /.quarto/
+.Rprofile
+renv/
+renv.lock

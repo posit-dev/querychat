@@ -4,11 +4,19 @@
 #' schema and optional additional context and instructions.
 #'
 #' @param df A data frame to generate schema information from.
-#' @param name A string containing the name of the table in SQL queries.
-#' @param data_description Optional description of the data, in plain text or Markdown format.
-#' @param extra_instructions Optional additional instructions for the chat model, in plain text or Markdown format.
+#' @param tbl_name A string containing the name of the table in SQL queries.
+#' @param data_description Optional string in plain text or Markdown format, containing
+#'   a description of the data frame or any additional context that might be
+#'   helpful in understanding the data. This will be included in the system
+#'   prompt for the chat model.
+#' @param extra_instructions Optional string in plain text or Markdown format, containing
+#'   any additional instructions for the chat model. These will be appended at
+#'   the end of the system prompt.
 #' @param categorical_threshold The maximum number of unique values for a text column to be considered categorical.
-#' @param prompt_path Optional path to a custom prompt file. If NULL, the default prompt file in the package will be used.
+#' @param prompt_path Optional string containing the path to a custom prompt file. If
+#'   `NULL`, the default prompt file in the package will be used. This file should
+#'   contain a whisker template for the system prompt, with placeholders for `{{schema}}`,
+#'   `{{data_description}}` [optional], and `{{extra_instructions}}` [optional].
 #'
 #' @return A string containing the system prompt for the chat model.
 #'

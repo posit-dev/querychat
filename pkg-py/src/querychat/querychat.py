@@ -168,6 +168,18 @@ def system_prompt(
     prompt_path = Path(__file__).parent / "prompt" / "prompt.md"
     prompt_text = prompt_path.read_text()
 
+    data_description_str: str | None = (
+        data_description.read_text()
+        if isinstance(data_description, Path)
+        else data_description
+    )
+
+    extra_instructions_str: str | None = (
+        extra_instructions.read_text()
+        if isinstance(extra_instructions, Path)
+        else extra_instructions
+    )
+
     return chevron.render(
         prompt_text,
         {
@@ -175,8 +187,8 @@ def system_prompt(
             "schema": data_source.get_schema(
                 categorical_threshold=categorical_threshold,
             ),
-            "data_description": data_description,
-            "extra_instructions": extra_instructions,
+            "data_description": data_description_str,
+            "extra_instructions": extra_instructions_str,
         },
     )
 
@@ -289,18 +301,6 @@ def init(
     # quality of life improvement to do the Path.read_text() for user or pass along the string
     greeting_str: str | None = (
         greeting.read_text() if isinstance(greeting, Path) else greeting
-    )
-
-    data_description_str: str | None = (
-        data_description.read_text()
-        if isinstance(data_description, Path)
-        else data_description
-    )
-
-    extra_instructions_str: str | None = (
-        extra_instructions.read_text()
-        if isinstance(extra_instructions, Path)
-        else extra_instructions
     )
 
     # Create the system prompt, or use the override

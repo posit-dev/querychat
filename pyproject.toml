@@ -108,6 +108,7 @@ extend-ignore = [
     "D104", # Missing docstring in public package
     "D107", # Missing docstring in __init__
     "D205", # 1 blank line required between summary line and description
+    "UP045", # Use `X | NULL` for type annotations, not `Optional[X]`
 ]
 extend-select = [
     # "C90", # C90; mccabe: https://docs.astral.sh/ruff/rules/complex-structure/

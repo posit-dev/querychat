@@ -9,9 +9,7 @@ from typing import TYPE_CHECKING, Any, Callable, Optional, Protocol, Union
 import chatlas
 import chevron
 import narwhals as nw
-import pandas as pd
 import sqlalchemy
-from narwhals.typing import IntoFrame
 from shiny import Inputs, Outputs, Session, module, reactive, ui
 
 if TYPE_CHECKING:

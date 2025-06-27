@@ -1,3 +1,5 @@
-from querychat.querychat import init, mod_server as server, sidebar, system_prompt, mod_ui as ui
+from querychat.querychat import init, sidebar, system_prompt
+from querychat.querychat import mod_server as server
+from querychat.querychat import mod_ui as ui
 
-__all__ = ["init", "server", "sidebar", "ui", "system_prompt"]
+__all__ = ["init", "server", "sidebar", "system_prompt", "ui"]

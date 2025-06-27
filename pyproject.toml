@@ -77,7 +77,7 @@ exclude = [
     "node_modules",
     "site-packages",
     "venv",
-    "app-*.py",             # ignore example apps for now
+    "examples",             # ignore example apps for now
 ]
 
 line-length = 88

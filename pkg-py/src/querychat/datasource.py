@@ -216,8 +216,8 @@ class SQLAlchemySource:
                 numeric_columns.append(col_name)
                 select_parts.extend(
                     [
-                        f"MIN({col_name}) as {col_name}_min",
-                        f"MAX({col_name}) as {col_name}_max",
+                        f"MIN({col_name}) as {col_name}__min",
+                        f"MAX({col_name}) as {col_name}__max",
                     ],
                 )
 
@@ -228,7 +228,7 @@ class SQLAlchemySource:
             ):
                 text_columns.append(col_name)
                 select_parts.append(
-                    f"COUNT(DISTINCT {col_name}) as {col_name}_distinct_count",
+                    f"COUNT(DISTINCT {col_name}) as {col_name}__distinct_count",
                 )
 
         # Execute single query to get all statistics
@@ -250,7 +250,7 @@ class SQLAlchemySource:
         categorical_values = {}
         text_cols_to_query = []
         for col_name in text_columns:
-            distinct_count_key = f"{col_name}_distinct_count"
+            distinct_count_key = f"{col_name}__distinct_count"
             if (
                 distinct_count_key in column_stats
                 and column_stats[distinct_count_key]
@@ -289,8 +289,8 @@ class SQLAlchemySource:
 
             # Add range info for numeric columns
             if col_name in numeric_columns:
-                min_key = f"{col_name}_min"
-                max_key = f"{col_name}_max"
+                min_key = f"{col_name}__min"
+                max_key = f"{col_name}__max"
                 if (
                     min_key in column_stats
                     and max_key in column_stats

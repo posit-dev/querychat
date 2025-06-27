@@ -6,7 +6,7 @@
 \usage{
 querychat_system_prompt(
   df,
-  tbl_name,
+  table_name,
   data_description = NULL,
   extra_instructions = NULL,
   categorical_threshold = 10,
@@ -16,7 +16,7 @@ querychat_system_prompt(
 \arguments{
 \item{df}{A data frame to generate schema information from.}
 
-\item{tbl_name}{A string containing the name of the table in SQL queries.}
+\item{table_name}{A string containing the name of the table in SQL queries.}
 
 \item{data_description}{Optional string in plain text or Markdown format, containing
 a description of the data frame or any additional context that might be

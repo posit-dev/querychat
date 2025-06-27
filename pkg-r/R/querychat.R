@@ -4,7 +4,7 @@
 #' Shiny sessions in the R process.
 #'
 #' @param df A data frame.
-#' @param tbl_name A string containing a valid table name for the data frame,
+#' @param table_name A string containing a valid table name for the data frame,
 #'   that will appear in SQL queries. Ensure that it begins with a letter, and
 #'   contains only letters, numbers, and underscores. By default, querychat will
 #'   try to infer a table name using the name of the `df` argument.
@@ -30,27 +30,27 @@
 querychat_init <- function(
   df,
   ...,
-  tbl_name = deparse(substitute(df)),
+  table_name = deparse(substitute(df)),
   greeting = NULL,
   system_prompt = querychat_system_prompt(
     df,
-    tbl_name,
+    table_name,
     # By default, pass through any params supplied to querychat_init()
     ...
   ),
   create_chat_func = purrr::partial(ellmer::chat_openai, model = "gpt-4o")
 ) {
-  is_tbl_name_ok <- is.character(tbl_name) &&
-    length(tbl_name) == 1 &&
-    grepl("^[a-zA-Z][a-zA-Z0-9_]*$", tbl_name, perl = TRUE)
-  if (!is_tbl_name_ok) {
-    if (missing(tbl_name)) {
+  is_table_name_ok <- is.character(table_name) &&
+    length(table_name) == 1 &&
+    grepl("^[a-zA-Z][a-zA-Z0-9_]*$", table_name, perl = TRUE)
+  if (!is_table_name_ok) {
+    if (missing(table_name)) {
       rlang::abort(
-        "Unable to infer table name from `df` argument. Please specify `tbl_name` argument explicitly."
+        "Unable to infer table name from `df` argument. Please specify `table_name` argument explicitly."
       )
     } else {
       rlang::abort(
-        "`tbl_name` argument must be a string containing a valid table name."
+        "`table_name` argument must be a string containing a valid table name."
       )
     }
   }
@@ -62,17 +62,17 @@ querychat_init <- function(
   # TODO: Provide nicer looking errors here
   stopifnot(
     "df must be a data frame" = is.data.frame(df),
-    "tbl_name must be a string" = is.character(tbl_name),
+    "table_name must be a string" = is.character(table_name),
     "system_prompt must be a string" = is.character(system_prompt),
     "create_chat_func must be a function" = is.function(create_chat_func)
   )
 
-  if ("tbl_name" %in% names(attributes(system_prompt))) {
-    # If available, be sure to use the `tbl_name` argument to `querychat_init()`
+  if ("table_name" %in% names(attributes(system_prompt))) {
+    # If available, be sure to use the `table_name` argument to `querychat_init()`
     # matches the one supplied to the system prompt
-    if (tbl_name != attr(system_prompt, "tbl_name")) {
+    if (table_name != attr(system_prompt, "table_name")) {
       rlang::abort(
-        "`querychat_init(tbl_name=)` must match system prompt `tbl_name` supplied to `querychat_system_prompt()`."
+        "`querychat_init(table_name=)` must match system prompt `table_name` supplied to `querychat_system_prompt()`."
       )
     }
   }
@@ -86,7 +86,7 @@ querychat_init <- function(
   }
 
   conn <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
-  duckdb::duckdb_register(conn, tbl_name, df, experimental = FALSE)
+  duckdb::duckdb_register(conn, table_name, df, experimental = FALSE)
   shiny::onStop(function() DBI::dbDisconnect(conn))
 
   structure(

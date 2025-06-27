@@ -4,7 +4,7 @@
 #' schema and optional additional context and instructions.
 #'
 #' @param df A data frame to generate schema information from.
-#' @param tbl_name A string containing the name of the table in SQL queries.
+#' @param table_name A string containing the name of the table in SQL queries.
 #' @param data_description Optional string in plain text or Markdown format, containing
 #'   a description of the data frame or any additional context that might be
 #'   helpful in understanding the data. This will be included in the system
@@ -23,13 +23,13 @@
 #' @export
 querychat_system_prompt <- function(
   df,
-  tbl_name,
+  table_name,
   data_description = NULL,
   extra_instructions = NULL,
   categorical_threshold = 10,
   prompt_path = system.file("prompt", "prompt.md", package = "querychat")
 ) {
-  schema <- df_to_schema(df, tbl_name, categorical_threshold)
+  schema <- df_to_schema(df, table_name, categorical_threshold)
 
   if (!is.null(data_description)) {
     data_description <- paste(data_description, collapse = "\n")
@@ -58,7 +58,7 @@ querychat_system_prompt <- function(
       )
     )
 
-  attr(processed_template, "tbl_name") <- tbl_name
+  attr(processed_template, "table_name") <- table_name
 
   processed_template
 }
@@ -70,7 +70,7 @@ querychat_system_prompt <- function(
 #' numeric columns and unique values for text columns.
 #'
 #' @param df A data frame to generate schema information from.
-#' @param tbl_name A string containing the name of the table in SQL queries.
+#' @param table_name A string containing the name of the table in SQL queries.
 #' @param categorical_threshold The maximum number of unique values for a text column to be considered categorical.
 #'
 #' @return A string containing the schema description for the data frame.
@@ -79,10 +79,10 @@ querychat_system_prompt <- function(
 #' @export
 df_to_schema <- function(
   df,
-  tbl_name = deparse(substitute(df)),
+  table_name = deparse(substitute(df)),
   categorical_threshold = 10
 ) {
-  schema <- c(paste("Table:", tbl_name), "Columns:")
+  schema <- c(paste("Table:", table_name), "Columns:")
 
   column_info <- lapply(names(df), function(column) {
     # Map R classes to SQL-like types

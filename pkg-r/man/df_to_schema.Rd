@@ -6,14 +6,14 @@
 \usage{
 df_to_schema(
   df,
-  tbl_name = deparse(substitute(df)),
+  table_name = deparse(substitute(df)),
   categorical_threshold = 10
 )
 }
 \arguments{
 \item{df}{A data frame to generate schema information from.}
 
-\item{tbl_name}{A string containing the name of the table in SQL queries.}
+\item{table_name}{A string containing the name of the table in SQL queries.}
 
 \item{categorical_threshold}{The maximum number of unique values for a text column to be considered categorical.}
 }

@@ -7,9 +7,9 @@
 querychat_init(
   df,
   ...,
-  tbl_name = deparse(substitute(df)),
+  table_name = deparse(substitute(df)),
   greeting = NULL,
-  system_prompt = querychat_system_prompt(df, tbl_name, ...),
+  system_prompt = querychat_system_prompt(df, table_name, ...),
   create_chat_func = purrr::partial(ellmer::chat_openai, model = "gpt-4o")
 )
 }
@@ -21,7 +21,7 @@ function, such as \code{data_description}, \code{extra_instructions}, and
 \code{prompt_path}. If a \code{system_prompt} argument is provided, the
 \code{...} arguments will be silently ignored.}
 
-\item{tbl_name}{A string containing a valid table name for the data frame,
+\item{table_name}{A string containing a valid table name for the data frame,
 that will appear in SQL queries. Ensure that it begins with a letter, and
 contains only letters, numbers, and underscores. By default, querychat will
 try to infer a table name using the name of the \code{df} argument.}

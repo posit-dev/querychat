@@ -304,11 +304,14 @@ def init(
     )
 
     # Create the system prompt, or use the override
-    system_prompt_ = system_prompt_override or system_prompt(
-        data_source_obj,
-        data_description_str,
-        extra_instructions_str,
-    )
+    if isinstance(system_prompt_override, Path):
+        system_prompt_ = system_prompt_override.read_text()
+    else:
+        system_prompt_ = system_prompt_override or system_prompt(
+            data_source_obj,
+            data_description,
+            extra_instructions,
+        )
 
     # Default chat function if none provided
     create_chat_callback = create_chat_callback or partial(

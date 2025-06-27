@@ -22,13 +22,14 @@
 #'
 #' @export
 querychat_system_prompt <- function(
-    df,
-    name,
-    data_description = NULL,
-    extra_instructions = NULL,
-    categorical_threshold = 10,
-    prompt_path = NULL) {
-  schema <- df_to_schema(df, name, categorical_threshold)
+  df,
+  tbl_name,
+  data_description = NULL,
+  extra_instructions = NULL,
+  categorical_threshold = 10,
+  prompt_path = system.file("prompt", "prompt.md", package = "querychat")
+) {
+  schema <- df_to_schema(df, tbl_name, categorical_threshold)
 
   if (!is.null(data_description)) {
     data_description <- paste(data_description, collapse = "\n")
@@ -47,21 +48,27 @@ querychat_system_prompt <- function(
   prompt_content <- readLines(prompt_path, warn = FALSE)
   prompt_text <- paste(prompt_content, collapse = "\n")
 
-  whisker::whisker.render(
-    prompt_text,
-    list(
-      schema = schema,
-      data_description = data_description,
-      extra_instructions = extra_instructions
+  processed_template <-
+    whisker::whisker.render(
+      prompt_text,
+      list(
+        schema = schema,
+        data_description = data_description,
+        extra_instructions = extra_instructions
+      )
     )
-  )
+
+  attr(processed_template, "tbl_name") <- tbl_name
+
+  processed_template
 }
 
 df_to_schema <- function(
-    df,
-    name = deparse(substitute(df)),
-    categorical_threshold) {
-  schema <- c(paste("Table:", name), "Columns:")
+  df,
+  tbl_name = deparse(substitute(df)),
+  categorical_threshold = 10
+) {
+  schema <- c(paste("Table:", tbl_name), "Columns:")
 
   column_info <- lapply(names(df), function(column) {
     # Map R classes to SQL-like types

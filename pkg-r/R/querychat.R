@@ -67,6 +67,15 @@ querychat_init <- function(
     "create_chat_func must be a function" = is.function(create_chat_func)
   )
 
+  if ("tbl_name" %in% names(attributes(system_prompt))) {
+    # If available, be sure to use the `tbl_name` argument to `querychat_init()`
+    # matches the one supplied to the system prompt
+    if (tbl_name != attr(system_prompt, "tbl_name")) {
+      rlang::abort(
+        "`querychat_init(tbl_name=)` must match system prompt `tbl_name` supplied to `querychat_system_prompt()`."
+      )
+    }
+  }
   if (!is.null(greeting)) {
     greeting <- paste(collapse = "\n", greeting)
   } else {

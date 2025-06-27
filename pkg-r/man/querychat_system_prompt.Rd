@@ -32,7 +32,7 @@ the end of the system prompt.}
 \item{prompt_path}{Optional string containing the path to a custom prompt file. If
 \code{NULL}, the default prompt file in the package will be used. This file should
 contain a whisker template for the system prompt, with placeholders for \code{{{schema}}},
-\code{{{data_description}}} \link{optional}, and \code{{{extra_instructions}}} \link{optional}.}
+\code{{{data_description}}}, and \code{{{extra_instructions}}}.}
 }
 \value{
 A string containing the system prompt for the chat model.

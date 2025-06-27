@@ -16,7 +16,7 @@
 #' @param prompt_path Optional string containing the path to a custom prompt file. If
 #'   `NULL`, the default prompt file in the package will be used. This file should
 #'   contain a whisker template for the system prompt, with placeholders for `{{schema}}`,
-#'   `{{data_description}}` [optional], and `{{extra_instructions}}` [optional].
+#'   `{{data_description}}`, and `{{extra_instructions}}`.
 #'
 #' @return A string containing the system prompt for the chat model.
 #'

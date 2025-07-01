@@ -2,4 +2,4 @@
 
 * Initial CRAN submission.
 
-* Added `prompt_path` support for `querychat_system_prompt()`. (Thank you, @oacar! #37)
+* Added `prompt_template` support for `querychat_system_prompt()`. (Thank you, @oacar! #37, #45)

@@ -9,7 +9,10 @@ querychat_init(
   ...,
   table_name = deparse(substitute(df)),
   greeting = NULL,
-  system_prompt = querychat_system_prompt(df, table_name, ...),
+  data_description = NULL,
+  extra_instructions = NULL,
+  system_prompt = querychat_system_prompt(df, table_name, ..., data_description =
+    data_description, extra_instructions = extra_instructions),
   create_chat_func = purrr::partial(ellmer::chat_openai, model = "gpt-4o")
 )
 }
@@ -17,9 +20,9 @@ querychat_init(
 \item{df}{A data frame.}
 
 \item{...}{Additional arguments passed to the \code{querychat_system_prompt()}
-function, such as \code{data_description}, \code{extra_instructions}, and
-\code{prompt_path}. If a \code{system_prompt} argument is provided, the
-\code{...} arguments will be silently ignored.}
+function, such as \code{categorical_threshold}, and \code{prompt_path}. If a
+\code{system_prompt} argument is provided, the \code{...} arguments will be silently
+ignored.}
 
 \item{table_name}{A string containing a valid table name for the data frame,
 that will appear in SQL queries. Ensure that it begins with a letter, and
@@ -29,6 +32,15 @@ try to infer a table name using the name of the \code{df} argument.}
 \item{greeting}{A string in Markdown format, containing the initial message
 to display to the user upon first loading the chatbot. If not provided, the
 LLM will be invoked at the start of the conversation to generate one.}
+
+\item{data_description}{Optional string in plain text or Markdown format, containing
+a description of the data frame or any additional context that might be
+helpful in understanding the data. This will be included in the system
+prompt for the chat model.}
+
+\item{extra_instructions}{Optional string in plain text or Markdown format, containing
+any additional instructions for the chat model. These will be appended at
+the end of the system prompt.}
 
 \item{system_prompt}{A string containing the system prompt for the chat model.
 The default uses \code{querychat_system_prompt()} to generate a generic prompt,

@@ -12,16 +12,16 @@
 #'   to display to the user upon first loading the chatbot. If not provided, the
 #'   LLM will be invoked at the start of the conversation to generate one.
 #' @param ... Additional arguments passed to the `querychat_system_prompt()`
-#'   function, such as `data_description`, `extra_instructions`, and
-#'   `prompt_path`. If a `system_prompt` argument is provided, the
-#'   `...` arguments will be silently ignored.
+#'   function, such as `categorical_threshold`, and `prompt_path`. If a
+#'   `system_prompt` argument is provided, the `...` arguments will be silently
+#'   ignored.
+#' @inheritParams querychat_system_prompt
 #' @param system_prompt A string containing the system prompt for the chat model.
 #'   The default uses `querychat_system_prompt()` to generate a generic prompt,
 #'   which you can enhance via the `data_description` and `extra_instructions`
 #'   arguments.
 #' @param create_chat_func A function that takes a system prompt and returns a
 #'   chat object. The default uses `ellmer::chat_openai()`.
-#'
 #' @returns An object that can be passed to `querychat_server()` as the
 #'   `querychat_config` argument. By convention, this object should be named
 #'   `querychat_config`.
@@ -32,11 +32,15 @@ querychat_init <- function(
   ...,
   table_name = deparse(substitute(df)),
   greeting = NULL,
+  data_description = NULL,
+  extra_instructions = NULL,
   system_prompt = querychat_system_prompt(
     df,
     table_name,
     # By default, pass through any params supplied to querychat_init()
-    ...
+    ...,
+    data_description = data_description,
+    extra_instructions = extra_instructions
   ),
   create_chat_func = purrr::partial(ellmer::chat_openai, model = "gpt-4o")
 ) {

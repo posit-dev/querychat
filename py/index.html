@@ -322,7 +322,7 @@ GitHub Models and GitHub Personal Access Tokens
 <h2 class="anchored" data-anchor-id="customizing-querychat">Customizing querychat</h2>
 <section id="provide-a-greeting-recommended" class="level3">
 <h3 class="anchored" data-anchor-id="provide-a-greeting-recommended">Provide a greeting (recommended)</h3>
-<p>When the querychat UI first appears, you will usually want it to greet the user with some basic instructions. By default, these instructions are auto-generated every time a user arrives; this is slow, wasteful, and unpredictable. Instead, you should create a file called <code>greeting.md</code>, and when calling <code>querychat.init</code>, pass <code>greeting=Path("greeting.md").read_text()</code>.</p>
+<p>When the querychat UI first appears, you will usually want it to greet the user with some basic instructions. By default, these instructions are auto-generated every time a user arrives; this is slow, wasteful, and unpredictable. Instead, you should create a file called <code>greeting.md</code>, and when calling <code>querychat.init</code>, pass <code>greeting=Path("greeting.md")</code>.</p>
 <p>You can provide suggestions to the user by using the <code>&lt;span class="suggestion"&gt; &lt;/span&gt;</code> tag.</p>
 <p>For example:</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ss">* </span>**Filter and sort the data:**</span>
@@ -384,7 +384,7 @@ GitHub Models and GitHub Personal Access Tokens
 <div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>querychat_config <span class="op">=</span> querychat.init(</span>
 <span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    titanic,</span>
 <span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">"titanic"</span>,</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    data_description<span class="op">=</span>Path(<span class="st">"data_description.md"</span>).read_text()</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    data_description<span class="op">=</span>Path(<span class="st">"data_description.md"</span>)</span>
 <span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>querychat doesn’t need this information in any particular format; just put whatever information, in whatever format, you think a human would find helpful.</p>
 </section>
@@ -400,7 +400,7 @@ GitHub Models and GitHub Personal Access Tokens
 <span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>        <span class="st">"Stay on topic, only talk about the data dashboard and refuse to answer other questions."</span></span>
 <span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    ]</span>
 <span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>You can also put these instructions in a separate file and use <code>Path("instructions.md").read_text()</code> to load them, as we did for <code>data_description</code> above.</p>
+<p>You can also put these instructions in a separate file and use <code>Path("instructions.md")</code> to load them, as we did for <code>data_description</code> above.</p>
 <p><strong>Warning:</strong> It is not 100% guaranteed that the LLM will always—or in many cases, ever—obey your instructions, and it can be difficult to predict which instructions will be a problem. So be sure to test extensively each time you change your instructions, and especially, if you change the model you use.</p>
 </section>
 </section>

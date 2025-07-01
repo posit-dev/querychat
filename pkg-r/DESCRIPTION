@@ -16,12 +16,13 @@ Depends:
     R (>= 4.1.0)
 Imports:
     bslib,
+    dbplyr,
     DBI,
+    dplyr,
     duckdb,
     ellmer,
     glue,
     htmltools,
-    jsonlite,
     purrr,
     rlang,
     shiny,
@@ -31,3 +32,9 @@ Imports:
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.2
+Suggests: 
+    DT,
+    RSQLite,
+    shinytest2,
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3

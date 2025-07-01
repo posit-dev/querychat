@@ -123,12 +123,11 @@ py-check-tox:  ## [py] Run python 3.9 - 3.12 checks with tox
 	@echo "🔄 Running tests and type checking with tox for Python 3.9--3.12"
 	uv run tox run-parallel
 
-# .PHONY: py-check-tests
-# py-check-tests:  ## [py] Run python tests
-# 	@echo ""
-# 	@echo "🧪 Running tests with pytest"
-# 	uv run playwright install
-# 	uv run pytest
+.PHONY: py-check-tests
+py-check-tests:  ## [py] Run python tests
+	@echo ""
+	@echo "🧪 Running tests with pytest"
+	uv run pytest
 
 .PHONY: py-check-types
 py-check-types:  ## [py] Run python type checks

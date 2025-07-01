@@ -36,7 +36,7 @@ querychat does not have direct access to the raw data; it can _only_ read or fil
 - **Transparency:** querychat always displays the SQL to the user, so it can be vetted instead of blindly trusted.
 - **Reproducibility:** The SQL query can be easily copied and reused.
 
-Currently, querychat uses DuckDB for its SQL engine. It's extremely fast and has a surprising number of statistical functions.
+Currently, querychat uses DuckDB for its SQL engine when working with data frames. For database sources, it uses the native SQL dialect of the connected database.
 
 ## Language-specific Documentation
 

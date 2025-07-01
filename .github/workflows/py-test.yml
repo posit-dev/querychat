@@ -37,8 +37,8 @@ jobs:
       - name: 📦 Install the project
         run: uv sync --python ${{matrix.config.python-version }} --all-extras --all-groups
 
-      #   - name: 🧪 Check tests
-      #     run: make py-check-tests
+      - name: 🧪 Check tests
+        run: make py-check-tests
 
       - name: 📝 Check types
         run: make py-check-types

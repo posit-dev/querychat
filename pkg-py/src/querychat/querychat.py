@@ -5,7 +5,7 @@ import sys
 from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Protocol, Union, Optional
+from typing import TYPE_CHECKING, Any, Callable, Optional, Protocol, Union
 
 import chatlas
 import chevron

@@ -11,7 +11,7 @@ from src.querychat.datasource import SQLAlchemySource
 def test_db_engine():
     """Create a temporary SQLite database with test data."""
     # Create temporary database file
-    temp_db = tempfile.NamedTemporaryFile(delete=False, suffix=".db") #noqa: SIM115
+    temp_db = tempfile.NamedTemporaryFile(delete=False, suffix=".db")  # noqa: SIM115
     temp_db.close()
 
     # Connect and create test table with various data types
@@ -103,7 +103,7 @@ def test_get_schema_categorical_values(test_db_engine):
     # Category column should be treated as categorical (3 unique values: A, B, C)
     assert "- category (TEXT)" in schema
     assert "Categorical values:" in schema
-    assert "'A'" in schema and "'B'" in schema and "'C'" in schema #noqa: PT018
+    assert "'A'" in schema and "'B'" in schema and "'C'" in schema  # noqa: PT018
 
 
 def test_get_schema_non_categorical_text(test_db_engine):

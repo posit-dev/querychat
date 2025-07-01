@@ -10,14 +10,9 @@
 #' @param greeting A string in Markdown format, containing the initial message
 #'   to display to the user upon first loading the chatbot. If not provided, the
 #'   LLM will be invoked at the start of the conversation to generate one.
-#' @param ... Additional arguments passed to the `querychat_system_prompt()`
-#'   function, such as `categorical_threshold`. If a
-#'   `system_prompt` argument is provided, the `...` arguments will be silently
-#'   ignored.
-#' @inheritParams querychat_system_prompt
 #' @param system_prompt A string containing the system prompt for the chat model.
-#'   The default uses `create_system_prompt()` to generate a generic prompt,
-#'   which you can enhance via the `data_description` and `extra_instructions`
+#'   The default generates a generic prompt, which you can enhance via the `data_description` and 
+#'   `extra_instructions`
 #'   arguments.
 #' @param auto_close_data_source Should the data source connection be automatically
 #'   closed when the shiny app stops? Defaults to TRUE.

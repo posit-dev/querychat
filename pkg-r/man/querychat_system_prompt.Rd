@@ -7,10 +7,11 @@
 querychat_system_prompt(
   df,
   table_name,
+  ...,
   data_description = NULL,
   extra_instructions = NULL,
-  categorical_threshold = 10,
-  prompt_path = system.file("prompt", "prompt.md", package = "querychat")
+  prompt_template = NULL,
+  categorical_threshold = 10
 )
 }
 \arguments{
@@ -18,21 +19,25 @@ querychat_system_prompt(
 
 \item{table_name}{A string containing the name of the table in SQL queries.}
 
-\item{data_description}{Optional string in plain text or Markdown format, containing
-a description of the data frame or any additional context that might be
-helpful in understanding the data. This will be included in the system
-prompt for the chat model.}
+\item{...}{Ignored. Used to allow for future parameters.}
 
-\item{extra_instructions}{Optional string in plain text or Markdown format, containing
-any additional instructions for the chat model. These will be appended at
-the end of the system prompt.}
+\item{data_description}{Optional string or existing file path. The contents
+should be in plain text or Markdown format, containing a description of the
+data frame or any additional context that might be helpful in understanding
+the data. This will be included in the system prompt for the chat model.}
 
-\item{categorical_threshold}{The maximum number of unique values for a text column to be considered categorical.}
+\item{extra_instructions}{Optional string or existing file path. The contents
+should be in plain text or Markdown format, containing any additional
+instructions for the chat model. These will be appended at the end of the
+system prompt.}
 
-\item{prompt_path}{Optional string containing the path to a custom prompt file. If
-\code{NULL}, the default prompt file in the package will be used. This file should
-contain a whisker template for the system prompt, with placeholders for \code{{{schema}}},
-\code{{{data_description}}}, and \code{{{extra_instructions}}}.}
+\item{prompt_template}{Optional string or existing file path. If \code{NULL}, the
+default prompt file in the package will be used. The contents should
+contain a whisker template for the system prompt, with placeholders for
+\code{{{schema}}}, \code{{{data_description}}}, and \code{{{extra_instructions}}}.}
+
+\item{categorical_threshold}{The maximum number of unique values for a text
+column to be considered categorical.}
 }
 \value{
 A string containing the system prompt for the chat model.

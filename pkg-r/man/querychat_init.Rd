@@ -11,8 +11,10 @@ querychat_init(
   greeting = NULL,
   data_description = NULL,
   extra_instructions = NULL,
+  prompt_template = NULL,
   system_prompt = querychat_system_prompt(df, table_name, ..., data_description =
-    data_description, extra_instructions = extra_instructions),
+    data_description, extra_instructions = extra_instructions, prompt_template =
+    prompt_template),
   create_chat_func = purrr::partial(ellmer::chat_openai, model = "gpt-4o")
 )
 }
@@ -20,7 +22,7 @@ querychat_init(
 \item{df}{A data frame.}
 
 \item{...}{Additional arguments passed to the \code{querychat_system_prompt()}
-function, such as \code{categorical_threshold}, and \code{prompt_path}. If a
+function, such as \code{categorical_threshold}. If a
 \code{system_prompt} argument is provided, the \code{...} arguments will be silently
 ignored.}
 
@@ -33,14 +35,20 @@ try to infer a table name using the name of the \code{df} argument.}
 to display to the user upon first loading the chatbot. If not provided, the
 LLM will be invoked at the start of the conversation to generate one.}
 
-\item{data_description}{Optional string in plain text or Markdown format, containing
-a description of the data frame or any additional context that might be
-helpful in understanding the data. This will be included in the system
-prompt for the chat model.}
+\item{data_description}{Optional string or existing file path. The contents
+should be in plain text or Markdown format, containing a description of the
+data frame or any additional context that might be helpful in understanding
+the data. This will be included in the system prompt for the chat model.}
 
-\item{extra_instructions}{Optional string in plain text or Markdown format, containing
-any additional instructions for the chat model. These will be appended at
-the end of the system prompt.}
+\item{extra_instructions}{Optional string or existing file path. The contents
+should be in plain text or Markdown format, containing any additional
+instructions for the chat model. These will be appended at the end of the
+system prompt.}
+
+\item{prompt_template}{Optional string or existing file path. If \code{NULL}, the
+default prompt file in the package will be used. The contents should
+contain a whisker template for the system prompt, with placeholders for
+\code{{{schema}}}, \code{{{data_description}}}, and \code{{{extra_instructions}}}.}
 
 \item{system_prompt}{A string containing the system prompt for the chat model.
 The default uses \code{querychat_system_prompt()} to generate a generic prompt,

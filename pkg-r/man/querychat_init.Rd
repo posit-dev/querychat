@@ -6,19 +6,25 @@
 \usage{
 querychat_init(
   df,
-  tbl_name = deparse(substitute(df)),
+  ...,
+  table_name = deparse(substitute(df)),
   greeting = NULL,
   data_description = NULL,
   extra_instructions = NULL,
-  create_chat_func = purrr::partial(ellmer::chat_openai, model = "gpt-4o"),
-  system_prompt = querychat_system_prompt(df, tbl_name, data_description =
-    data_description, extra_instructions = extra_instructions)
+  system_prompt = querychat_system_prompt(df, table_name, ..., data_description =
+    data_description, extra_instructions = extra_instructions),
+  create_chat_func = purrr::partial(ellmer::chat_openai, model = "gpt-4o")
 )
 }
 \arguments{
 \item{df}{A data frame.}
 
-\item{tbl_name}{A string containing a valid table name for the data frame,
+\item{...}{Additional arguments passed to the \code{querychat_system_prompt()}
+function, such as \code{categorical_threshold}, and \code{prompt_path}. If a
+\code{system_prompt} argument is provided, the \code{...} arguments will be silently
+ignored.}
+
+\item{table_name}{A string containing a valid table name for the data frame,
 that will appear in SQL queries. Ensure that it begins with a letter, and
 contains only letters, numbers, and underscores. By default, querychat will
 try to infer a table name using the name of the \code{df} argument.}
@@ -27,24 +33,22 @@ try to infer a table name using the name of the \code{df} argument.}
 to display to the user upon first loading the chatbot. If not provided, the
 LLM will be invoked at the start of the conversation to generate one.}
 
-\item{data_description}{A string in plain text or Markdown format, containing
+\item{data_description}{Optional string in plain text or Markdown format, containing
 a description of the data frame or any additional context that might be
 helpful in understanding the data. This will be included in the system
-prompt for the chat model. If a \code{system_prompt} argument is provided, the
-\code{data_description} argument will be ignored.}
+prompt for the chat model.}
 
-\item{extra_instructions}{A string in plain text or Markdown format, containing
+\item{extra_instructions}{Optional string in plain text or Markdown format, containing
 any additional instructions for the chat model. These will be appended at
-the end of the system prompt. If a \code{system_prompt} argument is provided,
-the \code{extra_instructions} argument will be ignored.}
-
-\item{create_chat_func}{A function that takes a system prompt and returns a
-chat object. The default uses \code{ellmer::chat_openai()}.}
+the end of the system prompt.}
 
 \item{system_prompt}{A string containing the system prompt for the chat model.
 The default uses \code{querychat_system_prompt()} to generate a generic prompt,
 which you can enhance via the \code{data_description} and \code{extra_instructions}
 arguments.}
+
+\item{create_chat_func}{A function that takes a system prompt and returns a
+chat object. The default uses \code{ellmer::chat_openai()}.}
 }
 \value{
 An object that can be passed to \code{querychat_server()} as the

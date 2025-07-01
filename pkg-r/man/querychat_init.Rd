@@ -26,10 +26,17 @@ To create a data source:
 to display to the user upon first loading the chatbot. If not provided, the
 LLM will be invoked at the start of the conversation to generate one.}
 
+\item{data_description}{A string containing a data description for the chat model. We have found
+that formatting the data description as a markdown bulleted list works best.}
+
+\item{extra_instructions}{A string containing extra instructions for the chat model.}
+
+\item{create_chat_func}{A function that takes a system prompt and returns a
+chat object. The default uses \code{ellmer::chat_openai()}.}
+
 \item{system_prompt}{A string containing the system prompt for the chat model.
 The default generates a generic prompt, which you can enhance via the \code{data_description} and
-\code{extra_instructions}
-arguments.}
+\code{extra_instructions} arguments.}
 
 \item{auto_close_data_source}{Should the data source connection be automatically
 closed when the shiny app stops? Defaults to TRUE.}

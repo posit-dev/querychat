@@ -139,7 +139,7 @@ def system_prompt(
     data_description: Optional[str | Path] = None,
     extra_instructions: Optional[str | Path] = None,
     categorical_threshold: int = 10,
-    prompt_path: Optional[Path] = None,
+    prompt_template: Optional[str | Path] = None,
 ) -> str:
     """
     Create a system prompt for the chat model based on a data source's schema
@@ -157,8 +157,8 @@ def system_prompt(
     categorical_threshold : int, default=10
         Threshold for determining if a column is categorical based on number of
         unique values
-    prompt_path
-        Optional `Path` to a custom prompt file. If not provided, the default
+    prompt_template
+        Optional `Path` to or string of a custom prompt template. If not provided, the default
         querychat template will be used.
 
     Returns
@@ -168,27 +168,30 @@ def system_prompt(
 
     """
     # Read the prompt file
-    if prompt_path is None:
+    if prompt_template is None:
         # Default to the prompt file in the same directory as this module
         # This allows for easy customization by placing a different prompt.md file there
-        prompt_path = Path(__file__).parent / "prompt" / "prompt.md"
+        prompt_template = Path(__file__).parent / "prompt" / "prompt.md"
+    prompt_str = (
+        prompt_template.read_text()
+        if isinstance(prompt_template, Path)
+        else prompt_template
+    )
 
-    prompt_text = prompt_path.read_text()
-
-    data_description_str: str | None = (
+    data_description_str = (
         data_description.read_text()
         if isinstance(data_description, Path)
         else data_description
     )
 
-    extra_instructions_str: str | None = (
+    extra_instructions_str = (
         extra_instructions.read_text()
         if isinstance(extra_instructions, Path)
         else extra_instructions
     )
 
     return chevron.render(
-        prompt_text,
+        prompt_str,
         {
             "db_engine": data_source.db_engine,
             "schema": data_source.get_schema(
@@ -244,7 +247,7 @@ def init(
     greeting: Optional[str | Path] = None,
     data_description: Optional[str | Path] = None,
     extra_instructions: Optional[str | Path] = None,
-    prompt_path: Optional[Path] = None,
+    prompt_template: Optional[str | Path] = None,
     system_prompt_override: Optional[str] = None,
     create_chat_callback: Optional[CreateChatCallback] = None,
 ) -> QueryChatConfig:
@@ -273,8 +276,8 @@ def init(
         Additional instructions for the chat model.
         If a pathlib.Path object is passed,
         querychat will read the contents of the path into a string with `.read_text()`.
-    prompt_path : Path, optional
-        Path to a custom prompt file. If not provided, the default querychat
+    prompt_template : Path, optional
+        Path to or a string of a custom prompt file. If not provided, the default querychat
         template will be used. This should be a Markdown file that contains the
         system prompt template. The mustache template can use the following
         variables:
@@ -285,7 +288,7 @@ def init(
         - `{{extra_instructions}}`: Any additional instructions provided
     system_prompt_override : str, optional
         A custom system prompt to use instead of the default. If provided,
-        `data_description`, `extra_instructions`, and `prompt_path` will be
+        `data_description`, `extra_instructions`, and `prompt_template` will be
         silently ignored.
     create_chat_callback : CreateChatCallback, optional
         A function that creates a chat object
@@ -331,7 +334,7 @@ def init(
             data_source_obj,
             data_description=data_description,
             extra_instructions=extra_instructions,
-            prompt_path=prompt_path,
+            prompt_template=prompt_template,
         )
 
     # Default chat function if none provided

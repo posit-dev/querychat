@@ -5,18 +5,21 @@
 #'
 #' @param df A data frame to generate schema information from.
 #' @param table_name A string containing the name of the table in SQL queries.
-#' @param data_description Optional string in plain text or Markdown format, containing
-#'   a description of the data frame or any additional context that might be
-#'   helpful in understanding the data. This will be included in the system
-#'   prompt for the chat model.
-#' @param extra_instructions Optional string in plain text or Markdown format, containing
-#'   any additional instructions for the chat model. These will be appended at
-#'   the end of the system prompt.
-#' @param categorical_threshold The maximum number of unique values for a text column to be considered categorical.
-#' @param prompt_path Optional string containing the path to a custom prompt file. If
-#'   `NULL`, the default prompt file in the package will be used. This file should
-#'   contain a whisker template for the system prompt, with placeholders for `{{schema}}`,
-#'   `{{data_description}}`, and `{{extra_instructions}}`.
+#' @param data_description Optional string or existing file path. The contents
+#'   should be in plain text or Markdown format, containing a description of the
+#'   data frame or any additional context that might be helpful in understanding
+#'   the data. This will be included in the system prompt for the chat model.
+#' @param extra_instructions Optional string or existing file path. The contents
+#'   should be in plain text or Markdown format, containing any additional
+#'   instructions for the chat model. These will be appended at the end of the
+#'   system prompt.
+#' @param prompt_template Optional string or existing file path. If `NULL`, the
+#'   default prompt file in the package will be used. The contents should
+#'   contain a whisker template for the system prompt, with placeholders for
+#'   `{{schema}}`, `{{data_description}}`, and `{{extra_instructions}}`.
+#' @param categorical_threshold The maximum number of unique values for a text
+#'   column to be considered categorical.
+#' @param ... Ignored. Used to allow for future parameters.
 #'
 #' @return A string containing the system prompt for the chat model.
 #'
@@ -24,29 +27,25 @@
 querychat_system_prompt <- function(
   df,
   table_name,
+  ...,
   data_description = NULL,
   extra_instructions = NULL,
-  categorical_threshold = 10,
-  prompt_path = system.file("prompt", "prompt.md", package = "querychat")
+  prompt_template = NULL,
+  categorical_threshold = 10
 ) {
+  rlang::check_dots_empty()
+
   schema <- df_to_schema(df, table_name, categorical_threshold)
 
-  if (!is.null(data_description)) {
-    data_description <- paste(data_description, collapse = "\n")
+  data_description <- read_path_or_string(data_description, "data_description")
+  extra_instructions <- read_path_or_string(
+    extra_instructions,
+    "extra_instructions"
+  )
+  if (is.null(prompt_template)) {
+    prompt_template <- system.file("prompt", "prompt.md", package = "querychat")
   }
-  if (!is.null(extra_instructions)) {
-    extra_instructions <- paste(extra_instructions, collapse = "\n")
-  }
-
-  # Read the prompt file
-  if (is.null(prompt_path)) {
-    prompt_path <- system.file("prompt", "prompt.md", package = "querychat")
-  }
-  if (!file.exists(prompt_path)) {
-    stop("Prompt file not found at: ", prompt_path)
-  }
-  prompt_content <- readLines(prompt_path, warn = FALSE)
-  prompt_text <- paste(prompt_content, collapse = "\n")
+  prompt_text <- read_path_or_string(prompt_template, "prompt_template")
 
   processed_template <-
     whisker::whisker.render(
@@ -62,6 +61,20 @@ querychat_system_prompt <- function(
 
   processed_template
 }
+
+read_path_or_string <- function(x, name) {
+  if (is.null(x)) {
+    return(NULL)
+  }
+  if (!is.character(x)) {
+    stop(sprintf("`%s=` must be a string or a path to a file.", name))
+  }
+  if (file.exists(x)) {
+    x <- readLines(x, warn = FALSE)
+  }
+  return(paste(x, collapse = "\n"))
+}
+
 
 #' Generate a schema description from a data frame
 #'

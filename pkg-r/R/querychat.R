@@ -12,7 +12,7 @@
 #'   to display to the user upon first loading the chatbot. If not provided, the
 #'   LLM will be invoked at the start of the conversation to generate one.
 #' @param ... Additional arguments passed to the `querychat_system_prompt()`
-#'   function, such as `categorical_threshold`, and `prompt_path`. If a
+#'   function, such as `categorical_threshold`. If a
 #'   `system_prompt` argument is provided, the `...` arguments will be silently
 #'   ignored.
 #' @inheritParams querychat_system_prompt
@@ -34,13 +34,15 @@ querychat_init <- function(
   greeting = NULL,
   data_description = NULL,
   extra_instructions = NULL,
+  prompt_template = NULL,
   system_prompt = querychat_system_prompt(
     df,
     table_name,
     # By default, pass through any params supplied to querychat_init()
     ...,
     data_description = data_description,
-    extra_instructions = extra_instructions
+    extra_instructions = extra_instructions,
+    prompt_template = prompt_template
   ),
   create_chat_func = purrr::partial(ellmer::chat_openai, model = "gpt-4o")
 ) {

@@ -135,6 +135,7 @@ class QueryChat:
 
 def system_prompt(
     data_source: DataSource,
+    *,
     data_description: Optional[str | Path] = None,
     extra_instructions: Optional[str | Path] = None,
     categorical_threshold: int = 10,
@@ -328,8 +329,8 @@ def init(
     else:
         system_prompt_ = system_prompt_override or system_prompt(
             data_source_obj,
-            data_description,
-            extra_instructions,
+            data_description=data_description,
+            extra_instructions=extra_instructions,
             prompt_path=prompt_path,
         )
 

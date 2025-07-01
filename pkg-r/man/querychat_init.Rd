@@ -26,19 +26,20 @@ To create a data source:
 to display to the user upon first loading the chatbot. If not provided, the
 LLM will be invoked at the start of the conversation to generate one.}
 
-\item{data_description}{A string in plain text or Markdown format, containing
-a description of the data frame or any additional context that might be
-helpful in understanding the data. This will be included in the system
-prompt for the chat model. If a \code{system_prompt} argument is provided, the
-\code{data_description} argument will be ignored.}
+\item{data_description}{Optional string or existing file path. The contents
+should be in plain text or Markdown format, containing a description of the
+data frame or any additional context that might be helpful in understanding
+the data. This will be included in the system prompt for the chat model.}
 
-\item{extra_instructions}{A string in plain text or Markdown format, containing
-any additional instructions for the chat model. These will be appended at
-the end of the system prompt. If a \code{system_prompt} argument is provided,
-the \code{extra_instructions} argument will be ignored.}
+\item{extra_instructions}{Optional string or existing file path. The contents
+should be in plain text or Markdown format, containing any additional
+instructions for the chat model. These will be appended at the end of the
+system prompt.}
 
-\item{create_chat_func}{A function that takes a system prompt and returns a
-chat object. The default uses \code{ellmer::chat_openai()}.}
+\item{prompt_template}{Optional string or existing file path. If \code{NULL}, the
+default prompt file in the package will be used. The contents should
+contain a whisker template for the system prompt, with placeholders for
+\code{{{schema}}}, \code{{{data_description}}}, and \code{{{extra_instructions}}}.}
 
 \item{system_prompt}{A string containing the system prompt for the chat model.
 The default uses \code{create_system_prompt()} to generate a generic prompt,

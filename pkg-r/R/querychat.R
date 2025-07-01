@@ -10,17 +10,11 @@
 #' @param greeting A string in Markdown format, containing the initial message
 #'   to display to the user upon first loading the chatbot. If not provided, the
 #'   LLM will be invoked at the start of the conversation to generate one.
-#' @param data_description A string in plain text or Markdown format, containing
-#'   a description of the data frame or any additional context that might be
-#'   helpful in understanding the data. This will be included in the system
-#'   prompt for the chat model. If a `system_prompt` argument is provided, the
-#'   `data_description` argument will be ignored.
-#' @param extra_instructions A string in plain text or Markdown format, containing
-#'   any additional instructions for the chat model. These will be appended at
-#'   the end of the system prompt. If a `system_prompt` argument is provided,
-#'   the `extra_instructions` argument will be ignored.
-#' @param create_chat_func A function that takes a system prompt and returns a
-#'   chat object. The default uses `ellmer::chat_openai()`.
+#' @param ... Additional arguments passed to the `querychat_system_prompt()`
+#'   function, such as `categorical_threshold`. If a
+#'   `system_prompt` argument is provided, the `...` arguments will be silently
+#'   ignored.
+#' @inheritParams querychat_system_prompt
 #' @param system_prompt A string containing the system prompt for the chat model.
 #'   The default uses `create_system_prompt()` to generate a generic prompt,
 #'   which you can enhance via the `data_description` and `extra_instructions`
@@ -83,6 +77,15 @@ querychat_init <- function(
     "create_chat_func must be a function" = is.function(create_chat_func)
   )
 
+  if ("table_name" %in% names(attributes(system_prompt))) {
+    # If available, be sure to use the `table_name` argument to `querychat_init()`
+    # matches the one supplied to the system prompt
+    if (table_name != attr(system_prompt, "table_name")) {
+      rlang::abort(
+        "`querychat_init(table_name=)` must match system prompt `table_name` supplied to `querychat_system_prompt()`."
+      )
+    }
+  }
   if (!is.null(greeting)) {
     greeting <- paste(collapse = "\n", greeting)
   } else {

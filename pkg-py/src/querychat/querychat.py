@@ -2,16 +2,15 @@ from __future__ import annotations
 
 import re
 import sys
+from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Protocol, Union
+from typing import TYPE_CHECKING, Any, Callable, Protocol, Union, Optional
 
 import chatlas
 import chevron
 import narwhals as nw
-import pandas as pd
 import sqlalchemy
-from narwhals.typing import IntoFrame
 from shiny import Inputs, Outputs, Session, module, reactive, ui
 
 if TYPE_CHECKING:
@@ -25,22 +24,16 @@ class CreateChatCallback(Protocol):
     def __call__(self, system_prompt: str) -> chatlas.Chat: ...
 
 
+@dataclass
 class QueryChatConfig:
     """
     Configuration class for querychat.
     """
 
-    def __init__(
-        self,
-        data_source: DataSource,
-        system_prompt: str,
-        greeting: str | None,
-        create_chat_callback: CreateChatCallback,
-    ):
-        self.data_source = data_source
-        self.system_prompt = system_prompt
-        self.greeting = greeting
-        self.create_chat_callback = create_chat_callback
+    data_source: DataSource
+    system_prompt: str
+    greeting: Optional[str]
+    create_chat_callback: CreateChatCallback
 
 
 class QueryChat:
@@ -135,9 +128,11 @@ class QueryChat:
 
 def system_prompt(
     data_source: DataSource,
-    data_description: str | None = None,
-    extra_instructions: str | None = None,
+    *,
+    data_description: Optional[str | Path] = None,
+    extra_instructions: Optional[str | Path] = None,
     categorical_threshold: int = 10,
+    prompt_template: Optional[str | Path] = None,
 ) -> str:
     """
     Create a system prompt for the chat model based on a data source's schema
@@ -155,6 +150,9 @@ def system_prompt(
     categorical_threshold : int, default=10
         Threshold for determining if a column is categorical based on number of
         unique values
+    prompt_template
+        Optional `Path` to or string of a custom prompt template. If not provided, the default
+        querychat template will be used.
 
     Returns
     -------
@@ -163,18 +161,37 @@ def system_prompt(
 
     """
     # Read the prompt file
-    prompt_path = Path(__file__).parent / "prompt" / "prompt.md"
-    prompt_text = prompt_path.read_text()
+    if prompt_template is None:
+        # Default to the prompt file in the same directory as this module
+        # This allows for easy customization by placing a different prompt.md file there
+        prompt_template = Path(__file__).parent / "prompt" / "prompt.md"
+    prompt_str = (
+        prompt_template.read_text()
+        if isinstance(prompt_template, Path)
+        else prompt_template
+    )
+
+    data_description_str = (
+        data_description.read_text()
+        if isinstance(data_description, Path)
+        else data_description
+    )
+
+    extra_instructions_str = (
+        extra_instructions.read_text()
+        if isinstance(extra_instructions, Path)
+        else extra_instructions
+    )
 
     return chevron.render(
-        prompt_text,
+        prompt_str,
         {
             "db_engine": data_source.db_engine,
             "schema": data_source.get_schema(
                 categorical_threshold=categorical_threshold,
             ),
-            "data_description": data_description,
-            "extra_instructions": extra_instructions,
+            "data_description": data_description_str,
+            "extra_instructions": extra_instructions_str,
         },
     )
 
@@ -219,11 +236,13 @@ def df_to_html(df: IntoFrame, maxrows: int = 5) -> str:
 def init(
     data_source: IntoFrame | sqlalchemy.Engine,
     table_name: str,
-    greeting: str | None = None,
-    data_description: str | None = None,
-    extra_instructions: str | None = None,
-    create_chat_callback: CreateChatCallback | None = None,
-    system_prompt_override: str | None = None,
+    *,
+    greeting: Optional[str | Path] = None,
+    data_description: Optional[str | Path] = None,
+    extra_instructions: Optional[str | Path] = None,
+    prompt_template: Optional[str | Path] = None,
+    system_prompt_override: Optional[str] = None,
+    create_chat_callback: Optional[CreateChatCallback] = None,
 ) -> QueryChatConfig:
     """
     Initialize querychat with any compliant data source.
@@ -238,16 +257,34 @@ def init(
         SQL queries (usually the variable name of the data frame, but it doesn't
         have to be). If a data_source is a SQLAlchemy engine, the table_name is
         the name of the table in the database to query against.
-    greeting : str, optional
-        A string in Markdown format, containing the initial message
-    data_description : str, optional
-        Description of the data in plain text or Markdown
-    extra_instructions : str, optional
-        Additional instructions for the chat model
+    greeting : str | Path, optional
+        A string in Markdown format, containing the initial message.
+        If a pathlib.Path object is passed,
+        querychat will read the contents of the path into a string with `.read_text()`.
+    data_description : str | Path, optional
+        Description of the data in plain text or Markdown.
+        If a pathlib.Path object is passed,
+        querychat will read the contents of the path into a string with `.read_text()`.
+    extra_instructions : str | Path, optional
+        Additional instructions for the chat model.
+        If a pathlib.Path object is passed,
+        querychat will read the contents of the path into a string with `.read_text()`.
+    prompt_template : Path, optional
+        Path to or a string of a custom prompt file. If not provided, the default querychat
+        template will be used. This should be a Markdown file that contains the
+        system prompt template. The mustache template can use the following
+        variables:
+        - `{{db_engine}}`: The database engine used (e.g., "DuckDB")
+        - `{{schema}}`: The schema of the data source, generated by
+          `data_source.get_schema()`
+        - `{{data_description}}`: The optional data description provided
+        - `{{extra_instructions}}`: Any additional instructions provided
+    system_prompt_override : str, optional
+        A custom system prompt to use instead of the default. If provided,
+        `data_description`, `extra_instructions`, and `prompt_template` will be
+        silently ignored.
     create_chat_callback : CreateChatCallback, optional
         A function that creates a chat object
-    system_prompt_override : str, optional
-        A custom system prompt to use instead of the default
 
     Returns
     -------
@@ -277,12 +314,21 @@ def init(
             file=sys.stderr,
         )
 
-    # Create the system prompt, or use the override
-    _system_prompt = system_prompt_override or system_prompt(
-        data_source_obj,
-        data_description,
-        extra_instructions,
+    # quality of life improvement to do the Path.read_text() for user or pass along the string
+    greeting_str: str | None = (
+        greeting.read_text() if isinstance(greeting, Path) else greeting
     )
+
+    # Create the system prompt, or use the override
+    if isinstance(system_prompt_override, Path):
+        system_prompt_ = system_prompt_override.read_text()
+    else:
+        system_prompt_ = system_prompt_override or system_prompt(
+            data_source_obj,
+            data_description=data_description,
+            extra_instructions=extra_instructions,
+            prompt_template=prompt_template,
+        )
 
     # Default chat function if none provided
     create_chat_callback = create_chat_callback or partial(
@@ -292,8 +338,8 @@ def init(
 
     return QueryChatConfig(
         data_source=data_source_obj,
-        system_prompt=_system_prompt,
-        greeting=greeting,
+        system_prompt=system_prompt_,
+        greeting=greeting_str,
         create_chat_callback=create_chat_callback,
     )
 
@@ -325,7 +371,12 @@ def mod_ui() -> ui.TagList:
     )
 
 
-def sidebar(id: str, width: int = 400, height: str = "100%", **kwargs) -> ui.Sidebar:
+def sidebar(
+    id: str,
+    width: int = 400,
+    height: str = "100%",
+    **kwargs,
+) -> ui.Sidebar:
     """
     Create a sidebar containing the querychat UI.
 

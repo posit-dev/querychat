@@ -257,16 +257,17 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    data_description<span class="op">=</span><span class="va">None</span>,</span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    extra_instructions<span class="op">=</span><span class="va">None</span>,</span>
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    categorical_threshold<span class="op">=</span><span class="dv">10</span>,</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    prompt_path<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Create a system prompt for the chat model based on a data source’s schema and optional additional context and instructions.</p>
 <section id="parameters" class="level2 doc-section doc-section-parameters">
 <h2 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 17%">
-<col style="width: 8%">
-<col style="width: 64%">
-<col style="width: 8%">
+<col style="width: 14%">
+<col style="width: 11%">
+<col style="width: 66%">
+<col style="width: 7%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -300,6 +301,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>int</td>
 <td>Threshold for determining if a column is categorical based on number of unique values</td>
 <td><code>10</code></td>
+</tr>
+<tr class="odd">
+<td>prompt_path</td>
+<td>Optional[Path]</td>
+<td>Optional <code>Path</code> to a custom prompt file. If not provided, the default querychat template will be used.</td>
+<td><code>None</code></td>
 </tr>
 </tbody>
 </table>

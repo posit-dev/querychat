@@ -16,9 +16,11 @@ Depends:
     R (>= 4.1.0)
 Imports:
     bslib,
+    callr,
     DBI,
     duckdb,
     ellmer,
+    ggplot2,
     glue,
     htmltools,
     jsonlite,

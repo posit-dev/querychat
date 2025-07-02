@@ -209,7 +209,6 @@ querychat_server <- function(id, querychat_config) {
         {
           callr::r(
             function(code, df) {
-              library(ggplot2)
               p <- eval(parse(text = code))
               if (!inherits(p, "ggplot")) stop("Code did not return a ggplot object.")
               p # return the ggplot object

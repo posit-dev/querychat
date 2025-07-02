@@ -28,24 +28,23 @@
 #'
 #' @export
 querychat_init <- function(
-  df,
-  ...,
-  table_name = deparse(substitute(df)),
-  greeting = NULL,
-  data_description = NULL,
-  extra_instructions = NULL,
-  prompt_template = NULL,
-  system_prompt = querychat_system_prompt(
     df,
-    table_name,
-    # By default, pass through any params supplied to querychat_init()
     ...,
-    data_description = data_description,
-    extra_instructions = extra_instructions,
-    prompt_template = prompt_template
-  ),
-  create_chat_func = purrr::partial(ellmer::chat_openai, model = "gpt-4o")
-) {
+    table_name = deparse(substitute(df)),
+    greeting = NULL,
+    data_description = NULL,
+    extra_instructions = NULL,
+    prompt_template = NULL,
+    system_prompt = querychat_system_prompt(
+      df,
+      table_name,
+      # By default, pass through any params supplied to querychat_init()
+      ...,
+      data_description = data_description,
+      extra_instructions = extra_instructions,
+      prompt_template = prompt_template
+    ),
+    create_chat_func = purrr::partial(ellmer::chat_openai, model = "gpt-4o")) {
   is_table_name_ok <- is.character(table_name) &&
     length(table_name) == 1 &&
     grepl("^[a-zA-Z][a-zA-Z0-9_]*$", table_name, perl = TRUE)
@@ -139,7 +138,8 @@ querychat_ui <- function(id) {
   htmltools::tagList(
     # TODO: Make this into a proper HTML dependency
     shiny::includeCSS(system.file("www", "styles.css", package = "querychat")),
-    shinychat::chat_ui(ns("chat"), height = "100%", fill = TRUE)
+    shinychat::chat_ui(ns("chat"), height = "100%", fill = TRUE),
+    shiny::plotOutput(ns("llm_plot"), height = 300)
   )
 }
 
@@ -191,6 +191,48 @@ querychat_server <- function(id, querychat_config) {
         session = session
       )
     }
+    plot_code <- shiny::reactiveVal(NULL)
+    # Preload the conversation with the system prompt. These are instructions for
+    # the chat model, and must not be shown to the end user.
+    chat <- create_chat_func(system_prompt = system_prompt)
+    output$llm_plot <- shiny::renderPlot({
+      code <- plot_code()
+      if (is.null(code) || !nzchar(code)) {
+        return(NULL)
+      }
+      df <- filtered_df()
+      forbidden <- c("system", "file", "unlink", "assign", "library", "require")
+      if (any(sapply(forbidden, grepl, code))) {
+        stop("Forbidden function detected in plot code.")
+      }
+      res <- tryCatch(
+        {
+          callr::r(
+            function(code, df) {
+              library(ggplot2)
+              p <- eval(parse(text = code))
+              if (!inherits(p, "ggplot")) stop("Code did not return a ggplot object.")
+              p # return the ggplot object
+            },
+            args = list(code = code, df = df),
+            show = TRUE,
+            stdout = TRUE,
+            stderr = TRUE,
+          )
+        },
+        error = function(e) {
+          message(
+            "Plot error: ", e$message, "\n",
+            "Code: ", code, "\n",
+          )
+          plot.new()
+          text(0.5, 0.5, "Plot error. See R console for details.")
+          return(NULL)
+        }
+      )
+      if (inherits(res, "ggplot")) print(res)
+      invisible(res)
+    })
 
     # Modifies the data presented in the data dashboard, based on the given SQL
     # query, and also updates the title.
@@ -219,6 +261,18 @@ querychat_server <- function(id, querychat_config) {
       }
     }
 
+    update_plot <- function(ggplot_code) {
+      plot_code(ggplot_code)
+      append_output("\n```r\n", ggplot_code, "\n```\n\n")
+    }
+    chat$register_tool(ellmer::tool(
+      update_plot,
+      "Updates the plot displayed in the data dashboard, based on the given ggplot code.",
+      ggplot_code = ellmer::type_string(
+        "A string containing R code that generates a ggplot object."
+      )
+    ))
+
     # Perform a SQL query on the data, and return the results as JSON.
     # @param query A DuckDB SQL query; must be a SELECT statement.
     # @return The results of the query as a JSON string.
@@ -242,9 +296,6 @@ querychat_server <- function(id, querychat_config) {
       df |> jsonlite::toJSON(auto_unbox = TRUE)
     }
 
-    # Preload the conversation with the system prompt. These are instructions for
-    # the chat model, and must not be shown to the end user.
-    chat <- create_chat_func(system_prompt = system_prompt)
     chat$register_tool(ellmer::tool(
       update_dashboard,
       "Modifies the data presented in the data dashboard, based on the given SQL query, and also updates the title.",

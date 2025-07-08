@@ -16,7 +16,7 @@
 #' @param create_chat_func A function that takes a system prompt and returns a
 #'   chat object. The default uses `ellmer::chat_openai()`.
 #' @param system_prompt A string containing the system prompt for the chat model.
-#'   The default generates a generic prompt, which you can enhance via the `data_description` and 
+#'   The default generates a generic prompt, which you can enhance via the `data_description` and
 #'   `extra_instructions` arguments.
 #' @param auto_close_data_source Should the data source connection be automatically
 #'   closed when the shiny app stops? Defaults to TRUE.

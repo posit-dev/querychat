@@ -44,7 +44,7 @@ packages = ["pkg-py/src/querychat"]
 include = ["pkg-py/src/querychat", "pkg-py/LICENSE", "pkg-py/README.md"]
 
 [dependency-groups]
-dev = ["ruff>=0.6.5", "pyright>=1.1.401", "tox-uv>=1.11.4"]
+dev = ["ruff>=0.6.5", "pyright>=1.1.401", "tox-uv>=1.11.4", "pytest>=8.4.0"]
 docs = ["quartodoc>=0.11.1"]
 examples = ["seaborn", "openai"]
 
@@ -77,6 +77,8 @@ exclude = [
     "node_modules",
     "site-packages",
     "venv",
+    "app-*.py",             # ignore example apps for now
+    "app.py",
     "examples",             # ignore example apps for now
 ]
 
@@ -159,6 +161,10 @@ unfixable = []
 
 # Allow unused variables when underscore-prefixed.
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+# disable S101 (flagging asserts) for tests
+[tool.ruff.lint.per-file-ignores]
+"pkg-py/tests/*.py" = ["S101"]
 
 [tool.ruff.format]
 quote-style = "double"

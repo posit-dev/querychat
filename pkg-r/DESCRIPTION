@@ -21,7 +21,6 @@ Imports:
     dplyr,
     duckdb,
     ellmer,
-    glue,
     htmltools,
     purrr,
     rlang,

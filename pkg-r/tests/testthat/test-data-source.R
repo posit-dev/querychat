@@ -63,11 +63,14 @@ test_that("get_schema methods return proper schema", {
   df_source <- querychat_data_source(test_df, table_name = "test_table")
   schema <- get_schema(df_source)
   expect_type(schema, "character")
-  expect_true(grepl("Table: test_table", schema))
-  expect_true(grepl("id \\(INTEGER\\)", schema))
-  expect_true(grepl("name \\(TEXT\\)", schema))
-  expect_true(grepl("active \\(BOOLEAN\\)", schema))
-  expect_true(grepl("Categorical values", schema)) # Should list categorical values
+  expect_match(schema, "Table: test_table")
+  expect_match(schema, "id \\(INTEGER\\)")
+  expect_match(schema, "name \\(TEXT\\)")
+  expect_match(schema, "active \\(BOOLEAN\\)")
+  expect_match(schema, "Categorical values") # Should list categorical values
+
+  # Test min/max values in schema - specifically for the id column
+  expect_match(schema, "- id \\(INTEGER\\)\\n  Range: 1 to 5")
 
   # Test with DBI source
   temp_db <- tempfile(fileext = ".db")
@@ -77,9 +80,12 @@ test_that("get_schema methods return proper schema", {
   dbi_source <- querychat_data_source(conn, "test_table")
   schema <- get_schema(dbi_source)
   expect_type(schema, "character")
-  expect_true(grepl("Table: test_table", schema))
-  expect_true(grepl("id \\(INTEGER\\)", schema))
-  expect_true(grepl("name \\(TEXT\\)", schema))
+  expect_match(schema, "Table: test_table")
+  expect_match(schema, "id \\(INTEGER\\)")
+  expect_match(schema, "name \\(TEXT\\)")
+
+  # Test min/max values in DBI source schema - specifically for the id column
+  expect_match(schema, "- id \\(INTEGER\\)\\n  Range: 1 to 5")
 
   # Clean up
   cleanup_source(df_source)
@@ -155,6 +161,28 @@ test_that("get_lazy_data returns tbl objects", {
   unlink(temp_db)
 })
 
+test_that("get_schema correctly reports min/max values for numeric columns", {
+  # Create a dataframe with multiple numeric columns
+  test_df <- data.frame(
+    id = 1:5,
+    score = c(10.5, 20.3, 15.7, 30.1, 25.9),
+    count = c(100, 200, 150, 50, 75),
+    stringsAsFactors = FALSE
+  )
+
+  df_source <- querychat_data_source(test_df, table_name = "test_metrics")
+  schema <- get_schema(df_source)
+
+  # Check that each numeric column has the correct min/max values
+  expect_match(schema, "- id \\(INTEGER\\)\\n  Range: 1 to 5")
+  expect_match(schema, "- score \\(FLOAT\\)\\n  Range: 10\\.5 to 30\\.1")
+  # Note: In the test output, count was detected as FLOAT rather than INTEGER
+  expect_match(schema, "- count \\(FLOAT\\)\\n  Range: 50 to 200")
+
+  # Clean up
+  cleanup_source(df_source)
+})
+
 test_that("create_system_prompt generates appropriate system prompt", {
   test_df <- data.frame(
     id = 1:3,
@@ -169,8 +197,8 @@ test_that("create_system_prompt generates appropriate system prompt", {
   )
   expect_type(prompt, "character")
   expect_true(nchar(prompt) > 0)
-  expect_true(grepl("A test dataframe", prompt))
-  expect_true(grepl("Table: test_table", prompt))
+  expect_match(prompt, "A test dataframe")
+  expect_match(prompt, "Table: test_table")
 
   # Clean up
   cleanup_source(df_source)

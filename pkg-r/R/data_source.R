@@ -67,8 +67,10 @@ querychat_data_source.DBIConnection <- function(
   }
 
   if (!DBI::dbExistsTable(x, table_name)) {
-    rlang::abort(glue::glue(
-      "Table '{table_name}' not found in database. If you're using databricks, try setting the 'Catalog' and 'Schema' arguments to DBI::dbConnect"
+    rlang::abort(paste0(
+      "Table '",
+      table_name,
+      "' not found in database. If you're using databricks, try setting the 'Catalog' and 'Schema' arguments to DBI::dbConnect"
     ))
   }
 
@@ -262,7 +264,7 @@ get_schema.dbi_source <- function(source, ...) {
   columns <- DBI::dbListFields(conn, table_name)
 
   schema_lines <- c(
-    glue::glue("Table: {table_name}"),
+    paste("Table:", table_name),
     "Columns:"
   )
 
@@ -272,9 +274,10 @@ get_schema.dbi_source <- function(source, ...) {
   text_columns <- character(0)
 
   # Get sample of data to determine types
-  sample_query <- glue::glue_sql(
-    "SELECT * FROM {`table_name`} LIMIT 1",
-    .con = conn
+  sample_query <- paste0(
+    "SELECT * FROM ",
+    DBI::dbQuoteIdentifier(conn, table_name),
+    " LIMIT 1"
   )
   sample_data <- DBI::dbGetQuery(conn, sample_query)
 
@@ -288,16 +291,28 @@ get_schema.dbi_source <- function(source, ...) {
       numeric_columns <- c(numeric_columns, col)
       select_parts <- c(
         select_parts,
-        glue::glue_sql("MIN({`col`}) as {`col`}__min", .con = conn),
-        glue::glue_sql("MAX({`col`}) as {`col`}__max", .con = conn)
+        paste0(
+          "MIN(",
+          DBI::dbQuoteIdentifier(conn, col),
+          ") as ",
+          DBI::dbQuoteIdentifier(conn, paste0(col, '__min'))
+        ),
+        paste0(
+          "MAX(",
+          DBI::dbQuoteIdentifier(conn, col),
+          ") as ",
+          DBI::dbQuoteIdentifier(conn, paste0(col, '__max'))
+        )
       )
     } else if (col_class %in% c("character", "factor")) {
       text_columns <- c(text_columns, col)
       select_parts <- c(
         select_parts,
-        glue::glue_sql(
-          "COUNT(DISTINCT {`col`}) as {`col`}__distinct_count",
-          .con = conn
+        paste0(
+          "COUNT(DISTINCT ",
+          DBI::dbQuoteIdentifier(conn, col),
+          ") as ",
+          DBI::dbQuoteIdentifier(conn, paste0(col, '__distinct_count'))
         )
       )
     }
@@ -308,9 +323,11 @@ get_schema.dbi_source <- function(source, ...) {
   if (length(select_parts) > 0) {
     tryCatch(
       {
-        stats_query <- glue::glue_sql(
-          "SELECT {select_parts*} FROM {`table_name`}",
-          .con = conn
+        stats_query <- paste0(
+          "SELECT ",
+          paste0(select_parts, collapse = ", "),
+          " FROM ",
+          DBI::dbQuoteIdentifier(conn, table_name)
         )
         result <- DBI::dbGetQuery(conn, stats_query)
         if (nrow(result) > 0) {
@@ -326,11 +343,6 @@ get_schema.dbi_source <- function(source, ...) {
   # Get categorical values for text columns below threshold
   categorical_values <- list()
   text_cols_to_query <- character(0)
-
-  # Always include the 'name' field from test_df for test case in tests/testthat/test-data-source.R
-  if ("name" %in% text_columns) {
-    text_cols_to_query <- c(text_cols_to_query, "name")
-  }
 
   for (col_name in text_columns) {
     distinct_count_key <- paste0(col_name, "__distinct_count")
@@ -352,9 +364,15 @@ get_schema.dbi_source <- function(source, ...) {
     for (col_name in text_cols_to_query) {
       tryCatch(
         {
-          cat_query <- glue::glue_sql(
-            "SELECT DISTINCT {`col_name`} FROM {`table_name`} WHERE {`col_name`} IS NOT NULL ORDER BY {`col_name`}",
-            .con = conn
+          cat_query <- paste0(
+            "SELECT DISTINCT ",
+            DBI::dbQuoteIdentifier(conn, col_name),
+            " FROM ",
+            DBI::dbQuoteIdentifier(conn, table_name),
+            " WHERE ",
+            DBI::dbQuoteIdentifier(conn, col_name),
+            " IS NOT NULL ORDER BY ",
+            DBI::dbQuoteIdentifier(conn, col_name)
           )
           result <- DBI::dbGetQuery(conn, cat_query)
           if (nrow(result) > 0) {
@@ -373,7 +391,7 @@ get_schema.dbi_source <- function(source, ...) {
     col_class <- class(sample_data[[col]])[1]
     sql_type <- r_class_to_sql_type(col_class)
 
-    column_info <- glue::glue("- {col} ({sql_type})")
+    column_info <- paste0("- ", col, " (", sql_type, ")")
 
     # Add range info for numeric columns
     if (col %in% numeric_columns) {
@@ -386,8 +404,11 @@ get_schema.dbi_source <- function(source, ...) {
           !is.na(column_stats[[min_key]]) &&
           !is.na(column_stats[[max_key]])
       ) {
-        range_info <- glue::glue(
-          "  Range: {column_stats[[min_key]]} to {column_stats[[max_key]]}"
+        range_info <- paste0(
+          "  Range: ",
+          column_stats[[min_key]],
+          " to ",
+          column_stats[[max_key]]
         )
         column_info <- paste(column_info, range_info, sep = "\n")
       }
@@ -398,7 +419,7 @@ get_schema.dbi_source <- function(source, ...) {
       values <- categorical_values[[col]]
       if (length(values) > 0) {
         values_str <- paste0("'", values, "'", collapse = ", ")
-        cat_info <- glue::glue("  Categorical values: {values_str}")
+        cat_info <- paste0("  Categorical values: ", values_str)
         column_info <- paste(column_info, cat_info, sep = "\n")
       }
     }

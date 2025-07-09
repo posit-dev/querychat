@@ -76,15 +76,6 @@ querychat_init <- function(
     "create_chat_func must be a function" = is.function(create_chat_func)
   )
 
-  if ("table_name" %in% names(attributes(system_prompt))) {
-    # If available, be sure to use the `table_name` argument to `querychat_init()`
-    # matches the one supplied to the system prompt
-    if (table_name != attr(system_prompt, "table_name")) {
-      rlang::abort(
-        "`querychat_init(table_name=)` must match system prompt `table_name` supplied to `querychat_system_prompt()`."
-      )
-    }
-  }
   if (!is.null(greeting)) {
     greeting <- paste(collapse = "\n", greeting)
   } else {
@@ -307,8 +298,12 @@ df_to_html <- function(df, maxrows = 5) {
     paste(collapse = "\n")
 
   if (nrow(df_short) != nrow(df)) {
-    rows_notice <- glue::glue(
-      "\n\n(Showing only the first {maxrows} rows out of {nrow(df)}.)\n"
+    rows_notice <- paste0(
+      "\n\n(Showing only the first ",
+      maxrows,
+      " rows out of ",
+      nrow(df),
+      ".)\n"
     )
   } else {
     rows_notice <- ""

@@ -97,7 +97,7 @@ execute_query <- function(source, query, ...) {
 
 #' @export
 execute_query.dbi_source <- function(source, query, ...) {
-  DBI::dbGetQuery(source$conn, query)
+  dplyr::collect(get_lazy_data(source, query))
 }
 
 #' Test a SQL query on a data source.

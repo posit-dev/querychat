@@ -53,7 +53,7 @@ ui <- page_sidebar(
   p(
     "The table below shows the current filtered data based on your chat queries:"
   ),
-  DT::DTOutput("data_table"),
+  DT::DTOutput("data_table", fill = FALSE),
   br(),
   h3("Current SQL Query"),
   verbatimTextOutput("sql_query"),

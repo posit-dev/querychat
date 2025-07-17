@@ -161,6 +161,53 @@ test_that("get_lazy_data returns tbl objects", {
   unlink(temp_db)
 })
 
+test_that("get_lazy_data works with empty query", {
+  # Test with data frame source
+  test_df <- data.frame(
+    id = 1:5,
+    value = c(10, 20, 30, 40, 50),
+    stringsAsFactors = FALSE
+  )
+
+  df_source <- querychat_data_source(test_df, table_name = "test_table")
+  
+  # Test with NULL query
+  lazy_data_null <- get_lazy_data(df_source, NULL)
+  expect_s3_class(lazy_data_null, "tbl")
+  result_null <- dplyr::collect(lazy_data_null)
+  expect_equal(nrow(result_null), 5)
+  
+  # Test with empty string query
+  lazy_data_empty <- get_lazy_data(df_source, "")
+  expect_s3_class(lazy_data_empty, "tbl")
+  result_empty <- dplyr::collect(lazy_data_empty)
+  expect_equal(nrow(result_empty), 5)
+  
+  # Test with DBI source
+  temp_db <- tempfile(fileext = ".db")
+  conn <- dbConnect(RSQLite::SQLite(), temp_db)
+  dbWriteTable(conn, "test_table", test_df, overwrite = TRUE)
+
+  dbi_source <- querychat_data_source(conn, "test_table")
+  
+  # Test with NULL query
+  lazy_data_null <- get_lazy_data(dbi_source, NULL)
+  expect_s3_class(lazy_data_null, "tbl")
+  result_null <- dplyr::collect(lazy_data_null)
+  expect_equal(nrow(result_null), 5)
+  
+  # Test with empty string query
+  lazy_data_empty <- get_lazy_data(dbi_source, "")
+  expect_s3_class(lazy_data_empty, "tbl")
+  result_empty <- dplyr::collect(lazy_data_empty)
+  expect_equal(nrow(result_empty), 5)
+
+  # Clean up
+  cleanup_source(df_source)
+  dbDisconnect(conn)
+  unlink(temp_db)
+})
+
 test_that("get_schema correctly reports min/max values for numeric columns", {
   # Create a dataframe with multiple numeric columns
   test_df <- data.frame(

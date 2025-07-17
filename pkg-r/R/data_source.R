@@ -137,7 +137,8 @@ get_lazy_data.dbi_source <- function(source, query = NULL, ...) {
     # For a null or empty query, default to returning the whole table (ie SELECT *)
     dplyr::tbl(source$conn, source$table_name)
   } else {
-    dplyr::tbl(source$conn, query)
+    # Use dbplyr::sql to create a safe SQL query object
+    dplyr::tbl(source$conn, dbplyr::sql(query))
   }
 }
 

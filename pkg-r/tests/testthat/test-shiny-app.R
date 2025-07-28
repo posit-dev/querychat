@@ -55,12 +55,7 @@ server <- function(input, output, session) {
   chat <- querychat_server("chat", querychat_config)
   
   output$data_table <- DT::renderDT({
-    data <- chat$df()
-    if (inherits(data, "tbl_lazy")) {
-      dplyr::collect(data)
-    } else {
-      data
-    }
+    chat$df()
   }, options = list(pageLength = 5))
   
   output$sql_query <- renderText({
@@ -96,7 +91,6 @@ test_that("database reactive functionality works correctly", {
 
   library(DBI)
   library(RSQLite)
-  library(dplyr)
 
   # Create test database
   temp_db <- tempfile(fileext = ".db")
@@ -126,28 +120,21 @@ test_that("database reactive functionality works correctly", {
   expect_s3_class(config$data_source, "dbi_source")
   expect_s3_class(config$data_source, "querychat_data_source")
 
-  # Test that get_lazy_data returns lazy table
-  lazy_data <- get_lazy_data(config$data_source)
-  expect_s3_class(
-    lazy_data,
-    c("tbl_SQLiteConnection", "tbl_dbi", "tbl_sql", "tbl_lazy", "tbl")
+  # Test that we can get all data
+  result_data <- execute_query(config$data_source, NULL)
+  expect_s3_class(result_data, "data.frame")
+  expect_equal(nrow(result_data), 150)
+  expect_equal(ncol(result_data), 5)
+
+  # Test with a specific query
+  query_result <- execute_query(
+    config$data_source,
+    "SELECT \"Sepal.Length\", \"Sepal.Width\" FROM iris WHERE \"Species\" = 'setosa'"
   )
-
-  # Test that we can chain operations and collect
-  result <- lazy_data %>%
-    filter(Species == "setosa") %>%
-    select(Sepal.Length, Sepal.Width) %>%
-    collect()
-
-  expect_s3_class(result, "data.frame")
-  expect_equal(nrow(result), 50)
-  expect_equal(ncol(result), 2)
-  expect_true(all(c("Sepal.Length", "Sepal.Width") %in% names(result)))
-
-  # Test that original lazy table is still usable
-  all_data <- collect(lazy_data)
-  expect_equal(nrow(all_data), 150)
-  expect_equal(ncol(all_data), 5)
+  expect_s3_class(query_result, "data.frame")
+  expect_equal(nrow(query_result), 50)
+  expect_equal(ncol(query_result), 2)
+  expect_true(all(c("Sepal.Length", "Sepal.Width") %in% names(query_result)))
 
   # Clean up
   dbDisconnect(db_conn)

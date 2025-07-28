@@ -143,13 +143,8 @@ querychat_ui <- function(id) {
 #'
 #' - `sql`: A reactive that returns the current SQL query.
 #' - `title`: A reactive that returns the current title.
-#' - `df`: A reactive that returns the filtered data. For data frame sources,
-#'   this returns a data.frame. For database sources, this returns a lazy
-#'   dbplyr tbl that can be further manipulated with dplyr verbs before
-#'   calling collect() to materialize the results.
+#' - `df`: A reactive that returns the filtered data as a data.frame.
 #' - `chat`: The [ellmer::Chat] object that powers the chat interface.
-#'
-#' By convention, this object should be named `querychat_config`.
 #'
 #' @export
 querychat_server <- function(id, querychat_config) {
@@ -164,10 +159,7 @@ querychat_server <- function(id, querychat_config) {
     current_title <- shiny::reactiveVal(NULL)
     current_query <- shiny::reactiveVal("")
     filtered_df <- shiny::reactive({
-      execute_query(data_source, query = dplyr::sql(current_query()))
-    })
-    filtered_tbl <- shiny::reactive({
-      get_lazy_data(data_source, query = dplyr::sql(current_query()))
+      execute_query(data_source, query = DBI::SQL(current_query()))
     })
 
     append_output <- function(...) {
@@ -277,8 +269,7 @@ querychat_server <- function(id, querychat_config) {
       chat = chat,
       sql = shiny::reactive(current_query()),
       title = shiny::reactive(current_title()),
-      df = filtered_df,
-      tbl = filtered_tbl
+      df = filtered_df
     )
   })
 }

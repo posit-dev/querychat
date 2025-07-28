@@ -17,7 +17,15 @@ querychat_data_source(x, ...)
 
 \item{...}{Additional arguments passed to specific methods}
 
-\item{table_name}{The name to use for the table in the data source}
+\item{table_name}{The name to use for the table in the data source. Can be:
+\itemize{
+\item A character string (e.g., "table_name")
+\item Or, for tables contained within catalogs or schemas:
+\itemize{
+\item A DBI::Id object (e.g., \code{DBI::Id(schema = "schema_name", table = "table_name")})
+\item An AsIs object created with I() (e.g., \code{I("schema_name.table_name")})
+}
+}}
 
 \item{categorical_threshold}{For text columns, the maximum number of unique values to consider as a categorical variable}
 }

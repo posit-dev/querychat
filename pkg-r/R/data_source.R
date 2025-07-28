@@ -4,7 +4,11 @@
 #' dispatches to appropriate methods based on input.
 #'
 #' @param x A data frame or DBI connection
-#' @param table_name The name to use for the table in the data source
+#' @param table_name The name to use for the table in the data source. Can be:
+#'   - A character string (e.g., "table_name")
+#'   - Or, for tables contained within catalogs or schemas:
+#'     - A DBI::Id object (e.g., `DBI::Id(schema = "schema_name", table = "table_name")`)
+#'     - An AsIs object created with I() (e.g., `I("schema_name.table_name")`)
 #' @param categorical_threshold For text columns, the maximum number of unique values to consider as a categorical variable
 #' @param ... Additional arguments passed to specific methods
 #' @return A querychat_data_source object
@@ -62,14 +66,26 @@ querychat_data_source.DBIConnection <- function(
   categorical_threshold = 20,
   ...
 ) {
-  if (!is.character(table_name) || length(table_name) != 1) {
-    rlang::abort("`table_name` must be a single character string")
+  # Handle different types of table_name inputs
+  if (inherits(table_name, "Id")) {
+    # DBI::Id object - keep as is
+  } else if (inherits(table_name, "AsIs")) {
+    # AsIs object - convert to character
+    table_name <- as.character(table_name)
+  } else if (is.character(table_name) && length(table_name) == 1) {
+    # Character string - keep as is
+  } else {
+    # Invalid input
+    rlang::abort(
+      "`table_name` must be a single character string, a DBI::Id object, or an AsIs object"
+    )
   }
 
+  # Check if table exists
   if (!DBI::dbExistsTable(x, table_name)) {
     rlang::abort(paste0(
       "Table '",
-      table_name,
+      as.character(table_name),
       "' not found in database. If you're using databricks, try setting the 'Catalog' and 'Schema' arguments to DBI::dbConnect"
     ))
   }
@@ -97,7 +113,15 @@ execute_query <- function(source, query, ...) {
 
 #' @export
 execute_query.dbi_source <- function(source, query, ...) {
-  dplyr::collect(get_lazy_data(source, query))
+  if (is.null(query) || query == "") {
+    # For a null or empty query, default to returning the whole table (ie SELECT *)
+    query <- paste0(
+      "SELECT * FROM ",
+      DBI::dbQuoteIdentifier(source$conn, source$table_name)
+    )
+  }
+  # Execute the query directly
+  DBI::dbGetQuery(source$conn, query)
 }
 
 #' Test a SQL query on a data source.
@@ -119,28 +143,6 @@ test_query.dbi_source <- function(source, query, ...) {
   df
 }
 
-
-#' Get a lazy representation of a data source
-#'
-#' @param source A querychat_data_source object
-#' @param query SQL query string
-#' @param ... Additional arguments passed to methods
-#' @return A lazy representation (typically a dbplyr tbl)
-#' @export
-get_lazy_data <- function(source, query, ...) {
-  UseMethod("get_lazy_data")
-}
-
-#' @export
-get_lazy_data.dbi_source <- function(source, query = NULL, ...) {
-  if (is.null(query) || query == "") {
-    # For a null or empty query, default to returning the whole table (ie SELECT *)
-    dplyr::tbl(source$conn, source$table_name)
-  } else {
-    # Use dbplyr::sql to create a safe SQL query object
-    dplyr::tbl(source$conn, dbplyr::sql(query))
-  }
-}
 
 #' Get type information for a data source
 #'

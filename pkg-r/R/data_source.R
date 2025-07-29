@@ -67,11 +67,8 @@ querychat_data_source.DBIConnection <- function(
   ...
 ) {
   # Handle different types of table_name inputs
-  if (inherits(table_name, "Id")) {
+  if (inherits(table_name, "Id") || inherits(table_name, "AsIs")) {
     # DBI::Id object - keep as is
-  } else if (inherits(table_name, "AsIs")) {
-    # AsIs object - convert to character
-    table_name <- as.character(table_name)
   } else if (is.character(table_name) && length(table_name) == 1) {
     # Character string - keep as is
   } else {

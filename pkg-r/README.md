@@ -82,7 +82,7 @@ Currently, querychat uses DuckDB for its SQL engine. It's extremely fast and has
 
 ### Provide a greeting (recommended)
 
-When the querychat UI first appears, you will usually want it to greet the user with some basic instructions. By default, these instructions are auto-generated every time a user arrives; this is slow, wasteful, and unpredictable. Instead, you should create a file called `greeting.md`, and when calling `querychat_init`, pass `greeting = readLines("greeting.md")`.
+When the querychat UI first appears, you will usually want it to greet the user with some basic instructions. By default, these instructions are auto-generated every time a user arrives; this is slow, wasteful, and unpredictable. Instead, you should create a file called `greeting.md`, and when calling `querychat_init`, pass `greeting = "greeting.md"`.
 
 You can provide suggestions to the user by using the `<span class="suggestion"> </span>` tag.
 
@@ -160,7 +160,7 @@ which you can then pass via:
 ```r
 querychat_config <- querychat_init(
   mtcars,
-  data_description = readLines("data_description.md")
+  data_description = "data_description.md"
 )
 ```
 
@@ -178,7 +178,7 @@ querychat_config <- querychat_init(mtcars, extra_instructions = c(
 ))
 ```
 
-You can also put these instructions in a separate file and use `readLines()` to load them, as we did for `data_description` above.
+You can also put these instructions in a separate file and pass the file path to load them, as we did for `data_description` above.
 
 **Warning:** It is not 100% guaranteed that the LLM will always—or in many cases, ever—obey your instructions, and it can be difficult to predict which instructions will be a problem. So be sure to test extensively each time you change your instructions, and especially, if you change the model you use.
 

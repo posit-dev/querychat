@@ -31,7 +31,8 @@ that will appear in SQL queries. Ensure that it begins with a letter, and
 contains only letters, numbers, and underscores. By default, querychat will
 try to infer a table name using the name of the \code{df} argument.}
 
-\item{greeting}{A string in Markdown format, containing the initial message
+\item{greeting}{Optional string or existing file path. The contents
+should be in plain text or Markdown format, containing the initial message
 to display to the user upon first loading the chatbot. If not provided, the
 LLM will be invoked at the start of the conversation to generate one.}
 

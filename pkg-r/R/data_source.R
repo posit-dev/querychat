@@ -65,14 +65,14 @@ querychat_data_source.DBIConnection <- function(
   ...
 ) {
   # Handle different types of table_name inputs
-  if (inherits(table_name, "Id") || inherits(table_name, "AsIs")) {
+  if (inherits(table_name, "Id")) {
     # DBI::Id object - keep as is
   } else if (is.character(table_name) && length(table_name) == 1) {
     # Character string - keep as is
   } else {
     # Invalid input
     rlang::abort(
-      "`table_name` must be a single character string, a DBI::Id object, or an AsIs object"
+      "`table_name` must be a single character string or a DBI::Id object"
     )
   }
 

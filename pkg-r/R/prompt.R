@@ -105,8 +105,10 @@ df_to_schema <- function(
       "FLOAT"
     } else if (is.logical(df[[column]])) {
       "BOOLEAN"
+    } else if (inherits(df[[column]], "Date")) {
+      "DATE"
     } else if (inherits(df[[column]], "POSIXt")) {
-      "DATETIME"
+      "TIMESTAMP"
     } else {
       "TEXT"
     }
@@ -121,7 +123,7 @@ df_to_schema <- function(
         categories_str <- paste0("'", categories, "'", collapse = ", ")
         info <- c(info, paste0("  Categorical values: ", categories_str))
       }
-    } else if (sql_type %in% c("INTEGER", "FLOAT", "DATETIME")) {
+    } else if (sql_type %in% c("INTEGER", "FLOAT", "DATE", "DATETIME")) {
       rng <- range(df[[column]], na.rm = TRUE)
       if (all(is.na(rng))) {
         info <- c(info, "  Range: NULL to NULL")

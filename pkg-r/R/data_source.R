@@ -79,9 +79,10 @@ querychat_data_source.DBIConnection <- function(
   # Check if table exists
   if (!DBI::dbExistsTable(x, table_name)) {
     rlang::abort(paste0(
-      "Table '",
-      as.character(table_name),
-      "' not found in database. If you're using databricks, try setting the 'Catalog' and 'Schema' arguments to DBI::dbConnect"
+      "Table ",
+      DBI::dbQuoteIdentifier(x, table_name),
+      " not found in database. If you're using a table in a catalog or schema, pass a DBI::Id",
+      " object to `table_name`"
     ))
   }
 

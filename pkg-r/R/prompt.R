@@ -105,8 +105,10 @@ df_to_schema <- function(
       "FLOAT"
     } else if (is.logical(df[[column]])) {
       "BOOLEAN"
+    } else if (inherits(df[[column]], "Date")) {
+      "DATE"
     } else if (inherits(df[[column]], "POSIXt")) {
-      "DATETIME"
+      "TIMESTAMP"
     } else {
       "TEXT"
     }

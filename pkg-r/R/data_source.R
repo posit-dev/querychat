@@ -6,7 +6,7 @@
 #' @param x A data frame or DBI connection
 #' @param table_name The name to use for the table in the data source. Can be:
 #'   - A character string (e.g., "table_name")
-#'   - Or, for tables contained within catalogs or schemas, a DBI::Id object (e.g., `DBI::Id(schema = "schema_name", table = "table_name")`)
+#'   - Or, for tables contained within catalogs or schemas, a [DBI::Id()] object (e.g., `DBI::Id(schema = "schema_name", table = "table_name")`)
 #' @param categorical_threshold For text columns, the maximum number of unique values to consider as a categorical variable
 #' @param ... Additional arguments passed to specific methods
 #' @return A querychat_data_source object

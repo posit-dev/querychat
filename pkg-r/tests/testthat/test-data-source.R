@@ -79,7 +79,7 @@ test_that("get_schema methods return proper schema", {
   dbi_source <- querychat_data_source(conn, "test_table")
   schema <- get_schema(dbi_source)
   expect_type(schema, "character")
-  expect_match(schema, "Table: test_table")
+  expect_match(schema, "Table: `test_table`")
   expect_match(schema, "id \\(INTEGER\\)")
   expect_match(schema, "name \\(TEXT\\)")
 

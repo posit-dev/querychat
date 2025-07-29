@@ -83,7 +83,7 @@ querychat_init <- function(
     }
   }
   if (!is.null(greeting)) {
-    greeting <- paste(collapse = "\n", greeting)
+    greeting <- read_path_or_string(greeting)
   } else {
     rlang::warn(c(
       "No greeting provided; the LLM will be invoked at the start of the conversation to generate one.",

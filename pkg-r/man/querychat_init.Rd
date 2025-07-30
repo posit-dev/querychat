@@ -5,58 +5,41 @@
 \title{Call this once outside of any server function}
 \usage{
 querychat_init(
-  df,
-  ...,
-  table_name = deparse(substitute(df)),
+  data_source,
   greeting = NULL,
   data_description = NULL,
   extra_instructions = NULL,
-  prompt_template = NULL,
-  system_prompt = querychat_system_prompt(df, table_name, ..., data_description =
-    data_description, extra_instructions = extra_instructions, prompt_template =
-    prompt_template),
-  create_chat_func = purrr::partial(ellmer::chat_openai, model = "gpt-4o")
+  create_chat_func = purrr::partial(ellmer::chat_openai, model = "gpt-4o"),
+  system_prompt = NULL,
+  auto_close_data_source = TRUE
 )
 }
 \arguments{
-\item{df}{A data frame.}
-
-\item{...}{Additional arguments passed to the \code{querychat_system_prompt()}
-function, such as \code{categorical_threshold}. If a
-\code{system_prompt} argument is provided, the \code{...} arguments will be silently
-ignored.}
-
-\item{table_name}{A string containing a valid table name for the data frame,
-that will appear in SQL queries. Ensure that it begins with a letter, and
-contains only letters, numbers, and underscores. By default, querychat will
-try to infer a table name using the name of the \code{df} argument.}
+\item{data_source}{A querychat_data_source object created by \code{querychat_data_source()}.
+To create a data source:
+\itemize{
+\item For data frame: \code{querychat_data_source(df, tbl_name = "my_table")}
+\item For database: \code{querychat_data_source(conn, "table_name")}
+}}
 
 \item{greeting}{A string in Markdown format, containing the initial message
 to display to the user upon first loading the chatbot. If not provided, the
 LLM will be invoked at the start of the conversation to generate one.}
 
-\item{data_description}{Optional string or existing file path. The contents
-should be in plain text or Markdown format, containing a description of the
-data frame or any additional context that might be helpful in understanding
-the data. This will be included in the system prompt for the chat model.}
+\item{data_description}{A string containing a data description for the chat model. We have found
+that formatting the data description as a markdown bulleted list works best.}
 
-\item{extra_instructions}{Optional string or existing file path. The contents
-should be in plain text or Markdown format, containing any additional
-instructions for the chat model. These will be appended at the end of the
-system prompt.}
-
-\item{prompt_template}{Optional string or existing file path. If \code{NULL}, the
-default prompt file in the package will be used. The contents should
-contain a whisker template for the system prompt, with placeholders for
-\code{{{schema}}}, \code{{{data_description}}}, and \code{{{extra_instructions}}}.}
-
-\item{system_prompt}{A string containing the system prompt for the chat model.
-The default uses \code{querychat_system_prompt()} to generate a generic prompt,
-which you can enhance via the \code{data_description} and \code{extra_instructions}
-arguments.}
+\item{extra_instructions}{A string containing extra instructions for the chat model.}
 
 \item{create_chat_func}{A function that takes a system prompt and returns a
 chat object. The default uses \code{ellmer::chat_openai()}.}
+
+\item{system_prompt}{A string containing the system prompt for the chat model.
+The default generates a generic prompt, which you can enhance via the \code{data_description} and
+\code{extra_instructions} arguments.}
+
+\item{auto_close_data_source}{Should the data source connection be automatically
+closed when the shiny app stops? Defaults to TRUE.}
 }
 \value{
 An object that can be passed to \code{querychat_server()} as the

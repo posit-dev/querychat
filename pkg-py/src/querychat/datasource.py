@@ -178,7 +178,7 @@ class SQLAlchemySource:
         if not inspector.has_table(table_name):
             raise ValueError(f"Table '{table_name}' not found in database")
 
-    def get_schema(self, *, categorical_threshold: int) -> str:
+    def get_schema(self, *, categorical_threshold: int) -> str:  # noqa: PLR0912
         """
         Generate schema information from database table.
 
@@ -191,12 +191,15 @@ class SQLAlchemySource:
 
         schema = [f"Table: {self._table_name}", "Columns:"]
 
-        for col in columns:
-            # Get SQL type name
-            sql_type = self._get_sql_type_name(col["type"])
-            column_info = [f"- {col['name']} ({sql_type})"]
+        # Build a single query to get all column statistics
+        select_parts = []
+        numeric_columns = []
+        text_columns = []
 
-            # For numeric columns, try to get range
+        for col in columns:
+            col_name = col["name"]
+
+            # Check if column is numeric
             if isinstance(
                 col["type"],
                 (
@@ -208,44 +211,103 @@ class SQLAlchemySource:
                     sqltypes.DateTime,
                     sqltypes.BigInteger,
                     sqltypes.SmallInteger,
-                    # sqltypes.Interval,
                 ),
             ):
-                try:
-                    query = text(
-                        f"SELECT MIN({col['name']}), MAX({col['name']}) FROM {self._table_name}",
-                    )
-                    with self._get_connection() as conn:
-                        result = conn.execute(query).fetchone()
-                        if result and result[0] is not None and result[1] is not None:
-                            column_info.append(f"  Range: {result[0]} to {result[1]}")
-                except Exception:  # noqa: S110
-                    pass  # Silently skip range info if query fails
+                numeric_columns.append(col_name)
+                select_parts.extend(
+                    [
+                        f"MIN({col_name}) as {col_name}__min",
+                        f"MAX({col_name}) as {col_name}__max",
+                    ],
+                )
 
-            # For string/text columns, check if categorical
+            # Check if column is text/string
             elif isinstance(
                 col["type"],
                 (sqltypes.String, sqltypes.Text, sqltypes.Enum),
             ):
-                try:
-                    count_query = text(
-                        f"SELECT COUNT(DISTINCT {col['name']}) FROM {self._table_name}",
-                    )
+                text_columns.append(col_name)
+                select_parts.append(
+                    f"COUNT(DISTINCT {col_name}) as {col_name}__distinct_count",
+                )
+
+        # Execute single query to get all statistics
+        column_stats = {}
+        if select_parts:
+            try:
+                stats_query = text(
+                    f"SELECT {', '.join(select_parts)} FROM {self._table_name}",
+                )
+                with self._get_connection() as conn:
+                    result = conn.execute(stats_query).fetchone()
+                    if result:
+                        # Convert result to dict for easier access
+                        column_stats = dict(zip(result._fields, result))
+            except Exception:  # noqa: S110
+                pass  # Fall back to no statistics if query fails
+
+        # Get categorical values for text columns that are below threshold
+        categorical_values = {}
+        text_cols_to_query = []
+        for col_name in text_columns:
+            distinct_count_key = f"{col_name}__distinct_count"
+            if (
+                distinct_count_key in column_stats
+                and column_stats[distinct_count_key]
+                and column_stats[distinct_count_key] <= categorical_threshold
+            ):
+                text_cols_to_query.append(col_name)
+
+        # Get categorical values in a single query if needed
+        if text_cols_to_query:
+            try:
+                # Build UNION query for all categorical columns
+                union_parts = [
+                    f"SELECT '{col_name}' as column_name, {col_name} as value "
+                    f"FROM {self._table_name} WHERE {col_name} IS NOT NULL "
+                    f"GROUP BY {col_name}"
+                    for col_name in text_cols_to_query
+                ]
+
+                if union_parts:
+                    categorical_query = text(" UNION ALL ".join(union_parts))
                     with self._get_connection() as conn:
-                        distinct_count = conn.execute(count_query).scalar()
-                        if distinct_count and distinct_count <= categorical_threshold:
-                            values_query = text(
-                                f"SELECT DISTINCT {col['name']} FROM {self._table_name} "
-                                f"WHERE {col['name']} IS NOT NULL",
-                            )
-                            values = [
-                                str(row[0])
-                                for row in conn.execute(values_query).fetchall()
-                            ]
-                            values_str = ", ".join([f"'{v}'" for v in values])
-                            column_info.append(f"  Categorical values: {values_str}")
-                except Exception:  # noqa: S110
-                    pass  # Silently skip categorical info if query fails
+                        results = conn.execute(categorical_query).fetchall()
+                        for row in results:
+                            col_name, value = row
+                            if col_name not in categorical_values:
+                                categorical_values[col_name] = []
+                            categorical_values[col_name].append(str(value))
+            except Exception:  # noqa: S110
+                pass  # Skip categorical values if query fails
+
+        # Build schema description using collected statistics
+        for col in columns:
+            col_name = col["name"]
+            sql_type = self._get_sql_type_name(col["type"])
+            column_info = [f"- {col_name} ({sql_type})"]
+
+            # Add range info for numeric columns
+            if col_name in numeric_columns:
+                min_key = f"{col_name}__min"
+                max_key = f"{col_name}__max"
+                if (
+                    min_key in column_stats
+                    and max_key in column_stats
+                    and column_stats[min_key] is not None
+                    and column_stats[max_key] is not None
+                ):
+                    column_info.append(
+                        f"  Range: {column_stats[min_key]} to {column_stats[max_key]}",
+                    )
+
+            # Add categorical values for text columns
+            elif col_name in categorical_values:
+                values = categorical_values[col_name]
+                # Remove duplicates and sort
+                unique_values = sorted(set(values))
+                values_str = ", ".join([f"'{v}'" for v in unique_values])
+                column_info.append(f"  Categorical values: {values_str}")
 
             schema.extend(column_info)
 

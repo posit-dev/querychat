@@ -3,85 +3,79 @@
 #' This will perform one-time initialization that can then be shared by all
 #' Shiny sessions in the R process.
 #'
-#' @param df A data frame.
-#' @param table_name A string containing a valid table name for the data frame,
-#'   that will appear in SQL queries. Ensure that it begins with a letter, and
-#'   contains only letters, numbers, and underscores. By default, querychat will
-#'   try to infer a table name using the name of the `df` argument.
+#' @param data_source A querychat_data_source object created by `querychat_data_source()`.
+#'   To create a data source:
+#'   - For data frame: `querychat_data_source(df, tbl_name = "my_table")`
+#'   - For database: `querychat_data_source(conn, "table_name")`
 #' @param greeting A string in Markdown format, containing the initial message
 #'   to display to the user upon first loading the chatbot. If not provided, the
 #'   LLM will be invoked at the start of the conversation to generate one.
-#' @param ... Additional arguments passed to the `querychat_system_prompt()`
-#'   function, such as `categorical_threshold`. If a
-#'   `system_prompt` argument is provided, the `...` arguments will be silently
-#'   ignored.
-#' @inheritParams querychat_system_prompt
-#' @param system_prompt A string containing the system prompt for the chat model.
-#'   The default uses `querychat_system_prompt()` to generate a generic prompt,
-#'   which you can enhance via the `data_description` and `extra_instructions`
-#'   arguments.
+#' @param data_description A string containing a data description for the chat model. We have found
+#'   that formatting the data description as a markdown bulleted list works best.
+#' @param extra_instructions A string containing extra instructions for the chat model.
 #' @param create_chat_func A function that takes a system prompt and returns a
 #'   chat object. The default uses `ellmer::chat_openai()`.
+#' @param system_prompt A string containing the system prompt for the chat model.
+#'   The default generates a generic prompt, which you can enhance via the `data_description` and
+#'   `extra_instructions` arguments.
+#' @param auto_close_data_source Should the data source connection be automatically
+#'   closed when the shiny app stops? Defaults to TRUE.
+#'
 #' @returns An object that can be passed to `querychat_server()` as the
 #'   `querychat_config` argument. By convention, this object should be named
 #'   `querychat_config`.
 #'
 #' @export
 querychat_init <- function(
-  df,
-  ...,
-  table_name = deparse(substitute(df)),
+  data_source,
   greeting = NULL,
   data_description = NULL,
   extra_instructions = NULL,
-  prompt_template = NULL,
-  system_prompt = querychat_system_prompt(
-    df,
-    table_name,
-    # By default, pass through any params supplied to querychat_init()
-    ...,
-    data_description = data_description,
-    extra_instructions = extra_instructions,
-    prompt_template = prompt_template
-  ),
-  create_chat_func = purrr::partial(ellmer::chat_openai, model = "gpt-4o")
+  create_chat_func = purrr::partial(ellmer::chat_openai, model = "gpt-4o"),
+  system_prompt = NULL,
+  auto_close_data_source = TRUE
 ) {
-  is_table_name_ok <- is.character(table_name) &&
-    length(table_name) == 1 &&
-    grepl("^[a-zA-Z][a-zA-Z0-9_]*$", table_name, perl = TRUE)
-  if (!is_table_name_ok) {
-    if (missing(table_name)) {
-      rlang::abort(
-        "Unable to infer table name from `df` argument. Please specify `table_name` argument explicitly."
-      )
-    } else {
-      rlang::abort(
-        "`table_name` argument must be a string containing a valid table name."
-      )
-    }
-  }
-
-  force(df)
-  force(system_prompt) # Have default `...` params evaluated
   force(create_chat_func)
 
-  # TODO: Provide nicer looking errors here
+  # If the user passes a data.frame to data_source, create a correct data source for them
+  if (inherits(data_source, "data.frame")) {
+    data_source <- querychat_data_source(
+      data_source,
+      table_name = deparse(substitute(data_source))
+    )
+  }
+
+  # Check that data_source is a querychat_data_source object
+  if (!inherits(data_source, "querychat_data_source")) {
+    rlang::abort(
+      "`data_source` must be a querychat_data_source object. Use querychat_data_source() to create one."
+    )
+  }
+
+  if (auto_close_data_source) {
+    # Close the data source when the Shiny app stops (or, if some reason the
+    # querychat_init call is within a specific session, when the session ends)
+    shiny::onStop(function() {
+      message("Closing data source...")
+      cleanup_source(data_source)
+    })
+  }
+
+  # Generate system prompt if not provided
+  if (is.null(system_prompt)) {
+    system_prompt <- create_system_prompt(
+      data_source,
+      data_description = data_description,
+      extra_instructions = extra_instructions
+    )
+  }
+
+  # Validate system prompt and create_chat_func
   stopifnot(
-    "df must be a data frame" = is.data.frame(df),
-    "table_name must be a string" = is.character(table_name),
     "system_prompt must be a string" = is.character(system_prompt),
     "create_chat_func must be a function" = is.function(create_chat_func)
   )
 
-  if ("table_name" %in% names(attributes(system_prompt))) {
-    # If available, be sure to use the `table_name` argument to `querychat_init()`
-    # matches the one supplied to the system prompt
-    if (table_name != attr(system_prompt, "table_name")) {
-      rlang::abort(
-        "`querychat_init(table_name=)` must match system prompt `table_name` supplied to `querychat_system_prompt()`."
-      )
-    }
-  }
   if (!is.null(greeting)) {
     greeting <- paste(collapse = "\n", greeting)
   } else {
@@ -91,14 +85,9 @@ querychat_init <- function(
     ))
   }
 
-  conn <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
-  duckdb::duckdb_register(conn, table_name, df, experimental = FALSE)
-  shiny::onStop(function() DBI::dbDisconnect(conn))
-
   structure(
     list(
-      df = df,
-      conn = conn,
+      data_source = data_source,
       system_prompt = system_prompt,
       greeting = greeting,
       create_chat_func = create_chat_func
@@ -154,19 +143,15 @@ querychat_ui <- function(id) {
 #'
 #' - `sql`: A reactive that returns the current SQL query.
 #' - `title`: A reactive that returns the current title.
-#' - `df`: A reactive that returns the data frame, filtered and sorted by the
-#'   current SQL query.
+#' - `df`: A reactive that returns the filtered data as a data.frame.
 #' - `chat`: The [ellmer::Chat] object that powers the chat interface.
-#'
-#' By convention, this object should be named `querychat_config`.
 #'
 #' @export
 querychat_server <- function(id, querychat_config) {
   shiny::moduleServer(id, function(input, output, session) {
     # 🔄 Reactive state/computation --------------------------------------------
 
-    df <- querychat_config[["df"]]
-    conn <- querychat_config[["conn"]]
+    data_source <- querychat_config[["data_source"]]
     system_prompt <- querychat_config[["system_prompt"]]
     greeting <- querychat_config[["greeting"]]
     create_chat_func <- querychat_config[["create_chat_func"]]
@@ -174,11 +159,7 @@ querychat_server <- function(id, querychat_config) {
     current_title <- shiny::reactiveVal(NULL)
     current_query <- shiny::reactiveVal("")
     filtered_df <- shiny::reactive({
-      if (current_query() == "") {
-        df
-      } else {
-        DBI::dbGetQuery(conn, current_query())
-      }
+      execute_query(data_source, query = DBI::SQL(current_query()))
     })
 
     append_output <- function(...) {
@@ -194,7 +175,7 @@ querychat_server <- function(id, querychat_config) {
 
     # Modifies the data presented in the data dashboard, based on the given SQL
     # query, and also updates the title.
-    # @param query A DuckDB SQL query; must be a SELECT statement.
+    # @param query A SQL query; must be a SELECT statement.
     # @param title A title to display at the top of the data dashboard,
     #   summarizing the intent of the SQL query.
     update_dashboard <- function(query, title) {
@@ -203,7 +184,7 @@ querychat_server <- function(id, querychat_config) {
       tryCatch(
         {
           # Try it to see if it errors; if so, the LLM will see the error
-          DBI::dbGetQuery(conn, query)
+          test_query(data_source, query)
         },
         error = function(err) {
           append_output("> Error: ", conditionMessage(err), "\n\n")
@@ -220,26 +201,22 @@ querychat_server <- function(id, querychat_config) {
     }
 
     # Perform a SQL query on the data, and return the results as JSON.
-    # @param query A DuckDB SQL query; must be a SELECT statement.
-    # @return The results of the query as a JSON string.
+    # @param query A SQL query; must be a SELECT statement.
+    # @return The results of the query as a data frame.
     query <- function(query) {
       # Do this before query, in case it errors
-      append_output("\n```sql\n", query, "\n```\n\n")
+      append_output("\n```sql\n", query, "\n```\n")
 
       tryCatch(
         {
-          df <- DBI::dbGetQuery(conn, query)
+          # Execute the query and return the results
+          execute_query(data_source, query)
         },
         error = function(e) {
           append_output("> Error: ", conditionMessage(e), "\n\n")
           stop(e)
         }
       )
-
-      tbl_html <- df_to_html(df, maxrows = 5)
-      append_output(tbl_html, "\n\n")
-
-      df |> jsonlite::toJSON(auto_unbox = TRUE)
     }
 
     # Preload the conversation with the system prompt. These are instructions for
@@ -249,7 +226,7 @@ querychat_server <- function(id, querychat_config) {
       update_dashboard,
       "Modifies the data presented in the data dashboard, based on the given SQL query, and also updates the title.",
       query = ellmer::type_string(
-        "A DuckDB SQL query; must be a SELECT statement."
+        "A SQL query; must be a SELECT statement."
       ),
       title = ellmer::type_string(
         "A title to display at the top of the data dashboard, summarizing the intent of the SQL query."
@@ -257,9 +234,9 @@ querychat_server <- function(id, querychat_config) {
     ))
     chat$register_tool(ellmer::tool(
       query,
-      "Perform a SQL query on the data, and return the results as JSON.",
+      "Perform a SQL query on the data, and return the results.",
       query = ellmer::type_string(
-        "A DuckDB SQL query; must be a SELECT statement."
+        "A SQL query; must be a SELECT statement."
       )
     ))
 
@@ -312,8 +289,12 @@ df_to_html <- function(df, maxrows = 5) {
     paste(collapse = "\n")
 
   if (nrow(df_short) != nrow(df)) {
-    rows_notice <- glue::glue(
-      "\n\n(Showing only the first {maxrows} rows out of {nrow(df)}.)\n"
+    rows_notice <- paste0(
+      "\n\n(Showing only the first ",
+      maxrows,
+      " rows out of ",
+      nrow(df),
+      ".)\n"
     )
   } else {
     rows_notice <- ""

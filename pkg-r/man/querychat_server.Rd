@@ -18,12 +18,9 @@ elements:
 \itemize{
 \item \code{sql}: A reactive that returns the current SQL query.
 \item \code{title}: A reactive that returns the current title.
-\item \code{df}: A reactive that returns the data frame, filtered and sorted by the
-current SQL query.
+\item \code{df}: A reactive that returns the filtered data as a data.frame.
 \item \code{chat}: The \link[ellmer:Chat]{ellmer::Chat} object that powers the chat interface.
 }
-
-By convention, this object should be named \code{querychat_config}.
 }
 \description{
 Initalize the querychat server

@@ -39,22 +39,24 @@ querychat_config <- querychat_init(
 ui <- bslib::page_sidebar(
   title = "Database Query Chat",
   sidebar = querychat_sidebar("chat"),
-  
+
   bslib::card(
     bslib::card_header("Current Data View"),
     bslib::card_body(
-      p("The table below shows the current filtered data based on your chat queries:"),
+      p(
+        "The table below shows the current filtered data based on your chat queries:"
+      ),
       DT::DTOutput("data_table", fill = FALSE)
     )
   ),
-  
+
   bslib::card(
     bslib::card_header("Current SQL Query"),
     bslib::card_body(
       verbatimTextOutput("sql_query")
     )
   ),
-  
+
   bslib::card(
     bslib::card_header("Dataset Information"),
     bslib::card_body(

@@ -32,7 +32,13 @@ titanic_expanded <- tidyr::uncount(titanic_df, Count)
 titanic_expanded$PassengerId <- 1:nrow(titanic_expanded)
 
 # Reorder columns to have ID first
-titanic_expanded <- titanic_expanded[, c("PassengerId", "Class", "Sex", "Age", "Survived")]
+titanic_expanded <- titanic_expanded[, c(
+  "PassengerId",
+  "Class",
+  "Sex",
+  "Age",
+  "Survived"
+)]
 
 # Write to SQLite database
 dbWriteTable(conn, "titanic", titanic_expanded, overwrite = TRUE)
@@ -55,10 +61,10 @@ querychat_config <- querychat_init(
 ui <- bslib::page_sidebar(
   title = "Titanic Query Chaining Demo",
   sidebar = querychat_sidebar("chat"),
-  
+
   # Main content
   bslib::layout_column_wrap(
-    width = 1/2,
+    width = 1 / 2,
     card(
       card_header("Passenger Count Summary"),
       card_body(plotlyOutput("passenger_chart"))
@@ -68,7 +74,7 @@ ui <- bslib::page_sidebar(
       card_body(plotlyOutput("class_survival_chart"))
     )
   ),
-  
+
   bslib::layout_column_wrap(
     width = 1,
     card(
@@ -79,21 +85,25 @@ ui <- bslib::page_sidebar(
       )
     )
   ),
-  
+
   hr(),
-  
+
   card(
     card_header("Current SQL Query"),
     card_body(textOutput("sql_query"))
   ),
-  
+
   hr(),
-  
+
   card(
     card_header("About This Example"),
     card_body(
-      p("This example demonstrates how to use querychat_server$tbl() to chain additional dplyr operations after a natural language query."),
-      p("The chat sidebar generates a base query, then we apply additional transformations programmatically.")
+      p(
+        "This example demonstrates how to use querychat_server$tbl() to chain additional dplyr operations after a natural language query."
+      ),
+      p(
+        "The chat sidebar generates a base query, then we apply additional transformations programmatically."
+      )
     )
   )
 )
@@ -101,7 +111,7 @@ ui <- bslib::page_sidebar(
 server <- function(input, output, session) {
   # Initialize querychat
   chat <- querychat_server("chat", querychat_config)
-  
+
   # Create high-level passenger counts chart
   output$passenger_chart <- renderPlotly({
     # Get base data from current query or all passengers if no query
@@ -109,17 +119,19 @@ server <- function(input, output, session) {
       group_by(Class, Sex) %>%
       summarize(Count = n(), .groups = "drop") %>%
       collect()
-      
+
     p <- ggplot(base_data, aes(x = Class, y = Count, fill = Sex)) +
       geom_col(position = "dodge") +
       theme_minimal() +
-      labs(title = "Passenger Count by Class and Sex",
-           x = "Passenger Class", 
-           y = "Count")
-    
+      labs(
+        title = "Passenger Count by Class and Sex",
+        x = "Passenger Class",
+        y = "Count"
+      )
+
     ggplotly(p)
   })
-  
+
   # Create survival rate by class chart
   output$class_survival_chart <- renderPlotly({
     survival_data <- chat$tbl() %>%
@@ -132,25 +144,29 @@ server <- function(input, output, session) {
         SurvivalRate = Survived / n()
       ) %>%
       collect()
-    
+
     p <- ggplot(survival_data, aes(x = Class, y = SurvivalRate, fill = Class)) +
       geom_col() +
       theme_minimal() +
-      labs(title = "Survival Rate by Class",
-           x = "Passenger Class",
-           y = "Survival Rate (%)") +
+      labs(
+        title = "Survival Rate by Class",
+        x = "Passenger Class",
+        y = "Survival Rate (%)"
+      ) +
       scale_y_continuous(limits = c(0, 100))
-    
+
     ggplotly(p)
   })
-  
+
   # Basic query results from chat
-  output$data_table <- DT::renderDT({
-    df <- chat$tbl() %>% collect()
-    df
-  }, options = list(pageLength = 5))
-  
-  
+  output$data_table <- DT::renderDT(
+    {
+      df <- chat$tbl() %>% collect()
+      df
+    },
+    options = list(pageLength = 5)
+  )
+
   # Show the current SQL query
   output$sql_query <- renderText({
     query <- chat$sql()

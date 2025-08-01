@@ -18,7 +18,13 @@ titanic_expanded <- tidyr::uncount(titanic_df, Count)
 titanic_expanded$PassengerId <- 1:nrow(titanic_expanded)
 
 # Reorder columns to have ID first
-titanic_expanded <- titanic_expanded[, c("PassengerId", "Class", "Sex", "Age", "Survived")]
+titanic_expanded <- titanic_expanded[, c(
+  "PassengerId",
+  "Class",
+  "Sex",
+  "Age",
+  "Survived"
+)]
 
 # Load greeting from external markdown file
 greeting_path <- file.path(getwd(), "greeting.md")
@@ -39,18 +45,20 @@ querychat_config <- querychat_init(
 ui <- bslib::page_sidebar(
   title = "Titanic Dataset Query Chat",
   sidebar = querychat_sidebar("chat"),
-  
+
   bslib::layout_column_wrap(
     width = 1,
     card(
       card_header("Dataset Overview"),
       card_body(
-        p("This example demonstrates using querychat with a data frame (rather than a database)."),
+        p(
+          "This example demonstrates using querychat with a data frame (rather than a database)."
+        ),
         p("Ask questions about the Titanic dataset in the chat sidebar.")
       )
     )
   ),
-  
+
   bslib::layout_column_wrap(
     width = 1,
     card(
@@ -61,18 +69,20 @@ ui <- bslib::page_sidebar(
       )
     )
   ),
-  
+
   bslib::layout_column_wrap(
     width = 1,
     card(
       card_header("Generated SQL Query"),
       card_body(
-        p("Even though we're using a data frame, querychat translates natural language to SQL under the hood:"),
+        p(
+          "Even though we're using a data frame, querychat translates natural language to SQL under the hood:"
+        ),
         verbatimTextOutput("sql_query")
       )
     )
   ),
-  
+
   bslib::layout_column_wrap(
     width = 1,
     card(
@@ -80,11 +90,17 @@ ui <- bslib::page_sidebar(
       card_body(
         p("The Titanic dataset contains:"),
         tags$ul(
-          tags$li(strong("PassengerId:"), "Unique identifier for each passenger"),
+          tags$li(
+            strong("PassengerId:"),
+            "Unique identifier for each passenger"
+          ),
           tags$li(strong("Class:"), "Passenger class (1st, 2nd, 3rd, or Crew)"),
           tags$li(strong("Sex:"), "Passenger sex (Male or Female)"),
           tags$li(strong("Age:"), "Age category (Adult or Child)"),
-          tags$li(strong("Survived:"), "Whether the passenger survived (Yes or No)")
+          tags$li(
+            strong("Survived:"),
+            "Whether the passenger survived (Yes or No)"
+          )
         )
       )
     )
@@ -94,13 +110,16 @@ ui <- bslib::page_sidebar(
 server <- function(input, output, session) {
   # Initialize querychat
   chat <- querychat_server("chat", querychat_config)
-  
+
   # Display query results
-  output$data_table <- DT::renderDT({
-    df <- chat$df()
-    df
-  }, options = list(pageLength = 10, scrollX = TRUE))
-  
+  output$data_table <- DT::renderDT(
+    {
+      df <- chat$df()
+      df
+    },
+    options = list(pageLength = 10, scrollX = TRUE)
+  )
+
   # Display the SQL query
   output$sql_query <- renderText({
     query <- chat$sql()

@@ -21,19 +21,9 @@ conn <- dbConnect(RSQLite::SQLite(), temp_db)
 iris_data <- iris
 dbWriteTable(conn, "iris", iris_data, overwrite = TRUE)
 
-# Define a custom greeting for the database app
-greeting <- "
-# Welcome to the Database Query Assistant! 📊
-
-I can help you explore and analyze the iris dataset from the connected database. 
-Ask me questions about the iris flowers, and I'll generate SQL queries to get the answers.
-
-Try asking:
-- Show me the first 10 rows of the iris dataset
-- What's the average sepal length by species?
-- Which species has the largest petals?
-- Create a summary of measurements grouped by species
-"
+# Load greeting from external markdown file
+greeting <- readLines("greeting.md", warn = FALSE)
+greeting <- paste(greeting, collapse = "\n")
 
 # Create data source using querychat_data_source
 iris_source <- querychat_data_source(conn, table_name = "iris")
@@ -46,24 +36,35 @@ querychat_config <- querychat_init(
   extra_instructions = "When showing results, always explain what the data represents and highlight any interesting patterns you observe."
 )
 
-ui <- page_sidebar(
+ui <- bslib::page_sidebar(
   title = "Database Query Chat",
   sidebar = querychat_sidebar("chat"),
-  h2("Current Data View"),
-  p(
-    "The table below shows the current filtered data based on your chat queries:"
+  
+  bslib::card(
+    bslib::card_header("Current Data View"),
+    bslib::card_body(
+      p("The table below shows the current filtered data based on your chat queries:"),
+      DT::DTOutput("data_table", fill = FALSE)
+    )
   ),
-  DT::DTOutput("data_table", fill = FALSE),
-  br(),
-  h3("Current SQL Query"),
-  verbatimTextOutput("sql_query"),
-  br(),
-  h3("Dataset Information"),
-  p("This demo database contains:"),
-  tags$ul(
-    tags$li("iris - Famous iris flower dataset (150 rows, 5 columns)"),
-    tags$li(
-      "Columns: Sepal.Length, Sepal.Width, Petal.Length, Petal.Width, Species"
+  
+  bslib::card(
+    bslib::card_header("Current SQL Query"),
+    bslib::card_body(
+      verbatimTextOutput("sql_query")
+    )
+  ),
+  
+  bslib::card(
+    bslib::card_header("Dataset Information"),
+    bslib::card_body(
+      p("This demo database contains:"),
+      tags$ul(
+        tags$li("iris - Famous iris flower dataset (150 rows, 5 columns)"),
+        tags$li(
+          "Columns: Sepal.Length, Sepal.Width, Petal.Length, Petal.Width, Species"
+        )
+      )
     )
   )
 )
@@ -89,4 +90,4 @@ server <- function(input, output, session) {
   })
 }
 
-shinyApp(ui = ui, server = server)
+shiny::shinyApp(ui = ui, server = server)

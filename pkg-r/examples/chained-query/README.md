@@ -45,7 +45,7 @@ results <- base_query %>%
 To run this example:
 
 1. Make sure you have all dependencies installed:
-   - shiny, bslib, querychat, DBI, RSQLite, dplyr, DT, tidyr
+   - shiny, bslib, querychat, DBI, RSQLite, dplyr, DT, tidyr, ggplot2, plotly
 
 2. Run the app with:
    ```r

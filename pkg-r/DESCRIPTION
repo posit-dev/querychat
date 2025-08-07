@@ -17,6 +17,8 @@ Depends:
 Imports:
     bslib,
     DBI,
+    dbplyr,
+    dplyr,
     duckdb,
     ellmer,
     htmltools,

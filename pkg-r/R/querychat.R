@@ -263,7 +263,7 @@ querychat_server <- function(id, querychat_config) {
       # Add user message to the chat history
       shinychat::chat_append(
         "chat",
-        chat$stream_async(input$chat_user_input, stream = "content")
+        chat$stream_async(input$chat_user_input)
       )
     })
 

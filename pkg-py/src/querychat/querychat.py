@@ -488,6 +488,8 @@ def mod_server(  # noqa: D417
         if title is not None:
             current_title.set(title)
 
+        return "Dashboard updated. Use `query` tool to review results, if needed."
+
     # Function to perform a SQL query and return results as JSON
     async def query(query: str):
         """

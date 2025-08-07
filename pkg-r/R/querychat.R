@@ -198,6 +198,8 @@ querychat_server <- function(id, querychat_config) {
       if (!is.null(title)) {
         current_title(title)
       }
+
+      "Dashboard updated. Use `query` tool to review results, if needed."
     }
 
     # Perform a SQL query on the data, and return the results as JSON.
@@ -261,7 +263,7 @@ querychat_server <- function(id, querychat_config) {
       # Add user message to the chat history
       shinychat::chat_append(
         "chat",
-        chat$stream_async(input$chat_user_input)
+        chat$stream_async(input$chat_user_input, stream = "content")
       )
     })
 

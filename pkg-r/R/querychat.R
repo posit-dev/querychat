@@ -198,6 +198,8 @@ querychat_server <- function(id, querychat_config) {
       if (!is.null(title)) {
         current_title(title)
       }
+
+      "Dashboard updated. Use `query` tool to review results, if needed."
     }
 
     # Perform a SQL query on the data, and return the results as JSON.

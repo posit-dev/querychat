@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import copy
+import os
 import re
 import sys
+import warnings
 from dataclasses import dataclass
-from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Optional, Protocol, Union
 
@@ -12,6 +14,8 @@ import chevron
 import narwhals as nw
 import sqlalchemy
 from shiny import Inputs, Outputs, Session, module, reactive, ui
+
+from ._utils import temp_env_vars
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -33,7 +37,7 @@ class QueryChatConfig:
     data_source: DataSource
     system_prompt: str
     greeting: Optional[str]
-    create_chat_callback: CreateChatCallback
+    client: chatlas.Chat
 
 
 class QueryChat:
@@ -233,6 +237,74 @@ def df_to_html(df: IntoFrame, maxrows: int = 5) -> str:
     return table_html + rows_notice
 
 
+def _get_client_from_env() -> Optional[str]:
+    """Get client configuration from environment variable."""
+    env_client = os.getenv("QUERYCHAT_CLIENT", "")
+    if not env_client:
+        return None
+    return env_client
+
+
+def _create_client_from_string(client_str: str) -> chatlas.Chat:
+    """Create a chatlas.Chat client from a provider-model string."""
+    provider, model = (
+        client_str.split("/", 1) if "/" in client_str else (client_str, None)
+    )
+    # We unset chatlas's envvars so we can listen to querychat's envvars instead
+    with temp_env_vars(
+        {
+            "CHATLAS_CHAT_PROVIDER": provider,
+            "CHATLAS_CHAT_MODEL": model,
+            "CHATLAS_CHAT_ARGS": os.environ["QUERYCHAT_CLIENT_ARGS"],
+        },
+    ):
+        return chatlas.ChatAuto(provider="openai")
+
+
+def _resolve_querychat_client(
+    client: Optional[Union[chatlas.Chat, CreateChatCallback, str]] = None,
+) -> chatlas.Chat:
+    """
+    Resolve the client argument into a chatlas.Chat object.
+
+    Parameters
+    ----------
+    client : chatlas.Chat, CreateChatCallback, str, or None
+        The client to resolve. Can be:
+        - A chatlas.Chat object (returned as-is)
+        - A function that returns a chatlas.Chat object
+        - A provider-model string (e.g., "openai/gpt-4.1")
+        - None (fall back to environment variable or default)
+
+    Returns
+    -------
+    chatlas.Chat
+        A resolved chatlas.Chat object
+
+    """
+    if client is None:
+        client = _get_client_from_env()
+
+    if client is None:
+        # Default to OpenAI with using chatlas's default model
+        return chatlas.ChatOpenAI()
+
+    if callable(client) and not isinstance(client, chatlas.Chat):
+        # Backcompat: support the old create_chat_callback style, using an empty
+        # system prompt as a placeholder.
+        client = client(system_prompt="")
+
+    if isinstance(client, str):
+        client = _create_client_from_string(client)
+
+    if not isinstance(client, chatlas.Chat):
+        raise TypeError(
+            "client must be a chatlas.Chat object or function that returns one",
+        )
+
+    return client
+
+
 def init(
     data_source: IntoFrame | sqlalchemy.Engine,
     table_name: str,
@@ -242,6 +314,7 @@ def init(
     extra_instructions: Optional[str | Path] = None,
     prompt_template: Optional[str | Path] = None,
     system_prompt_override: Optional[str] = None,
+    client: Optional[Union[chatlas.Chat, CreateChatCallback, str]] = None,
     create_chat_callback: Optional[CreateChatCallback] = None,
 ) -> QueryChatConfig:
     """
@@ -283,7 +356,15 @@ def init(
         A custom system prompt to use instead of the default. If provided,
         `data_description`, `extra_instructions`, and `prompt_template` will be
         silently ignored.
+    client : chatlas.Chat, CreateChatCallback, str, optional
+        An `chatlas.Chat` object, a string to be passed to `chatlas.ChatAuto()`
+        describing the model to use (e.g. `"openai/gpt-4.1"`), or a function that
+        creates a chat client. If not provided, querychat consults the
+        `QUERYCHAT_CLIENT` environment variable, which can be set to a
+        provider-model string. If no option is provided, querychat defaults to
+        using `chatlas.ChatOpenAI(model="gpt-4.1")`.
     create_chat_callback : CreateChatCallback, optional
+        **Deprecated.** Use the `client` argument instead.
         A function that creates a chat object
 
     Returns
@@ -292,6 +373,22 @@ def init(
         A QueryChatConfig object that can be passed to server()
 
     """
+    # Handle deprecated create_chat_callback argument
+    if create_chat_callback is not None:
+        warnings.warn(
+            "The 'create_chat_callback' parameter is deprecated. Use 'client' instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        if client is not None:
+            raise ValueError(
+                "You cannot pass both `create_chat_callback` and `client` to `init()`.",
+            )
+        client = create_chat_callback
+
+    # Resolve the client
+    resolved_client = _resolve_querychat_client(client)
+
     # Validate table name (must begin with letter, contain only letters, numbers, underscores)
     if not re.match(r"^[a-zA-Z][a-zA-Z0-9_]*$", table_name):
         raise ValueError(
@@ -330,17 +427,11 @@ def init(
             prompt_template=prompt_template,
         )
 
-    # Default chat function if none provided
-    create_chat_callback = create_chat_callback or partial(
-        chatlas.ChatOpenAI,
-        model="gpt-4.1",
-    )
-
     return QueryChatConfig(
         data_source=data_source_obj,
         system_prompt=system_prompt_,
         greeting=greeting_str,
-        create_chat_callback=create_chat_callback,
+        client=resolved_client,
     )
 
 
@@ -441,7 +532,7 @@ def mod_server(  # noqa: D417
     data_source = querychat_config.data_source
     system_prompt = querychat_config.system_prompt
     greeting = querychat_config.greeting
-    create_chat_callback = querychat_config.create_chat_callback
+    client = querychat_config.client
 
     # Reactive values to store state
     current_title = reactive.value[Union[str, None]](None)
@@ -517,16 +608,11 @@ def mod_server(  # noqa: D417
 
     chat_ui = ui.Chat("chat")
 
-    # Initialize the chat with the system prompt
-    # This is a placeholder - actual implementation would depend on chatlas
-    chat = create_chat_callback(system_prompt=system_prompt)
+    # Set up the chat object for this session
+    chat = copy.deepcopy(client)
+    chat.system_prompt = system_prompt
     chat.register_tool(update_dashboard)
     chat.register_tool(query)
-
-    # Register tools with the chat
-    # This is a placeholder - actual implementation would depend on chatlas
-    # chat.register_tool("update_dashboard", update_dashboard)
-    # chat.register_tool("query", query)
 
     # Add greeting if provided
     if greeting and any(len(g) > 0 for g in greeting.split("\n")):

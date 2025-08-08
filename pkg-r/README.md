@@ -220,7 +220,7 @@ You can also put these instructions in a separate file and use `readLines()` to 
 
 ### Use a different LLM provider
 
-By default, querychat uses OpenAI with the default model chosen by `ellmer::chat_openai()`. If you want to use a different model, you can provide an ellmer chat object to the `client` argument of `querchat_init()`.
+By default, querychat uses OpenAI with the default model chosen by `ellmer::chat_openai()`. If you want to use a different model, you can provide an ellmer chat object to the `client` argument of `querychat_init()`.
 
 ```r
 library(ellmer)

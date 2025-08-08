@@ -220,35 +220,34 @@ You can also put these instructions in a separate file and use `readLines()` to 
 
 ### Use a different LLM provider
 
-By default, querychat uses GPT-4o via the OpenAI API. If you want to use a different model, you can provide a `create_chat_func` function that takes a `system_prompt` parameter, and returns an Ellmer chat object. A convenient way to do this is with `purrr::partial`:
-
-```r
-library(ellmer)
-
-# Option 1: Define a function
-my_chat_func <- function(system_prompt) {
-  return(
-    chat_claude(
-      model="claude-3-7-sonnet-latest",
-      system_prompt=system_prompt
-    )
-  )
-}
-```
+By default, querychat uses OpenAI with the default model chosen by `ellmer::chat_openai()`. If you want to use a different model, you can provide an ellmer chat object to the `client` argument of `querchat_init()`.
 
 ```r
 library(ellmer)
 library(purrr)
 
-# Create data source first
 mtcars_source <- querychat_data_source(mtcars, tbl_name = "cars")
 
-# Option 2: Use partial
 querychat_config <- querychat_init(
   data_source = mtcars_source,
-  create_chat_func = purrr::partial(ellmer::chat_claude, model = "claude-3-7-sonnet-latest")
+  client = ellmer::chat_anthropic(model = "claude-3-7-sonnet-latest")
 )
 ```
 
 This would use Claude 3.7 Sonnet instead, which would require you to provide an API key.
-See the [instructions from Ellmer](https://ellmer.tidyverse.org/reference/chat_claude.html) for more information on how to authenticate with different providers.
+See the [instructions from Ellmer](https://ellmer.tidyverse.org/reference/chat_anthropic.html) for more information on how to authenticate with different providers.
+
+Alternatively, you can use a provider-model string, which will be passed to `ellmer::chat()`:
+
+```r
+querychat_config <- querychat_init(
+  data_source = mtcars_source,
+  client = "anthropic/claude-3-7-sonnet-latest"
+)
+```
+
+Or you can set the `querychat.client` R option to a chat object or provider-model string, which will be used as the default client for all querychat apps in your session:
+
+```r
+option(querychat.client = "anthropic/claude-3-7-sonnet-latest")
+```

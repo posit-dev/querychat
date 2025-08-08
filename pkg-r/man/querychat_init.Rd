@@ -9,9 +9,10 @@ querychat_init(
   greeting = NULL,
   data_description = NULL,
   extra_instructions = NULL,
-  create_chat_func = purrr::partial(ellmer::chat_openai, model = "gpt-4o"),
+  create_chat_func = deprecated(),
   system_prompt = NULL,
-  auto_close_data_source = TRUE
+  auto_close_data_source = TRUE,
+  client = NULL
 )
 }
 \arguments{
@@ -31,8 +32,8 @@ that formatting the data description as a markdown bulleted list works best.}
 
 \item{extra_instructions}{A string containing extra instructions for the chat model.}
 
-\item{create_chat_func}{A function that takes a system prompt and returns a
-chat object. The default uses \code{ellmer::chat_openai()}.}
+\item{create_chat_func}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}}. Use the \code{client}
+argument instead.}
 
 \item{system_prompt}{A string containing the system prompt for the chat model.
 The default generates a generic prompt, which you can enhance via the \code{data_description} and
@@ -40,6 +41,14 @@ The default generates a generic prompt, which you can enhance via the \code{data
 
 \item{auto_close_data_source}{Should the data source connection be automatically
 closed when the shiny app stops? Defaults to TRUE.}
+
+\item{client}{An \code{ellmer::Chat} object, a string to be passed to
+\code{\link[ellmer:chat-any]{ellmer::chat()}} describing the model to use (e.g. \code{"openai/gpt-4o"}), or
+a function that creates a chat client. If not provided, querychat consults
+the \code{querychat.client} R option, which can be any of the described options,
+or the \code{QUERYCHAT_CLIENT} environment variable, which can be set to a
+a provider-model string. If no option is provided, querychat defaults to
+using \code{\link[ellmer:chat_openai]{ellmer::chat_openai()}}.}
 }
 \value{
 An object that can be passed to \code{querychat_server()} as the

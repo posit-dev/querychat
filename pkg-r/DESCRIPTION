@@ -18,8 +18,9 @@ Imports:
     bslib,
     DBI,
     duckdb,
-    ellmer,
+    ellmer (>= 0.3.0),
     htmltools,
+    lifecycle,
     purrr,
     rlang,
     shiny,
@@ -28,6 +29,7 @@ Imports:
     xtable
 Suggests: 
     DT,
+    R6,
     RSQLite,
     shinytest2,
     testthat (>= 3.0.0)

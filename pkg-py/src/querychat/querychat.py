@@ -357,9 +357,9 @@ def init(
         `data_description`, `extra_instructions`, and `prompt_template` will be
         silently ignored.
     client : chatlas.Chat, CreateChatCallback, str, optional
-        An `chatlas.Chat` object, a string to be passed to `chatlas.ChatAuto()`
-        describing the model to use (e.g. `"openai/gpt-4.1"`), or a function that
-        creates a chat client. If not provided, querychat consults the
+        A `chatlas.Chat` object, a string to be passed to `chatlas.ChatAuto()`
+        describing the model to use (e.g. `"openai/gpt-4.1"`), or a function
+        that creates a chat client. If not provided, querychat consults the
         `QUERYCHAT_CLIENT` environment variable, which can be set to a
         provider-model string. If no option is provided, querychat defaults to
         using `chatlas.ChatOpenAI(model="gpt-4.1")`.

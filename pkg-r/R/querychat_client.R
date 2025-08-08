@@ -9,7 +9,7 @@ querychat_client <- function(client = NULL) {
   }
 
   if (rlang::is_function(client)) {
-    client <- client()
+    client <- client(system_prompt = "")
   }
 
   if (rlang::is_string(client)) {

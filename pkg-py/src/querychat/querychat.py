@@ -365,7 +365,6 @@ def init(
         using `chatlas.ChatOpenAI(model="gpt-4.1")`.
     create_chat_callback : CreateChatCallback, optional
         **Deprecated.** Use the `client` argument instead.
-        A function that creates a chat object
 
     Returns
     -------
@@ -610,6 +609,7 @@ def mod_server(  # noqa: D417
 
     # Set up the chat object for this session
     chat = copy.deepcopy(client)
+    chat.set_turns([])
     chat.system_prompt = system_prompt
     chat.register_tool(update_dashboard)
     chat.register_tool(query)

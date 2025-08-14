@@ -9,7 +9,9 @@ querychat_client <- function(client = NULL) {
   }
 
   if (rlang::is_function(client)) {
-    client <- client(system_prompt = "")
+    # `client` as a function was the first interface we supported and expected
+    # `system_prompt` as an argument. This avoids breaking existing code.
+    client <- client(system_prompt = NULL)
   }
 
   if (rlang::is_string(client)) {

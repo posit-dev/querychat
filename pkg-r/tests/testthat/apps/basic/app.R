@@ -1,5 +1,5 @@
 library(shiny)
-library(bslib)
+library(bslib, warn.conflicts = FALSE)
 library(querychat)
 library(DBI)
 library(RSQLite)

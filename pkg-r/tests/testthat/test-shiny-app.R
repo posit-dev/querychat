@@ -26,13 +26,15 @@ test_that("database reactive functionality works correctly", {
   library(RSQLite)
 
   # Create test database
-  temp_db <- tempfile(fileext = ".db")
+  temp_db <- withr::local_tempfile(fileext = ".db")
   conn <- dbConnect(RSQLite::SQLite(), temp_db)
   dbWriteTable(conn, "iris", iris, overwrite = TRUE)
   dbDisconnect(conn)
 
   # Test database source creation
   db_conn <- dbConnect(RSQLite::SQLite(), temp_db)
+  withr::defer(dbDisconnect(db_conn))
+
   iris_source <- querychat_data_source(db_conn, "iris")
 
   # Mock chat function
@@ -63,8 +65,4 @@ test_that("database reactive functionality works correctly", {
   expect_equal(nrow(query_result), 50)
   expect_equal(ncol(query_result), 2)
   expect_true(all(c("Sepal.Length", "Sepal.Width") %in% names(query_result)))
-
-  # Clean up
-  dbDisconnect(db_conn)
-  unlink(temp_db)
 })

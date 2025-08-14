@@ -5,8 +5,9 @@ library(querychat)
 
 test_that("database source query functionality", {
   # Create temporary SQLite database
-  temp_db <- tempfile(fileext = ".db")
+  temp_db <- withr::local_tempfile(fileext = ".db")
   conn <- dbConnect(RSQLite::SQLite(), temp_db)
+  withr::defer(dbDisconnect(conn))
 
   # Create test table
   test_data <- data.frame(
@@ -39,8 +40,4 @@ test_that("database source query functionality", {
     "SELECT * FROM users ORDER BY age DESC"
   )
   expect_equal(ordered_result$name[1], "Charlie") # Oldest first
-
-  # Clean up
-  dbDisconnect(conn)
-  unlink(temp_db)
 })

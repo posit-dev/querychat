@@ -14,19 +14,19 @@ test_that("querychat_data_source.data.frame creates proper S3 object", {
 
   # Test with explicit table name
   source <- querychat_data_source(test_df, table_name = "test_table")
+  withr::defer(cleanup_source(source))
+
   expect_s3_class(source, "data_frame_source")
   expect_s3_class(source, "querychat_data_source")
   expect_equal(source$table_name, "test_table")
   expect_true(inherits(source$conn, "DBIConnection"))
-
-  # Clean up
-  cleanup_source(source)
 })
 
 test_that("querychat_data_source.DBIConnection creates proper S3 object", {
   # Create temporary SQLite database
-  temp_db <- tempfile(fileext = ".db")
+  temp_db <- withr::local_tempfile(fileext = ".db")
   conn <- dbConnect(RSQLite::SQLite(), temp_db)
+  withr::defer(dbDisconnect(conn))
 
   # Create test table
   test_data <- data.frame(
@@ -44,10 +44,6 @@ test_that("querychat_data_source.DBIConnection creates proper S3 object", {
   expect_s3_class(db_source, "querychat_data_source")
   expect_equal(db_source$table_name, "users")
   expect_equal(db_source$categorical_threshold, 20)
-
-  # Clean up
-  dbDisconnect(conn)
-  unlink(temp_db)
 })
 
 test_that("get_schema methods return proper schema", {
@@ -60,6 +56,8 @@ test_that("get_schema methods return proper schema", {
   )
 
   df_source <- querychat_data_source(test_df, table_name = "test_table")
+  withr::defer(cleanup_source(df_source))
+
   schema <- get_schema(df_source)
   expect_type(schema, "character")
   expect_match(schema, "Table: test_table")
@@ -72,8 +70,10 @@ test_that("get_schema methods return proper schema", {
   expect_match(schema, "- id \\(INTEGER\\)\\n  Range: 1 to 5")
 
   # Test with DBI source
-  temp_db <- tempfile(fileext = ".db")
+  temp_db <- withr::local_tempfile(fileext = ".db")
   conn <- dbConnect(RSQLite::SQLite(), temp_db)
+  withr::defer(dbDisconnect(conn))
+
   dbWriteTable(conn, "test_table", test_df, overwrite = TRUE)
 
   dbi_source <- querychat_data_source(conn, "test_table")
@@ -85,11 +85,6 @@ test_that("get_schema methods return proper schema", {
 
   # Test min/max values in DBI source schema - specifically for the id column
   expect_match(schema, "- id \\(INTEGER\\)\\n  Range: 1 to 5")
-
-  # Clean up
-  cleanup_source(df_source)
-  dbDisconnect(conn)
-  unlink(temp_db)
 })
 
 test_that("execute_query works for both source types", {
@@ -101,6 +96,7 @@ test_that("execute_query works for both source types", {
   )
 
   df_source <- querychat_data_source(test_df, table_name = "test_table")
+  withr::defer(cleanup_source(df_source))
   result <- execute_query(
     df_source,
     "SELECT * FROM test_table WHERE value > 25"
@@ -109,8 +105,9 @@ test_that("execute_query works for both source types", {
   expect_equal(nrow(result), 3) # Should return 3 rows (30, 40, 50)
 
   # Test with DBI source
-  temp_db <- tempfile(fileext = ".db")
+  temp_db <- withr::local_tempfile(fileext = ".db")
   conn <- dbConnect(RSQLite::SQLite(), temp_db)
+  withr::defer(dbDisconnect(conn))
   dbWriteTable(conn, "test_table", test_df, overwrite = TRUE)
 
   dbi_source <- querychat_data_source(conn, "test_table")
@@ -120,11 +117,6 @@ test_that("execute_query works for both source types", {
   )
   expect_s3_class(result, "data.frame")
   expect_equal(nrow(result), 3) # Should return 3 rows (30, 40, 50)
-
-  # Clean up
-  cleanup_source(df_source)
-  dbDisconnect(conn)
-  unlink(temp_db)
 })
 
 test_that("execute_query works with empty/null queries", {
@@ -136,6 +128,7 @@ test_that("execute_query works with empty/null queries", {
   )
 
   df_source <- querychat_data_source(test_df, table_name = "test_table")
+  withr::defer(cleanup_source(df_source))
 
   # Test with NULL query
   result_null <- execute_query(df_source, NULL)
@@ -150,8 +143,10 @@ test_that("execute_query works with empty/null queries", {
   expect_equal(ncol(result_empty), 2) # Should return all columns
 
   # Test with DBI source
-  temp_db <- tempfile(fileext = ".db")
+  temp_db <- withr::local_tempfile(fileext = ".db")
   conn <- dbConnect(RSQLite::SQLite(), temp_db)
+  withr::defer(dbDisconnect(conn))
+
   dbWriteTable(conn, "test_table", test_df, overwrite = TRUE)
 
   dbi_source <- querychat_data_source(conn, "test_table")
@@ -167,11 +162,6 @@ test_that("execute_query works with empty/null queries", {
   expect_s3_class(result_empty, "data.frame")
   expect_equal(nrow(result_empty), 5) # Should return all rows
   expect_equal(ncol(result_empty), 2) # Should return all columns
-
-  # Clean up
-  cleanup_source(df_source)
-  dbDisconnect(conn)
-  unlink(temp_db)
 })
 
 
@@ -185,6 +175,7 @@ test_that("get_schema correctly reports min/max values for numeric columns", {
   )
 
   df_source <- querychat_data_source(test_df, table_name = "test_metrics")
+  withr::defer(cleanup_source(df_source))
   schema <- get_schema(df_source)
 
   # Check that each numeric column has the correct min/max values
@@ -192,9 +183,6 @@ test_that("get_schema correctly reports min/max values for numeric columns", {
   expect_match(schema, "- score \\(FLOAT\\)\\n  Range: 10\\.5 to 30\\.1")
   # Note: In the test output, count was detected as FLOAT rather than INTEGER
   expect_match(schema, "- count \\(FLOAT\\)\\n  Range: 50 to 200")
-
-  # Clean up
-  cleanup_source(df_source)
 })
 
 test_that("create_system_prompt generates appropriate system prompt", {
@@ -205,6 +193,8 @@ test_that("create_system_prompt generates appropriate system prompt", {
   )
 
   df_source <- querychat_data_source(test_df, table_name = "test_table")
+  withr::defer(cleanup_source(df_source))
+
   prompt <- create_system_prompt(
     df_source,
     data_description = "A test dataframe"
@@ -213,9 +203,6 @@ test_that("create_system_prompt generates appropriate system prompt", {
   expect_true(nchar(prompt) > 0)
   expect_match(prompt, "A test dataframe")
   expect_match(prompt, "Table: test_table")
-
-  # Clean up
-  cleanup_source(df_source)
 })
 
 test_that("querychat_init automatically handles data.frame inputs", {
@@ -224,18 +211,18 @@ test_that("querychat_init automatically handles data.frame inputs", {
 
   # Should work with data frame and auto-convert it
   config <- querychat_init(data_source = test_df, greeting = "Test greeting")
+  withr::defer(cleanup_source(config$data_source))
+
   expect_s3_class(config, "querychat_config")
   expect_s3_class(config$data_source, "querychat_data_source")
   expect_s3_class(config$data_source, "data_frame_source")
 
   # Should work with proper data source too
   df_source <- querychat_data_source(test_df, table_name = "test_table")
+  withr::defer(cleanup_source(df_source))
+
   config <- querychat_init(data_source = df_source, greeting = "Test greeting")
   expect_s3_class(config, "querychat_config")
-
-  # Clean up
-  cleanup_source(df_source)
-  cleanup_source(config$data_source)
 })
 
 test_that("querychat_init works with both source types", {
@@ -248,14 +235,19 @@ test_that("querychat_init works with both source types", {
 
   # Create data source and test with querychat_init
   df_source <- querychat_data_source(test_df, table_name = "test_source")
+  withr::defer(cleanup_source(df_source))
+
   config <- querychat_init(data_source = df_source, greeting = "Test greeting")
+
   expect_s3_class(config, "querychat_config")
   expect_s3_class(config$data_source, "data_frame_source")
   expect_equal(config$data_source$table_name, "test_source")
 
   # Test with database connection
-  temp_db <- tempfile(fileext = ".db")
+  temp_db <- withr::local_tempfile(fileext = ".db")
   conn <- dbConnect(RSQLite::SQLite(), temp_db)
+  withr::defer(dbDisconnect(conn))
+
   dbWriteTable(conn, "test_table", test_df, overwrite = TRUE)
 
   dbi_source <- querychat_data_source(conn, "test_table")
@@ -263,9 +255,4 @@ test_that("querychat_init works with both source types", {
   expect_s3_class(config, "querychat_config")
   expect_s3_class(config$data_source, "dbi_source")
   expect_equal(config$data_source$table_name, "test_table")
-
-  # Clean up
-  cleanup_source(df_source)
-  dbDisconnect(conn)
-  unlink(temp_db)
 })

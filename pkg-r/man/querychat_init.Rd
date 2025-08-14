@@ -43,11 +43,15 @@ The default generates a generic prompt, which you can enhance via the \code{data
 closed when the shiny app stops? Defaults to TRUE.}
 
 \item{client}{An \code{ellmer::Chat} object, a string to be passed to
-\code{\link[ellmer:chat-any]{ellmer::chat()}} describing the model to use (e.g. \code{"openai/gpt-4o"}), or
-a function that creates a chat client. If not provided, querychat consults
-the \code{querychat.client} R option, which can be any of the described options,
-or the \code{QUERYCHAT_CLIENT} environment variable, which can be set to a
-a provider-model string. If no option is provided, querychat defaults to
+\code{\link[ellmer:chat-any]{ellmer::chat()}} describing the model to use (e.g. \code{"openai/gpt-4o"}), or a
+function that creates a chat client. When using a function, the function
+should take \code{system_prompt} as an argument and return an \code{ellmer::Chat}
+object.
+
+If \code{client} is not provided, querychat consults the \code{querychat.client} R
+option, which can be any of the described options, or the
+\code{QUERYCHAT_CLIENT} environment variable, which can be set to a a
+provider-model string. If no option is provided, querychat defaults to
 using \code{\link[ellmer:chat_openai]{ellmer::chat_openai()}}.}
 }
 \value{

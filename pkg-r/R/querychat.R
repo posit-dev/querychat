@@ -14,11 +14,15 @@
 #'   that formatting the data description as a markdown bulleted list works best.
 #' @param extra_instructions A string containing extra instructions for the chat model.
 #' @param client An `ellmer::Chat` object, a string to be passed to
-#'   [ellmer::chat()] describing the model to use (e.g. `"openai/gpt-4o"`), or
-#'   a function that creates a chat client. If not provided, querychat consults
-#'   the `querychat.client` R option, which can be any of the described options,
-#'   or the `QUERYCHAT_CLIENT` environment variable, which can be set to a
-#'   a provider-model string. If no option is provided, querychat defaults to
+#'   [ellmer::chat()] describing the model to use (e.g. `"openai/gpt-4o"`), or a
+#'   function that creates a chat client. When using a function, the function
+#'   should take `system_prompt` as an argument and return an `ellmer::Chat`
+#'   object.
+#'
+#'   If `client` is not provided, querychat consults the `querychat.client` R
+#'   option, which can be any of the described options, or the
+#'   `QUERYCHAT_CLIENT` environment variable, which can be set to a a
+#'   provider-model string. If no option is provided, querychat defaults to
 #'   using [ellmer::chat_openai()].
 #' @param create_chat_func `r lifecycle::badge('deprecated')`. Use the `client`
 #'   argument instead.

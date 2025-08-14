@@ -359,10 +359,13 @@ def init(
     client : chatlas.Chat, CreateChatCallback, str, optional
         A `chatlas.Chat` object, a string to be passed to `chatlas.ChatAuto()`
         describing the model to use (e.g. `"openai/gpt-4.1"`), or a function
-        that creates a chat client. If not provided, querychat consults the
-        `QUERYCHAT_CLIENT` environment variable, which can be set to a
-        provider-model string. If no option is provided, querychat defaults to
-        using `chatlas.ChatOpenAI(model="gpt-4.1")`.
+        that creates a chat client. If using a function, the function should
+        accept a `system_prompt` argument and return a `chatlas.Chat` object.
+
+        If `client` is not provided, querychat consults the `QUERYCHAT_CLIENT`
+        environment variable, which can be set to a provider-model string. If no
+        option is provided, querychat defaults to using
+        `chatlas.ChatOpenAI(model="gpt-4.1")`.
     create_chat_callback : CreateChatCallback, optional
         **Deprecated.** Use the `client` argument instead.
 

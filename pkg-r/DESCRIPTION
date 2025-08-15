@@ -1,6 +1,6 @@
 Package: querychat
 Title: Filter and Query Data Frames in 'shiny' Using an LLM Chat Interface
-Version: 0.0.0.9000
+Version: 0.0.1.9000
 Authors@R: c(
     person("Joe", "Cheng", , "joe@posit.co", role = c("aut", "cre")),
     person("Posit Software, PBC", role = c("cph", "fnd"))
@@ -18,19 +18,22 @@ Imports:
     bslib,
     DBI,
     duckdb,
-    ellmer,
+    ellmer (>= 0.3.0),
     htmltools,
+    lifecycle,
     purrr,
     rlang,
     shiny,
     shinychat (>= 0.2.0),
     whisker,
     xtable
-Suggests: 
+Suggests:
     DT,
+    R6,
     RSQLite,
     shinytest2,
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+    withr
 Config/testthat/edition: 3
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

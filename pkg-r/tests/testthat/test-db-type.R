@@ -13,17 +13,14 @@ test_that("get_db_type returns correct type for dbi_source with SQLite", {
   skip_if_not_installed("RSQLite")
 
   # Create a SQLite database source
-  temp_db <- tempfile(fileext = ".db")
+  temp_db <- withr::local_tempfile(fileext = ".db")
   conn <- DBI::dbConnect(RSQLite::SQLite(), temp_db)
+  withr::defer(DBI::dbDisconnect(conn))
   DBI::dbWriteTable(conn, "test_table", data.frame(x = 1:5, y = letters[1:5]))
   db_source <- querychat_data_source(conn, "test_table")
 
   # Test that get_db_type returns the correct database type
   expect_equal(get_db_type(db_source), "SQLite")
-
-  # Clean up
-  DBI::dbDisconnect(conn)
-  unlink(temp_db)
 })
 
 test_that("get_db_type is correctly used in create_system_prompt", {

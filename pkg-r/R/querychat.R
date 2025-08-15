@@ -13,8 +13,19 @@
 #' @param data_description A string containing a data description for the chat model. We have found
 #'   that formatting the data description as a markdown bulleted list works best.
 #' @param extra_instructions A string containing extra instructions for the chat model.
-#' @param create_chat_func A function that takes a system prompt and returns a
-#'   chat object. The default uses `ellmer::chat_openai()`.
+#' @param client An `ellmer::Chat` object, a string to be passed to
+#'   [ellmer::chat()] describing the model to use (e.g. `"openai/gpt-4o"`), or a
+#'   function that creates a chat client. When using a function, the function
+#'   should take `system_prompt` as an argument and return an `ellmer::Chat`
+#'   object.
+#'
+#'   If `client` is not provided, querychat consults the `querychat.client` R
+#'   option, which can be any of the described options, or the
+#'   `QUERYCHAT_CLIENT` environment variable, which can be set to a a
+#'   provider-model string. If no option is provided, querychat defaults to
+#'   using [ellmer::chat_openai()].
+#' @param create_chat_func `r lifecycle::badge('deprecated')`. Use the `client`
+#'   argument instead.
 #' @param system_prompt A string containing the system prompt for the chat model.
 #'   The default generates a generic prompt, which you can enhance via the `data_description` and
 #'   `extra_instructions` arguments.
@@ -31,11 +42,26 @@ querychat_init <- function(
   greeting = NULL,
   data_description = NULL,
   extra_instructions = NULL,
-  create_chat_func = purrr::partial(ellmer::chat_openai, model = "gpt-4o"),
+  create_chat_func = deprecated(),
   system_prompt = NULL,
-  auto_close_data_source = TRUE
+  auto_close_data_source = TRUE,
+  client = NULL
 ) {
-  force(create_chat_func)
+  if (lifecycle::is_present(create_chat_func)) {
+    lifecycle::deprecate_warn(
+      "0.0.1",
+      "querychat_init(create_chat_func=)",
+      "querychat_init(client =)"
+    )
+    if (!is.null(client)) {
+      rlang::abort(
+        "You cannot pass both `create_chat_func` and `client` to `querychat_init()`."
+      )
+    }
+    client <- create_chat_func
+  }
+
+  client <- querychat_client(client)
 
   # If the user passes a data.frame to data_source, create a correct data source for them
   if (inherits(data_source, "data.frame")) {
@@ -70,10 +96,9 @@ querychat_init <- function(
     )
   }
 
-  # Validate system prompt and create_chat_func
+  # Validate system prompt
   stopifnot(
-    "system_prompt must be a string" = is.character(system_prompt),
-    "create_chat_func must be a function" = is.function(create_chat_func)
+    "system_prompt must be a string" = is.character(system_prompt)
   )
 
   if (!is.null(greeting)) {
@@ -90,7 +115,7 @@ querychat_init <- function(
       data_source = data_source,
       system_prompt = system_prompt,
       greeting = greeting,
-      create_chat_func = create_chat_func
+      client = client
     ),
     class = "querychat_config"
   )
@@ -154,7 +179,7 @@ querychat_server <- function(id, querychat_config) {
     data_source <- querychat_config[["data_source"]]
     system_prompt <- querychat_config[["system_prompt"]]
     greeting <- querychat_config[["greeting"]]
-    create_chat_func <- querychat_config[["create_chat_func"]]
+    client <- querychat_config[["client"]]
 
     current_title <- shiny::reactiveVal(NULL)
     current_query <- shiny::reactiveVal("")
@@ -223,7 +248,9 @@ querychat_server <- function(id, querychat_config) {
 
     # Preload the conversation with the system prompt. These are instructions for
     # the chat model, and must not be shown to the end user.
-    chat <- create_chat_func(system_prompt = system_prompt)
+    chat <- client$clone()
+    chat$set_turns(list())
+    chat$set_system_prompt(system_prompt)
     chat$register_tool(ellmer::tool(
       update_dashboard,
       "Modifies the data presented in the data dashboard, based on the given SQL query, and also updates the title.",
@@ -263,7 +290,7 @@ querychat_server <- function(id, querychat_config) {
       # Add user message to the chat history
       shinychat::chat_append(
         "chat",
-        chat$stream_async(input$chat_user_input)
+        chat$stream_async(input$chat_user_input, stream = "content")
       )
     })
 

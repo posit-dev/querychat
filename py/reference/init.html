@@ -74,7 +74,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="../site_libs/quarto-html/quarto-syntax-highlighting-dbde6ece91fc58bf30abbd8587d2285d.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-37dd45b7c699b430626064747632e4f1.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-efc2f443af0dea8de810aa865e64aad8.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -261,16 +261,17 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    extra_instructions<span class="op">=</span><span class="va">None</span>,</span>
 <span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    prompt_template<span class="op">=</span><span class="va">None</span>,</span>
 <span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    system_prompt_override<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    create_chat_callback<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    client<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    create_chat_callback<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Initialize querychat with any compliant data source.</p>
 <section id="parameters" class="level2 doc-section doc-section-parameters">
 <h2 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 4%">
-<col style="width: 5%">
-<col style="width: 88%">
+<col style="width: 6%">
+<col style="width: 87%">
 <col style="width: 2%">
 </colgroup>
 <thead>
@@ -325,9 +326,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td><code>None</code></td>
 </tr>
 <tr class="even">
+<td>client</td>
+<td>(chatlas.Chat, CreateChatCallback, str)</td>
+<td>A <code>chatlas.Chat</code> object, a string to be passed to <code>chatlas.ChatAuto()</code> describing the model to use (e.g.&nbsp;<code>"openai/gpt-4.1"</code>), or a function that creates a chat client. If using a function, the function should accept a <code>system_prompt</code> argument and return a <code>chatlas.Chat</code> object. If <code>client</code> is not provided, querychat consults the <code>QUERYCHAT_CLIENT</code> environment variable, which can be set to a provider-model string. If no option is provided, querychat defaults to using <code>chatlas.ChatOpenAI(model="gpt-4.1")</code>.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
 <td>create_chat_callback</td>
 <td>CreateChatCallback</td>
-<td>A function that creates a chat object</td>
+<td><strong>Deprecated.</strong> Use the <code>client</code> argument instead.</td>
 <td><code>None</code></td>
 </tr>
 </tbody>

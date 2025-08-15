@@ -19,6 +19,9 @@ elements:
 \item \code{sql}: A reactive that returns the current SQL query.
 \item \code{title}: A reactive that returns the current title.
 \item \code{df}: A reactive that returns the filtered data as a data.frame.
+\item \code{tbl}: A reactive that returns a lazy \code{dbplyr::tbl()} object that supports
+lazy evaluation and query chaining. This can be further manipulated with
+dplyr verbs before calling \code{collect()} to materialize the results.
 \item \code{chat}: The \link[ellmer:Chat]{ellmer::Chat} object that powers the chat interface.
 }
 }

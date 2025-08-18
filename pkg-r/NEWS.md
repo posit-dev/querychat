@@ -17,3 +17,5 @@
   * the `querychat.client` R option, which can be any of the above options,
   * the `QUERYCHAT_CLIENT` environment variable, which should be a provider-model string,
   * or the default model from `ellmer::chat_openai()`.
+
+* `querychat_server()` now uses a `shiny::ExtendedTask` for streaming the chat response, which allows the dashboard to update and remain responsive while the chat response is streaming in. (#63)

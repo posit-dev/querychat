@@ -21,6 +21,7 @@ Imports:
     ellmer (>= 0.3.0),
     htmltools,
     lifecycle,
+    promises,
     purrr,
     rlang,
     shiny,

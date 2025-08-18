@@ -617,19 +617,23 @@ def mod_server(  # noqa: D417
     chat.register_tool(update_dashboard)
     chat.register_tool(query)
 
-    # Add greeting if provided
-    if greeting and any(len(g) > 0 for g in greeting.split("\n")):
-        # Display greeting in chat UI
-        pass
-    else:
-        # Generate greeting using the chat model
-        pass
+    @reactive.extended_task
+    async def append_stream(chat_obj: chatlas.Chat, user_input: str):
+        stream = await chat_obj.stream_async(user_input, echo="none")
+        await chat_ui.append_message_stream(stream)
 
     # Handle user input
     @chat_ui.on_user_submit
-    async def _(user_input: str):
-        stream = await chat.stream_async(user_input, echo="none")
-        await chat_ui.append_message_stream(stream)
+    def _(user_input: str):
+        append_stream(chat, user_input)
+
+    @reactive.effect
+    async def _():
+        if append_stream.status() == "error":
+            await chat_ui.append_message(
+                "An error occurred while processing your input. "
+                f"Error: {append_stream.result()}.",
+            )
 
     @reactive.effect
     async def greet_on_startup():
@@ -642,5 +646,18 @@ def mod_server(  # noqa: D417
             )
             await chat_ui.append_message_stream(stream)
 
+    @reactive.calc
+    def current_query_rv():
+        return current_query.get()
+
+    @reactive.calc
+    def current_title_rv():
+        return current_title.get()
+
     # Return the interface for other components to use
-    return QueryChat(chat, current_query.get, current_title.get, filtered_df)
+    return QueryChat(
+        chat,
+        current_query_rv,
+        current_title_rv,
+        filtered_df,
+    )

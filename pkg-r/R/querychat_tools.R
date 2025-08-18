@@ -18,7 +18,7 @@ tool_update_dashboard <- function(
         "A SQL query; must be a SELECT statement."
       ),
       title = ellmer::type_string(
-        "A title to display at the top of the data dashboard, summarizing the intent of the SQL query."
+        "A brief title for display purposes, summarizing the intent of the SQL query."
       )
     ),
     annotations = ellmer::tool_annotations(
@@ -139,6 +139,7 @@ querychat_tool_result <- function(
     error = if (is_error) res,
     extra = list(
       display = list(
+        title = if (action == "update" && !is.null(title)) title,
         show_request = is_error,
         markdown = sprintf("```sql\n%s\n```%s", query, output),
         open = !is_error

@@ -30,6 +30,7 @@ Imports:
     whisker,
     xtable
 Suggests:
+    bsicons,
     DT,
     R6,
     RSQLite,

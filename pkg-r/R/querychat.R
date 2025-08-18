@@ -285,13 +285,22 @@ querychat_server <- function(id, querychat_config) {
       )
     }
 
-    # Handle user input
+    append_stream_task <- shiny::ExtendedTask$new(
+      function(client, user_input) {
+        stream <- client$stream_async(
+          user_input,
+          stream = "content"
+        )
+
+        p <- promises::promise_resolve(stream)
+        promises::then(p, function(stream) {
+          shinychat::chat_append("chat", stream)
+        })
+      }
+    )
+
     shiny::observeEvent(input$chat_user_input, {
-      # Add user message to the chat history
-      shinychat::chat_append(
-        "chat",
-        chat$stream_async(input$chat_user_input, stream = "content")
-      )
+      append_stream_task$invoke(chat, input$chat_user_input)
     })
 
     list(

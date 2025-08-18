@@ -257,7 +257,11 @@ querychat_server <- function(id, querychat_config) {
       chat = chat,
       sql = shiny::reactive(current_query()),
       title = shiny::reactive(current_title()),
-      df = filtered_df
+      df = filtered_df,
+      update_query = function(query, title = NULL) {
+        current_query(query)
+        current_title(title)
+      }
     )
   })
 }

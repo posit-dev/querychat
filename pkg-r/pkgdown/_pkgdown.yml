@@ -37,3 +37,4 @@ reference:
   - querychat_sidebar
   - querychat_system_prompt
   - querychat_ui
+  - querychat_app

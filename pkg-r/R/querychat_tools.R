@@ -80,70 +80,69 @@ tool_query <- function(data_source) {
   )
 }
 
-tool_query_impl <-
-  querychat_tool_result <- function(
-    data_source,
-    query,
-    title = NULL,
-    action = "update"
-  ) {
-    action <- rlang::arg_match(action, c("update", "query"))
+querychat_tool_result <- function(
+  data_source,
+  query,
+  title = NULL,
+  action = "update"
+) {
+  action <- rlang::arg_match(action, c("update", "query"))
 
-    res <- tryCatch(
-      switch(
-        action,
-        update = {
-          test_query(data_source, query)
-          NULL
-        },
-        query = execute_query(data_source, query)
+  res <- tryCatch(
+    switch(
+      action,
+      update = {
+        test_query(data_source, query)
+        NULL
+      },
+      query = execute_query(data_source, query)
+    ),
+    error = function(err) err
+  )
+
+  is_error <- rlang::is_condition(res) || inherits(res, "error")
+
+  output <- ""
+  if (!is_error && action == "query") {
+    output <- utils::capture.output(print(res))
+    output <- paste(
+      c(
+        "\n\n<details open><summary>Result</summary>\n\n```",
+        output,
+        "```\n\n</details>"
       ),
-      error = function(err) err
-    )
-
-    is_error <- rlang::is_condition(res) || inherits(res, "error")
-
-    output <- ""
-    if (!is_error && action == "query") {
-      output <- utils::capture.output(print(res))
-      output <- paste(
-        c(
-          "\n\n<details open><summary>Result</summary>\n\n```",
-          output,
-          "```\n\n</details>"
-        ),
-        collapse = "\n"
-      )
-    }
-
-    if (!is_error && action == "update") {
-      output <- format(
-        shiny::tags$button(
-          class = "btn btn-outline-primary btn-sm float-end mt-3 querychat-update-dashboard-btn",
-          "data-query" = query,
-          "data-title" = title,
-          "Apply Filter"
-        )
-      )
-      output <- paste0("\n\n", output)
-    }
-
-    value <-
-      switch(
-        action,
-        query = res,
-        update = "Dashboard updated. Use `querychat_query` tool to review results, if needed."
-      )
-
-    ellmer::ContentToolResult(
-      value = if (!is_error) value,
-      error = if (is_error) res,
-      extra = list(
-        display = list(
-          show_request = is_error,
-          markdown = sprintf("```sql\n%s\n```%s", query, output),
-          open = !is_error
-        )
-      )
+      collapse = "\n"
     )
   }
+
+  if (!is_error && action == "update") {
+    output <- format(
+      shiny::tags$button(
+        class = "btn btn-outline-primary btn-sm float-end mt-3 querychat-update-dashboard-btn",
+        "data-query" = query,
+        "data-title" = title,
+        "Apply Filter"
+      )
+    )
+    output <- paste0("\n\n", output)
+  }
+
+  value <-
+    switch(
+      action,
+      query = res,
+      update = "Dashboard updated. Use `querychat_query` tool to review results, if needed."
+    )
+
+  ellmer::ContentToolResult(
+    value = if (!is_error) value,
+    error = if (is_error) res,
+    extra = list(
+      display = list(
+        show_request = is_error,
+        markdown = sprintf("```sql\n%s\n```%s", query, output),
+        open = !is_error
+      )
+    )
+  )
+}

@@ -100,7 +100,7 @@ querychat_tool_result <- function(
     error = function(err) err
   )
 
-  is_error <- rlang::is_condition(res) || inherits(res, "error")
+  is_error <- rlang::is_condition(res)
 
   output <- ""
   if (!is_error && action == "query") {

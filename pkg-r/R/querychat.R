@@ -204,18 +204,24 @@ querychat_server <- function(id, querychat_config) {
     # @param title A title to display at the top of the data dashboard,
     #   summarizing the intent of the SQL query.
     update_dashboard <- function(query, title) {
-      append_output("\n```sql\n", query, "\n```\n\n")
-
-      tryCatch(
+      err_test <- tryCatch(
         {
           # Try it to see if it errors; if so, the LLM will see the error
           test_query(data_source, query)
+          NULL
         },
         error = function(err) {
           append_output("> Error: ", conditionMessage(err), "\n\n")
-          stop(err)
+          ellmer::ContentToolResult(
+            error = err,
+            extra = extra_display(query, open = FALSE)
+          )
         }
       )
+
+      if (!is.null(err_test)) {
+        return(err_test)
+      }
 
       if (!is.null(query)) {
         current_query(query)
@@ -224,24 +230,29 @@ querychat_server <- function(id, querychat_config) {
         current_title(title)
       }
 
-      "Dashboard updated. Use `query` tool to review results, if needed."
+      ellmer::ContentToolResult(
+        "Dashboard updated. Use `query` tool to review results, if needed.",
+        extra = extra_display(query, open = TRUE)
+      )
     }
 
     # Perform a SQL query on the data, and return the results as JSON.
     # @param query A SQL query; must be a SELECT statement.
     # @return The results of the query as a data frame.
     query <- function(query) {
-      # Do this before query, in case it errors
-      append_output("\n```sql\n", query, "\n```\n")
-
       tryCatch(
         {
           # Execute the query and return the results
-          execute_query(data_source, query)
+          ellmer::ContentToolResult(
+            execute_query(data_source, query),
+            extra = extra_display(query)
+          )
         },
-        error = function(e) {
-          append_output("> Error: ", conditionMessage(e), "\n\n")
-          stop(e)
+        error = function(err) {
+          ellmer::ContentToolResult(
+            error = err,
+            extra = extra_display(query, open = FALSE)
+          )
         }
       )
     }
@@ -253,19 +264,31 @@ querychat_server <- function(id, querychat_config) {
     chat$set_system_prompt(system_prompt)
     chat$register_tool(ellmer::tool(
       update_dashboard,
-      "Modifies the data presented in the data dashboard, based on the given SQL query, and also updates the title.",
-      query = ellmer::type_string(
-        "A SQL query; must be a SELECT statement."
+      description = "Modifies the data presented in the data dashboard, based on the given SQL query, and also updates the title.",
+      arguments = list(
+        query = ellmer::type_string(
+          "A SQL query; must be a SELECT statement."
+        ),
+        title = ellmer::type_string(
+          "A title to display at the top of the data dashboard, summarizing the intent of the SQL query."
+        )
       ),
-      title = ellmer::type_string(
-        "A title to display at the top of the data dashboard, summarizing the intent of the SQL query."
+      annotations = ellmer::tool_annotations(
+        title = "Update Dashboard",
+        icon = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-funnel-fill" viewBox="0 0 16 16"><path d="M1.5 1.5A.5.5 0 0 1 2 1h12a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.128.334L10 8.692V13.5a.5.5 0 0 1-.342.474l-3 1A.5.5 0 0 1 6 14.5V8.692L1.628 3.834A.5.5 0 0 1 1.5 3.5z"/></svg>'
       )
     ))
     chat$register_tool(ellmer::tool(
       query,
-      "Perform a SQL query on the data, and return the results.",
-      query = ellmer::type_string(
-        "A SQL query; must be a SELECT statement."
+      description = "Perform a SQL query on the data, and return the results.",
+      arguments = list(
+        query = ellmer::type_string(
+          "A SQL query; must be a SELECT statement."
+        )
+      ),
+      annotations = ellmer::tool_annotations(
+        title = "Query Data",
+        icon = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-table" viewBox="0 0 16 16"><path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2zm15 2h-4v3h4zm0 4h-4v3h4zm0 4h-4v3h3a1 1 0 0 0 1-1zm-5 3v-3H6v3zm-5 0v-3H1v2a1 1 0 0 0 1 1zm-4-4h4V8H1zm0-4h4V4H1zm5-3v3h4V4zm4 4H6v3h4z"/></svg>'
       )
     ))
 
@@ -310,6 +333,16 @@ querychat_server <- function(id, querychat_config) {
       df = filtered_df
     )
   })
+}
+
+extra_display <- function(query, open = TRUE) {
+  list(
+    display = list(
+      show_request = FALSE,
+      markdown = sprintf("```sql\n%s\n```", query),
+      open = open
+    )
+  )
 }
 
 df_to_html <- function(df, maxrows = 5) {

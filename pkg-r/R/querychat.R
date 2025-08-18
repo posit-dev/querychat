@@ -151,8 +151,14 @@ querychat_sidebar <- function(id, width = 400, height = "100%", ...) {
 querychat_ui <- function(id) {
   ns <- shiny::NS(id)
   htmltools::tagList(
-    # TODO: Make this into a proper HTML dependency
-    shiny::includeCSS(system.file("www", "styles.css", package = "querychat")),
+    htmltools::htmlDependency(
+      "querychat",
+      version = "0.0.1",
+      package = "querychat",
+      src = "htmldep",
+      script = "querychat.js",
+      stylesheet = "styles.css"
+    ),
     shinychat::chat_ui(ns("chat"), height = "100%", fill = TRUE)
   )
 }
@@ -198,76 +204,15 @@ querychat_server <- function(id, querychat_config) {
       )
     }
 
-    # Modifies the data presented in the data dashboard, based on the given SQL
-    # query, and also updates the title.
-    # @param query A SQL query; must be a SELECT statement.
-    # @param title A title to display at the top of the data dashboard,
-    #   summarizing the intent of the SQL query.
-    update_dashboard <- function(query, title) {
-      append_output("\n```sql\n", query, "\n```\n\n")
-
-      tryCatch(
-        {
-          # Try it to see if it errors; if so, the LLM will see the error
-          test_query(data_source, query)
-        },
-        error = function(err) {
-          append_output("> Error: ", conditionMessage(err), "\n\n")
-          stop(err)
-        }
-      )
-
-      if (!is.null(query)) {
-        current_query(query)
-      }
-      if (!is.null(title)) {
-        current_title(title)
-      }
-
-      "Dashboard updated. Use `query` tool to review results, if needed."
-    }
-
-    # Perform a SQL query on the data, and return the results as JSON.
-    # @param query A SQL query; must be a SELECT statement.
-    # @return The results of the query as a data frame.
-    query <- function(query) {
-      # Do this before query, in case it errors
-      append_output("\n```sql\n", query, "\n```\n")
-
-      tryCatch(
-        {
-          # Execute the query and return the results
-          execute_query(data_source, query)
-        },
-        error = function(e) {
-          append_output("> Error: ", conditionMessage(e), "\n\n")
-          stop(e)
-        }
-      )
-    }
-
     # Preload the conversation with the system prompt. These are instructions for
     # the chat model, and must not be shown to the end user.
     chat <- client$clone()
     chat$set_turns(list())
     chat$set_system_prompt(system_prompt)
-    chat$register_tool(ellmer::tool(
-      update_dashboard,
-      "Modifies the data presented in the data dashboard, based on the given SQL query, and also updates the title.",
-      query = ellmer::type_string(
-        "A SQL query; must be a SELECT statement."
-      ),
-      title = ellmer::type_string(
-        "A title to display at the top of the data dashboard, summarizing the intent of the SQL query."
-      )
-    ))
-    chat$register_tool(ellmer::tool(
-      query,
-      "Perform a SQL query on the data, and return the results.",
-      query = ellmer::type_string(
-        "A SQL query; must be a SELECT statement."
-      )
-    ))
+    chat$register_tool(
+      tool_update_dashboard(data_source, current_query, current_title)
+    )
+    chat$register_tool(tool_query(data_source))
 
     # Prepopulate the chat UI with a welcome message that appears to be from the
     # chat model (but is actually hard-coded). This is just for the user, not for
@@ -301,6 +246,11 @@ querychat_server <- function(id, querychat_config) {
 
     shiny::observeEvent(input$chat_user_input, {
       append_stream_task$invoke(chat, input$chat_user_input)
+    })
+
+    shiny::observeEvent(input$chat_update, {
+      current_query(input$chat_update$query)
+      current_title(input$chat_update$title)
     })
 
     list(

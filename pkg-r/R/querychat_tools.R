@@ -105,7 +105,7 @@ tool_query_impl <-
 
     output <- ""
     if (!is_error && action == "query") {
-      output <- capture.output(print(res))
+      output <- utils::capture.output(print(res))
       output <- paste(
         c(
           "\n\n<details open><summary>Result</summary>\n\n```",
@@ -118,7 +118,7 @@ tool_query_impl <-
 
     if (!is_error && action == "update") {
       output <- format(
-        tags$button(
+        shiny::tags$button(
           class = "btn btn-outline-primary btn-sm float-end mt-3 querychat-update-dashboard-btn",
           "data-query" = query,
           "data-title" = title,

@@ -26,6 +26,7 @@ Imports:
     rlang,
     shiny,
     shinychat (>= 0.2.0.9000),
+    utils,
     whisker,
     xtable
 Suggests:

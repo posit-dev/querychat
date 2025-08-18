@@ -36,30 +36,23 @@ tool_update_dashboard_impl <- function(
   force(data_source)
 
   function(query, title) {
-    err_test <- tryCatch(
-      {
-        # Try it to see if it errors; if so, the LLM will see the error
-        test_query(data_source, query)
-        NULL
-      },
-      error = function(err) querychat_tool_result(err, query)
+    res <- querychat_tool_result(
+      data_source,
+      query = query,
+      title = title,
+      action = "update"
     )
 
-    if (!is.null(err_test)) {
-      return(err_test)
+    if (is.null(res@error)) {
+      if (!is.null(query)) {
+        current_query(query)
+      }
+      if (!is.null(title)) {
+        current_title(title)
+      }
     }
 
-    if (!is.null(query)) {
-      current_query(query)
-    }
-    if (!is.null(title)) {
-      current_title(title)
-    }
-
-    querychat_tool_result(
-      "Dashboard updated. Use `querychat_query` tool to review results, if needed.",
-      query = query
-    )
+    res
   }
 }
 
@@ -67,8 +60,12 @@ tool_update_dashboard_impl <- function(
 # @param query A SQL query; must be a SELECT statement.
 # @return The results of the query as a data frame.
 tool_query <- function(data_source) {
+  force(data_source)
+
   ellmer::tool(
-    tool_query_impl(data_source),
+    function(query) {
+      querychat_tool_result(data_source, query, action = "query")
+    },
     name = "querychat_query",
     description = "Perform a SQL query on the data, and return the results.",
     arguments = list(
@@ -83,45 +80,70 @@ tool_query <- function(data_source) {
   )
 }
 
-tool_query_impl <- function(data_source) {
-  force(data_source)
+tool_query_impl <-
+  querychat_tool_result <- function(
+    data_source,
+    query,
+    title = NULL,
+    action = "update"
+  ) {
+    action <- rlang::arg_match(action, c("update", "query"))
 
-  function(query) {
-    tryCatch(
-      {
-        # Execute the query and return the results
-        querychat_tool_result(execute_query(data_source, query), query)
-      },
-      error = function(err) querychat_tool_result(err, query)
-    )
-  }
-}
-
-querychat_tool_result <- function(x, query) {
-  is_error <- rlang::is_condition(x) || inherits(x, "error")
-
-  output <- ""
-  if (!is_error && !is.character(x)) {
-    output <- capture.output(print(x))
-    output <- paste(
-      c(
-        "\n\n<details open><summary>Result</summary>\n\n```",
-        output,
-        "```\n\n</details>"
+    res <- tryCatch(
+      switch(
+        action,
+        update = {
+          test_query(data_source, query)
+          NULL
+        },
+        query = execute_query(data_source, query)
       ),
-      collapse = "\n"
+      error = function(err) err
     )
-  }
 
-  ellmer::ContentToolResult(
-    value = if (!is_error) x,
-    error = if (is_error) x,
-    extra = list(
-      display = list(
-        show_request = is_error,
-        markdown = sprintf("```sql\n%s\n```%s", query, output),
-        open = !is_error
+    is_error <- rlang::is_condition(res) || inherits(res, "error")
+
+    output <- ""
+    if (!is_error && action == "query") {
+      output <- capture.output(print(res))
+      output <- paste(
+        c(
+          "\n\n<details open><summary>Result</summary>\n\n```",
+          output,
+          "```\n\n</details>"
+        ),
+        collapse = "\n"
+      )
+    }
+
+    if (!is_error && action == "update") {
+      output <- format(
+        tags$button(
+          class = "btn btn-outline-primary btn-sm float-end mt-3 querychat-update-dashboard-btn",
+          "data-query" = query,
+          "data-title" = title,
+          "Apply Filter"
+        )
+      )
+      output <- paste0("\n\n", output)
+    }
+
+    value <-
+      switch(
+        action,
+        query = res,
+        update = "Dashboard updated. Use `querychat_query` tool to review results, if needed."
+      )
+
+    ellmer::ContentToolResult(
+      value = if (!is_error) value,
+      error = if (is_error) res,
+      extra = list(
+        display = list(
+          show_request = is_error,
+          markdown = sprintf("```sql\n%s\n```%s", query, output),
+          open = !is_error
+        )
       )
     )
-  )
-}
+  }

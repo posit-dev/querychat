@@ -151,8 +151,14 @@ querychat_sidebar <- function(id, width = 400, height = "100%", ...) {
 querychat_ui <- function(id) {
   ns <- shiny::NS(id)
   htmltools::tagList(
-    # TODO: Make this into a proper HTML dependency
-    shiny::includeCSS(system.file("www", "styles.css", package = "querychat")),
+    htmltools::htmlDependency(
+      "querychat",
+      version = "0.0.1",
+      package = "querychat",
+      src = "htmldep",
+      script = "querychat.js",
+      stylesheet = "styles.css"
+    ),
     shinychat::chat_ui(ns("chat"), height = "100%", fill = TRUE)
   )
 }
@@ -240,6 +246,11 @@ querychat_server <- function(id, querychat_config) {
 
     shiny::observeEvent(input$chat_user_input, {
       append_stream_task$invoke(chat, input$chat_user_input)
+    })
+
+    shiny::observeEvent(input$chat_update, {
+      current_query(input$chat_update$query)
+      current_title(input$chat_update$title)
     })
 
     list(

@@ -46,6 +46,7 @@ querychat_app <- function(config, ..., bookmark_store = "url") {
       )),
       class = "bslib-page-dashboard",
       sidebar = querychat_sidebar("chat"),
+      shiny::useBusyIndicators(pulse = TRUE, spinners = FALSE),
       bslib::card(
         fill = FALSE,
         style = bslib::css(max_height = "33%"),

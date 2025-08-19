@@ -23,3 +23,5 @@
 * querychat now requires `ellmer` version 0.3.0 or later and uses rich tool cards for dashboard updates and database queries. (#65)
 
 * New `querychat_app()` function lets you quickly launch a Shiny app with a querychat chat interface. (#66)
+
+* `querychat_ui()` now adds a `.querychat` class to the chat container and `querychat_sidebar()` adds a `.querychat-sidebar` class to the sidebar, allowing for easier customization via CSS. (#68)

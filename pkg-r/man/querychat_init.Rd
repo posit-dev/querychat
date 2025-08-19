@@ -16,7 +16,9 @@ querychat_init(
 )
 }
 \arguments{
-\item{data_source}{A querychat_data_source object created by \code{querychat_data_source()}.
+\item{data_source}{A querychat_data_source object created by
+\code{querychat_data_source()}.
+
 To create a data source:
 \itemize{
 \item For data frame: \code{querychat_data_source(df, tbl_name = "my_table")}
@@ -27,20 +29,22 @@ To create a data source:
 to display to the user upon first loading the chatbot. If not provided, the
 LLM will be invoked at the start of the conversation to generate one.}
 
-\item{data_description}{A string containing a data description for the chat model. We have found
-that formatting the data description as a markdown bulleted list works best.}
+\item{data_description}{A string containing a data description for the chat
+model. We have found that formatting the data description as a markdown
+bulleted list works best.}
 
-\item{extra_instructions}{A string containing extra instructions for the chat model.}
+\item{extra_instructions}{A string containing extra instructions for the
+chat model.}
 
 \item{create_chat_func}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}}. Use the \code{client}
 argument instead.}
 
-\item{system_prompt}{A string containing the system prompt for the chat model.
-The default generates a generic prompt, which you can enhance via the \code{data_description} and
-\code{extra_instructions} arguments.}
+\item{system_prompt}{A string containing the system prompt for the chat
+model. The default generates a generic prompt, which you can enhance via
+the \code{data_description} and \code{extra_instructions} arguments.}
 
-\item{auto_close_data_source}{Should the data source connection be automatically
-closed when the shiny app stops? Defaults to TRUE.}
+\item{auto_close_data_source}{Should the data source connection be
+automatically closed when the shiny app stops? Defaults to TRUE.}
 
 \item{client}{An \code{ellmer::Chat} object, a string to be passed to
 \code{\link[ellmer:chat-any]{ellmer::chat()}} describing the model to use (e.g. \code{"openai/gpt-4o"}), or a

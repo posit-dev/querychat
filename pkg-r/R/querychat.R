@@ -3,16 +3,20 @@
 #' This will perform one-time initialization that can then be shared by all
 #' Shiny sessions in the R process.
 #'
-#' @param data_source A querychat_data_source object created by `querychat_data_source()`.
+#' @param data_source A querychat_data_source object created by
+#'   `querychat_data_source()`.
+#'
 #'   To create a data source:
 #'   - For data frame: `querychat_data_source(df, tbl_name = "my_table")`
 #'   - For database: `querychat_data_source(conn, "table_name")`
 #' @param greeting A string in Markdown format, containing the initial message
 #'   to display to the user upon first loading the chatbot. If not provided, the
 #'   LLM will be invoked at the start of the conversation to generate one.
-#' @param data_description A string containing a data description for the chat model. We have found
-#'   that formatting the data description as a markdown bulleted list works best.
-#' @param extra_instructions A string containing extra instructions for the chat model.
+#' @param data_description A string containing a data description for the chat
+#'   model. We have found that formatting the data description as a markdown
+#'   bulleted list works best.
+#' @param extra_instructions A string containing extra instructions for the
+#'   chat model.
 #' @param client An `ellmer::Chat` object, a string to be passed to
 #'   [ellmer::chat()] describing the model to use (e.g. `"openai/gpt-4o"`), or a
 #'   function that creates a chat client. When using a function, the function
@@ -26,11 +30,11 @@
 #'   using [ellmer::chat_openai()].
 #' @param create_chat_func `r lifecycle::badge('deprecated')`. Use the `client`
 #'   argument instead.
-#' @param system_prompt A string containing the system prompt for the chat model.
-#'   The default generates a generic prompt, which you can enhance via the `data_description` and
-#'   `extra_instructions` arguments.
-#' @param auto_close_data_source Should the data source connection be automatically
-#'   closed when the shiny app stops? Defaults to TRUE.
+#' @param system_prompt A string containing the system prompt for the chat
+#'   model. The default generates a generic prompt, which you can enhance via
+#'   the `data_description` and `extra_instructions` arguments.
+#' @param auto_close_data_source Should the data source connection be
+#'   automatically closed when the shiny app stops? Defaults to TRUE.
 #'
 #' @returns An object that can be passed to `querychat_server()` as the
 #'   `querychat_config` argument. By convention, this object should be named
@@ -124,14 +128,15 @@ querychat_init <- function(
 #' UI components for querychat
 #'
 #' These functions create UI components for the querychat interface.
-#' `querychat_ui` creates a basic chat interface, while `querychat_sidebar`
-#' wraps the chat interface in a `bslib::sidebar` component designed to be used
-#' as the `sidebar` argument to `bslib::page_sidebar`.
+#' `querychat_ui()` creates a basic chat interface, while `querychat_sidebar()`
+#' wraps the chat interface in a [bslib::sidebar()] component designed to be
+#' used as the `sidebar` argument to [bslib::page_sidebar()].
 #'
 #' @param id The ID of the module instance.
-#' @param width The width of the sidebar (when using `querychat_sidebar`).
-#' @param height The height of the sidebar (when using `querychat_sidebar`).
-#' @param ... Additional arguments passed to `bslib::sidebar` (when using `querychat_sidebar`).
+#' @param width,height In `querychat_sidebar()`: the width and height of the
+#'   sidebar.
+#' @param ... In `querychat_sidebar()`: additional arguments passed to
+#'   [bslib::sidebar()].
 #'
 #' @return A UI object that can be embedded in a Shiny app.
 #'
@@ -141,8 +146,10 @@ querychat_sidebar <- function(id, width = 400, height = "100%", ...) {
   bslib::sidebar(
     width = width,
     height = height,
+    class = "querychat-sidebar",
     ...,
-    querychat_ui(id) # purposely NOT using ns() here, we're just a passthrough
+    # purposely NOT using ns() for `id`, we're just a passthrough
+    querychat_ui(id)
   )
 }
 
@@ -159,7 +166,12 @@ querychat_ui <- function(id) {
       script = "querychat.js",
       stylesheet = "styles.css"
     ),
-    shinychat::chat_ui(ns("chat"), height = "100%", fill = TRUE)
+    shinychat::chat_ui(
+      ns("chat"),
+      height = "100%",
+      fill = TRUE,
+      class = "querychat"
+    )
   )
 }
 

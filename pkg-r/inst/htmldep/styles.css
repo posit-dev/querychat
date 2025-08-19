@@ -1,37 +1,15 @@
-:root {
-  --bslib-sidebar-main-bg: #f8f8f8;
-}
-
-.popover {
-  --bs-popover-header-bg: #222;
-  --bs-popover-header-color: #fff;
-}
-
-.popover .btn-close {
-  filter: var(--bs-btn-close-white-filter);
-}
-shiny-chat-message table td,
-shiny-chat-message table th {
+.querychat shiny-chat-message table td,
+.querychat shiny-chat-message table th {
   border: var(--bs-border-width) var(--bs-border-style) var(--bs-border-color);
   padding: 3px;
 }
 
-shiny-chat-message table td {
+.querychat shiny-chat-message table td {
   font-family: var(--bs-font-monospace);
 }
 
-#show_title:empty,
-#show_query:empty {
-  /* Prevent empty title/query blocks from taking any space */
-  border: 0;
-  padding: 0;
-  margin-bottom: 0;
-}
-
-#show_title:empty,
-#show_query {
-  /* We can't affect the flex parent's gap, so instead we use a negative margin
-      to counteract it. In the case of #show_query, we don't even want the gap
-      even when it's showing, as it results in too much space between the two. */
-  margin-top: calc(-1 * var(--bslib-mb-spacer));
+/* querychat takes up the full sidebar, so move the collapse toggle out of the way */
+.bslib-sidebar-layout:has(.querychat-sidebar):not(.sidebar-collapsed)>.collapse-toggle {
+    right: 4px;
+    top: 4px;
 }

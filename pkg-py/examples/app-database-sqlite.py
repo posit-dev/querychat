@@ -34,7 +34,7 @@ querychat_config = qc.init(
     "titanic",
     greeting=greeting,
     data_description=data_desc,
-    create_chat_callback=use_github_models,
+    client=use_github_models,
 )
 
 # Create UI
@@ -48,6 +48,7 @@ app_ui = ui.page_sidebar(
     ),
     title="querychat with Python (SQLite)",
     fillable=True,
+    class_="bslib-page-dashboard",
 )
 
 

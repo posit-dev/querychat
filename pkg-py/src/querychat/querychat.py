@@ -458,9 +458,7 @@ def mod_ui() -> ui.TagList:
 
     return ui.TagList(
         ui.include_css(css_path),
-        # Chat interface goes here - placeholder for now
-        # This would need to be replaced with actual chat UI components
-        ui.chat_ui("chat"),
+        ui.chat_ui("chat", class_="querychat"),
     )
 
 
@@ -494,6 +492,7 @@ def sidebar(
         mod_ui(id),
         width=width,
         height=height,
+        class_="querychat-sidebar",
         **kwargs,
     )
 

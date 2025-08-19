@@ -44,6 +44,7 @@ querychat_app <- function(config, ..., bookmark_store = "url") {
         config$data_source$table_name,
         "</code></span>"
       )),
+      class = "bslib-page-dashboard",
       sidebar = querychat_sidebar("chat"),
       bslib::card(
         fill = FALSE,
@@ -130,7 +131,7 @@ querychat_app <- function(config, ..., bookmark_store = "url") {
     })
   }
 
-  app <- shiny::shinyApp(ui, server, ..., enableBookmarking = bookmark_store)
+  app <- shiny::shinyApp(ui, server, enableBookmarking = bookmark_store)
   tryCatch(shiny::runGadget(app), interrupt = function(cnd) NULL)
   invisible(chat)
 }

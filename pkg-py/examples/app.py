@@ -23,7 +23,7 @@ def use_github_models(system_prompt: str) -> chatlas.Chat:
 querychat_config = qc.init(
     data_source=titanic,
     table_name="titanic",
-    create_chat_callback=use_github_models,
+    client=use_github_models,
 )
 
 # Create UI
@@ -32,7 +32,13 @@ app_ui = ui.page_sidebar(
     #    Alternatively, use qc.ui(id) elsewhere if you don't want your
     #    chat interface to live in a sidebar.
     qc.sidebar("chat"),
-    ui.output_data_frame("data_table"),
+    ui.card(
+      ui.card_header("Titanic Data"),
+      ui.output_data_frame("data_table"),
+      fill=True,
+    ),
+    fillable=True,
+    class_="bslib-page-dashboard"
 )
 
 

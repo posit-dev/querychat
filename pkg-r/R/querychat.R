@@ -3,23 +3,38 @@
 #' This will perform one-time initialization that can then be shared by all
 #' Shiny sessions in the R process.
 #'
-#' @param data_source A querychat_data_source object created by `querychat_data_source()`.
+#' @param data_source A querychat_data_source object created by
+#'   `querychat_data_source()`.
+#'
 #'   To create a data source:
 #'   - For data frame: `querychat_data_source(df, tbl_name = "my_table")`
 #'   - For database: `querychat_data_source(conn, "table_name")`
 #' @param greeting A string in Markdown format, containing the initial message
 #'   to display to the user upon first loading the chatbot. If not provided, the
 #'   LLM will be invoked at the start of the conversation to generate one.
-#' @param data_description A string containing a data description for the chat model. We have found
-#'   that formatting the data description as a markdown bulleted list works best.
-#' @param extra_instructions A string containing extra instructions for the chat model.
-#' @param create_chat_func A function that takes a system prompt and returns a
-#'   chat object. The default uses `ellmer::chat_openai()`.
-#' @param system_prompt A string containing the system prompt for the chat model.
-#'   The default generates a generic prompt, which you can enhance via the `data_description` and
-#'   `extra_instructions` arguments.
-#' @param auto_close_data_source Should the data source connection be automatically
-#'   closed when the shiny app stops? Defaults to TRUE.
+#' @param data_description A string containing a data description for the chat
+#'   model. We have found that formatting the data description as a markdown
+#'   bulleted list works best.
+#' @param extra_instructions A string containing extra instructions for the
+#'   chat model.
+#' @param client An `ellmer::Chat` object, a string to be passed to
+#'   [ellmer::chat()] describing the model to use (e.g. `"openai/gpt-4o"`), or a
+#'   function that creates a chat client. When using a function, the function
+#'   should take `system_prompt` as an argument and return an `ellmer::Chat`
+#'   object.
+#'
+#'   If `client` is not provided, querychat consults the `querychat.client` R
+#'   option, which can be any of the described options, or the
+#'   `QUERYCHAT_CLIENT` environment variable, which can be set to a a
+#'   provider-model string. If no option is provided, querychat defaults to
+#'   using [ellmer::chat_openai()].
+#' @param create_chat_func `r lifecycle::badge('deprecated')`. Use the `client`
+#'   argument instead.
+#' @param system_prompt A string containing the system prompt for the chat
+#'   model. The default generates a generic prompt, which you can enhance via
+#'   the `data_description` and `extra_instructions` arguments.
+#' @param auto_close_data_source Should the data source connection be
+#'   automatically closed when the shiny app stops? Defaults to TRUE.
 #'
 #' @returns An object that can be passed to `querychat_server()` as the
 #'   `querychat_config` argument. By convention, this object should be named
@@ -31,11 +46,26 @@ querychat_init <- function(
   greeting = NULL,
   data_description = NULL,
   extra_instructions = NULL,
-  create_chat_func = purrr::partial(ellmer::chat_openai, model = "gpt-4o"),
+  create_chat_func = deprecated(),
   system_prompt = NULL,
-  auto_close_data_source = TRUE
+  auto_close_data_source = TRUE,
+  client = NULL
 ) {
-  force(create_chat_func)
+  if (lifecycle::is_present(create_chat_func)) {
+    lifecycle::deprecate_warn(
+      "0.0.1",
+      "querychat_init(create_chat_func=)",
+      "querychat_init(client =)"
+    )
+    if (!is.null(client)) {
+      rlang::abort(
+        "You cannot pass both `create_chat_func` and `client` to `querychat_init()`."
+      )
+    }
+    client <- create_chat_func
+  }
+
+  client <- querychat_client(client)
 
   # If the user passes a data.frame to data_source, create a correct data source for them
   if (inherits(data_source, "data.frame")) {
@@ -70,10 +100,9 @@ querychat_init <- function(
     )
   }
 
-  # Validate system prompt and create_chat_func
+  # Validate system prompt
   stopifnot(
-    "system_prompt must be a string" = is.character(system_prompt),
-    "create_chat_func must be a function" = is.function(create_chat_func)
+    "system_prompt must be a string" = is.character(system_prompt)
   )
 
   if (!is.null(greeting)) {
@@ -90,7 +119,7 @@ querychat_init <- function(
       data_source = data_source,
       system_prompt = system_prompt,
       greeting = greeting,
-      create_chat_func = create_chat_func
+      client = client
     ),
     class = "querychat_config"
   )
@@ -99,14 +128,15 @@ querychat_init <- function(
 #' UI components for querychat
 #'
 #' These functions create UI components for the querychat interface.
-#' `querychat_ui` creates a basic chat interface, while `querychat_sidebar`
-#' wraps the chat interface in a `bslib::sidebar` component designed to be used
-#' as the `sidebar` argument to `bslib::page_sidebar`.
+#' `querychat_ui()` creates a basic chat interface, while `querychat_sidebar()`
+#' wraps the chat interface in a [bslib::sidebar()] component designed to be
+#' used as the `sidebar` argument to [bslib::page_sidebar()].
 #'
 #' @param id The ID of the module instance.
-#' @param width The width of the sidebar (when using `querychat_sidebar`).
-#' @param height The height of the sidebar (when using `querychat_sidebar`).
-#' @param ... Additional arguments passed to `bslib::sidebar` (when using `querychat_sidebar`).
+#' @param width,height In `querychat_sidebar()`: the width and height of the
+#'   sidebar.
+#' @param ... In `querychat_sidebar()`: additional arguments passed to
+#'   [bslib::sidebar()].
 #'
 #' @return A UI object that can be embedded in a Shiny app.
 #'
@@ -116,8 +146,10 @@ querychat_sidebar <- function(id, width = 400, height = "100%", ...) {
   bslib::sidebar(
     width = width,
     height = height,
+    class = "querychat-sidebar",
     ...,
-    querychat_ui(id) # purposely NOT using ns() here, we're just a passthrough
+    # purposely NOT using ns() for `id`, we're just a passthrough
+    querychat_ui(id)
   )
 }
 
@@ -126,9 +158,20 @@ querychat_sidebar <- function(id, width = 400, height = "100%", ...) {
 querychat_ui <- function(id) {
   ns <- shiny::NS(id)
   htmltools::tagList(
-    # TODO: Make this into a proper HTML dependency
-    shiny::includeCSS(system.file("www", "styles.css", package = "querychat")),
-    shinychat::chat_ui(ns("chat"), height = "100%", fill = TRUE)
+    htmltools::htmlDependency(
+      "querychat",
+      version = "0.0.1",
+      package = "querychat",
+      src = "htmldep",
+      script = "querychat.js",
+      stylesheet = "styles.css"
+    ),
+    shinychat::chat_ui(
+      ns("chat"),
+      height = "100%",
+      fill = TRUE,
+      class = "querychat"
+    )
   )
 }
 
@@ -154,7 +197,7 @@ querychat_server <- function(id, querychat_config) {
     data_source <- querychat_config[["data_source"]]
     system_prompt <- querychat_config[["system_prompt"]]
     greeting <- querychat_config[["greeting"]]
-    create_chat_func <- querychat_config[["create_chat_func"]]
+    client <- querychat_config[["client"]]
 
     current_title <- shiny::reactiveVal(NULL)
     current_query <- shiny::reactiveVal("")
@@ -173,72 +216,15 @@ querychat_server <- function(id, querychat_config) {
       )
     }
 
-    # Modifies the data presented in the data dashboard, based on the given SQL
-    # query, and also updates the title.
-    # @param query A SQL query; must be a SELECT statement.
-    # @param title A title to display at the top of the data dashboard,
-    #   summarizing the intent of the SQL query.
-    update_dashboard <- function(query, title) {
-      append_output("\n```sql\n", query, "\n```\n\n")
-
-      tryCatch(
-        {
-          # Try it to see if it errors; if so, the LLM will see the error
-          test_query(data_source, query)
-        },
-        error = function(err) {
-          append_output("> Error: ", conditionMessage(err), "\n\n")
-          stop(err)
-        }
-      )
-
-      if (!is.null(query)) {
-        current_query(query)
-      }
-      if (!is.null(title)) {
-        current_title(title)
-      }
-    }
-
-    # Perform a SQL query on the data, and return the results as JSON.
-    # @param query A SQL query; must be a SELECT statement.
-    # @return The results of the query as a data frame.
-    query <- function(query) {
-      # Do this before query, in case it errors
-      append_output("\n```sql\n", query, "\n```\n")
-
-      tryCatch(
-        {
-          # Execute the query and return the results
-          execute_query(data_source, query)
-        },
-        error = function(e) {
-          append_output("> Error: ", conditionMessage(e), "\n\n")
-          stop(e)
-        }
-      )
-    }
-
     # Preload the conversation with the system prompt. These are instructions for
     # the chat model, and must not be shown to the end user.
-    chat <- create_chat_func(system_prompt = system_prompt)
-    chat$register_tool(ellmer::tool(
-      update_dashboard,
-      "Modifies the data presented in the data dashboard, based on the given SQL query, and also updates the title.",
-      query = ellmer::type_string(
-        "A SQL query; must be a SELECT statement."
-      ),
-      title = ellmer::type_string(
-        "A title to display at the top of the data dashboard, summarizing the intent of the SQL query."
-      )
-    ))
-    chat$register_tool(ellmer::tool(
-      query,
-      "Perform a SQL query on the data, and return the results.",
-      query = ellmer::type_string(
-        "A SQL query; must be a SELECT statement."
-      )
-    ))
+    chat <- client$clone()
+    chat$set_turns(list())
+    chat$set_system_prompt(system_prompt)
+    chat$register_tool(
+      tool_update_dashboard(data_source, current_query, current_title)
+    )
+    chat$register_tool(tool_query(data_source))
 
     # Prepopulate the chat UI with a welcome message that appears to be from the
     # chat model (but is actually hard-coded). This is just for the user, not for
@@ -256,20 +242,38 @@ querychat_server <- function(id, querychat_config) {
       )
     }
 
-    # Handle user input
+    append_stream_task <- shiny::ExtendedTask$new(
+      function(client, user_input) {
+        stream <- client$stream_async(
+          user_input,
+          stream = "content"
+        )
+
+        p <- promises::promise_resolve(stream)
+        promises::then(p, function(stream) {
+          shinychat::chat_append("chat", stream)
+        })
+      }
+    )
+
     shiny::observeEvent(input$chat_user_input, {
-      # Add user message to the chat history
-      shinychat::chat_append(
-        "chat",
-        chat$stream_async(input$chat_user_input)
-      )
+      append_stream_task$invoke(chat, input$chat_user_input)
+    })
+
+    shiny::observeEvent(input$chat_update, {
+      current_query(input$chat_update$query)
+      current_title(input$chat_update$title)
     })
 
     list(
       chat = chat,
       sql = shiny::reactive(current_query()),
       title = shiny::reactive(current_title()),
-      df = filtered_df
+      df = filtered_df,
+      update_query = function(query, title = NULL) {
+        current_query(query)
+        current_title(title)
+      }
     )
   })
 }

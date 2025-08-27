@@ -138,7 +138,7 @@ This dataset contains information about Titanic passengers, collected for predic
 which you can then pass via:
 
 ```python
-querychat_config = querychat.init(
+qc_config = querychat.init(
     titanic,
     "titanic",
     data_description=Path("data_description.md")
@@ -152,7 +152,7 @@ querychat doesn't need this information in any particular format; just put whate
 You can add additional instructions of your own to the end of the system prompt, by passing `extra_instructions` into `querychat.init`.
 
 ```python
-querychat_config = querychat.init(
+qc_config = querychat.init(
     titanic,
     "titanic",
     extra_instructions=[
@@ -172,23 +172,13 @@ You can also put these instructions in a separate file and use `Path("instructio
 By default, querychat uses GPT-4o via the OpenAI API. If you want to use a different model, you can provide a `create_chat_callback` function that takes a `system_prompt` parameter, and returns a chatlas Chat object:
 
 ```python
+import querychat
 import chatlas
-from functools import partial
 
-# Option 1: Define a function
-def my_chat_func(system_prompt: str) -> chatlas.Chat:
-    return chatlas.ChatAnthropic(
-        model="claude-3-7-sonnet-latest",
-        system_prompt=system_prompt
-    )
-
-# Option 2: Use partial
-my_chat_func = partial(chatlas.ChatAnthropic, model="claude-3-7-sonnet-latest")
-
-querychat_config = querychat.init(
+qc_config = querychat.init(
     titanic,
     "titanic",
-    create_chat_callback=my_chat_func
+    client=chatlas.ChatAnthropic(model="claude-3-7-sonnet-latest")
 )
 ```
 

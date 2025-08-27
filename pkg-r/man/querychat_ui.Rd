@@ -12,18 +12,18 @@ querychat_ui(id)
 \arguments{
 \item{id}{The ID of the module instance.}
 
-\item{width}{The width of the sidebar (when using \code{querychat_sidebar}).}
+\item{width, height}{In \code{querychat_sidebar()}: the width and height of the
+sidebar.}
 
-\item{height}{The height of the sidebar (when using \code{querychat_sidebar}).}
-
-\item{...}{Additional arguments passed to \code{bslib::sidebar} (when using \code{querychat_sidebar}).}
+\item{...}{In \code{querychat_sidebar()}: additional arguments passed to
+\code{\link[bslib:sidebar]{bslib::sidebar()}}.}
 }
 \value{
 A UI object that can be embedded in a Shiny app.
 }
 \description{
 These functions create UI components for the querychat interface.
-\code{querychat_ui} creates a basic chat interface, while \code{querychat_sidebar}
-wraps the chat interface in a \code{bslib::sidebar} component designed to be used
-as the \code{sidebar} argument to \code{bslib::page_sidebar}.
+\code{querychat_ui()} creates a basic chat interface, while \code{querychat_sidebar()}
+wraps the chat interface in a \code{\link[bslib:sidebar]{bslib::sidebar()}} component designed to be
+used as the \code{sidebar} argument to \code{\link[bslib:page_sidebar]{bslib::page_sidebar()}}.
 }

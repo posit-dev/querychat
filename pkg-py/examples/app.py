@@ -2,7 +2,7 @@ import chatlas
 from seaborn import load_dataset
 from shiny import App, render, ui
 
-import querychat as qc
+import querychat
 
 titanic = load_dataset("titanic")
 
@@ -20,32 +20,38 @@ def use_github_models(system_prompt: str) -> chatlas.Chat:
     )
 
 
-querychat_config = qc.init(
+qc_config = querychat.init(
     data_source=titanic,
     table_name="titanic",
-    create_chat_callback=use_github_models,
+    client=use_github_models,
 )
 
 # Create UI
 app_ui = ui.page_sidebar(
-    # 2. Use qc.sidebar(id) in a ui.page_sidebar.
-    #    Alternatively, use qc.ui(id) elsewhere if you don't want your
+    # 2. Use querychat.sidebar(id) in a ui.page_sidebar.
+    #    Alternatively, use querychat.ui(id) elsewhere if you don't want your
     #    chat interface to live in a sidebar.
-    qc.sidebar("chat"),
-    ui.output_data_frame("data_table"),
+    querychat.sidebar("chat"),
+    ui.card(
+      ui.card_header("Titanic Data"),
+      ui.output_data_frame("data_table"),
+      fill=True,
+    ),
+    fillable=True,
+    class_="bslib-page-dashboard"
 )
 
 
 # Define server logic
 def server(input, output, session):
     # 3. Create a querychat object using the config from step 1.
-    chat = qc.server("chat", querychat_config)
+    qc = querychat.server("chat", qc_config)
 
     # 4. Use the filtered/sorted data frame anywhere you wish, via the
     #    chat.df() reactive.
     @render.data_frame
     def data_table():
-        return chat.df()
+        return qc.df()
 
 
 # Create Shiny app

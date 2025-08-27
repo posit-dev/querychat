@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import chatlas
-import querychat as qc
+import querychat
 from seaborn import load_dataset
 from shiny import App, render, ui
 
@@ -20,18 +20,18 @@ def use_github_models(system_prompt: str) -> chatlas.Chat:
         system_prompt=system_prompt,
     )
 
-querychat_config = qc.init(
+qc_config = querychat.init(
     titanic,
     "titanic",
     greeting=greeting,
     data_description=data_desc,
-    create_chat_callback=use_github_models,
+    client=use_github_models,
 )
 
 # Create UI
 app_ui = ui.page_sidebar(
     # 2. Place the chat component in the sidebar
-    qc.sidebar("chat"),
+    querychat.sidebar("chat"),
     # Main panel with data viewer
     ui.card(
         ui.output_data_frame("data_table"),
@@ -39,19 +39,20 @@ app_ui = ui.page_sidebar(
     ),
     title="querychat with Python",
     fillable=True,
+    class_="bslib-page-dashboard",
 )
 
 
 # Define server logic
 def server(input, output, session):
     # 3. Initialize querychat server with the config from step 1
-    chat = qc.server("chat", querychat_config)
+    qc = querychat.server("chat", qc_config)
 
     # 4. Display the filtered dataframe
     @render.data_frame
     def data_table():
         # Access filtered data via chat.df() reactive
-        return chat.df()
+        return qc.df()
 
 
 # Create Shiny app

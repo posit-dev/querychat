@@ -18,7 +18,7 @@ from typing import (
 
 import chatlas
 import chevron
-import narwhals as nw
+import narwhals.stable.v1 as nw
 import sqlalchemy
 from shiny import Inputs, Outputs, Session, module, reactive, ui
 
@@ -26,7 +26,7 @@ from ._utils import temp_env_vars
 
 if TYPE_CHECKING:
     import pandas as pd
-    from narwhals.typing import IntoFrame
+    from narwhals.stable.v1.typing import IntoFrame
 
 from .datasource import DataFrameSource, DataSource, SQLAlchemySource
 

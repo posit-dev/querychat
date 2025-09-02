@@ -33,8 +33,9 @@ jobs:
       - name: 📦 Install the project
         run: uv sync --python ${{ env.PYTHON_VERSION }} --all-extras --all-groups
 
-      #   - name: 🧪 Check tests
-      #     run: make py-check-tests
+      - name: 🧪 Check tests
+        run: make py-check-tests
+
       - name: 📝 Check types
         working-directory: ./pkg-py
         run: make py-check-types

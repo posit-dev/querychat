@@ -7,7 +7,14 @@ import sys
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Optional, Protocol, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Optional,
+    Protocol,
+    Union,
+)
 
 import chatlas
 import chevron
@@ -217,8 +224,16 @@ def df_to_html(df: IntoFrame, maxrows: int = 5) -> str:
         HTML string representation of the table
 
     """
-    ndf = nw.from_native(df)
-    df_short = nw.from_native(df).head(maxrows)
+    df_short: nw.DataFrame[Any]
+
+    if isinstance(df, nw.LazyFrame):
+        ndf_eager = df.collect()
+        df_short = df.head(maxrows).collect()
+    elif isinstance(df, nw.DataFrame):
+        ndf_eager = df
+        df_short = df.head(maxrows)
+    else:
+        raise TypeError("df must be a Narwhals DataFrame or LazyFrame")
 
     # Generate HTML table
     table_html = df_short.to_pandas().to_html(
@@ -227,9 +242,9 @@ def df_to_html(df: IntoFrame, maxrows: int = 5) -> str:
     )
 
     # Add note about truncated rows if needed
-    if len(df_short) != len(ndf):
+    if len(df_short) != len(ndf_eager):
         rows_notice = (
-            f"\n\n(Showing only the first {maxrows} rows out of {len(ndf)}.)\n"
+            f"\n\n(Showing only the first {maxrows} rows out of {len(ndf_eager)}.)\n"
         )
     else:
         rows_notice = ""
@@ -400,10 +415,14 @@ def init(
     data_source_obj: DataSource
     if isinstance(data_source, sqlalchemy.Engine):
         data_source_obj = SQLAlchemySource(data_source, table_name)
-    else:
+    elif isinstance(data_source, (nw.DataFrame, nw.LazyFrame)):
         data_source_obj = DataFrameSource(
-            nw.from_native(data_source).to_pandas(),
+            nw.to_native(data_source),
             table_name,
+        )
+    else:
+        raise TypeError(
+            "`data_source` must be a Narwhals DataFrame or LazyFrame, or a SQLAlchemy Engine",
         )
     # Process greeting
     if greeting is None:

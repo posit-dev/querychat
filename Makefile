@@ -111,11 +111,10 @@ r-docs-preview: ## [r] Build R docs
 
 .PHONY: py-setup
 py-setup:  ## [py] Setup python environment
-	uv sync --all-extras --all-groups
+	uv sync --all-extras --all-groups --upgrade
 
 .PHONY: py-check
-# py-check:  py-check-format py-check-types py-check-tests ## [py] Run python checks
-py-check:  py-check-format py-check-types ## [py] Run python checks
+py-check:  py-check-format py-check-types py-check-tests ## [py] Run python checks
 
 .PHONY: py-check-tox
 py-check-tox:  ## [py] Run python 3.9 - 3.12 checks with tox

@@ -224,14 +224,9 @@ def df_to_html(df: IntoFrame, maxrows: int = 5) -> str:
         HTML string representation of the table
 
     """
-    df_short: nw.DataFrame[Any]
-
-    if isinstance(df, nw.LazyFrame):
-        ndf_eager = df.collect()
-        df_short = df.head(maxrows).collect()
-    elif isinstance(df, nw.DataFrame):
-        ndf_eager = df
-        df_short = df.head(maxrows)
+    if isinstance(df, (nw.LazyFrame, nw.DataFrame)):
+        df_short = df.lazy().head(maxrows).collect()
+        nrow_full = df.lazy().select(nw.len()).collect().item()
     else:
         raise TypeError("df must be a Narwhals DataFrame or LazyFrame")
 
@@ -242,9 +237,9 @@ def df_to_html(df: IntoFrame, maxrows: int = 5) -> str:
     )
 
     # Add note about truncated rows if needed
-    if len(df_short) != len(ndf_eager):
+    if len(df_short) != nrow_full:
         rows_notice = (
-            f"\n\n(Showing only the first {maxrows} rows out of {len(ndf_eager)}.)\n"
+            f"\n\n(Showing only the first {maxrows} rows out of {nrow_full}.)\n"
         )
     else:
         rows_notice = ""

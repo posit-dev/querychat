@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "querychat"
-version = "0.1.0"
+version = "0.2.0"
 description = "Chat with your data using natural language"
 readme = "pkg-py/README.md"
 requires-python = ">=3.9"

@@ -37,18 +37,15 @@ jobs:
         run: make py-check-tests
 
       - name: 📝 Check types
-        working-directory: ./pkg-py
         run: make py-check-types
 
       - name: 📐 Check formatting
-        working-directory: ./pkg-py
         run: make py-check-format
       - name: 🧳 Build package
-        working-directory: ./pkg-py
         run: make py-build
 
       # TODO: https://pypi.org/manage/project/querychat/settings/publishing/
       - name: 🚢 Publish release on PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          packages-dir: ./pkg-py/dist
+          packages-dir: ./dist

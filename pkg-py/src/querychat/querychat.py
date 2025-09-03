@@ -232,8 +232,10 @@ def df_to_html(df: IntoFrame, maxrows: int = 5) -> str:
         try:
             nw_df = nw.from_native(df)
         except Exception as e:
-            raise TypeError("df must be a Narwhals DataFrame, LazyFrame, or compatible DataFrame (e.g., pandas)") from e
-    
+            raise TypeError(
+                "df must be a Narwhals DataFrame, LazyFrame, or compatible DataFrame (e.g., pandas)"
+            ) from e
+
     df_short = nw_df.lazy().head(maxrows).collect()
     nrow_full = nw_df.lazy().select(nw.len()).collect().item()
 

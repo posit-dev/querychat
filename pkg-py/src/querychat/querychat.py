@@ -7,11 +7,18 @@ import sys
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Optional, Protocol, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Optional,
+    Protocol,
+    Union,
+)
 
 import chatlas
 import chevron
-import narwhals as nw
+import narwhals.stable.v1 as nw
 import sqlalchemy
 from shiny import Inputs, Outputs, Session, module, reactive, ui
 
@@ -19,7 +26,7 @@ from ._utils import temp_env_vars
 
 if TYPE_CHECKING:
     import pandas as pd
-    from narwhals.typing import IntoFrame
+    from narwhals.stable.v1.typing import IntoFrame
 
 from .datasource import DataFrameSource, DataSource, SQLAlchemySource
 
@@ -217,8 +224,11 @@ def df_to_html(df: IntoFrame, maxrows: int = 5) -> str:
         HTML string representation of the table
 
     """
-    ndf = nw.from_native(df)
-    df_short = nw.from_native(df).head(maxrows)
+    if isinstance(df, (nw.LazyFrame, nw.DataFrame)):
+        df_short = df.lazy().head(maxrows).collect()
+        nrow_full = df.lazy().select(nw.len()).collect().item()
+    else:
+        raise TypeError("df must be a Narwhals DataFrame or LazyFrame")
 
     # Generate HTML table
     table_html = df_short.to_pandas().to_html(
@@ -227,9 +237,9 @@ def df_to_html(df: IntoFrame, maxrows: int = 5) -> str:
     )
 
     # Add note about truncated rows if needed
-    if len(df_short) != len(ndf):
+    if len(df_short) != nrow_full:
         rows_notice = (
-            f"\n\n(Showing only the first {maxrows} rows out of {len(ndf)}.)\n"
+            f"\n\n(Showing only the first {maxrows} rows out of {nrow_full}.)\n"
         )
     else:
         rows_notice = ""
@@ -400,10 +410,14 @@ def init(
     data_source_obj: DataSource
     if isinstance(data_source, sqlalchemy.Engine):
         data_source_obj = SQLAlchemySource(data_source, table_name)
-    else:
+    elif isinstance(data_source, (nw.DataFrame, nw.LazyFrame)):
         data_source_obj = DataFrameSource(
-            nw.from_native(data_source).to_pandas(),
+            nw.to_native(data_source),
             table_name,
+        )
+    else:
+        raise TypeError(
+            "`data_source` must be a Narwhals DataFrame or LazyFrame, or a SQLAlchemy Engine",
         )
     # Process greeting
     if greeting is None:

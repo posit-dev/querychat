@@ -90,8 +90,10 @@ If you find yourself offering example questions to the user as part of your resp
 * <span class="suggestion">Suggestion 3.</span>
 ```
 
+{{#is_duck_db}}
 ## DuckDB SQL tips
 
 * `percentile_cont` and `percentile_disc` are "ordered set" aggregate functions. These functions are specified using the WITHIN GROUP (ORDER BY sort_expression) syntax, and they are converted to an equivalent aggregate function that takes the ordering expression as the first argument. For example, `percentile_cont(fraction) WITHIN GROUP (ORDER BY column [(ASC|DESC)])` is equivalent to `quantile_cont(column, fraction ORDER BY column [(ASC|DESC)])`.
 
+{{/is_duck_db}}
 {{extra_instructions}}

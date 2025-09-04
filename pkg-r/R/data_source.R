@@ -225,7 +225,8 @@ create_system_prompt.querychat_data_source <- function(
       schema = schema,
       data_description = data_description,
       extra_instructions = extra_instructions,
-      db_type = db_type
+      db_type = db_type,
+      is_duck_db = identical(db_type, "DuckDB")
     )
   )
 }

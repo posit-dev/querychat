@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
 
     # Only run on release events for tags start with "py/v*"
-    # if: github.event_name != 'release' || startsWith(github.ref, 'refs/tags/py/v')
+    if: github.event_name != 'release' || startsWith(github.ref, 'refs/tags/py/v')
 
     steps:
     - name: Check out repository

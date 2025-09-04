@@ -35,7 +35,7 @@ jobs:
       contents: write
 
     # Only run on release events for tags start with "r/v*"
-    # if: github.event_name != 'release' || startsWith(github.ref, 'refs/tags/r/v')
+    if: github.event_name != 'release' || startsWith(github.ref, 'refs/tags/r/v')
 
     steps:
       - uses: actions/checkout@v4

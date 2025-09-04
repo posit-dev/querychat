@@ -104,6 +104,65 @@ def tool_update_dashboard(
     return update_dashboard
 
 
+def tool_reset_dashboard(
+    current_query: Callable,
+    current_title: Callable,
+) -> Tool:
+    """
+    Create a tool that resets the dashboard to show all data.
+
+    Parameters
+    ----------
+    current_query : Callable
+        Reactive value for storing the current SQL query
+    current_title : Callable
+        Reactive value for storing the current title
+
+    Returns
+    -------
+    Tool
+        A tool that can be registered with chatlas
+
+    """
+
+    @_as_tool(
+        annotations={
+            "title": "Reset Dashboard",
+            "icon": '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="bi bi-arrow-counterclockwise" style="height:1em;width:1em;fill:currentColor;vertical-align:-0.125em;" aria-hidden="true" role="img"><path fill-rule="evenodd" d="M8 3a5 5 0 1 1-4.546 2.914.5.5 0 0 0-.908-.417A6 6 0 1 0 8 2v1z"></path><path d="M8 4.466V.534a.25.25 0 0 0-.41-.192L5.23 2.308a.25.25 0 0 0 0 .384l2.36 1.966A.25.25 0 0 0 8 4.466z"></path></svg>',
+        },
+    )
+    def reset_dashboard() -> ContentToolResult:
+        """
+        Reset the data dashboard to show all data.
+        """
+        # Reset current query and title
+        current_query("")
+        current_title(None)
+
+        # Add Reset Filter button
+        button_html = """<button
+            class="btn btn-outline-primary btn-sm float-end mt-3 querychat-update-dashboard-btn"
+            data-query=""
+            data-title="">
+            Reset Filter
+        </button>"""
+
+        # Return ContentToolResult with display metadata
+        return ContentToolResult(
+            value="The dashboard has been reset to show all data.",
+            extra={
+                "display": ToolResultDisplay(
+                    markdown=button_html,
+                    title=None,
+                    show_request=False,
+                    open=False,
+                ),
+            },
+        )
+
+    return reset_dashboard
+
+
 def tool_query(data_source: DataSource) -> Tool:
     """
     Create a tool that performs a SQL query on the data.

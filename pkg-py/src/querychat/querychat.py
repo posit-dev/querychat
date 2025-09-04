@@ -16,7 +16,7 @@ import sqlalchemy
 from shiny import Inputs, Outputs, Session, module, reactive, ui
 
 from ._utils import temp_env_vars
-from .tools import tool_query, tool_update_dashboard
+from .tools import tool_query, tool_reset_dashboard, tool_update_dashboard
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -524,6 +524,10 @@ def mod_server(  # noqa: D417
         current_query.set,
         current_title.set,
     )
+    reset_dashboard_tool = tool_reset_dashboard(
+        current_query.set,
+        current_title.set,
+    )
     query_tool = tool_query(data_source)
 
     chat_ui = shinychat.Chat("chat")
@@ -533,7 +537,7 @@ def mod_server(  # noqa: D417
     chat.set_turns([])
     chat.system_prompt = system_prompt
     # Register tools with annotations for the UI
-    chat.set_tools([*chat.get_tools(), update_dashboard_tool, query_tool])
+    chat.set_tools([*chat.get_tools(), update_dashboard_tool, reset_dashboard_tool, query_tool])
 
     # Add greeting if provided
     if greeting and any(len(g) > 0 for g in greeting.split("\n")):

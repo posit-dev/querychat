@@ -224,20 +224,15 @@ def df_to_html(df: IntoFrame, maxrows: int = 5) -> str:
         HTML string representation of the table
 
     """
-    # Convert to Narwhals DataFrame if it's not already one
-    if isinstance(df, (nw.LazyFrame, nw.DataFrame)):
-        nw_df = df
-    else:
-        # Try to convert using nw.from_native (supports pandas and other formats)
-        try:
-            nw_df = nw.from_native(df)
-        except Exception as e:
-            raise TypeError(
-                "df must be a Narwhals DataFrame, LazyFrame, or compatible DataFrame (e.g., pandas)",
-            ) from e
+    ndf = nw.from_native(df)
 
-    df_short = nw_df.lazy().head(maxrows).collect()
-    nrow_full = nw_df.lazy().select(nw.len()).collect().item()
+    if isinstance(ndf, (nw.LazyFrame, nw.DataFrame)):
+        df_short = ndf.lazy().head(maxrows).collect()
+        nrow_full = ndf.lazy().select(nw.len()).collect().item()
+    else:
+        raise TypeError(
+            "Must be able to convert `df` into a Narwhals DataFrame or LazyFrame",
+        )
 
     # Generate HTML table
     table_html = df_short.to_pandas().to_html(

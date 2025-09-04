@@ -5,8 +5,9 @@ from pathlib import Path
 import pandas as pd
 import pytest
 from sqlalchemy import create_engine
-from src.querychat.datasource import DataFrameSource, SQLAlchemySource
-from src.querychat.querychat import df_to_html
+
+from querychat.datasource import DataFrameSource, SQLAlchemySource
+from querychat.querychat import df_to_html
 
 
 @pytest.fixture

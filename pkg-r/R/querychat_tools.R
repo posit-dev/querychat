@@ -56,6 +56,20 @@ tool_update_dashboard_impl <- function(
   }
 }
 
+
+tool_reset_dashboard <- function(reset_fn) {
+  ellmer::tool(
+    reset_fn,
+    name = "querychat_reset_dashboard",
+    description = "Resets the data dashboard to show all data.",
+    arguments = list(),
+    annotations = ellmer::tool_annotations(
+      title = "Reset Dashboard",
+      icon = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="bi bi-arrow-counterclockwise " style="height:1em;width:1em;fill:currentColor;vertical-align:-0.125em;" aria-hidden="true" role="img" ><path fill-rule="evenodd" d="M8 3a5 5 0 1 1-4.546 2.914.5.5 0 0 0-.908-.417A6 6 0 1 0 8 2v1z"></path><path d="M8 4.466V.534a.25.25 0 0 0-.41-.192L5.23 2.308a.25.25 0 0 0 0 .384l2.36 1.966A.25.25 0 0 0 8 4.466z"></path></svg>'
+    )
+  )
+}
+
 # Perform a SQL query on the data, and return the results as JSON.
 # @param query A SQL query; must be a SELECT statement.
 # @return The results of the query as a data frame.
@@ -86,7 +100,12 @@ querychat_tool_result <- function(
   title = NULL,
   action = "update"
 ) {
-  action <- rlang::arg_match(action, c("update", "query"))
+  action <- rlang::arg_match(action, c("update", "query", "reset"))
+
+  if (action == "reset") {
+    query <- ""
+    title <- NULL
+  }
 
   res <- tryCatch(
     switch(
@@ -95,7 +114,8 @@ querychat_tool_result <- function(
         test_query(data_source, query)
         NULL
       },
-      query = execute_query(data_source, query)
+      query = execute_query(data_source, query),
+      reset = "The dashboard has been reset to show all data."
     ),
     error = function(err) err
   )
@@ -115,13 +135,13 @@ querychat_tool_result <- function(
     )
   }
 
-  if (!is_error && action == "update") {
+  if (!is_error && action %in% c("update", "reset")) {
     output <- format(
       shiny::tags$button(
         class = "btn btn-outline-primary btn-sm float-end mt-3 querychat-update-dashboard-btn",
         "data-query" = query,
         "data-title" = title,
-        "Apply Filter"
+        switch(action, update = "Apply Filter", reset = "Reset Filter")
       )
     )
     output <- paste0("\n\n", output)
@@ -130,9 +150,15 @@ querychat_tool_result <- function(
   value <-
     switch(
       action,
-      query = res,
-      update = "Dashboard updated. Use `querychat_query` tool to review results, if needed."
+      update = "Dashboard updated. Use `querychat_query` tool to review results, if needed.",
+      res
     )
+
+  display_md <- switch(
+    action,
+    reset = output,
+    sprintf("```sql\n%s\n```%s", query, output)
+  )
 
   ellmer::ContentToolResult(
     value = if (!is_error) value,
@@ -141,8 +167,8 @@ querychat_tool_result <- function(
       display = list(
         title = if (action == "update" && !is.null(title)) title,
         show_request = is_error,
-        markdown = sprintf("```sql\n%s\n```%s", query, output),
-        open = !is_error
+        markdown = display_md,
+        open = !is_error && action != "reset"
       )
     )
   )

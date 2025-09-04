@@ -1,7 +1,5 @@
 # querychat (development version)
 
-* Initial CRAN submission.
-
 * Added `prompt_template` support for `querychat_system_prompt()`. (Thank you, @oacar! #37, #45)
 
 * `querychat_init()` now accepts a `client`, replacing the previous `create_chat_func` argument. (#60)
@@ -25,3 +23,5 @@
 * New `querychat_app()` function lets you quickly launch a Shiny app with a querychat chat interface. (#66)
 
 * `querychat_ui()` now adds a `.querychat` class to the chat container and `querychat_sidebar()` adds a `.querychat-sidebar` class to the sidebar, allowing for easier customization via CSS. (#68)
+
+* querychat now uses a separate tool to reset the dashboard. (#80)

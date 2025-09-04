@@ -159,13 +159,19 @@ get_db_type.data_frame_source <- function(source, ...) {
 #' @export
 get_db_type.dbi_source <- function(source, ...) {
   conn <- source$conn
-  conn_info <- DBI::dbGetInfo(conn)
-  # default to 'POSIX' if dbms name not found
-  dbms_name <- purrr::pluck(conn_info, "dbms.name", .default = "POSIX")
+
   # Special handling for known database types
+  if (inherits(conn, "duckdb_connection")) {
+    return("DuckDB")
+  }
   if (inherits(conn, "SQLiteConnection")) {
     return("SQLite")
   }
+
+  # default to 'POSIX' if dbms name not found
+  conn_info <- DBI::dbGetInfo(conn)
+  dbms_name <- purrr::pluck(conn_info, "dbms.name", .default = "POSIX")
+
   # remove ' SQL', if exists (SQL is already in the prompt)
   return(gsub(" SQL", "", dbms_name))
 }
@@ -219,7 +225,8 @@ create_system_prompt.querychat_data_source <- function(
       schema = schema,
       data_description = data_description,
       extra_instructions = extra_instructions,
-      db_type = db_type
+      db_type = db_type,
+      is_duck_db = identical(db_type, "DuckDB")
     )
   )
 }

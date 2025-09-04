@@ -216,6 +216,12 @@ querychat_server <- function(id, querychat_config) {
       )
     }
 
+    reset_query <- function() {
+      current_query("")
+      current_title(NULL)
+      querychat_tool_result(action = "reset")
+    }
+
     # Preload the conversation with the system prompt. These are instructions for
     # the chat model, and must not be shown to the end user.
     chat <- client$clone()
@@ -225,6 +231,7 @@ querychat_server <- function(id, querychat_config) {
       tool_update_dashboard(data_source, current_query, current_title)
     )
     chat$register_tool(tool_query(data_source))
+    chat$register_tool(tool_reset_dashboard(reset_query))
 
     # Prepopulate the chat UI with a welcome message that appears to be from the
     # chat model (but is actually hard-coded). This is just for the user, not for

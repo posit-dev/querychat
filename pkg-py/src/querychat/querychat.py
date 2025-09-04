@@ -414,15 +414,12 @@ def init(
     data_source_obj: DataSource
     if isinstance(data_source, sqlalchemy.Engine):
         data_source_obj = SQLAlchemySource(data_source, table_name)
-    elif isinstance(data_source, (nw.DataFrame, nw.LazyFrame)):
+    else:
         data_source_obj = DataFrameSource(
-            nw.to_native(data_source),
+            data_source,
             table_name,
         )
-    else:
-        raise TypeError(
-            "`data_source` must be a Narwhals DataFrame or LazyFrame, or a SQLAlchemy Engine",
-        )
+
     # Process greeting
     if greeting is None:
         print(

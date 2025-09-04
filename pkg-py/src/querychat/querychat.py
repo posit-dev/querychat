@@ -7,22 +7,16 @@ import sys
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Optional,
-    Protocol,
-    Union,
-)
+from typing import TYPE_CHECKING, Any, Callable, Optional, Protocol, Union
 
 import chatlas
 import chevron
-import narwhals.stable.v1 as nw
+import shinychat
 import sqlalchemy
 from shiny import Inputs, Outputs, Session, module, reactive, ui
 
 from ._utils import temp_env_vars
+from .tools import tool_query, tool_update_dashboard
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -207,50 +201,6 @@ def system_prompt(
     )
 
 
-def df_to_html(df: IntoFrame, maxrows: int = 5) -> str:
-    """
-    Convert a DataFrame to an HTML table for display in chat.
-
-    Parameters
-    ----------
-    df : IntoFrame
-        The DataFrame to convert
-    maxrows : int, default=5
-        Maximum number of rows to display
-
-    Returns
-    -------
-    str
-        HTML string representation of the table
-
-    """
-    ndf = nw.from_native(df)
-
-    if isinstance(ndf, (nw.LazyFrame, nw.DataFrame)):
-        df_short = ndf.lazy().head(maxrows).collect()
-        nrow_full = ndf.lazy().select(nw.len()).collect().item()
-    else:
-        raise TypeError(
-            "Must be able to convert `df` into a Narwhals DataFrame or LazyFrame",
-        )
-
-    # Generate HTML table
-    table_html = df_short.to_pandas().to_html(
-        index=False,
-        classes="table table-striped",
-    )
-
-    # Add note about truncated rows if needed
-    if len(df_short) != nrow_full:
-        rows_notice = (
-            f"\n\n(Showing only the first {maxrows} rows out of {nrow_full}.)\n"
-        )
-    else:
-        rows_notice = ""
-
-    return table_html + rows_notice
-
-
 def _get_client_from_env() -> Optional[str]:
     """Get client configuration from environment variable."""
     env_client = os.getenv("QUERYCHAT_CLIENT", "")
@@ -414,15 +364,12 @@ def init(
     data_source_obj: DataSource
     if isinstance(data_source, sqlalchemy.Engine):
         data_source_obj = SQLAlchemySource(data_source, table_name)
-    elif isinstance(data_source, (nw.DataFrame, nw.LazyFrame)):
+    else:
         data_source_obj = DataFrameSource(
-            nw.to_native(data_source),
+            data_source,
             table_name,
         )
-    else:
-        raise TypeError(
-            "`data_source` must be a Narwhals DataFrame or LazyFrame, or a SQLAlchemy Engine",
-        )
+
     # Process greeting
     if greeting is None:
         print(
@@ -471,12 +418,14 @@ def mod_ui() -> ui.TagList:
         A UI component.
 
     """
-    # Include CSS
+    # Include CSS and JS
     css_path = Path(__file__).parent / "static" / "css" / "styles.css"
+    js_path = Path(__file__).parent / "static" / "js" / "querychat.js"
 
     return ui.TagList(
         ui.include_css(css_path),
-        ui.chat_ui("chat", class_="querychat"),
+        ui.include_js(js_path),
+        shinychat.chat_ui("chat", class_="querychat"),
     )
 
 
@@ -569,70 +518,22 @@ def mod_server(  # noqa: D417
         async with chat_ui.message_stream_context() as msgstream:
             await msgstream.append(text)
 
-    # The function that updates the dashboard with a new SQL query
-    async def update_dashboard(query: str, title: str):
-        """
-        Modify the data presented in the data dashboard, based on the given SQL query,
-        and also updates the title.
+    # Create the tool functions
+    update_dashboard_tool = tool_update_dashboard(
+        data_source,
+        current_query.set,
+        current_title.set,
+    )
+    query_tool = tool_query(data_source)
 
-        Parameters
-        ----------
-        query : str
-            A DuckDB SQL query; must be a SELECT statement.
-        title : str
-            A title to display at the top of the data dashboard, summarizing the intent of the SQL query.
-
-        """
-        await append_output(f"\n```sql\n{query}\n```\n\n")
-
-        try:
-            # Try the query to see if it errors
-            data_source.execute_query(query)
-        except Exception as e:
-            error_msg = str(e)
-            await append_output(f"> Error: {error_msg}\n\n")
-            raise e
-
-        if query is not None:
-            current_query.set(query)
-        if title is not None:
-            current_title.set(title)
-
-        return "Dashboard updated. Use `query` tool to review results, if needed."
-
-    # Function to perform a SQL query and return results as JSON
-    async def query(query: str):
-        """
-        Perform a SQL query on the data, and return the results as JSON.
-
-        Parameters
-        ----------
-        query
-            A DuckDB SQL query; must be a SELECT statement.
-
-        """
-        await append_output(f"\n```sql\n{query}\n```\n\n")
-
-        try:
-            result_df = data_source.execute_query(query)
-        except Exception as e:
-            error_msg = str(e)
-            await append_output(f"> Error: {error_msg}\n\n")
-            raise e
-
-        tbl_html = df_to_html(result_df, maxrows=5)
-        await append_output(f"{tbl_html}\n\n")
-
-        return result_df.to_json(orient="records")
-
-    chat_ui = ui.Chat("chat")
+    chat_ui = shinychat.Chat("chat")
 
     # Set up the chat object for this session
     chat = copy.deepcopy(client)
     chat.set_turns([])
     chat.system_prompt = system_prompt
-    chat.register_tool(update_dashboard)
-    chat.register_tool(query)
+    # Register tools with annotations for the UI
+    chat.set_tools([*chat.get_tools(), update_dashboard_tool, query_tool])
 
     # Add greeting if provided
     if greeting and any(len(g) > 0 for g in greeting.split("\n")):
@@ -645,8 +546,25 @@ def mod_server(  # noqa: D417
     # Handle user input
     @chat_ui.on_user_submit
     async def _(user_input: str):
-        stream = await chat.stream_async(user_input, echo="none")
+        stream = await chat.stream_async(user_input, echo="none", content="all")
         await chat_ui.append_message_stream(stream)
+
+    # Handle update button clicks
+    @reactive.effect
+    @reactive.event(input.chat_update)
+    def _():
+        update = input.chat_update()
+        if update is None:
+            return
+        if not isinstance(update, dict):
+            return
+
+        query = update.get("query")
+        title = update.get("title")
+        if query is not None:
+            current_query.set(query)
+        if title is not None:
+            current_title.set(title)
 
     @reactive.effect
     async def greet_on_startup():

@@ -24,10 +24,11 @@ dependencies = [
     "shiny",
     "shinywidgets",
     "htmltools",
-    "chatlas",
+    "chatlas>=0.11.1",
     "narwhals",
     "chevron",
-    "sqlalchemy>=2.0.0" # Using 2.0+ for improved type hints and API
+    "sqlalchemy>=2.0.0", # Using 2.0+ for improved type hints and API
+    "shinychat @ git+https://github.com/posit-dev/shinychat.git"
 ]
 classifiers = [
     "Programming Language :: Python",
@@ -44,6 +45,9 @@ Homepage = "https://github.com/posit-dev/querychat" # TODO update when we have d
 Repository = "https://github.com/posit-dev/querychat"
 Issues = "https://github.com/posit-dev/querychat/issues"
 Source = "https://github.com/posit-dev/querychat/tree/main/pkg-py"
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["pkg-py/src/querychat"]

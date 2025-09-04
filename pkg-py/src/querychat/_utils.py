@@ -2,7 +2,12 @@ from __future__ import annotations
 
 import os
 from contextlib import contextmanager
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
+
+import narwhals.stable.v1 as nw
+
+if TYPE_CHECKING:
+    from narwhals.stable.v1.typing import IntoFrame
 
 
 @contextmanager
@@ -46,3 +51,47 @@ def temp_env_vars(env_vars: dict[str, Optional[str]]):
             else:
                 # Restore original value
                 os.environ[key] = original_value
+
+
+def df_to_html(df: IntoFrame, maxrows: int = 5) -> str:
+    """
+    Convert a DataFrame to an HTML table for display in chat.
+
+    Parameters
+    ----------
+    df : IntoFrame
+        The DataFrame to convert
+    maxrows : int, default=5
+        Maximum number of rows to display
+
+    Returns
+    -------
+    str
+        HTML string representation of the table
+
+    """
+    ndf = nw.from_native(df)
+
+    if isinstance(ndf, (nw.LazyFrame, nw.DataFrame)):
+        df_short = ndf.lazy().head(maxrows).collect()
+        nrow_full = ndf.lazy().select(nw.len()).collect().item()
+    else:
+        raise TypeError(
+            "Must be able to convert `df` into a Narwhals DataFrame or LazyFrame",
+        )
+
+    # Generate HTML table
+    table_html = df_short.to_pandas().to_html(
+        index=False,
+        classes="table table-striped",
+    )
+
+    # Add note about truncated rows if needed
+    if len(df_short) != nrow_full:
+        rows_notice = (
+            f"\n\n(Showing only the first {maxrows} rows out of {nrow_full}.)\n"
+        )
+    else:
+        rows_notice = ""
+
+    return table_html + rows_notice

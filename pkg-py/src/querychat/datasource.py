@@ -3,8 +3,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, ClassVar, Protocol
 
 import duckdb
-import narwhals as nw
+import narwhals.stable.v1 as nw
 import pandas as pd
+from narwhals.stable.v1.typing import IntoFrame
 from sqlalchemy import inspect, text
 from sqlalchemy.sql import sqltypes
 
@@ -58,8 +59,9 @@ class DataFrameSource:
     """A DataSource implementation that wraps a pandas DataFrame using DuckDB."""
 
     db_engine: ClassVar[str] = "DuckDB"
+    _df: nw.DataFrame | nw.LazyFrame
 
-    def __init__(self, df: pd.DataFrame, table_name: str):
+    def __init__(self, df: IntoFrame, table_name: str):
         """
         Initialize with a pandas DataFrame.
 
@@ -69,9 +71,10 @@ class DataFrameSource:
 
         """
         self._conn = duckdb.connect(database=":memory:")
-        self._df = df
+        self._df = nw.from_native(df)
         self._table_name = table_name
-        self._conn.register(table_name, df)
+        # TODO: If the data frame is already SQL-backed, maybe we shouldn't be making a new copy here.
+        self._conn.register(table_name, self._df.lazy().collect().to_pandas())
 
     def get_schema(self, *, categorical_threshold: int) -> str:
         """
@@ -86,9 +89,8 @@ class DataFrameSource:
             String describing the schema
 
         """
-        ndf = nw.from_native(self._df)
-
         schema = [f"Table: {self._table_name}", "Columns:"]
+        ndf = self._df
 
         for column in ndf.columns:
             # Map pandas dtypes to SQL-like types
@@ -149,7 +151,7 @@ class DataFrameSource:
             The complete dataset as a pandas DataFrame
 
         """
-        return self._df.copy()
+        return self._df.lazy().collect().to_pandas()
 
 
 class SQLAlchemySource:

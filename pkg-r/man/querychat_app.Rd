@@ -29,7 +29,7 @@ natural language queries. The app uses a pre-configured Shiny app built on
 way to chat with your data.
 }
 \examples{
-\dontshow{if (rlang::is_interactive()) (if (getRversion() >= "3.4") withAutoprint else force)(\{ # examplesIf}
+\dontshow{if (rlang::is_interactive()) withAutoprint(\{ # examplesIf}
 # Pass in a data frame to start querychatting
 querychat_app(mtcars)
 

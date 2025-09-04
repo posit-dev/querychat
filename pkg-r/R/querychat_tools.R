@@ -77,7 +77,7 @@ tool_query <- function(data_source) {
   force(data_source)
 
   ellmer::tool(
-    function(query) {
+    function(query, `_intent` = "") {
       querychat_tool_result(data_source, query, action = "query")
     },
     name = "querychat_query",
@@ -85,6 +85,9 @@ tool_query <- function(data_source) {
     arguments = list(
       query = ellmer::type_string(
         "A SQL query; must be a SELECT statement."
+      ),
+      `_intent` = ellmer::type_string(
+        "The intent of the query, in brief natural language for user context."
       )
     ),
     annotations = ellmer::tool_annotations(

@@ -2,6 +2,9 @@ import chatlas
 from seaborn import load_dataset
 from shiny import App, render, ui
 
+from dotenv import load_dotenv
+load_dotenv()
+
 import querychat
 
 titanic = load_dataset("titanic")
@@ -33,7 +36,7 @@ app_ui = ui.page_sidebar(
     #    chat interface to live in a sidebar.
     querychat.sidebar("chat"),
     ui.card(
-      ui.card_header("Titanic Data"),
+      ui.card_header(ui.output_text("title")),
       ui.output_data_frame("data_table"),
       fill=True,
     ),
@@ -52,6 +55,11 @@ def server(input, output, session):
     @render.data_frame
     def data_table():
         return qc.df()
+
+    @render.text
+    def title():
+        title = qc.title()
+        return title if title else "Titanic Dataset"
 
 
 # Create Shiny app

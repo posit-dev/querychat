@@ -23,7 +23,7 @@ def sample_dataframe():
 
 
 @pytest.fixture
-def test_db_engine_with_data():
+def sample_sqlite():
     """Create a temporary SQLite database with test data."""
     temp_db = tempfile.NamedTemporaryFile(delete=False, suffix=".db")  # noqa: SIM115
     temp_db.close()
@@ -82,9 +82,9 @@ def test_df_to_html_with_dataframe_source_result(sample_dataframe):
     assert "Eve" in html_output
 
 
-def test_df_to_html_with_sqlalchemy_source_result(test_db_engine_with_data):
+def test_df_to_html_with_sqlalchemy_source_result(sample_sqlite):
     """Test that df_to_html() works with results from SQLAlchemySource.execute_query()."""
-    source = SQLAlchemySource(test_db_engine_with_data, "employees")
+    source = SQLAlchemySource(sample_sqlite, "employees")
 
     # Execute query to get pandas DataFrame
     result_df = source.execute_query("SELECT * FROM employees WHERE age > 25")

@@ -30,7 +30,7 @@ querychat's natural language chat experience is powered by LLMs (like GPT-4o, Cl
 
 ### Powered by SQL
 
-querychat does not have direct access to the raw data; it can _only_ read or filter the data by writing SQL `SELECT` statements. This is crucial for ensuring relability, transparency, and reproducibility:
+querychat does not have direct access to the raw data; it can _only_ read or filter the data by writing SQL `SELECT` statements. This means we're not sending the raw data to the LLM and asking it to filter or calculate summary statistics directly, as LLMs can be inconsistent at such tasks. Instead, when you ask something like 'how many penguins have bills longer than 40mm?', the LLM writes SQL to answer the question and sees only the result of that SQL query, ensuring the answer is guaranteed to be accurate with your data. This is crucial for ensuring relability, transparency, and reproducibility:
 
 - **Reliability:** Today's LLMs are excellent at writing SQL, but bad at direct calculation.
 - **Transparency:** querychat always displays the SQL to the user, so it can be vetted instead of blindly trusted.

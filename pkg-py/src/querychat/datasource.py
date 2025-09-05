@@ -10,6 +10,7 @@ from sqlalchemy import inspect, text
 from sqlalchemy.sql import sqltypes
 
 if TYPE_CHECKING:
+    from narwhals.stable.v1.typing import IntoFrame
     from sqlalchemy.engine import Connection, Engine
 
 
@@ -73,7 +74,7 @@ class DataFrameSource:
         self._conn = duckdb.connect(database=":memory:")
         self._df = nw.from_native(df)
         self._table_name = table_name
-        # TODO: If the data frame is already SQL-backed, maybe we shouldn't be making a new copy here.
+        # TODO(@gadenbuie): If the data frame is already SQL-backed, maybe we shouldn't be making a new copy here.
         self._conn.register(table_name, self._df.lazy().collect().to_pandas())
 
     def get_schema(self, *, categorical_threshold: int) -> str:
@@ -90,7 +91,13 @@ class DataFrameSource:
 
         """
         schema = [f"Table: {self._table_name}", "Columns:"]
-        ndf = self._df
+
+        # Ensure we're working with a DataFrame, not a LazyFrame
+        ndf = (
+            self._df.head(10).collect()
+            if isinstance(self._df, nw.LazyFrame)
+            else self._df
+        )
 
         for column in ndf.columns:
             # Map pandas dtypes to SQL-like types
@@ -151,6 +158,7 @@ class DataFrameSource:
             The complete dataset as a pandas DataFrame
 
         """
+        # TODO(@gadenbuie): This should just return `self._df` and not a pandas DataFrame
         return self._df.lazy().collect().to_pandas()
 
 

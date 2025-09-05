@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Added rich tool UI support using shinychat development version and chatlas >= 0.11.1 (#67)
 * Added `querychat_reset_dashboard()` tool for easily resetting the dashboard filters (#81)
 
+## [0.2.2] - 2025-09-04
+
+* Fixed another issue with data sources that aren't already narwhals DataFrames (#83)
+
 ## [0.2.1] - 2025-09-04
 
 * Fixed an issue with the query tool when used with SQLAlchemy data sources. (@npelikan #79)

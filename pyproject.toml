@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "querychat"
-version = "0.2.1"
+version = "0.2.2"
 description = "Chat with your data using natural language"
 readme = "pkg-py/README.md"
 requires-python = ">=3.9"
@@ -128,6 +128,7 @@ extend-ignore = [
     "D107", # Missing docstring in __init__
     "D205", # 1 blank line required between summary line and description
     "UP045", # Use `X | NULL` for type annotations, not `Optional[X]`
+    "TD003", # TODO doesn't need to have an issue link
 ]
 extend-select = [
     # "C90", # C90; mccabe: https://docs.astral.sh/ruff/rules/complex-structure/

@@ -4,7 +4,8 @@ from pathlib import Path
 
 import pytest
 from sqlalchemy import create_engine, text
-from src.querychat.datasource import SQLAlchemySource
+
+from querychat.datasource import SQLAlchemySource
 
 
 @pytest.fixture

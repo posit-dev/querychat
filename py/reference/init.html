@@ -298,7 +298,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr class="odd">
 <td>greeting</td>
 <td>str | Path</td>
-<td>A string in Markdown format, containing the initial message. If a pathlib.Path object is passed, querychat will read the contents of the path into a string with <code>.read_text()</code>.</td>
+<td>A string in Markdown format, containing the initial message. If a pathlib.Path object is passed, querychat will read the contents of the path into a string with <code>.read_text()</code>. You can use <code>querychat.greeting()</code> to help generate a greeting from a querychat configuration. If no greeting is provided, one will be generated at the start of every new conversation.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">

@@ -182,6 +182,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#customizing-querychat" id="toc-customizing-querychat" class="nav-link" data-scroll-target="#customizing-querychat">Customizing querychat</a>
   <ul class="collapse">
   <li><a href="#provide-a-greeting-recommended" id="toc-provide-a-greeting-recommended" class="nav-link" data-scroll-target="#provide-a-greeting-recommended">Provide a greeting (recommended)</a></li>
+  <li><a href="#generate-a-greeting" id="toc-generate-a-greeting" class="nav-link" data-scroll-target="#generate-a-greeting">Generate a greeting</a></li>
   <li><a href="#augment-the-system-prompt-recommended" id="toc-augment-the-system-prompt-recommended" class="nav-link" data-scroll-target="#augment-the-system-prompt-recommended">Augment the system prompt (recommended)</a></li>
   <li><a href="#use-a-different-llm-provider" id="toc-use-a-different-llm-provider" class="nav-link" data-scroll-target="#use-a-different-llm-provider">Use a different LLM provider</a></li>
   </ul></li>
@@ -349,12 +350,32 @@ GitHub Models and GitHub Personal Access Tokens
 <span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="ss">  * </span><span class="dt">&lt;</span><span class="kw">span</span><span class="ot"> class</span><span class="op">=</span><span class="st">"suggestion"</span><span class="dt">&gt;</span>What's the average age of children who survived?<span class="dt">&lt;/</span><span class="kw">span</span><span class="dt">&gt;</span></span>
 <span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="ss">  * </span><span class="dt">&lt;</span><span class="kw">span</span><span class="ot"> class</span><span class="op">=</span><span class="st">"suggestion"</span><span class="dt">&gt;</span>How many passengers were traveling alone?<span class="dt">&lt;/</span><span class="kw">span</span><span class="dt">&gt;</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>These suggestions appear in the greeting and automatically populate the chat text box when clicked. This gives the user a few ideas to explore on their own. You can see this behavior in our <a href="https://shiny.posit.co/py/templates/querychat/"><code>querychat template</code></a>.</p>
-<p>If you need help coming up with a greeting, your own app can help you! Just launch it and paste this into the chat interface:</p>
-<blockquote class="blockquote">
-<p>Help me create a greeting for your future users. Include some example questions. Format your suggested greeting as Markdown, in a code block.</p>
-</blockquote>
-<p>And keep giving it feedback until you’re happy with the result, which will then be ready to be pasted into <code>greeting.md</code>.</p>
-<p>Alternatively, you can completely suppress the greeting by passing <code>greeting=""</code>.</p>
+</section>
+<section id="generate-a-greeting" class="level3">
+<h3 class="anchored" data-anchor-id="generate-a-greeting">Generate a greeting</h3>
+<p>If you need help coming up with a greeting, you can use the <code>querychat.greeting()</code> function to generate one:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> querychat</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> palmerpenguins <span class="im">import</span> load_penguins</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Create config with your dataset</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>penguins <span class="op">=</span> load_penguins()</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>penguins_config <span class="op">=</span> querychat.init(penguins, <span class="st">"penguins"</span>)</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate a greeting</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>querychat.greeting(penguins_config)</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Hello! I'm here to help you explore and analyze the penguins dataset.</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Here are some example prompts you can try:</span></span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; ...</span></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Update the config with the generated greeting</span></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>penguins_config <span class="op">=</span> querychat.init(</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>    penguins,</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>    <span class="st">"penguins"</span>,</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>    greeting<span class="op">=</span><span class="st">"Hello! I'm here to help you explore and analyze the penguins dataset..."</span></span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>This will use the LLM to generate a friendly greeting message with sample prompts. In Shiny apps, you could also generate the greeting once when the app starts up so that it’s shared among all users:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>penguins_config <span class="op">=</span> querychat.init(penguins, <span class="st">"penguins"</span>)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>penguins_config.greeting <span class="op">=</span> querychat.greeting(penguins_config, echo<span class="op">=</span><span class="st">"none"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
 <section id="augment-the-system-prompt-recommended" class="level3">
 <h3 class="anchored" data-anchor-id="augment-the-system-prompt-recommended">Augment the system prompt (recommended)</h3>
@@ -377,43 +398,43 @@ GitHub Models and GitHub Personal Access Tokens
 <p>And that’s all the LLM will know about your data. The actual data does not get passed into the LLM. We calculate these values before we pass the schema information into the LLM.</p>
 <p>If the column names are usefully descriptive, it may be able to make a surprising amount of sense out of the data. But if your data frame’s columns are <code>x</code>, <code>V1</code>, <code>value</code>, etc., then the model will need to be given more background info–just like a human would.</p>
 <p>To provide this information, use the <code>data_description</code> argument. For example, if you’re using the <code>titanic</code> dataset, you might create a <code>data_description.md</code> like this:</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>This dataset contains information about Titanic passengers, collected for predicting survival.</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>survived: Survival (0 = No, 1 = Yes)</span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>pclass: Ticket class (1 = 1st, 2 = 2nd, 3 = 3rd)</span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>sex: Sex of passenger</span>
-<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>age: Age in years</span>
-<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>sibsp: Number of siblings/spouses aboard</span>
-<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>parch: Number of parents/children aboard</span>
-<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>fare: Passenger fare</span>
-<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>embarked: Port of embarkation (C = Cherbourg, Q = Queenstown, S = Southampton)</span>
-<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>class: Same as pclass but as text</span>
-<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>who: Man, woman, or child</span>
-<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>adult_male: Boolean for adult males</span>
-<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>deck: Deck of the ship</span>
-<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>embark_town: Town of embarkation</span>
-<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>alive: Survival status as text</span>
-<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>alone: Whether the passenger was alone</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>This dataset contains information about Titanic passengers, collected for predicting survival.</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>survived: Survival (0 = No, 1 = Yes)</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>pclass: Ticket class (1 = 1st, 2 = 2nd, 3 = 3rd)</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>sex: Sex of passenger</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>age: Age in years</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>sibsp: Number of siblings/spouses aboard</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>parch: Number of parents/children aboard</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>fare: Passenger fare</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>embarked: Port of embarkation (C = Cherbourg, Q = Queenstown, S = Southampton)</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>class: Same as pclass but as text</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>who: Man, woman, or child</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>adult_male: Boolean for adult males</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>deck: Deck of the ship</span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>embark_town: Town of embarkation</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>alive: Survival status as text</span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>alone: Whether the passenger was alone</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>which you can then pass via:</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>qc_config <span class="op">=</span> querychat.init(</span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    titanic,</span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">"titanic"</span>,</span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    data_description<span class="op">=</span>Path(<span class="st">"data_description.md"</span>)</span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>qc_config <span class="op">=</span> querychat.init(</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    titanic,</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">"titanic"</span>,</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    data_description<span class="op">=</span>Path(<span class="st">"data_description.md"</span>)</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>querychat doesn’t need this information in any particular format; just put whatever information, in whatever format, you think a human would find helpful.</p>
 </section>
 <section id="additional-instructions" class="level4">
 <h4 class="anchored" data-anchor-id="additional-instructions">Additional instructions</h4>
 <p>You can add additional instructions of your own to the end of the system prompt, by passing <code>extra_instructions</code> into <code>querychat.init</code>.</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>qc_config <span class="op">=</span> querychat.init(</span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    titanic,</span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">"titanic"</span>,</span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    extra_instructions<span class="op">=</span>[</span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>        <span class="st">"You're speaking to a British audience--please use appropriate spelling conventions."</span>,</span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>        <span class="st">"Use lots of emojis! 😃 Emojis everywhere, 🌍 emojis forever. ♾️"</span>,</span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>        <span class="st">"Stay on topic, only talk about the data dashboard and refuse to answer other questions."</span></span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    ]</span>
-<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>qc_config <span class="op">=</span> querychat.init(</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>    titanic,</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">"titanic"</span>,</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    extra_instructions<span class="op">=</span>[</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>        <span class="st">"You're speaking to a British audience--please use appropriate spelling conventions."</span>,</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>        <span class="st">"Use lots of emojis! 😃 Emojis everywhere, 🌍 emojis forever. ♾️"</span>,</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>        <span class="st">"Stay on topic, only talk about the data dashboard and refuse to answer other questions."</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    ]</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>You can also put these instructions in a separate file and use <code>Path("instructions.md")</code> to load them, as we did for <code>data_description</code> above.</p>
 <p><strong>Warning:</strong> It is not 100% guaranteed that the LLM will always—or in many cases, ever—obey your instructions, and it can be difficult to predict which instructions will be a problem. So be sure to test extensively each time you change your instructions, and especially, if you change the model you use.</p>
 </section>
@@ -421,14 +442,14 @@ GitHub Models and GitHub Personal Access Tokens
 <section id="use-a-different-llm-provider" class="level3">
 <h3 class="anchored" data-anchor-id="use-a-different-llm-provider">Use a different LLM provider</h3>
 <p>By default, querychat uses GPT-4o via the OpenAI API. If you want to use a different model, you can provide a <code>create_chat_callback</code> function that takes a <code>system_prompt</code> parameter, and returns a chatlas Chat object:</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> querychat</span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> chatlas</span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>qc_config <span class="op">=</span> querychat.init(</span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>    titanic,</span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">"titanic"</span>,</span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>    client<span class="op">=</span>chatlas.ChatAnthropic(model<span class="op">=</span><span class="st">"claude-3-7-sonnet-latest"</span>)</span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> querychat</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> chatlas</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>qc_config <span class="op">=</span> querychat.init(</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>    titanic,</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">"titanic"</span>,</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>    client<span class="op">=</span>chatlas.ChatAnthropic(model<span class="op">=</span><span class="st">"claude-3-7-sonnet-latest"</span>)</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>This would use Claude 3.7 Sonnet instead, which would require you to provide an API key. See the <a href="https://github.com/posit-dev/chatlas">chatlas documentation</a> for more information on how to authenticate with different providers.</p>
 </section>
 </section>

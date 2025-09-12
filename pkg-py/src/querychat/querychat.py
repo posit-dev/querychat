@@ -428,6 +428,7 @@ def init(
         print(
             "Warning: No greeting provided; the LLM will be invoked at conversation start to generate one. "
             "For faster startup, lower cost, and determinism, please save a greeting and pass it to init().",
+            "You can also use `querychat.greeting()` to help generate a greeting.",
             file=sys.stderr,
         )
 

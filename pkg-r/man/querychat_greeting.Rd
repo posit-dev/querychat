@@ -36,20 +36,20 @@ conversation, using this function.
 }
 \examples{
 \dontshow{if (interactive()) withAutoprint(\{ # examplesIf}
-mtcars_config <- querychat_init(mtcars)
+penguins_config <- querychat_init(penguins)
 
 # Generate a new greeting
-querychat_greeting(config)
+querychat_greeting(penguins_config)
 
 # Update the config with the generated greeting
-mtcars_config <- querychat_init(
-  mtcars,
-  greeting = "Hello! I’m here to help you explore and analyze the mtcars..."
+penguins_config <- querychat_init(
+  penguins,
+  greeting = "Hello! I’m here to help you explore and analyze the penguins..."
 )
 
 # Alternatively, you could generate the greeting once when starting up your
 # Shiny app server, to be shared across all users.
-mtcars_config <- querychat_init(mtcars)
-mtcars_config$greeting <- querychat_greeting(mtcars_config)
+penguins_config <- querychat_init(penguins)
+penguins_config$greeting <- querychat_greeting(penguins_config)
 \dontshow{\}) # examplesIf}
 }

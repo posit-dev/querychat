@@ -100,9 +100,9 @@ querychat.greeting(penguins_config)
 #> ...
 
 # Update the config with the generated greeting
-mtcars_config = querychat.init(
-    mtcars,
-    "mtcars",
+penguins_config = querychat.init(
+    penguins,
+    "penguins",
     greeting="Hello! I'm here to help you explore and analyze the penguins dataset..."
 )
 ```

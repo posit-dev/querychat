@@ -177,8 +177,7 @@ def tool_query(data_source: DataSource) -> Tool:
     """
 
     @_as_tool(annotations={"title": "Query Data"})
-    # TODO: Replace title with `_intent` if supported directly by chatlas
-    def query(query: str, title: str = "") -> ContentToolResult:
+    def query(query: str, _intent: str = "") -> ContentToolResult:
         """
         Perform a SQL query on the data, and return the results as JSON.
 
@@ -186,7 +185,7 @@ def tool_query(data_source: DataSource) -> Tool:
         ----------
         query : str
             A SQL query; must be a SELECT statement.
-        title : str, optional
+        _intent : str, optional
             The intent of the query, in brief natural language for user context.
 
         """
@@ -213,7 +212,6 @@ def tool_query(data_source: DataSource) -> Tool:
             extra={
                 "display": ToolResultDisplay(
                     markdown=markdown,
-                    title=f"Query: {title}" if title else None,
                     show_request=False,
                     open=True,
                     icon=HTML(

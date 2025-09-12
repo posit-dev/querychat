@@ -11,7 +11,8 @@
 #'   - For database: `querychat_data_source(conn, "table_name")`
 #' @param greeting A string in Markdown format, containing the initial message
 #'   to display to the user upon first loading the chatbot. If not provided, the
-#'   LLM will be invoked at the start of the conversation to generate one.
+#'   LLM will be invoked at the start of the conversation to generate one. You
+#'   can also use [querychat_greeting()] to generate a greeting.
 #' @param data_description A string containing a data description for the chat
 #'   model. We have found that formatting the data description as a markdown
 #'   bulleted list works best.
@@ -110,7 +111,8 @@ querychat_init <- function(
   } else {
     rlang::warn(c(
       "No greeting provided; the LLM will be invoked at the start of the conversation to generate one.",
-      "*" = "For faster startup, lower cost, and determinism, please save a greeting and pass it to querychat_init()."
+      "*" = "For faster startup, lower cost, and determinism, please save a greeting and pass it to querychat_init().",
+      "i" = "You can generate a greeting by passing this config object to `querychat_greeting()`."
     ))
   }
 
@@ -175,7 +177,7 @@ querychat_ui <- function(id) {
   )
 }
 
-#' Initalize the querychat server
+#' Initialize the querychat server
 #'
 #' @param id The ID of the module instance. Must match the ID passed to
 #'   the corresponding call to `querychat_ui()`.
@@ -236,18 +238,10 @@ querychat_server <- function(id, querychat_config) {
     # Prepopulate the chat UI with a welcome message that appears to be from the
     # chat model (but is actually hard-coded). This is just for the user, not for
     # the chat model to see.
-    if (!is.null(greeting)) {
-      if (isTRUE(any(nzchar(greeting)))) {
-        shinychat::chat_append("chat", greeting)
-      }
-    } else {
-      shinychat::chat_append(
-        "chat",
-        chat$stream_async(
-          "Please give me a friendly greeting. Include a few sample prompts in a two-level bulleted list."
-        )
-      )
-    }
+    shinychat::chat_append(
+      "chat",
+      querychat_greeting(querychat_config, generate = TRUE, stream = TRUE)
+    )
 
     append_stream_task <- shiny::ExtendedTask$new(
       function(client, user_input) {

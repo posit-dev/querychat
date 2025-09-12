@@ -25,3 +25,5 @@
 * `querychat_ui()` now adds a `.querychat` class to the chat container and `querychat_sidebar()` adds a `.querychat-sidebar` class to the sidebar, allowing for easier customization via CSS. (#68)
 
 * querychat now uses a separate tool to reset the dashboard. (#80)
+
+* `querychat_greeting()` can be used to generate a greeting message for your querychat bot. (#87)

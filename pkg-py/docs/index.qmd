@@ -81,13 +81,39 @@ These suggestions appear in the greeting and automatically populate the chat tex
 This gives the user a few ideas to explore on their own.
 You can see this behavior in our [`querychat template`](https://shiny.posit.co/py/templates/querychat/).
 
-If you need help coming up with a greeting, your own app can help you! Just launch it and paste this into the chat interface:
+### Generate a greeting
 
-> Help me create a greeting for your future users. Include some example questions. Format your suggested greeting as Markdown, in a code block.
+If you need help coming up with a greeting, you can use the `querychat.greeting()` function to generate one:
 
-And keep giving it feedback until you're happy with the result, which will then be ready to be pasted into `greeting.md`.
+```python
+import querychat
+from palmerpenguins import load_penguins
 
-Alternatively, you can completely suppress the greeting by passing `greeting=""`.
+# Create config with your dataset
+penguins = load_penguins()
+penguins_config = querychat.init(penguins, "penguins")
+
+# Generate a greeting
+querychat.greeting(penguins_config)
+#> Hello! I'm here to help you explore and analyze the penguins dataset.
+#> Here are some example prompts you can try:
+#> ...
+
+# Update the config with the generated greeting
+penguins_config = querychat.init(
+    penguins,
+    "penguins",
+    greeting="Hello! I'm here to help you explore and analyze the penguins dataset..."
+)
+```
+
+This will use the LLM to generate a friendly greeting message with sample prompts.
+In Shiny apps, you could also generate the greeting once when the app starts up so that it's shared among all users:
+
+```python
+penguins_config = querychat.init(penguins, "penguins")
+penguins_config.greeting = querychat.greeting(penguins_config, echo="none")
+```
 
 ### Augment the system prompt (recommended)
 

@@ -536,16 +536,11 @@ def mod_server(  # noqa: D417
     chat = copy.deepcopy(client)
     chat.set_turns([])
     chat.system_prompt = system_prompt
-    # Register tools with annotations for the UI
-    chat.set_tools([*chat.get_tools(), update_dashboard_tool, reset_dashboard_tool, query_tool])
 
-    # Add greeting if provided
-    if greeting and any(len(g) > 0 for g in greeting.split("\n")):
-        # Display greeting in chat UI
-        pass
-    else:
-        # Generate greeting using the chat model
-        pass
+    # Register tools with annotations for the UI
+    chat.register_tool(update_dashboard_tool)
+    chat.register_tool(query_tool)
+    chat.register_tool(reset_dashboard_tool)
 
     # Handle user input
     @chat_ui.on_user_submit

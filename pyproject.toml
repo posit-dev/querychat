@@ -24,11 +24,11 @@ dependencies = [
     "shiny",
     "shinywidgets",
     "htmltools",
-    "chatlas>=0.11.1",
+    "chatlas>=0.12.0",
     "narwhals",
     "chevron",
     "sqlalchemy>=2.0.0", # Using 2.0+ for improved type hints and API
-    "shinychat @ git+https://github.com/posit-dev/shinychat.git"
+    "shinychat>=0.2.8"
 ]
 classifiers = [
     "Programming Language :: Python",

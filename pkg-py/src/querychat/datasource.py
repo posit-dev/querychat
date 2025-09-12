@@ -83,8 +83,8 @@ class DataFrameSource:
 
         Args:
             table_name: Name to use for the table in schema description
-            categorical_threshold: Maximum number of unique values for a text column
-                                to be considered categorical
+            categorical_threshold: Maximum number of unique values for a text
+            column to be considered categorical
 
         Returns:
             String describing the schema

@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added `querychat_reset_dashboard()` tool for easily resetting the dashboard filters when asked by the user. (#81)
 
+* Added `querychat.greeting()` to help you create a greeting message for your querychat bot. (#87)
+
 ## [0.2.2] - 2025-09-04
 
 * Fixed another issue with data sources that aren't already narwhals DataFrames (#83)

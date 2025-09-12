@@ -3,9 +3,8 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from sqlalchemy import create_engine, text
-
 from querychat.datasource import SQLAlchemySource
+from sqlalchemy import create_engine, text
 
 
 @pytest.fixture

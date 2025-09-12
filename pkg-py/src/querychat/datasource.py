@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, ClassVar, Protocol
 import duckdb
 import narwhals.stable.v1 as nw
 import pandas as pd
+from narwhals.stable.v1.typing import IntoFrame
 from sqlalchemy import inspect, text
 from sqlalchemy.sql import sqltypes
 
@@ -82,8 +83,8 @@ class DataFrameSource:
 
         Args:
             table_name: Name to use for the table in schema description
-            categorical_threshold: Maximum number of unique values for a text column
-                                to be considered categorical
+            categorical_threshold: Maximum number of unique values for a text
+            column to be considered categorical
 
         Returns:
             String describing the schema

@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [UNRELEASED]
+
+* Added rich tool UI support using shinychat development version and chatlas >= 0.11.1. (#67)
+
+* Added `querychat_reset_dashboard()` tool for easily resetting the dashboard filters when asked by the user. (#81)
+
 ## [0.2.2] - 2025-09-04
 
 * Fixed another issue with data sources that aren't already narwhals DataFrames (#83)

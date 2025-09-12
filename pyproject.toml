@@ -24,10 +24,11 @@ dependencies = [
     "shiny",
     "shinywidgets",
     "htmltools",
-    "chatlas",
+    "chatlas>=0.12.0",
     "narwhals",
     "chevron",
-    "sqlalchemy>=2.0.0" # Using 2.0+ for improved type hints and API
+    "sqlalchemy>=2.0.0", # Using 2.0+ for improved type hints and API
+    "shinychat>=0.2.8"
 ]
 classifiers = [
     "Programming Language :: Python",
@@ -44,6 +45,9 @@ Homepage = "https://github.com/posit-dev/querychat" # TODO update when we have d
 Repository = "https://github.com/posit-dev/querychat"
 Issues = "https://github.com/posit-dev/querychat/issues"
 Source = "https://github.com/posit-dev/querychat/tree/main/pkg-py"
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["pkg-py/src/querychat"]
@@ -108,7 +112,6 @@ extend-ignore = [
     "E501",    # Line too long
     "ISC001",  # single-line-implicit-string-concatenation
     "ISC002",  # multi-line-implicit-string-concatenation
-    "PD901",   # Avoid using the generic variable name `df` for DataFrames
     "PLR0913", # Too many arguments in function definition
     "PLR0915", # Too many statements in function
     "RET504",  # Unnecessary assignment to `{name}` before `return` statement
@@ -125,6 +128,7 @@ extend-ignore = [
     "D205", # 1 blank line required between summary line and description
     "UP045", # Use `X | NULL` for type annotations, not `Optional[X]`
     "TD003", # TODO doesn't need to have an issue link
+    "COM812", # conflicts with formatter
 ]
 extend-select = [
     # "C90", # C90; mccabe: https://docs.astral.sh/ruff/rules/complex-structure/

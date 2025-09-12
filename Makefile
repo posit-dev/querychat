@@ -143,7 +143,6 @@ py-check-format:
 .PHONY: py-format
 py-format: ## [py] Format python code
 	uv run ruff check --fix pkg-py --config pyproject.toml
-	uv run ruff check --fix pkg-py --config pyproject.toml --select I
 	uv run ruff format pkg-py --config pyproject.toml
 
 # .PHONY: py-coverage

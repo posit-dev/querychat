@@ -112,7 +112,6 @@ extend-ignore = [
     "E501",    # Line too long
     "ISC001",  # single-line-implicit-string-concatenation
     "ISC002",  # multi-line-implicit-string-concatenation
-    "PD901",   # Avoid using the generic variable name `df` for DataFrames
     "PLR0913", # Too many arguments in function definition
     "PLR0915", # Too many statements in function
     "RET504",  # Unnecessary assignment to `{name}` before `return` statement
@@ -129,6 +128,7 @@ extend-ignore = [
     "D205", # 1 blank line required between summary line and description
     "UP045", # Use `X | NULL` for type annotations, not `Optional[X]`
     "TD003", # TODO doesn't need to have an issue link
+    "COM812", # conflicts with formatter
 ]
 extend-select = [
     # "C90", # C90; mccabe: https://docs.astral.sh/ruff/rules/complex-structure/

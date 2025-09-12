@@ -8,5 +8,12 @@
     },
     "editor.defaultFormatter": "charliermarsh.ruff",
   },
-  "flake8.args": ["--max-line-length=120"]
+  "flake8.args": [
+    "--max-line-length=120"
+  ],
+  "python.testing.pytestArgs": [
+    "pkg-py"
+  ],
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestEnabled": true
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/querychat.R
 \name{querychat_server}
 \alias{querychat_server}
-\title{Initalize the querychat server}
+\title{Initialize the querychat server}
 \usage{
 querychat_server(id, querychat_config)
 }
@@ -23,5 +23,5 @@ elements:
 }
 }
 \description{
-Initalize the querychat server
+Initialize the querychat server
 }

@@ -4,7 +4,7 @@ test_that("querychat_greeting without an initial greeting", {
   expect_warning(
     config <- querychat_init(
       mtcars,
-      client = MockChat$new(response = "Hi there!")
+      client = ellmer::chat_openai(api_key = "boop")
     )
   )
 

@@ -11,7 +11,8 @@
 #'   - For database: `querychat_data_source(conn, "table_name")`
 #' @param greeting A string in Markdown format, containing the initial message
 #'   to display to the user upon first loading the chatbot. If not provided, the
-#'   LLM will be invoked at the start of the conversation to generate one.
+#'   LLM will be invoked at the start of the conversation to generate one. You
+#'   can also use [querychat_greeting()] to generate a greeting.
 #' @param data_description A string containing a data description for the chat
 #'   model. We have found that formatting the data description as a markdown
 #'   bulleted list works best.

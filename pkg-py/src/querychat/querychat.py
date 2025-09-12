@@ -345,9 +345,12 @@ def init(
         have to be). If a data_source is a SQLAlchemy engine, the table_name is
         the name of the table in the database to query against.
     greeting : str | Path, optional
-        A string in Markdown format, containing the initial message.
-        If a pathlib.Path object is passed,
-        querychat will read the contents of the path into a string with `.read_text()`.
+        A string in Markdown format, containing the initial message. If a
+        pathlib.Path object is passed, querychat will read the contents of the
+        path into a string with `.read_text()`. You can use
+        `querychat.greeting()` to help generate a greeting from a querychat
+        configuration. If no greeting is provided, one will be generated at the
+        start of every new conversation.
     data_description : str | Path, optional
         Description of the data in plain text or Markdown.
         If a pathlib.Path object is passed,

@@ -76,10 +76,13 @@ def greeting(
         raise TypeError("`querychat_config` must be a QueryChatConfig object.")
 
     greeting_text = querychat_config.greeting
+    has_greeting = greeting_text is not None and len(greeting_text.strip()) > 0
+
+    if has_greeting:
+        return greeting_text
 
     if not generate:
-        has_greeting = greeting_text is not None and len(greeting_text.strip()) > 0
-        return greeting_text if has_greeting else None
+        return None
 
     chat = deepcopy(querychat_config.client)
     chat.system_prompt = querychat_config.system_prompt

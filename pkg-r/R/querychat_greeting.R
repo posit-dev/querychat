@@ -51,11 +51,15 @@ querychat_greeting <- function(
 
   greeting <- querychat_config$greeting
 
+  has_greeting <- !is.null(greeting) && any(nzchar(greeting))
+
+  if (has_greeting) {
+    return(greeting)
+  }
+
   if (!isTRUE(generate)) {
-    has_greeting <- !is.null(greeting) && any(nzchar(greeting))
-    return(
-      if (has_greeting) paste(greeting, collapse = "\n") else NULL
-    )
+    # No greeting and not generating one
+    return(NULL)
   }
 
   chat <- querychat_config$client$clone()

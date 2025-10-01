@@ -81,19 +81,23 @@ tool_reset_dashboard <- function(reset_fn) {
 # @return The results of the query as a data frame.
 tool_query <- function(data_source) {
   force(data_source)
+  db_type <- get_db_type(data_source)
 
   ellmer::tool(
     function(query, `_intent` = "") {
       querychat_tool_result(data_source, query, action = "query")
     },
     name = "querychat_query",
-    description = "Perform a SQL query on the data, and return the results.",
+    description = interpolate_package("tool-query.md", db_type = db_type),
     arguments = list(
       query = ellmer::type_string(
-        "A SQL query; must be a SELECT statement."
+        interpolate(
+          "A valid {{db_type}} SQL SELECT statement. Must follow the database schema provided in the system prompt. Use clear column aliases (e.g., 'AVG(price) AS avg_price') and include SQL comments for complex logic. Subqueries and CTEs are encouraged for readability.",
+          db_type = db_type
+        )
       ),
       `_intent` = ellmer::type_string(
-        "The intent of the query, in brief natural language for user context."
+        "A brief, user-friendly description of what this query calculates or retrieves."
       )
     ),
     annotations = ellmer::tool_annotations(

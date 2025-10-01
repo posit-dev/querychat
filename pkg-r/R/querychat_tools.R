@@ -9,18 +9,20 @@ tool_update_dashboard <- function(
   current_title,
   filtered_df
 ) {
+  db_type <- get_db_type(data_source)
+
   ellmer::tool(
     tool_update_dashboard_impl(data_source, current_query, current_title),
     name = "querychat_update_dashboard",
     description = interpolate_package(
       "tool-update-dashboard.md",
-      db_type = get_db_type(data_source)
+      db_type = db_type
     ),
     arguments = list(
       query = ellmer::type_string(
         ellmer::interpolate(
           "A {{db_type}} SQL SELECT query that MUST return all existing schema columns (use SELECT * or explicitly list all columns). May include additional computed columns, subqueries, CTEs, WHERE clauses, ORDER BY, and any {{db_type}}-supported SQL functions.",
-          db_type = get_db_type(data_source)
+          db_type = db_type
         )
       ),
       title = ellmer::type_string(

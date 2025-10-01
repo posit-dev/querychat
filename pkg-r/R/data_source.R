@@ -151,9 +151,14 @@ get_db_type <- function(source, ...) {
 }
 
 #' @export
+get_db_type.default <- function(source, ...) {
+  "standard"
+}
+
+#' @export
 get_db_type.data_frame_source <- function(source, ...) {
   # Local dataframes are always duckdb!
-  return("DuckDB")
+  "DuckDB"
 }
 
 #' @export
@@ -173,7 +178,7 @@ get_db_type.dbi_source <- function(source, ...) {
   dbms_name <- purrr::pluck(conn_info, "dbms.name", .default = "POSIX")
 
   # remove ' SQL', if exists (SQL is already in the prompt)
-  return(gsub(" SQL", "", dbms_name))
+  gsub(" SQL", "", dbms_name)
 }
 
 
@@ -209,7 +214,7 @@ create_system_prompt.querychat_data_source <- function(
   }
 
   # Read the prompt file
-  prompt_path <- system.file("prompt", "prompt.md", package = "querychat")
+  prompt_path <- system.file("prompts", "prompt.md", package = "querychat")
   prompt_content <- readLines(prompt_path, warn = FALSE)
   prompt_text <- paste(prompt_content, collapse = "\n")
 

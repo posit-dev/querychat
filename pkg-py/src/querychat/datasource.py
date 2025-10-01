@@ -17,6 +17,10 @@ if TYPE_CHECKING:
 class DataSource(Protocol):
     db_engine: ClassVar[str]
 
+    def get_db_type(self) -> str:
+        """Get the database type."""
+        ...
+
     def get_schema(self, *, categorical_threshold) -> str:
         """
         Return schema information about the table as a string.
@@ -56,7 +60,17 @@ class DataSource(Protocol):
         ...
 
 
-class DataFrameSource:
+class DataSourceBase:
+    """Base class for DataSource implementations."""
+
+    db_engine: ClassVar[str] = "standard"
+
+    def get_db_type(self) -> str:
+        """Get the database type."""
+        return self.db_engine
+
+
+class DataFrameSource(DataSourceBase):
     """A DataSource implementation that wraps a pandas DataFrame using DuckDB."""
 
     db_engine: ClassVar[str] = "DuckDB"
@@ -162,7 +176,7 @@ class DataFrameSource:
         return self._df.lazy().collect().to_pandas()
 
 
-class SQLAlchemySource:
+class SQLAlchemySource(DataSourceBase):
     """
     A DataSource implementation that supports multiple SQL databases via SQLAlchemy.
 
@@ -187,6 +201,15 @@ class SQLAlchemySource:
         inspector = inspect(self._engine)
         if not inspector.has_table(table_name):
             raise ValueError(f"Table '{table_name}' not found in database")
+
+    def get_db_type(self) -> str:
+        """
+        Get the database type.
+
+        Returns the specific database type (e.g., POSTGRESQL, MYSQL, SQLITE) by
+        inspecting the SQLAlchemy engine. Removes " SQL" suffix if present.
+        """
+        return self._engine.dialect.name.upper().replace(" SQL", "")
 
     def get_schema(self, *, categorical_threshold: int) -> str:  # noqa: PLR0912
         """

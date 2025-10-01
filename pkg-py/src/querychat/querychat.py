@@ -169,7 +169,7 @@ def system_prompt(
     if prompt_template is None:
         # Default to the prompt file in the same directory as this module
         # This allows for easy customization by placing a different prompt.md file there
-        prompt_template = Path(__file__).parent / "prompt" / "prompt.md"
+        prompt_template = Path(__file__).parent / "prompts" / "prompt.md"
     prompt_str = (
         prompt_template.read_text()
         if isinstance(prompt_template, Path)
@@ -188,10 +188,13 @@ def system_prompt(
         else extra_instructions
     )
 
+    is_duck_db = data_source.get_db_type().lower() == "duckdb"
+
     return chevron.render(
         prompt_str,
         {
-            "db_engine": data_source.db_engine,
+            "db_type": data_source.get_db_type(),
+            "is_duck_db": is_duck_db,
             "schema": data_source.get_schema(
                 categorical_threshold=categorical_threshold,
             ),
@@ -219,7 +222,7 @@ def _create_client_from_string(client_str: str) -> chatlas.Chat:
         {
             "CHATLAS_CHAT_PROVIDER": provider,
             "CHATLAS_CHAT_MODEL": model,
-            "CHATLAS_CHAT_ARGS": os.environ["QUERYCHAT_CLIENT_ARGS"],
+            "CHATLAS_CHAT_ARGS": os.environ.get("QUERYCHAT_CLIENT_ARGS"),
         },
     ):
         return chatlas.ChatAuto(provider="openai")

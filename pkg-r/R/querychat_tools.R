@@ -9,13 +9,21 @@ tool_update_dashboard <- function(
   current_title,
   filtered_df
 ) {
+  db_type <- get_db_type(data_source)
+
   ellmer::tool(
     tool_update_dashboard_impl(data_source, current_query, current_title),
     name = "querychat_update_dashboard",
-    description = "Modifies the data presented in the data dashboard, based on the given SQL query, and also updates the title.",
+    description = interpolate_package(
+      "tool-update-dashboard.md",
+      db_type = db_type
+    ),
     arguments = list(
       query = ellmer::type_string(
-        "A SQL query; must be a SELECT statement."
+        ellmer::interpolate(
+          "A {{db_type}} SQL SELECT query that MUST return all existing schema columns (use SELECT * or explicitly list all columns). May include additional computed columns, subqueries, CTEs, WHERE clauses, ORDER BY, and any {{db_type}}-supported SQL functions.",
+          db_type = db_type
+        )
       ),
       title = ellmer::type_string(
         "A brief title for display purposes, summarizing the intent of the SQL query."
@@ -61,7 +69,7 @@ tool_reset_dashboard <- function(reset_fn) {
   ellmer::tool(
     reset_fn,
     name = "querychat_reset_dashboard",
-    description = "Resets the data dashboard to show all data.",
+    description = interpolate_package("tool-reset-dashboard.md"),
     arguments = list(),
     annotations = ellmer::tool_annotations(
       title = "Reset Dashboard",
@@ -75,19 +83,23 @@ tool_reset_dashboard <- function(reset_fn) {
 # @return The results of the query as a data frame.
 tool_query <- function(data_source) {
   force(data_source)
+  db_type <- get_db_type(data_source)
 
   ellmer::tool(
     function(query, `_intent` = "") {
       querychat_tool_result(data_source, query, action = "query")
     },
     name = "querychat_query",
-    description = "Perform a SQL query on the data, and return the results.",
+    description = interpolate_package("tool-query.md", db_type = db_type),
     arguments = list(
       query = ellmer::type_string(
-        "A SQL query; must be a SELECT statement."
+        interpolate(
+          "A valid {{db_type}} SQL SELECT statement. Must follow the database schema provided in the system prompt. Use clear column aliases (e.g., 'AVG(price) AS avg_price') and include SQL comments for complex logic. Subqueries and CTEs are encouraged for readability.",
+          db_type = db_type
+        )
       ),
       `_intent` = ellmer::type_string(
-        "The intent of the query, in brief natural language for user context."
+        "A brief, user-friendly description of what this query calculates or retrieves."
       )
     ),
     annotations = ellmer::tool_annotations(

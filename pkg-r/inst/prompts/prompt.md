@@ -15,8 +15,8 @@ Here is additional information about the data:
 {{/data_description}}
 
 For security reasons, you may only query this specific table.
-{{#is_duck_db}}
 
+{{#is_duck_db}}
 ### DuckDB SQL Tips
 
 **Percentile functions:** In standard SQL, `percentile_cont` and `percentile_disc` are "ordered set" aggregate functions that use the `WITHIN GROUP (ORDER BY sort_expression)` syntax. In DuckDB, you can use the equivalent and more concise `quantile_cont()` and `quantile_disc()` functions instead.
@@ -33,7 +33,6 @@ quantile_cont(salary, 0.5)
 ```
 
 {{/is_duck_db}}
-
 ## Your Capabilities
 
 You can handle three types of requests:

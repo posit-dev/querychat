@@ -67,7 +67,7 @@ tool_reset_dashboard <- function(reset_fn) {
   ellmer::tool(
     reset_fn,
     name = "querychat_reset_dashboard",
-    description = "Resets the data dashboard to show all data.",
+    description = interpolate_package("tool-reset-dashboard.md"),
     arguments = list(),
     annotations = ellmer::tool_annotations(
       title = "Reset Dashboard",

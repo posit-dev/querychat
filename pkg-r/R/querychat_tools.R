@@ -12,10 +12,16 @@ tool_update_dashboard <- function(
   ellmer::tool(
     tool_update_dashboard_impl(data_source, current_query, current_title),
     name = "querychat_update_dashboard",
-    description = "Modifies the data presented in the data dashboard, based on the given SQL query, and also updates the title.",
+    description = interpolate_package(
+      "tool-update-dashboard.md",
+      db_type = get_db_type(data_source)
+    ),
     arguments = list(
       query = ellmer::type_string(
-        "A SQL query; must be a SELECT statement."
+        ellmer::interpolate(
+          "A {{db_type}} SQL SELECT query that MUST return all existing schema columns (use SELECT * or explicitly list all columns). May include additional computed columns, subqueries, CTEs, WHERE clauses, ORDER BY, and any {{db_type}}-supported SQL functions.",
+          db_type = get_db_type(data_source)
+        )
       ),
       title = ellmer::type_string(
         "A brief title for display purposes, summarizing the intent of the SQL query."

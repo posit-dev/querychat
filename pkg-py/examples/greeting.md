@@ -1,14 +1,13 @@
-Hello! I'm here to assist you with analyzing the Titanic dataset.
-Here are some examples of what you can ask me to do:
+Hello! Welcome to your Titanic data dashboard. I'm here to help you filter, sort, and analyze the data. Here are a few ideas to get you started:
 
-- **Filtering and Sorting:**
-  - Show only passengers who boarded in Cherbourg.
-  - Sort passengers by age in descending order.
+* Explore the data
+  * <span class="suggestion">Show me all passengers who survived</span>
+  * <span class="suggestion">Show only first class passengers</span>
+* Analyze statistics
+  * <span class="suggestion">What is the average age of passengers?</span>
+  * <span class="suggestion">How many children were on board?</span>
+* Compare and dig deeper
+  * <span class="suggestion">Which class had the highest survival rate?</span>
+  * <span class="suggestion">Show the fare distribution by embarkation town</span>
 
-- **Data Analysis:**
-  - What is the survival rate for each passenger class?
-  - How many children were aboard the Titanic?
-
-- **General Statistics:**
-  - Calculate the average age of female passengers.
-  - Find the total fare collected from passengers who did not survive.
+Let me know what you'd like to explore!

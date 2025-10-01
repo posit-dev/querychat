@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar, Protocol
+from typing import TYPE_CHECKING, Protocol
 
 import duckdb
 import narwhals.stable.v1 as nw
@@ -15,7 +15,8 @@ if TYPE_CHECKING:
 
 
 class DataSource(Protocol):
-    db_engine: ClassVar[str] = "standard"
+    @property
+    def db_engine(self) -> str: ...
 
     def get_schema(self, *, categorical_threshold) -> str:
         """
@@ -59,7 +60,6 @@ class DataSource(Protocol):
 class DataFrameSource:
     """A DataSource implementation that wraps a pandas DataFrame using DuckDB."""
 
-    db_engine: ClassVar[str] = "DuckDB"
     _df: nw.DataFrame | nw.LazyFrame
 
     def __init__(self, df: IntoFrame, table_name: str):
@@ -76,6 +76,11 @@ class DataFrameSource:
         self._table_name = table_name
         # TODO(@gadenbuie): If the data frame is already SQL-backed, maybe we shouldn't be making a new copy here.
         self._conn.register(table_name, self._df.lazy().collect().to_pandas())
+
+    @property
+    def db_engine(self) -> str:
+        """Get the database engine type."""
+        return "DuckDB"
 
     def get_schema(self, *, categorical_threshold: int) -> str:
         """

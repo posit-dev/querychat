@@ -102,7 +102,7 @@ def tool_update_dashboard(
 
     description = _read_prompt_template(
         "tool-update-dashboard.md",
-        db_type=data_source.db_engine,
+        db_type=data_source.get_db_type(),
     )
     impl.__doc__ = description
 
@@ -239,7 +239,7 @@ def tool_query(data_source: DataSource) -> Tool:
     """
     impl = _query_impl(data_source)
 
-    description = _read_prompt_template("tool-query.md", db_type=data_source.db_engine)
+    description = _read_prompt_template("tool-query.md", db_type=data_source.get_db_type())
     impl.__doc__ = description
 
     return Tool.from_func(

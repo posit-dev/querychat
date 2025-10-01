@@ -188,12 +188,12 @@ def system_prompt(
         else extra_instructions
     )
 
-    is_duck_db = data_source.db_engine.lower() == "duckdb"
+    is_duck_db = data_source.get_db_type().lower() == "duckdb"
 
     return chevron.render(
         prompt_str,
         {
-            "db_type": data_source.db_engine,
+            "db_type": data_source.get_db_type(),
             "is_duck_db": is_duck_db,
             "schema": data_source.get_schema(
                 categorical_threshold=categorical_threshold,

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING, ClassVar, Protocol
 
 import duckdb
 import narwhals.stable.v1 as nw
@@ -15,8 +15,11 @@ if TYPE_CHECKING:
 
 
 class DataSource(Protocol):
-    @property
-    def db_engine(self) -> str: ...
+    db_engine: ClassVar[str]
+
+    def get_db_type(self) -> str:
+        """Get the database type."""
+        ...
 
     def get_schema(self, *, categorical_threshold) -> str:
         """
@@ -57,9 +60,20 @@ class DataSource(Protocol):
         ...
 
 
-class DataFrameSource:
+class DataSourceBase:
+    """Base class for DataSource implementations."""
+
+    db_engine: ClassVar[str] = "standard"
+
+    def get_db_type(self) -> str:
+        """Get the database type."""
+        return self.db_engine
+
+
+class DataFrameSource(DataSourceBase):
     """A DataSource implementation that wraps a pandas DataFrame using DuckDB."""
 
+    db_engine: ClassVar[str] = "DuckDB"
     _df: nw.DataFrame | nw.LazyFrame
 
     def __init__(self, df: IntoFrame, table_name: str):
@@ -76,11 +90,6 @@ class DataFrameSource:
         self._table_name = table_name
         # TODO(@gadenbuie): If the data frame is already SQL-backed, maybe we shouldn't be making a new copy here.
         self._conn.register(table_name, self._df.lazy().collect().to_pandas())
-
-    @property
-    def db_engine(self) -> str:
-        """Get the database engine type."""
-        return "DuckDB"
 
     def get_schema(self, *, categorical_threshold: int) -> str:
         """
@@ -167,12 +176,14 @@ class DataFrameSource:
         return self._df.lazy().collect().to_pandas()
 
 
-class SQLAlchemySource:
+class SQLAlchemySource(DataSourceBase):
     """
     A DataSource implementation that supports multiple SQL databases via SQLAlchemy.
 
     Supports various databases including PostgreSQL, MySQL, SQLite, Snowflake, and Databricks.
     """
+
+    db_engine: ClassVar[str] = "SQLAlchemy"
 
     def __init__(self, engine: Engine, table_name: str):
         """
@@ -191,19 +202,14 @@ class SQLAlchemySource:
         if not inspector.has_table(table_name):
             raise ValueError(f"Table '{table_name}' not found in database")
 
-    @property
-    def db_engine(self) -> str:
+    def get_db_type(self) -> str:
         """
-        Get the database engine type.
+        Get the database type.
 
         Returns the specific database type (e.g., POSTGRESQL, MYSQL, SQLITE) by
         inspecting the SQLAlchemy engine. Removes " SQL" suffix if present.
         """
-        # Get the database name from the engine
-        dbms_name = self._engine.dialect.name.upper()
-
-        # Remove ' SQL' suffix if present (SQL is already in the prompt)
-        return dbms_name.replace(" SQL", "")
+        return self._engine.dialect.name.upper().replace(" SQL", "")
 
     def get_schema(self, *, categorical_threshold: int) -> str:  # noqa: PLR0912
         """

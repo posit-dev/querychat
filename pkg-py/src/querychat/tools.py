@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Callable
 
 import chevron
 from chatlas import ContentToolResult, Tool
@@ -21,40 +21,12 @@ def _read_prompt_template(filename: str, **kwargs) -> str:
     return chevron.render(template, kwargs)
 
 
-def _as_tool(**kwargs) -> Callable[[Callable[..., Any]], Tool]:
-    def decorator(func: Callable[..., Any]) -> Tool:
-        return Tool.from_func(func, **kwargs)
-
-    return decorator
-
-
-def tool_update_dashboard(
+def _update_dashboard_impl(
     data_source: DataSource,
     current_query: Callable,
     current_title: Callable,
-) -> Tool:
-    """
-    Create a tool that modifies the data presented in the dashboard based on the SQL query.
-
-    Parameters
-    ----------
-    data_source : DataSource
-        The data source to query against
-    current_query : Callable
-        Reactive value for storing the current SQL query
-    current_title : Callable
-        Reactive value for storing the current title
-
-    Returns
-    -------
-    Callable
-        A function that can be registered as a tool with chatlas
-
-    """
-    # Get the description from the template
-    description = _read_prompt_template(
-        "tool-update-dashboard.md", db_type=data_source.db_engine
-    )
+) -> Callable[[str, str], ContentToolResult]:
+    """Create the implementation function for updating the dashboard."""
 
     def update_dashboard(query: str, title: str) -> ContentToolResult:
         error = None
@@ -100,22 +72,21 @@ def tool_update_dashboard(
             },
         )
 
-    # Set the docstring dynamically
-    update_dashboard.__doc__ = description
-
-    # Apply the decorator
-    return _as_tool(annotations={"title": "Update Dashboard"})(update_dashboard)
+    return update_dashboard
 
 
-def tool_reset_dashboard(
+def tool_update_dashboard(
+    data_source: DataSource,
     current_query: Callable,
     current_title: Callable,
 ) -> Tool:
     """
-    Create a tool that resets the dashboard to show all data.
+    Create a tool that modifies the data presented in the dashboard based on the SQL query.
 
     Parameters
     ----------
+    data_source : DataSource
+        The data source to query against
     current_query : Callable
         Reactive value for storing the current SQL query
     current_title : Callable
@@ -127,8 +98,26 @@ def tool_reset_dashboard(
         A tool that can be registered with chatlas
 
     """
-    # Get the description from the template
-    description = _read_prompt_template("tool-reset-dashboard.md")
+    impl = _update_dashboard_impl(data_source, current_query, current_title)
+
+    description = _read_prompt_template(
+        "tool-update-dashboard.md",
+        db_type=data_source.db_engine,
+    )
+    impl.__doc__ = description
+
+    return Tool.from_func(
+        impl,
+        name="querychat_update_dashboard",
+        annotations={"title": "Update Dashboard"},
+    )
+
+
+def _reset_dashboard_impl(
+    current_query: Callable,
+    current_title: Callable,
+) -> Callable[[], ContentToolResult]:
+    """Create the implementation function for resetting the dashboard."""
 
     def reset_dashboard() -> ContentToolResult:
         # Reset current query and title
@@ -159,30 +148,43 @@ def tool_reset_dashboard(
             },
         )
 
-    # Set the docstring dynamically
-    reset_dashboard.__doc__ = description
-
-    # Apply the decorator
-    return _as_tool(annotations={"title": "Reset Dashboard"})(reset_dashboard)
+    return reset_dashboard
 
 
-def tool_query(data_source: DataSource) -> Tool:
+def tool_reset_dashboard(
+    current_query: Callable,
+    current_title: Callable,
+) -> Tool:
     """
-    Create a tool that performs a SQL query on the data.
+    Create a tool that resets the dashboard to show all data.
 
     Parameters
     ----------
-    data_source : DataSource
-        The data source to query against
+    current_query : Callable
+        Reactive value for storing the current SQL query
+    current_title : Callable
+        Reactive value for storing the current title
 
     Returns
     -------
-    Callable
-        A function that can be registered as a tool with chatlas
+    Tool
+        A tool that can be registered with chatlas
 
     """
-    # Get the description from the template
-    description = _read_prompt_template("tool-query.md", db_type=data_source.db_engine)
+    impl = _reset_dashboard_impl(current_query, current_title)
+
+    description = _read_prompt_template("tool-reset-dashboard.md")
+    impl.__doc__ = description
+
+    return Tool.from_func(
+        impl,
+        name="querychat_reset_dashboard",
+        annotations={"title": "Reset Dashboard"},
+    )
+
+
+def _query_impl(data_source: DataSource) -> Callable[[str, str], ContentToolResult]:
+    """Create the implementation function for querying data."""
 
     def query(query: str, _intent: str = "") -> ContentToolResult:
         error = None
@@ -217,8 +219,31 @@ def tool_query(data_source: DataSource) -> Tool:
             },
         )
 
-    # Set the docstring dynamically
-    query.__doc__ = description
+    return query
 
-    # Apply the decorator
-    return _as_tool(annotations={"title": "Query Data"})(query)
+
+def tool_query(data_source: DataSource) -> Tool:
+    """
+    Create a tool that performs a SQL query on the data.
+
+    Parameters
+    ----------
+    data_source : DataSource
+        The data source to query against
+
+    Returns
+    -------
+    Tool
+        A tool that can be registered with chatlas
+
+    """
+    impl = _query_impl(data_source)
+
+    description = _read_prompt_template("tool-query.md", db_type=data_source.db_engine)
+    impl.__doc__ = description
+
+    return Tool.from_func(
+        impl,
+        name="querychat_query",
+        annotations={"title": "Query Data"},
+    )

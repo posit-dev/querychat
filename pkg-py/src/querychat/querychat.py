@@ -222,7 +222,7 @@ def _create_client_from_string(client_str: str) -> chatlas.Chat:
         {
             "CHATLAS_CHAT_PROVIDER": provider,
             "CHATLAS_CHAT_MODEL": model,
-            "CHATLAS_CHAT_ARGS": os.environ["QUERYCHAT_CLIENT_ARGS"],
+            "CHATLAS_CHAT_ARGS": os.environ.get("QUERYCHAT_CLIENT_ARGS"),
         },
     ):
         return chatlas.ChatAuto(provider="openai")

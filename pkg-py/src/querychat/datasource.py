@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 
 class DataSource(Protocol):
-    db_engine: ClassVar[str]
+    db_engine: ClassVar[str] = "standard"
 
     def get_schema(self, *, categorical_threshold) -> str:
         """
@@ -169,8 +169,6 @@ class SQLAlchemySource:
     Supports various databases including PostgreSQL, MySQL, SQLite, Snowflake, and Databricks.
     """
 
-    db_engine: ClassVar[str] = "SQLAlchemy"
-
     def __init__(self, engine: Engine, table_name: str):
         """
         Initialize with a SQLAlchemy engine.
@@ -187,6 +185,20 @@ class SQLAlchemySource:
         inspector = inspect(self._engine)
         if not inspector.has_table(table_name):
             raise ValueError(f"Table '{table_name}' not found in database")
+
+    @property
+    def db_engine(self) -> str:
+        """
+        Get the database engine type.
+
+        Returns the specific database type (e.g., POSTGRESQL, MYSQL, SQLITE) by
+        inspecting the SQLAlchemy engine. Removes " SQL" suffix if present.
+        """
+        # Get the database name from the engine
+        dbms_name = self._engine.dialect.name.upper()
+
+        # Remove ' SQL' suffix if present (SQL is already in the prompt)
+        return dbms_name.replace(" SQL", "")
 
     def get_schema(self, *, categorical_threshold: int) -> str:  # noqa: PLR0912
         """

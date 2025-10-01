@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable
 
+import chevron
 from chatlas import ContentToolResult, Tool
 from htmltools import HTML
 from shinychat.types import ToolResultDisplay
@@ -10,6 +12,13 @@ from ._utils import df_to_html
 
 if TYPE_CHECKING:
     from .datasource import DataSource
+
+
+def _read_prompt_template(filename: str, **kwargs) -> str:
+    """Read and interpolate a prompt template file."""
+    template_path = Path(__file__).parent / "prompts" / filename
+    template = template_path.read_text()
+    return chevron.render(template, kwargs)
 
 
 def _as_tool(**kwargs) -> Callable[[Callable[..., Any]], Tool]:
@@ -42,21 +51,12 @@ def tool_update_dashboard(
         A function that can be registered as a tool with chatlas
 
     """
+    # Get the description from the template
+    description = _read_prompt_template(
+        "tool-update-dashboard.md", db_type=data_source.db_engine
+    )
 
-    @_as_tool(annotations={"title": "Update Dashboard"})
     def update_dashboard(query: str, title: str) -> ContentToolResult:
-        """
-        Modify the data presented in the data dashboard, based on the given SQL query,
-        and also updates the title.
-
-        Parameters
-        ----------
-        query : str
-            A SQL query; must be a SELECT statement.
-        title : str
-            A title to display at the top of the data dashboard, summarizing the intent of the SQL query.
-
-        """
         error = None
         markdown = f"```sql\n{query}\n```"
         value = "Dashboard updated. Use `query` tool to review results, if needed."
@@ -100,7 +100,11 @@ def tool_update_dashboard(
             },
         )
 
-    return update_dashboard
+    # Set the docstring dynamically
+    update_dashboard.__doc__ = description
+
+    # Apply the decorator
+    return _as_tool(annotations={"title": "Update Dashboard"})(update_dashboard)
 
 
 def tool_reset_dashboard(
@@ -123,12 +127,10 @@ def tool_reset_dashboard(
         A tool that can be registered with chatlas
 
     """
+    # Get the description from the template
+    description = _read_prompt_template("tool-reset-dashboard.md")
 
-    @_as_tool(annotations={"title": "Reset Dashboard"})
     def reset_dashboard() -> ContentToolResult:
-        """
-        Reset the data dashboard to show all data.
-        """
         # Reset current query and title
         current_query("")
         current_title(None)
@@ -157,7 +159,11 @@ def tool_reset_dashboard(
             },
         )
 
-    return reset_dashboard
+    # Set the docstring dynamically
+    reset_dashboard.__doc__ = description
+
+    # Apply the decorator
+    return _as_tool(annotations={"title": "Reset Dashboard"})(reset_dashboard)
 
 
 def tool_query(data_source: DataSource) -> Tool:
@@ -175,20 +181,10 @@ def tool_query(data_source: DataSource) -> Tool:
         A function that can be registered as a tool with chatlas
 
     """
+    # Get the description from the template
+    description = _read_prompt_template("tool-query.md", db_type=data_source.db_engine)
 
-    @_as_tool(annotations={"title": "Query Data"})
     def query(query: str, _intent: str = "") -> ContentToolResult:
-        """
-        Perform a SQL query on the data, and return the results as JSON.
-
-        Parameters
-        ----------
-        query : str
-            A SQL query; must be a SELECT statement.
-        _intent : str, optional
-            The intent of the query, in brief natural language for user context.
-
-        """
         error = None
         markdown = f"```sql\n{query}\n```"
         value = None
@@ -221,4 +217,8 @@ def tool_query(data_source: DataSource) -> Tool:
             },
         )
 
-    return query
+    # Set the docstring dynamically
+    query.__doc__ = description
+
+    # Apply the decorator
+    return _as_tool(annotations={"title": "Query Data"})(query)

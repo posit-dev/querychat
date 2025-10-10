@@ -102,7 +102,7 @@ querychat_app <- function(config, ..., bookmark_store = "url") {
       )
     })
 
-    shiny::observeEvent(input$reset_query, {
+    shiny::observeEvent(input$reset_query, label = "on_reset_query", {
       qc$update_query("", NULL)
     })
 
@@ -127,7 +127,7 @@ querychat_app <- function(config, ..., bookmark_store = "url") {
       )
     })
 
-    shiny::observeEvent(input$close_btn, {
+    shiny::observeEvent(input$close_btn, label = "on_close_btn", {
       shiny::stopApp()
     })
   }

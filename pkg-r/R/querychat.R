@@ -201,9 +201,9 @@ querychat_server <- function(id, querychat_config) {
     greeting <- querychat_config[["greeting"]]
     client <- querychat_config[["client"]]
 
-    current_title <- shiny::reactiveVal(NULL)
-    current_query <- shiny::reactiveVal("")
-    filtered_df <- shiny::reactive({
+    current_title <- shiny::reactiveVal(NULL, label = "current_title")
+    current_query <- shiny::reactiveVal("", label = "current_query")
+    filtered_df <- shiny::reactive(label = "filtered_df", {
       execute_query(data_source, query = DBI::SQL(current_query()))
     })
 
@@ -257,11 +257,11 @@ querychat_server <- function(id, querychat_config) {
       }
     )
 
-    shiny::observeEvent(input$chat_user_input, {
+    shiny::observeEvent(input$chat_user_input, label = "on_chat_user_input", {
       append_stream_task$invoke(chat, input$chat_user_input)
     })
 
-    shiny::observeEvent(input$chat_update, {
+    shiny::observeEvent(input$chat_update, label = "on_chat_update", {
       current_query(input$chat_update$query)
       current_title(input$chat_update$title)
     })

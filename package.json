@@ -1,0 +1,19 @@
+{
+  "name": "querychat-dependencies",
+  "version": "1.0.0",
+  "private": true,
+  "description": "JavaScript dependencies for querychat code editor",
+  "scripts": {
+    "install-deps": "npm install --no-save prism-code-editor cpy-cli",
+    "copy-deps": "npm run copy-core && npm run copy-languages && npm run copy-extensions && npm run copy-themes",
+    "copy-core": "cp node_modules/prism-code-editor/dist/index.js node_modules/prism-code-editor/dist/layout.css node_modules/prism-code-editor/dist/copy.css pkg-r/inst/js/prism-code-editor/",
+    "copy-languages": "cp node_modules/prism-code-editor/dist/languages/*.js pkg-r/inst/js/prism-code-editor/languages/",
+    "copy-extensions": "cp node_modules/prism-code-editor/dist/extensions/copyButton/index.js pkg-r/inst/js/prism-code-editor/extensions/copyButton/ && cp node_modules/prism-code-editor/dist/extensions/commands.js pkg-r/inst/js/prism-code-editor/extensions/",
+    "copy-themes": "cp node_modules/prism-code-editor/dist/themes/*.css pkg-r/inst/js/prism-code-editor/themes/",
+    "update-deps": "npm run install-deps && npm run copy-deps"
+  },
+  "devDependencies": {
+    "prism-code-editor": "^3.0.0",
+    "cpy-cli": "^5.0.0"
+  }
+}

@@ -1,14 +1,20 @@
 library(testthat)
 library(querychat)
 
-test_that("html_dependency_code_editor returns valid htmlDependency", {
-  dep <- html_dependency_code_editor()
+test_that("html_dependency_code_editor returns valid htmlDependencies", {
+  deps <- html_dependency_code_editor()
 
-  expect_s3_class(dep, "html_dependency")
-  expect_equal(dep$name, "prism-code-editor")
-  expect_equal(dep$version, "3.0.0")
-  expect_true(length(dep$script) > 0)
-  expect_true(length(dep$stylesheet) > 0)
+  # Should be a tagList containing both dependencies
+  expect_s3_class(deps, "shiny.tag.list")
+
+  # Extract the actual dependencies
+  dep_list <- htmltools::findDependencies(deps)
+  expect_true(length(dep_list) >= 2)
+
+  # Check that both prism-code-editor and shiny-input-code-editor are present
+  dep_names <- sapply(dep_list, function(d) d$name)
+  expect_true("prism-code-editor" %in% dep_names)
+  expect_true("shiny-input-code-editor" %in% dep_names)
 })
 
 test_that("code_editor_themes returns character vector of themes", {
@@ -68,10 +74,13 @@ test_that("input_code_editor generates correct HTML structure", {
     language = "sql"
   )
 
-  html <- as.character(editor)
+  # Check that dependencies are attached
+  deps <- htmltools::findDependencies(editor)
+  dep_names <- sapply(deps, function(d) d$name)
+  expect_true("prism-code-editor" %in% dep_names)
+  expect_true("shiny-input-code-editor" %in% dep_names)
 
-  # Check for HTML dependency
-  expect_match(html, "prism-code-editor")
+  html <- as.character(editor)
 
   # Check for editor div with correct class
   expect_match(html, 'class="code-editor-input"')

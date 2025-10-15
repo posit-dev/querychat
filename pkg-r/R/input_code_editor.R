@@ -210,10 +210,6 @@ input_code_editor <- function(
   indentation <- match.arg(indentation)
   insert_spaces <- (indentation == "space")
 
-  # Construct the base path to the htmldep folder for use by JavaScript
-  # This will be used by the binding to construct paths to language files and themes
-  base_path <- "prism-code-editor"
-
   # Create the editor container div with all configuration as data attributes
   editor_div <- htmltools::tags$div(
     id = id,
@@ -232,8 +228,7 @@ input_code_editor <- function(
     `data-word-wrap` = tolower(as.character(word_wrap)),
     `data-tab-size` = as.character(tab_size),
     `data-insert-spaces` = tolower(as.character(insert_spaces)),
-    `data-placeholder` = placeholder,
-    `data-base-path` = base_path
+    `data-placeholder` = placeholder
   )
 
   # Return with htmlDependency attached

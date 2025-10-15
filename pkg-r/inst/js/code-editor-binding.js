@@ -11,13 +11,43 @@ const loadedLanguages = new Set();
 // Track which editor instances have been initialized
 const initializedEditors = new WeakSet();
 
+// Memoized base path for prism-code-editor files
+let _prismCodeEditorBasePath = null;
+
+/**
+ * Discovers and memoizes the base path for prism-code-editor files
+ * by finding the script element that loaded index.js
+ * @returns {string} The base path to prism-code-editor files
+ */
+function getPrismCodeEditorBasePath() {
+  if (_prismCodeEditorBasePath !== null) {
+    return _prismCodeEditorBasePath;
+  }
+
+  // Find the script element that loaded prism-code-editor's index.js
+  const scriptElement = document.querySelector('script[src*="prism-code-editor"][src$="index.js"]');
+
+  if (!scriptElement) {
+    console.error('Could not find prism-code-editor script element');
+    _prismCodeEditorBasePath = '';
+    return _prismCodeEditorBasePath;
+  }
+
+  // Extract the base path from the src attribute
+  const src = scriptElement.getAttribute('src');
+  // Remove '/index.js' from the end to get the base path
+  _prismCodeEditorBasePath = src.replace(/\/index\.js$/, '');
+
+  return _prismCodeEditorBasePath;
+}
+
 /**
  * Dynamically loads a language grammar module if not already loaded
  * @param {string} language - The language identifier (e.g., 'sql', 'python', 'r')
- * @param {string} basePath - The base path to the language files
+ * @param {string} prismCodeEditorBasePath - The base path to the prism-code-editor files
  * @returns {Promise<void>}
  */
-async function loadLanguage(language, basePath) {
+async function loadLanguage(language, prismCodeEditorBasePath) {
   if (loadedLanguages.has(language)) {
     return;
   }
@@ -29,7 +59,7 @@ async function loadLanguage(language, basePath) {
   }
 
   try {
-    await import(`${basePath}/languages/${language}.js`);
+    await import(`${prismCodeEditorBasePath}/languages/${language}.js`);
     loadedLanguages.add(language);
   } catch (error) {
     console.error(`Failed to load language '${language}':`, error);
@@ -41,16 +71,16 @@ async function loadLanguage(language, basePath) {
  * Loads or switches the theme CSS for an editor instance
  * @param {string} inputId - The editor's input ID
  * @param {string} themeName - The theme name (e.g., 'github-light', 'vs-code-dark')
- * @param {string} basePath - The base path to theme CSS files
+ * @param {string} prismCodeEditorBasePath - The base path to prism-code-editor files
  */
-function loadTheme(inputId, themeName, basePath) {
+function loadTheme(inputId, themeName, prismCodeEditorBasePath) {
   const linkId = `code-editor-theme-${inputId}`;
   const existingLink = document.getElementById(linkId);
 
   const newLink = document.createElement('link');
   newLink.id = linkId;
   newLink.rel = 'stylesheet';
-  newLink.href = `${basePath}/themes/${themeName}.css`;
+  newLink.href = `${prismCodeEditorBasePath}/themes/${themeName}.css`;
 
   // Add new link to head
   document.head.appendChild(newLink);
@@ -68,9 +98,9 @@ function loadTheme(inputId, themeName, basePath) {
  * @param {HTMLElement} el - The editor container element
  * @param {string} themeLight - Light theme name
  * @param {string} themeDark - Dark theme name
- * @param {string} basePath - Base path to theme files
+ * @param {string} prismCodeEditorBasePath - Base path to prism-code-editor files
  */
-function setupThemeWatcher(el, themeLight, themeDark, basePath) {
+function setupThemeWatcher(el, themeLight, themeDark, prismCodeEditorBasePath) {
   const inputId = el.id;
 
   // Function to load appropriate theme based on current data-bs-theme
@@ -78,7 +108,7 @@ function setupThemeWatcher(el, themeLight, themeDark, basePath) {
     const htmlEl = document.documentElement;
     const theme = htmlEl.getAttribute('data-bs-theme');
     const themeName = (theme === 'dark') ? themeDark : themeLight;
-    loadTheme(inputId, themeName, basePath);
+    loadTheme(inputId, themeName, prismCodeEditorBasePath);
   };
 
   // Set initial theme
@@ -124,17 +154,16 @@ async function initializeEditor(el) {
   const insertSpaces = el.dataset.insertSpaces !== 'false'; // default true
   const placeholder = el.dataset.placeholder || '';
 
-  // Determine base path from the HTML dependency
-  // The prism-code-editor files should be in the htmldep folder
-  const basePath = el.dataset.basePath || '';
+  // Get the base path to prism-code-editor files
+  const prismCodeEditorBasePath = getPrismCodeEditorBasePath();
 
   // Load required language grammar
-  await loadLanguage(language, basePath);
+  await loadLanguage(language, prismCodeEditorBasePath);
 
   // Dynamically import the createEditor function and extensions
-  const { createEditor } = await import(`${basePath}/index.js`);
-  const { copyButton } = await import(`${basePath}/extensions/copyButton/index.js`);
-  const { defaultCommands } = await import(`${basePath}/extensions/commands.js`);
+  const { createEditor } = await import(`${prismCodeEditorBasePath}/index.js`);
+  const { copyButton } = await import(`${prismCodeEditorBasePath}/extensions/copyButton/index.js`);
+  const { defaultCommands } = await import(`${prismCodeEditorBasePath}/extensions/commands.js`);
 
   // Create editor instance
   const editor = createEditor(
@@ -158,7 +187,7 @@ async function initializeEditor(el) {
   initializedEditors.add(el);
 
   // Set up theme management
-  setupThemeWatcher(el, themeLight, themeDark, basePath);
+  setupThemeWatcher(el, themeLight, themeDark, prismCodeEditorBasePath);
 
   // Set up event listeners for value changes
   const textarea = el.querySelector('textarea');
@@ -281,8 +310,8 @@ $.extend(codeEditorBinding, {
 
     // Handle language change (requires grammar loading and reinitialization)
     if (data.language !== undefined && data.language !== el.dataset.language) {
-      const basePath = el.dataset.basePath || '';
-      loadLanguage(data.language, basePath).then(() => {
+      const prismCodeEditorBasePath = getPrismCodeEditorBasePath();
+      loadLanguage(data.language, prismCodeEditorBasePath).then(() => {
         el.dataset.language = data.language;
         editor.setOptions({ language: data.language });
         // Force retokenization
@@ -299,8 +328,8 @@ $.extend(codeEditorBinding, {
       const htmlEl = document.documentElement;
       const currentTheme = htmlEl.getAttribute('data-bs-theme');
       if (currentTheme !== 'dark') {
-        const basePath = el.dataset.basePath || '';
-        loadTheme(el.id, data.theme_light, basePath);
+        const prismCodeEditorBasePath = getPrismCodeEditorBasePath();
+        loadTheme(el.id, data.theme_light, prismCodeEditorBasePath);
       }
     }
 
@@ -310,8 +339,8 @@ $.extend(codeEditorBinding, {
       const htmlEl = document.documentElement;
       const currentTheme = htmlEl.getAttribute('data-bs-theme');
       if (currentTheme === 'dark') {
-        const basePath = el.dataset.basePath || '';
-        loadTheme(el.id, data.theme_dark, basePath);
+        const prismCodeEditorBasePath = getPrismCodeEditorBasePath();
+        loadTheme(el.id, data.theme_dark, prismCodeEditorBasePath);
       }
     }
   },

@@ -260,3 +260,6 @@ _dev
 .Rprofile
 renv/
 renv.lock
+
+# Claude
+.claude/settings.local.json

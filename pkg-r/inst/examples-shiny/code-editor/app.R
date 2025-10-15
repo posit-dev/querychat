@@ -15,8 +15,28 @@ ui <- page_sidebar(
     selectInput(
       "language",
       "Language:",
-      choices = c("sql", "python", "r", "javascript", "html", "css", "json"),
+      choices = c(
+        "sql",
+        "python",
+        "r",
+        "javascript",
+        "html",
+        "css",
+        "json",
+        "markdown",
+        "yaml"
+      ),
       selected = "sql"
+    ),
+    actionButton(
+      "load_sample",
+      "Load Sample Code",
+      class = "btn-secondary btn-sm w-100 mb-2"
+    ),
+    actionButton(
+      "clear_code",
+      "Clear Editor",
+      class = "btn-warning btn-sm w-100 mb-2"
     ),
 
     selectInput(
@@ -55,23 +75,6 @@ ui <- page_sidebar(
       choices = c("Spaces" = "space", "Tabs" = "tab"),
       selected = "space",
       inline = TRUE
-    ),
-
-    h4("Actions"),
-    actionButton(
-      "update_settings",
-      "Apply Settings",
-      class = "btn-primary btn-sm w-100 mb-2"
-    ),
-    actionButton(
-      "load_sample",
-      "Load Sample Code",
-      class = "btn-secondary btn-sm w-100 mb-2"
-    ),
-    actionButton(
-      "clear_code",
-      "Clear Editor",
-      class = "btn-warning btn-sm w-100 mb-2"
     )
   ),
 
@@ -123,15 +126,7 @@ ui <- page_sidebar(
             tags$li("Copy button in top-right corner"),
             tags$li("Automatic theme switching based on Bootstrap theme"),
             tags$li("Update on blur (when editor loses focus)")
-          ),
-
-          h4("Supported Languages:"),
-          p(
-            "sql, python, r, javascript, html, css, json, bash, markdown, yaml, xml"
-          ),
-
-          h4("Available Themes:"),
-          p(paste(code_editor_themes(), collapse = ", "))
+          )
         )
       )
     )
@@ -147,22 +142,35 @@ server <- function(input, output, session) {
     javascript = "// Async function to fetch data\nasync function fetchUserData(userId) {\n  try {\n    const response = await fetch(`/api/users/${userId}`);\n    if (!response.ok) {\n      throw new Error(`HTTP error! status: ${response.status}`);\n    }\n    const data = await response.json();\n    return data;\n  } catch (error) {\n    console.error('Failed to fetch user data:', error);\n    return null;\n  }\n}\n\n// Usage\nfetchUserData(123).then(user => {\n  console.log('User data:', user);\n});",
     html = "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <title>My Web Page</title>\n  <link rel=\"stylesheet\" href=\"styles.css\">\n</head>\n<body>\n  <header>\n    <h1>Welcome to My Website</h1>\n    <nav>\n      <ul>\n        <li><a href=\"#home\">Home</a></li>\n        <li><a href=\"#about\">About</a></li>\n        <li><a href=\"#contact\">Contact</a></li>\n      </ul>\n    </nav>\n  </header>\n  <main>\n    <p>This is the main content area.</p>\n  </main>\n</body>\n</html>",
     css = "/* Modern CSS with variables */\n:root {\n  --primary-color: #007bff;\n  --secondary-color: #6c757d;\n  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto;\n}\n\nbody {\n  font-family: var(--font-family);\n  line-height: 1.6;\n  color: #333;\n  max-width: 1200px;\n  margin: 0 auto;\n  padding: 20px;\n}\n\n.card {\n  background: white;\n  border-radius: 8px;\n  box-shadow: 0 2px 4px rgba(0,0,0,0.1);\n  padding: 20px;\n  transition: transform 0.2s;\n}\n\n.card:hover {\n  transform: translateY(-2px);\n  box-shadow: 0 4px 8px rgba(0,0,0,0.15);\n}",
-    json = "{\n  \"name\": \"my-app\",\n  \"version\": \"1.0.0\",\n  \"description\": \"A sample application\",\n  \"main\": \"index.js\",\n  \"scripts\": {\n    \"start\": \"node index.js\",\n    \"test\": \"jest\",\n    \"build\": \"webpack --mode production\"\n  },\n  \"dependencies\": {\n    \"express\": \"^4.18.0\",\n    \"react\": \"^18.2.0\",\n    \"react-dom\": \"^18.2.0\"\n  },\n  \"devDependencies\": {\n    \"jest\": \"^29.0.0\",\n    \"webpack\": \"^5.75.0\"\n  },\n  \"keywords\": [\"example\", \"demo\", \"sample\"],\n  \"author\": \"Your Name\",\n  \"license\": \"MIT\"\n}"
+    json = "{\n  \"name\": \"my-app\",\n  \"version\": \"1.0.0\",\n  \"description\": \"A sample application\",\n  \"main\": \"index.js\",\n  \"scripts\": {\n    \"start\": \"node index.js\",\n    \"test\": \"jest\",\n    \"build\": \"webpack --mode production\"\n  },\n  \"dependencies\": {\n    \"express\": \"^4.18.0\",\n    \"react\": \"^18.2.0\",\n    \"react-dom\": \"^18.2.0\"\n  },\n  \"devDependencies\": {\n    \"jest\": \"^29.0.0\",\n    \"webpack\": \"^5.75.0\"\n  },\n  \"keywords\": [\"example\", \"demo\", \"sample\"],\n  \"author\": \"Your Name\",\n  \"license\": \"MIT\"\n}",
+    markdown = "# Project Documentation\n\n## Overview\nThis is a sample project that demonstrates various features and capabilities.\n\n## Installation\n1. Clone the repository\n2. Install dependencies:\n   ```bash\n   npm install\n   ```\n\n## Features\n- **Modern Architecture**: Built with the latest technologies\n- **Responsive Design**: Works on all devices\n- **Performance Optimized**: Fast loading and execution\n\n## Usage Examples\n### Basic Implementation\n```javascript\nconst app = new Application();\napp.initialize();\n```\n\n## Contributing\nWe welcome contributions! Please follow these steps:\n1. Fork the repository\n2. Create your feature branch\n3. Submit a pull request\n\n## License\nThis project is licensed under the MIT License - see the LICENSE file for details.\n\n## Contact\nEmail: example@domain.com\nTwitter: @example",
+    yaml = "# Application Configuration\napp:\n  name: sample-application\n  version: 1.0.0\n  environment: production\n\nserver:\n  host: localhost\n  port: 3000\n  ssl:\n    enabled: true\n    cert: /path/to/cert.pem\n    key: /path/to/key.pem\n\ndatabase:\n  primary:\n    host: db.example.com\n    port: 5432\n    name: maindb\n    user: admin\n    max_connections: 100\n  replica:\n    enabled: true\n    hosts:\n      - replica1.example.com\n      - replica2.example.com\n\nlogging:\n  level: info\n  format: json\n  outputs:\n    - type: file\n      path: /var/log/app.log\n    - type: stdout\n\nmonitoring:\n  enabled: true\n  interval: 60\n  endpoints:\n    - /health\n    - /metrics"
   )
 
-  # Update settings when button is clicked
-  observeEvent(input$update_settings, {
-    update_code_editor(
-      "code",
-      language = input$language,
-      theme_light = input$theme_light,
-      theme_dark = input$theme_dark,
-      read_only = input$read_only,
-      line_numbers = input$line_numbers,
-      word_wrap = input$word_wrap,
-      tab_size = input$tab_size,
-      indentation = input$indentation
-    )
+  # Update code input settings
+  observeEvent(input$language, {
+    update_code_editor("code", language = input$language)
+  })
+  observeEvent(input$theme_light, {
+    update_code_editor("code", theme_light = input$theme_light)
+  })
+  observeEvent(input$theme_dark, {
+    update_code_editor("code", theme_dark = input$theme_dark)
+  })
+  observeEvent(input$read_only, {
+    update_code_editor("code", read_only = input$read_only)
+  })
+  observeEvent(input$line_numbers, {
+    update_code_editor("code", line_numbers = input$line_numbers)
+  })
+  observeEvent(input$word_wrap, {
+    update_code_editor("code", word_wrap = input$word_wrap)
+  })
+  observeEvent(input$tab_size, {
+    update_code_editor("code", tab_size = input$tab_size)
+  })
+  observeEvent(input$indentation, {
+    update_code_editor("code", indentation = input$indentation)
   })
 
   # Load sample code for selected language

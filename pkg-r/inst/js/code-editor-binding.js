@@ -62,10 +62,9 @@ async function loadLanguage(language, prismCodeEditorBasePath) {
     return;
   }
 
-  // JavaScript is included in the clike grammar which is loaded by default
-  if (language === 'javascript' || language === 'js') {
-    loadedLanguages.add(language);
-    return;
+  // HTML is included in the clike grammar which is loaded by default
+  if (language === 'html') {
+    language = 'markup';
   }
 
   try {

@@ -46,7 +46,7 @@
 
 /* Submit flash animation (Ctrl/Cmd+Enter feedback) */
 .code-editor-submit-flash {
-  animation: code-editor-flash 0.2s ease-out;
+  animation: code-editor-flash 400ms ease-out;
 }
 
 @keyframes code-editor-flash {
@@ -55,8 +55,8 @@
     box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.5);
   }
   100% {
-    border-color: var(--bs-border-color, #dee2e6);
-    box-shadow: none;
+    border-color: var(--bs-primary, #0d6efd);
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
   }
 }
 
@@ -85,7 +85,6 @@
 .shiny-input-code-editor code {
   font-family: var(--bs-font-monospace, ui-monospace, "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", monospace);
   font-size: 0.875rem;
-  line-height: 1.5;
 }
 
 /* Read-only state styling */

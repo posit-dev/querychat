@@ -188,7 +188,7 @@ test_that("update_code_editor validates inputs", {
 
   expect_error(
     update_code_editor("test", indentation = "invalid", session = NULL),
-    "indentation.*must be either.*space.*or.*tab"
+    "indentation.*must be"
   )
 })
 

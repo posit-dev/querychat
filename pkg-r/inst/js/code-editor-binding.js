@@ -48,6 +48,11 @@ function getPrismCodeEditorBasePath() {
 
 /**
  * Dynamically loads a language grammar module if not already loaded
+ *
+ * Prism grammars from prism-code-editor register themselves via side effects
+ * when imported. They should be imported from prism/languages/ not the regular
+ * languages/ directory.
+ *
  * @param {string} language - The language identifier (e.g., 'sql', 'python', 'r')
  * @param {string} prismCodeEditorBasePath - The base path to the prism-code-editor files
  * @returns {Promise<void>}
@@ -57,14 +62,16 @@ async function loadLanguage(language, prismCodeEditorBasePath) {
     return;
   }
 
-  // JavaScript is built-in to Prism, no need to load
+  // JavaScript is included in the clike grammar which is loaded by default
   if (language === 'javascript' || language === 'js') {
     loadedLanguages.add(language);
     return;
   }
 
   try {
-    await import(`${prismCodeEditorBasePath}/languages/${language}.js`);
+    // Import from prism/languages/ not regular languages/
+    // The prism grammars register themselves through side effects
+    await import(`${prismCodeEditorBasePath}/prism/languages/${language}.js`);
     loadedLanguages.add(language);
   } catch (error) {
     console.error(`Failed to load language '${language}':`, error);

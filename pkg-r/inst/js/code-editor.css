@@ -40,7 +40,7 @@
 .shiny-input-code-editor .code-editor:focus-within {
   border-color: var(--bs-primary, #0d6efd);
   outline: 0;
-  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+  box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb, 13, 110, 253), 0.25);
 }
 
 /* Dark mode adjustments */
@@ -52,7 +52,7 @@
 
 [data-bs-theme="dark"] .shiny-input-code-editor .code-editor:focus-within {
   border-color: var(--bs-primary, #0d6efd);
-  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+  box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb, 13, 110, 253), 0.25);
 }
 
 /* Submit flash animation (Ctrl/Cmd+Enter feedback) */
@@ -63,11 +63,11 @@
 @keyframes code-editor-flash {
   0% {
     border-color: var(--bs-success, #198754);
-    box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.5);
+    box-shadow: 0 0 0 0.25rem rgba(var(--bs-success-rgb, 25, 135, 84), 0.25);
   }
   100% {
     border-color: var(--bs-primary, #0d6efd);
-    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb, 13, 110, 253), 0.25);
   }
 }
 

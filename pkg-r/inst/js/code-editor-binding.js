@@ -119,7 +119,9 @@ function setupThemeWatcher(el, themeLight, themeDark, prismCodeEditorBasePath) {
   const updateTheme = () => {
     const htmlEl = document.documentElement;
     const theme = htmlEl.getAttribute('data-bs-theme');
-    const themeName = (theme === 'dark') ? themeDark : themeLight;
+    const themeName = (theme === 'dark')
+      ? el.dataset.themeDark || themeDark
+      : el.dataset.themeLight || themeLight;
     loadTheme(inputId, themeName, prismCodeEditorBasePath);
   };
 

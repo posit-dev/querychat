@@ -27,3 +27,5 @@
 * querychat now uses a separate tool to reset the dashboard. (#80)
 
 * `querychat_greeting()` can be used to generate a greeting message for your querychat bot. (#87)
+
+* querychat's system prompt and tool descriptions were rewritten for clarity and future extensibility. (#90)

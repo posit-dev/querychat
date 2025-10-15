@@ -82,8 +82,8 @@ test_that("input_code_editor generates correct HTML structure", {
 
   html <- as.character(editor)
 
-  # Check for editor div with correct class
-  expect_match(html, 'class="code-editor-input"')
+  # Check for editor div with correct class (may include other classes from as_fill_carrier)
+  expect_match(html, 'shiny-input-code-editor')
 
   # Check for correct ID
   expect_match(html, 'id="test_editor"')
@@ -186,7 +186,7 @@ test_that("input_code_editor handles NULL placeholder", {
   html <- as.character(editor)
   # NULL placeholder should not appear in HTML or should be empty
   # The htmltools package handles NULL attributes by not including them
-  expect_true(grepl('class="code-editor-input"', html))
+  expect_true(grepl('shiny-input-code-editor', html))
 })
 
 test_that("input_code_editor indentation parameter works correctly", {

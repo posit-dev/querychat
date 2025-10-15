@@ -213,8 +213,8 @@ input_code_editor <- function(
   # Create the editor container div with all configuration as data attributes
   editor_div <- htmltools::tags$div(
     id = id,
-    class = "code-editor-input",
-    as_fill_carrier(),
+    class = "shiny-input-code-editor",
+    bslib::as_fill_carrier(),
     style = htmltools::css(
       height = height,
       width = width,

@@ -6,7 +6,7 @@
  * while theme CSS files handle syntax highlighting colors.
  */
 
-.code-editor-input {
+.shiny-input-code-editor {
   /* Required by Prism Code Editor */
   display: grid !important;
 
@@ -26,20 +26,20 @@
 }
 
 /* Focus state - matches Bootstrap input focus */
-.code-editor-input:focus-within {
+.shiny-input-code-editor:focus-within {
   border-color: var(--bs-primary, #0d6efd);
   outline: 0;
   box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
 }
 
 /* Dark mode adjustments */
-[data-bs-theme="dark"] .code-editor-input {
+[data-bs-theme="dark"] .shiny-input-code-editor {
   border-color: var(--bs-border-color, #495057);
   background-color: var(--bs-body-bg, #212529);
   color: var(--bs-body-color, #dee2e6);
 }
 
-[data-bs-theme="dark"] .code-editor-input:focus-within {
+[data-bs-theme="dark"] .shiny-input-code-editor:focus-within {
   border-color: var(--bs-primary, #0d6efd);
   box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
 }
@@ -61,12 +61,12 @@
 }
 
 /* Ensure copy button appears above code but below modals */
-.code-editor-input .pce-copy-button {
+.shiny-input-code-editor .pce-copy-button {
   z-index: 10;
 }
 
 /* Placeholder styling when editor is empty */
-.code-editor-input[data-placeholder]:not(.code-editor-has-content)::before {
+.shiny-input-code-editor[data-placeholder]:not(.code-editor-has-content)::before {
   content: attr(data-placeholder);
   position: absolute;
   top: 0.5rem;
@@ -79,26 +79,26 @@
 }
 
 /* Ensure proper font rendering */
-.code-editor-input,
-.code-editor-input textarea,
-.code-editor-input pre,
-.code-editor-input code {
+.shiny-input-code-editor,
+.shiny-input-code-editor textarea,
+.shiny-input-code-editor pre,
+.shiny-input-code-editor code {
   font-family: var(--bs-font-monospace, ui-monospace, "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", monospace);
   font-size: 0.875rem;
   line-height: 1.5;
 }
 
 /* Read-only state styling */
-.code-editor-input[data-read-only="true"] {
+.shiny-input-code-editor[data-read-only="true"] {
   background-color: var(--bs-secondary-bg, #e9ecef);
   cursor: not-allowed;
 }
 
-[data-bs-theme="dark"] .code-editor-input[data-read-only="true"] {
+[data-bs-theme="dark"] .shiny-input-code-editor[data-read-only="true"] {
   background-color: var(--bs-secondary-bg, #343a40);
 }
 
 /* Ensure textarea fills container properly */
-.code-editor-input textarea {
+.shiny-input-code-editor textarea {
   min-height: 100%;
 }

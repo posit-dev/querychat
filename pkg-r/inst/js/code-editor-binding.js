@@ -233,7 +233,7 @@ const codeEditorBinding = new Shiny.InputBinding();
 $.extend(codeEditorBinding, {
   // Find all code editor elements in the scope
   find: function(scope) {
-    return $(scope).find('.code-editor-input');
+    return $(scope).find('.shiny-input-code-editor');
   },
 
   // Get the current value of the editor

@@ -5,10 +5,12 @@ library(querychat)
 ui <- page_sidebar(
   title = "Code Editor Demo",
   theme = bs_theme(version = 5),
+  class = "bslib-page-dashboard",
 
   sidebar = sidebar(
     width = 300,
-    h4("Editor Controls"),
+    title = "Editor Controls",
+    gap = "0.5rem",
 
     selectInput(
       "language",
@@ -31,6 +33,16 @@ ui <- page_sidebar(
       selected = "github-dark"
     ),
 
+    p(
+      input_dark_mode(
+        id = "dark_mode",
+        mode = "light",
+        style = css("--vertical-correction" = "5px")
+      ),
+      "Toggle Theme",
+      class = "text-end"
+    ),
+
     checkboxInput("read_only", "Read Only", value = FALSE),
     checkboxInput("line_numbers", "Line Numbers", value = TRUE),
     checkboxInput("word_wrap", "Word Wrap", value = FALSE),
@@ -41,72 +53,87 @@ ui <- page_sidebar(
       "indentation",
       "Indentation:",
       choices = c("Spaces" = "space", "Tabs" = "tab"),
-      selected = "space"
+      selected = "space",
+      inline = TRUE
     ),
 
-    hr(),
-
     h4("Actions"),
-    actionButton("update_settings", "Apply Settings", class = "btn-primary btn-sm w-100 mb-2"),
-    actionButton("load_sample", "Load Sample Code", class = "btn-secondary btn-sm w-100 mb-2"),
-    actionButton("clear_code", "Clear Editor", class = "btn-warning btn-sm w-100 mb-2"),
-
-    hr(),
-
-    h4("Bootstrap Theme"),
-    p("Toggle to test automatic theme switching:"),
-    input_dark_mode(id = "dark_mode", mode = "light")
+    actionButton(
+      "update_settings",
+      "Apply Settings",
+      class = "btn-primary btn-sm w-100 mb-2"
+    ),
+    actionButton(
+      "load_sample",
+      "Load Sample Code",
+      class = "btn-secondary btn-sm w-100 mb-2"
+    ),
+    actionButton(
+      "clear_code",
+      "Clear Editor",
+      class = "btn-warning btn-sm w-100 mb-2"
+    )
   ),
 
-  card(
-    card_header("Code Editor"),
-    card_body(
-      p(
-        "This editor supports syntax highlighting, line numbers, word wrap, and more. ",
-        "Try pressing ", tags$kbd("Ctrl/Cmd+Enter"), " to submit the code."
-      ),
-      input_code_editor(
-        "code",
-        code = "SELECT * FROM table\nWHERE column = 'value'\nORDER BY id DESC\nLIMIT 10;",
-        language = "sql",
-        height = "400px",
-        placeholder = "Enter your code here..."
+  layout_columns(
+    card(
+      card_header("Code Editor"),
+      card_body(
+        p(
+          "This editor supports syntax highlighting, line numbers, word wrap, and more. ",
+          "Try pressing ",
+          tags$kbd("Ctrl/Cmd+Enter"),
+          " to submit the code."
+        ),
+        input_code_editor(
+          "code",
+          code = "SELECT * FROM table\nWHERE column = 'value'\nORDER BY id DESC\nLIMIT 10;",
+          language = "sql",
+          height = "400px",
+          placeholder = "Enter your code here..."
+        )
       )
-    )
-  ),
-
-  card(
-    card_header("Editor Output"),
-    card_body(
-      h4("Current Code:"),
-      verbatimTextOutput("code_output"),
-
-      hr(),
-
-      h4("Editor Info:"),
-      verbatimTextOutput("editor_info")
-    )
-  ),
-
-  card(
-    card_header("Features & Keyboard Shortcuts"),
-    card_body(
-      tags$ul(
-        tags$li(tags$kbd("Ctrl/Cmd+Enter"), " - Submit code to R (triggers reactive update)"),
-        tags$li(tags$kbd("Ctrl/Cmd+Z"), " - Undo"),
-        tags$li(tags$kbd("Ctrl/Cmd+Shift+Z"), " - Redo"),
-        tags$li(tags$kbd("Tab"), " - Indent selection"),
-        tags$li(tags$kbd("Shift+Tab"), " - Dedent selection"),
-        tags$li("Copy button in top-right corner"),
-        tags$li("Automatic theme switching based on Bootstrap theme"),
-        tags$li("Update on blur (when editor loses focus)")
+    ),
+    layout_columns(
+      col_widths = 12,
+      navset_card_underline(
+        title = "Editor Info",
+        nav_panel(
+          "Value",
+          verbatimTextOutput("code_output"),
+        ),
+        nav_panel(
+          "Settings",
+          verbatimTextOutput("editor_info")
+        )
       ),
 
-      h4("Supported Languages:"),
-      p("sql, python, r, javascript, html, css, json, bash, markdown, yaml, xml"),
+      card(
+        card_header("Features & Keyboard Shortcuts"),
+        card_body(
+          tags$ul(
+            tags$li(
+              tags$kbd("Ctrl/Cmd+Enter"),
+              " - Submit code to R (triggers reactive update)"
+            ),
+            tags$li(tags$kbd("Ctrl/Cmd+Z"), " - Undo"),
+            tags$li(tags$kbd("Ctrl/Cmd+Shift+Z"), " - Redo"),
+            tags$li(tags$kbd("Tab"), " - Indent selection"),
+            tags$li(tags$kbd("Shift+Tab"), " - Dedent selection"),
+            tags$li("Copy button in top-right corner"),
+            tags$li("Automatic theme switching based on Bootstrap theme"),
+            tags$li("Update on blur (when editor loses focus)")
+          ),
 
-      h4("Available Themes:"),
-      p(paste(code_editor_themes(), collapse = ", "))
+          h4("Supported Languages:"),
+          p(
+            "sql, python, r, javascript, html, css, json, bash, markdown, yaml, xml"
+          ),
+
+          h4("Available Themes:"),
+          p(paste(code_editor_themes(), collapse = ", "))
+        )
+      )
     )
   )
 )

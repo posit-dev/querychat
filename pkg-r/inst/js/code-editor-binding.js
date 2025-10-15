@@ -205,12 +205,12 @@ async function initializeEditor(el) {
   const textarea = el.querySelector('textarea');
   if (textarea) {
     // Blur event
-    textarea.addEventListener('blur.codeEditorBinding', () => {
+    textarea.addEventListener('blur', () => {
       el.dispatchEvent(new CustomEvent('codeEditorUpdate'));
     });
 
     // Ctrl/Cmd+Enter keyboard shortcut
-    textarea.addEventListener('keydown.codeEditorBinding', (e) => {
+    textarea.addEventListener('keydown', (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
         e.preventDefault();
         el.dispatchEvent(new CustomEvent('codeEditorUpdate'));
@@ -262,15 +262,15 @@ $.extend(codeEditorBinding, {
       console.error('Failed to initialize code editor:', error);
     });
 
+    this._updateCallback = () => callback(true); // true enables rate policy
+
     // Listen for custom update events
-    $(el).on('codeEditorUpdate.codeEditorBinding', function() {
-      callback(true); // true enables rate policy
-    });
+    el.addEventListener('codeEditorUpdate', this._updateCallback);
   },
 
   // Unsubscribe from value changes
   unsubscribe: function(el) {
-    $(el).off('.codeEditorBinding');
+    el.removeEventListener('codeEditorUpdate', this._updateCallback);
 
     // Clean up theme observer
     if (el._themeObserver) {

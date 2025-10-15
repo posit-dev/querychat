@@ -79,7 +79,7 @@ r-check-package:  ## [r] Check package
 r-check-tests:  ## [r] Check tests
 	@echo ""
 	@echo "🧪 Running R tests"
-	cd $(PATH_PKG_R) && Rscript -e "devtools::test()"
+	cd $(PATH_PKG_R) && Rscript -e "devtools::test(reporter = 'check')"
 
 .PHONY: r-check-format
 r-check-format:  ## [r] Check format

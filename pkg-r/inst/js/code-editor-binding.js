@@ -200,6 +200,20 @@ async function initializeEditor(el) {
     defaultCommands()
   );
 
+  const oldEnterCallback = editor.keyCommandMap.Enter
+  editor.keyCommandMap.Enter = (e, selection, value) => {
+    if (e.metaKey || e.ctrlKey) {
+      el.dispatchEvent(new CustomEvent('codeEditorUpdate'));
+      // Visual feedback: brief border flash on inner container
+      editorContainer.classList.add('code-editor-submit-flash');
+      setTimeout(() => {
+        editorContainer.classList.remove('code-editor-submit-flash');
+      }, 400);
+      return true;
+    }
+    return oldEnterCallback?.(e, selection, value);
+  }
+
   // Store editor instance on outer element
   el.prismEditor = editor;
   initializedEditors.add(el);
@@ -213,20 +227,6 @@ async function initializeEditor(el) {
     // Blur event
     textarea.addEventListener('blur', () => {
       el.dispatchEvent(new CustomEvent('codeEditorUpdate'));
-    });
-
-    // Ctrl/Cmd+Enter keyboard shortcut
-    textarea.addEventListener('keydown', (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-        e.preventDefault();
-        el.dispatchEvent(new CustomEvent('codeEditorUpdate'));
-
-        // Visual feedback: brief border flash on inner container
-        editorContainer.classList.add('code-editor-submit-flash');
-        setTimeout(() => {
-          editorContainer.classList.remove('code-editor-submit-flash');
-        }, 400);
-      }
     });
   }
 

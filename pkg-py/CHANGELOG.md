@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added `querychat.greeting()` to help you create a greeting message for your querychat bot. (#87)
 
+* querychat's system prompt and tool descriptions were rewritten for clarity and future extensibility. (#90)
+
 ## [0.2.2] - 2025-09-04
 
 * Fixed another issue with data sources that aren't already narwhals DataFrames (#83)

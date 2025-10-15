@@ -75,6 +75,9 @@ available themes. Default is \code{"github-dark"}.}
 \item{indentation}{Type of indentation: \code{"space"} or \code{"tab"}. Default is
 \code{"space"}.}
 
+\item{fill}{Whether or not to allow the card to grow/shrink to fit a
+fillable container with an opinionated height (e.g., \code{page_fillable()}).}
+
 \item{session}{Shiny session object, for expert use only.}
 }
 \value{

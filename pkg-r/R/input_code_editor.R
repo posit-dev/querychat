@@ -62,6 +62,7 @@
 #' @param tab_size Number of spaces per tab. Default is `2`.
 #' @param indentation Type of indentation: `"space"` or `"tab"`. Default is
 #'   `"space"`.
+#' @inheritParams bslib::card
 #' @param session Shiny session object, for expert use only.
 #'
 #' @return An HTML tag object that can be included in a Shiny UI.
@@ -96,11 +97,8 @@ input_code_editor <- function(
   theme_light <- arg_match_theme(theme_light, "theme_light")
   theme_dark <- arg_match_theme(theme_dark, "theme_dark")
 
-  indentation <- match.arg(indentation)
+  indentation <- rlang::arg_match(indentation)
   insert_spaces <- (indentation == "space")
-
-  # Create label element
-  label_tag <- asNamespace("shiny")[["shinyInputLabel"]](id, label)
 
   # Create inner container that will hold the actual editor
   editor_inner <- htmltools::tags$div(
@@ -110,6 +108,8 @@ input_code_editor <- function(
       display = "grid"
     )
   )
+
+  label_tag <- asNamespace("shiny")[["shinyInputLabel"]](id, label)
 
   htmltools::tags$div(
     id = id,
@@ -194,12 +194,7 @@ update_code_editor <- function(
     message$tab_size <- tab_size
   }
   if (!is.null(indentation)) {
-    if (!indentation %in% c("space", "tab")) {
-      cli::cli_abort(c(
-        "{.arg indentation} must be either {.val space} or {.val tab}.",
-        "x" = "You provided: {.val {indentation}}"
-      ))
-    }
+    indentation <- rlang::arg_match(indentation, c("space", "tab"))
     message$indentation <- indentation
   }
 

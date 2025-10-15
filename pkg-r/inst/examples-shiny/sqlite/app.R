@@ -3,6 +3,7 @@ library(bslib)
 library(querychat)
 library(DBI)
 library(RSQLite)
+library(palmerpenguins)
 
 # Create a sample SQLite database for demonstration
 # In a real app, you would connect to your existing database
@@ -18,52 +19,52 @@ conn <- dbConnect(RSQLite::SQLite(), temp_db)
 # querychat_init
 
 # Create sample data in the database
-iris_data <- iris
-dbWriteTable(conn, "iris", iris_data, overwrite = TRUE)
+dbWriteTable(conn, "penguins", palmerpenguins::penguins, overwrite = TRUE)
 
 # Define a custom greeting for the database app
 greeting <- "
-# Welcome to the Database Query Assistant! 📊
+# Welcome to the Database Query Assistant! 🐧
 
-I can help you explore and analyze the iris dataset from the connected database. 
-Ask me questions about the iris flowers, and I'll generate SQL queries to get the answers.
+I can help you explore and analyze the Palmer Penguins dataset from the connected database.
+Ask me questions about the penguins, and I'll generate SQL queries to get the answers.
 
 Try asking:
-- Show me the first 10 rows of the iris dataset
-- What's the average sepal length by species?
-- Which species has the largest petals?
-- Create a summary of measurements grouped by species
+- <span class=\"suggestion\">Show me the first 10 rows of the penguins dataset</span>
+- <span class=\"suggestion\">What's the average bill length by species?</span>
+- <span class=\"suggestion\">Which species has the largest body mass?</span>
+- <span class=\"suggestion\">Create a summary of measurements grouped by species and island</span>
 "
 
 # Create data source using querychat_data_source
-iris_source <- querychat_data_source(conn, table_name = "iris")
+penguins_source <- querychat_data_source(conn, table_name = "penguins")
 
 # Configure querychat for database
 querychat_config <- querychat_init(
-  data_source = iris_source,
+  data_source = penguins_source,
   greeting = greeting,
-  data_description = "This database contains the famous iris flower dataset with measurements of sepal and petal dimensions across three species (setosa, versicolor, and virginica).",
+  data_description = "This database contains the Palmer Penguins dataset with measurements of bill dimensions, flipper length, body mass, sex, and species (Adelie, Chinstrap, and Gentoo) collected from three islands in the Palmer Archipelago, Antarctica.",
   extra_instructions = "When showing results, always explain what the data represents and highlight any interesting patterns you observe."
 )
 
 ui <- page_sidebar(
   title = "Database Query Chat",
   sidebar = querychat_sidebar("chat"),
+
   h2("Current Data View"),
   p(
     "The table below shows the current filtered data based on your chat queries:"
   ),
   DT::DTOutput("data_table", fill = FALSE),
-  br(),
-  h3("Current SQL Query"),
+
+  h2("Current SQL Query"),
   verbatimTextOutput("sql_query"),
-  br(),
-  h3("Dataset Information"),
+
+  h2("Dataset Information"),
   p("This demo database contains:"),
   tags$ul(
-    tags$li("iris - Famous iris flower dataset (150 rows, 5 columns)"),
+    tags$li("penguins - Palmer Penguins dataset (344 rows, 8 columns)"),
     tags$li(
-      "Columns: Sepal.Length, Sepal.Width, Petal.Length, Petal.Width, Species"
+      "Columns: species, island, bill_length_mm, bill_depth_mm, flipper_length_mm, body_mass_g, sex, year"
     )
   )
 )
@@ -73,8 +74,7 @@ server <- function(input, output, session) {
 
   output$data_table <- DT::renderDT(
     {
-      df <- chat$df()
-      df
+      chat$df()
     },
     options = list(pageLength = 10, scrollX = TRUE)
   )

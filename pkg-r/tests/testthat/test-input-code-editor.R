@@ -70,7 +70,7 @@ test_that("validate_language rejects invalid languages", {
 test_that("input_code_editor generates correct HTML structure", {
   editor <- input_code_editor(
     "test_editor",
-    code = "SELECT * FROM table",
+    value = "SELECT * FROM table",
     language = "sql"
   )
 
@@ -96,13 +96,12 @@ test_that("input_code_editor generates correct HTML structure", {
 test_that("input_code_editor handles all parameters correctly", {
   editor <- input_code_editor(
     "full_editor",
-    code = "print('hello')",
+    value = "print('hello')",
     language = "python",
     height = "500px",
     width = "80%",
     theme_light = "vs-code-light",
     theme_dark = "vs-code-dark",
-    placeholder = "Enter code here",
     read_only = TRUE,
     line_numbers = FALSE,
     word_wrap = TRUE,
@@ -116,7 +115,6 @@ test_that("input_code_editor handles all parameters correctly", {
   expect_match(html, 'data-language="python"')
   expect_match(html, 'data-theme-light="vs-code-light"')
   expect_match(html, 'data-theme-dark="vs-code-dark"')
-  expect_match(html, 'data-placeholder="Enter code here"')
   expect_match(html, 'data-read-only="true"')
   expect_match(html, 'data-line-numbers="false"')
   expect_match(html, 'data-word-wrap="true"')
@@ -141,7 +139,7 @@ test_that("input_code_editor uses correct defaults", {
   expect_match(html, 'data-word-wrap="false"')
   expect_match(html, 'data-tab-size="2"')
   expect_match(html, 'data-insert-spaces="true"')
-  expect_match(html, 'height:\\s*300px')
+  expect_match(html, 'height:\\s*auto')
   expect_match(html, 'width:\\s*100%')
 })
 
@@ -164,29 +162,20 @@ test_that("input_code_editor validates language", {
   )
 })
 
-test_that("input_code_editor handles empty code", {
-  editor <- input_code_editor("empty_editor", code = "")
+test_that("input_code_editor handles empty value", {
+  editor <- input_code_editor("empty_editor", value = "")
 
   html <- as.character(editor)
   expect_match(html, 'data-initial-code=""')
 })
 
-test_that("input_code_editor handles special characters in code", {
+test_that("input_code_editor handles special characters in value", {
   code_with_special <- "SELECT * FROM table WHERE name = 'O\"Brien' AND value < 100"
-  editor <- input_code_editor("special_editor", code = code_with_special)
+  editor <- input_code_editor("special_editor", value = code_with_special)
 
   html <- as.character(editor)
   # HTML should be properly escaped
   expect_true(grepl("data-initial-code", html))
-})
-
-test_that("input_code_editor handles NULL placeholder", {
-  editor <- input_code_editor("test", placeholder = NULL)
-
-  html <- as.character(editor)
-  # NULL placeholder should not appear in HTML or should be empty
-  # The htmltools package handles NULL attributes by not including them
-  expect_true(grepl('shiny-input-code-editor', html))
 })
 
 test_that("input_code_editor indentation parameter works correctly", {
@@ -226,6 +215,22 @@ test_that("update_code_editor validates inputs", {
   )
 })
 
+test_that("input_code_editor supports label parameter", {
+  editor_with_label <- input_code_editor("test", label = "SQL Query")
+  editor_without_label <- input_code_editor("test2")
+
+  html_with <- as.character(editor_with_label)
+  html_without <- as.character(editor_without_label)
+
+  # Editor with label should have a label element
+  expect_match(html_with, "<label")
+  expect_match(html_with, "SQL Query")
+
+  # Editor without label should not have a label element or have an empty one
+  # (shinyInputLabel handles NULL by not creating a label)
+  expect_true(grepl("shiny-input-code-editor", html_without))
+})
+
 test_that("input_code_editor creates unique IDs", {
   editor1 <- input_code_editor("editor1")
   editor2 <- input_code_editor("editor2")
@@ -239,11 +244,11 @@ test_that("input_code_editor creates unique IDs", {
   expect_false(grepl('id="editor1"', html2))
 })
 
-test_that("input_code_editor attaches dependency once", {
+test_that("input_code_editor attaches dependencies", {
   editor <- input_code_editor("test")
 
-  # The editor should be a tagList with the dependency and the div
-  expect_s3_class(editor, "shiny.tag.list")
+  # The editor should be a tag with the dependencies attached
+  expect_s3_class(editor, "shiny.tag")
 
   # Extract dependencies
   deps <- htmltools::findDependencies(editor)

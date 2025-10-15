@@ -90,10 +90,11 @@ ui <- page_sidebar(
         ),
         input_code_editor(
           "code",
-          code = "SELECT * FROM table\nWHERE column = 'value'\nORDER BY id DESC\nLIMIT 10;",
+          value = "SELECT * FROM table\nWHERE column = 'value'\nORDER BY id DESC\nLIMIT 10;",
+          label = "Code Editor",
           language = "sql",
-          height = "400px",
-          placeholder = "Enter your code here..."
+          # height = "400px",
+          fill = TRUE
         )
       )
     ),
@@ -147,7 +148,7 @@ server <- function(input, output, session) {
     yaml = "# Application Configuration\napp:\n  name: sample-application\n  version: 1.0.0\n  environment: production\n\nserver:\n  host: localhost\n  port: 3000\n  ssl:\n    enabled: true\n    cert: /path/to/cert.pem\n    key: /path/to/key.pem\n\ndatabase:\n  primary:\n    host: db.example.com\n    port: 5432\n    name: maindb\n    user: admin\n    max_connections: 100\n  replica:\n    enabled: true\n    hosts:\n      - replica1.example.com\n      - replica2.example.com\n\nlogging:\n  level: info\n  format: json\n  outputs:\n    - type: file\n      path: /var/log/app.log\n    - type: stdout\n\nmonitoring:\n  enabled: true\n  interval: 60\n  endpoints:\n    - /health\n    - /metrics"
   )
 
-  # Update code input settings
+  # Update code editor settings
   observeEvent(input$language, {
     update_code_editor("code", language = input$language)
   })
@@ -180,7 +181,7 @@ server <- function(input, output, session) {
     if (!is.null(sample)) {
       update_code_editor(
         "code",
-        code = sample,
+        value = sample,
         language = lang
       )
     }
@@ -188,7 +189,7 @@ server <- function(input, output, session) {
 
   # Clear editor
   observeEvent(input$clear_code, {
-    update_code_editor("code", code = "")
+    update_code_editor("code", value = "")
   })
 
   # Display current code

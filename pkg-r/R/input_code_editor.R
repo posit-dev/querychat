@@ -124,7 +124,9 @@ validate_language <- function(language, arg_name = "language") {
 #' features powered by Prism Code Editor.
 #'
 #' @param id Input ID. Access the current value with `input$<id>`.
-#' @param code Initial code content. Default is an empty string.
+#' @param value Initial code content. Default is an empty string.
+#' @param label Display label for the input. Default is `NULL` for no label.
+#' @param ... Must be empty. Prevents accidentally passing unnamed arguments.
 #' @param language Programming language for syntax highlighting. Must be one of:
 #'   `"sql"`, `"python"`, `"r"`, `"javascript"`, `"html"`, `"css"`, `"json"`,
 #'   `"bash"`, `"markdown"`, `"yaml"`, `"xml"`. Default is `"sql"`.
@@ -134,7 +136,6 @@ validate_language <- function(language, arg_name = "language") {
 #'   available themes. Default is `"github-light"`.
 #' @param theme_dark Theme to use in dark mode. See [code_editor_themes()] for
 #'   available themes. Default is `"github-dark"`.
-#' @param placeholder Placeholder text shown when editor is empty. Default is `NULL`.
 #' @param read_only Whether the editor should be read-only. Default is `FALSE`.
 #' @param line_numbers Whether to show line numbers. Default is `TRUE`.
 #' @param word_wrap Whether to wrap long lines. Default is `FALSE`.
@@ -168,7 +169,7 @@ validate_language <- function(language, arg_name = "language") {
 #' ui <- fluidPage(
 #'   input_code_editor(
 #'     "sql_query",
-#'     code = "SELECT * FROM table",
+#'     value = "SELECT * FROM table",
 #'     language = "sql"
 #'   )
 #' )
@@ -189,19 +190,25 @@ validate_language <- function(language, arg_name = "language") {
 #' @export
 input_code_editor <- function(
   id,
-  code = "",
+  value = "",
+  label = NULL,
+  ...,
   language = "sql",
-  height = "300px",
+  height = "auto",
   width = "100%",
   theme_light = "github-light",
   theme_dark = "github-dark",
-  placeholder = NULL,
   read_only = FALSE,
   line_numbers = TRUE,
   word_wrap = FALSE,
   tab_size = 2,
-  indentation = c("space", "tab")
+  indentation = c("space", "tab"),
+  fill = TRUE
 ) {
+  # Ensure no extra arguments
+  rlang::check_dots_empty()
+  stopifnot(rlang::is_bool(fill))
+
   # Validate inputs
   validate_language(language, "language")
   validate_theme(theme_light, "theme_light")
@@ -210,18 +217,29 @@ input_code_editor <- function(
   indentation <- match.arg(indentation)
   insert_spaces <- (indentation == "space")
 
-  # Create the editor container div with all configuration as data attributes
-  editor_div <- htmltools::tags$div(
+  # Create label element
+  label_tag <- asNamespace("shiny")[["shinyInputLabel"]](id, label)
+
+  # Create inner container that will hold the actual editor
+  editor_inner <- htmltools::tags$div(
+    class = "code-editor",
+    bslib::as_fill_item(),
+    style = htmltools::css(
+      display = "grid"
+    )
+  )
+
+  htmltools::tags$div(
     id = id,
     class = "shiny-input-code-editor",
-    bslib::as_fill_carrier(),
     style = htmltools::css(
       height = height,
-      width = width,
-      display = "grid"
+      width = width
     ),
+    if (fill) bslib::as_fill_item(),
+    bslib::as_fillable_container(),
     `data-language` = language,
-    `data-initial-code` = code,
+    `data-initial-code` = value,
     `data-theme-light` = theme_light,
     `data-theme-dark` = theme_dark,
     `data-read-only` = tolower(as.character(read_only)),
@@ -229,24 +247,20 @@ input_code_editor <- function(
     `data-word-wrap` = tolower(as.character(word_wrap)),
     `data-tab-size` = as.character(tab_size),
     `data-insert-spaces` = tolower(as.character(insert_spaces)),
-    `data-placeholder` = placeholder
-  )
-
-  # Return with htmlDependency attached
-  htmltools::tagList(
+    label_tag,
+    editor_inner,
     html_dependency_code_editor(),
-    editor_div
   )
 }
 
 #' Update a code editor from the server
 #'
-#' Update the code, language, themes, or other options of a code editor from the
+#' Update the value, language, themes, or other options of a code editor from the
 #' server side.
 #'
 #' @param id The input ID of the editor to update.
-#' @param code New code content. If `NULL`, the code is not changed.
-#' @param ... Reserved for future use. Must be named arguments.
+#' @param value New code content. If `NULL`, the value is not changed.
+#' @param ... Must be empty. Prevents accidentally passing unnamed arguments.
 #' @param language New programming language. If `NULL`, the language is not changed.
 #'   See [input_code_editor()] for supported languages.
 #' @param theme_light New light theme. If `NULL`, the theme is not changed.
@@ -271,7 +285,7 @@ input_code_editor <- function(
 #'   actionButton("change_lang", "Switch to Python"),
 #'   input_code_editor(
 #'     "code",
-#'     code = "SELECT * FROM table",
+#'     value = "SELECT * FROM table",
 #'     language = "sql"
 #'   )
 #' )
@@ -280,7 +294,7 @@ input_code_editor <- function(
 #'   observeEvent(input$change_lang, {
 #'     update_code_editor(
 #'       "code",
-#'       code = "print('Hello, world!')",
+#'       value = "print('Hello, world!')",
 #'       language = "python"
 #'     )
 #'   })
@@ -294,7 +308,7 @@ input_code_editor <- function(
 #' @export
 update_code_editor <- function(
   id,
-  code = NULL,
+  value = NULL,
   ...,
   language = NULL,
   theme_light = NULL,
@@ -323,8 +337,8 @@ update_code_editor <- function(
   # Build message with only non-NULL values
   message <- list()
 
-  if (!is.null(code)) {
-    message$code <- code
+  if (!is.null(value)) {
+    message$code <- value
   }
   if (!is.null(language)) {
     message$language <- language

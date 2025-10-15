@@ -147,7 +147,7 @@ function setupThemeWatcher(el, themeLight, themeDark, prismCodeEditorBasePath) {
 
 /**
  * Initializes a Prism Code Editor instance for an element
- * @param {HTMLElement} el - The editor container element
+ * @param {HTMLElement} el - The outer editor container element (.shiny-input-code-editor)
  * @returns {Promise<Object>} The created editor instance
  */
 async function initializeEditor(el) {
@@ -155,7 +155,14 @@ async function initializeEditor(el) {
     return el.prismEditor;
   }
 
-  // Get configuration from data attributes
+  // Find the inner container where the editor will be initialized
+  const editorContainer = el.querySelector('.code-editor');
+  if (!editorContainer) {
+    console.error('Could not find .code-editor inside .shiny-input-code-editor');
+    return;
+  }
+
+  // Get configuration from data attributes on the outer element
   const language = el.dataset.language || 'sql';
   const initialCode = el.dataset.initialCode || '';
   const themeLight = el.dataset.themeLight || 'github-light';
@@ -165,7 +172,6 @@ async function initializeEditor(el) {
   const wordWrap = el.dataset.wordWrap === 'true';
   const tabSize = parseInt(el.dataset.tabSize) || 2;
   const insertSpaces = el.dataset.insertSpaces !== 'false'; // default true
-  const placeholder = el.dataset.placeholder || '';
 
   // Get the base path to prism-code-editor files
   const prismCodeEditorBasePath = getPrismCodeEditorBasePath();
@@ -178,9 +184,9 @@ async function initializeEditor(el) {
   const { copyButton } = await import(`${prismCodeEditorBasePath}/extensions/copyButton/index.js`);
   const { defaultCommands } = await import(`${prismCodeEditorBasePath}/extensions/commands.js`);
 
-  // Create editor instance
+  // Create editor instance in the inner container
   const editor = createEditor(
-    el,
+    editorContainer,
     {
       language: language,
       value: initialCode,
@@ -188,14 +194,13 @@ async function initializeEditor(el) {
       insertSpaces: insertSpaces,
       lineNumbers: lineNumbers,
       wordWrap: wordWrap,
-      readOnly: readOnly,
-      placeholder: placeholder
+      readOnly: readOnly
     },
     copyButton(),
     defaultCommands()
   );
 
-  // Store editor instance on element
+  // Store editor instance on outer element
   el.prismEditor = editor;
   initializedEditors.add(el);
 
@@ -216,11 +221,11 @@ async function initializeEditor(el) {
         e.preventDefault();
         el.dispatchEvent(new CustomEvent('codeEditorUpdate'));
 
-        // Visual feedback: brief border flash
-        el.classList.add('code-editor-submit-flash');
+        // Visual feedback: brief border flash on inner container
+        editorContainer.classList.add('code-editor-submit-flash');
         setTimeout(() => {
-          el.classList.remove('code-editor-submit-flash');
-        }, 200);
+          editorContainer.classList.remove('code-editor-submit-flash');
+        }, 400);
       }
     });
   }

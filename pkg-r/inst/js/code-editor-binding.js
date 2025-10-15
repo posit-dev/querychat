@@ -35,11 +35,16 @@ function getPrismCodeEditorBasePath() {
 
   // Extract the base path from the src attribute
   const src = scriptElement.getAttribute('src');
+
+  // Convert relative URL to absolute URL
+  const absoluteSrc = new URL(src, document.baseURI).href;
+
   // Remove '/index.js' from the end to get the base path
-  _prismCodeEditorBasePath = src.replace(/\/index\.js$/, '');
+  _prismCodeEditorBasePath = absoluteSrc.replace(/\/index\.js$/, '');
 
   return _prismCodeEditorBasePath;
 }
+
 
 /**
  * Dynamically loads a language grammar module if not already loaded

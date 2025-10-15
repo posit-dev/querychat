@@ -89,6 +89,8 @@ input_code_editor <- function(
   rlang::check_dots_empty()
   stopifnot(rlang::is_bool(fill))
 
+  check_value_line_count(value)
+
   # Validate inputs
   language <- arg_match_language(language)
   theme_light <- arg_match_theme(theme_light, "theme_light")
@@ -167,6 +169,7 @@ update_code_editor <- function(
   message <- list()
 
   if (!is.null(value)) {
+    check_value_line_count(value)
     message$code <- value
   }
   if (!is.null(language)) {
@@ -301,4 +304,21 @@ arg_match_language <- function(language, arg_name = "language") {
     error_arg = arg_name,
     error_call = rlang::caller_env()
   )
+}
+
+check_value_line_count <- function(value) {
+  if (is.null(value) || !is.character(value) || length(value) == 0) {
+    return(invisible(NULL))
+  }
+
+  line_count <- length(strsplit(value, "\n", fixed = TRUE)[[1]])
+
+  if (line_count >= 750) {
+    cli::cli_warn(c(
+      "Code editor value contains {line_count} lines.",
+      "i" = "The editor may experience performance issues with 750 or more lines."
+    ))
+  }
+
+  invisible(NULL)
 }

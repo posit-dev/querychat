@@ -30,40 +30,17 @@ test_that("code_editor_themes returns character vector of themes", {
   expect_true("vs-code-dark" %in% themes)
 })
 
-test_that("validate_theme accepts valid themes", {
-  expect_silent(validate_theme("github-light"))
-  expect_silent(validate_theme("github-dark"))
-  expect_silent(validate_theme("vs-code-light"))
-  expect_silent(validate_theme(NULL))
-})
-
-test_that("validate_theme rejects invalid themes", {
+test_that("arg_match_theme rejects invalid themes", {
   expect_error(
-    validate_theme("nonexistent-theme"),
-    "must be one of the available themes"
-  )
-  expect_error(
-    validate_theme("fake-theme"),
-    "You provided"
+    arg_match_theme("nonexistent-theme"),
+    "must be one of"
   )
 })
 
-test_that("validate_language accepts valid languages", {
-  expect_silent(validate_language("sql"))
-  expect_silent(validate_language("python"))
-  expect_silent(validate_language("r"))
-  expect_silent(validate_language("javascript"))
-  expect_silent(validate_language(NULL))
-})
-
-test_that("validate_language rejects invalid languages", {
+test_that("arg_match_language rejects invalid languages", {
   expect_error(
-    validate_language("fortran"),
-    "must be one of the supported languages"
-  )
-  expect_error(
-    validate_language("cobol"),
-    "You provided"
+    arg_match_language("fortran"),
+    "must be one of"
   )
 })
 
@@ -146,19 +123,19 @@ test_that("input_code_editor uses correct defaults", {
 test_that("input_code_editor validates theme names", {
   expect_error(
     input_code_editor("test", theme_light = "invalid-theme"),
-    "theme_light.*must be one of the available themes"
+    "theme_light.*must be one of"
   )
 
   expect_error(
     input_code_editor("test", theme_dark = "invalid-theme"),
-    "theme_dark.*must be one of the available themes"
+    "theme_dark.*must be one of"
   )
 })
 
 test_that("input_code_editor validates language", {
   expect_error(
     input_code_editor("test", language = "fortran"),
-    "language.*must be one of the supported languages"
+    "language.*must be one of"
   )
 })
 
@@ -196,17 +173,17 @@ test_that("update_code_editor validates inputs", {
 
   expect_error(
     update_code_editor("test", language = "fortran", session = NULL),
-    "language.*must be one of the supported languages"
+    "language.*must be one of"
   )
 
   expect_error(
     update_code_editor("test", theme_light = "invalid", session = NULL),
-    "theme_light.*must be one of the available themes"
+    "theme_light.*must be one of"
   )
 
   expect_error(
     update_code_editor("test", theme_dark = "invalid", session = NULL),
-    "theme_dark.*must be one of the available themes"
+    "theme_dark.*must be one of"
   )
 
   expect_error(
@@ -277,4 +254,74 @@ test_that("input_code_editor tab_size validates range", {
 
   # Note: The function doesn't currently validate tab_size range,
   # but this test is here for future validation if needed
+})
+
+test_that("input_code_editor warns when value has 750 or more lines", {
+  # No warning for small values
+  expect_silent(input_code_editor("test1", value = "line1\nline2\nline3"))
+
+  # No warning for exactly 749 lines
+  value_749 <- paste(rep("line", 749), collapse = "\n")
+  expect_silent(input_code_editor("test2", value = value_749))
+
+  # Warning for exactly 750 lines
+  value_750 <- paste(rep("line", 750), collapse = "\n")
+  expect_warning(
+    input_code_editor("test3", value = value_750),
+    "Code editor value contains 750 lines"
+  )
+  expect_warning(
+    input_code_editor("test3", value = value_750),
+    "performance issues"
+  )
+
+  # Warning for more than 750 lines
+  value_1000 <- paste(rep("line", 1000), collapse = "\n")
+  expect_warning(
+    input_code_editor("test4", value = value_1000),
+    "Code editor value contains 1000 lines"
+  )
+})
+
+test_that("update_code_editor warns when value has 750 or more lines", {
+  mock_session <- list(sendInputMessage = function(...) invisible())
+
+  # No warning for small values
+  expect_silent(update_code_editor(
+    "test1",
+    value = "line1\nline2",
+    session = mock_session
+  ))
+
+  # Warning for exactly 750 lines
+  value_750 <- paste(rep("line", 750), collapse = "\n")
+  expect_warning(
+    update_code_editor("test3", value = value_750, session = mock_session),
+    "Code editor value contains 750 lines"
+  )
+
+  # Warning for more than 750 lines
+  value_1000 <- paste(rep("line", 1000), collapse = "\n")
+  expect_warning(
+    update_code_editor("test4", value = value_1000, session = mock_session),
+    "Code editor value contains 1000 lines"
+  )
+})
+
+test_that("check_value_line_count handles edge cases", {
+  # NULL value
+  expect_silent(querychat:::check_value_line_count(NULL))
+
+  # Empty string
+  expect_silent(querychat:::check_value_line_count(""))
+
+  # Empty character vector
+  expect_silent(querychat:::check_value_line_count(character(0)))
+
+  # Single line
+  expect_silent(querychat:::check_value_line_count("single line"))
+
+  # Multiple lines below threshold
+  value_100 <- paste(rep("line", 100), collapse = "\n")
+  expect_silent(querychat:::check_value_line_count(value_100))
 })

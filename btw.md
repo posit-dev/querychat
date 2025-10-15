@@ -2,20 +2,8 @@
 client: aws_bedrock/us.anthropic.claude-sonnet-4-5-20250929-v1:0
 tools:
   - docs
-  # - env
   - files
-  # - ide
-  # - search
-  # - session
   - web
----
-
-Follow these important style rules when writing R code:
-
-* Prefer solutions that use {tidyverse}
-* Always use `<-` for assignment
-* Always use the native base-R pipe `|>` for piped expressions
-
 ---
 
 # Code Editor Component Implementation Plan
@@ -536,6 +524,37 @@ Each should include:
 - Modern browsers with ES6+ support
 - Chrome/Edge 90+, Firefox 88+, Safari 14+
 - No IE11 support (consistent with Bootstrap 5)
+
+## Key development commands
+
+General advice:
+* When running R from the console, always run it with `--quiet --vanilla`
+* Always run `air format .` before committing code
+* The R package is in `pkg-r/`, always keep track of your working directory.
+
+### Testing
+
+- Tests for `pkg-r/R/{name}.R` go in `pkg-r/tests/testthat/test-{name}.R`.
+- Use `devtools::test("pkg-r", reporter = "check")` to run all tests
+- Use `devtools::test("pkg-r", filter = "name", reporter = "check")` to run tests for `pkg-r/R/{name}.R`
+- DO NOT USE `devtools::test_active_file()`
+- All testing functions automatically load code; you don't need to.
+
+- All new code should have an accompanying test.
+- If there are existing tests, place new tests next to similar existing tests.
+
+### Documentation
+
+- Run `devtools::document("pkg-r")` after changing any roxygen2 docs.
+- Every user facing function should be exported and have roxygen2 documentation.
+- Whenever you add a new documentation file, make sure to also add the topic name to `_pkgdown.yml`.
+- Use sentence case for all headings
+
+### Code style
+
+- Use newspaper style/high-level first function organization. Main logic at the top and helper functions should come below.
+- Don't define functions inside of functions unless they are very brief.
+- Error messages should use `cli::cli_abort()` and follow the tidyverse style guide (https://style.tidyverse.org/errors.html)
 
 ---
 

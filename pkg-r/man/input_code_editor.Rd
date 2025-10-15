@@ -2,28 +2,53 @@
 % Please edit documentation in R/input_code_editor.R
 \name{input_code_editor}
 \alias{input_code_editor}
+\alias{update_code_editor}
+\alias{code_editor_themes}
 \title{Code editor input for Shiny}
 \usage{
 input_code_editor(
   id,
-  code = "",
+  value = "",
+  label = NULL,
+  ...,
   language = "sql",
-  height = "300px",
+  height = "auto",
   width = "100\%",
   theme_light = "github-light",
   theme_dark = "github-dark",
-  placeholder = NULL,
   read_only = FALSE,
   line_numbers = TRUE,
   word_wrap = FALSE,
   tab_size = 2,
-  indentation = c("space", "tab")
+  indentation = c("space", "tab"),
+  fill = TRUE
 )
+
+update_code_editor(
+  id,
+  value = NULL,
+  ...,
+  language = NULL,
+  theme_light = NULL,
+  theme_dark = NULL,
+  read_only = NULL,
+  line_numbers = NULL,
+  word_wrap = NULL,
+  tab_size = NULL,
+  indentation = NULL,
+  session = shiny::getDefaultReactiveDomain()
+)
+
+code_editor_themes()
 }
 \arguments{
 \item{id}{Input ID. Access the current value with \verb{input$<id>}.}
 
-\item{code}{Initial code content. Default is an empty string.}
+\item{value}{Initial code content. Default is an empty string.}
+
+\item{label}{Display label for the input. Default is \code{NULL} for no label.}
+
+\item{...}{Must be empty. Prevents accidentally passing unnamed arguments.}
 
 \item{language}{Programming language for syntax highlighting. Must be one of:
 \code{"sql"}, \code{"python"}, \code{"r"}, \code{"javascript"}, \code{"html"}, \code{"css"}, \code{"json"},
@@ -39,8 +64,6 @@ available themes. Default is \code{"github-light"}.}
 \item{theme_dark}{Theme to use in dark mode. See \code{\link[=code_editor_themes]{code_editor_themes()}} for
 available themes. Default is \code{"github-dark"}.}
 
-\item{placeholder}{Placeholder text shown when editor is empty. Default is \code{NULL}.}
-
 \item{read_only}{Whether the editor should be read-only. Default is \code{FALSE}.}
 
 \item{line_numbers}{Whether to show line numbers. Default is \code{TRUE}.}
@@ -49,16 +72,29 @@ available themes. Default is \code{"github-dark"}.}
 
 \item{tab_size}{Number of spaces per tab. Default is \code{2}.}
 
-\item{indentation}{Type of indentation: \code{"space"} or \code{"tab"}. Default is \code{"space"}.}
+\item{indentation}{Type of indentation: \code{"space"} or \code{"tab"}. Default is
+\code{"space"}.}
+
+\item{session}{Shiny session object, for expert use only.}
 }
 \value{
 An HTML tag object that can be included in a Shiny UI.
 }
 \description{
-Creates an interactive code editor input that can be used in Shiny applications.
-The editor provides syntax highlighting, line numbers, and other code editing
-features powered by Prism Code Editor.
+Creates an interactive code editor input that can be used in Shiny
+applications. The editor provides syntax highlighting, line numbers, and
+other code editing features powered by Prism Code Editor.
 }
+\section{Functions}{
+\itemize{
+\item \code{input_code_editor()}: Create a light-weight code editor input
+
+\item \code{update_code_editor()}: Update the code editor input value and settings
+
+\item \code{code_editor_themes()}: List available code editor syntax highlighting
+themes
+
+}}
 \section{Keyboard shortcuts}{
 
 The editor supports the following keyboard shortcuts:
@@ -82,19 +118,19 @@ The editor value is sent to R when:
 
 \section{Theme switching}{
 
-The editor automatically switches between \code{theme_light} and \code{theme_dark} based
-on the Bootstrap 5 \code{data-bs-theme} attribute on the \verb{<html>} element. This
-integrates seamlessly with \code{bslib::bs_theme()} theme switching.
+The editor automatically switches between \code{theme_light} and \code{theme_dark}
+when used with \code{\link[bslib:input_dark_mode]{bslib::input_dark_mode()}}.
 }
 
 \examples{
 \dontrun{
 library(shiny)
+library(querychat)
 
 ui <- fluidPage(
   input_code_editor(
     "sql_query",
-    code = "SELECT * FROM table",
+    value = "SELECT * FROM table",
     language = "sql"
   )
 )
@@ -108,10 +144,4 @@ server <- function(input, output, session) {
 shinyApp(ui, server)
 }
 
-}
-\seealso{
-\itemize{
-\item \code{\link[=update_code_editor]{update_code_editor()}} to update the editor from the server
-\item \code{\link[=code_editor_themes]{code_editor_themes()}} to see available themes
-}
 }

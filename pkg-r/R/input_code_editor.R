@@ -1,148 +1,8 @@
-#' HTML dependency for the code editor component
-#'
-#' This function returns an htmlDependency object that bundles all necessary
-#' JavaScript and CSS files for the Prism Code Editor component.
-#'
-#' @return An htmlDependency object
-#' @keywords internal
-html_dependency_code_editor <- function() {
-  dep_code_editor <- htmltools::htmlDependency(
-    name = "shiny-input-code-editor",
-    version = utils::packageVersion("querychat"),
-    package = "querychat",
-    src = "js",
-    script = "code-editor-binding.js",
-    stylesheet = "code-editor.css",
-    all_files = FALSE
-  )
-
-  htmltools::tagList(
-    html_dependency_prism_code_editor(),
-    dep_code_editor
-  )
-}
-
-html_dependency_prism_code_editor <- function() {
-  htmltools::htmlDependency(
-    name = "prism-code-editor",
-    version = "3.0.0",
-    package = "querychat",
-    src = "js/prism-code-editor",
-    script = list(src = "index.js", type = "module"),
-    stylesheet = c("layout.css", "copy.css"),
-    all_files = TRUE
-  )
-}
-
-#' Get available code editor themes
-#'
-#' Returns a character vector of available theme names that can be used with
-#' `input_code_editor()` and `update_code_editor()`.
-#'
-#' @return A character vector of theme names
-#' @export
-code_editor_themes <- function() {
-  themes_dir <- system.file(
-    "js/prism-code-editor/themes",
-    package = "querychat"
-  )
-
-  if (!dir.exists(themes_dir)) {
-    return(character(0))
-  }
-
-  theme_files <- list.files(themes_dir, pattern = "\\.css$")
-  sub("\\.css$", "", theme_files)
-}
-
-#' Validate theme name
-#'
-#' @param theme A theme name
-#' @param arg_name Name of the argument (for error messages)
-#' @return The validated theme name (invisibly)
-#' @keywords internal
-validate_theme <- function(theme, arg_name = "theme") {
-  if (is.null(theme)) {
-    return(invisible(NULL))
-  }
-
-  available_themes <- code_editor_themes()
-
-  if (!theme %in% available_themes) {
-    cli::cli_abort(c(
-      "{.arg {arg_name}} must be one of the available themes.",
-      "x" = "You provided: {.val {theme}}",
-      "i" = "Available themes: {.val {available_themes}}"
-    ))
-  }
-
-  invisible(theme)
-}
-
-#' Validate language name
-#'
-#' @param language A language identifier
-#' @param arg_name Name of the argument (for error messages)
-#' @return The validated language name (invisibly)
-#' @keywords internal
-validate_language <- function(language, arg_name = "language") {
-  if (is.null(language)) {
-    return(invisible(NULL))
-  }
-
-  # List of initially supported languages - these match the grammar files
-  # we've bundled from prism-code-editor
-  supported_languages <- c(
-    "sql",
-    "python",
-    "r",
-    "javascript",
-    "html",
-    "css",
-    "json",
-    "bash",
-    "markdown",
-    "yaml",
-    "xml"
-  )
-
-  if (!language %in% supported_languages) {
-    cli::cli_abort(c(
-      "{.arg {arg_name}} must be one of the supported languages.",
-      "x" = "You provided: {.val {language}}",
-      "i" = "Supported languages: {.val {supported_languages}}"
-    ))
-  }
-
-  invisible(language)
-}
-
 #' Code editor input for Shiny
 #'
-#' Creates an interactive code editor input that can be used in Shiny applications.
-#' The editor provides syntax highlighting, line numbers, and other code editing
-#' features powered by Prism Code Editor.
-#'
-#' @param id Input ID. Access the current value with `input$<id>`.
-#' @param value Initial code content. Default is an empty string.
-#' @param label Display label for the input. Default is `NULL` for no label.
-#' @param ... Must be empty. Prevents accidentally passing unnamed arguments.
-#' @param language Programming language for syntax highlighting. Must be one of:
-#'   `"sql"`, `"python"`, `"r"`, `"javascript"`, `"html"`, `"css"`, `"json"`,
-#'   `"bash"`, `"markdown"`, `"yaml"`, `"xml"`. Default is `"sql"`.
-#' @param height CSS height of the editor. Default is `"300px"`.
-#' @param width CSS width of the editor. Default is `"100%"`.
-#' @param theme_light Theme to use in light mode. See [code_editor_themes()] for
-#'   available themes. Default is `"github-light"`.
-#' @param theme_dark Theme to use in dark mode. See [code_editor_themes()] for
-#'   available themes. Default is `"github-dark"`.
-#' @param read_only Whether the editor should be read-only. Default is `FALSE`.
-#' @param line_numbers Whether to show line numbers. Default is `TRUE`.
-#' @param word_wrap Whether to wrap long lines. Default is `FALSE`.
-#' @param tab_size Number of spaces per tab. Default is `2`.
-#' @param indentation Type of indentation: `"space"` or `"tab"`. Default is `"space"`.
-#'
-#' @return An HTML tag object that can be included in a Shiny UI.
+#' Creates an interactive code editor input that can be used in Shiny
+#' applications. The editor provides syntax highlighting, line numbers, and
+#' other code editing features powered by Prism Code Editor.
 #'
 #' @section Keyboard shortcuts:
 #' The editor supports the following keyboard shortcuts:
@@ -158,13 +18,13 @@ validate_language <- function(language, arg_name = "language") {
 #' - The user presses `Ctrl/Cmd+Enter`
 #'
 #' @section Theme switching:
-#' The editor automatically switches between `theme_light` and `theme_dark` based
-#' on the Bootstrap 5 `data-bs-theme` attribute on the `<html>` element. This
-#' integrates seamlessly with `bslib::bs_theme()` theme switching.
+#' The editor automatically switches between `theme_light` and `theme_dark`
+#' when used with [bslib::input_dark_mode()].
 #'
 #' @examples
 #' \dontrun{
 #' library(shiny)
+#' library(querychat)
 #'
 #' ui <- fluidPage(
 #'   input_code_editor(
@@ -183,10 +43,30 @@ validate_language <- function(language, arg_name = "language") {
 #' shinyApp(ui, server)
 #' }
 #'
-#' @seealso
-#' - [update_code_editor()] to update the editor from the server
-#' - [code_editor_themes()] to see available themes
+#' @param id Input ID. Access the current value with `input$<id>`.
+#' @param value Initial code content. Default is an empty string.
+#' @param label Display label for the input. Default is `NULL` for no label.
+#' @param ... Must be empty. Prevents accidentally passing unnamed arguments.
+#' @param language Programming language for syntax highlighting. Must be one of:
+#'   `"sql"`, `"python"`, `"r"`, `"javascript"`, `"html"`, `"css"`, `"json"`,
+#'   `"bash"`, `"markdown"`, `"yaml"`, `"xml"`. Default is `"sql"`.
+#' @param height CSS height of the editor. Default is `"300px"`.
+#' @param width CSS width of the editor. Default is `"100%"`.
+#' @param theme_light Theme to use in light mode. See [code_editor_themes()] for
+#'   available themes. Default is `"github-light"`.
+#' @param theme_dark Theme to use in dark mode. See [code_editor_themes()] for
+#'   available themes. Default is `"github-dark"`.
+#' @param read_only Whether the editor should be read-only. Default is `FALSE`.
+#' @param line_numbers Whether to show line numbers. Default is `TRUE`.
+#' @param word_wrap Whether to wrap long lines. Default is `FALSE`.
+#' @param tab_size Number of spaces per tab. Default is `2`.
+#' @param indentation Type of indentation: `"space"` or `"tab"`. Default is
+#'   `"space"`.
+#' @param session Shiny session object, for expert use only.
 #'
+#' @return An HTML tag object that can be included in a Shiny UI.
+#'
+#' @describeIn input_code_editor Create a light-weight code editor input
 #' @export
 input_code_editor <- function(
   id,
@@ -210,9 +90,9 @@ input_code_editor <- function(
   stopifnot(rlang::is_bool(fill))
 
   # Validate inputs
-  validate_language(language, "language")
-  validate_theme(theme_light, "theme_light")
-  validate_theme(theme_dark, "theme_dark")
+  language <- arg_match_language(language)
+  theme_light <- arg_match_theme(theme_light, "theme_light")
+  theme_dark <- arg_match_theme(theme_dark, "theme_dark")
 
   indentation <- match.arg(indentation)
   insert_spaces <- (indentation == "space")
@@ -253,58 +133,7 @@ input_code_editor <- function(
   )
 }
 
-#' Update a code editor from the server
-#'
-#' Update the value, language, themes, or other options of a code editor from the
-#' server side.
-#'
-#' @param id The input ID of the editor to update.
-#' @param value New code content. If `NULL`, the value is not changed.
-#' @param ... Must be empty. Prevents accidentally passing unnamed arguments.
-#' @param language New programming language. If `NULL`, the language is not changed.
-#'   See [input_code_editor()] for supported languages.
-#' @param theme_light New light theme. If `NULL`, the theme is not changed.
-#'   See [code_editor_themes()] for available themes.
-#' @param theme_dark New dark theme. If `NULL`, the theme is not changed.
-#'   See [code_editor_themes()] for available themes.
-#' @param read_only New read-only state. If `NULL`, the state is not changed.
-#' @param line_numbers New line numbers setting. If `NULL`, the setting is not changed.
-#' @param word_wrap New word wrap setting. If `NULL`, the setting is not changed.
-#' @param tab_size New tab size. If `NULL`, the size is not changed.
-#' @param indentation New indentation type: `"space"` or `"tab"`. If `NULL`, the
-#'   type is not changed.
-#' @param session The Shiny session object. Defaults to the current session.
-#'
-#' @return Called for its side effect of updating the editor. Invisibly returns `NULL`.
-#'
-#' @examples
-#' \dontrun{
-#' library(shiny)
-#'
-#' ui <- fluidPage(
-#'   actionButton("change_lang", "Switch to Python"),
-#'   input_code_editor(
-#'     "code",
-#'     value = "SELECT * FROM table",
-#'     language = "sql"
-#'   )
-#' )
-#'
-#' server <- function(input, output, session) {
-#'   observeEvent(input$change_lang, {
-#'     update_code_editor(
-#'       "code",
-#'       value = "print('Hello, world!')",
-#'       language = "python"
-#'     )
-#'   })
-#' }
-#'
-#' shinyApp(ui, server)
-#' }
-#'
-#' @seealso [input_code_editor()]
-#'
+#' @describeIn input_code_editor Update the code editor input value and settings
 #' @export
 update_code_editor <- function(
   id,
@@ -325,13 +154,13 @@ update_code_editor <- function(
 
   # Validate inputs if provided
   if (!is.null(language)) {
-    validate_language(language, "language")
+    language <- arg_match_language(language, "language")
   }
   if (!is.null(theme_light)) {
-    validate_theme(theme_light, "theme_light")
+    theme_light <- arg_match_theme(theme_light, "theme_light")
   }
   if (!is.null(theme_dark)) {
-    validate_theme(theme_dark, "theme_dark")
+    theme_dark <- arg_match_theme(theme_dark, "theme_dark")
   }
 
   # Build message with only non-NULL values
@@ -375,4 +204,101 @@ update_code_editor <- function(
   session$sendInputMessage(id, message)
 
   invisible(NULL)
+}
+
+#' HTML dependency for the code editor component
+#'
+#' This function returns an htmlDependency object that bundles all necessary
+#' JavaScript and CSS files for the Prism Code Editor component.
+#'
+#' @return An htmlDependency object
+#' @keywords internal
+html_dependency_code_editor <- function() {
+  dep_code_editor <- htmltools::htmlDependency(
+    name = "shiny-input-code-editor",
+    version = utils::packageVersion("querychat"),
+    package = "querychat",
+    src = "js",
+    script = "code-editor-binding.js",
+    stylesheet = "code-editor.css",
+    all_files = FALSE
+  )
+
+  htmltools::tagList(
+    html_dependency_prism_code_editor(),
+    dep_code_editor
+  )
+}
+
+html_dependency_prism_code_editor <- function() {
+  htmltools::htmlDependency(
+    name = "prism-code-editor",
+    version = "3.0.0",
+    package = "querychat",
+    src = "js/prism-code-editor",
+    script = list(src = "index.js", type = "module"),
+    stylesheet = c("layout.css", "copy.css"),
+    all_files = TRUE
+  )
+}
+
+#' @describeIn input_code_editor List available code editor syntax highlighting
+#'   themes
+#' @export
+code_editor_themes <- function() {
+  themes_dir <- system.file(
+    "js/prism-code-editor/themes",
+    package = "querychat"
+  )
+
+  if (!dir.exists(themes_dir)) {
+    return(character(0))
+  }
+
+  theme_files <- list.files(themes_dir, pattern = "\\.css$")
+  sub("\\.css$", "", theme_files)
+}
+
+arg_match_theme <- function(theme, arg_name = "theme") {
+  if (is.null(theme)) {
+    return(invisible(NULL))
+  }
+
+  available_themes <- code_editor_themes()
+
+  rlang::arg_match(
+    theme,
+    values = available_themes,
+    error_arg = arg_name,
+    error_call = rlang::caller_env()
+  )
+}
+
+arg_match_language <- function(language, arg_name = "language") {
+  if (is.null(language)) {
+    return(invisible(NULL))
+  }
+
+  # List of initially supported languages - these match the grammar files
+  # we've bundled from prism-code-editor
+  supported_languages <- c(
+    "sql",
+    "python",
+    "r",
+    "javascript",
+    "html",
+    "css",
+    "json",
+    "bash",
+    "markdown",
+    "yaml",
+    "xml"
+  )
+
+  rlang::arg_match(
+    language,
+    values = supported_languages,
+    error_arg = arg_name,
+    error_call = rlang::caller_env()
+  )
 }

@@ -309,8 +309,8 @@ check_value_line_count <- function(value) {
   line_count <- length(strsplit(value, "\n", fixed = TRUE)[[1]])
 
   if (line_count >= 750) {
-    cli::cli_warn(c(
-      "Code editor value contains {line_count} lines.",
+    rlang::warn(c(
+      sprintf("Code editor value contains %d lines.", line_count),
       "i" = "The editor may experience performance issues with 750 or more lines."
     ))
   }

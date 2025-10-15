@@ -6,14 +6,31 @@
 #' @return An htmlDependency object
 #' @keywords internal
 html_dependency_code_editor <- function() {
+  dep_code_editor <- htmltools::htmlDependency(
+    name = "shiny-input-code-editor",
+    version = utils::packageVersion("querychat"),
+    package = "querychat",
+    src = "js",
+    script = "code-editor-binding.js",
+    stylesheet = "code-editor.css",
+    all_files = FALSE
+  )
+
+  htmltools::tagList(
+    html_dependency_prism_code_editor(),
+    dep_code_editor
+  )
+}
+
+html_dependency_prism_code_editor <- function() {
   htmltools::htmlDependency(
     name = "prism-code-editor",
     version = "3.0.0",
     package = "querychat",
     src = "js/prism-code-editor",
-    script = c("index.js", "../code-editor-binding.js"),
-    stylesheet = c("layout.css", "copy.css", "../code-editor.css"),
-    all_files = FALSE
+    script = list(src = "index.js", type = "module"),
+    stylesheet = c("layout.css", "copy.css"),
+    all_files = TRUE
   )
 }
 
@@ -76,8 +93,17 @@ validate_language <- function(language, arg_name = "language") {
   # List of initially supported languages - these match the grammar files
   # we've bundled from prism-code-editor
   supported_languages <- c(
-    "sql", "python", "r", "javascript", "html", "css", "json",
-    "bash", "markdown", "yaml", "xml"
+    "sql",
+    "python",
+    "r",
+    "javascript",
+    "html",
+    "css",
+    "json",
+    "bash",
+    "markdown",
+    "yaml",
+    "xml"
   )
 
   if (!language %in% supported_languages) {

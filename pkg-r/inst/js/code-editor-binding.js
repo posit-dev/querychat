@@ -361,12 +361,14 @@ $.extend(codeEditorBinding, {
         loadTheme(el.id, data.theme_dark, prismCodeEditorBasePath);
       }
     }
+
+    el.dispatchEvent(new CustomEvent('codeEditorUpdate'));
   },
 
   // Rate policy: debounce to avoid excessive updates
   getRatePolicy: function() {
     return {
-      policy: 'debounce',
+      policy: 'throttle',
       delay: 300
     };
   }

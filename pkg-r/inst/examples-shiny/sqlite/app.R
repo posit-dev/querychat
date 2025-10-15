@@ -19,8 +19,7 @@ conn <- dbConnect(RSQLite::SQLite(), temp_db)
 # querychat_init
 
 # Create sample data in the database
-penguins_data <- palmerpenguins::penguins
-dbWriteTable(conn, "penguins", penguins_data, overwrite = TRUE)
+dbWriteTable(conn, "penguins", palmerpenguins::penguins, overwrite = TRUE)
 
 # Define a custom greeting for the database app
 greeting <- "
@@ -50,16 +49,17 @@ querychat_config <- querychat_init(
 ui <- page_sidebar(
   title = "Database Query Chat",
   sidebar = querychat_sidebar("chat"),
+
   h2("Current Data View"),
   p(
     "The table below shows the current filtered data based on your chat queries:"
   ),
   DT::DTOutput("data_table", fill = FALSE),
-  br(),
-  h3("Current SQL Query"),
+
+  h2("Current SQL Query"),
   verbatimTextOutput("sql_query"),
-  br(),
-  h3("Dataset Information"),
+
+  h2("Dataset Information"),
   p("This demo database contains:"),
   tags$ul(
     tags$li("penguins - Palmer Penguins dataset (344 rows, 8 columns)"),
@@ -74,8 +74,7 @@ server <- function(input, output, session) {
 
   output$data_table <- DT::renderDT(
     {
-      df <- chat$df()
-      df
+      chat$df()
     },
     options = list(pageLength = 10, scrollX = TRUE)
   )

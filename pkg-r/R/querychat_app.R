@@ -63,7 +63,7 @@ querychat_app <- function(config, ..., bookmark_store = "url") {
             )
           )
         ),
-        shiny::uiOutput("sql_output")
+        querychat_ui_code("chat")
       ),
       bslib::card(
         bslib::card_header(bsicons::bs_icon("table"), "Data"),
@@ -110,22 +110,22 @@ querychat_app <- function(config, ..., bookmark_store = "url") {
       DT::datatable(qc$df())
     })
 
-    output$sql_output <- shiny::renderUI({
-      sql <- if (shiny::isTruthy(qc$sql())) {
-        qc$sql()
-      } else {
-        paste("SELECT * FROM", config$data_source$table_name)
-      }
+    # output$sql_output <- shiny::renderUI({
+    #   sql <- if (shiny::isTruthy(qc$sql())) {
+    #     qc$sql()
+    #   } else {
+    #     paste("SELECT * FROM", config$data_source$table_name)
+    #   }
 
-      sql_code <- paste(c("```sql", sql, "```"), collapse = "\n")
+    #   sql_code <- paste(c("```sql", sql, "```"), collapse = "\n")
 
-      shinychat::output_markdown_stream(
-        "sql_code",
-        content = sql_code,
-        auto_scroll = FALSE,
-        width = "100%"
-      )
-    })
+    #   shinychat::output_markdown_stream(
+    #     "sql_code",
+    #     content = sql_code,
+    #     auto_scroll = FALSE,
+    #     width = "100%"
+    #   )
+    # })
 
     shiny::observeEvent(input$close_btn, label = "on_close_btn", {
       shiny::stopApp()

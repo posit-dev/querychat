@@ -3,11 +3,14 @@
 \name{querychat_ui}
 \alias{querychat_ui}
 \alias{querychat_sidebar}
+\alias{querychat_ui_code}
 \title{UI components for querychat}
 \usage{
+querychat_ui(id)
+
 querychat_sidebar(id, width = 400, height = "100\%", ...)
 
-querychat_ui(id)
+querychat_ui_code(id, ...)
 }
 \arguments{
 \item{id}{The ID of the module instance.}
@@ -27,3 +30,15 @@ These functions create UI components for the querychat interface.
 wraps the chat interface in a \code{\link[bslib:sidebar]{bslib::sidebar()}} component designed to be
 used as the \code{sidebar} argument to \code{\link[bslib:page_sidebar]{bslib::page_sidebar()}}.
 }
+\section{Functions}{
+\itemize{
+\item \code{querychat_ui()}: Create a chat interface to be used in a Shiny app.
+
+\item \code{querychat_sidebar()}: Create a chat interface to be used as a sidebar in
+pages like \code{\link[bslib:page_sidebar]{bslib::page_sidebar()}}, \code{\link[bslib:page_navbar]{bslib::page_navbar()}}, or
+\code{\link[bslib:sidebar]{bslib::layout_sidebar()}}.
+
+\item \code{querychat_ui_code()}: A code editor UI component that displays the current
+SQL query and allows the user to edit it.
+
+}}

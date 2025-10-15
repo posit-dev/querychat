@@ -142,20 +142,7 @@ querychat_init <- function(
 #'
 #' @return A UI object that can be embedded in a Shiny app.
 #'
-#' @name querychat_ui
-#' @export
-querychat_sidebar <- function(id, width = 400, height = "100%", ...) {
-  bslib::sidebar(
-    width = width,
-    height = height,
-    class = "querychat-sidebar",
-    ...,
-    # purposely NOT using ns() for `id`, we're just a passthrough
-    querychat_ui(id)
-  )
-}
-
-#' @rdname querychat_ui
+#' @describeIn querychat_ui Create a chat interface to be used in a Shiny app.
 #' @export
 querychat_ui <- function(id) {
   ns <- shiny::NS(id)
@@ -174,6 +161,34 @@ querychat_ui <- function(id) {
       fill = TRUE,
       class = "querychat"
     )
+  )
+}
+
+#' @describeIn querychat_ui Create a chat interface to be used as a sidebar in
+#'   pages like [bslib::page_sidebar()], [bslib::page_navbar()], or
+#'   [bslib::layout_sidebar()].
+#' @export
+querychat_sidebar <- function(id, width = 400, height = "100%", ...) {
+  bslib::sidebar(
+    width = width,
+    height = height,
+    class = "querychat-sidebar",
+    ...,
+    # purposely NOT using ns() for `id`, we're just a passthrough
+    querychat_ui(id)
+  )
+}
+
+
+#' @describeIn querychat_ui A code editor UI component that displays the current
+#'   SQL query and allows the user to edit it.
+#' @export
+querychat_ui_code <- function(id, ...) {
+  ns <- shiny::NS(id)
+  input_code_editor(
+    ns("code_editor"),
+    language = "sql",
+    ...
   )
 }
 
@@ -264,6 +279,15 @@ querychat_server <- function(id, querychat_config) {
     shiny::observeEvent(input$chat_update, label = "on_chat_update", {
       current_query(input$chat_update$query)
       current_title(input$chat_update$title)
+    })
+
+    shiny::observeEvent(current_query(), {
+      update_code_editor("code_editor", value = current_query())
+    })
+
+    shiny::observeEvent(input$code_editor, {
+      shiny::req(input$code_editor)
+      current_query(input$code_editor)
     })
 
     list(

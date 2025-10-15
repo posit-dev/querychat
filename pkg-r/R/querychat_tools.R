@@ -93,7 +93,7 @@ tool_query <- function(data_source) {
     description = interpolate_package("tool-query.md", db_type = db_type),
     arguments = list(
       query = ellmer::type_string(
-        interpolate(
+        ellmer::interpolate(
           "A valid {{db_type}} SQL SELECT statement. Must follow the database schema provided in the system prompt. Use clear column aliases (e.g., 'AVG(price) AS avg_price') and include SQL comments for complex logic. Subqueries and CTEs are encouraged for readability.",
           db_type = db_type
         )

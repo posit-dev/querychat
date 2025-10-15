@@ -214,6 +214,7 @@ input_code_editor <- function(
   editor_div <- htmltools::tags$div(
     id = id,
     class = "code-editor-input",
+    as_fill_carrier(),
     style = htmltools::css(
       height = height,
       width = width,

@@ -7,11 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
-* Added rich tool UI support using shinychat development version and chatlas >= 0.11.1. (#67)
+### New features
+
+* The `.sql` query and `.title` returned from `querychat.server()` are now reactive values, meaning you can now `.set()` their value, and `.df()` will update accordingly. (#98)
+
+* Added `querychat.greeting()` to help you create a greeting message for your querychat bot. (#87)
 
 * Added `querychat_reset_dashboard()` tool for easily resetting the dashboard filters when asked by the user. (#81)
 
-* Added `querychat.greeting()` to help you create a greeting message for your querychat bot. (#87)
+### Improvements
+
+* Added rich tool UI support using shinychat development version and chatlas >= 0.11.1. (#67)
 
 * querychat's system prompt and tool descriptions were rewritten for clarity and future extensibility. (#90)
 
@@ -40,4 +46,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.0] - 2025-05-24
 
 This first release of the `querychat` package.
-

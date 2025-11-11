@@ -7,7 +7,7 @@ import sys
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Optional, Protocol, Union
+from typing import TYPE_CHECKING, Any, Callable, Optional, Protocol, Union, overload
 
 import chatlas
 import chevron
@@ -41,6 +41,10 @@ class QueryChatConfig:
     client: chatlas.Chat
 
 
+ReactiveString = reactive.Value[str]
+ReactiveStringOrNone = reactive.Value[str | None]
+
+
 class QueryChat:
     """
     An object representing a query chat session. This is created within a Shiny
@@ -52,8 +56,8 @@ class QueryChat:
     def __init__(
         self,
         chat: chatlas.Chat,
-        sql: Callable[[], str],
-        title: Callable[[], Union[str, None]],
+        sql: ReactiveString,
+        title: ReactiveStringOrNone,
         df: Callable[[], pd.DataFrame],
     ):
         """
@@ -61,9 +65,9 @@ class QueryChat:
 
         Args:
             chat: The chat object for the session
-            sql: Reactive that returns the current SQL query
-            title: Reactive that returns the current title
-            df: Reactive that returns the filtered data frame
+            sql: Reactively read (or set) the current SQL query
+            title: Reactively read (or set) the current title
+            df: Reactively read the current filtered data frame
 
         """
         self._chat = chat
@@ -81,29 +85,57 @@ class QueryChat:
         """
         return self._chat
 
-    def sql(self) -> str:
+    @overload
+    def sql(self, query: None = None) -> str: ...
+
+    @overload
+    def sql(self, query: str) -> bool: ...
+
+    def sql(self, query: Optional[str] = None) -> str | bool:
         """
-        Reactively read the current SQL query that is in effect.
+        Reactively read (or set) the current SQL query that is in effect.
+
+        Args:
+            query: If provided, sets the current SQL query to this value.
 
         Returns:
-            The current SQL query as a string, or `""` if no query has been set.
+            If no `query` is provided, returns the current SQL query as a string
+            (possibly `""` if no query has been set). If a `query` is provided,
+            returns `True` if the query was changed to a new value, or `False`
+            if it was the same as the current value.
 
         """
-        return self._sql()
+        if query is None:
+            return self._sql()
+        else:
+            return self._sql.set(query)
 
-    def title(self) -> Union[str, None]:
+    @overload
+    def title(self, value: None = None) -> str: ...
+
+    @overload
+    def title(self, value: str) -> bool: ...
+
+    def title(self, value: Optional[str] = None) -> str | None | bool:
         """
-        Reactively read the current title that is in effect. The title is a
-        short description of the current query that the LLM provides to us
-        whenever it generates a new SQL query. It can be used as a status string
-        for the data dashboard.
+        Reactively read (or set) the current title that is in effect.
+
+        The title is a short description of the current query that the LLM
+        provides to us whenever it generates a new SQL query. It can be used as
+        a status string for the data dashboard.
 
         Returns:
-            The current title as a string, or `None` if no title has been set
-            due to no SQL query being set.
+            If no `value` is provided, returns the current title as a string, or
+            `None` if no title has been set due to no SQL query being set. If a
+            `value` is provided, sets the current title to this value and
+            returns `True` if the title was changed to a new value, or `False`
+            if it was the same as the current value.
 
         """
-        return self._title()
+        if value is None:
+            return self._title()
+        else:
+            return self._title.set(value)
 
     def df(self) -> pd.DataFrame:
         """
@@ -510,8 +542,8 @@ def mod_server(  # noqa: D417
     client = querychat_config.client
 
     # Reactive values to store state
-    current_title = reactive.value[Union[str, None]](None)
-    current_query = reactive.value("")
+    current_title = ReactiveStringOrNone(None)
+    current_query = ReactiveString("")
 
     @reactive.calc
     def filtered_df():
@@ -520,20 +552,15 @@ def mod_server(  # noqa: D417
         else:
             return data_source.execute_query(current_query.get())
 
-    # This would handle appending messages to the chat UI
-    async def append_output(text):
-        async with chat_ui.message_stream_context() as msgstream:
-            await msgstream.append(text)
-
     # Create the tool functions
     update_dashboard_tool = tool_update_dashboard(
         data_source,
-        current_query.set,
-        current_title.set,
+        current_query,
+        current_title,
     )
     reset_dashboard_tool = tool_reset_dashboard(
-        current_query.set,
-        current_title.set,
+        current_query,
+        current_title,
     )
     query_tool = tool_query(data_source)
 
@@ -584,4 +611,4 @@ def mod_server(  # noqa: D417
             await chat_ui.append_message_stream(stream)
 
     # Return the interface for other components to use
-    return QueryChat(chat, current_query.get, current_title.get, filtered_df)
+    return QueryChat(chat, current_query, current_title, filtered_df)

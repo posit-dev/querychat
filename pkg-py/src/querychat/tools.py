@@ -12,6 +12,7 @@ from ._utils import df_to_html
 
 if TYPE_CHECKING:
     from .datasource import DataSource
+    from .querychat import ReactiveString, ReactiveStringOrNone
 
 
 def _read_prompt_template(filename: str, **kwargs) -> str:
@@ -23,8 +24,8 @@ def _read_prompt_template(filename: str, **kwargs) -> str:
 
 def _update_dashboard_impl(
     data_source: DataSource,
-    current_query: Callable,
-    current_title: Callable,
+    current_query: ReactiveString,
+    current_title: ReactiveStringOrNone,
 ) -> Callable[[str, str], ContentToolResult]:
     """Create the implementation function for updating the dashboard."""
 
@@ -47,9 +48,9 @@ def _update_dashboard_impl(
 
             # Update state on success
             if query is not None:
-                current_query(query)
+                current_query.set(query)
             if title is not None:
-                current_title(title)
+                current_title.set(title)
 
         except Exception as e:
             error = str(e)
@@ -77,19 +78,19 @@ def _update_dashboard_impl(
 
 def tool_update_dashboard(
     data_source: DataSource,
-    current_query: Callable,
-    current_title: Callable,
+    current_query: ReactiveString,
+    current_title: ReactiveStringOrNone,
 ) -> Tool:
     """
     Create a tool that modifies the data presented in the dashboard based on the SQL query.
 
     Parameters
     ----------
-    data_source : DataSource
+    data_source
         The data source to query against
-    current_query : Callable
+    current_query
         Reactive value for storing the current SQL query
-    current_title : Callable
+    current_title
         Reactive value for storing the current title
 
     Returns
@@ -114,15 +115,15 @@ def tool_update_dashboard(
 
 
 def _reset_dashboard_impl(
-    current_query: Callable,
-    current_title: Callable,
+    current_query: ReactiveString,
+    current_title: ReactiveStringOrNone,
 ) -> Callable[[], ContentToolResult]:
     """Create the implementation function for resetting the dashboard."""
 
     def reset_dashboard() -> ContentToolResult:
         # Reset current query and title
-        current_query("")
-        current_title(None)
+        current_query.set("")
+        current_title.set(None)
 
         # Add Reset Filter button
         button_html = """<button
@@ -152,17 +153,17 @@ def _reset_dashboard_impl(
 
 
 def tool_reset_dashboard(
-    current_query: Callable,
-    current_title: Callable,
+    current_query: ReactiveString,
+    current_title: ReactiveStringOrNone,
 ) -> Tool:
     """
     Create a tool that resets the dashboard to show all data.
 
     Parameters
     ----------
-    current_query : Callable
+    current_query
         Reactive value for storing the current SQL query
-    current_title : Callable
+    current_title
         Reactive value for storing the current title
 
     Returns
@@ -228,7 +229,7 @@ def tool_query(data_source: DataSource) -> Tool:
 
     Parameters
     ----------
-    data_source : DataSource
+    data_source
         The data source to query against
 
     Returns
@@ -239,7 +240,9 @@ def tool_query(data_source: DataSource) -> Tool:
     """
     impl = _query_impl(data_source)
 
-    description = _read_prompt_template("tool-query.md", db_type=data_source.get_db_type())
+    description = _read_prompt_template(
+        "tool-query.md", db_type=data_source.get_db_type()
+    )
     impl.__doc__ = description
 
     return Tool.from_func(

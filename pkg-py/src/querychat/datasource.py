@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar, Protocol
+from typing import TYPE_CHECKING, ClassVar, Protocol, runtime_checkable
 
 import duckdb
 import narwhals.stable.v1 as nw
 import pandas as pd
-from narwhals.stable.v1.typing import IntoFrame
 from sqlalchemy import inspect, text
 from sqlalchemy.sql import sqltypes
 
@@ -14,8 +13,10 @@ if TYPE_CHECKING:
     from sqlalchemy.engine import Connection, Engine
 
 
+@runtime_checkable
 class DataSource(Protocol):
     db_engine: ClassVar[str]
+    table_name: str
 
     def get_db_type(self) -> str:
         """Get the database type."""
@@ -87,7 +88,7 @@ class DataFrameSource(DataSourceBase):
         """
         self._conn = duckdb.connect(database=":memory:")
         self._df = nw.from_native(df)
-        self._table_name = table_name
+        self.table_name = table_name
         # TODO(@gadenbuie): If the data frame is already SQL-backed, maybe we shouldn't be making a new copy here.
         self._conn.register(table_name, self._df.lazy().collect().to_pandas())
 
@@ -104,7 +105,7 @@ class DataFrameSource(DataSourceBase):
             String describing the schema
 
         """
-        schema = [f"Table: {self._table_name}", "Columns:"]
+        schema = [f"Table: {self.table_name}", "Columns:"]
 
         # Ensure we're working with a DataFrame, not a LazyFrame
         ndf = (
@@ -195,7 +196,7 @@ class SQLAlchemySource(DataSourceBase):
 
         """
         self._engine = engine
-        self._table_name = table_name
+        self.table_name = table_name
 
         # Validate table exists
         inspector = inspect(self._engine)
@@ -220,9 +221,9 @@ class SQLAlchemySource(DataSourceBase):
 
         """
         inspector = inspect(self._engine)
-        columns = inspector.get_columns(self._table_name)
+        columns = inspector.get_columns(self.table_name)
 
-        schema = [f"Table: {self._table_name}", "Columns:"]
+        schema = [f"Table: {self.table_name}", "Columns:"]
 
         # Build a single query to get all column statistics
         select_parts = []
@@ -269,7 +270,7 @@ class SQLAlchemySource(DataSourceBase):
         if select_parts:
             try:
                 stats_query = text(
-                    f"SELECT {', '.join(select_parts)} FROM {self._table_name}",
+                    f"SELECT {', '.join(select_parts)} FROM {self.table_name}",
                 )
                 with self._get_connection() as conn:
                     result = conn.execute(stats_query).fetchone()
@@ -297,7 +298,7 @@ class SQLAlchemySource(DataSourceBase):
                 # Build UNION query for all categorical columns
                 union_parts = [
                     f"SELECT '{col_name}' as column_name, {col_name} as value "
-                    f"FROM {self._table_name} WHERE {col_name} IS NOT NULL "
+                    f"FROM {self.table_name} WHERE {col_name} IS NOT NULL "
                     f"GROUP BY {col_name}"
                     for col_name in text_cols_to_query
                 ]
@@ -368,7 +369,7 @@ class SQLAlchemySource(DataSourceBase):
             The complete dataset as a pandas DataFrame
 
         """
-        return self.execute_query(f"SELECT * FROM {self._table_name}")
+        return self.execute_query(f"SELECT * FROM {self.table_name}")
 
     def _get_sql_type_name(self, type_: sqltypes.TypeEngine) -> str:  # noqa: PLR0911
         """Convert SQLAlchemy type to SQL type name."""

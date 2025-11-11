@@ -530,13 +530,6 @@ def mod_server(  # noqa: D417
             - chat: The chat object.
 
     """
-
-    @reactive.effect
-    def _():
-        # This will be triggered when the module is initialized
-        # Here we would set up the chat interface, initialize the chat model, etc.
-        pass
-
     # Extract config parameters
     data_source = querychat_config.data_source
     system_prompt = querychat_config.system_prompt

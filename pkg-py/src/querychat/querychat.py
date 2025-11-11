@@ -43,7 +43,7 @@ class QueryChatConfig:
 
 ReactiveString = reactive.Value[str]
 """A reactive string value."""
-ReactiveStringOrNone = reactive.Value[str | None]
+ReactiveStringOrNone = reactive.Value[Union[str, None]]
 """A reactive string (or None) value."""
 
 

@@ -42,7 +42,9 @@ class QueryChatConfig:
 
 
 ReactiveString = reactive.Value[str]
+"""A reactive string value."""
 ReactiveStringOrNone = reactive.Value[str | None]
+"""A reactive string (or None) value."""
 
 
 class QueryChat:
@@ -111,7 +113,7 @@ class QueryChat:
             return self._sql.set(query)
 
     @overload
-    def title(self, value: None = None) -> str: ...
+    def title(self, value: None = None) -> str | None: ...
 
     @overload
     def title(self, value: str) -> bool: ...

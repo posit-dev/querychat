@@ -10,8 +10,10 @@ from typing import TYPE_CHECKING, Any, Callable, Literal, Optional, Union, overl
 import chevron
 import shinychat
 import sqlalchemy
-from shiny import Inputs, Outputs, Session, module, reactive, ui
+from shiny import App, Inputs, Outputs, Session, module, reactive, render, req, ui
+from shinychat import output_markdown_stream
 
+from ._icons import bs_icon
 from ._utils import normalize_client
 from .datasource import DataFrameSource, DataSource, SQLAlchemySource
 from .tools import tool_query, tool_reset_dashboard, tool_update_dashboard
@@ -20,6 +22,7 @@ if TYPE_CHECKING:
     import chatlas
     import pandas as pd
     from narwhals.stable.v1.typing import IntoFrame
+    from shiny.bookmark import BookmarkState, RestoreState
 
 
 @dataclass
@@ -127,6 +130,97 @@ class QueryChat:
         self.greeting = config.greeting
         self.client = config.client
 
+    def app(self, bookmark_store: Literal["url", "server", "disable"] = "url") -> App:
+        """
+        Quickly chat with a dataset.
+
+        Creates a Shiny app with a chat sidebar and data table view -- providing a
+        quick-and-easy way to start chatting with your data.
+
+        Parameters
+        ----------
+        bookmark_store
+            The bookmarking store to use for the Shiny app. Options are:
+                - `"url"`: Store bookmarks in the URL (default).
+                - `"server"`: Store bookmarks on the server.
+                - `"disable"`: Disable bookmarking.
+
+        Returns
+        -------
+        :
+            A Shiny App object that can be run with `app.run()` or served with `shiny run`.
+
+        """
+        enable_bookmarking = bookmark_store != "disable"
+        table_name = self.data_source.table_name
+
+        def app_ui(request):
+            return ui.page_sidebar(
+                self.sidebar("chat"),
+                ui.card(
+                    ui.card_header(
+                        ui.div(
+                            ui.div(
+                                bs_icon("terminal-fill"),
+                                ui.output_text("query_title", inline=True),
+                                class_="d-flex align-items-center gap-2",
+                            ),
+                            ui.output_ui("ui_reset", inline=True),
+                            class_="hstack gap-3",
+                        ),
+                    ),
+                    ui.output_ui("sql_output"),
+                    fill=False,
+                    style="max-height: 33%;",
+                ),
+                ui.card(
+                    ui.card_header(bs_icon("table"), " Data"),
+                    ui.output_data_frame("dt"),
+                ),
+                title=ui.span("querychat with ", ui.code(table_name)),
+                class_="bslib-page-dashboard",
+                fillable=True,
+            )
+
+        def app_server(input: Inputs, output: Outputs, session: Session):
+            qc = self.server("chat", enable_bookmarking=enable_bookmarking)
+
+            @render.text
+            def query_title():
+                return qc.title() or "SQL Query"
+
+            @render.ui
+            def ui_reset():
+                req(qc.sql())
+                return ui.input_action_button(
+                    "reset_query",
+                    "Reset Query",
+                    class_="btn btn-outline-danger btn-sm lh-1 ms-auto",
+                )
+
+            @reactive.effect
+            @reactive.event(input.reset_query)
+            def _():
+                qc.sql("")
+                qc.title(None)
+
+            @render.data_frame
+            def dt():
+                return qc.df()
+
+            @render.ui
+            def sql_output():
+                sql = qc.sql() or f"SELECT * FROM {table_name}"
+                sql_code = f"```sql\n{sql}\n```"
+                return output_markdown_stream(
+                    "sql_code",
+                    content=sql_code,
+                    auto_scroll=False,
+                    width="100%",
+                )
+
+        return App(app_ui, app_server, bookmark_store=bookmark_store)
+
     def sidebar(
         self,
         id: str,
@@ -187,7 +281,7 @@ class QueryChat:
 
         return _ui_wrapper(id, **kwargs)
 
-    def server(self, id: str):
+    def server(self, id: str, *, enable_bookmarking: bool = True) -> QueriedValues:
         """
         Initialize the querychat server logic.
 
@@ -195,6 +289,9 @@ class QueryChat:
         ----------
         id
             An ID corresponding to the UI component.
+        enable_bookmarking
+            Whether to enable bookmarking for this chat session. For this to take
+            effect, the Shiny app must also have a `bookmark_store` configured.
 
         Returns
         -------
@@ -214,13 +311,14 @@ class QueryChat:
         def mod_server_wrapper(
             input: Inputs,
             output: Outputs,
-            session: Session,
+            session: Session
         ):
             return _server_impl(
                 input,
                 output,
                 session,
                 querychat_config=config,
+                enable_bookmarking=enable_bookmarking,
             )
 
         return mod_server_wrapper(id)
@@ -644,6 +742,8 @@ def _server_impl(
     output: Outputs,
     session: Session,
     querychat_config: QueryChatConfig,
+    *,
+    enable_bookmarking: bool = True,
 ) -> QueriedValues:
     data_source = querychat_config.data_source
     system_prompt = querychat_config.system_prompt
@@ -653,6 +753,7 @@ def _server_impl(
     # Reactive values to store state
     current_title = ReactiveStringOrNone(None)
     current_query = ReactiveString("")
+    has_greeted = reactive.value[bool](False)  # noqa: FBT003
 
     @reactive.calc
     def filtered_df():
@@ -710,6 +811,9 @@ def _server_impl(
 
     @reactive.effect
     async def greet_on_startup():
+        if has_greeted():
+            return
+
         if querychat_config.greeting:
             await chat_ui.append_message(greeting)
         elif querychat_config.greeting is None:
@@ -718,6 +822,30 @@ def _server_impl(
                 echo="none",
             )
             await chat_ui.append_message_stream(stream)
+
+        has_greeted.set(True)
+
+    if enable_bookmarking:
+        chat_ui.enable_bookmarking(client)
+
+        def _on_bookmark(x: BookmarkState) -> None:
+            vals = x.values  # noqa: PD011
+            vals["querychat_current_query"] = current_query.get()
+            vals["querychat_current_title"] = current_title.get()
+            vals["querychat_has_greeted"] = has_greeted.get()
+
+        session.bookmark.on_bookmark(_on_bookmark)
+
+        def _on_restore(x: RestoreState) -> None:
+            vals = x.values  # noqa: PD011
+            if "querychat_current_query" in vals:
+                current_query.set(vals["querychat_current_query"])
+            if "querychat_current_title" in vals:
+                current_title.set(vals["querychat_current_title"])
+            if "querychat_has_greeted" in vals:
+                has_greeted.set(vals["querychat_has_greeted"])
+
+        session.bookmark.on_restore(_on_restore)
 
     # Return the interface for other components to use
     return QueriedValues(filtered_df, current_query, current_title, chat)

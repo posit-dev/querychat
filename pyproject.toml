@@ -21,7 +21,7 @@ maintainers = [
 dependencies = [
     "duckdb",
     "pandas",
-    "shiny",
+    "shiny @ git+https://github.com/posit-dev/py-shiny.git@fix/bookmark-missing-input-error",
     "shinywidgets",
     "htmltools",
     "chatlas>=0.12.0",

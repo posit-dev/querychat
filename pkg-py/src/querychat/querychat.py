@@ -65,11 +65,16 @@ class QueryChat:
         """
         Initialize a QueryChat object.
 
-        Args:
-            chat: The chat object for the session
-            sql: Reactively read (or set) the current SQL query
-            title: Reactively read (or set) the current title
-            df: Reactively read the current filtered data frame
+        Parameters
+        ----------
+        chat
+            The chat object for the session
+        sql
+            Reactively read (or set) the current SQL query
+        title
+            Reactively read (or set) the current title
+        df
+            Reactively read the current filtered data frame
 
         """
         self._chat = chat
@@ -81,7 +86,8 @@ class QueryChat:
         """
         Get the chat object for this session.
 
-        Returns:
+        Returns
+        -------
             The chat object
 
         """
@@ -97,10 +103,14 @@ class QueryChat:
         """
         Reactively read (or set) the current SQL query that is in effect.
 
-        Args:
-            query: If provided, sets the current SQL query to this value.
+        Parameters
+        ----------
+        query
+            If provided, sets the current SQL query to this value.
 
-        Returns:
+        Returns
+        -------
+        :
             If no `query` is provided, returns the current SQL query as a string
             (possibly `""` if no query has been set). If a `query` is provided,
             returns `True` if the query was changed to a new value, or `False`
@@ -126,7 +136,9 @@ class QueryChat:
         provides to us whenever it generates a new SQL query. It can be used as
         a status string for the data dashboard.
 
-        Returns:
+        Returns
+        -------
+        :
             If no `value` is provided, returns the current title as a string, or
             `None` if no title has been set due to no SQL query being set. If a
             `value` is provided, sets the current title to this value and
@@ -143,7 +155,9 @@ class QueryChat:
         """
         Reactively read the current filtered data frame that is in effect.
 
-        Returns:
+        Returns
+        -------
+        :
             The current filtered data frame as a pandas DataFrame. If no query
             has been set, this will return the unfiltered data frame from the
             data source.
@@ -179,14 +193,14 @@ def system_prompt(
 
     Parameters
     ----------
-    data_source : DataSource
+    data_source
         A data source to generate schema information from
-    data_description : str, optional
+    data_description
         Optional description of the data, in plain text or Markdown format
-    extra_instructions : str, optional
+    extra_instructions
         Optional additional instructions for the chat model, in plain text or
         Markdown format
-    categorical_threshold : int, default=10
+    categorical_threshold
         Threshold for determining if a column is categorical based on number of
         unique values
     prompt_template
@@ -195,7 +209,7 @@ def system_prompt(
 
     Returns
     -------
-    str
+    :
         The system prompt for the chat model.
 
     """
@@ -270,7 +284,7 @@ def _resolve_querychat_client(
 
     Parameters
     ----------
-    client : chatlas.Chat, CreateChatCallback, str, or None
+    client
         The client to resolve. Can be:
         - A chatlas.Chat object (returned as-is)
         - A function that returns a chatlas.Chat object
@@ -279,7 +293,7 @@ def _resolve_querychat_client(
 
     Returns
     -------
-    chatlas.Chat
+    :
         A resolved chatlas.Chat object
 
     """
@@ -323,30 +337,30 @@ def init(
 
     Parameters
     ----------
-    data_source : IntoFrame | sqlalchemy.Engine
+    data_source
         Either a Narwhals-compatible data frame (e.g., Polars or Pandas) or a
         SQLAlchemy engine containing the table to query against.
-    table_name : str
+    table_name
         If a data_source is a data frame, a name to use to refer to the table in
         SQL queries (usually the variable name of the data frame, but it doesn't
         have to be). If a data_source is a SQLAlchemy engine, the table_name is
         the name of the table in the database to query against.
-    greeting : str | Path, optional
+    greeting
         A string in Markdown format, containing the initial message. If a
         pathlib.Path object is passed, querychat will read the contents of the
         path into a string with `.read_text()`. You can use
         `querychat.greeting()` to help generate a greeting from a querychat
         configuration. If no greeting is provided, one will be generated at the
         start of every new conversation.
-    data_description : str | Path, optional
+    data_description
         Description of the data in plain text or Markdown.
         If a pathlib.Path object is passed,
         querychat will read the contents of the path into a string with `.read_text()`.
-    extra_instructions : str | Path, optional
+    extra_instructions
         Additional instructions for the chat model.
         If a pathlib.Path object is passed,
         querychat will read the contents of the path into a string with `.read_text()`.
-    prompt_template : Path, optional
+    prompt_template
         Path to or a string of a custom prompt file. If not provided, the default querychat
         template will be used. This should be a Markdown file that contains the
         system prompt template. The mustache template can use the following
@@ -356,11 +370,11 @@ def init(
           `data_source.get_schema()`
         - `{{data_description}}`: The optional data description provided
         - `{{extra_instructions}}`: Any additional instructions provided
-    system_prompt_override : str, optional
+    system_prompt_override
         A custom system prompt to use instead of the default. If provided,
         `data_description`, `extra_instructions`, and `prompt_template` will be
         silently ignored.
-    client : chatlas.Chat, CreateChatCallback, str, optional
+    client
         A `chatlas.Chat` object, a string to be passed to `chatlas.ChatAuto()`
         describing the model to use (e.g. `"openai/gpt-4.1"`), or a function
         that creates a chat client. If using a function, the function should
@@ -370,12 +384,12 @@ def init(
         environment variable, which can be set to a provider-model string. If no
         option is provided, querychat defaults to using
         `chatlas.ChatOpenAI(model="gpt-4.1")`.
-    create_chat_callback : CreateChatCallback, optional
+    create_chat_callback
         **Deprecated.** Use the `client` argument instead.
 
     Returns
     -------
-    QueryChatConfig
+    :
         A QueryChatConfig object that can be passed to server()
 
     """
@@ -481,11 +495,11 @@ def sidebar(
 
     Parameters
     ----------
-    id : str
+    id
         The module ID.
-    width : int, default=400
+    width
         Width of the sidebar in pixels.
-    height : str, default="100%"
+    height
         Height of the sidebar.
     **kwargs
         Additional arguments to pass to the sidebar component.

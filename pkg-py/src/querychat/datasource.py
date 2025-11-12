@@ -26,11 +26,15 @@ class DataSource(Protocol):
         """
         Return schema information about the table as a string.
 
-        Args:
-            categorical_threshold: Maximum number of unique values for a text
-                column to be considered categorical
+        Parameters
+        ----------
+        categorical_threshold
+            Maximum number of unique values for a text column to be considered
+            categorical
 
-        Returns:
+        Returns
+        -------
+        :
             A string containing the schema information in a format suitable for
             prompting an LLM about the data structure
 
@@ -41,10 +45,14 @@ class DataSource(Protocol):
         """
         Execute SQL query and return results as DataFrame.
 
-        Args:
-            query: SQL query to execute
+        Parameters
+        ----------
+        query
+            SQL query to execute
 
-        Returns:
+        Returns
+        -------
+        :
             Query results as a pandas DataFrame
 
         """
@@ -54,7 +62,9 @@ class DataSource(Protocol):
         """
         Return the unfiltered data as a DataFrame.
 
-        Returns:
+        Returns
+        -------
+        :
             The complete dataset as a pandas DataFrame
 
         """
@@ -81,9 +91,12 @@ class DataFrameSource(DataSourceBase):
         """
         Initialize with a pandas DataFrame.
 
-        Args:
-            df: The DataFrame to wrap
-            table_name: Name of the table in SQL queries
+        Parameters
+        ----------
+        df: The DataFrame to wrap
+            The DataFrame to wrap
+        table_name
+            Name of the table in SQL queries
 
         """
         self._conn = duckdb.connect(database=":memory:")
@@ -96,12 +109,15 @@ class DataFrameSource(DataSourceBase):
         """
         Generate schema information from DataFrame.
 
-        Args:
-            table_name: Name to use for the table in schema description
-            categorical_threshold: Maximum number of unique values for a text
-            column to be considered categorical
+        Parameters
+        ----------
+        categorical_threshold
+            Maximum number of unique values for a text column to be considered
+            categorical
 
-        Returns:
+        Returns
+        -------
+        :
             String describing the schema
 
         """
@@ -156,10 +172,14 @@ class DataFrameSource(DataSourceBase):
         """
         Execute query using DuckDB.
 
-        Args:
-            query: SQL query to execute
+        Parameters
+        ----------
+        query
+            SQL query to execute
 
-        Returns:
+        Returns
+        -------
+        :
             Query results as pandas DataFrame
 
         """
@@ -169,7 +189,9 @@ class DataFrameSource(DataSourceBase):
         """
         Return the unfiltered data as a DataFrame.
 
-        Returns:
+        Returns
+        -------
+        :
             The complete dataset as a pandas DataFrame
 
         """
@@ -179,9 +201,11 @@ class DataFrameSource(DataSourceBase):
 
 class SQLAlchemySource(DataSourceBase):
     """
-    A DataSource implementation that supports multiple SQL databases via SQLAlchemy.
+    A DataSource implementation that supports multiple SQL databases via
+    SQLAlchemy.
 
-    Supports various databases including PostgreSQL, MySQL, SQLite, Snowflake, and Databricks.
+    Supports various databases including PostgreSQL, MySQL, SQLite, Snowflake,
+    and Databricks.
     """
 
     db_engine: ClassVar[str] = "SQLAlchemy"
@@ -190,9 +214,12 @@ class SQLAlchemySource(DataSourceBase):
         """
         Initialize with a SQLAlchemy engine.
 
-        Args:
-            engine: SQLAlchemy engine
-            table_name: Name of the table to query
+        Parameters
+        ----------
+        engine
+            SQLAlchemy engine
+        table_name
+            Name of the table to query
 
         """
         self._engine = engine
@@ -351,10 +378,14 @@ class SQLAlchemySource(DataSourceBase):
         """
         Execute SQL query and return results as DataFrame.
 
-        Args:
-            query: SQL query to execute
+        Parameters
+        ----------
+        query
+            SQL query to execute
 
-        Returns:
+        Returns
+        -------
+        :
             Query results as pandas DataFrame
 
         """
@@ -365,7 +396,9 @@ class SQLAlchemySource(DataSourceBase):
         """
         Return the unfiltered data as a DataFrame.
 
-        Returns:
+        Returns
+        -------
+        :
             The complete dataset as a pandas DataFrame
 
         """

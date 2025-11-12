@@ -21,6 +21,7 @@ from .tools import tool_query, tool_reset_dashboard, tool_update_dashboard
 if TYPE_CHECKING:
     import pandas as pd
     from narwhals.stable.v1.typing import IntoFrame
+    from shiny.bookmark import BookmarkState, RestoreState
 
 from .datasource import DataFrameSource, DataSource, SQLAlchemySource
 
@@ -521,6 +522,8 @@ def mod_server(  # noqa: D417
     output: Outputs,
     session: Session,
     querychat_config: QueryChatConfig,
+    *,
+    enable_bookmarking: bool = True,
 ) -> QueryChat:
     """
     Initialize the querychat server.
@@ -529,6 +532,8 @@ def mod_server(  # noqa: D417
     ----------
     querychat_config
         Configuration object from init().
+    enable_bookmarking
+        Whether to enable bookmarking support for the chat session.
 
     Returns
     -------
@@ -546,6 +551,7 @@ def mod_server(  # noqa: D417
     # Reactive values to store state
     current_title = ReactiveStringOrNone(None)
     current_query = ReactiveString("")
+    has_greeted = reactive.value[bool](False)  # noqa: FBT003
 
     @reactive.calc
     def filtered_df():
@@ -603,6 +609,9 @@ def mod_server(  # noqa: D417
 
     @reactive.effect
     async def greet_on_startup():
+        if has_greeted():
+            return
+
         if querychat_config.greeting:
             await chat_ui.append_message(greeting)
         elif querychat_config.greeting is None:
@@ -611,6 +620,30 @@ def mod_server(  # noqa: D417
                 echo="none",
             )
             await chat_ui.append_message_stream(stream)
+
+        has_greeted.set(True)
+
+    if enable_bookmarking:
+        chat_ui.enable_bookmarking(client)
+
+        def _on_bookmark(x: BookmarkState) -> None:
+            vals = x.values  # noqa: PD011
+            vals["querychat_current_query"] = current_query.get()
+            vals["querychat_current_title"] = current_title.get()
+            vals["querychat_has_greeted"] = has_greeted.get()
+
+        session.bookmark.on_bookmark(_on_bookmark)
+
+        def _on_restore(x: RestoreState) -> None:
+            vals = x.values  # noqa: PD011
+            if "querychat_current_query" in vals:
+                current_query.set(vals["querychat_current_query"])
+            if "querychat_current_title" in vals:
+                current_title.set(vals["querychat_current_title"])
+            if "querychat_has_greeted" in vals:
+                has_greeted.set(vals["querychat_has_greeted"])
+
+        session.bookmark.on_restore(_on_restore)
 
     # Return the interface for other components to use
     return QueryChat(chat, current_query, current_title, filtered_df)

@@ -167,7 +167,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/init.html">Shiny Core</a></li><li class="breadcrumb-item"><a href="../reference/init.html">init</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/init.html">Get Started</a></li><li class="breadcrumb-item"><a href="../reference/init.html">init</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -188,7 +188,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
             <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
- <span class="menu-text">Shiny Core</span></a>
+ <span class="menu-text">Get Started</span></a>
           <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
@@ -212,16 +212,27 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="menu-text">server</span></a>
   </div>
 </li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/system_prompt.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">system_prompt</span></a>
-  </div>
-</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Customize</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="../reference/ui.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">ui</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../reference/system_prompt.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">system_prompt</span></a>
   </div>
 </li>
       </ul>
@@ -245,7 +256,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="toc-actions"><ul><li><a href="https://github.com/posit-dev/querychat/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li><li><a href="https://github.com/posit-dev/querychat/edit/main/pkg-py/docs/reference/init.qmd" class="toc-action"><i class="bi empty"></i>Edit this page</a></li></ul></div></nav>
     </div>
 <!-- main -->
-<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/init.html">Shiny Core</a></li><li class="breadcrumb-item"><a href="../reference/init.html">init</a></li></ol></nav></header>
+<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/init.html">Get Started</a></li><li class="breadcrumb-item"><a href="../reference/init.html">init</a></li></ol></nav></header>
 
 
 
@@ -268,12 +279,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="parameters" class="level2 doc-section doc-section-parameters">
 <h2 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="caption-top table">
-<colgroup>
-<col style="width: 4%">
-<col style="width: 6%">
-<col style="width: 87%">
-<col style="width: 2%">
-</colgroup>
 <thead>
 <tr class="header">
 <th>Name</th>
@@ -285,55 +290,55 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td>data_source</td>
-<td>IntoFrame | sqlalchemy.Engine</td>
+<td><code>IntoFrame</code> | <code>sqlalchemy</code>.<code>Engine</code></td>
 <td>Either a Narwhals-compatible data frame (e.g., Polars or Pandas) or a SQLAlchemy engine containing the table to query against.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
 <td>table_name</td>
-<td>str</td>
+<td><a href="https://docs.python.org/3/library/stdtypes.html#str">str</a></td>
 <td>If a data_source is a data frame, a name to use to refer to the table in SQL queries (usually the variable name of the data frame, but it doesn’t have to be). If a data_source is a SQLAlchemy engine, the table_name is the name of the table in the database to query against.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="odd">
 <td>greeting</td>
-<td>str | Path</td>
+<td><a href="https://docs.python.org/3/library/typing.html#typing.Optional">Optional</a>[<a href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | <a href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a>]</td>
 <td>A string in Markdown format, containing the initial message. If a pathlib.Path object is passed, querychat will read the contents of the path into a string with <code>.read_text()</code>. You can use <code>querychat.greeting()</code> to help generate a greeting from a querychat configuration. If no greeting is provided, one will be generated at the start of every new conversation.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
 <td>data_description</td>
-<td>str | Path</td>
+<td><a href="https://docs.python.org/3/library/typing.html#typing.Optional">Optional</a>[<a href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | <a href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a>]</td>
 <td>Description of the data in plain text or Markdown. If a pathlib.Path object is passed, querychat will read the contents of the path into a string with <code>.read_text()</code>.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="odd">
 <td>extra_instructions</td>
-<td>str | Path</td>
+<td><a href="https://docs.python.org/3/library/typing.html#typing.Optional">Optional</a>[<a href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | <a href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a>]</td>
 <td>Additional instructions for the chat model. If a pathlib.Path object is passed, querychat will read the contents of the path into a string with <code>.read_text()</code>.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
 <td>prompt_template</td>
-<td>Path</td>
+<td><a href="https://docs.python.org/3/library/typing.html#typing.Optional">Optional</a>[<a href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | <a href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a>]</td>
 <td>Path to or a string of a custom prompt file. If not provided, the default querychat template will be used. This should be a Markdown file that contains the system prompt template. The mustache template can use the following variables: - <code>{db_engine}</code>: The database engine used (e.g., “DuckDB”) - <code>{schema}</code>: The schema of the data source, generated by <code>data_source.get_schema()</code> - <code>{data_description}</code>: The optional data description provided - <code>{extra_instructions}</code>: Any additional instructions provided</td>
 <td><code>None</code></td>
 </tr>
 <tr class="odd">
 <td>system_prompt_override</td>
-<td>str</td>
+<td><a href="https://docs.python.org/3/library/typing.html#typing.Optional">Optional</a>[<a href="https://docs.python.org/3/library/stdtypes.html#str">str</a>]</td>
 <td>A custom system prompt to use instead of the default. If provided, <code>data_description</code>, <code>extra_instructions</code>, and <code>prompt_template</code> will be silently ignored.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
 <td>client</td>
-<td>(chatlas.Chat, CreateChatCallback, str)</td>
+<td><a href="https://docs.python.org/3/library/typing.html#typing.Optional">Optional</a>[<a href="https://docs.python.org/3/library/typing.html#typing.Union">Union</a>[<code>chatlas</code>.<code>Chat</code>, <code>CreateChatCallback</code>, <a href="https://docs.python.org/3/library/stdtypes.html#str">str</a>]]</td>
 <td>A <code>chatlas.Chat</code> object, a string to be passed to <code>chatlas.ChatAuto()</code> describing the model to use (e.g.&nbsp;<code>"openai/gpt-4.1"</code>), or a function that creates a chat client. If using a function, the function should accept a <code>system_prompt</code> argument and return a <code>chatlas.Chat</code> object. If <code>client</code> is not provided, querychat consults the <code>QUERYCHAT_CLIENT</code> environment variable, which can be set to a provider-model string. If no option is provided, querychat defaults to using <code>chatlas.ChatOpenAI(model="gpt-4.1")</code>.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="odd">
 <td>create_chat_callback</td>
-<td>CreateChatCallback</td>
+<td><a href="https://docs.python.org/3/library/typing.html#typing.Optional">Optional</a>[<code>CreateChatCallback</code>]</td>
 <td><strong>Deprecated.</strong> Use the <code>client</code> argument instead.</td>
 <td><code>None</code></td>
 </tr>
@@ -344,9 +349,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h2 class="doc-section doc-section-returns anchored" data-anchor-id="returns">Returns</h2>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 9%">
-<col style="width: 20%">
-<col style="width: 69%">
+<col style="width: 6%">
+<col style="width: 47%">
+<col style="width: 46%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -358,7 +363,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td></td>
-<td>QueryChatConfig</td>
+<td><code>QueryChatConfig</code></td>
 <td>A QueryChatConfig object that can be passed to server()</td>
 </tr>
 </tbody>

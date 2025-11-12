@@ -88,6 +88,7 @@ class QueryChat:
 
         Returns
         -------
+        :
             The chat object
 
         """
@@ -462,14 +463,9 @@ def mod_ui() -> ui.TagList:
     """
     Create the UI for the querychat component.
 
-    Parameters
-    ----------
-    id : str
-        The module ID
-
     Returns
     -------
-    ui.TagList
+    :
         A UI component.
 
     """
@@ -506,7 +502,7 @@ def sidebar(
 
     Returns
     -------
-    ui.Sidebar
+    :
         A sidebar UI component.
 
     """
@@ -531,17 +527,14 @@ def mod_server(  # noqa: D417
 
     Parameters
     ----------
-    querychat_config : QueryChatConfig
+    querychat_config
         Configuration object from init().
 
     Returns
     -------
-    dict[str, Any]
-        A dictionary with reactive components:
-            - sql: A reactive that returns the current SQL query.
-            - title: A reactive that returns the current title.
-            - df: A reactive that returns the filtered data frame.
-            - chat: The chat object.
+    :
+        A QueryChat object representing the chat session. This can be used to
+        access the chat, current SQL query, title, and filtered data frame.
 
     """
     # Extract config parameters

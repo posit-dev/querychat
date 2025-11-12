@@ -67,25 +67,25 @@ metadata-files:
 
 quartodoc:
   package: querychat
-
+  render_interlinks: true
   sidebar: reference/_sidebar.yml
   css: reference/_styles-quartodoc.css
-
   sections:
-    - title: Shiny Core
-      options:
-        signature_name: relative
-        include_imports: false
-        include_inherited: false
-        include_attributes: true
-        include_classes: true
-        include_functions: true
+    - title: Get Started
+      desc: The basic building blocks of Querychat
       contents:
         - init
         - sidebar
         - server
-        - system_prompt
+
+    - title: Customize
+      desc: Dive deeper into customizing Querychat
+      contents:
         - ui
+        - system_prompt
+
+filters:
+  - "interlinks"
 
 interlinks:
   fast: true

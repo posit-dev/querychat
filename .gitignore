@@ -263,3 +263,5 @@ renv.lock
 
 # Claude
 .claude/settings.local.json
+
+/.luarc.json

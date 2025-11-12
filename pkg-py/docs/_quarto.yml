@@ -67,7 +67,7 @@ metadata-files:
 
 quartodoc:
   package: querychat
-
+  render_interlinks: true
   sidebar: reference/_sidebar.yml
   css: reference/_styles-quartodoc.css
 
@@ -86,6 +86,9 @@ quartodoc:
         - server
         - system_prompt
         - ui
+
+filters:
+  - "interlinks"
 
 interlinks:
   fast: true

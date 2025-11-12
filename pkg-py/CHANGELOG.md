@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
+* New `querychat.app()` function lets you quickly launch an app to chat with your data. (#99)
+
 * The `.sql` query and `.title` returned from `querychat.server()` are now reactive values, meaning you can now `.set()` their value, and `.df()` will update accordingly. (#98)
 
 * Added `querychat.greeting()` to help you create a greeting message for your querychat bot. (#87)
@@ -18,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Improvements
 
 * Added rich tool UI support using shinychat development version and chatlas >= 0.11.1. (#67)
+
+* Enabled bookmarking by default in both `querychat.app()` and `querychat.server()`. In latter case, you'll need to also specify the `bookmark_store` (either in `shiny.App()` or `shiny.express.app_opts()`) for it to work. (#99)
 
 * querychat's system prompt and tool descriptions were rewritten for clarity and future extensibility. (#90)
 

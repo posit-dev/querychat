@@ -93,7 +93,7 @@ class DataFrameSource(DataSourceBase):
 
         Parameters
         ----------
-        df: The DataFrame to wrap
+        df
             The DataFrame to wrap
         table_name
             Name of the table in SQL queries

@@ -40,16 +40,16 @@ def init(
 
     .. deprecated:: 0.3.0
         Use :class:`QueryChat` instead. This function will be removed in
-        version 1.0.
+        a future release.
 
     Warning:
     -------
-    This function is deprecated and will be removed in querychat 1.0.
+    This function is deprecated and will be removed in a future release.
     Use ``QueryChat()`` instead.
 
     """
     warn_deprecated(
-        "init() is deprecated and will be removed in querychat 1.0. "
+        "init() is deprecated and will be removed in a future release. "
         "Use QueryChat() instead."
     )
     return _init_impl(
@@ -151,16 +151,16 @@ def system_prompt(
 
     .. deprecated:: 0.3.0
         Use :meth:`QueryChat.set_system_prompt` instead. This function will be
-        removed in version 1.0.
+        removed in a future release.
 
     Warning:
     -------
-    This function is deprecated and will be removed in querychat 1.0.
+    This function is deprecated and will be removed in a future release.
     Use ``QueryChat.set_system_prompt()`` instead.
 
     """
     warnings.warn(
-        "system_prompt() is deprecated and will be removed in querychat 1.0. "
+        "system_prompt() is deprecated and will be removed in a future release. "
         "Use QueryChat.set_system_prompt() instead.",
         FutureWarning,
         stacklevel=2,

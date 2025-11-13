@@ -13,14 +13,13 @@ import sqlalchemy
 from shiny import Inputs, Outputs, Session, module, reactive, ui
 
 from ._utils import normalize_client
+from .datasource import DataFrameSource, DataSource, SQLAlchemySource
 from .tools import tool_query, tool_reset_dashboard, tool_update_dashboard
 
 if TYPE_CHECKING:
     import chatlas
     import pandas as pd
     from narwhals.stable.v1.typing import IntoFrame
-
-from .datasource import DataFrameSource, DataSource, SQLAlchemySource
 
 
 @dataclass
@@ -114,7 +113,7 @@ class QueryChat:
             - `{{extra_instructions}}`: Any additional instructions provided
 
         """
-        config = init(
+        config = _init_impl(
             data_source,
             table_name,
             client=client,
@@ -156,10 +155,11 @@ class QueryChat:
             A sidebar UI component.
 
         """
-        return sidebar(
-            id,
+        return ui.sidebar(
+            self.ui(id),
             width=width,
             height=height,
+            class_="querychat-sidebar",
             **kwargs,
         )
 
@@ -180,7 +180,12 @@ class QueryChat:
             A UI component.
 
         """
-        return mod_ui(id, **kwargs)
+
+        @module.ui
+        def _ui_wrapper(**ui_kwargs):
+            return _ui_impl(**ui_kwargs)
+
+        return _ui_wrapper(id, **kwargs)
 
     def server(self, id: str):
         """
@@ -204,7 +209,21 @@ class QueryChat:
             greeting=self.greeting,
             client=self.client,
         )
-        return mod_server(id, querychat_config=config)
+
+        @module.server
+        def mod_server_wrapper(
+            input: Inputs,
+            output: Outputs,
+            session: Session,
+        ):
+            return _server_impl(
+                input,
+                output,
+                session,
+                querychat_config=config,
+            )
+
+        return mod_server_wrapper(id)
 
     def generate_greeting(self, *, echo: Literal["none", "text"] = "none"):
         """
@@ -264,6 +283,7 @@ class QueryChat:
         """
         client = copy.deepcopy(self.client)
         client.system_prompt = self.system_prompt
+        client.set_turns([])
         prompt = "Please give me a friendly greeting. Include a few sample prompts in a two-level bulleted list."
         return str(client.chat(prompt, echo=echo))
 
@@ -311,7 +331,7 @@ class QueryChat:
 
 
         """
-        self.system_prompt = system_prompt(
+        self.system_prompt = _system_prompt_impl(
             data_source,
             data_description=data_description,
             extra_instructions=extra_instructions,
@@ -493,7 +513,7 @@ class QueriedValues:
         }.get(key)
 
 
-def system_prompt(
+def _system_prompt_impl(
     data_source: DataSource,
     *,
     data_description: Optional[str | Path] = None,
@@ -501,12 +521,6 @@ def system_prompt(
     categorical_threshold: int = 10,
     prompt_template: Optional[str | Path] = None,
 ) -> str:
-    """
-    Create a system prompt for the chat model based on a data source's schema
-    and optional additional context and instructions.
-
-    **Deprecated.** Use `QueryChat.set_system_prompt()` instead.
-    """
     # Read the prompt file
     if prompt_template is None:
         # Default to the prompt file in the same directory as this module
@@ -546,7 +560,7 @@ def system_prompt(
     )
 
 
-def init(
+def _init_impl(
     data_source: IntoFrame | sqlalchemy.Engine,
     table_name: str,
     *,
@@ -557,11 +571,6 @@ def init(
     system_prompt_override: Optional[str] = None,
     client: Optional[Union[chatlas.Chat, str]] = None,
 ) -> QueryChatConfig:
-    """
-    Initialize querychat with any compliant data source.
-
-    **Deprecated.** Use `QueryChat()` instead.
-    """
     resolved_client = normalize_client(client)
 
     # Validate table name (must begin with letter, contain only letters, numbers, underscores)
@@ -588,7 +597,7 @@ def init(
     if isinstance(system_prompt_override, Path):
         system_prompt_ = system_prompt_override.read_text()
     else:
-        system_prompt_ = system_prompt_override or system_prompt(
+        system_prompt_ = system_prompt_override or _system_prompt_impl(
             data_source_obj,
             data_description=data_description,
             extra_instructions=extra_instructions,
@@ -614,14 +623,7 @@ def _normalize_data_source(
     return DataFrameSource(data_source, table_name)
 
 
-@module.ui
-def mod_ui(**kwargs) -> ui.TagList:
-    """
-    Create the UI for the querychat component.
-
-    **Deprecated.** Use `QueryChat.ui()` instead.
-    """
-    # Include CSS and JS
+def _ui_impl(**kwargs) -> ui.TagList:
     css_path = Path(__file__).parent / "static" / "css" / "styles.css"
     js_path = Path(__file__).parent / "static" / "js" / "querychat.js"
 
@@ -637,39 +639,12 @@ def mod_ui(**kwargs) -> ui.TagList:
     )
 
 
-def sidebar(
-    id: str,
-    width: int = 400,
-    height: str = "100%",
-    **kwargs,
-) -> ui.Sidebar:
-    """
-    Create a sidebar containing the querychat UI.
-
-    **Deprecated.** Use `QueryChat.sidebar()` instead.
-    """
-    return ui.sidebar(
-        mod_ui(id),
-        width=width,
-        height=height,
-        class_="querychat-sidebar",
-        **kwargs,
-    )
-
-
-@module.server
-def mod_server(
+def _server_impl(
     input: Inputs,
     output: Outputs,
     session: Session,
     querychat_config: QueryChatConfig,
 ) -> QueriedValues:
-    """
-    Initialize the querychat server.
-
-    **Deprecated.** Use `QueryChat.server()` instead.
-    """
-    # Extract config parameters
     data_source = querychat_config.data_source
     system_prompt = querychat_config.system_prompt
     greeting = querychat_config.greeting

@@ -111,7 +111,7 @@ def normalize_client(client: Optional[str | chatlas.Chat] = None) -> chatlas.Cha
 
     if not isinstance(client, chatlas.Chat):
         raise TypeError(
-            "client must be a chatlas.Chat object or function that returns one",
+            "client must be a chatlas.Chat object or a string",
         )
 
     return client

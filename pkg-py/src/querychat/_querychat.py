@@ -10,9 +10,11 @@ from typing import TYPE_CHECKING, Literal, Optional, overload
 import chatlas
 import chevron
 import sqlalchemy
-from shiny import ui
+from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 from shiny.session import get_current_session
+from shinychat import output_markdown_stream
 
+from ._icons import bs_icon
 from ._querychat_module import ModServerResult, mod_server, mod_ui
 from .datasource import DataFrameSource, DataSource, SQLAlchemySource
 
@@ -133,6 +135,99 @@ class QueryChatBase:
         # Populated when ._server() gets called (in an active session)
         self._server_values: ModServerResult | None = None
 
+    def app(
+        self, *, bookmark_store: Literal["url", "server", "disable"] = "url"
+    ) -> App:
+        """
+        Quickly chat with a dataset.
+
+        Creates a Shiny app with a chat sidebar and data table view -- providing a
+        quick-and-easy way to start chatting with your data.
+
+        Parameters
+        ----------
+        bookmark_store
+            The bookmarking store to use for the Shiny app. Options are:
+                - `"url"`: Store bookmarks in the URL (default).
+                - `"server"`: Store bookmarks on the server.
+                - `"disable"`: Disable bookmarking.
+
+        Returns
+        -------
+        :
+            A Shiny App object that can be run with `app.run()` or served with `shiny run`.
+
+        """
+        enable_bookmarking = bookmark_store != "disable"
+        table_name = self.data_source.table_name
+
+        def app_ui(request):
+            return ui.page_sidebar(
+                self.sidebar(),
+                ui.card(
+                    ui.card_header(
+                        ui.div(
+                            ui.div(
+                                bs_icon("terminal-fill"),
+                                ui.output_text("query_title", inline=True),
+                                class_="d-flex align-items-center gap-2",
+                            ),
+                            ui.output_ui("ui_reset", inline=True),
+                            class_="hstack gap-3",
+                        ),
+                    ),
+                    ui.output_ui("sql_output"),
+                    fill=False,
+                    style="max-height: 33%;",
+                ),
+                ui.card(
+                    ui.card_header(bs_icon("table"), " Data"),
+                    ui.output_data_frame("dt"),
+                ),
+                title=ui.span("querychat with ", ui.code(table_name)),
+                class_="bslib-page-dashboard",
+                fillable=True,
+            )
+
+        def app_server(input: Inputs, output: Outputs, session: Session):
+            self._server(enable_bookmarking=enable_bookmarking)
+
+            @render.text
+            def query_title():
+                return self.title() or "SQL Query"
+
+            @render.ui
+            def ui_reset():
+                req(self.sql())
+                return ui.input_action_button(
+                    "reset_query",
+                    "Reset Query",
+                    class_="btn btn-outline-danger btn-sm lh-1 ms-auto",
+                )
+
+            @reactive.effect
+            @reactive.event(input.reset_query)
+            def _():
+                self.sql("")
+                self.title(None)
+
+            @render.data_frame
+            def dt():
+                return self.df()
+
+            @render.ui
+            def sql_output():
+                sql = self.sql() or f"SELECT * FROM {table_name}"
+                sql_code = f"```sql\n{sql}\n```"
+                return output_markdown_stream(
+                    "sql_code",
+                    content=sql_code,
+                    auto_scroll=False,
+                    width="100%",
+                )
+
+        return App(app_ui, app_server, bookmark_store=bookmark_store)
+
     def sidebar(
         self,
         *,
@@ -183,7 +278,7 @@ class QueryChatBase:
         """
         return mod_ui(self.id, **kwargs)
 
-    def _server(self):
+    def _server(self, *, enable_bookmarking: bool = True) -> None:
         """
         Initialize the server module.
 
@@ -211,6 +306,7 @@ class QueryChatBase:
             system_prompt=self.system_prompt,
             greeting=self.greeting,
             client=self.client,
+            enable_bookmarking=enable_bookmarking,
         )
 
         return
@@ -434,7 +530,7 @@ class QueryChatBase:
 
 
 class QueryChat(QueryChatBase):
-    def server(self):
+    def server(self, *, enable_bookmarking: bool = True) -> None:
         """
         Initialize Shiny server logic.
 
@@ -442,6 +538,12 @@ class QueryChat(QueryChatBase):
         explicitly call `.server()` within the Shiny server function. In Shiny
         Express mode, you can use `querychat.express.QueryChat` instead
         of `querychat.QueryChat`, which calls `.server()` automatically.
+
+        Parameters
+        ----------
+        enable_bookmarking
+            Whether to enable bookmarking for the querychat module. Default is
+            `True`.
 
         Examples
         --------
@@ -474,7 +576,7 @@ class QueryChat(QueryChatBase):
             None
 
         """
-        return self._server()
+        return self._server(enable_bookmarking=enable_bookmarking)
 
 
 class QueryChatExpress(QueryChatBase):
@@ -514,6 +616,7 @@ class QueryChatExpress(QueryChatBase):
         data_description: Optional[str | Path] = None,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        enable_bookmarking: bool = True,
     ):
         super().__init__(
             data_source,
@@ -525,7 +628,7 @@ class QueryChatExpress(QueryChatBase):
             extra_instructions=extra_instructions,
             prompt_template=prompt_template,
         )
-        self._server()
+        self._server(enable_bookmarking=enable_bookmarking)
 
 
 def normalize_data_source(

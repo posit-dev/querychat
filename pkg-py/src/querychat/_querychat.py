@@ -157,7 +157,7 @@ class QueryChatBase:
 
         """
         return ui.sidebar(
-            self.ui(**kwargs),
+            self.ui(),
             width=width,
             height=height,
             class_="querychat-sidebar",

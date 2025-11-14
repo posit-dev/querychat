@@ -131,8 +131,7 @@ class QueryChatBase:
             prompt_template=prompt_template,
         )
 
-        # Reactive values and server state
-        self._server_initialized: bool = False
+        # Populated when ._server() gets called (in an active session)
         self._server_values: ModServerResult | None = None
 
     def sidebar(
@@ -215,9 +214,6 @@ class QueryChatBase:
             client=self.client,
         )
 
-        # Mark as initialized
-        self._server_initialized = True
-
         return
 
     def df(self) -> pd.DataFrame:
@@ -237,7 +233,10 @@ class QueryChatBase:
             If `.server()` has not been called yet.
 
         """
-        vals = self._get_server_values()
+        vals = self._server_values
+        if vals is None:
+            raise RuntimeError("Must call .server() before accessing .df()")
+
         return vals.df()
 
     @overload
@@ -269,7 +268,9 @@ class QueryChatBase:
             If `.server()` has not been called yet.
 
         """
-        vals = self._get_server_values()
+        vals = self._server_values
+        if vals is None:
+            raise RuntimeError("Must call .server() before accessing .sql()")
 
         if query is None:
             return vals.sql()
@@ -310,21 +311,14 @@ class QueryChatBase:
             If `.server()` has not been called yet.
 
         """
-        vals = self._get_server_values()
+        vals = self._server_values
+        if vals is None:
+            raise RuntimeError("Must call .server() before accessing .title()")
 
         if value is None:
             return vals.title()
         else:
             return vals.title.set(value)
-
-    def _get_server_values(self) -> ModServerResult:
-        if not self._server_initialized:
-            raise RuntimeError("Must call .server() before using this method.")
-        if self._server_values is None:
-            raise RuntimeError(
-                "Internal error: server initialized but values aren't available."
-            )
-        return self._server_values
 
     def generate_greeting(self, *, echo: Literal["none", "text"] = "none"):
         """

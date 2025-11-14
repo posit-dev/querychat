@@ -1,11 +1,13 @@
-from querychat.querychat import QueryChat
-
+from . import express
 from ._deprecated import greeting, init, sidebar, system_prompt
 from ._deprecated import mod_server as server
 from ._deprecated import mod_ui as ui
+from ._querychat import QueryChat
 
 __all__ = (
     "QueryChat",
+    "express",
+    # Old API (deprecated)
     "greeting",
     "init",
     "server",

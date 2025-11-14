@@ -2,16 +2,16 @@ from __future__ import annotations
 
 import warnings
 from copy import deepcopy
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Optional, Union
 
 from shiny import Inputs, Outputs, Session, module, ui
 
-from .querychat import (
-    QueryChatConfig,
-    _init_impl,
-    _server_impl,
-    _system_prompt_impl,
-    _ui_impl,
+from ._querychat_impl import (
+    init_impl,
+    server_impl,
+    system_prompt_impl,
+    ui_impl,
 )
 
 if TYPE_CHECKING:
@@ -22,6 +22,25 @@ if TYPE_CHECKING:
     from narwhals.stable.v1.typing import IntoFrame
 
     from .datasource import DataSource
+
+
+@dataclass
+class QueryChatConfig:
+    """
+    Configuration class for querychat.
+
+    Warning:
+    -------
+    This class only exists as the return value of `init()`, which is deprecated,
+    and so will likely be removed in a future release. New code should use
+    `QueryChat()`.
+
+    """
+
+    data_source: DataSource
+    system_prompt: str
+    greeting: Optional[str]
+    client: chatlas.Chat
 
 
 def init(
@@ -52,7 +71,7 @@ def init(
         "init() is deprecated and will be removed in a future release. "
         "Use QueryChat() instead."
     )
-    return _init_impl(
+    res = init_impl(
         data_source,
         table_name,
         greeting=greeting,
@@ -62,6 +81,7 @@ def init(
         system_prompt_override=system_prompt_override,
         client=client,
     )
+    return QueryChatConfig(**res)
 
 
 @module.ui
@@ -78,7 +98,7 @@ def mod_ui(**kwargs) -> ui.TagList:
         "ui() is deprecated and will be removed in a future release. "
         "Use QueryChat.ui() instead."
     )
-    return _ui_impl(**kwargs)
+    return ui_impl(**kwargs)
 
 
 @module.server
@@ -102,11 +122,14 @@ def mod_server(
         FutureWarning,
         stacklevel=2,
     )
-    return _server_impl(
+    return server_impl(
         input,
         output,
         session,
-        querychat_config,
+        data_source=querychat_config.data_source,
+        system_prompt=querychat_config.system_prompt,
+        greeting=querychat_config.greeting,
+        client=querychat_config.client,
     )
 
 
@@ -165,7 +188,7 @@ def system_prompt(
         FutureWarning,
         stacklevel=2,
     )
-    return _system_prompt_impl(
+    return system_prompt_impl(
         data_source,
         data_description=data_description,
         extra_instructions=extra_instructions,

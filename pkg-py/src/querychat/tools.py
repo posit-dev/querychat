@@ -11,8 +11,8 @@ from shinychat.types import ToolResultDisplay
 from ._utils import df_to_html
 
 if TYPE_CHECKING:
+    from ._querychat_impl import ReactiveString, ReactiveStringOrNone
     from .datasource import DataSource
-    from .querychat import ReactiveString, ReactiveStringOrNone
 
 
 def _read_prompt_template(filename: str, **kwargs) -> str:

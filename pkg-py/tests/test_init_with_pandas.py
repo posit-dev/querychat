@@ -3,7 +3,6 @@ import os
 import narwhals.stable.v1 as nw
 import pandas as pd
 import pytest
-
 from querychat import QueryChat
 
 

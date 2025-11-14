@@ -1,18 +1,8 @@
 from __future__ import annotations
 
-import warnings
-from copy import deepcopy
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 from shiny import Inputs, Outputs, Session, module, ui
-
-from ._querychat_impl import (
-    init_impl,
-    server_impl,
-    system_prompt_impl,
-    ui_impl,
-)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -22,25 +12,6 @@ if TYPE_CHECKING:
     from narwhals.stable.v1.typing import IntoFrame
 
     from .datasource import DataSource
-
-
-@dataclass
-class QueryChatConfig:
-    """
-    Configuration class for querychat.
-
-    Warning:
-    -------
-    This class only exists as the return value of `init()`, which is deprecated,
-    and so will likely be removed in a future release. New code should use
-    `QueryChat()`.
-
-    """
-
-    data_source: DataSource
-    system_prompt: str
-    greeting: Optional[str]
-    client: chatlas.Chat
 
 
 def init(
@@ -53,35 +24,13 @@ def init(
     prompt_template: Optional[str | Path] = None,
     system_prompt_override: Optional[str] = None,
     client: Optional[Union[chatlas.Chat, str]] = None,
-) -> QueryChatConfig:
+):
     """
     Initialize querychat with any compliant data source.
 
-    .. deprecated:: 0.3.0
-        Use :class:`QueryChat` instead. This function will be removed in
-        a future release.
-
-    Warning:
-    -------
-    This function is deprecated and will be removed in a future release.
-    Use ``QueryChat()`` instead.
-
+    **Deprecated.** Use `QueryChat()` instead.
     """
-    warn_deprecated(
-        "init() is deprecated and will be removed in a future release. "
-        "Use QueryChat() instead."
-    )
-    res = init_impl(
-        data_source,
-        table_name,
-        greeting=greeting,
-        data_description=data_description,
-        extra_instructions=extra_instructions,
-        prompt_template=prompt_template,
-        system_prompt_override=system_prompt_override,
-        client=client,
-    )
-    return QueryChatConfig(**res)
+    raise RuntimeError("init() is deprecated. Use QueryChat() instead.")
 
 
 @module.ui
@@ -89,16 +38,9 @@ def mod_ui(**kwargs) -> ui.TagList:
     """
     Create the UI for the querychat component.
 
-    .. deprecated:: 0.3.0
-        Use :meth:`QueryChat.ui()` instead. This function will be removed in
-        a future release.
-
+    **Deprecated.** Use `QueryChat.ui()` instead.
     """
-    warn_deprecated(
-        "ui() is deprecated and will be removed in a future release. "
-        "Use QueryChat.ui() instead."
-    )
-    return ui_impl(**kwargs)
+    raise RuntimeError("mod_ui() is deprecated. Use QueryChat.ui() instead.")
 
 
 @module.server
@@ -106,31 +48,14 @@ def mod_server(
     input: Inputs,
     output: Outputs,
     session: Session,
-    querychat_config: QueryChatConfig,
+    querychat_config: Any,
 ):
     """
     Initialize the querychat server.
 
-    .. deprecated:: 0.3.0
-        Use :meth:`QueryChat.server()` instead. This function will be removed in
-        a future release.
-
+    **Deprecated.** Use `QueryChat.server()` instead.
     """
-    warnings.warn(
-        "server() is deprecated and will be removed in a future release. "
-        "Use QueryChat.server() instead.",
-        FutureWarning,
-        stacklevel=2,
-    )
-    return server_impl(
-        input,
-        output,
-        session,
-        data_source=querychat_config.data_source,
-        system_prompt=querychat_config.system_prompt,
-        greeting=querychat_config.greeting,
-        client=querychat_config.client,
-    )
+    raise RuntimeError("mod_server() is deprecated. Use QueryChat.server() instead.")
 
 
 def sidebar(
@@ -142,22 +67,9 @@ def sidebar(
     """
     Create a sidebar containing the querychat UI.
 
-    .. deprecated:: 0.3.0
-        Use :meth:`QueryChat.sidebar()` instead. This function will be removed in
-        a future release.
-
+    **Deprecated.** Use `QueryChat.sidebar()` instead.
     """
-    warn_deprecated(
-        "sidebar() is deprecated and will be removed in a future release. "
-        "Use QueryChat.sidebar() instead."
-    )
-    return ui.sidebar(
-        mod_ui(id),
-        width=width,
-        height=height,
-        class_="querychat-sidebar",
-        **kwargs,
-    )
+    raise RuntimeError("sidebar() is deprecated. Use QueryChat.sidebar() instead.")
 
 
 def system_prompt(
@@ -172,28 +84,10 @@ def system_prompt(
     Create a system prompt for the chat model based on a data source's schema
     and optional additional context and instructions.
 
-    .. deprecated:: 0.3.0
-        Use :meth:`QueryChat.set_system_prompt` instead. This function will be
-        removed in a future release.
-
-    Warning:
-    -------
-    This function is deprecated and will be removed in a future release.
-    Use ``QueryChat.set_system_prompt()`` instead.
-
+    **Deprecated.** Use `QueryChat.set_system_prompt()` instead.
     """
-    warnings.warn(
-        "system_prompt() is deprecated and will be removed in a future release. "
-        "Use QueryChat.set_system_prompt() instead.",
-        FutureWarning,
-        stacklevel=2,
-    )
-    return system_prompt_impl(
-        data_source,
-        data_description=data_description,
-        extra_instructions=extra_instructions,
-        categorical_threshold=categorical_threshold,
-        prompt_template=prompt_template,
+    raise RuntimeError(
+        "system_prompt() is deprecated. Use QueryChat.set_system_prompt() instead."
     )
 
 
@@ -209,43 +103,6 @@ def greeting(
 
     **Deprecated.** Use `QueryChat.generate_greeting()` instead.
     """
-    warn_deprecated(
-        "greeting() is deprecated and will be removed in a future release. "
-        "Use QueryChat.generate_greeting() instead."
-    )
-
-    not_querychat_config = (
-        not hasattr(querychat_config, "client")
-        and not hasattr(querychat_config, "greeting")
-        and not hasattr(querychat_config, "system_prompt")
-    )
-
-    if not_querychat_config:
-        raise TypeError("`querychat_config` must be a QueryChatConfig object.")
-
-    greeting_text = querychat_config.greeting
-    has_greeting = greeting_text is not None and len(greeting_text.strip()) > 0
-
-    if has_greeting:
-        return greeting_text
-
-    if not generate:
-        return None
-
-    chat = deepcopy(querychat_config.client)
-    chat.system_prompt = querychat_config.system_prompt
-
-    prompt = "Please give me a friendly greeting. Include a few sample prompts in a two-level bulleted list."
-
-    if stream:
-        return chat.stream_async(prompt, **kwargs)
-    else:
-        return chat.chat(prompt, **kwargs)
-
-
-def warn_deprecated(msg: str) -> None:
-    warnings.warn(
-        msg,
-        FutureWarning,
-        stacklevel=3,
+    raise RuntimeError(
+        "greeting() is deprecated. Use QueryChat.generate_greeting() instead."
     )

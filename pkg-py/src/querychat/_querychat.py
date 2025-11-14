@@ -1,31 +1,24 @@
 from __future__ import annotations
 
 import copy
-import warnings
+import os
+import re
+import sys
+from pathlib import Path
 from typing import TYPE_CHECKING, Literal, Optional, overload
 
-from shiny import Inputs, Outputs, Session, module, ui
+import chatlas
+import chevron
+import sqlalchemy
+from shiny import ui
 from shiny.session import get_current_session
 
-from ._querychat_impl import (
-    ServerResult,
-    init_impl,
-    normalize_data_source,
-    server_impl,
-    system_prompt_impl,
-    ui_impl,
-)
-from ._utils import normalize_client
+from ._querychat_module import ModServerResult, mod_server, mod_ui
+from .datasource import DataFrameSource, DataSource, SQLAlchemySource
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
-    import chatlas
     import pandas as pd
-    import sqlalchemy
     from narwhals.stable.v1.typing import IntoFrame
-
-    from .datasource import DataSource
 
 
 class QueryChatBase:
@@ -71,15 +64,14 @@ class QueryChatBase:
             configuration. If no greeting is provided, one will be generated at the
             start of every new conversation.
         client
-            A `chatlas.Chat` object, a string to be passed to `chatlas.ChatAuto()`
-            describing the model to use (e.g. `"openai/gpt-4.1"`), or a function
-            that creates a chat client. If using a function, the function should
-            accept a `system_prompt` argument and return a `chatlas.Chat` object.
+            A `chatlas.Chat` object or a string to be passed to
+            `chatlas.ChatAuto()`'s `provider_model` parameter, describing the
+            provider and model combination to use (e.g. `"openai/gpt-4.1"`,
+            "anthropic/claude-sonnet-4-5", "google/gemini-2.5-flash". etc).
 
-            If `client` is not provided, querychat consults the `QUERYCHAT_CLIENT`
-            environment variable, which can be set to a provider-model string. If no
-            option is provided, querychat defaults to using
-            `chatlas.ChatOpenAI(model="gpt-4.1")`.
+            If `client` is not provided, querychat consults the
+            `QUERYCHAT_CLIENT` environment variable. If that is not set, it
+            defaults to `"openai"`.
         data_description
             Description of the data in plain text or Markdown. If a pathlib.Path
             object is passed, querychat will read the contents of the path into a
@@ -109,27 +101,39 @@ class QueryChatBase:
         ```
 
         """
-        # Note: init_impl validates table_name
-        self._id = id or table_name
+        self.data_source = normalize_data_source(data_source, table_name)
 
-        # Initialize config using existing implementation
-        res = init_impl(
-            data_source,
-            table_name,
-            client=client,
-            greeting=greeting,
+        # Validate table name (must begin with letter, contain only letters, numbers, underscores)
+        if not re.match(r"^[a-zA-Z][a-zA-Z0-9_]*$", table_name):
+            raise ValueError(
+                "Table name must begin with a letter and contain only letters, numbers, and underscores",
+            )
+
+        self.id = id or table_name
+
+        self.client = normalize_client(client)
+
+        if greeting is None:
+            print(
+                "Warning: No greeting provided; the LLM will be invoked at conversation start to generate one. "
+                "For faster startup, lower cost, and determinism, please save a greeting and pass it to init().",
+                "You can also use `querychat.greeting()` to help generate a greeting.",
+                file=sys.stderr,
+            )
+
+        # quality of life improvement to do the Path.read_text() for user or pass along the string
+        self.greeting = greeting.read_text() if isinstance(greeting, Path) else greeting
+
+        self.system_prompt = get_system_prompt(
+            self.data_source,
             data_description=data_description,
             extra_instructions=extra_instructions,
             prompt_template=prompt_template,
         )
-        self.data_source = res["data_source"]
-        self.system_prompt = res["system_prompt"]
-        self.greeting = res["greeting"]
-        self.client = res["client"]
 
-        # Initialize server state
+        # Reactive values and server state
         self._server_initialized: bool = False
-        self._values: ServerResult | None = None
+        self._server_values: ModServerResult | None = None
 
     def sidebar(
         self,
@@ -179,12 +183,7 @@ class QueryChatBase:
             A UI component.
 
         """
-
-        @module.ui
-        def _ui_wrapper(**ui_kwargs):
-            return ui_impl(**ui_kwargs)
-
-        return _ui_wrapper(self._id, **kwargs)
+        return mod_ui(self.id, **kwargs)
 
     def _server(self):
         """
@@ -195,17 +194,7 @@ class QueryChatBase:
         This is a private method since it is called automatically in Express mode.
 
         """
-        # No-op if already initialized
-        if self._server_initialized:
-            warnings.warn(
-                f"QueryChat server logic for instance '{self._id}' has already "
-                "been initialized. Subsequent calls to .server() are no-ops.",
-                UserWarning,
-                stacklevel=2,
-            )
-            return
-
-        # Needs be called within an active Shiny session
+        # Must be called within an active Shiny session
         session = get_current_session()
         if session is None:
             raise RuntimeError(
@@ -217,24 +206,14 @@ class QueryChatBase:
         if session.is_stub_session():
             return
 
-        @module.server
-        def mod_server_wrapper(
-            input: Inputs,
-            output: Outputs,
-            session: Session,
-        ):
-            return server_impl(
-                input,
-                output,
-                session,
-                data_source=self.data_source,
-                system_prompt=self.system_prompt,
-                greeting=self.greeting,
-                client=self.client,
-            )
-
         # Call the server module
-        self._values = mod_server_wrapper(self._id)
+        self._server_values = mod_server(
+            self.id,
+            data_source=self.data_source,
+            system_prompt=self.system_prompt,
+            greeting=self.greeting,
+            client=self.client,
+        )
 
         # Mark as initialized
         self._server_initialized = True
@@ -258,14 +237,8 @@ class QueryChatBase:
             If `.server()` has not been called yet.
 
         """
-        if not self._server_initialized:
-            raise RuntimeError("Must call .server() before accessing .df()")
-        if self._values is None:
-            raise RuntimeError(
-                "Internal error: server initialized but values aren't available."
-            )
-
-        return self._values.df()
+        vals = self._get_server_values()
+        return vals.df()
 
     @overload
     def sql(self, query: None = None) -> str: ...
@@ -296,18 +269,12 @@ class QueryChatBase:
             If `.server()` has not been called yet.
 
         """
-        if not self._server_initialized:
-            raise RuntimeError("Must call .server() before accessing .sql()")
-
-        if self._values is None:
-            raise RuntimeError(
-                "Internal error: server initialized but values aren't available."
-            )
+        vals = self._get_server_values()
 
         if query is None:
-            return self._values.current_query()
+            return vals.sql()
         else:
-            return self._values.current_query.set(query)
+            return vals.sql.set(query)
 
     @overload
     def title(self, value: None = None) -> str | None: ...
@@ -343,18 +310,21 @@ class QueryChatBase:
             If `.server()` has not been called yet.
 
         """
-        if not self._server_initialized:
-            raise RuntimeError("Must call .server() before accessing .title()")
+        vals = self._get_server_values()
 
-        if self._values is None:
+        if value is None:
+            return vals.title()
+        else:
+            return vals.title.set(value)
+
+    def _get_server_values(self) -> ModServerResult:
+        if not self._server_initialized:
+            raise RuntimeError("Must call .server() before using this method.")
+        if self._server_values is None:
             raise RuntimeError(
                 "Internal error: server initialized but values aren't available."
             )
-
-        if value is None:
-            return self._values.current_title()
-        else:
-            return self._values.current_title.set(value)
+        return self._server_values
 
     def generate_greeting(self, *, echo: Literal["none", "text"] = "none"):
         """
@@ -421,7 +391,7 @@ class QueryChatBase:
             querychat template will be used.
 
         """
-        self.system_prompt = system_prompt_impl(
+        self.system_prompt = get_system_prompt(
             data_source,
             data_description=data_description,
             extra_instructions=extra_instructions,
@@ -563,3 +533,74 @@ class QueryChatExpress(QueryChatBase):
             prompt_template=prompt_template,
         )
         self._server()
+
+
+def normalize_data_source(
+    data_source: IntoFrame | sqlalchemy.Engine | DataSource,
+    table_name: str,
+) -> DataSource:
+    if isinstance(data_source, DataSource):
+        return data_source
+    if isinstance(data_source, sqlalchemy.Engine):
+        return SQLAlchemySource(data_source, table_name)
+    return DataFrameSource(data_source, table_name)
+
+
+def normalize_client(client: str | chatlas.Chat | None) -> chatlas.Chat:
+    if client is None:
+        client = os.getenv("QUERYCHAT_CLIENT", None)
+
+    if client is None:
+        client = "openai"
+
+    if isinstance(client, chatlas.Chat):
+        return client
+
+    return chatlas.ChatAuto(provider_model=client)
+
+
+def get_system_prompt(
+    data_source: DataSource,
+    *,
+    data_description: Optional[str | Path] = None,
+    extra_instructions: Optional[str | Path] = None,
+    categorical_threshold: int = 10,
+    prompt_template: Optional[str | Path] = None,
+) -> str:
+    # Read the prompt file
+    if prompt_template is None:
+        # Default to the prompt file in the same directory as this module
+        # This allows for easy customization by placing a different prompt.md file there
+        prompt_template = Path(__file__).parent / "prompts" / "prompt.md"
+    prompt_str = (
+        prompt_template.read_text()
+        if isinstance(prompt_template, Path)
+        else prompt_template
+    )
+
+    data_description_str = (
+        data_description.read_text()
+        if isinstance(data_description, Path)
+        else data_description
+    )
+
+    extra_instructions_str = (
+        extra_instructions.read_text()
+        if isinstance(extra_instructions, Path)
+        else extra_instructions
+    )
+
+    is_duck_db = data_source.get_db_type().lower() == "duckdb"
+
+    return chevron.render(
+        prompt_str,
+        {
+            "db_type": data_source.get_db_type(),
+            "is_duck_db": is_duck_db,
+            "schema": data_source.get_schema(
+                categorical_threshold=categorical_threshold,
+            ),
+            "data_description": data_description_str,
+            "extra_instructions": extra_instructions_str,
+        },
+    )

@@ -7,7 +7,7 @@ from ._querychat import QueryChat
 __all__ = (
     "QueryChat",
     "express",
-    # Old API (deprecated)
+    # TODO(lifecycle): Remove these deprecated functions when we reach v1.0
     "greeting",
     "init",
     "server",

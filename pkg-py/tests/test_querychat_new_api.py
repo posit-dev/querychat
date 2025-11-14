@@ -45,7 +45,7 @@ def test_querychat_init(sample_df):
     assert hasattr(qc, "system_prompt")
     assert hasattr(qc, "greeting")
     assert hasattr(qc, "client")
-    assert qc._id == "test_table"
+    assert qc.id == "test_table"
 
     # Even without server initialization, we should be able to query the data source
     result = qc.data_source.execute_query(
@@ -65,7 +65,7 @@ def test_querychat_custom_id(sample_df):
         greeting="Hello!",
     )
 
-    assert qc._id == "custom_id"
+    assert qc.id == "custom_id"
 
 
 def test_querychat_set_methods(sample_df):
@@ -102,11 +102,11 @@ def test_querychat_core_reactive_access_before_server_raises(sample_df):
     )
 
     # Accessing reactive properties before .server() should raise
-    with pytest.raises(RuntimeError, match="Must call \\.server\\(\\) before accessing"):
+    with pytest.raises(RuntimeError, match="Must call \\.server\\(\\)"):
         qc.title()
 
-    with pytest.raises(RuntimeError, match="Must call \\.server\\(\\) before accessing"):
+    with pytest.raises(RuntimeError, match="Must call \\.server\\(\\)"):
         qc.sql()
 
-    with pytest.raises(RuntimeError, match="Must call \\.server\\(\\) before accessing"):
+    with pytest.raises(RuntimeError, match="Must call \\.server\\(\\)"):
         qc.df()

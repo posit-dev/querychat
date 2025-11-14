@@ -4,7 +4,6 @@ import os
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Optional
 
-import chatlas
 import narwhals.stable.v1 as nw
 
 if TYPE_CHECKING:
@@ -96,46 +95,3 @@ def df_to_html(df: IntoFrame, maxrows: int = 5) -> str:
         rows_notice = ""
 
     return table_html + rows_notice
-
-
-def normalize_client(client: Optional[str | chatlas.Chat] = None) -> chatlas.Chat:
-    if client is None:
-        client = get_client_from_env()
-
-    if client is None:
-        # Default to OpenAI with using chatlas's default model
-        return chatlas.ChatOpenAI()
-
-    if isinstance(client, str):
-        client = create_client_from_string(client)
-
-    if not isinstance(client, chatlas.Chat):
-        raise TypeError(
-            "client must be a chatlas.Chat object or a string",
-        )
-
-    return client
-
-
-def get_client_from_env() -> Optional[str]:
-    """Get client configuration from environment variable."""
-    env_client = os.getenv("QUERYCHAT_CLIENT", "")
-    if not env_client:
-        return None
-    return env_client
-
-
-def create_client_from_string(client_str: str) -> chatlas.Chat:
-    """Create a chatlas.Chat client from a provider-model string."""
-    provider, model = (
-        client_str.split("/", 1) if "/" in client_str else (client_str, None)
-    )
-    # We unset chatlas's envvars so we can listen to querychat's envvars instead
-    with temp_env_vars(
-        {
-            "CHATLAS_CHAT_PROVIDER": provider,
-            "CHATLAS_CHAT_MODEL": model,
-            "CHATLAS_CHAT_ARGS": os.environ.get("QUERYCHAT_CLIENT_ARGS"),
-        },
-    ):
-        return chatlas.ChatAuto(provider="openai")

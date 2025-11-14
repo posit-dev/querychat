@@ -9,9 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changes
 
-* The entire functional API (i.e., `init()`, `sidebar()`, `server()`, etc) has been deprecated in favor of a new class/OOP API. Namely, the new `QueryChat()` class is now the recommended way to start (instead of `init()`), which has methods to replace old functions (e.g., `.sidebar()`, `.server()`, etc). (#101)
-* The previously deprecated `create_chat_callback` parameter of `init()` was removed. (#101)
-* The `querychat.querychat` submodule was removed. It was never intended to be a part of the public API. (#101)
+* The entire functional API (i.e., `init()`, `sidebar()`, `server()`, etc) has been hard deprecated in favor of a simpler OOP-based API. Namely, the new `QueryChat()` class is now the recommended way to start (instead of `init()`), which has methods to replace old functions (e.g., `.sidebar()`, `.server()`, etc). (#101)
 
 ## [UNRELEASED]
 

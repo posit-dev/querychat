@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Callable, Union
 
 import shinychat
 from shiny import module, reactive, ui
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 ReactiveString = reactive.Value[str]
 """A reactive string value."""
-ReactiveStringOrNone = reactive.Value[str | None]
+ReactiveStringOrNone = reactive.Value[Union[str, None]]
 """A reactive string (or None) value."""
 
 CHAT_ID = "chat"

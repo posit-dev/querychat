@@ -118,11 +118,11 @@ def mod_server(
         if not isinstance(update, dict):
             return
 
-        query = update.get("query")
-        title = update.get("title")
-        if query is not None:
-            sql.set(query)
-        if title is not None:
-            title.set(title)
+        new_query = update.get("query")
+        new_title = update.get("title")
+        if new_query is not None:
+            sql.set(new_query)
+        if new_title is not None:
+            title.set(new_title)
 
     return ModServerResult(df=filtered_df, sql=sql, title=title, client=chat)

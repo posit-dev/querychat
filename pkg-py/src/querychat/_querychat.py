@@ -488,7 +488,10 @@ class QueryChat(QueryChatBase):
 
         qc = QueryChat(my_dataframe, "my_data")
 
-        app_ui = ui.page_fluid(qc.sidebar(), ui.output_data_frame("data_table"))
+        app_ui = ui.page_fluid(
+            qc.sidebar(),
+            ui.output_data_frame("data_table"),
+        )
 
 
         def server(input, output, session):

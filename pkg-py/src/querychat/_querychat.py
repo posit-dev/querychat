@@ -121,7 +121,6 @@ class QueryChatBase:
                 file=sys.stderr,
             )
 
-        # quality of life improvement to do the Path.read_text() for user or pass along the string
         self.greeting = greeting.read_text() if isinstance(greeting, Path) else greeting
 
         self.system_prompt = get_system_prompt(

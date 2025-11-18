@@ -1,5 +1,3 @@
-"""Tests for the new QueryChat and QueryChatCore API."""
-
 import os
 
 import pandas as pd

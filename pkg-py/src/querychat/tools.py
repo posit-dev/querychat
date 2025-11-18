@@ -140,7 +140,7 @@ def _reset_dashboard_impl(
                     title=None,
                     show_request=False,
                     open=False,
-                    icon=bs_icon("terminal-fill"),
+                    icon=bs_icon("arrow-counterclockwise"),
                 ),
             },
         )

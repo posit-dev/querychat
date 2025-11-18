@@ -11,13 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * The entire functional API (i.e., `init()`, `sidebar()`, `server()`, etc) has been hard deprecated in favor of a simpler OOP-based API. Namely, the new `QueryChat()` class is now the main entry point (instead of `init()`) and has methods to replace old functions (e.g., `.sidebar()`, `.server()`, etc). (#101)
 
-## [UNRELEASED]
-
 ### New features
 
-* The `.sql` query and `.title` returned from `querychat.server()` are now reactive values, meaning you can now `.set()` their value, and `.df()` will update accordingly. (#98)
+* The current SQL query and title can now be programmatically set through the `.sql()` and `.title()` methods of `QueryChat()`. (#98, #101)
 
-* Added `querychat.greeting()` to help you create a greeting message for your querychat bot. (#87)
+* Added a `.generate_greeting()` method to help you create a greeting message for your querychat bot. (#87)
 
 * Added `querychat_reset_dashboard()` tool for easily resetting the dashboard filters when asked by the user. (#81)
 

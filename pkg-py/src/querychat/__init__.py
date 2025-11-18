@@ -1,14 +1,15 @@
-from querychat._greeting import greeting
-from querychat.querychat import (
-    init,
-    sidebar,
-    system_prompt,
-)
-from querychat.querychat import (
-    mod_server as server,
-)
-from querychat.querychat import (
-    mod_ui as ui,
-)
+from ._deprecated import greeting, init, sidebar, system_prompt
+from ._deprecated import mod_server as server
+from ._deprecated import mod_ui as ui
+from ._querychat import QueryChat
 
-__all__ = ["greeting", "init", "server", "sidebar", "system_prompt", "ui"]
+__all__ = (
+    "QueryChat",
+    # TODO(lifecycle): Remove these deprecated functions when we reach v1.0
+    "greeting",
+    "init",
+    "server",
+    "sidebar",
+    "system_prompt",
+    "ui",
+)

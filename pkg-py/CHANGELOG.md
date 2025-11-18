@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### Changes
+
+* The entire functional API (i.e., `init()`, `sidebar()`, `server()`, etc) has been hard deprecated in favor of a simpler OOP-based API. Namely, the new `QueryChat()` class is now the main entry point (instead of `init()`) and has methods to replace old functions (e.g., `.sidebar()`, `.server()`, etc). (#101)
+
+## [UNRELEASED]
+
 ### New features
 
 * The `.sql` query and `.title` returned from `querychat.server()` are now reactive values, meaning you can now `.set()` their value, and `.df()` will update accordingly. (#98)

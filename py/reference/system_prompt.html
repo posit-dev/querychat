@@ -247,11 +247,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#querychat.system_prompt" id="toc-querychat.system_prompt" class="nav-link active" data-scroll-target="#querychat.system_prompt">system_prompt</a>
-  <ul class="collapse">
-  <li><a href="#parameters" id="toc-parameters" class="nav-link" data-scroll-target="#parameters">Parameters</a></li>
-  <li><a href="#returns" id="toc-returns" class="nav-link" data-scroll-target="#returns">Returns</a></li>
-  </ul></li>
+  <li><a href="#querychat.system_prompt" id="toc-querychat.system_prompt" class="nav-link active" data-scroll-target="#querychat.system_prompt">system_prompt</a></li>
   </ul>
 <div class="toc-actions"><ul><li><a href="https://github.com/posit-dev/querychat/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li><li><a href="https://github.com/posit-dev/querychat/edit/main/pkg-py/docs/reference/system_prompt.qmd" class="toc-action"><i class="bi empty"></i>Edit this page</a></li></ul></div></nav>
     </div>
@@ -272,72 +268,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    prompt_template<span class="op">=</span><span class="va">None</span>,</span>
 <span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Create a system prompt for the chat model based on a data source’s schema and optional additional context and instructions.</p>
-<section id="parameters" class="level2 doc-section doc-section-parameters">
-<h2 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h2>
-<table class="caption-top table">
-<thead>
-<tr class="header">
-<th>Name</th>
-<th>Type</th>
-<th>Description</th>
-<th>Default</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>data_source</td>
-<td><code>DataSource</code></td>
-<td>A data source to generate schema information from</td>
-<td><em>required</em></td>
-</tr>
-<tr class="even">
-<td>data_description</td>
-<td><a href="https://docs.python.org/3/library/typing.html#typing.Optional">Optional</a>[<a href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | <a href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a>]</td>
-<td>Optional description of the data, in plain text or Markdown format</td>
-<td><code>None</code></td>
-</tr>
-<tr class="odd">
-<td>extra_instructions</td>
-<td><a href="https://docs.python.org/3/library/typing.html#typing.Optional">Optional</a>[<a href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | <a href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a>]</td>
-<td>Optional additional instructions for the chat model, in plain text or Markdown format</td>
-<td><code>None</code></td>
-</tr>
-<tr class="even">
-<td>categorical_threshold</td>
-<td><a href="https://docs.python.org/3/library/functions.html#int">int</a></td>
-<td>Threshold for determining if a column is categorical based on number of unique values</td>
-<td><code>10</code></td>
-</tr>
-<tr class="odd">
-<td>prompt_template</td>
-<td><a href="https://docs.python.org/3/library/typing.html#typing.Optional">Optional</a>[<a href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | <a href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a>]</td>
-<td>Optional <code>Path</code> to or string of a custom prompt template. If not provided, the default querychat template will be used.</td>
-<td><code>None</code></td>
-</tr>
-</tbody>
-</table>
-</section>
-<section id="returns" class="level2 doc-section doc-section-returns">
-<h2 class="doc-section doc-section-returns anchored" data-anchor-id="returns">Returns</h2>
-<table class="caption-top table">
-<thead>
-<tr class="header">
-<th>Name</th>
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td></td>
-<td><a href="https://docs.python.org/3/library/stdtypes.html#str">str</a></td>
-<td>The system prompt for the chat model.</td>
-</tr>
-</tbody>
-</table>
+<p><strong>Deprecated.</strong> Use <code>QueryChat.set_system_prompt()</code> instead.</p>
 
 
-</section>
 </section>
 
 </main> <!-- /main -->

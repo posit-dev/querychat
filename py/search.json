@@ -11,31 +11,7 @@
     "href": "reference/system_prompt.html",
     "title": "system_prompt",
     "section": "",
-    "text": "system_prompt(\n    data_source,\n    *,\n    data_description=None,\n    extra_instructions=None,\n    categorical_threshold=10,\n    prompt_template=None,\n)\nCreate a system prompt for the chat model based on a data source’s schema and optional additional context and instructions.\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata_source\nDataSource\nA data source to generate schema information from\nrequired\n\n\ndata_description\nOptional[str | Path]\nOptional description of the data, in plain text or Markdown format\nNone\n\n\nextra_instructions\nOptional[str | Path]\nOptional additional instructions for the chat model, in plain text or Markdown format\nNone\n\n\ncategorical_threshold\nint\nThreshold for determining if a column is categorical based on number of unique values\n10\n\n\nprompt_template\nOptional[str | Path]\nOptional Path to or string of a custom prompt template. If not provided, the default querychat template will be used.\nNone\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\nstr\nThe system prompt for the chat model.",
-    "crumbs": [
-      "API Reference",
-      "Customize",
-      "system_prompt"
-    ]
-  },
-  {
-    "objectID": "reference/system_prompt.html#parameters",
-    "href": "reference/system_prompt.html#parameters",
-    "title": "system_prompt",
-    "section": "",
-    "text": "Name\nType\nDescription\nDefault\n\n\n\n\ndata_source\nDataSource\nA data source to generate schema information from\nrequired\n\n\ndata_description\nOptional[str | Path]\nOptional description of the data, in plain text or Markdown format\nNone\n\n\nextra_instructions\nOptional[str | Path]\nOptional additional instructions for the chat model, in plain text or Markdown format\nNone\n\n\ncategorical_threshold\nint\nThreshold for determining if a column is categorical based on number of unique values\n10\n\n\nprompt_template\nOptional[str | Path]\nOptional Path to or string of a custom prompt template. If not provided, the default querychat template will be used.\nNone",
-    "crumbs": [
-      "API Reference",
-      "Customize",
-      "system_prompt"
-    ]
-  },
-  {
-    "objectID": "reference/system_prompt.html#returns",
-    "href": "reference/system_prompt.html#returns",
-    "title": "system_prompt",
-    "section": "",
-    "text": "Name\nType\nDescription\n\n\n\n\n\nstr\nThe system prompt for the chat model.",
+    "text": "system_prompt\nsystem_prompt(\n    data_source,\n    *,\n    data_description=None,\n    extra_instructions=None,\n    categorical_threshold=10,\n    prompt_template=None,\n)\nCreate a system prompt for the chat model based on a data source’s schema and optional additional context and instructions.\nDeprecated. Use QueryChat.set_system_prompt() instead.",
     "crumbs": [
       "API Reference",
       "Customize",
@@ -47,31 +23,7 @@
     "href": "reference/sidebar.html",
     "title": "sidebar",
     "section": "",
-    "text": "sidebar(id, width=400, height='100%', **kwargs)\nCreate a sidebar containing the querychat UI.\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nid\nstr\nThe module ID.\nrequired\n\n\nwidth\nint\nWidth of the sidebar in pixels.\n400\n\n\nheight\nstr\nHeight of the sidebar.\n'100%'\n\n\n**kwargs\n\nAdditional arguments to pass to the sidebar component.\n{}\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\nui.Sidebar\nA sidebar UI component.",
-    "crumbs": [
-      "API Reference",
-      "Get Started",
-      "sidebar"
-    ]
-  },
-  {
-    "objectID": "reference/sidebar.html#parameters",
-    "href": "reference/sidebar.html#parameters",
-    "title": "sidebar",
-    "section": "",
-    "text": "Name\nType\nDescription\nDefault\n\n\n\n\nid\nstr\nThe module ID.\nrequired\n\n\nwidth\nint\nWidth of the sidebar in pixels.\n400\n\n\nheight\nstr\nHeight of the sidebar.\n'100%'\n\n\n**kwargs\n\nAdditional arguments to pass to the sidebar component.\n{}",
-    "crumbs": [
-      "API Reference",
-      "Get Started",
-      "sidebar"
-    ]
-  },
-  {
-    "objectID": "reference/sidebar.html#returns",
-    "href": "reference/sidebar.html#returns",
-    "title": "sidebar",
-    "section": "",
-    "text": "Name\nType\nDescription\n\n\n\n\n\nui.Sidebar\nA sidebar UI component.",
+    "text": "sidebar\nsidebar(id, width=400, height='100%', **kwargs)\nCreate a sidebar containing the querychat UI.\nDeprecated. Use QueryChat.sidebar() instead.",
     "crumbs": [
       "API Reference",
       "Get Started",
@@ -83,31 +35,7 @@
     "href": "reference/server.html",
     "title": "server",
     "section": "",
-    "text": "server(input, output, session, querychat_config)\nInitialize the querychat server.\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\nquerychat_config\nQueryChatConfig\nConfiguration object from init().\nrequired\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\nQueryChat\nA QueryChat object representing the chat session. This can be used to access the chat, current SQL query, title, and filtered data frame.",
-    "crumbs": [
-      "API Reference",
-      "Get Started",
-      "server"
-    ]
-  },
-  {
-    "objectID": "reference/server.html#parameters",
-    "href": "reference/server.html#parameters",
-    "title": "server",
-    "section": "",
-    "text": "Name\nType\nDescription\nDefault\n\n\n\n\nquerychat_config\nQueryChatConfig\nConfiguration object from init().\nrequired",
-    "crumbs": [
-      "API Reference",
-      "Get Started",
-      "server"
-    ]
-  },
-  {
-    "objectID": "reference/server.html#returns",
-    "href": "reference/server.html#returns",
-    "title": "server",
-    "section": "",
-    "text": "Name\nType\nDescription\n\n\n\n\n\nQueryChat\nA QueryChat object representing the chat session. This can be used to access the chat, current SQL query, title, and filtered data frame.",
+    "text": "server\nserver(input, output, session, querychat_config)\nInitialize the querychat server.\nDeprecated. Use QueryChat.server() instead.",
     "crumbs": [
       "API Reference",
       "Get Started",
@@ -325,19 +253,7 @@
     "href": "reference/ui.html",
     "title": "ui",
     "section": "",
-    "text": "ui()\nCreate the UI for the querychat component.\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\nui.TagList\nA UI component.",
-    "crumbs": [
-      "API Reference",
-      "Customize",
-      "ui"
-    ]
-  },
-  {
-    "objectID": "reference/ui.html#returns",
-    "href": "reference/ui.html#returns",
-    "title": "ui",
-    "section": "",
-    "text": "Name\nType\nDescription\n\n\n\n\n\nui.TagList\nA UI component.",
+    "text": "ui\nui(**kwargs)\nCreate the UI for the querychat component.\nDeprecated. Use QueryChat.ui() instead.",
     "crumbs": [
       "API Reference",
       "Customize",
@@ -349,31 +265,7 @@
     "href": "reference/init.html",
     "title": "init",
     "section": "",
-    "text": "init(\n    data_source,\n    table_name,\n    *,\n    greeting=None,\n    data_description=None,\n    extra_instructions=None,\n    prompt_template=None,\n    system_prompt_override=None,\n    client=None,\n    create_chat_callback=None,\n)\nInitialize querychat with any compliant data source.\n\n\n\n\n\nName\nType\nDescription\nDefault\n\n\n\n\ndata_source\nIntoFrame | sqlalchemy.Engine\nEither a Narwhals-compatible data frame (e.g., Polars or Pandas) or a SQLAlchemy engine containing the table to query against.\nrequired\n\n\ntable_name\nstr\nIf a data_source is a data frame, a name to use to refer to the table in SQL queries (usually the variable name of the data frame, but it doesn’t have to be). If a data_source is a SQLAlchemy engine, the table_name is the name of the table in the database to query against.\nrequired\n\n\ngreeting\nOptional[str | Path]\nA string in Markdown format, containing the initial message. If a pathlib.Path object is passed, querychat will read the contents of the path into a string with .read_text(). You can use querychat.greeting() to help generate a greeting from a querychat configuration. If no greeting is provided, one will be generated at the start of every new conversation.\nNone\n\n\ndata_description\nOptional[str | Path]\nDescription of the data in plain text or Markdown. If a pathlib.Path object is passed, querychat will read the contents of the path into a string with .read_text().\nNone\n\n\nextra_instructions\nOptional[str | Path]\nAdditional instructions for the chat model. If a pathlib.Path object is passed, querychat will read the contents of the path into a string with .read_text().\nNone\n\n\nprompt_template\nOptional[str | Path]\nPath to or a string of a custom prompt file. If not provided, the default querychat template will be used. This should be a Markdown file that contains the system prompt template. The mustache template can use the following variables: - {db_engine}: The database engine used (e.g., “DuckDB”) - {schema}: The schema of the data source, generated by data_source.get_schema() - {data_description}: The optional data description provided - {extra_instructions}: Any additional instructions provided\nNone\n\n\nsystem_prompt_override\nOptional[str]\nA custom system prompt to use instead of the default. If provided, data_description, extra_instructions, and prompt_template will be silently ignored.\nNone\n\n\nclient\nOptional[Union[chatlas.Chat, CreateChatCallback, str]]\nA chatlas.Chat object, a string to be passed to chatlas.ChatAuto() describing the model to use (e.g. \"openai/gpt-4.1\"), or a function that creates a chat client. If using a function, the function should accept a system_prompt argument and return a chatlas.Chat object. If client is not provided, querychat consults the QUERYCHAT_CLIENT environment variable, which can be set to a provider-model string. If no option is provided, querychat defaults to using chatlas.ChatOpenAI(model=\"gpt-4.1\").\nNone\n\n\ncreate_chat_callback\nOptional[CreateChatCallback]\nDeprecated. Use the client argument instead.\nNone\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nName\nType\nDescription\n\n\n\n\n\nQueryChatConfig\nA QueryChatConfig object that can be passed to server()",
-    "crumbs": [
-      "API Reference",
-      "Get Started",
-      "init"
-    ]
-  },
-  {
-    "objectID": "reference/init.html#parameters",
-    "href": "reference/init.html#parameters",
-    "title": "init",
-    "section": "",
-    "text": "Name\nType\nDescription\nDefault\n\n\n\n\ndata_source\nIntoFrame | sqlalchemy.Engine\nEither a Narwhals-compatible data frame (e.g., Polars or Pandas) or a SQLAlchemy engine containing the table to query against.\nrequired\n\n\ntable_name\nstr\nIf a data_source is a data frame, a name to use to refer to the table in SQL queries (usually the variable name of the data frame, but it doesn’t have to be). If a data_source is a SQLAlchemy engine, the table_name is the name of the table in the database to query against.\nrequired\n\n\ngreeting\nOptional[str | Path]\nA string in Markdown format, containing the initial message. If a pathlib.Path object is passed, querychat will read the contents of the path into a string with .read_text(). You can use querychat.greeting() to help generate a greeting from a querychat configuration. If no greeting is provided, one will be generated at the start of every new conversation.\nNone\n\n\ndata_description\nOptional[str | Path]\nDescription of the data in plain text or Markdown. If a pathlib.Path object is passed, querychat will read the contents of the path into a string with .read_text().\nNone\n\n\nextra_instructions\nOptional[str | Path]\nAdditional instructions for the chat model. If a pathlib.Path object is passed, querychat will read the contents of the path into a string with .read_text().\nNone\n\n\nprompt_template\nOptional[str | Path]\nPath to or a string of a custom prompt file. If not provided, the default querychat template will be used. This should be a Markdown file that contains the system prompt template. The mustache template can use the following variables: - {db_engine}: The database engine used (e.g., “DuckDB”) - {schema}: The schema of the data source, generated by data_source.get_schema() - {data_description}: The optional data description provided - {extra_instructions}: Any additional instructions provided\nNone\n\n\nsystem_prompt_override\nOptional[str]\nA custom system prompt to use instead of the default. If provided, data_description, extra_instructions, and prompt_template will be silently ignored.\nNone\n\n\nclient\nOptional[Union[chatlas.Chat, CreateChatCallback, str]]\nA chatlas.Chat object, a string to be passed to chatlas.ChatAuto() describing the model to use (e.g. \"openai/gpt-4.1\"), or a function that creates a chat client. If using a function, the function should accept a system_prompt argument and return a chatlas.Chat object. If client is not provided, querychat consults the QUERYCHAT_CLIENT environment variable, which can be set to a provider-model string. If no option is provided, querychat defaults to using chatlas.ChatOpenAI(model=\"gpt-4.1\").\nNone\n\n\ncreate_chat_callback\nOptional[CreateChatCallback]\nDeprecated. Use the client argument instead.\nNone",
-    "crumbs": [
-      "API Reference",
-      "Get Started",
-      "init"
-    ]
-  },
-  {
-    "objectID": "reference/init.html#returns",
-    "href": "reference/init.html#returns",
-    "title": "init",
-    "section": "",
-    "text": "Name\nType\nDescription\n\n\n\n\n\nQueryChatConfig\nA QueryChatConfig object that can be passed to server()",
+    "text": "init\ninit(\n    data_source,\n    table_name,\n    *,\n    greeting=None,\n    data_description=None,\n    extra_instructions=None,\n    prompt_template=None,\n    system_prompt_override=None,\n    client=None,\n)\nInitialize querychat with any compliant data source.\nDeprecated. Use QueryChat() instead.",
     "crumbs": [
       "API Reference",
       "Get Started",

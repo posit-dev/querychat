@@ -247,11 +247,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#querychat.init" id="toc-querychat.init" class="nav-link active" data-scroll-target="#querychat.init">init</a>
-  <ul class="collapse">
-  <li><a href="#parameters" id="toc-parameters" class="nav-link" data-scroll-target="#parameters">Parameters</a></li>
-  <li><a href="#returns" id="toc-returns" class="nav-link" data-scroll-target="#returns">Returns</a></li>
-  </ul></li>
+  <li><a href="#querychat.init" id="toc-querychat.init" class="nav-link active" data-scroll-target="#querychat.init">init</a></li>
   </ul>
 <div class="toc-actions"><ul><li><a href="https://github.com/posit-dev/querychat/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li><li><a href="https://github.com/posit-dev/querychat/edit/main/pkg-py/docs/reference/init.qmd" class="toc-action"><i class="bi empty"></i>Edit this page</a></li></ul></div></nav>
     </div>
@@ -273,104 +269,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    prompt_template<span class="op">=</span><span class="va">None</span>,</span>
 <span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    system_prompt_override<span class="op">=</span><span class="va">None</span>,</span>
 <span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    client<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    create_chat_callback<span class="op">=</span><span class="va">None</span>,</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Initialize querychat with any compliant data source.</p>
-<section id="parameters" class="level2 doc-section doc-section-parameters">
-<h2 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h2>
-<table class="caption-top table">
-<thead>
-<tr class="header">
-<th>Name</th>
-<th>Type</th>
-<th>Description</th>
-<th>Default</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>data_source</td>
-<td><code>IntoFrame</code> | <code>sqlalchemy</code>.<code>Engine</code></td>
-<td>Either a Narwhals-compatible data frame (e.g., Polars or Pandas) or a SQLAlchemy engine containing the table to query against.</td>
-<td><em>required</em></td>
-</tr>
-<tr class="even">
-<td>table_name</td>
-<td><a href="https://docs.python.org/3/library/stdtypes.html#str">str</a></td>
-<td>If a data_source is a data frame, a name to use to refer to the table in SQL queries (usually the variable name of the data frame, but it doesn’t have to be). If a data_source is a SQLAlchemy engine, the table_name is the name of the table in the database to query against.</td>
-<td><em>required</em></td>
-</tr>
-<tr class="odd">
-<td>greeting</td>
-<td><a href="https://docs.python.org/3/library/typing.html#typing.Optional">Optional</a>[<a href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | <a href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a>]</td>
-<td>A string in Markdown format, containing the initial message. If a pathlib.Path object is passed, querychat will read the contents of the path into a string with <code>.read_text()</code>. You can use <code>querychat.greeting()</code> to help generate a greeting from a querychat configuration. If no greeting is provided, one will be generated at the start of every new conversation.</td>
-<td><code>None</code></td>
-</tr>
-<tr class="even">
-<td>data_description</td>
-<td><a href="https://docs.python.org/3/library/typing.html#typing.Optional">Optional</a>[<a href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | <a href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a>]</td>
-<td>Description of the data in plain text or Markdown. If a pathlib.Path object is passed, querychat will read the contents of the path into a string with <code>.read_text()</code>.</td>
-<td><code>None</code></td>
-</tr>
-<tr class="odd">
-<td>extra_instructions</td>
-<td><a href="https://docs.python.org/3/library/typing.html#typing.Optional">Optional</a>[<a href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | <a href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a>]</td>
-<td>Additional instructions for the chat model. If a pathlib.Path object is passed, querychat will read the contents of the path into a string with <code>.read_text()</code>.</td>
-<td><code>None</code></td>
-</tr>
-<tr class="even">
-<td>prompt_template</td>
-<td><a href="https://docs.python.org/3/library/typing.html#typing.Optional">Optional</a>[<a href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | <a href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a>]</td>
-<td>Path to or a string of a custom prompt file. If not provided, the default querychat template will be used. This should be a Markdown file that contains the system prompt template. The mustache template can use the following variables: - <code>{db_engine}</code>: The database engine used (e.g., “DuckDB”) - <code>{schema}</code>: The schema of the data source, generated by <code>data_source.get_schema()</code> - <code>{data_description}</code>: The optional data description provided - <code>{extra_instructions}</code>: Any additional instructions provided</td>
-<td><code>None</code></td>
-</tr>
-<tr class="odd">
-<td>system_prompt_override</td>
-<td><a href="https://docs.python.org/3/library/typing.html#typing.Optional">Optional</a>[<a href="https://docs.python.org/3/library/stdtypes.html#str">str</a>]</td>
-<td>A custom system prompt to use instead of the default. If provided, <code>data_description</code>, <code>extra_instructions</code>, and <code>prompt_template</code> will be silently ignored.</td>
-<td><code>None</code></td>
-</tr>
-<tr class="even">
-<td>client</td>
-<td><a href="https://docs.python.org/3/library/typing.html#typing.Optional">Optional</a>[<a href="https://docs.python.org/3/library/typing.html#typing.Union">Union</a>[<code>chatlas</code>.<code>Chat</code>, <code>CreateChatCallback</code>, <a href="https://docs.python.org/3/library/stdtypes.html#str">str</a>]]</td>
-<td>A <code>chatlas.Chat</code> object, a string to be passed to <code>chatlas.ChatAuto()</code> describing the model to use (e.g.&nbsp;<code>"openai/gpt-4.1"</code>), or a function that creates a chat client. If using a function, the function should accept a <code>system_prompt</code> argument and return a <code>chatlas.Chat</code> object. If <code>client</code> is not provided, querychat consults the <code>QUERYCHAT_CLIENT</code> environment variable, which can be set to a provider-model string. If no option is provided, querychat defaults to using <code>chatlas.ChatOpenAI(model="gpt-4.1")</code>.</td>
-<td><code>None</code></td>
-</tr>
-<tr class="odd">
-<td>create_chat_callback</td>
-<td><a href="https://docs.python.org/3/library/typing.html#typing.Optional">Optional</a>[<code>CreateChatCallback</code>]</td>
-<td><strong>Deprecated.</strong> Use the <code>client</code> argument instead.</td>
-<td><code>None</code></td>
-</tr>
-</tbody>
-</table>
-</section>
-<section id="returns" class="level2 doc-section doc-section-returns">
-<h2 class="doc-section doc-section-returns anchored" data-anchor-id="returns">Returns</h2>
-<table class="caption-top table">
-<colgroup>
-<col style="width: 6%">
-<col style="width: 47%">
-<col style="width: 46%">
-</colgroup>
-<thead>
-<tr class="header">
-<th>Name</th>
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td></td>
-<td><code>QueryChatConfig</code></td>
-<td>A QueryChatConfig object that can be passed to server()</td>
-</tr>
-</tbody>
-</table>
+<p><strong>Deprecated.</strong> Use <code>QueryChat()</code> instead.</p>
 
 
-</section>
 </section>
 
 </main> <!-- /main -->

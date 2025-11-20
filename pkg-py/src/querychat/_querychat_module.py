@@ -136,14 +136,14 @@ def mod_server(
     if enable_bookmarking:
         chat_ui.enable_bookmarking(client)
 
+        @session.bookmark.on_bookmark
         def _on_bookmark(x: BookmarkState) -> None:
             vals = x.values  # noqa: PD011
             vals["querychat_sql"] = sql.get()
             vals["querychat_title"] = title.get()
             vals["querychat_has_greeted"] = has_greeted.get()
 
-        session.bookmark.on_bookmark(_on_bookmark)
-
+        @session.bookmark.on_restore
         def _on_restore(x: RestoreState) -> None:
             vals = x.values  # noqa: PD011
             if "querychat_sql" in vals:
@@ -152,7 +152,5 @@ def mod_server(
                 title.set(vals["querychat_title"])
             if "querychat_has_greeted" in vals:
                 has_greeted.set(vals["querychat_has_greeted"])
-
-        session.bookmark.on_restore(_on_restore)
 
     return ModServerResult(df=filtered_df, sql=sql, title=title, client=chat)

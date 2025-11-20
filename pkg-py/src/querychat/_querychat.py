@@ -11,6 +11,7 @@ import chatlas
 import chevron
 import sqlalchemy
 from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
+from shiny.express._stub_session import ExpressStubSession
 from shiny.session import get_current_session
 from shinychat import output_markdown_stream
 
@@ -278,7 +279,7 @@ class QueryChatBase:
         """
         return mod_ui(self.id, **kwargs)
 
-    def _server(self, *, enable_bookmarking: bool = True) -> None:
+    def _server(self, *, enable_bookmarking: bool = False) -> None:
         """
         Initialize the server module.
 
@@ -530,7 +531,7 @@ class QueryChatBase:
 
 
 class QueryChat(QueryChatBase):
-    def server(self, *, enable_bookmarking: bool = True) -> None:
+    def server(self, *, enable_bookmarking: bool = False) -> None:
         """
         Initialize Shiny server logic.
 
@@ -542,32 +543,45 @@ class QueryChat(QueryChatBase):
         Parameters
         ----------
         enable_bookmarking
-            Whether to enable bookmarking for the querychat module. Default is
-            `True`.
+            Whether to enable bookmarking for the querychat module.
 
         Examples
         --------
         ```python
         from shiny import App, render, ui
+        from seaborn import load_dataset
         from querychat import QueryChat
 
-        qc = QueryChat(my_dataframe, "my_data")
+        titanic = load_dataset("titanic")
 
-        app_ui = ui.page_fluid(
-            qc.sidebar(),
-            ui.output_data_frame("data_table"),
-        )
+        qc = QueryChat(titanic, "titanic")
+
+
+        def app_ui(request):
+            return ui.page_sidebar(
+                qc.sidebar(),
+                ui.card(
+                    ui.card_header(ui.output_text("title")),
+                    ui.output_data_frame("data_table"),
+                ),
+                title="Titanic QueryChat App",
+                fillable=True,
+            )
 
 
         def server(input, output, session):
-            qc.server()
+            qc.server(enable_bookmarking=True)
 
             @render.data_frame
             def data_table():
                 return qc.df()
 
+            @render.text
+            def title():
+                return qc.title() or "My Data"
 
-        app = App(app_ui, server)
+
+        app = App(app_ui, server, bookmark_store="url")
         ```
 
         Returns
@@ -590,17 +604,33 @@ class QueryChatExpress(QueryChatBase):
     Examples
     --------
     ```python
-    from shiny.express import render, ui
     from querychat.express import QueryChat
+    from seaborn import load_dataset
+    from shiny.express import app_opts, render, ui
 
-    qc = QueryChat(my_dataframe, "my_data")
+    titanic = load_dataset("titanic")
 
+    qc = QueryChat(titanic, "titanic")
     qc.sidebar()
 
+    with ui.card(fill=True):
+        with ui.card_header():
 
-    @render.data_frame
-    def data_table():
-        return qc.df()
+            @render.text
+            def title():
+                return qc.title() or "Titanic Dataset"
+
+        @render.data_frame
+        def data_table():
+            return qc.df()
+
+
+    ui.page_opts(
+        title="Titanic QueryChat App",
+        fillable=True,
+    )
+
+    app_opts(bookmark_store="url")
     ```
 
     """
@@ -616,7 +646,7 @@ class QueryChatExpress(QueryChatBase):
         data_description: Optional[str | Path] = None,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
-        enable_bookmarking: bool = True,
+        enable_bookmarking: Literal["auto", True, False] = "auto",
     ):
         super().__init__(
             data_source,
@@ -628,7 +658,21 @@ class QueryChatExpress(QueryChatBase):
             extra_instructions=extra_instructions,
             prompt_template=prompt_template,
         )
-        self._server(enable_bookmarking=enable_bookmarking)
+
+        # If the Express session has a bookmark store set, automatically enable
+        # querychat's bookmarking
+        enable: bool
+        if enable_bookmarking == "auto":
+            session = get_current_session()
+            if session and isinstance(session, ExpressStubSession):
+                store = session.app_opts.get("bookmark_store", "disable")
+                enable = store != "disable"
+            else:
+                enable = False
+        else:
+            enable = enable_bookmarking
+
+        self._server(enable_bookmarking=enable)
 
 
 def normalize_data_source(

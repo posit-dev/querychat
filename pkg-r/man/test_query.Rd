@@ -17,5 +17,8 @@ test_query(source, query, ...)
 Result of the query, limited to one row of data.
 }
 \description{
-Test a SQL query on a data source.
+An entrypoint for developers to create custom data sources for use with
+querychat. Most users shouldn't use this function directly; instead, they
+should call the \verb{$sql()} method on the \link{QueryChat} object to run queries.
 }
+\keyword{internal}

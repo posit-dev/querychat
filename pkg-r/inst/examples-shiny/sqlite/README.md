@@ -1,6 +1,6 @@
 # Database Setup Examples for querychat
 
-This document provides examples of how to set up querychat with various database types using the new `database_source()` functionality.
+This document provides examples of how to set up querychat with various database types.
 
 ## SQLite
 
@@ -12,15 +12,16 @@ library(querychat)
 # Connect to SQLite database
 conn <- dbConnect(RSQLite::SQLite(), "path/to/your/database.db")
 
-# Create database source
-db_source <- database_source(conn, "your_table_name")
-
-# Initialize querychat
-config <- querychat_init(
-  data_source = db_source,
+# Create QueryChat instance
+qc <- QueryChat$new(
+  conn,
+  "your_table_name",
   greeting = "Welcome! Ask me about your data.",
   data_description = "Description of your data..."
 )
+
+# Launch the app
+qc$app()
 ```
 
 ## PostgreSQL
@@ -40,11 +41,11 @@ conn <- dbConnect(
   password = "your_password"
 )
 
-# Create database source
-db_source <- database_source(conn, "your_table_name")
+# Create QueryChat instance
+qc <- QueryChat$new(conn, "your_table_name")
 
-# Initialize querychat
-config <- querychat_init(data_source = db_source)
+# Launch the app
+qc$app()
 ```
 
 ## MySQL
@@ -63,22 +64,25 @@ conn <- dbConnect(
   password = "your_password"
 )
 
-# Create database source
-db_source <- database_source(conn, "your_table_name")
+# Create QueryChat instance
+qc <- QueryChat$new(conn, "your_table_name")
 
-# Initialize querychat
-config <- querychat_init(data_source = db_source)
+# Launch the app
+qc$app()
 ```
 
 ## Connection Management
 
-When using database sources in Shiny apps, make sure to properly manage connections:
+When using database sources in custom Shiny apps, make sure to properly manage connections:
 
 ```r
 server <- function(input, output, session) {
-  # Your querychat server logic here
-  chat <- querychat_server("chat", querychat_config)
-  
+  # Initialize QueryChat server
+  qc$server()
+
+  # Your custom outputs here
+  output$table <- renderTable(qc$df())
+
   # Clean up connection when session ends
   session$onSessionEnded(function() {
     if (dbIsValid(conn)) {
@@ -86,15 +90,6 @@ server <- function(input, output, session) {
     }
   })
 }
-```
-
-## Configuration Options
-
-The `database_source()` function accepts a `categorical_threshold` parameter:
-
-```r
-# Columns with <= 50 unique values will be treated as categorical
-db_source <- database_source(conn, "table_name", categorical_threshold = 50)
 ```
 
 ## Security Considerations

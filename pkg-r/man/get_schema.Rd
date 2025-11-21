@@ -4,10 +4,12 @@
 \alias{get_schema}
 \title{Get schema for a data source}
 \usage{
-get_schema(source, ...)
+get_schema(source, categorical_threshold = 20, ...)
 }
 \arguments{
 \item{source}{A querychat_data_source object}
+
+\item{categorical_threshold}{For text columns, the maximum number of unique values to consider as a categorical variable}
 
 \item{...}{Additional arguments passed to methods}
 }
@@ -15,5 +17,8 @@ get_schema(source, ...)
 A character string describing the schema
 }
 \description{
-Get schema for a data source
+An entrypoint for developers to create custom data sources for use with
+querychat. Most users shouldn't use this function directly; instead, they
+should call the \verb{$set_system_prompt()} method on the \link{QueryChat} object.
 }
+\keyword{internal}

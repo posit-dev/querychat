@@ -20,36 +20,46 @@ pak::pak("posit-dev/querychat/pkg-r")
 
 First, you'll need an OpenAI API key. See the [instructions from Ellmer](https://ellmer.tidyverse.org/reference/chat_openai.html). (Or use a different LLM provider, see below.)
 
-Here's a very minimal example that shows the three function calls you need to make.
+### Quick Start
+
+The fastest way to get started is with the built-in app:
+
+```r
+library(querychat)
+
+qc <- QueryChat$new(mtcars, "mtcars")
+qc$app()
+```
+
+This launches a complete Shiny app with a chat interface, SQL query display, and data table. Perfect for quick exploration and prototyping!
+
+### Custom Shiny Apps
+
+For more control, integrate querychat into your own Shiny app:
 
 ```r
 library(shiny)
 library(bslib)
 library(querychat)
 
-# 1. Create a data source for querychat
-mtcars_source <- querychat_data_source(mtcars)
-
-# 2. Configure querychat with the data source
-querychat_config <- querychat_init(mtcars_source)
+# 1. Create a QueryChat instance with your data
+qc <- QueryChat$new(mtcars, "mtcars")
 
 ui <- page_sidebar(
-  # 3. Use querychat_sidebar(id) in a bslib::page_sidebar.
-  #    Alternatively, use querychat_ui(id) elsewhere if you don't want your
+  # 2. Use qc$sidebar() in a bslib::page_sidebar.
+  #    Alternatively, use qc$ui() elsewhere if you don't want your
   #    chat interface to live in a sidebar.
-  sidebar = querychat_sidebar("chat"),
+  sidebar = qc$sidebar(),
   DT::DTOutput("dt")
 )
 
 server <- function(input, output, session) {
-
-  # 4. Create a querychat object using the config from step 2.
-  querychat <- querychat_server("chat", querychat_config)
+  # 3. Initialize the QueryChat server
+  qc$server()
 
   output$dt <- DT::renderDT({
-    # 5. Use the filtered/sorted data frame anywhere you wish, via the
-    #    querychat$df() reactive.
-    DT::datatable(querychat$df())
+    # 4. Use the filtered/sorted data frame anywhere you wish, via qc$df()
+    DT::datatable(qc$df())
   })
 }
 
@@ -70,13 +80,11 @@ library(RSQLite)
 # 1. Connect to a database
 conn <- DBI::dbConnect(RSQLite::SQLite(), "path/to/database.db")
 
-# 2. Create a database data source for querychat
-db_source <- querychat_data_source(conn, "table_name")
+# 2. Create a QueryChat instance with the database connection
+qc <- QueryChat$new(conn, "table_name")
 
-# 3. Configure querychat with the database source
-querychat_config <- querychat_init(db_source)
-
-# Then use querychat_config in your Shiny app as shown above
+# 3. Use it in your Shiny app as shown above
+qc$app()
 ```
 
 ## How it works
@@ -107,7 +115,7 @@ Currently, querychat uses DuckDB for its SQL engine when working with data frame
 
 ### Provide a greeting (recommended)
 
-When the querychat UI first appears, you will usually want it to greet the user with some basic instructions. By default, these instructions are auto-generated every time a user arrives; this is slow, wasteful, and unpredictable. Instead, you should create a file called `greeting.md`, and when calling `querychat_init`, pass `greeting = readLines("greeting.md")`.
+When the querychat UI first appears, you will usually want it to greet the user with some basic instructions. By default, these instructions are auto-generated every time a user arrives; this is slow, wasteful, and unpredictable. Instead, you should create a file called `greeting.md`, and when creating your `QueryChat` instance, pass `greeting = "greeting.md"` (or use `readLines()` to read the file as a string).
 
 You can provide suggestions to the user by using the `<span class="suggestion"> </span>` tag.
 
@@ -128,11 +136,18 @@ For example:
 These suggestions appear in the greeting and automatically populate the chat text box when clicked.
 This gives the user a few ideas to explore on their own.
 
-If you need help coming up with a greeting, your own app can help you! Just launch it and paste this into the chat interface:
+You can use the `$generate_greeting()` method to help create a greeting:
 
-> Help me create a greeting for your future users. Include some example questions. Format your suggested greeting as Markdown, in a code block.
+```r
+qc <- QueryChat$new(mtcars, "mtcars")
+greeting <- qc$generate_greeting(echo = "text")
 
-And keep giving it feedback until you're happy with the result, which will then be ready to be pasted into `greeting.md`.
+# Save it for reuse
+writeLines(greeting, "greeting.md")
+
+# Then use it in your app
+qc <- QueryChat$new(mtcars, "mtcars", greeting = "greeting.md")
+```
 
 Alternatively, you can completely suppress the greeting by passing `greeting = ""`.
 
@@ -183,13 +198,10 @@ performance for 32 automobiles (1973–74 models).
 which you can then pass via:
 
 ```r
-# Create data source first
-mtcars_source <- querychat_data_source(mtcars, tbl_name = "cars")
-
-# Then initialize with the data source and description
-querychat_config <- querychat_init(
-  data_source = mtcars_source,
-  data_description = readLines("data_description.md")
+qc <- QueryChat$new(
+  mtcars,
+  "mtcars",
+  data_description = "data_description.md"
 )
 ```
 
@@ -197,15 +209,12 @@ querychat doesn't need this information in any particular format; just put whate
 
 #### Additional instructions
 
-You can add additional instructions of your own to the end of the system prompt, by passing `extra_instructions` into `query_init`.
+You can add additional instructions of your own to the end of the system prompt, by passing `extra_instructions` to `QueryChat$new()`.
 
 ```r
-# Create data source first
-mtcars_source <- querychat_data_source(mtcars, tbl_name = "cars")
-
-# Then initialize with instructions
-querychat_config <- querychat_init(
-  data_source = mtcars_source,
+qc <- QueryChat$new(
+  mtcars,
+  "mtcars",
   extra_instructions = c(
     "You're speaking to a British audience--please use appropriate spelling conventions.",
     "Use lots of emojis! 😃 Emojis everywhere, 🌍 emojis forever. ♾️",
@@ -214,22 +223,20 @@ querychat_config <- querychat_init(
 )
 ```
 
-You can also put these instructions in a separate file and use `readLines()` to load them, as we did for `data_description` above.
+You can also put these instructions in a separate file and pass the file path, as we did for `data_description` above.
 
 **Warning:** It is not 100% guaranteed that the LLM will always—or in many cases, ever—obey your instructions, and it can be difficult to predict which instructions will be a problem. So be sure to test extensively each time you change your instructions, and especially, if you change the model you use.
 
 ### Use a different LLM provider
 
-By default, querychat uses OpenAI with the default model chosen by `ellmer::chat_openai()`. If you want to use a different model, you can provide an ellmer chat object to the `client` argument of `querychat_init()`.
+By default, querychat uses OpenAI with the default model chosen by `ellmer::chat_openai()`. If you want to use a different model, you can provide an ellmer chat object to the `client` argument of `QueryChat$new()`.
 
 ```r
 library(ellmer)
-library(purrr)
 
-mtcars_source <- querychat_data_source(mtcars, tbl_name = "cars")
-
-querychat_config <- querychat_init(
-  data_source = mtcars_source,
+qc <- QueryChat$new(
+  mtcars,
+  "mtcars",
   client = ellmer::chat_anthropic(model = "claude-3-7-sonnet-latest")
 )
 ```
@@ -240,8 +247,9 @@ See the [instructions from Ellmer](https://ellmer.tidyverse.org/reference/chat_a
 Alternatively, you can use a provider-model string, which will be passed to `ellmer::chat()`:
 
 ```r
-querychat_config <- querychat_init(
-  data_source = mtcars_source,
+qc <- QueryChat$new(
+  mtcars,
+  "mtcars",
   client = "anthropic/claude-3-7-sonnet-latest"
 )
 ```
@@ -249,5 +257,5 @@ querychat_config <- querychat_init(
 Or you can set the `querychat.client` R option to a chat object or provider-model string, which will be used as the default client for all querychat apps in your session:
 
 ```r
-option(querychat.client = "anthropic/claude-3-7-sonnet-latest")
+options(querychat.client = "anthropic/claude-3-7-sonnet-latest")
 ```

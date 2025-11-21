@@ -32,9 +32,4 @@ template:
 reference:
 - title: Chat interfaces
   contents:
-  - querychat_init
-  - querychat_server
-  - querychat_sidebar
-  - querychat_system_prompt
-  - querychat_ui
-  - querychat_app
+  - QueryChat

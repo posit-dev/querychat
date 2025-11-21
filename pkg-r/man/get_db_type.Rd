@@ -15,5 +15,8 @@ get_db_type(source, ...)
 A character string containing the type information
 }
 \description{
-Get type information for a data source
+An entrypoint for developers to create custom data sources for use with
+querychat. Most users shouldn't use this function directly; instead, they
+should call the \verb{$set_system_prompt()} method on the \link{QueryChat} object.
 }
+\keyword{internal}

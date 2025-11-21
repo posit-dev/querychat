@@ -8,6 +8,7 @@ create_system_prompt(
   source,
   data_description = NULL,
   extra_instructions = NULL,
+  categorical_threshold = 20,
   ...
 )
 }
@@ -18,11 +19,17 @@ create_system_prompt(
 
 \item{extra_instructions}{Optional additional instructions}
 
+\item{categorical_threshold}{For text columns, the maximum number of unique
+values to consider as a categorical variable}
+
 \item{...}{Additional arguments passed to methods}
 }
 \value{
 A string with the system prompt
 }
 \description{
-Create a system prompt for the data source
+An entrypoint for developers to create custom data sources for use with
+querychat. Most users shouldn't use this function directly; instead, they
+should call the \verb{$set_system_prompt()} method on the \link{QueryChat} object.
 }
+\keyword{internal}

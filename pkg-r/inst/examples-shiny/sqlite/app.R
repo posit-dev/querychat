@@ -15,8 +15,6 @@ onStop(function() {
 })
 
 conn <- dbConnect(RSQLite::SQLite(), temp_db)
-# The connection will automatically be closed when the app stops, thanks to
-# querychat_init
 
 # Create sample data in the database
 dbWriteTable(conn, "penguins", palmerpenguins::penguins, overwrite = TRUE)
@@ -35,12 +33,10 @@ Try asking:
 - <span class=\"suggestion\">Create a summary of measurements grouped by species and island</span>
 "
 
-# Create data source using querychat_data_source
-penguins_source <- querychat_data_source(conn, table_name = "penguins")
-
-# Configure querychat for database
-querychat_config <- querychat_init(
-  data_source = penguins_source,
+# Create QueryChat object with database connection
+qc <- QueryChat$new(
+  conn,
+  "penguins",
   greeting = greeting,
   data_description = "This database contains the Palmer Penguins dataset with measurements of bill dimensions, flipper length, body mass, sex, and species (Adelie, Chinstrap, and Gentoo) collected from three islands in the Palmer Archipelago, Antarctica.",
   extra_instructions = "When showing results, always explain what the data represents and highlight any interesting patterns you observe."
@@ -48,7 +44,7 @@ querychat_config <- querychat_init(
 
 ui <- page_sidebar(
   title = "Database Query Chat",
-  sidebar = querychat_sidebar("chat"),
+  sidebar = qc$sidebar(),
 
   h2("Current Data View"),
   p(
@@ -70,17 +66,17 @@ ui <- page_sidebar(
 )
 
 server <- function(input, output, session) {
-  chat <- querychat_server("chat", querychat_config)
+  qc$server()
 
   output$data_table <- DT::renderDT(
     {
-      chat$df()
+      qc$df()
     },
     options = list(pageLength = 10, scrollX = TRUE)
   )
 
   output$sql_query <- renderText({
-    query <- chat$sql()
+    query <- qc$sql()
     if (query == "") {
       "No filter applied - showing all data"
     } else {

@@ -6,8 +6,7 @@
 tool_update_dashboard <- function(
   data_source,
   current_query,
-  current_title,
-  filtered_df
+  current_title
 ) {
   db_type <- get_db_type(data_source)
 

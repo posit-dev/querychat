@@ -1,15 +1,17 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar, Protocol, runtime_checkable
+import importlib
+from typing import TYPE_CHECKING, ClassVar, Literal, Protocol, runtime_checkable
 
 import duckdb
 import narwhals.stable.v1 as nw
-import pandas as pd
 from sqlalchemy import inspect, text
 from sqlalchemy.sql import sqltypes
 
 if TYPE_CHECKING:
-    from narwhals.stable.v1.typing import IntoFrame
+    from narwhals.stable.v1.typing import (
+        IntoFrame,
+    )
     from sqlalchemy.engine import Connection, Engine
 
 
@@ -41,7 +43,7 @@ class DataSource(Protocol):
         """
         ...
 
-    def execute_query(self, query: str) -> pd.DataFrame:
+    def execute_query(self, query: str) -> nw.DataFrame:
         """
         Execute SQL query and return results as DataFrame.
 
@@ -53,19 +55,19 @@ class DataSource(Protocol):
         Returns
         -------
         :
-            Query results as a pandas DataFrame
+            Query results as a narwhals-compatible DataFrame
 
         """
         ...
 
-    def get_data(self) -> pd.DataFrame:
+    def get_data(self) -> nw.DataFrame:
         """
         Return the unfiltered data as a DataFrame.
 
         Returns
         -------
         :
-            The complete dataset as a pandas DataFrame
+            The complete dataset as a narwhals-compatible DataFrame
 
         """
         ...
@@ -82,14 +84,14 @@ class DataSourceBase:
 
 
 class DataFrameSource(DataSourceBase):
-    """A DataSource implementation that wraps a pandas DataFrame using DuckDB."""
+    """A DataSource implementation that wraps a narwhals-compatible DataFrame using DuckDB."""
 
     db_engine: ClassVar[str] = "DuckDB"
     _df: nw.DataFrame | nw.LazyFrame
 
     def __init__(self, df: IntoFrame, table_name: str):
         """
-        Initialize with a pandas DataFrame.
+        Initialize with a narwhals-compatible DataFrame.
 
         Parameters
         ----------
@@ -101,9 +103,9 @@ class DataFrameSource(DataSourceBase):
         """
         self._conn = duckdb.connect(database=":memory:")
         self._df = nw.from_native(df)
+        self._df_library = _get_df_library()
         self.table_name = table_name
-        # TODO(@gadenbuie): If the data frame is already SQL-backed, maybe we shouldn't be making a new copy here.
-        self._conn.register(table_name, self._df.lazy().collect().to_pandas())
+        self._conn.register(table_name, df)
 
     def get_schema(self, *, categorical_threshold: int) -> str:
         """
@@ -168,7 +170,7 @@ class DataFrameSource(DataSourceBase):
 
         return "\n".join(schema)
 
-    def execute_query(self, query: str) -> pd.DataFrame:
+    def execute_query(self, query: str) -> nw.DataFrame:
         """
         Execute query using DuckDB.
 
@@ -180,23 +182,29 @@ class DataFrameSource(DataSourceBase):
         Returns
         -------
         :
-            Query results as pandas DataFrame
+            Query results as a narwhals DataFrame
 
         """
-        return self._conn.execute(query).df()
+        res = self._conn.execute(query)
+        if self._df_library == "pandas":
+            df = res.df()
+        elif self._df_library == "polars":
+            df = res.pl(lazy=False)
+        else:
+            df = res.arrow()
+        return nw.from_native(df)
 
-    def get_data(self) -> pd.DataFrame:
+    def get_data(self) -> nw.DataFrame:
         """
         Return the unfiltered data as a DataFrame.
 
         Returns
         -------
         :
-            The complete dataset as a pandas DataFrame
+            The complete dataset as a narwhals DataFrame
 
         """
-        # TODO(@gadenbuie): This should just return `self._df` and not a pandas DataFrame
-        return self._df.lazy().collect().to_pandas()
+        return self._df
 
 
 class SQLAlchemySource(DataSourceBase):
@@ -374,7 +382,7 @@ class SQLAlchemySource(DataSourceBase):
 
         return "\n".join(schema)
 
-    def execute_query(self, query: str) -> pd.DataFrame:
+    def execute_query(self, query: str) -> nw.DataFrame:
         """
         Execute SQL query and return results as DataFrame.
 
@@ -386,13 +394,28 @@ class SQLAlchemySource(DataSourceBase):
         Returns
         -------
         :
-            Query results as pandas DataFrame
+            Query results as a LazyFrame
 
         """
-        with self._get_connection() as conn:
-            return pd.read_sql_query(text(query), conn)
+        connection_uri = str(self._engine.url)
+        df_lib = _get_df_library()
+        if df_lib == "pandas":
+            import pandas as pd
 
-    def get_data(self) -> pd.DataFrame:
+            df = pd.read_sql(query, con=connection_uri)
+        elif df_lib == "polars":
+            import polars as pl
+
+            df = pl.read_database(query, connection=connection_uri)
+        else:  # arrow
+            import pyarrow as pa
+
+            # TODO: this doesn't exist -- find something similar
+            df = pa.read_sql_query(query, con=connection_uri)
+
+        return nw.from_native(df)
+
+    def get_data(self) -> nw.DataFrame:
         """
         Return the unfiltered data as a DataFrame.
 
@@ -428,3 +451,25 @@ class SQLAlchemySource(DataSourceBase):
     def _get_connection(self) -> Connection:
         """Get a connection to use for queries."""
         return self._engine.connect()
+
+
+def _get_df_library() -> Literal["pandas", "polars", "arrow"]:
+    try:
+        importlib.import_module("pandas")
+        return "pandas"
+    except ImportError:
+        pass
+    try:
+        importlib.import_module("polars")
+        return "polars"
+    except ImportError:
+        pass
+    try:
+        importlib.import_module("pyarrow")
+        return "arrow"
+    except ImportError:
+        pass
+
+    raise ImportError(
+        "No supported DataFrame library found. Please install either pandas, polars, or pyarrow.",
+    )

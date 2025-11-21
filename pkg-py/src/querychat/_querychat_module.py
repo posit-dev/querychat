@@ -12,7 +12,7 @@ from .tools import tool_query, tool_reset_dashboard, tool_update_dashboard
 
 if TYPE_CHECKING:
     import chatlas
-    import pandas as pd
+    import narwhals.stable.v1 as nw
     from shiny import Inputs, Outputs, Session
     from shiny.bookmark import BookmarkState, RestoreState
 
@@ -45,7 +45,7 @@ def mod_ui(**kwargs):
 
 @dataclass
 class ModServerResult:
-    df: Callable[[], pd.DataFrame]
+    df: Callable[[], nw.DataFrame]
     sql: ReactiveString
     title: ReactiveStringOrNone
     client: chatlas.Chat
@@ -138,14 +138,14 @@ def mod_server(
 
         @session.bookmark.on_bookmark
         def _on_bookmark(x: BookmarkState) -> None:
-            vals = x.values  # noqa: PD011
+            vals = x.values
             vals["querychat_sql"] = sql.get()
             vals["querychat_title"] = title.get()
             vals["querychat_has_greeted"] = has_greeted.get()
 
         @session.bookmark.on_restore
         def _on_restore(x: RestoreState) -> None:
-            vals = x.values  # noqa: PD011
+            vals = x.values
             if "querychat_sql" in vals:
                 sql.set(vals["querychat_sql"])
             if "querychat_title" in vals:

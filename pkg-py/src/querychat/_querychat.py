@@ -20,8 +20,10 @@ from ._querychat_module import ModServerResult, mod_server, mod_ui
 from .datasource import DataFrameSource, DataSource, SQLAlchemySource
 
 if TYPE_CHECKING:
-    import pandas as pd
-    from narwhals.stable.v1.typing import IntoFrame
+    import narwhals.stable.v1 as nw
+    from narwhals.stable.v1.typing import (
+        IntoFrame,
+    )
 
 
 class QueryChatBase:
@@ -33,7 +35,7 @@ class QueryChatBase:
 
     def __init__(
         self,
-        data_source: IntoFrame | sqlalchemy.Engine,
+        data_source: IntoFrame | sqlalchemy.Engine | DataSource,
         table_name: str,
         *,
         id: Optional[str] = None,
@@ -312,7 +314,8 @@ class QueryChatBase:
 
         return
 
-    def df(self) -> pd.DataFrame:
+    # TODO: can we add @overloads here to let users know when they're getting lazy vs eager?
+    def df(self) -> nw.DataFrame:
         """
         Reactively read the current filtered data frame that is in effect.
 
@@ -490,7 +493,9 @@ class QueryChatBase:
         )
 
     def set_data_source(
-        self, data_source: IntoFrame | sqlalchemy.Engine | DataSource, table_name: str
+        self,
+        data_source: IntoFrame | sqlalchemy.Engine | DataSource,
+        table_name: str,
     ) -> None:
         """
         Set a new data source for the QueryChat object.
@@ -637,7 +642,7 @@ class QueryChatExpress(QueryChatBase):
 
     def __init__(
         self,
-        data_source: IntoFrame | sqlalchemy.Engine,
+        data_source: IntoFrame | sqlalchemy.Engine | DataSource,
         table_name: str,
         *,
         id: Optional[str] = None,

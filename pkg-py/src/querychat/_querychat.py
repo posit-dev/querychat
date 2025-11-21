@@ -19,14 +19,16 @@ from ._icons import bs_icon
 from ._querychat_module import GREETING_PROMPT, ServerValues, mod_server, mod_ui
 
 if TYPE_CHECKING:
-    import pandas as pd
-    from narwhals.stable.v1.typing import IntoFrame
+    import narwhals.stable.v1 as nw
+    from narwhals.stable.v1.typing import (
+        IntoFrame,
+    )
 
 
 class QueryChatBase:
     def __init__(
         self,
-        data_source: IntoFrame | sqlalchemy.Engine,
+        data_source: IntoFrame | sqlalchemy.Engine | DataSource,
         table_name: str,
         *,
         id: Optional[str] = None,
@@ -519,7 +521,7 @@ class QueryChatExpress(QueryChatBase):
 
     def __init__(
         self,
-        data_source: IntoFrame | sqlalchemy.Engine,
+        data_source: IntoFrame | sqlalchemy.Engine | DataSource,
         table_name: str,
         *,
         id: Optional[str] = None,
@@ -571,7 +573,7 @@ class QueryChatExpress(QueryChatBase):
             enable_bookmarking=enable,
         )
 
-    def df(self) -> pd.DataFrame:
+    def df(self) -> nw.DataFrame:
         """
         Reactively read the current filtered data frame that is in effect.
 

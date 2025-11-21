@@ -8,11 +8,17 @@ to quickly get started without needing to install additional dependencies.
 from __future__ import annotations
 
 from importlib.resources import files
+from typing import TYPE_CHECKING
 
-import pandas as pd
+import narwhals as nw
+
+if TYPE_CHECKING:
+    from narwhals.typing import EagerAllowed, IntoBackend
+
+__all__ = ["tips", "titanic"]
 
 
-def titanic() -> pd.DataFrame:
+def titanic(backend: IntoBackend[EagerAllowed] = "pandas") -> nw.DataFrame:
     """
     Load the Titanic dataset.
 
@@ -35,10 +41,10 @@ def titanic() -> pd.DataFrame:
     """
     # Get the path to the gzipped CSV file using importlib.resources
     data_file = files("querychat.data") / "titanic.csv.gz"
-    return pd.read_csv(str(data_file), compression="gzip")
+    return nw.read_csv(str(data_file), backend=backend)
 
 
-def tips() -> pd.DataFrame:
+def tips(backend: IntoBackend[EagerAllowed] = "pandas") -> nw.DataFrame:
     """
     Load the tips dataset.
 
@@ -62,7 +68,4 @@ def tips() -> pd.DataFrame:
     """
     # Get the path to the gzipped CSV file using importlib.resources
     data_file = files("querychat.data") / "tips.csv.gz"
-    return pd.read_csv(str(data_file), compression="gzip")
-
-
-__all__ = ["tips", "titanic"]
+    return nw.read_csv(str(data_file), backend=backend)

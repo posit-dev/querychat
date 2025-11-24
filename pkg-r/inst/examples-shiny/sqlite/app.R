@@ -46,21 +46,30 @@ ui <- page_sidebar(
   title = "Database Query Chat",
   sidebar = qc$sidebar(),
 
-  h2("Current Data View"),
-  p(
-    "The table below shows the current filtered data based on your chat queries:"
+  card(
+    fill = FALSE,
+    card_header("Current SQL Query"),
+    verbatimTextOutput("sql_query")
   ),
-  DT::DTOutput("data_table", fill = FALSE),
 
-  h2("Current SQL Query"),
-  verbatimTextOutput("sql_query"),
-
-  h2("Dataset Information"),
-  p("This demo database contains:"),
-  tags$ul(
-    tags$li("penguins - Palmer Penguins dataset (344 rows, 8 columns)"),
-    tags$li(
-      "Columns: species, island, bill_length_mm, bill_depth_mm, flipper_length_mm, body_mass_g, sex, year"
+  card(
+    full_screen = TRUE,
+    card_header(
+      "Current Data View",
+      tooltip(
+        bsicons::bs_icon("question-circle-fill", class = "mx-1"),
+        "The table below shows the current filtered data based on your chat queries"
+      ),
+      tooltip(
+        bsicons::bs_icon("info-circle-fill"),
+        "The penguins dataset contains measurements on 344 penguins."
+      )
+    ),
+    DT::DTOutput("data_table"),
+    card_footer(
+      markdown(
+        "Data source: [palmerpenguins package](https://allisonhorst.github.io/palmerpenguins/)"
+      )
     )
   )
 )
@@ -72,6 +81,7 @@ server <- function(input, output, session) {
     {
       qc$df()
     },
+    fillContainer = TRUE,
     options = list(pageLength = 10, scrollX = TRUE)
   )
 

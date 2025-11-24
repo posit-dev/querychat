@@ -281,6 +281,7 @@ QueryChat <- R6::R6Class(
             shiny::uiOutput("sql_output")
           ),
           bslib::card(
+            full_screen = TRUE,
             bslib::card_header(bsicons::bs_icon("table"), "Data"),
             DT::DTOutput("dt")
           ),
@@ -323,7 +324,11 @@ QueryChat <- R6::R6Class(
         })
 
         output$dt <- DT::renderDT({
-          DT::datatable(self$df())
+          DT::datatable(
+            self$df(), 
+            fillContainer = TRUE,
+            options = list(pageLength = 25, scrollX = TRUE)
+          )
         })
 
         output$sql_output <- shiny::renderUI({

@@ -114,7 +114,7 @@ class QueryChatBase:
 
         self.id = id or table_name
 
-        self.client = normalize_client(client)
+        self._client = normalize_client(client)
 
         if greeting is None:
             print(
@@ -306,7 +306,7 @@ class QueryChatBase:
             data_source=self.data_source,
             system_prompt=self.system_prompt,
             greeting=self.greeting,
-            client=self.client,
+            client=self._client,
             enable_bookmarking=enable_bookmarking,
         )
 
@@ -416,7 +416,22 @@ class QueryChatBase:
         else:
             return vals.title.set(value)
 
-    def generate_greeting(self, *, echo: Literal["none", "text"] = "none"):
+    def client(self):
+        """
+        Obtain the chat client being used by this QueryChat instance.
+
+        Returns
+        -------
+        :
+            None
+
+        """
+        vals = self._server_values
+        if vals is None:
+            raise RuntimeError("Must call .server() before .client()")
+        return vals.client
+
+    def generate_greeting(self, *, echo: Literal["none", "output"] = "none"):
         """
         Generate a welcome greeting for the chat.
 
@@ -428,7 +443,7 @@ class QueryChatBase:
         Parameters
         ----------
         echo
-            If `echo = "text"`, prints the greeting to standard output. If
+            If `echo = "output"`, prints the greeting to standard output. If
             `echo = "none"` (default), does not print anything.
 
         Returns
@@ -437,7 +452,7 @@ class QueryChatBase:
             The greeting string (in Markdown format).
 
         """
-        client = copy.deepcopy(self.client)
+        client = copy.deepcopy(self._client)
         client.system_prompt = self.system_prompt
         client.set_turns([])
         prompt = "Please give me a friendly greeting. Include a few sample prompts in a two-level bulleted list."
@@ -509,25 +524,6 @@ class QueryChatBase:
 
         """
         self.data_source = normalize_data_source(data_source, table_name)
-
-    def set_client(self, client: str | chatlas.Chat) -> None:
-        """
-        Set a new chat client for the QueryChat object.
-
-        Parameters
-        ----------
-        client
-            A `chatlas.Chat` object or a string to be passed to
-            `chatlas.ChatAuto()` describing the model to use (e.g.
-            `"openai/gpt-4.1"`).
-
-        Returns
-        -------
-        :
-            None
-
-        """
-        self.client = normalize_client(client)
 
 
 class QueryChat(QueryChatBase):

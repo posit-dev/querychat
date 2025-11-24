@@ -104,7 +104,7 @@ class QueryChatBase:
         ```
 
         """
-        self.data_source = normalize_data_source(data_source, table_name)
+        self._data_source = normalize_data_source(data_source, table_name)
 
         # Validate table name (must begin with letter, contain only letters, numbers, underscores)
         if not re.match(r"^[a-zA-Z][a-zA-Z0-9_]*$", table_name):
@@ -127,7 +127,7 @@ class QueryChatBase:
         self.greeting = greeting.read_text() if isinstance(greeting, Path) else greeting
 
         self.system_prompt = get_system_prompt(
-            self.data_source,
+            self._data_source,
             data_description=data_description,
             extra_instructions=extra_instructions,
             prompt_template=prompt_template,
@@ -160,7 +160,7 @@ class QueryChatBase:
 
         """
         enable_bookmarking = bookmark_store != "disable"
-        table_name = self.data_source.table_name
+        table_name = self._data_source.table_name
 
         def app_ui(request):
             return ui.page_sidebar(
@@ -303,7 +303,7 @@ class QueryChatBase:
         # Call the server module
         self._server_values = mod_server(
             self.id,
-            data_source=self.data_source,
+            data_source=self._data_source,
             system_prompt=self.system_prompt,
             greeting=self.greeting,
             client=self._client,
@@ -504,26 +504,18 @@ class QueryChatBase:
             prompt_template=prompt_template,
         )
 
-    def set_data_source(
-        self, data_source: IntoFrame | sqlalchemy.Engine | DataSource, table_name: str
-    ) -> None:
+    @property
+    def data_source(self):
         """
-        Set a new data source for the QueryChat object.
-
-        Parameters
-        ----------
-        data_source
-            The new data source to use.
-        table_name
-            If a data_source is a data frame, a name to use to refer to the table
+        Get the current data source.
 
         Returns
         -------
         :
-            None
+            The current data source.
 
         """
-        self.data_source = normalize_data_source(data_source, table_name)
+        return self._data_source
 
 
 class QueryChat(QueryChatBase):

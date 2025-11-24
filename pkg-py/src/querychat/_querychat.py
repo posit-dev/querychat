@@ -140,7 +140,7 @@ class QueryChatBase:
         client2 = copy.deepcopy(client)
         client2.set_turns([])
         client2.system_prompt = prompt
-        self._client = client2
+        self.client = client2
 
         # Populated when ._server() gets called (in an active session)
         self._server_values: ModServerResult | None = None
@@ -314,7 +314,7 @@ class QueryChatBase:
             self.id,
             data_source=self._data_source,
             greeting=self.greeting,
-            client=self._client,
+            client=self.client,
             enable_bookmarking=enable_bookmarking,
         )
 
@@ -445,27 +445,10 @@ class QueryChatBase:
             The greeting string (in Markdown format).
 
         """
-        client = copy.deepcopy(self._client)
+        client = copy.deepcopy(self.client)
         client.set_turns([])
         prompt = "Please give me a friendly greeting. Include a few sample prompts in a two-level bulleted list."
         return str(client.chat(prompt, echo=echo))
-
-    @property
-    def client(self):
-        """
-        Obtain the underlying chat client.
-
-        If called before `.server()`, this returns the base client provided at
-        initialization. If called after `.server()`, this returns the session-specific
-        client used for the active Shiny session.
-
-        Returns
-        -------
-        :
-            None
-
-        """
-        return self._client
 
     @property
     def data_source(self):

@@ -23,10 +23,10 @@ Imports:
     lifecycle,
     promises,
     purrr,
+    R6,
     rlang,
     shiny,
     shinychat (>= 0.2.0.9000),
-    R6,
     utils,
     whisker
 Suggests:

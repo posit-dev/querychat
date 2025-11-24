@@ -325,7 +325,7 @@ QueryChat <- R6::R6Class(
 
         output$dt <- DT::renderDT({
           DT::datatable(
-            self$df(), 
+            self$df(),
             fillContainer = TRUE,
             options = list(pageLength = 25, scrollX = TRUE)
           )

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import copy
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable, Union
@@ -48,7 +47,6 @@ class ModServerResult:
     df: Callable[[], pd.DataFrame]
     sql: ReactiveString
     title: ReactiveStringOrNone
-    client: chatlas.Chat
 
 
 @module.server
@@ -58,7 +56,6 @@ def mod_server(
     session: Session,
     *,
     data_source: DataSource,
-    system_prompt: str,
     greeting: str | None,
     client: chatlas.Chat,
     enable_bookmarking: bool,
@@ -68,20 +65,15 @@ def mod_server(
     title = ReactiveStringOrNone(None)
     has_greeted = reactive.value[bool](False)  # noqa: FBT003
 
-    # Set up the chat object for this session
-    chat = copy.deepcopy(client)
-    chat.set_turns([])
-    chat.system_prompt = system_prompt
-
     # Create the tool functions
     update_dashboard_tool = tool_update_dashboard(data_source, sql, title)
     reset_dashboard_tool = tool_reset_dashboard(sql, title)
     query_tool = tool_query(data_source)
 
     # Register tools with annotations for the UI
-    chat.register_tool(update_dashboard_tool)
-    chat.register_tool(query_tool)
-    chat.register_tool(reset_dashboard_tool)
+    client.register_tool(update_dashboard_tool)
+    client.register_tool(query_tool)
+    client.register_tool(reset_dashboard_tool)
 
     # Execute query when SQL changes
     @reactive.calc
@@ -97,7 +89,7 @@ def mod_server(
     # Handle user input
     @chat_ui.on_user_submit
     async def _(user_input: str):
-        stream = await chat.stream_async(user_input, echo="none", content="all")
+        stream = await client.stream_async(user_input, echo="none", content="all")
         await chat_ui.append_message_stream(stream)
 
     @reactive.effect
@@ -108,7 +100,7 @@ def mod_server(
         if greeting:
             await chat_ui.append_message(greeting)
         elif greeting is None:
-            stream = await chat.stream_async(
+            stream = await client.stream_async(
                 "Please give me a friendly greeting. Include a few sample prompts in a two-level bulleted list.",
                 echo="none",
             )
@@ -153,4 +145,4 @@ def mod_server(
             if "querychat_has_greeted" in vals:
                 has_greeted.set(vals["querychat_has_greeted"])
 
-    return ModServerResult(df=filtered_df, sql=sql, title=title, client=chat)
+    return ModServerResult(df=filtered_df, sql=sql, title=title)

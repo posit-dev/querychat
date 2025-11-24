@@ -118,8 +118,6 @@ class QueryChatBase:
 
         self.id = id or table_name
 
-        self._client = normalize_client(client)
-
         if greeting is None:
             print(
                 "Warning: No greeting provided; the LLM will be invoked at conversation start to generate one. "
@@ -130,13 +128,19 @@ class QueryChatBase:
 
         self.greeting = greeting.read_text() if isinstance(greeting, Path) else greeting
 
-        self._system_prompt = get_system_prompt(
+        prompt = get_system_prompt(
             self._data_source,
             data_description=data_description,
             extra_instructions=extra_instructions,
             categorical_threshold=categorical_threshold,
             prompt_template=prompt_template,
         )
+
+        client = normalize_client(client)
+        client2 = copy.deepcopy(client)
+        client2.set_turns([])
+        client2.system_prompt = prompt
+        self._client = client2
 
         # Populated when ._server() gets called (in an active session)
         self._server_values: ModServerResult | None = None
@@ -309,7 +313,6 @@ class QueryChatBase:
         self._server_values = mod_server(
             self.id,
             data_source=self._data_source,
-            system_prompt=self._system_prompt,
             greeting=self.greeting,
             client=self._client,
             enable_bookmarking=enable_bookmarking,
@@ -443,7 +446,6 @@ class QueryChatBase:
 
         """
         client = copy.deepcopy(self._client)
-        client.system_prompt = self._system_prompt
         client.set_turns([])
         prompt = "Please give me a friendly greeting. Include a few sample prompts in a two-level bulleted list."
         return str(client.chat(prompt, echo=echo))
@@ -463,48 +465,7 @@ class QueryChatBase:
             None
 
         """
-        vals = self._server_values
-        if vals is None:
-            return self._client
-        else:
-            return vals.client
-
-    @property
-    def system_prompt(self):
-        """
-        Get the current system prompt.
-
-        Returns
-        -------
-        :
-            The current system prompt.
-
-        """
-        vals = self._server_values
-        if vals is None:
-            return self._system_prompt
-        else:
-            return vals.client.system_prompt
-
-    @system_prompt.setter
-    def system_prompt(self, value: str):
-        """
-        Set a new system prompt.
-
-        Parameters
-        ----------
-        value
-            The new system prompt string.
-
-        Returns
-        -------
-        :
-            None
-
-        """
-        self._system_prompt = value
-        if self._server_values is not None:
-            self._server_values.client.system_prompt = value
+        return self._client
 
     @property
     def data_source(self):

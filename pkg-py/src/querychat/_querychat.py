@@ -137,10 +137,9 @@ class QueryChatBase:
         )
 
         client = normalize_client(client)
-        client2 = copy.deepcopy(client)
-        client2.set_turns([])
-        client2.system_prompt = prompt
-        self.client = client2
+        self.client = copy.deepcopy(client)
+        self.client.set_turns([])
+        self.client.system_prompt = prompt
 
         # Populated when ._server() gets called (in an active session)
         self._server_values: ModServerResult | None = None

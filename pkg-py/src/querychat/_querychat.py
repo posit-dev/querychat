@@ -40,6 +40,7 @@ class QueryChatBase:
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         data_description: Optional[str | Path] = None,
+        categorical_threshold: int = 10,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
     ):
@@ -79,6 +80,9 @@ class QueryChatBase:
             Description of the data in plain text or Markdown. If a pathlib.Path
             object is passed, querychat will read the contents of the path into a
             string with `.read_text()`.
+        categorical_threshold
+            Threshold for determining if a column is categorical based on number of
+            unique values.
         extra_instructions
             Additional instructions for the chat model. If a pathlib.Path object is
             passed, querychat will read the contents of the path into a string with
@@ -104,7 +108,7 @@ class QueryChatBase:
         ```
 
         """
-        self.data_source = normalize_data_source(data_source, table_name)
+        self._data_source = normalize_data_source(data_source, table_name)
 
         # Validate table name (must begin with letter, contain only letters, numbers, underscores)
         if not re.match(r"^[a-zA-Z][a-zA-Z0-9_]*$", table_name):
@@ -113,8 +117,6 @@ class QueryChatBase:
             )
 
         self.id = id or table_name
-
-        self.client = normalize_client(client)
 
         if greeting is None:
             print(
@@ -126,12 +128,19 @@ class QueryChatBase:
 
         self.greeting = greeting.read_text() if isinstance(greeting, Path) else greeting
 
-        self.system_prompt = get_system_prompt(
-            self.data_source,
+        prompt = get_system_prompt(
+            self._data_source,
             data_description=data_description,
             extra_instructions=extra_instructions,
+            categorical_threshold=categorical_threshold,
             prompt_template=prompt_template,
         )
+
+        # Fork and empty chat now so the per-session forks are fast
+        client = normalize_client(client)
+        self._client = copy.deepcopy(client)
+        self._client.set_turns([])
+        self._client.system_prompt = prompt
 
         # Populated when ._server() gets called (in an active session)
         self._server_values: ModServerResult | None = None
@@ -160,7 +169,7 @@ class QueryChatBase:
 
         """
         enable_bookmarking = bookmark_store != "disable"
-        table_name = self.data_source.table_name
+        table_name = self._data_source.table_name
 
         def app_ui(request):
             return ui.page_sidebar(
@@ -303,10 +312,9 @@ class QueryChatBase:
         # Call the server module
         self._server_values = mod_server(
             self.id,
-            data_source=self.data_source,
-            system_prompt=self.system_prompt,
+            data_source=self._data_source,
             greeting=self.greeting,
-            client=self.client,
+            client=self._client,
             enable_bookmarking=enable_bookmarking,
         )
 
@@ -416,7 +424,7 @@ class QueryChatBase:
         else:
             return vals.title.set(value)
 
-    def generate_greeting(self, *, echo: Literal["none", "text"] = "none"):
+    def generate_greeting(self, *, echo: Literal["none", "output"] = "none"):
         """
         Generate a welcome greeting for the chat.
 
@@ -428,7 +436,7 @@ class QueryChatBase:
         Parameters
         ----------
         echo
-            If `echo = "text"`, prints the greeting to standard output. If
+            If `echo = "output"`, prints the greeting to standard output. If
             `echo = "none"` (default), does not print anything.
 
         Returns
@@ -437,97 +445,39 @@ class QueryChatBase:
             The greeting string (in Markdown format).
 
         """
-        client = copy.deepcopy(self.client)
-        client.system_prompt = self.system_prompt
+        client = copy.deepcopy(self._client)
         client.set_turns([])
         prompt = "Please give me a friendly greeting. Include a few sample prompts in a two-level bulleted list."
         return str(client.chat(prompt, echo=echo))
 
-    def set_system_prompt(
-        self,
-        data_source: DataSource,
-        *,
-        data_description: Optional[str | Path] = None,
-        extra_instructions: Optional[str | Path] = None,
-        categorical_threshold: int = 10,
-        prompt_template: Optional[str | Path] = None,
-    ) -> None:
+    @property
+    def client(self):
         """
-        Customize the system prompt.
-
-        Control the logic behind how the system prompt is generated based on the
-        data source's schema and optional additional context and instructions.
-
-        Note
-        ----
-        This method is for parametrized system prompt generation only. To set a
-        fully custom system prompt string, set the `system_prompt` attribute
-        directly.
-
-        Parameters
-        ----------
-        data_source
-            A data source to generate schema information from
-        data_description
-            Optional description of the data, in plain text or Markdown format
-        extra_instructions
-            Optional additional instructions for the chat model, in plain text or
-            Markdown format
-        categorical_threshold
-            Threshold for determining if a column is categorical based on number of
-            unique values
-        prompt_template
-            Optional `Path` to or string of a custom prompt template. If not provided, the default
-            querychat template will be used.
-
-        """
-        self.system_prompt = get_system_prompt(
-            data_source,
-            data_description=data_description,
-            extra_instructions=extra_instructions,
-            categorical_threshold=categorical_threshold,
-            prompt_template=prompt_template,
-        )
-
-    def set_data_source(
-        self, data_source: IntoFrame | sqlalchemy.Engine | DataSource, table_name: str
-    ) -> None:
-        """
-        Set a new data source for the QueryChat object.
-
-        Parameters
-        ----------
-        data_source
-            The new data source to use.
-        table_name
-            If a data_source is a data frame, a name to use to refer to the table
+        Get the (session-specific) chat client.
 
         Returns
         -------
         :
-            None
+            The current chat client.
 
         """
-        self.data_source = normalize_data_source(data_source, table_name)
+        vals = self._server_values
+        if vals is None:
+            raise RuntimeError("Must call .server() before accessing .client")
+        return vals.client
 
-    def set_client(self, client: str | chatlas.Chat) -> None:
+    @property
+    def data_source(self):
         """
-        Set a new chat client for the QueryChat object.
-
-        Parameters
-        ----------
-        client
-            A `chatlas.Chat` object or a string to be passed to
-            `chatlas.ChatAuto()` describing the model to use (e.g.
-            `"openai/gpt-4.1"`).
+        Get the current data source.
 
         Returns
         -------
         :
-            None
+            The current data source.
 
         """
-        self.client = normalize_client(client)
+        return self._data_source
 
 
 class QueryChat(QueryChatBase):

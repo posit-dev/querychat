@@ -58,7 +58,6 @@ def mod_server(
     session: Session,
     *,
     data_source: DataSource,
-    system_prompt: str,
     greeting: str | None,
     client: chatlas.Chat,
     enable_bookmarking: bool,
@@ -70,8 +69,6 @@ def mod_server(
 
     # Set up the chat object for this session
     chat = copy.deepcopy(client)
-    chat.set_turns([])
-    chat.system_prompt = system_prompt
 
     # Create the tool functions
     update_dashboard_tool = tool_update_dashboard(data_source, sql, title)

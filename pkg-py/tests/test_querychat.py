@@ -39,10 +39,6 @@ def test_querychat_init(sample_df):
 
     # Verify basic attributes are set
     assert qc is not None
-    assert hasattr(qc, "data_source")
-    assert hasattr(qc, "system_prompt")
-    assert hasattr(qc, "greeting")
-    assert hasattr(qc, "client")
     assert qc.id == "test_table"
 
     # Even without server initialization, we should be able to query the data source
@@ -64,31 +60,6 @@ def test_querychat_custom_id(sample_df):
     )
 
     assert qc.id == "custom_id"
-
-
-def test_querychat_set_methods(sample_df):
-    """Test that setter methods work."""
-    qc = QueryChat(
-        data_source=sample_df,
-        table_name="test_table",
-        greeting="Hello!",
-    )
-
-    # Test set_system_prompt
-    qc.set_system_prompt(
-        qc.data_source,
-        data_description="A test dataset",
-    )
-    assert "test dataset" in qc.system_prompt.lower()
-
-    # Test set_data_source
-    new_df = pd.DataFrame({"x": [1, 2, 3]})
-    qc.set_data_source(new_df, "new_table")
-    assert qc.data_source is not None
-
-    # Test set_client
-    qc.set_client("openai/gpt-4o-mini")
-    assert qc.client is not None
 
 
 def test_querychat_core_reactive_access_before_server_raises(sample_df):

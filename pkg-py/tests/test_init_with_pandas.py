@@ -39,10 +39,6 @@ def test_init_with_pandas_dataframe():
 
     # Verify the result is properly configured
     assert qc is not None
-    assert hasattr(qc, "data_source")
-    assert hasattr(qc, "system_prompt")
-    assert hasattr(qc, "greeting")
-    assert hasattr(qc, "client")
 
 
 def test_init_with_narwhals_dataframe():
@@ -66,8 +62,6 @@ def test_init_with_narwhals_dataframe():
 
     # Verify the result is correctly configured
     assert qc is not None
-    assert hasattr(qc, "data_source")
-    assert hasattr(qc, "system_prompt")
 
 
 def test_init_with_narwhals_lazyframe_direct_query():

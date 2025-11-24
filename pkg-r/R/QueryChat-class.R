@@ -61,8 +61,6 @@
 #'   \item{`$cleanup()`}{Clean up data source resources.}
 #' }
 #'
-#' @field data_source The normalized data source object (read-only).
-#' @field client The LLM chat client (read-only, session-specific).
 #' @field greeting The greeting message displayed to users.
 #' @field id The module ID for namespacing.
 #'

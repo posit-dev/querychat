@@ -88,6 +88,7 @@ is_data_source <- function(x) {
 #'
 #' @param source A querychat_data_source object
 #' @param query SQL query string
+#' @param ... Additional arguments passed to methods
 #' @return Result of the query as a data frame
 #' @keywords internal
 #' @export

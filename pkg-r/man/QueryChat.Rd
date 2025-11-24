@@ -258,10 +258,6 @@ qc2 <- QueryChat$new(mtcars, "mtcars", greeting = "mtcars_greeting.md")
 \section{Active bindings}{
 \if{html}{\out{<div class="r6-active-bindings">}}
 \describe{
-\item{\code{data_source}}{The normalized data source object (read-only).}
-
-\item{\code{client}}{The LLM chat client (read-only, session-specific).}
-
 \item{\code{client}}{Get the (session-specific) chat client.}
 
 \item{\code{data_source}}{Get the current data source.}

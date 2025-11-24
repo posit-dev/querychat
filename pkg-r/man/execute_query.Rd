@@ -10,6 +10,8 @@ execute_query(source, query, ...)
 \item{source}{A querychat_data_source object}
 
 \item{query}{SQL query string}
+
+\item{...}{Additional arguments passed to methods}
 }
 \value{
 Result of the query as a data frame

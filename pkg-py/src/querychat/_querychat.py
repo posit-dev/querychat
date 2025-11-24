@@ -136,10 +136,11 @@ class QueryChatBase:
             prompt_template=prompt_template,
         )
 
+        # Fork and empty chat now so the per-session forks are fast
         client = normalize_client(client)
-        self.client = copy.deepcopy(client)
-        self.client.set_turns([])
-        self.client.system_prompt = prompt
+        self._client = copy.deepcopy(client)
+        self._client.set_turns([])
+        self._client.system_prompt = prompt
 
         # Populated when ._server() gets called (in an active session)
         self._server_values: ModServerResult | None = None
@@ -313,7 +314,7 @@ class QueryChatBase:
             self.id,
             data_source=self._data_source,
             greeting=self.greeting,
-            client=self.client,
+            client=self._client,
             enable_bookmarking=enable_bookmarking,
         )
 
@@ -444,10 +445,26 @@ class QueryChatBase:
             The greeting string (in Markdown format).
 
         """
-        client = copy.deepcopy(self.client)
+        client = copy.deepcopy(self._client)
         client.set_turns([])
         prompt = "Please give me a friendly greeting. Include a few sample prompts in a two-level bulleted list."
         return str(client.chat(prompt, echo=echo))
+
+    @property
+    def client(self):
+        """
+        Get the (session-specific) chat client.
+
+        Returns
+        -------
+        :
+            The current chat client.
+
+        """
+        vals = self._server_values
+        if vals is None:
+            raise RuntimeError("Must call .server() before accessing .client")
+        return vals.client
 
     @property
     def data_source(self):

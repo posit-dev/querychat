@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     import chatlas
     import pandas as pd
     from shiny import Inputs, Outputs, Session
+    from shiny.bookmark import BookmarkState, RestoreState
 
     from .datasource import DataSource
 
@@ -60,10 +61,12 @@ def mod_server(
     system_prompt: str,
     greeting: str | None,
     client: chatlas.Chat,
+    enable_bookmarking: bool,
 ):
     # Reactive values to store state
     sql = ReactiveString("")
     title = ReactiveStringOrNone(None)
+    has_greeted = reactive.value[bool](False)  # noqa: FBT003
 
     # Set up the chat object for this session
     chat = copy.deepcopy(client)
@@ -99,6 +102,9 @@ def mod_server(
 
     @reactive.effect
     async def greet_on_startup():
+        if has_greeted():
+            return
+
         if greeting:
             await chat_ui.append_message(greeting)
         elif greeting is None:
@@ -107,6 +113,8 @@ def mod_server(
                 echo="none",
             )
             await chat_ui.append_message_stream(stream)
+
+        has_greeted.set(True)
 
     # Handle update button clicks
     @reactive.effect
@@ -124,5 +132,25 @@ def mod_server(
             sql.set(new_query)
         if new_title is not None:
             title.set(new_title)
+
+    if enable_bookmarking:
+        chat_ui.enable_bookmarking(client)
+
+        @session.bookmark.on_bookmark
+        def _on_bookmark(x: BookmarkState) -> None:
+            vals = x.values  # noqa: PD011
+            vals["querychat_sql"] = sql.get()
+            vals["querychat_title"] = title.get()
+            vals["querychat_has_greeted"] = has_greeted.get()
+
+        @session.bookmark.on_restore
+        def _on_restore(x: RestoreState) -> None:
+            vals = x.values  # noqa: PD011
+            if "querychat_sql" in vals:
+                sql.set(vals["querychat_sql"])
+            if "querychat_title" in vals:
+                title.set(vals["querychat_title"])
+            if "querychat_has_greeted" in vals:
+                has_greeted.set(vals["querychat_has_greeted"])
 
     return ModServerResult(df=filtered_df, sql=sql, title=title, client=chat)

@@ -40,6 +40,7 @@ class QueryChatBase:
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         data_description: Optional[str | Path] = None,
+        categorical_threshold: int = 10,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
     ):
@@ -79,6 +80,9 @@ class QueryChatBase:
             Description of the data in plain text or Markdown. If a pathlib.Path
             object is passed, querychat will read the contents of the path into a
             string with `.read_text()`.
+        categorical_threshold
+            Threshold for determining if a column is categorical based on number of
+            unique values.
         extra_instructions
             Additional instructions for the chat model. If a pathlib.Path object is
             passed, querychat will read the contents of the path into a string with
@@ -126,10 +130,11 @@ class QueryChatBase:
 
         self.greeting = greeting.read_text() if isinstance(greeting, Path) else greeting
 
-        self.system_prompt = get_system_prompt(
+        self._system_prompt = get_system_prompt(
             self._data_source,
             data_description=data_description,
             extra_instructions=extra_instructions,
+            categorical_threshold=categorical_threshold,
             prompt_template=prompt_template,
         )
 
@@ -304,7 +309,7 @@ class QueryChatBase:
         self._server_values = mod_server(
             self.id,
             data_source=self._data_source,
-            system_prompt=self.system_prompt,
+            system_prompt=self._system_prompt,
             greeting=self.greeting,
             client=self._client,
             enable_bookmarking=enable_bookmarking,
@@ -416,21 +421,6 @@ class QueryChatBase:
         else:
             return vals.title.set(value)
 
-    def client(self):
-        """
-        Obtain the chat client being used by this QueryChat instance.
-
-        Returns
-        -------
-        :
-            None
-
-        """
-        vals = self._server_values
-        if vals is None:
-            raise RuntimeError("Must call .server() before .client()")
-        return vals.client
-
     def generate_greeting(self, *, echo: Literal["none", "output"] = "none"):
         """
         Generate a welcome greeting for the chat.
@@ -453,56 +443,68 @@ class QueryChatBase:
 
         """
         client = copy.deepcopy(self._client)
-        client.system_prompt = self.system_prompt
+        client.system_prompt = self._system_prompt
         client.set_turns([])
         prompt = "Please give me a friendly greeting. Include a few sample prompts in a two-level bulleted list."
         return str(client.chat(prompt, echo=echo))
 
-    def set_system_prompt(
-        self,
-        data_source: DataSource,
-        *,
-        data_description: Optional[str | Path] = None,
-        extra_instructions: Optional[str | Path] = None,
-        categorical_threshold: int = 10,
-        prompt_template: Optional[str | Path] = None,
-    ) -> None:
+    @property
+    def client(self):
         """
-        Customize the system prompt.
+        Obtain the underlying chat client.
 
-        Control the logic behind how the system prompt is generated based on the
-        data source's schema and optional additional context and instructions.
+        If called before `.server()`, this returns the base client provided at
+        initialization. If called after `.server()`, this returns the session-specific
+        client used for the active Shiny session.
 
-        Note
-        ----
-        This method is for parametrized system prompt generation only. To set a
-        fully custom system prompt string, set the `system_prompt` attribute
-        directly.
+        Returns
+        -------
+        :
+            None
+
+        """
+        vals = self._server_values
+        if vals is None:
+            return self._client
+        else:
+            return vals.client
+
+    @property
+    def system_prompt(self):
+        """
+        Get the current system prompt.
+
+        Returns
+        -------
+        :
+            The current system prompt.
+
+        """
+        vals = self._server_values
+        if vals is None:
+            return self._system_prompt
+        else:
+            return vals.client.system_prompt
+
+    @system_prompt.setter
+    def system_prompt(self, value: str):
+        """
+        Set a new system prompt.
 
         Parameters
         ----------
-        data_source
-            A data source to generate schema information from
-        data_description
-            Optional description of the data, in plain text or Markdown format
-        extra_instructions
-            Optional additional instructions for the chat model, in plain text or
-            Markdown format
-        categorical_threshold
-            Threshold for determining if a column is categorical based on number of
-            unique values
-        prompt_template
-            Optional `Path` to or string of a custom prompt template. If not provided, the default
-            querychat template will be used.
+        value
+            The new system prompt string.
+
+        Returns
+        -------
+        :
+            None
 
         """
-        self.system_prompt = get_system_prompt(
-            data_source,
-            data_description=data_description,
-            extra_instructions=extra_instructions,
-            categorical_threshold=categorical_threshold,
-            prompt_template=prompt_template,
-        )
+        self._system_prompt = value
+        if self._server_values is not None:
+            self._server_values.client.system_prompt = value
 
     @property
     def data_source(self):

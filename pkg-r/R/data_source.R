@@ -3,7 +3,7 @@
 #' An entrypoint for developers to create custom data sources for use with
 #' querychat. Most users shouldn't use this function directly; instead, they
 #' should pass their data to `QueryChat$new()`.
-#' 
+#'
 #' @param x A data frame or DBI connection
 #' @param table_name The name to use for the table in the data source. Can be:
 #'   - A character string (e.g., "table_name")
@@ -81,7 +81,7 @@ is_data_source <- function(x) {
 }
 
 #' Execute an SQL query on a data source
-#' 
+#'
 #' An entrypoint for developers to create custom data source objects for use
 #' with querychat. Most users shouldn't use this function directly; instead,
 #' they call the `$sql()` method on the [QueryChat] object to run queries.
@@ -109,7 +109,7 @@ execute_query.dbi_source <- function(source, query, ...) {
 }
 
 #' Test a SQL query on a data source.
-#' 
+#'
 #' An entrypoint for developers to create custom data sources for use with
 #' querychat. Most users shouldn't use this function directly; instead, they
 #' should call the `$sql()` method on the [QueryChat] object to run queries.
@@ -134,7 +134,7 @@ test_query.dbi_source <- function(source, query, ...) {
 
 
 #' Get type information for a data source
-#' 
+#'
 #' An entrypoint for developers to create custom data sources for use with
 #' querychat. Most users shouldn't use this function directly; instead, they
 #' should call the `$set_system_prompt()` method on the [QueryChat] object.
@@ -181,7 +181,7 @@ get_db_type.dbi_source <- function(source, ...) {
 
 
 #' Create a system prompt for the data source
-#' 
+#'
 #' An entrypoint for developers to create custom data sources for use with
 #' querychat. Most users shouldn't use this function directly; instead, they
 #' should call the `$set_system_prompt()` method on the [QueryChat] object.
@@ -268,7 +268,7 @@ cleanup_source.dbi_source <- function(source, ...) {
 
 
 #' Get schema for a data source
-#' 
+#'
 #' An entrypoint for developers to create custom data sources for use with
 #' querychat. Most users shouldn't use this function directly; instead, they
 #' should call the `$set_system_prompt()` method on the [QueryChat] object.

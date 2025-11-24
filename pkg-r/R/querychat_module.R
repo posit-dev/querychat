@@ -22,7 +22,6 @@ mod_ui <- function(id) {
 # Main module server function
 mod_server <- function(id, data_source, greeting, client) {
   shiny::moduleServer(id, function(input, output, session) {
-
     current_title <- shiny::reactiveVal(NULL, label = "current_title")
     current_query <- shiny::reactiveVal("", label = "current_query")
     filtered_df <- shiny::reactive(label = "filtered_df", {

@@ -209,7 +209,11 @@ test_that("QueryChat$new() automatically handles data.frame inputs", {
   test_df <- data.frame(id = 1:3, name = c("A", "B", "C"))
 
   # Should work with data frame and auto-convert it
-  qc <- QueryChat$new(data_source = test_df, table_name = "test_df", greeting = "Test greeting")
+  qc <- QueryChat$new(
+    data_source = test_df,
+    table_name = "test_df",
+    greeting = "Test greeting"
+  )
   withr::defer(qc$cleanup())
 
   expect_s3_class(qc$data_source, "querychat_data_source")
@@ -219,7 +223,11 @@ test_that("QueryChat$new() automatically handles data.frame inputs", {
   df_source <- create_data_source(test_df, table_name = "test_table")
   withr::defer(cleanup_source(df_source))
 
-  qc2 <- QueryChat$new(data_source = df_source, table_name = "test_table", greeting = "Test greeting")
+  qc2 <- QueryChat$new(
+    data_source = df_source,
+    table_name = "test_table",
+    greeting = "Test greeting"
+  )
   expect_s3_class(qc2$data_source, "querychat_data_source")
 })
 
@@ -235,7 +243,11 @@ test_that("QueryChat$new() works with both source types", {
   df_source <- create_data_source(test_df, table_name = "test_source")
   withr::defer(cleanup_source(df_source))
 
-  qc <- QueryChat$new(data_source = df_source, table_name = "test_source", greeting = "Test greeting")
+  qc <- QueryChat$new(
+    data_source = df_source,
+    table_name = "test_source",
+    greeting = "Test greeting"
+  )
 
   expect_s3_class(qc$data_source, "data_frame_source")
   expect_equal(qc$data_source$table_name, "test_source")
@@ -248,7 +260,11 @@ test_that("QueryChat$new() works with both source types", {
   dbWriteTable(conn, "test_table", test_df, overwrite = TRUE)
 
   dbi_source <- create_data_source(conn, "test_table")
-  qc2 <- QueryChat$new(data_source = dbi_source, table_name = "test_table", greeting = "Test greeting")
+  qc2 <- QueryChat$new(
+    data_source = dbi_source,
+    table_name = "test_table",
+    greeting = "Test greeting"
+  )
   expect_s3_class(qc2$data_source, "dbi_source")
   expect_equal(qc2$data_source$table_name, "test_table")
 })

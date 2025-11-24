@@ -32,7 +32,9 @@ ui <- page_sidebar(
   sidebar = qc$sidebar(),
 
   h2("Current Data View"),
-  p("The table below shows the current filtered data based on your chat queries:"),
+  p(
+    "The table below shows the current filtered data based on your chat queries:"
+  ),
   DT::DTOutput("data_table", fill = FALSE),
 
   h2("Current SQL Query"),
@@ -42,7 +44,9 @@ ui <- page_sidebar(
   p("This dataset contains:"),
   tags$ul(
     tags$li("344 observations of penguins"),
-    tags$li("Columns: species, island, bill_length_mm, bill_depth_mm, flipper_length_mm, body_mass_g, sex, year")
+    tags$li(
+      "Columns: species, island, bill_length_mm, bill_depth_mm, flipper_length_mm, body_mass_g, sex, year"
+    )
   )
 )
 

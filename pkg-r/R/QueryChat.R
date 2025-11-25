@@ -653,9 +653,168 @@ QueryChat <- R6::R6Class(
 )
 
 
+#' QueryChat convenience functions
+#'
+#' Convenience functions for wrapping [QueryChat] creation (i.e., `querychat()`)
+#' and app launching (i.e., `querychat_app()`).
+#'
+#' @param data_source Either a data.frame or a database connection (e.g., DBI
+#'   connection).
+#' @param table_name A string specifying the table name to use in SQL queries.
+#'   If `data_source` is a data.frame, this is the name to refer to it by in
+#'   queries (typically the variable name). If `data_source` is a database
+#'   connection, this is the name of the table in the database.
+#' @param ... Additional arguments (currently unused).
+#' @param id Optional module ID for the QueryChat instance. If not provided,
+#'   will be auto-generated from `table_name`. The ID is used to namespace
+#'   the Shiny module.
+#' @param greeting Optional initial message to display to users. Can be a
+#'   character string (in Markdown format) or a file path. If not provided,
+#'   a greeting will be generated at the start of each conversation using the
+#'   LLM, which adds latency and cost. Use `$generate_greeting()` to create
+#'   a greeting to save and reuse.
+#' @param client Optional chat client. Can be:
+#'   - An [ellmer::Chat] object
+#'   - A string to pass to [ellmer::chat()] (e.g., `"openai/gpt-4o"`)
+#'   - `NULL` (default): Uses the `querychat.client` option, the
+#'     `QUERYCHAT_CLIENT` environment variable, or defaults to
+#'     [ellmer::chat_openai()]
+#' @param data_description Optional description of the data in plain text or
+#'   Markdown. Can be a string or a file path. This provides context to the
+#'   LLM about what the data represents.
+#' @param categorical_threshold For text columns, the maximum number of unique
+#'   values to consider as a categorical variable. Default is 20.
+#' @param extra_instructions Optional additional instructions for the chat
+#'   model in plain text or Markdown. Can be a string or a file path.
+#' @param prompt_template Optional path to or string of a custom prompt
+#'   template file. If not provided, the default querychat template will be
+#'   used. See the package prompts directory for the default template format.
+#' @param cleanup Whether or not to automatically run `$cleanup()` when the
+#'   Shiny session/app stops. By default, cleanup only occurs if `QueryChat`
+#'   gets created within a Shiny session. Set to `TRUE` to always clean up,
+#'   or `FALSE` to never clean up automatically.
+#'
+#' @return A `QueryChat` object. See [QueryChat] for available methods.
+#'
+#' @rdname querychat-convenience
+#'
+#' @export
+#' @examples
+#' \dontrun{
+#' # Quick start - chat with mtcars dataset in one line
+#' querychat_app(mtcars, "mtcars")
+#'
+#' # Add options
+#' querychat_app(
+#'   mtcars,
+#'   "mtcars",
+#'   greeting = "Welcome to the mtcars explorer!",
+#'   client = "openai/gpt-4o"
+#' )
+#'
+#' # Chat with a database table
+#' library(DBI)
+#' conn <- dbConnect(RSQLite::SQLite(), ":memory:")
+#' dbWriteTable(conn, "mtcars", mtcars)
+#' querychat_app(conn, "mtcars")
+#'
+#' # Create QueryChat class object
+#' qc <- querychat(mtcars, "mtcars")
+#'
+#' # Run the app later
+#' qc$app()
+#'
+#' }
+querychat <- function(
+  data_source,
+  table_name,
+  ...,
+  id = NULL,
+  greeting = NULL,
+  client = NULL,
+  data_description = NULL,
+  categorical_threshold = 20,
+  extra_instructions = NULL,
+  prompt_template = NULL,
+  cleanup = TRUE
+) {
+  QueryChat$new(
+    data_source = data_source,
+    table_name = table_name,
+    ...,
+    id = id,
+    greeting = greeting,
+    client = client,
+    data_description = data_description,
+    categorical_threshold = categorical_threshold,
+    extra_instructions = extra_instructions,
+    prompt_template = prompt_template,
+    cleanup = cleanup
+  )
+}
+
+
+#' @rdname querychat-convenience
+#' @param bookmark_store The bookmarking storage method. Passed to
+#'   [shiny::enableBookmarking()]. If `"url"` or `"server"`, the chat state
+#'   (including current query) will be bookmarked. Default is `"url"`.
+#' @return Invisibly returns the chat object after the app stops.
+#'
+#' @export
+#' @examples
+#' \dontrun{
+#' # Quick start - create and run app in one line
+#' querychat_app(mtcars, "mtcars")
+#'
+#' # With options
+#' querychat_app(
+#'   mtcars,
+#'   "mtcars",
+#'   greeting = "Welcome to the mtcars explorer!",
+#'   client = "openai/gpt-4o"
+#' )
+#'
+#' # With database
+#' library(DBI)
+#' conn <- dbConnect(RSQLite::SQLite(), ":memory:")
+#' dbWriteTable(conn, "mtcars", mtcars)
+#' querychat_app(conn, "mtcars")
+#' }
+querychat_app <- function(
+  data_source,
+  table_name,
+  ...,
+  id = NULL,
+  greeting = NULL,
+  client = NULL,
+  data_description = NULL,
+  categorical_threshold = 20,
+  extra_instructions = NULL,
+  prompt_template = NULL,
+  cleanup = TRUE,
+  bookmark_store = "url"
+) {
+  qc <- QueryChat$new(
+    data_source = data_source,
+    table_name = table_name,
+    ...,
+    id = id,
+    greeting = greeting,
+    client = client,
+    data_description = data_description,
+    categorical_threshold = categorical_threshold,
+    extra_instructions = extra_instructions,
+    prompt_template = prompt_template,
+    cleanup = cleanup
+  )
+
+  qc$app(bookmark_store = bookmark_store)
+}
+
+
 normalize_data_source <- function(data_source, table_name) {
   if (is_data_source(data_source)) {
-    return(data_source)
+    data_source
   } else {
     as_querychat_data_source(data_source, table_name)
   }

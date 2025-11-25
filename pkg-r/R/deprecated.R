@@ -38,26 +38,6 @@ querychat_init <- function(...) {
 
 #' @rdname deprecated
 #' @export
-querychat_app <- function(...) {
-  lifecycle::deprecate_stop(
-    when = "0.1.0",
-    what = "querychat_app()",
-    with = "QueryChat$app()",
-    details = c(
-      "Old code:",
-      "  querychat_app(config)",
-      "",
-      "New code:",
-      "  qc <- QueryChat$new(data, 'table_name')",
-      "  qc$app()",
-      "",
-      "See ?QueryChat for more information."
-    )
-  )
-}
-
-#' @rdname deprecated
-#' @export
 querychat_sidebar <- function(...) {
   lifecycle::deprecate_stop(
     when = "0.1.0",

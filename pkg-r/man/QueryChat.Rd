@@ -294,7 +294,7 @@ Create a new QueryChat object.
   categorical_threshold = 20,
   extra_instructions = NULL,
   prompt_template = NULL,
-  auto_cleanup = TRUE
+  cleanup = NA
 )}\if{html}{\out{</div>}}
 }
 
@@ -344,8 +344,10 @@ model in plain text or Markdown. Can be a string or a file path.}
 template file. If not provided, the default querychat template will be
 used. See the package prompts directory for the default template format.}
 
-\item{\code{auto_cleanup}}{Logical indicating whether to automatically close the
-data source when the Shiny app stops. Default is \code{TRUE}.}
+\item{\code{cleanup}}{Whether or not to automatically run \verb{$cleanup()} when the
+Shiny session/app stops. By default, cleanup only occurs if \code{QueryChat}
+gets created within a Shiny session. Set to \code{TRUE} to always clean up,
+or \code{FALSE} to never clean up automatically.}
 }
 \if{html}{\out{</div>}}
 }

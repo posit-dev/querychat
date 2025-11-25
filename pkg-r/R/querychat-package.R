@@ -45,7 +45,7 @@
 #'
 #' @section Examples:
 #' To see examples included with the package, run:
-#' 
+#'
 #' ```r
 #' shiny::runExample(package = "querychat")
 #' ```

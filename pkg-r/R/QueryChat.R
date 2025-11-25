@@ -202,7 +202,7 @@ QueryChat <- R6::R6Class(
       )
 
       # Fork and empty chat now so the per-session forks are fast
-      client <- normalize_client(client)
+      client <- as_querychat_client(client)
       private$.client <- client$clone()
       private$.client$set_turns(list())
       private$.client$set_system_prompt(prompt)
@@ -652,6 +652,6 @@ normalize_data_source <- function(data_source, table_name) {
   if (is_data_source(data_source)) {
     return(data_source)
   } else {
-    create_data_source(data_source, table_name)
+    as_querychat_data_source(data_source, table_name)
   }
 }

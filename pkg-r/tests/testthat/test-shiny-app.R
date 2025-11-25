@@ -35,7 +35,7 @@ test_that("database reactive functionality works correctly", {
   db_conn <- dbConnect(RSQLite::SQLite(), temp_db)
   withr::defer(dbDisconnect(db_conn))
 
-  iris_source <- create_data_source(db_conn, "iris")
+  iris_source <- as_querychat_data_source(db_conn, "iris")
 
   # Mock chat function
   mock_client <- ellmer::chat_openai(api_key = "boop")

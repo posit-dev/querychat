@@ -15,7 +15,7 @@ interpolate_package <- function(path, ..., .envir = parent.frame()) {
 }
 
 
-normalize_client <- function(client = NULL) {
+as_querychat_client <- function(client = NULL) {
   if (is.null(client)) {
     client <- querychat_client_option()
   }

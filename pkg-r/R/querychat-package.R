@@ -41,7 +41,7 @@
 #'
 #' @section Main Components:
 #' - [QueryChat]: The main R6 class for creating chat interfaces
-#' - [create_data_source()]: (Advanced) Create custom data source objects
+#' - [as_querychat_data_source()]: (Advanced) Create custom data source objects
 #'
 #' @section Examples:
 #' See the package examples directory for complete working apps:

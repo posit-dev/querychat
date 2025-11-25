@@ -18,7 +18,7 @@ test_that("test_query.dbi_source correctly retrieves one row of data", {
 
   dbWriteTable(conn, "test_table", test_df, overwrite = TRUE)
 
-  dbi_source <- create_data_source(conn, "test_table")
+  dbi_source <- as_querychat_data_source(conn, "test_table")
   withr::defer(cleanup_source(dbi_source))
 
   # Test basic query - should only return one row
@@ -62,7 +62,7 @@ test_that("test_query.dbi_source handles errors correctly", {
   )
   dbWriteTable(conn, "test_table", test_df, overwrite = TRUE)
 
-  dbi_source <- create_data_source(conn, "test_table")
+  dbi_source <- as_querychat_data_source(conn, "test_table")
   withr::defer(cleanup_source(dbi_source), priority = "last")
 
   # Test with invalid SQL
@@ -96,7 +96,7 @@ test_that("test_query.dbi_source works with different data types", {
 
   dbWriteTable(conn, "types_table", test_df, overwrite = TRUE)
 
-  dbi_source <- create_data_source(conn, "types_table")
+  dbi_source <- as_querychat_data_source(conn, "types_table")
   withr::defer(cleanup_source(dbi_source), priority = "last")
 
   # Test query with different column types

@@ -3,7 +3,7 @@ library(DBI)
 library(RSQLite)
 library(querychat)
 
-test_that("create_data_source.data.frame creates proper S3 object", {
+test_that("as_querychat_data_source.data.frame creates proper S3 object", {
   # Create a simple data frame
   test_df <- data.frame(
     id = 1:5,
@@ -13,7 +13,7 @@ test_that("create_data_source.data.frame creates proper S3 object", {
   )
 
   # Test with explicit table name
-  source <- create_data_source(test_df, table_name = "test_table")
+  source <- as_querychat_data_source(test_df, table_name = "test_table")
   withr::defer(cleanup_source(source))
 
   expect_s3_class(source, "data_frame_source")
@@ -22,7 +22,7 @@ test_that("create_data_source.data.frame creates proper S3 object", {
   expect_true(inherits(source$conn, "DBIConnection"))
 })
 
-test_that("create_data_source.DBIConnection creates proper S3 object", {
+test_that("as_querychat_data_source.DBIConnection creates proper S3 object", {
   # Create temporary SQLite database
   temp_db <- withr::local_tempfile(fileext = ".db")
   conn <- dbConnect(RSQLite::SQLite(), temp_db)
@@ -39,7 +39,7 @@ test_that("create_data_source.DBIConnection creates proper S3 object", {
   dbWriteTable(conn, "users", test_data, overwrite = TRUE)
 
   # Test DBI source creation
-  db_source <- create_data_source(conn, "users")
+  db_source <- as_querychat_data_source(conn, "users")
   expect_s3_class(db_source, "dbi_source")
   expect_s3_class(db_source, "querychat_data_source")
   expect_equal(db_source$table_name, "users")
@@ -54,7 +54,7 @@ test_that("get_schema methods return proper schema", {
     stringsAsFactors = FALSE
   )
 
-  df_source <- create_data_source(test_df, table_name = "test_table")
+  df_source <- as_querychat_data_source(test_df, table_name = "test_table")
   withr::defer(cleanup_source(df_source))
 
   schema <- get_schema(df_source)
@@ -75,7 +75,7 @@ test_that("get_schema methods return proper schema", {
 
   dbWriteTable(conn, "test_table", test_df, overwrite = TRUE)
 
-  dbi_source <- create_data_source(conn, "test_table")
+  dbi_source <- as_querychat_data_source(conn, "test_table")
   schema <- get_schema(dbi_source)
   expect_type(schema, "character")
   expect_match(schema, "Table: `test_table`")
@@ -94,7 +94,7 @@ test_that("execute_query works for both source types", {
     stringsAsFactors = FALSE
   )
 
-  df_source <- create_data_source(test_df, table_name = "test_table")
+  df_source <- as_querychat_data_source(test_df, table_name = "test_table")
   withr::defer(cleanup_source(df_source))
   result <- execute_query(
     df_source,
@@ -109,7 +109,7 @@ test_that("execute_query works for both source types", {
   withr::defer(dbDisconnect(conn))
   dbWriteTable(conn, "test_table", test_df, overwrite = TRUE)
 
-  dbi_source <- create_data_source(conn, "test_table")
+  dbi_source <- as_querychat_data_source(conn, "test_table")
   result <- execute_query(
     dbi_source,
     "SELECT * FROM test_table WHERE value > 25"
@@ -126,7 +126,7 @@ test_that("execute_query works with empty/null queries", {
     stringsAsFactors = FALSE
   )
 
-  df_source <- create_data_source(test_df, table_name = "test_table")
+  df_source <- as_querychat_data_source(test_df, table_name = "test_table")
   withr::defer(cleanup_source(df_source))
 
   # Test with NULL query
@@ -148,7 +148,7 @@ test_that("execute_query works with empty/null queries", {
 
   dbWriteTable(conn, "test_table", test_df, overwrite = TRUE)
 
-  dbi_source <- create_data_source(conn, "test_table")
+  dbi_source <- as_querychat_data_source(conn, "test_table")
 
   # Test with NULL query
   result_null <- execute_query(dbi_source, NULL)
@@ -173,7 +173,7 @@ test_that("get_schema correctly reports min/max values for numeric columns", {
     stringsAsFactors = FALSE
   )
 
-  df_source <- create_data_source(test_df, table_name = "test_metrics")
+  df_source <- as_querychat_data_source(test_df, table_name = "test_metrics")
   withr::defer(cleanup_source(df_source))
   schema <- get_schema(df_source)
 
@@ -191,7 +191,7 @@ test_that("create_system_prompt generates appropriate system prompt", {
     stringsAsFactors = FALSE
   )
 
-  df_source <- create_data_source(test_df, table_name = "test_table")
+  df_source <- as_querychat_data_source(test_df, table_name = "test_table")
   withr::defer(cleanup_source(df_source))
 
   prompt <- create_system_prompt(
@@ -220,7 +220,7 @@ test_that("QueryChat$new() automatically handles data.frame inputs", {
   expect_s3_class(qc$data_source, "data_frame_source")
 
   # Should work with proper data source too
-  df_source <- create_data_source(test_df, table_name = "test_table")
+  df_source <- as_querychat_data_source(test_df, table_name = "test_table")
   withr::defer(cleanup_source(df_source))
 
   qc2 <- QueryChat$new(
@@ -240,7 +240,7 @@ test_that("QueryChat$new() works with both source types", {
   )
 
   # Create data source and test with QueryChat$new()
-  df_source <- create_data_source(test_df, table_name = "test_source")
+  df_source <- as_querychat_data_source(test_df, table_name = "test_source")
   withr::defer(cleanup_source(df_source))
 
   qc <- QueryChat$new(
@@ -259,7 +259,7 @@ test_that("QueryChat$new() works with both source types", {
 
   dbWriteTable(conn, "test_table", test_df, overwrite = TRUE)
 
-  dbi_source <- create_data_source(conn, "test_table")
+  dbi_source <- as_querychat_data_source(conn, "test_table")
   qc2 <- QueryChat$new(
     data_source = dbi_source,
     table_name = "test_table",

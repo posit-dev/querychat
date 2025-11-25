@@ -11,12 +11,12 @@
 #' @return A querychat_data_source object
 #' @keywords internal
 #' @export
-create_data_source <- function(x, table_name = NULL, ...) {
-  UseMethod("create_data_source")
+as_querychat_data_source <- function(x, table_name = NULL, ...) {
+  UseMethod("as_querychat_data_source")
 }
 
 #' @export
-create_data_source.data.frame <- function(x, table_name = NULL, ...) {
+as_querychat_data_source.data.frame <- function(x, table_name = NULL, ...) {
   if (is.null(table_name)) {
     # Infer table name from dataframe name, if not already added
     table_name <- deparse(substitute(x))
@@ -47,7 +47,7 @@ create_data_source.data.frame <- function(x, table_name = NULL, ...) {
 }
 
 #' @export
-create_data_source.DBIConnection <- function(x, table_name, ...) {
+as_querychat_data_source.DBIConnection <- function(x, table_name, ...) {
   # Handle different types of table_name inputs
   if (inherits(table_name, "Id")) {
     # DBI::Id object - keep as is

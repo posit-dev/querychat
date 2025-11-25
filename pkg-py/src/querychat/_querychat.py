@@ -137,7 +137,7 @@ class QueryChatBase:
         )
 
         # Fork and empty chat now so the per-session forks are fast
-        client = normalize_client(client)
+        client = as_querychat_client(client)
         self._client = copy.deepcopy(client)
         self._client.set_turns([])
         self._client.system_prompt = prompt
@@ -636,7 +636,7 @@ def normalize_data_source(
     return DataFrameSource(data_source, table_name)
 
 
-def normalize_client(client: str | chatlas.Chat | None) -> chatlas.Chat:
+def as_querychat_client(client: str | chatlas.Chat | None) -> chatlas.Chat:
     if client is None:
         client = os.getenv("QUERYCHAT_CLIENT", None)
 

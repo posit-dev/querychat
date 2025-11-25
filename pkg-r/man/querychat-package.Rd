@@ -59,12 +59,16 @@ shinyApp(ui, server)
 
 \section{Examples}{
 
-See the package examples directory for complete working apps:
-\itemize{
-\item \verb{01-hello-app/}: Minimal example using \verb{$app()}
-\item \verb{02-sidebar-app/}: Custom layout with additional UI elements
-\item \verb{sqlite/}: Database connection example
-}
+To see examples included with the package, run:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{shiny::runExample(package = "querychat")
+}\if{html}{\out{</div>}}
+
+This provides a list of available examples. To run a specific example, like
+'01-hello-app', use:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{shiny::runExample("01-hello-app", package = "querychat")
+}\if{html}{\out{</div>}}
 }
 
 \seealso{

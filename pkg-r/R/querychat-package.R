@@ -44,10 +44,19 @@
 #' - [as_querychat_data_source()]: (Advanced) Create custom data source objects
 #'
 #' @section Examples:
-#' See the package examples directory for complete working apps:
-#' - `01-hello-app/`: Minimal example using `$app()`
-#' - `02-sidebar-app/`: Custom layout with additional UI elements
-#' - `sqlite/`: Database connection example
+#' To see examples included with the package, run:
+#' 
+#' ```r
+#' shiny::runExample(package = "querychat")
+#' ```
+#'
+#' This provides a list of available examples. To run a specific example, like
+#' '01-hello-app', use:
+#'
+#' ```r
+#' shiny::runExample("01-hello-app", package = "querychat")
+#' ```
+#'
 #'
 #' @keywords internal
 "_PACKAGE"

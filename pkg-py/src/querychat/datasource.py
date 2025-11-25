@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar, Protocol, runtime_checkable
+from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
 
 import duckdb
 import narwhals.stable.v1 as nw
@@ -13,15 +14,25 @@ if TYPE_CHECKING:
     from sqlalchemy.engine import Connection, Engine
 
 
-@runtime_checkable
-class DataSource(Protocol):
-    db_engine: ClassVar[str]
+class DataSource(ABC):
+    """
+    An abstract class defining the interface for data sources used by QueryChat.
+
+    Attributes
+    ----------
+    table_name
+        Name of the table to be used in SQL queries.
+
+    """
+
     table_name: str
 
+    @abstractmethod
     def get_db_type(self) -> str:
-        """Get the database type."""
+        """Name for the database behind the SQL execution."""
         ...
 
+    @abstractmethod
     def get_schema(self, *, categorical_threshold) -> str:
         """
         Return schema information about the table as a string.
@@ -41,6 +52,7 @@ class DataSource(Protocol):
         """
         ...
 
+    @abstractmethod
     def execute_query(self, query: str) -> pd.DataFrame:
         """
         Execute SQL query and return results as DataFrame.
@@ -58,6 +70,7 @@ class DataSource(Protocol):
         """
         ...
 
+    @abstractmethod
     def get_data(self) -> pd.DataFrame:
         """
         Return the unfiltered data as a DataFrame.
@@ -71,20 +84,9 @@ class DataSource(Protocol):
         ...
 
 
-class DataSourceBase:
-    """Base class for DataSource implementations."""
-
-    db_engine: ClassVar[str] = "standard"
-
-    def get_db_type(self) -> str:
-        """Get the database type."""
-        return self.db_engine
-
-
-class DataFrameSource(DataSourceBase):
+class DataFrameSource(DataSource):
     """A DataSource implementation that wraps a pandas DataFrame using DuckDB."""
 
-    db_engine: ClassVar[str] = "DuckDB"
     _df: nw.DataFrame | nw.LazyFrame
 
     def __init__(self, df: IntoFrame, table_name: str):
@@ -104,6 +106,18 @@ class DataFrameSource(DataSourceBase):
         self.table_name = table_name
         # TODO(@gadenbuie): If the data frame is already SQL-backed, maybe we shouldn't be making a new copy here.
         self._conn.register(table_name, self._df.lazy().collect().to_pandas())
+
+    def get_db_type(self) -> str:
+        """
+        Get the database type.
+
+        Returns
+        -------
+        :
+            The string "DuckDB"
+
+        """
+        return "DuckDB"
 
     def get_schema(self, *, categorical_threshold: int) -> str:
         """
@@ -199,7 +213,7 @@ class DataFrameSource(DataSourceBase):
         return self._df.lazy().collect().to_pandas()
 
 
-class SQLAlchemySource(DataSourceBase):
+class SQLAlchemySource(DataSource):
     """
     A DataSource implementation that supports multiple SQL databases via
     SQLAlchemy.
@@ -207,8 +221,6 @@ class SQLAlchemySource(DataSourceBase):
     Supports various databases including PostgreSQL, MySQL, SQLite, Snowflake,
     and Databricks.
     """
-
-    db_engine: ClassVar[str] = "SQLAlchemy"
 
     def __init__(self, engine: Engine, table_name: str):
         """

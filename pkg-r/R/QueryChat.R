@@ -129,8 +129,10 @@ QueryChat <- R6::R6Class(
     #' @param prompt_template Optional path to or string of a custom prompt
     #'   template file. If not provided, the default querychat template will be
     #'   used. See the package prompts directory for the default template format.
-    #' @param auto_cleanup Logical indicating whether to automatically close the
-    #'   data source when the Shiny app stops. Default is `TRUE`.
+    #' @param cleanup Whether or not to automatically run `$cleanup()` when the
+    #'   Shiny session/app stops. By default, cleanup only occurs if `QueryChat`
+    #'   gets created within a Shiny session. Set to `TRUE` to always clean up,
+    #'   or `FALSE` to never clean up automatically.
     #'
     #' @return A new `QueryChat` object.
     #'
@@ -165,7 +167,7 @@ QueryChat <- R6::R6Class(
       categorical_threshold = 20,
       extra_instructions = NULL,
       prompt_template = NULL,
-      auto_cleanup = TRUE
+      cleanup = NA
     ) {
       rlang::check_dots_empty()
 
@@ -207,9 +209,12 @@ QueryChat <- R6::R6Class(
       private$.client$set_turns(list())
       private$.client$set_system_prompt(prompt)
 
-      if (auto_cleanup) {
-        # Close the data source when the Shiny app stops (or, if some reason the
-        # querychat_init call is within a specific session, when the session ends)
+      # By default, only close automatically if a Shiny session is active
+      if (is.na(cleanup)) {
+        cleanup <- !is.null(shiny::getDefaultReactiveDomain())
+      }
+
+      if (cleanup) {
         shiny::onStop(function() {
           message("Closing data source...")
           self$cleanup()

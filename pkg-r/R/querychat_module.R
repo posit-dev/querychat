@@ -1,5 +1,5 @@
 # Main module UI function
-mod_ui <- function(id) {
+mod_ui <- function(id, ...) {
   ns <- shiny::NS(id)
   htmltools::tagList(
     htmltools::htmlDependency(
@@ -13,8 +13,8 @@ mod_ui <- function(id) {
     shinychat::chat_ui(
       ns("chat"),
       height = "100%",
-      fill = TRUE,
-      class = "querychat"
+      class = "querychat",
+      ...
     )
   )
 }

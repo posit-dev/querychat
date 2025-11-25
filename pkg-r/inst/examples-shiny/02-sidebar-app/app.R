@@ -4,27 +4,36 @@ library(querychat)
 library(palmerpenguins)
 
 # Define a custom greeting for the penguins app
-greeting <- "
+greeting <- r"(
 # Welcome to the Palmer Penguins Explorer! 🐧
 
 I can help you explore and analyze the Palmer Penguins dataset. Ask me questions
 about the penguins, and I'll generate SQL queries to get the answers.
 
 Try asking:
-- <span class=\"suggestion\">Show me the first 10 rows of the penguins dataset</span>
-- <span class=\"suggestion\">What's the average bill length by species?</span>
-- <span class=\"suggestion\">Which species has the largest body mass?</span>
-- <span class=\"suggestion\">Create a summary of measurements grouped by species and island</span>
-"
+- <span class="suggestion">Show me the first 10 rows of the penguins dataset</span>
+- <span class="suggestion">What's the average bill length by species?</span>
+- <span class="suggestion">Which species has the largest body mass?</span>
+- <span class="suggestion">Create a summary of measurements grouped by species and island</span>
+)"
 
 # Create QueryChat object with custom options
 qc <- QueryChat$new(
   penguins,
   "penguins",
   greeting = greeting,
-  data_description = "The Palmer Penguins dataset contains measurements of bill dimensions, flipper length, body mass, sex, and species (Adelie, Chinstrap, and Gentoo) collected from three islands in the Palmer Archipelago, Antarctica.",
-  extra_instructions = "When showing results, always explain what the data represents and highlight any interesting patterns you observe."
+  data_description = paste(
+    "The Palmer Penguins dataset contains measurements of bill",
+    "dimensions, flipper length, body mass, sex, and species",
+    "(Adelie, Chinstrap, and Gentoo) collected from three islands in",
+    "the Palmer Archipelago, Antarctica."
+  ),
+  extra_instructions = paste(
+    "When showing results, always explain what the data represents",
+    "and highlight any interesting patterns you observe."
+  )
 )
+
 
 # Define custom UI with sidebar
 ui <- page_sidebar(

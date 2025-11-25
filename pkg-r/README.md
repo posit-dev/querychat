@@ -115,7 +115,7 @@ Currently, querychat uses DuckDB for its SQL engine when working with data frame
 
 ### Provide a greeting (recommended)
 
-When the querychat UI first appears, you will usually want it to greet the user with some basic instructions. By default, these instructions are auto-generated every time a user arrives; this is slow, wasteful, and unpredictable. Instead, you should create a file called `greeting.md`, and when creating your `QueryChat` instance, pass `greeting = "greeting.md"` (or use `readLines()` to read the file as a string).
+When the querychat UI first appears, you will usually want it to greet the user with some basic instructions. By default, these instructions are auto-generated every time a user arrives; this is potentially slow, wasteful, and unpredictable. Instead, you should create a file called `greeting.md`, and when creating your `QueryChat` instance, pass `greeting = "greeting.md"` (or use `readLines()` to read the file as a string).
 
 You can provide suggestions to the user by using the `<span class="suggestion"> </span>` tag.
 

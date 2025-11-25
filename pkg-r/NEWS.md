@@ -1,7 +1,7 @@
 # querychat (development version)
 
-* Nearly the entire functional API (i.e., `querychat_init()`, `querychat_sidebar()`, `querychat_server()`, etc) has been hard deprecated in favor of a simpler OOP-based API. Namely, the new `QueryChat$new()` class is now the main entry point (instead of `querychat_init()`) and has methods to replace old functions (e.g., `$sidebar()`, `$server()`, etc). (#xxx)
-    * In addition, `querychat_data_source()` was renamed to `create_data_source()`, and remains exported for a developer extension point, but users no longer have to explicitly create a data source. (#xxx)
+* Nearly the entire functional API (i.e., `querychat_init()`, `querychat_sidebar()`, `querychat_server()`, etc) has been hard deprecated in favor of a simpler OOP-based API. Namely, the new `QueryChat$new()` class is now the main entry point (instead of `querychat_init()`) and has methods to replace old functions (e.g., `$sidebar()`, `$server()`, etc). (#109)
+    * In addition, `querychat_data_source()` was renamed to `create_data_source()`, and remains exported for a developer extension point, but users no longer have to explicitly create a data source. (#109)
 
 * Added `prompt_template` support for `querychat_system_prompt()`. (Thank you, @oacar! #37, #45)
 

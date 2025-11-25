@@ -48,27 +48,6 @@ shinyApp(ui, server)
 }\if{html}{\out{</div>}}
 }
 
-\section{Constructor}{
-
-\code{QueryChat$new(data_source, table_name, id = NULL, greeting = NULL, client = NULL, data_description = NULL, extra_instructions = NULL, prompt_template = NULL)}
-}
-
-\section{Methods}{
-
-\describe{
-\item{\verb{$new(...)}}{Create a new QueryChat object.}
-\item{\verb{$sidebar(...)}}{Create a sidebar UI with chat interface.}
-\item{\verb{$ui(...)}}{Create the chat UI component.}
-\item{\verb{$server()}}{Initialize server logic (call within server function).}
-\item{\verb{$df()}}{Get the current filtered data frame (reactive).}
-\item{\verb{$sql(query)}}{Get or set the current SQL query (reactive).}
-\item{\verb{$title(value)}}{Get or set the current title (reactive).}
-\item{\verb{$app()}}{Create a complete Shiny app with sensible defaults.}
-\item{\verb{$generate_greeting(echo)}}{Generate a greeting message using the LLM.}
-\item{\verb{$cleanup()}}{Clean up data source resources.}
-}
-}
-
 \examples{
 \dontrun{
 # Basic usage with a data frame
@@ -122,10 +101,21 @@ library(querychat)
 
 qc <- QueryChat$new(mtcars, "mtcars")
 qc$app()
-
-# Or explicitly run the app
-shiny::runApp(qc$app())
 }
+
+
+## ------------------------------------------------
+## Method `QueryChat$app_obj`
+## ------------------------------------------------
+
+\dontrun{
+library(querychat)
+
+qc <- QueryChat$new(mtcars, "mtcars")
+app <- qc$app_obj()
+shiny::runApp(app)
+}
+
 
 ## ------------------------------------------------
 ## Method `QueryChat$sidebar`
@@ -266,6 +256,7 @@ qc2 <- QueryChat$new(mtcars, "mtcars", greeting = "mtcars_greeting.md")
 \itemize{
 \item \href{#method-QueryChat-new}{\code{QueryChat$new()}}
 \item \href{#method-QueryChat-app}{\code{QueryChat$app()}}
+\item \href{#method-QueryChat-app_obj}{\code{QueryChat$app_obj()}}
 \item \href{#method-QueryChat-sidebar}{\code{QueryChat$sidebar()}}
 \item \href{#method-QueryChat-ui}{\code{QueryChat$ui()}}
 \item \href{#method-QueryChat-server}{\code{QueryChat$server()}}
@@ -385,22 +376,21 @@ qc <- QueryChat$new(conn, "mtcars")
 \if{html}{\out{<a id="method-QueryChat-app"></a>}}
 \if{latex}{\out{\hypertarget{method-QueryChat-app}{}}}
 \subsection{Method \code{app()}}{
-Create a complete Shiny app with sensible defaults.
+Create and run a Shiny gadget for chatting with data
 
-This is a convenience method that creates a full Shiny application with:
-\itemize{
-\item A sidebar containing the chat interface
-\item A card displaying the current SQL query
-\item A card displaying the filtered data table
-\item A reset button to clear the query
-}
+Runs a Shiny gadget (designed for interactive use) that provides
+a complete interface for chatting with your data using natural language.
+If you're looking to deploy this app or run it through some other means,
+see \verb{$app_obj()}.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{QueryChat$app(bookmark_store = "url")}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{QueryChat$app(..., bookmark_store = "url")}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
+\item{\code{...}}{Arguments passed to \verb{$app_obj()}.}
+
 \item{\code{bookmark_store}}{The bookmarking storage method. Passed to
 \code{\link[shiny:enableBookmarking]{shiny::enableBookmarking()}}. If \code{"url"} or \code{"server"}, the chat state
 (including current query) will be bookmarked. Default is \code{"url"}.}
@@ -408,8 +398,7 @@ This is a convenience method that creates a full Shiny application with:
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-A Shiny app object that can be run with \code{\link[shiny:runApp]{shiny::runApp()}} or
-passed to \code{\link[shiny:shinyApp]{shiny::shinyApp()}}.
+Invisibly returns the chat object after the app stops.
 }
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
@@ -418,10 +407,55 @@ library(querychat)
 
 qc <- QueryChat$new(mtcars, "mtcars")
 qc$app()
-
-# Or explicitly run the app
-shiny::runApp(qc$app())
 }
+
+}
+\if{html}{\out{</div>}}
+
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-QueryChat-app_obj"></a>}}
+\if{latex}{\out{\hypertarget{method-QueryChat-app_obj}{}}}
+\subsection{Method \code{app_obj()}}{
+A streamlined Shiny app for chatting with data
+
+Creates a Shiny app designed for chatting with data, with:
+\itemize{
+\item A sidebar containing the chat interface
+\item A card displaying the current SQL query
+\item A card displaying the filtered data table
+\item A reset button to clear the query
+}
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{QueryChat$app_obj(..., bookmark_store = "url")}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{...}}{Additional arguments (currently unused).}
+
+\item{\code{bookmark_store}}{The bookmarking storage method. Passed to
+\code{\link[shiny:enableBookmarking]{shiny::enableBookmarking()}}. If \code{"url"} or \code{"server"}, the chat state
+(including current query) will be bookmarked. Default is \code{"url"}.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+A Shiny app object that can be run with \code{shiny::runApp()}.
+}
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{\dontrun{
+library(querychat)
+
+qc <- QueryChat$new(mtcars, "mtcars")
+app <- qc$app_obj()
+shiny::runApp(app)
+}
+
 }
 \if{html}{\out{</div>}}
 

@@ -223,20 +223,19 @@ QueryChat <- R6::R6Class(
     },
 
     #' @description
-    #' Create a complete Shiny app with sensible defaults.
+    #' Create and run a Shiny gadget for chatting with data
     #'
-    #' This is a convenience method that creates a full Shiny application with:
-    #' - A sidebar containing the chat interface
-    #' - A card displaying the current SQL query
-    #' - A card displaying the filtered data table
-    #' - A reset button to clear the query
+    #' Runs a Shiny gadget (designed for interactive use) that provides
+    #' a complete interface for chatting with your data using natural language.
+    #' If you're looking to deploy this app or run it through some other means,
+    #' see `$app_obj()`.
     #'
+    #' @param ... Arguments passed to `$app_obj()`.
     #' @param bookmark_store The bookmarking storage method. Passed to
     #'   [shiny::enableBookmarking()]. If `"url"` or `"server"`, the chat state
     #'   (including current query) will be bookmarked. Default is `"url"`.
     #'
-    #' @return A Shiny app object that can be run with [shiny::runApp()] or
-    #'   passed to [shiny::shinyApp()].
+    #' @return Invisibly returns the chat object after the app stops.
     #'
     #' @examples
     #' \dontrun{
@@ -244,13 +243,43 @@ QueryChat <- R6::R6Class(
     #'
     #' qc <- QueryChat$new(mtcars, "mtcars")
     #' qc$app()
-    #'
-    #' # Or explicitly run the app
-    #' shiny::runApp(qc$app())
     #' }
-    app = function(bookmark_store = "url") {
+    #'
+    app = function(..., bookmark_store = "url") {
+      app <- self$app_obj(..., bookmark_store = bookmark_store)
+      tryCatch(shiny::runGadget(app), interrupt = function(cnd) NULL)
+      invisible(private$server_values$chat)
+    },
+
+    #' @description
+    #' A streamlined Shiny app for chatting with data
+    #'
+    #' Creates a Shiny app designed for chatting with data, with:
+    #' - A sidebar containing the chat interface
+    #' - A card displaying the current SQL query
+    #' - A card displaying the filtered data table
+    #' - A reset button to clear the query
+    #'
+    #' @param ... Additional arguments (currently unused).
+    #' @param bookmark_store The bookmarking storage method. Passed to
+    #'  [shiny::enableBookmarking()]. If `"url"` or `"server"`, the chat state
+    #'  (including current query) will be bookmarked. Default is `"url"`.
+    #'
+    #' @return A Shiny app object that can be run with `shiny::runApp()`.
+    #'
+    #' @examples
+    #' \dontrun{
+    #' library(querychat)
+    #'
+    #' qc <- QueryChat$new(mtcars, "mtcars")
+    #' app <- qc$app_obj()
+    #' shiny::runApp(app)
+    #' }
+    #'
+    app_obj = function(..., bookmark_store = "url") {
       rlang::check_installed("DT")
       rlang::check_installed("bsicons")
+      rlang::check_dots_empty()
 
       table_name <- private$.data_source$table_name
 
@@ -295,11 +324,8 @@ QueryChat <- R6::R6Class(
         )
       }
 
-      chat <- NULL
-
       server <- function(input, output, session) {
         self$server()
-        chat <<- private$server_values$chat
 
         output$query_title <- shiny::renderText({
           if (shiny::isTruthy(self$title())) {
@@ -354,9 +380,7 @@ QueryChat <- R6::R6Class(
         })
       }
 
-      app <- shiny::shinyApp(ui, server, enableBookmarking = bookmark_store)
-      tryCatch(shiny::runGadget(app), interrupt = function(cnd) NULL)
-      invisible(chat)
+      shiny::shinyApp(ui, server, enableBookmarking = bookmark_store)
     },
 
     #' @description

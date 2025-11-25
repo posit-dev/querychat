@@ -33,7 +33,7 @@ class DataSource(ABC):
         ...
 
     @abstractmethod
-    def get_schema(self, *, categorical_threshold) -> str:
+    def get_schema(self, *, categorical_threshold: int) -> str:
         """
         Return schema information about the table as a string.
 

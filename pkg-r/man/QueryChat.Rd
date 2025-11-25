@@ -48,6 +48,27 @@ shinyApp(ui, server)
 }\if{html}{\out{</div>}}
 }
 
+\section{Constructor}{
+
+\code{QueryChat$new(data_source, table_name, id = NULL, greeting = NULL, client = NULL, data_description = NULL, extra_instructions = NULL, prompt_template = NULL)}
+}
+
+\section{Methods}{
+
+\describe{
+\item{\verb{$new(...)}}{Create a new QueryChat object.}
+\item{\verb{$sidebar(...)}}{Create a sidebar UI with chat interface.}
+\item{\verb{$ui(...)}}{Create the chat UI component.}
+\item{\verb{$server()}}{Initialize server logic (call within server function).}
+\item{\verb{$df()}}{Get the current filtered data frame (reactive).}
+\item{\verb{$sql(query)}}{Get or set the current SQL query (reactive).}
+\item{\verb{$title(value)}}{Get or set the current title (reactive).}
+\item{\verb{$app()}}{Create a complete Shiny app with sensible defaults.}
+\item{\verb{$generate_greeting(echo)}}{Generate a greeting message using the LLM.}
+\item{\verb{$cleanup()}}{Clean up data source resources.}
+}
+}
+
 \examples{
 \dontrun{
 # Basic usage with a data frame

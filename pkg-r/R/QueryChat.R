@@ -238,13 +238,10 @@ QueryChat <- R6::R6Class(
     #' library(querychat)
     #'
     #' qc <- QueryChat$new(mtcars, "mtcars")
-    #' app <- qc$app()
+    #' qc$app()
     #'
-    #' # Run the app
-    #' shiny::runApp(app)
-    #'
-    #' # Or return from a script
-    #' app
+    #' # Or explicitly run the app
+    #' shiny::runApp(qc$app())
     #' }
     app = function(bookmark_store = "url") {
       rlang::check_installed("DT")
@@ -254,10 +251,9 @@ QueryChat <- R6::R6Class(
 
       ui <- function(req) {
         bslib::page_sidebar(
-          title = shiny::HTML(paste0(
-            "<span>querychat with <code>",
-            table_name,
-            "</code></span>"
+          title = shiny::HTML(sprintf(
+            "<span>querychat with <code>%s</code></span>",
+            table_name
           )),
           class = "bslib-page-dashboard",
           sidebar = self$sidebar(),

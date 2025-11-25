@@ -736,7 +736,7 @@ querychat <- function(
   categorical_threshold = 20,
   extra_instructions = NULL,
   prompt_template = NULL,
-  cleanup = TRUE
+  cleanup = NA
 ) {
   QueryChat$new(
     data_source = data_source,

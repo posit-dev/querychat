@@ -1,0 +1,179 @@
+---
+title: Data Sources
+lightbox: true
+---
+
+`querychat` supports many types of data sources, including: 
+
+1. Any [narwhals-compatible](https://narwhals-dev.github.io/narwhals/) data frame.
+2. Any [SQLAlchemy](https://www.sqlalchemy.org/) database.
+3. A custom [DataSource](reference/datasource.DataSource.qmd) interface/protocol.
+
+The sections below describe how to use each type of data source with `querychat`.
+
+
+## Data frames
+
+You can use any [narwhals-compatible](https://narwhals-dev.github.io/narwhals/) data frame as a data source in `querychat`. This includes popular data frame libraries like [pandas](https://pandas.pydata.org/), [polars](https://www.pola.rs/), [pyarrow](https://arrow.apache.org/docs/python/), and many more.
+
+::: {.panel-tabset .panel-pills}
+
+### Pandas
+
+```{.python filename="pandas-app.py"}
+import pandas as pd
+from querychat import QueryChat
+
+mtcars = pd.read_csv(
+    "https://gist.githubusercontent.com/seankross/a412dfbd88b3db70b74b/raw/5f23f993cd87c283ce766e7ac6b329ee7cc2e1d1/mtcars.csv"
+)
+
+qc = QueryChat(mtcars, "mtcars")
+app = qc.app()
+```
+
+### Polars
+
+```{.python filename="polars-app.py"}
+import polars as pl
+from querychat import QueryChat
+
+mtcars = pl.read_csv(
+    "https://gist.githubusercontent.com/seankross/a412dfbd88b3db70b74b/raw/5f23f993cd87c283ce766e7ac6b329ee7cc2e1d1/mtcars.csv"
+)
+
+qc = QueryChat(mtcars, "mtcars")
+app = qc.app()
+```
+
+### Pyarrow
+
+```{.python filename="pyarrow-app.py"}
+import pyarrow as pa
+import pyarrow.csv as pv
+from querychat import QueryChat
+
+mtcars = pv.read_csv(
+    "https://gist.githubusercontent.com/seankross/a412dfbd88b3db70b74b/raw/5f23f993cd87c283ce766e7ac6b329ee7cc2e1d1/mtcars.csv"
+).to_table()
+
+qc = QueryChat(mtcars, "mtcars")
+app = qc.app()
+```
+
+:::
+
+If you're [building an app](build.qmd), note you can read the queried data frame reactively using the `df()` method, which returns a `pandas.DataFrame` by default. 
+
+## Databases
+
+You can also connect `querychat` directly to any database supported by [SQLAlchemy](https://www.sqlalchemy.org/). This includes popular databases like SQLite, DuckDB, PostgreSQL, MySQL, and many more.
+
+Assuming you have a database set up and accessible, you can pass a SQLAlchemy [database URL](https://docs.sqlalchemy.org/en/20/core/engines.html) to `create_engine()`, and then pass the resulting engine to `QueryChat`. Below are some examples for common databases.
+
+
+::: {.panel-tabset}
+
+### Duck DB
+
+```shell
+pip install duckdb duckdb-engine
+```
+
+```{.python filename="duckdb-app.py"}
+from pathlib import Path
+from sqlalchemy import create_engine
+from querychat import QueryChat
+
+# Assumes my_database.duckdb is in the same directory as this script
+db_path = Path(__file__).parent / "my_database.duckdb"
+engine = create_engine(f"duckdb:///{db_path}")
+
+qc = QueryChat(engine, "my_table")
+app = qc.app()
+```
+
+### SQLite
+
+```{.python filename="sqlite-app.py"}
+from pathlib import Path
+from sqlalchemy import create_engine
+from querychat import QueryChat
+
+# Assumes my_database.db is in the same directory as this script
+db_path = Path(__file__).parent / "my_database.db"
+engine = create_engine(f"sqlite:///{db_path}")
+
+qc = QueryChat(engine, "my_table")
+app = qc.app()
+```
+
+
+### PostgreSQL
+
+```shell
+pip install psycopg2-binary
+```
+
+```{.python filename="postgresql-app.py"}
+from sqlalchemy import create_engine
+from querychat import QueryChat
+
+engine = create_engine("postgresql+psycopg2://user:password@localhost:5432/mydatabase")
+qc = QueryChat(engine, "my_table")
+app = qc.app()
+```
+
+### MySQL
+
+```shell
+pip install pymysql
+```
+
+```{.python filename="mysql-app.py"}
+from sqlalchemy import create_engine
+from querychat import QueryChat
+
+engine = create_engine("mysql+pymysql://user:password@localhost:3306/mydatabase")
+qc = QueryChat(engine, "my_table")
+app = qc.app()
+```
+
+:::
+
+
+If you don't have a database set up, you can easily create a local DuckDB database from a CSV file using the following code:
+
+```{.python filename="create-duckdb.py"}
+import duckdb
+
+conn = duckdb.connect("my_database.duckdb")
+
+conn.execute("""
+    CREATE TABLE my_table AS
+    SELECT * FROM read_csv_auto('path/to/your/file.csv')
+""")
+```
+
+Or, if you have a pandas DataFrame, you can create the DuckDB database like so:
+
+```{.python filename="create-duckdb-from-pandas.py"}
+import duckdb
+import pandas as pd
+
+from seaborn import load_dataset
+titanic = load_dataset("titanic")
+
+conn = duckdb.connect("my_database.duckdb")
+conn.register('titanic_df', titanic)
+conn.execute("""
+    CREATE TABLE titanic AS
+    SELECT * FROM titanic_df
+""")
+```
+
+Then you can connect to this database using the DuckDB example above (changing the table name as appropriate):
+
+## Custom sources
+
+If you have a custom data source that doesn't fit into the above categories, you can implement the [DataSource](reference/datasource.DataSource.qmd) interface/protocol. This requires implementing methods for getting schema information and executing queries.

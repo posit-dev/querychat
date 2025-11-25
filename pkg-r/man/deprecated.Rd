@@ -3,7 +3,6 @@
 \name{deprecated}
 \alias{deprecated}
 \alias{querychat_init}
-\alias{querychat_app}
 \alias{querychat_sidebar}
 \alias{querychat_ui}
 \alias{querychat_server}
@@ -12,8 +11,6 @@
 \title{Deprecated functions}
 \usage{
 querychat_init(...)
-
-querychat_app(...)
 
 querychat_sidebar(...)
 

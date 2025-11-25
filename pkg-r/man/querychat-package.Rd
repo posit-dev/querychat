@@ -2,7 +2,6 @@
 % Please edit documentation in R/querychat-package.R
 \docType{package}
 \name{querychat-package}
-\alias{querychat}
 \alias{querychat-package}
 \title{querychat: Chat with Your Data Using Natural Language}
 \description{

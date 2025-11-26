@@ -1,0 +1,518 @@
+---
+title: Build an app
+---
+
+While the [`.app()` method](reference/QueryChat.qmd#querychat.QueryChat.app) provides a quick way to start exploring data, building bespoke Shiny apps with QueryChat unlocks the full power of integrating natural language data exploration with custom visualizations, layouts, and interactivity. This guide shows you how to integrate QueryChat into your own Shiny applications and leverage its reactive data outputs to create rich, interactive dashboards.
+
+## Starter template
+
+Integrating QueryChat into a Shiny app requires just three steps:
+
+1. Initialize a `QueryChat()` instance with your data
+2. Add the QueryChat UI component (either `.sidebar()` or `.ui()`)
+3. Use reactive values like `.df()`, `.sql()`, and `.title()` to build outputs that respond to user queries
+
+Here's a starter template demonstrating these steps:
+
+::: {.panel-tabset group="shiny-mode"}
+
+#### Express
+
+```python
+{{< include /../examples/03-sidebar-express-app.py >}}
+```
+
+#### Core
+
+```python
+{{< include /../examples/03-sidebar-core-app.py >}}
+```
+
+
+:::
+
+::: callout-note
+With Core, you'll need to call the `qc.server()` method within your server function to set up QueryChat's reactive behavior, and capture its return value to access reactive data. This is not necessary with Express, which handles it automatically and exposes reactive values directly on the `QueryChat` instance.
+:::
+
+## Reactives
+
+There are three main reactive values provided by QueryChat for use in your app:
+
+### Filtered data {#filtered-data}
+
+The `.df()` method returns the current filtered and/or sorted data frame. This updates whenever the user prompts a filtering or sorting operation through the chat interface (see [Data updating](tools.qmd#data-updating) for details).
+
+
+::: {.panel-tabset group="shiny-mode"}
+
+#### Express
+
+```python
+@render.data_frame
+def table():
+    return qc.df()  # Returns filtered/sorted data
+```
+
+#### Core
+
+```python
+qc_vals = qc.server()
+
+@render.data_frame
+def table():
+    return qc_vals.df()  # Returns filtered/sorted data
+```
+
+:::
+
+You can use `.df()` to power any output in your app - visualizations, summary statistics, data tables, and more. When a user asks to "show only survivors" or "sort by age", `.df()` automatically updates, and any outputs that depend on it will re-render.
+
+### SQL query {#sql-query}
+
+The `.sql()` method returns the current SQL query as a string. This is useful for displaying the query to users for transparency and reproducibility:
+
+::: {.panel-tabset group="shiny-mode"}
+
+#### Express
+
+```python
+@render.text
+def current_query():
+    return qc.sql() or "SELECT * FROM my_data"
+```
+
+#### Core
+
+```python
+qc_vals = qc.server()
+
+@render.text
+def current_query():
+    return qc_vals.sql() or "SELECT * FROM my_data"
+```
+
+:::
+
+You can also use `.sql()` as a setter to programmatically update the query (see [Programmatic filtering](#programmatic-filtering) below).
+
+### Title {#title}
+
+The `.title()` method returns a short description of the current filter, provided by the LLM when it generates a query. For example, if a user asks to "show first-class survivors", the title might be "First-class survivors".
+
+::: {.panel-tabset group="shiny-mode"}
+
+##### Express
+
+```python
+@render.text
+def card_title():
+    return qc.title() or "All Data"
+```
+
+#### Core
+
+```python
+qc_vals = qc.server()
+
+@render.text
+def card_title():
+    return qc_vals.title() or "All Data"
+```
+
+:::
+
+Returns `None` when no filter is active. You can also use `.title()` as a setter to update the title programmatically.
+
+## Custom UI
+
+In the starter template above, we used the `.sidebar()` method for a simple sidebar layout. In some cases, you might want to place the chat UI somewhere else in your app layout, or just more fully customize what goes in the sidebar. The `.ui()` method is designed for this -- it returns the chat component without additional layout wrappers.
+
+For example here is how to place the chat in a sidebar with some additional controls:
+
+::: {.panel-tabset group="shiny-mode"}
+
+#### Express
+
+```python
+from shiny.express import ui, reactive
+from querychat.express import QueryChat
+
+qc = QueryChat(data, "my_data")
+
+with ui.sidebar():
+    qc.ui()  # Chat component
+    ui.hr()
+    ui.input_action_button("reset", "Reset Filters", class_="w-100")
+```
+
+#### Core
+
+```python
+from shiny import ui, reactive
+from querychat import QueryChat
+
+qc = QueryChat(data, "my_data")
+
+app_ui = ui.page_sidebar(
+    ui.sidebar(
+        qc.ui(),  # Chat component
+        ui.hr(),
+        ui.input_action_button("reset", "Reset Filters", class_="w-100"),
+    ),
+    # Main content here
+)
+```
+
+:::
+
+::: callout-tip
+### Custom Shiny chat UIs
+
+Learn more about customizing Shiny chat UIs in the [Shiny Chat documentation](https://shiny.posit.co/py/docs/genai-chatbots.html#layout).
+:::
+
+
+## Data views
+
+Thanks to Shiny's support for [Jupyter Widgets](https://shiny.posit.co/py/docs/jupyter-widgets.html) like [Plotly](https://shiny.posit.co/py/components/outputs/plot-plotly/), it's straightforward to create rich data views that depend on QueryChat data. Here's an example of an app showing both the filtered data and a bar chart depending on that same data:
+
+
+```python
+import plotly.express as px
+
+from seaborn import load_dataset
+from shiny.express import render, ui
+from shinywidgets import render_plotly
+
+from querychat.express import QueryChat
+
+titanic = load_dataset("titanic")
+qc = QueryChat(titanic, "titanic")
+qc.sidebar()
+
+with ui.layout_columns():
+    with ui.card():
+        ui.card_header("Data Table")
+
+        @render.data_frame
+        def table():
+            return qc.df()
+
+    with ui.card():
+        ui.card_header("Survival by Class")
+
+        @render_plotly
+        def survival_plot():
+            d = qc.df()
+            summary = d.groupby('pclass')['survived'].mean().reset_index()
+            return px.bar(summary, x='pclass', y='survived')
+```
+
+Now when a user filters the data through natural language (e.g., "filter to only children"), both the table and the chart update automatically.
+
+![](/images/plotly-data-view.png){fig-alt="Screenshot of a querychat app showing both a data table and a bar chart of survival by class." class="lightbox shadow rounded mb-3"}
+
+A more useful, but slightly more involved example like the one below might incorporate other [Shiny components](https://shiny.posit.co/py/components/) like value boxes to summarize key statistics about the filtered data.
+
+
+<details>
+<summary><code>app.py</code></summary>
+
+```python
+from shiny.express import render, ui
+from shinywidgets import render_plotly
+from querychat.express import QueryChat
+from seaborn import load_dataset
+from faicons import icon_svg
+import plotly.express as px
+
+titanic = load_dataset("titanic")
+qc = QueryChat(titanic, "titanic")
+qc.sidebar()
+
+with ui.layout_column_wrap(fill=False):
+    with ui.value_box(showcase=icon_svg("users")):
+        "Passengers"
+
+        @render.text
+        def count():
+            return str(len(qc.df()))
+
+    with ui.value_box(showcase=icon_svg("heart")):
+        "Survival Rate"
+
+        @render.text
+        def survival():
+            rate = qc.df()['survived'].mean() * 100
+            return f"{rate:.1f}%"
+
+    with ui.value_box(showcase=icon_svg("coins")):
+        "Avg Fare"
+
+        @render.text
+        def fare():
+            avg = qc.df()['fare'].mean()
+            return f"${avg:.2f}"
+
+with ui.layout_columns():
+    with ui.card():
+        with ui.card_header():
+            "Data Table"
+
+            @render.text
+            def table_title():
+                return f" - {qc.title()}" if qc.title() else ""
+
+        @render.data_frame
+        def data_table():
+            return qc.df()
+
+    with ui.card():
+        ui.card_header("Survival by Class")
+
+        @render_plotly
+        def survival_by_class():
+            df = qc.df()
+            summary = df.groupby('pclass')['survived'].mean().reset_index()
+            return px.bar(
+                summary,
+                x='pclass',
+                y='survived',
+                labels={'pclass': 'Class', 'survived': 'Survival Rate'},
+            )
+
+with ui.layout_columns():
+    with ui.card():
+        ui.card_header("Age Distribution")
+
+        @render_plotly
+        def age_dist():
+            df = qc.df()
+            return px.histogram(df, x='age', nbins=30)
+
+    with ui.card():
+        ui.card_header("Fare by Class")
+
+        @render_plotly
+        def fare_by_class():
+            df = qc.df()
+            return px.box(df, x='pclass', y='fare', color='survived')
+
+ui.page_opts(
+    title="Titanic Survival Analysis",
+    fillable=True,
+    class_="bslib-page-dashboard",
+)
+```
+
+</details>
+
+
+![](/images/rich-data-views.png){fig-alt="Screenshot of a querychat app showing value boxes, a data table, and multiple plots." class="lightbox shadow rounded mb-3"}
+
+
+## Programmatic updates
+
+QueryChat's reactive state can be updated programmatically. For example, you might want to add a "Reset Filters" button that clears any active filters and returns the data table to its original state. You can do this by setting both the SQL query and title to their default values. This way you don't have to rely on both the user and LLM to send the right prompt.
+
+::: {.panel-tabset group="shiny-mode"}
+
+#### Express
+
+```python
+ui.input_action_button("reset", "Reset Filters")
+
+@reactive.effect
+@reactive.event(input.reset)
+def _():
+    qc.sql("")
+    qc.title(None)
+```
+
+#### Core
+
+```python
+ui.input_action_button("reset", "Reset Filters")
+
+qc_vals = qc.server()
+
+@reactive.effect
+@reactive.event(input.reset)
+def _():
+    qc_vals.sql.set("")
+    qc_vals.title.set(None)
+```
+
+:::
+
+This is equivalent to the user asking the LLM to "reset" or "show all data".
+
+## Multiple datasets
+
+You can use multiple QueryChat instances in a single app to explore different datasets. Just ensure each instance has a different table name (or `id` which derives the table name) to avoid conflicts. Here's an example with two datasets:
+
+```python
+from seaborn import load_dataset
+from shiny.express import render, ui
+from querychat.express import QueryChat
+
+titanic = load_dataset("titanic")
+penguins = load_dataset("penguins")
+
+qc_titanic = QueryChat(titanic, "titanic")
+qc_penguins = QueryChat(penguins, "penguins")
+
+with ui.sidebar():
+    with ui.panel_conditional("input.navbar == 'Titanic'"):
+        qc_titanic.ui()
+    with ui.panel_conditional("input.navbar == 'Penguins'"):
+        qc_penguins.ui()
+
+with ui.nav_panel("Titanic"):
+    @render.data_frame
+    def titanic_table():
+        return qc_titanic.df()
+
+with ui.nav_panel("Penguins"):
+    @render.data_frame
+    def penguins_table():
+        return qc_penguins.df()
+
+ui.page_opts(
+    id="navbar",
+    title="Multiple Datasets with QueryChat",
+    fillable=True,
+)
+```
+
+![](/images/multiple-datasets.png){fig-alt="Screenshot of a querychat app with two datasets: titanic and penguins." class="lightbox shadow rounded mb-3"}
+
+
+## Complete example
+
+Here's a complete example bringing together multiple concepts - a Titanic survival analysis dashboard with natural language exploration, coordinated visualizations, and custom controls:
+
+```python
+from shiny.express import render, ui
+from querychat.express import QueryChat
+from seaborn import load_dataset
+import plotly.express as px
+
+# Load data
+titanic = load_dataset("titanic")
+
+# Create QueryChat
+qc = QueryChat(
+    titanic,
+    "titanic",
+    data_description="Titanic passenger data with survival outcomes",
+)
+
+# Page configuration
+ui.page_opts(
+    title="Titanic Survival Analysis",
+    fillable=True,
+    class_="bslib-page-dashboard",
+)
+
+# Create sidebar with chat
+with ui.sidebar(width=400):
+    qc.ui()
+    ui.hr()
+    ui.input_action_button("reset", "Reset Filters", class_="w-100")
+
+# Summary cards
+with ui.layout_columns():
+    with ui.value_box(showcase=ui.icon("users")):
+        "Passengers"
+
+        @render.text
+        def count():
+            return str(len(qc.df()))
+
+    with ui.value_box(showcase=ui.icon("heart")):
+        "Survival Rate"
+
+        @render.text
+        def survival():
+            rate = qc.df()['survived'].mean() * 100
+            return f"{rate:.1f}%"
+
+    with ui.value_box(showcase=ui.icon("coins")):
+        "Avg Fare"
+
+        @render.text
+        def fare():
+            avg = qc.df()['fare'].mean()
+            return f"${avg:.2f}"
+
+# Main content area with visualizations
+with ui.layout_columns():
+    with ui.card():
+        with ui.card_header():
+            "Data Table"
+
+            @render.text
+            def table_title():
+                return f" - {qc.title()}" if qc.title() else ""
+
+        @render.data_frame
+        def data_table():
+            return qc.df()
+
+    with ui.card():
+        ui.card_header("Survival by Class")
+
+        @render.plot
+        def survival_by_class():
+            df = qc.df()
+            summary = df.groupby('pclass')['survived'].mean().reset_index()
+            fig = px.bar(
+                summary,
+                x='pclass',
+                y='survived',
+                labels={'pclass': 'Class', 'survived': 'Survival Rate'},
+            )
+            return fig
+
+with ui.layout_columns():
+    with ui.card():
+        ui.card_header("Age Distribution")
+
+        @render.plot
+        def age_dist():
+            df = qc.df()
+            fig = px.histogram(df, x='age', nbins=30)
+            return fig
+
+    with ui.card():
+        ui.card_header("Fare by Class")
+
+        @render.plot
+        def fare_by_class():
+            df = qc.df()
+            fig = px.box(df, x='pclass', y='fare', color='survived')
+            return fig
+
+# Reset button handler
+@reactive.effect
+@reactive.event(input.reset)
+def handle_reset():
+    qc.sql("")
+    qc.title(None)
+    ui.notification_show("Filters cleared", type="message")
+```
+
+This dashboard demonstrates:
+- Natural language filtering through chat
+- Multiple coordinated views (cards, table, plots)
+- Custom reset button alongside natural language
+- Dynamic titles reflecting current state
+- Responsive layout that updates together
+
+## See also
+
+- [Greet users](greet.qmd) - Create welcoming onboarding experiences
+- [Provide context](context.qmd) - Help the LLM understand your data better
+- [Tools](tools.qmd) - Understand what QueryChat can do under the hood

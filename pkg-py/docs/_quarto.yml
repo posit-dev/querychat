@@ -1,11 +1,14 @@
 project:
   type: website
   output-dir: ../../docs/py
+  pre-render:
+    cp ../CHANGELOG.md CHANGELOG.md
 
 website:
   title: "querychat"
   site-url: https://posit-dev.github.io/querychat/py
-  description: Chat with your data in Shiny apps
+  description: Explore data using natural language
+  page-navigation: true
 
   bread-crumbs: true
   open-graph: true
@@ -21,43 +24,41 @@ website:
       [![](https://posit.co/wp-content/uploads/2024/06/Posit-Logos-2024_horiz-full-color.svg){fig-alt="Posit" width=65px}](https://posit.co)
 
   navbar:
-    left:
-      - text: Get Started
-        href: index.qmd
-      - text: "Examples"
-        href: examples/index.qmd
+    background: "#193D56"
+    search: true
+    title: '<span class="ms-3 fs-3 lead" style="vertical-align:middle;">QueryChat</span>'
+    #title: '<img src="/images/hex.png" height="40px" alt="querychat website"/><span class="ms-3 fs-3 lead header text-white" style="vertical-align:middle;">QueryChat</span>'
+    
+    right:
       - text: API Reference
         href: reference/index.qmd
-
-    tools:
+      - text: Changelog
+        href: /changelog.html
       - icon: github
-        menu:
-          - text: Source code
-            href:  https://github.com/posit-dev/querychat/tree/main/pkg-py
-          - text: Report a bug
-            href:  https://github.com/posit-dev/querychat/issues/new
-
+        href: https://github.com/posit-dev/querychat
+        aria-label: GitHub repository
 
   sidebar:
-    - id: examples
-      title: "Examples"
-      style: docked
-      type: light
-      background: light
-      foreground: dark
+    - id: get-started
+      title: Get Started
+      style: floating
+      align: left
       contents:
-      - href: examples/index.qmd
-      - section: "DataFrames"
-        contents:
-          - href: examples/pandas.qmd
-      - section: "Databases"
-        contents:
-          - href: examples/sqlite.qmd
+        - index.qmd
+        - section: "Overview"
+          contents:
+            - models.qmd
+            - data-sources.qmd
+            - context.qmd
+            - build.qmd
+            - greet.qmd
+            - tools.qmd
+
 
 format:
   html:
-    theme: [brand]
-    highlight-style: github
+    theme: 
+      - styles.scss
     toc: true
 
 lightbox: auto
@@ -71,18 +72,38 @@ quartodoc:
   sidebar: reference/_sidebar.yml
   css: reference/_styles-quartodoc.css
   sections:
-    - title: Get Started
-      desc: The basic building blocks of Querychat
+    - title: The Querychat class
+      desc: The starting point for any QueryChat session
       contents:
-        - init
-        - sidebar
-        - server
+        - name: QueryChat
+          include_inherited: true
+        - name: express.QueryChat
+          include_inherited: true
 
-    - title: Customize
-      desc: Dive deeper into customizing Querychat
+    - title: Reactive values
+      desc: Session-specific reactive values representing the current query
       contents:
-        - ui
-        - system_prompt
+        - types.ServerValues
+
+    - title: Data Sources
+      desc: The underlying logic for managing data sources
+      contents:
+        - name: types.DataSource
+          signature_name: short
+        - name: types.DataFrameSource
+          signature_name: short
+        - name: types.SQLAlchemySource
+          signature_name: short
+    
+    - title: Tools
+      desc: The underlying tools provided to the LLM
+      contents:
+        - name: tools.tool_query
+          signature_name: short
+        - name: tools.tool_update_dashboard
+          signature_name: short
+        - name: tools.tool_reset_dashboard
+          signature_name: short
 
 filters:
   - "interlinks"

@@ -1,0 +1,70 @@
+/*-- scss:defaults --*/
+
+$font-family-sans-serif: 'Public Sans', sans-serif;
+$font-family-monospace: 'Fira Code', monospace;
+$headings-font-family: 'Hubot Sans', sans-serif;
+$display-font-family: 'Hubot Sans', sans-serif;
+$headings-color: #193D56;
+
+/*-- scss:rules --*/
+
+@import url('https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,100..900;1,100..900&display=swap');
+@import url('https://fonts.googleapis.com/css?family=Fira Code');
+@import url('https://fonts.googleapis.com/css?family=Hubot Sans');
+
+.header {
+  font-family: $headings-font-family;
+  color: $headings-color;
+}
+
+/* css styles */
+
+.cell-output pre code {
+  white-space: pre-wrap;
+}
+
+/* Undo somebody's aggressive CSS */
+pre {
+  font-family: var(--bs-font-monospace);
+}
+
+
+/* sidebar */
+.sidebar-item-container {
+  font-size: 1rem;
+
+  .text-start {
+    font-weight: 600;
+  }
+}
+
+.sidebar-item-section {
+  padding-top: 0.5rem;
+}
+
+// make it even more noticable
+.sidebar-link {
+  &:hover {
+    font-weight: 500;
+  }
+
+  &.active {
+    position: relative;
+
+    &::before {
+      content: "\23F5";
+      position: absolute;
+      left: -0.9em;
+      font-size: 1em;
+      color: var(--bs-primary);
+    }
+  }
+}
+
+
+/* Get code output to look like a sourceCode block */
+pre:has(> code) {
+  background-color: rgba(233, 236, 239, 0.65);
+  border-radius: .25em;
+  padding: .4em;
+}

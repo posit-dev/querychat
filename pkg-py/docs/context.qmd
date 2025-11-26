@@ -1,0 +1,100 @@
+---
+title: Provide context
+---
+
+To improve the LLM's ability to accurately translate natural language queries into SQL, it often helps to provide relevant metadata. Querychat automatically provides things like column names and data types to the LLM, but you can enhance this further with additional context like [data descriptions](#data-description). You can also provide [custom instructions](#extra-instructions) to add additional behaviors and even supply a fully [custom prompt template](#custom-template), if desired.
+
+All of this information is provided to the LLM as part of the **system prompt** -- a string of text containing instructions and context for the LLM to consider when responding to user queries.
+
+## Default prompt
+
+For full visibility into the full system prompt that Querychat generates for the LLM, see the `system_prompt` property. This is useful for debugging and understanding exactly what context the LLM is using:
+
+```python
+from querychat import QueryChat
+from seaborn import load_dataset
+
+titanic = load_dataset("titanic")
+
+qc = QueryChat(titanic, "titanic")
+print(qc.system_prompt)
+```
+
+By default, the system prompt contains the following components:
+
+1. The basic set of behaviors and guidelines the LLM must follow in order for querychat to work properly, including how to use [tools](tools.qmd) to execute queries and update the app.
+2. The SQL schema of the data frame you provided. This includes:
+    - Column names
+    - Data types (integer, float, boolean, datetime, text)
+    - For text columns with less than 10 unique values, we assume they are categorical variables and include the list of values
+    - For integer and float columns, we include the range
+3. A [data description](#data-description) (if provided via `data_description`)
+4. [Additional instructions](#additional-instructions) you want to use to guide querychat's behavior (if provided via `extra_instructions`).
+
+
+## Data description {#data-description}
+
+If your column names are descriptive, Querychat may already work well without additional context. However, if your columns are named `x`, `V1`, `value`, etc., you should provide a data description. Use the `data_description` parameter for this:
+
+```{.python filename="titanic-app.py"}
+from pathlib import Path
+from querychat import QueryChat
+
+qc = QueryChat(
+    titanic,
+    "titanic",
+    data_description=Path("data_description.md")
+)
+app = qc.app()
+```
+
+Querychat doesn't need this information in any particular format -- just provide what a human would find helpful:
+
+```{.markdown filename="data_description.md"}
+This dataset contains information about Titanic passengers, collected for predicting survival.
+
+- survived: Survival (0 = No, 1 = Yes)
+- pclass: Ticket class (1 = 1st, 2 = 2nd, 3 = 3rd)
+- sex: Sex of passenger
+- age: Age in years
+- sibsp: Number of siblings/spouses aboard
+- parch: Number of parents/children aboard
+- fare: Passenger fare
+- embarked: Port of embarkation (C = Cherbourg, Q = Queenstown, S = Southampton)
+```
+
+
+
+## Additional instructions {#extra-instructions}
+
+You can add custom instructions to guide the LLM's behavior using the `extra_instructions` parameter:
+
+```python
+qc = QueryChat(
+    titanic,
+    "titanic",
+    extra_instructions=Path("instructions.md")
+)
+```
+
+Or as a string:
+
+```python
+instructions = """
+- Use British spelling conventions
+- Stay on topic and only discuss the data dashboard
+- Refuse to answer unrelated questions
+"""
+
+qc = QueryChat(titanic, "titanic", extra_instructions=instructions)
+```
+
+::: callout-warning
+
+LLMs may not always follow your instructions perfectly. Test extensively when changing instructions or models.
+:::
+
+
+## Custom template {#custom-template}
+
+If you want more control over the system prompt, you can provide a custom prompt template using the `prompt_template` parameter. This is for more advanced users who want to fully customize the LLM's behavior. See the [API reference](reference/QueryChat.qmd#attributes) for details on the available template variables.

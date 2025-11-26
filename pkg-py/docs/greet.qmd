@@ -1,0 +1,58 @@
+
+---
+title: Greet users
+---
+
+### Provide a greeting
+
+When the querychat UI first appears, you will usually want it to greet the user with some basic instructions. By default, these instructions are auto-generated every time a user arrives; this is slow, wasteful, and unpredictable. Instead, you should create a greeting file and pass it when creating your `QueryChat` object:
+
+```python
+from pathlib import Path
+qc = QueryChat(titanic, "titanic", greeting=Path("greeting.md"))
+```
+
+You can provide suggestions to the user by using the `<span class="suggestion"> </span>` tag:
+
+```markdown
+* **Filter and sort the data:**
+  * <span class="suggestion">Show only survivors</span>
+  * <span class="suggestion">Filter to first class passengers under 30</span>
+  * <span class="suggestion">Sort by fare from highest to lowest</span>
+
+* **Answer questions about the data:**
+  * <span class="suggestion">What was the survival rate by gender?</span>
+  * <span class="suggestion">What's the average age of children who survived?</span>
+  * <span class="suggestion">How many passengers were traveling alone?</span>
+```
+
+These suggestions appear in the greeting and automatically populate the chat text box when clicked.
+You can see this behavior in our [`querychat template`](https://shiny.posit.co/py/templates/querychat/).
+
+### Generate a greeting
+
+If you need help coming up with a greeting, you can use the `.generate_greeting()` method:
+
+```python
+from palmerpenguins import load_penguins
+from querychat import QueryChat
+
+# Create QueryChat object with your dataset
+penguins = load_penguins()
+qc = QueryChat(penguins, "penguins")
+
+# Generate a greeting (this calls the LLM)
+greeting_text = qc.generate_greeting()
+#> Hello! I'm here to help you explore and analyze the penguins dataset.
+#> Here are some example prompts you can try:
+#> ...
+
+# Save it for reuse
+with open("penguins_greeting.md", "w") as f:
+    f.write(greeting_text)
+
+# Then use the saved greeting in your app
+qc = QueryChat(penguins, "penguins", greeting=Path("penguins_greeting.md"))
+```
+
+This approach generates a greeting once and saves it for reuse, avoiding the latency and cost of generating it for every user.

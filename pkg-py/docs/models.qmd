@@ -1,0 +1,88 @@
+---
+title: Models
+---
+
+Under the hood, `querychat` is powered by [chatlas](https://posit-dev.github.io/chatlas/), a library for building chat-based applications with large language models (LLMs). `chatlas` supports a wide range of LLM providers -- [see here](https://posit-dev.github.io/chatlas/get-started/models.html) for a full list.
+
+### Specify a model
+
+To use a particular model, pass a `"{provider}/{model}"` string to the `client` parameter. Under the hood, this gets passed along to [`chatlas.ChatAuto`](https://posit-dev.github.io/chatlas/reference/ChatAuto.html)
+
+```python
+from querychat import QueryChat
+from seaborn import load_dataset
+titanic = load_dataset("titanic")
+
+qc = QueryChat(
+    titanic,
+    "titanic",
+    client="anthropic/claude-sonnet-4-5"
+)
+```
+
+And, if you'd like to effectively set a new default model, you can use the `QUERYCHAT_CLIENT` environment variable.
+
+```shell
+export QUERYCHAT_CLIENT="anthropic/claude-sonnet-4-5"
+```
+
+Note that it can also be useful to pass a full `Chat` object to the `client` parameter for more advanced use cases (e.g., custom [parameters](https://posit-dev.github.io/chatlas/get-started/parameters.html), [tools](https://posit-dev.github.io/chatlas/get-started/tools.html), etc). It can also be useful for getting some [helpful autocomplete](https://posit-dev.github.io/chatlas/get-started/models.html#model-type-hints) of available models.
+
+```python
+from chatlas import ChatAnthropic
+
+client = ChatAnthropic(model="claude-sonnet-4-5")
+```
+
+### Credentials
+
+Most models require an API key or some other form of authentication. See the reference page for the relevant [model provider](https://posit-dev.github.io/chatlas/get-started/models.html)  (e.g., [ChatAnthropic](https://posit-dev.github.io/chatlas/reference/ChatAnthropic.html)) to learn more on how to set up credentials.
+
+::: callout-tip
+### Github model marketplace
+
+If you are already setup with Github credentials, [Github model marketplace](https://github.com/marketplace/models) provides a free and easy way to get started. See [here](https://posit-dev.github.io/chatlas/reference/ChatGithub.html) for more details on how to get setup.
+
+```{.python filename="github-model.py"}
+from chatlas import ChatGithub
+
+# Just works if GITHUB_TOKEN is set in your environment
+client = ChatGithub(model="gpt-4.1")
+```
+:::
+
+In general, most providers will prefer credentials stored as environment variables, and common practice is to use a `.env` file to manage these variables. For example, for `ChatOpenAI()`, you might create a `.env` file like so:
+
+```{.shell filename=".env"}
+OPENAI_API_KEY="your_api_key_here"
+```
+
+Then, load the environment variables via the `dotenv` package:
+
+```shell
+pip install dotenv
+```
+
+```python
+from dotenv import load_dotenv
+load_dotenv()
+```
+
+
+### Recommended models
+
+In theory, you could use any model that has tool calling support, but we currently recommend (as of November 2025):
+
+- GPT-4.1 (the default)
+- Claude 4.5 Sonnet
+- Google Gemini 3.0
+
+In our testing, we've found that those models strike a good balance between accuracy and latency. Smaller/cheaper models like GPT-4o-mini are fine for simple queries but make surprising mistakes with more complex ones; and reasoning models like o3-mini slow down responses without providing meaningfully better results.
+
+We've also seen some decent results with frontier local models, but even if you have the compute to run the largest models, they still tend to lag behind the cloud-hosted options in terms of accuracy and speed.
+
+::: callout-tip
+## Data privacy concerns?
+
+If you have data privacy concerns, consider that your org may provide access to private instances of these models with data residency guarantees. For example, Azure, AWS Bedrock, and Google Vertex AI all provide private instances of popular LLMs. You can interface with these enterprise providers by passing the right string (e.g., `"bedrock-anthropic"`) or `Chat` object (e.g., `ChatBedrockAnthropic()`) to the `client` parameter. See the [chatlas docs](https://posit-dev.github.io/chatlas/get-started/models.html) for more details.
+:::

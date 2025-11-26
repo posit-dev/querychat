@@ -41,7 +41,7 @@ There are three main reactive values provided by QueryChat for use in your app:
 
 ### Filtered data {#filtered-data}
 
-The `.df()` method returns the current filtered and/or sorted data frame. This updates whenever the user prompts a filtering or sorting operation through the chat interface (see [Data updating](build.qmd#data-updating) for details).
+The `.df()` method returns the current filtered and/or sorted data frame. This updates whenever the user prompts a filtering or sorting operation through the chat interface (see [Data updating](tools.qmd#data-updating) for details).
 
 
 ::: {.panel-tabset group="shiny-mode"}

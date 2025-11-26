@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>index – querychat</title>
+<title>types.servervalues – querychat</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -20,6 +20,41 @@ ul.task-list li input[type="checkbox"] {
   margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
   vertical-align: middle;
 }
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
 </style>
 
 
@@ -30,7 +65,8 @@ ul.task-list li input[type="checkbox"] {
 <script src="../site_libs/quarto-search/fuse.min.js"></script>
 <script src="../site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="../">
-<link href="../reference/QueryChat.html" rel="next">
+<link href="../reference/types.DataSource.html" rel="next">
+<link href="../reference/express.QueryChat.html" rel="prev">
 <script src="../site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
 <script src="../site_libs/quarto-html/popper.min.js"></script>
@@ -71,8 +107,10 @@ ul.task-list li input[type="checkbox"] {
 
 
 <meta property="og:title" content="querychat">
+<meta property="og:description" content="Explore data using natural language">
 <meta property="og:site_name" content="querychat">
 <meta name="twitter:title" content="querychat">
+<meta name="twitter:description" content="Explore data using natural language">
 <meta name="twitter:card" content="summary">
 </head>
 
@@ -117,7 +155,7 @@ ul.task-list li input[type="checkbox"] {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/index.html">Function reference</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/types.ServerValues.html">Reactive values</a></li><li class="breadcrumb-item"><a href="../reference/types.ServerValues.html">types.ServerValues</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -131,7 +169,7 @@ ul.task-list li input[type="checkbox"] {
     <ul class="list-unstyled mt-1">
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/index.html" class="sidebar-item-text sidebar-link active">
+  <a href="../reference/index.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Function reference</span></a>
   </div>
 </li>
@@ -169,7 +207,7 @@ ul.task-list li input[type="checkbox"] {
       <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/types.ServerValues.html" class="sidebar-item-text sidebar-link">
+  <a href="../reference/types.ServerValues.html" class="sidebar-item-text sidebar-link active">
  <span class="menu-text">types.ServerValues</span></a>
   </div>
 </li>
@@ -243,88 +281,54 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#function-reference" id="toc-function-reference" class="nav-link active" data-scroll-target="#function-reference">Function reference</a>
+  <li><a href="#querychat.types.ServerValues" id="toc-querychat.types.ServerValues" class="nav-link active" data-scroll-target="#querychat.types.ServerValues">types.ServerValues</a>
   <ul class="collapse">
-  <li><a href="#the-querychat-class" id="toc-the-querychat-class" class="nav-link" data-scroll-target="#the-querychat-class">The Querychat class</a></li>
-  <li><a href="#reactive-values" id="toc-reactive-values" class="nav-link" data-scroll-target="#reactive-values">Reactive values</a></li>
-  <li><a href="#data-sources" id="toc-data-sources" class="nav-link" data-scroll-target="#data-sources">Data Sources</a></li>
-  <li><a href="#tools" id="toc-tools" class="nav-link" data-scroll-target="#tools">Tools</a></li>
+  <li><a href="#attributes" id="toc-attributes" class="nav-link" data-scroll-target="#attributes">Attributes</a></li>
   </ul></li>
   </ul>
-<div class="toc-actions"><ul><li><a href="https://github.com/posit-dev/querychat/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li><li><a href="https://github.com/posit-dev/querychat/edit/main/pkg-py/docs/reference/index.qmd" class="toc-action"><i class="bi empty"></i>Edit this page</a></li></ul></div></nav>
+<div class="toc-actions"><ul><li><a href="https://github.com/posit-dev/querychat/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li><li><a href="https://github.com/posit-dev/querychat/edit/main/pkg-py/docs/reference/types.ServerValues.qmd" class="toc-action"><i class="bi empty"></i>Edit this page</a></li></ul></div></nav>
     </div>
 <!-- main -->
-<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"></header>
+<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/types.ServerValues.html">Reactive values</a></li><li class="breadcrumb-item"><a href="../reference/types.ServerValues.html">types.ServerValues</a></li></ol></nav></header>
 
 
 
 
-<section id="function-reference" class="level1 doc doc-index">
-<h1 class="doc doc-index">Function reference</h1>
-<section id="the-querychat-class" class="level2">
-<h2 class="anchored" data-anchor-id="the-querychat-class">The Querychat class</h2>
-<p>The starting point for any QueryChat session</p>
+<section id="querychat.types.ServerValues" class="level1">
+<h1>types.ServerValues</h1>
+<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>types.ServerValues(df, sql, title, client)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Session-specific reactive values and client returned by QueryChat.server().</p>
+<p>This dataclass contains all the session-specific reactive state for a QueryChat instance. Each session gets its own ServerValues to ensure proper isolation between concurrent sessions.</p>
+<section id="attributes" class="level2 doc-section doc-section-attributes">
+<h2 class="doc-section doc-section-attributes anchored" data-anchor-id="attributes">Attributes</h2>
 <table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
 <tbody>
 <tr class="odd">
-<td><a href="../reference/QueryChat.html#querychat.QueryChat">QueryChat</a></td>
-<td>Create a QueryChat instance.</td>
+<td>df</td>
+<td><a href="https://docs.python.org/3/library/typing.html#typing.Callable">Callable</a>[[], <code>pd</code>.<code>DataFrame</code>]</td>
+<td>A reactive Calc that returns the current filtered data frame. If no SQL query has been set, this returns the unfiltered data from the data source. Call it like <code>.df()</code> to reactively read the current data frame.</td>
 </tr>
 <tr class="even">
-<td><a href="../reference/express.QueryChat.html#querychat.express.QueryChat">express.QueryChat</a></td>
-<td>Use QueryChat with Shiny Express.</td>
+<td>sql</td>
+<td><code>ReactiveString</code></td>
+<td>A reactive Value containing the current SQL query string. Access the value by calling <code>.sql()</code>, or set it with <code>.sql.set("SELECT ...")</code>. An empty string <code>""</code> indicates no query has been set.</td>
 </tr>
-</tbody>
-</table>
-</section>
-<section id="reactive-values" class="level2">
-<h2 class="anchored" data-anchor-id="reactive-values">Reactive values</h2>
-<p>Session-specific reactive values representing the current query</p>
-<table class="caption-top table">
-<tbody>
 <tr class="odd">
-<td><a href="../reference/types.ServerValues.html#querychat.types.ServerValues">types.ServerValues</a></td>
-<td>Session-specific reactive values and client returned by QueryChat.server().</td>
-</tr>
-</tbody>
-</table>
-</section>
-<section id="data-sources" class="level2">
-<h2 class="anchored" data-anchor-id="data-sources">Data Sources</h2>
-<p>The underlying logic for managing data sources</p>
-<table class="caption-top table">
-<tbody>
-<tr class="odd">
-<td><a href="../reference/types.DataSource.html#querychat.types.DataSource">types.DataSource</a></td>
-<td>An abstract class defining the interface for data sources used by QueryChat.</td>
+<td>title</td>
+<td><code>ReactiveStringOrNone</code></td>
+<td>A reactive Value containing the current title for the query. The LLM provides this title when generating a new SQL query. Access it with <code>.title()</code>, or set it with <code>.title.set("...")</code>. Returns <code>None</code> if no title has been set.</td>
 </tr>
 <tr class="even">
-<td><a href="../reference/types.DataFrameSource.html#querychat.types.DataFrameSource">types.DataFrameSource</a></td>
-<td>A DataSource implementation that wraps a pandas DataFrame using DuckDB.</td>
-</tr>
-<tr class="odd">
-<td><a href="../reference/types.SQLAlchemySource.html#querychat.types.SQLAlchemySource">types.SQLAlchemySource</a></td>
-<td>A DataSource implementation that supports multiple SQL databases via</td>
-</tr>
-</tbody>
-</table>
-</section>
-<section id="tools" class="level2">
-<h2 class="anchored" data-anchor-id="tools">Tools</h2>
-<p>The underlying tools provided to the LLM</p>
-<table class="caption-top table">
-<tbody>
-<tr class="odd">
-<td><a href="../reference/tools.tool_query.html#querychat.tools.tool_query">tools.tool_query</a></td>
-<td>Create a tool that performs a SQL query on the data.</td>
-</tr>
-<tr class="even">
-<td><a href="../reference/tools.tool_update_dashboard.html#querychat.tools.tool_update_dashboard">tools.tool_update_dashboard</a></td>
-<td>Create a tool that modifies the data presented in the dashboard based on the SQL query.</td>
-</tr>
-<tr class="odd">
-<td><a href="../reference/tools.tool_reset_dashboard.html#querychat.tools.tool_reset_dashboard">tools.tool_reset_dashboard</a></td>
-<td>Create a tool that resets the dashboard to show all data.</td>
+<td>client</td>
+<td><code>chatlas</code>.<code>Chat</code></td>
+<td>The session-specific chat client instance. This is a deep copy of the base client configured for this specific session, containing the chat history and tool registrations for this session only.</td>
 </tr>
 </tbody>
 </table>
@@ -735,10 +739,13 @@ ul.task-list li input[type="checkbox"] {
   </script>
 <nav class="page-navigation">
   <div class="nav-page nav-page-previous">
+      <a href="../reference/express.QueryChat.html" class="pagination-link" aria-label="express.QueryChat">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">express.QueryChat</span>
+      </a>          
   </div>
   <div class="nav-page nav-page-next">
-      <a href="../reference/QueryChat.html" class="pagination-link" aria-label="QueryChat">
-        <span class="nav-page-text">QueryChat</span> <i class="bi bi-arrow-right-short"></i>
+      <a href="../reference/types.DataSource.html" class="pagination-link" aria-label="types.DataSource">
+        <span class="nav-page-text">types.DataSource</span> <i class="bi bi-arrow-right-short"></i>
       </a>
   </div>
 </nav>
@@ -750,7 +757,7 @@ ul.task-list li input[type="checkbox"] {
 </div>   
     <div class="nav-footer-center">
       &nbsp;
-    <div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/posit-dev/querychat/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li><li><a href="https://github.com/posit-dev/querychat/edit/main/pkg-py/docs/reference/index.qmd" class="toc-action"><i class="bi empty"></i>Edit this page</a></li></ul></div></div>
+    <div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/posit-dev/querychat/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li><li><a href="https://github.com/posit-dev/querychat/edit/main/pkg-py/docs/reference/types.ServerValues.qmd" class="toc-action"><i class="bi empty"></i>Edit this page</a></li></ul></div></div>
     <div class="nav-footer-right">
       &nbsp;
     </div>

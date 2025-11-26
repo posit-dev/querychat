@@ -386,7 +386,7 @@ class QueryChat(QueryChatBase):
                 return qc_vals.df()
 
             @render.text
-            def title_text():
+            def title():
                 return qc_vals.title() or "My Data"
 
 
@@ -527,7 +527,7 @@ class QueryChatExpress(QueryChatBase):
         session = get_current_session()
         if session is None:
             raise RuntimeError(
-                "Unexpected error: No active Shiny session found."
+                "Unexpected error: No active Shiny session found. "
                 "Is express.QueryChat() being called outside of a Shiny Express app?",
             )
 

@@ -122,22 +122,4 @@ qc <- querychat(mtcars, "mtcars")
 qc$app()
 
 }
-\dontrun{
-# Quick start - create and run app in one line
-querychat_app(mtcars, "mtcars")
-
-# With options
-querychat_app(
-  mtcars,
-  "mtcars",
-  greeting = "Welcome to the mtcars explorer!",
-  client = "openai/gpt-4o"
-)
-
-# With database
-library(DBI)
-conn <- dbConnect(RSQLite::SQLite(), ":memory:")
-dbWriteTable(conn, "mtcars", mtcars)
-querychat_app(conn, "mtcars")
-}
 }

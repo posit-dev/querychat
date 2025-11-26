@@ -477,7 +477,7 @@ QueryChat <- R6::R6Class(
     #' generate a greeting once and save it for reuse.
     #'
     #' @param echo Whether to print the greeting to the console. Options are
-    #'   `"none"` (default, no output) or `"text"` (print to console).
+    #'   `"none"` (default, no output) or `"output"` (print to console).
     #'
     #' @return The greeting string in Markdown format.
     #'
@@ -487,7 +487,7 @@ QueryChat <- R6::R6Class(
     #' qc <- QueryChat$new(mtcars, "mtcars")
     #'
     #' # Generate a greeting and save it
-    #' greeting <- qc$generate_greeting(echo = "text")
+    #' greeting <- qc$generate_greeting()
     #' writeLines(greeting, "mtcars_greeting.md")
     #'
     #' # Later, use the saved greeting
@@ -640,25 +640,6 @@ querychat <- function(
 #' @return Invisibly returns the chat object after the app stops.
 #'
 #' @export
-#' @examples
-#' \dontrun{
-#' # Quick start - create and run app in one line
-#' querychat_app(mtcars, "mtcars")
-#'
-#' # With options
-#' querychat_app(
-#'   mtcars,
-#'   "mtcars",
-#'   greeting = "Welcome to the mtcars explorer!",
-#'   client = "openai/gpt-4o"
-#' )
-#'
-#' # With database
-#' library(DBI)
-#' conn <- dbConnect(RSQLite::SQLite(), ":memory:")
-#' dbWriteTable(conn, "mtcars", mtcars)
-#' querychat_app(conn, "mtcars")
-#' }
 querychat_app <- function(
   data_source,
   table_name,

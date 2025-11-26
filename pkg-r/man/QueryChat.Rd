@@ -167,7 +167,7 @@ server <- function(input, output, session) {
 qc <- QueryChat$new(mtcars, "mtcars")
 
 # Generate a greeting and save it
-greeting <- qc$generate_greeting(echo = "text")
+greeting <- qc$generate_greeting()
 writeLines(greeting, "mtcars_greeting.md")
 
 # Later, use the saved greeting
@@ -552,7 +552,7 @@ generate a greeting once and save it for reuse.
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{echo}}{Whether to print the greeting to the console. Options are
-\code{"none"} (default, no output) or \code{"text"} (print to console).}
+\code{"none"} (default, no output) or \code{"output"} (print to console).}
 }
 \if{html}{\out{</div>}}
 }
@@ -566,7 +566,7 @@ The greeting string in Markdown format.
 qc <- QueryChat$new(mtcars, "mtcars")
 
 # Generate a greeting and save it
-greeting <- qc$generate_greeting(echo = "text")
+greeting <- qc$generate_greeting()
 writeLines(greeting, "mtcars_greeting.md")
 
 # Later, use the saved greeting

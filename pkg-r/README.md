@@ -54,12 +54,12 @@ ui <- page_sidebar(
 )
 
 server <- function(input, output, session) {
-  # 3. Initialize the QueryChat server
-  qc$server()
+  # 3. Initialize the QueryChat server (returns session-specific reactive values)
+  qc_vals <- qc$server()
 
   output$dt <- DT::renderDT({
-    # 4. Use the filtered/sorted data frame anywhere you wish, via qc$df()
-    DT::datatable(qc$df())
+    # 4. Use the filtered/sorted data frame anywhere you wish, via qc_vals$df()
+    DT::datatable(qc_vals$df())
   })
 }
 

@@ -15,8 +15,8 @@ The \code{QueryChat} class takes your data (a data frame or database connection)
 as input and provides methods to:
 \itemize{
 \item Generate a chat UI for natural language queries (e.g., \verb{$app()}, \verb{$sidebar()})
-\item Reactively read SQL results in your Shiny app (e.g., \verb{$df()})
-\item Programmatically get/set the current query and title (e.g., \verb{$sql()}, \verb{$title()})
+\item Initialize server logic that returns session-specific reactive values (via \verb{$server()})
+\item Access reactive data, SQL queries, and titles through the returned server values
 }
 }
 \section{Usage}{
@@ -38,35 +38,14 @@ ui <- page_sidebar(
 )
 
 server <- function(input, output, session) \{
-  qc$server()
+  qc_vals <- qc$server()
 
-  output$sql <- renderText(qc$sql())
-  output$data <- renderDataTable(qc$df())
+  output$sql <- renderText(qc_vals$sql())
+  output$data <- renderDataTable(qc_vals$df())
 \}
 
 shinyApp(ui, server)
 }\if{html}{\out{</div>}}
-}
-
-\section{Constructor}{
-
-\code{QueryChat$new(data_source, table_name, id = NULL, greeting = NULL, client = NULL, data_description = NULL, extra_instructions = NULL, prompt_template = NULL)}
-}
-
-\section{Methods}{
-
-\describe{
-\item{\verb{$new(...)}}{Create a new QueryChat object.}
-\item{\verb{$sidebar(...)}}{Create a sidebar UI with chat interface.}
-\item{\verb{$ui(...)}}{Create the chat UI component.}
-\item{\verb{$server()}}{Initialize server logic (call within server function).}
-\item{\verb{$df()}}{Get the current filtered data frame (reactive).}
-\item{\verb{$sql(query)}}{Get or set the current SQL query (reactive).}
-\item{\verb{$title(value)}}{Get or set the current title (reactive).}
-\item{\verb{$app()}}{Create a complete Shiny app with sensible defaults.}
-\item{\verb{$generate_greeting(echo)}}{Generate a greeting message using the LLM.}
-\item{\verb{$cleanup()}}{Clean up data source resources.}
-}
 }
 
 \examples{
@@ -171,70 +150,11 @@ ui <- fluidPage(
 qc <- QueryChat$new(mtcars, "mtcars")
 
 server <- function(input, output, session) {
-  qc$server()
+  qc_vals <- qc$server()
 
-  output$data <- renderDataTable(qc$df())
-  output$query <- renderText(qc$sql())
-}
-}
-
-## ------------------------------------------------
-## Method `QueryChat$df`
-## ------------------------------------------------
-
-\dontrun{
-qc <- QueryChat$new(mtcars, "mtcars")
-
-server <- function(input, output, session) {
-  qc$server()
-
-  output$table <- renderDataTable({
-    qc$df()  # Reactive - will update when query changes
-  })
-}
-}
-
-## ------------------------------------------------
-## Method `QueryChat$sql`
-## ------------------------------------------------
-
-\dontrun{
-qc <- QueryChat$new(mtcars, "mtcars")
-
-server <- function(input, output, session) {
-  qc$server()
-
-  # Get current query
-  output$current_query <- renderText({
-    qc$sql()
-  })
-
-  # Set query programmatically
-  observeEvent(input$filter_button, {
-    qc$sql("SELECT * FROM mtcars WHERE cyl = 6")
-  })
-}
-}
-
-## ------------------------------------------------
-## Method `QueryChat$title`
-## ------------------------------------------------
-
-\dontrun{
-qc <- QueryChat$new(mtcars, "mtcars")
-
-server <- function(input, output, session) {
-  qc$server()
-
-  # Get current title
-  output$title <- renderText({
-    qc$title() \%||\% "No Query"
-  })
-
-  # Set title programmatically
-  observeEvent(input$set_title, {
-    qc$title("Filtered Cars")
-  })
+  output$data <- renderDataTable(qc_vals$df())
+  output$query <- renderText(qc_vals$sql())
+  output$title <- renderText(qc_vals$title() \%||\% "No Query")
 }
 }
 
@@ -266,7 +186,7 @@ qc2 <- QueryChat$new(mtcars, "mtcars", greeting = "mtcars_greeting.md")
 \section{Active bindings}{
 \if{html}{\out{<div class="r6-active-bindings">}}
 \describe{
-\item{\code{client}}{Get the (session-specific) chat client.}
+\item{\code{system_prompt}}{Get the system prompt.}
 
 \item{\code{data_source}}{Get the current data source.}
 }
@@ -281,9 +201,6 @@ qc2 <- QueryChat$new(mtcars, "mtcars", greeting = "mtcars_greeting.md")
 \item \href{#method-QueryChat-sidebar}{\code{QueryChat$sidebar()}}
 \item \href{#method-QueryChat-ui}{\code{QueryChat$ui()}}
 \item \href{#method-QueryChat-server}{\code{QueryChat$server()}}
-\item \href{#method-QueryChat-df}{\code{QueryChat$df()}}
-\item \href{#method-QueryChat-sql}{\code{QueryChat$sql()}}
-\item \href{#method-QueryChat-title}{\code{QueryChat$title()}}
 \item \href{#method-QueryChat-generate_greeting}{\code{QueryChat$generate_greeting()}}
 \item \href{#method-QueryChat-cleanup}{\code{QueryChat$cleanup()}}
 \item \href{#method-QueryChat-clone}{\code{QueryChat$clone()}}
@@ -419,7 +336,13 @@ see \verb{$app_obj()}.
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-Invisibly returns the chat object after the app stops.
+Invisibly returns a list of session-specific values:
+\itemize{
+\item \code{df}: The final filtered data frame
+\item \code{sql}: The final SQL query string
+\item \code{title}: The final title
+\item \code{client}: The session-specific chat client instance
+}
 }
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
@@ -569,8 +492,8 @@ ui <- fluidPage(
 Initialize the querychat server logic.
 
 This method must be called within a Shiny server function. It sets up
-the reactive logic for the chat interface and populates the internal
-server values that are accessed via \verb{$df()}, \verb{$sql()}, and \verb{$title()}.
+the reactive logic for the chat interface and returns session-specific
+reactive values.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{QueryChat$server(session = shiny::getDefaultReactiveDomain())}\if{html}{\out{</div>}}
 }
@@ -583,89 +506,13 @@ server values that are accessed via \verb{$df()}, \verb{$sql()}, and \verb{$titl
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-Invisibly returns \code{NULL}. Access reactive values via \verb{$df()},
-\verb{$sql()}, and \verb{$title()} methods.
-}
-\subsection{Examples}{
-\if{html}{\out{<div class="r example copy">}}
-\preformatted{\dontrun{
-qc <- QueryChat$new(mtcars, "mtcars")
-
-server <- function(input, output, session) {
-  qc$server()
-
-  output$data <- renderDataTable(qc$df())
-  output$query <- renderText(qc$sql())
-}
-}
-}
-\if{html}{\out{</div>}}
-
-}
-
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-QueryChat-df"></a>}}
-\if{latex}{\out{\hypertarget{method-QueryChat-df}{}}}
-\subsection{Method \code{df()}}{
-Get the current filtered data frame.
-
-This is a reactive expression that returns the data after applying the
-current SQL query. If no query has been set, returns the unfiltered data.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{QueryChat$df()}\if{html}{\out{</div>}}
-}
-
-\subsection{Returns}{
-A data.frame with the filtered/transformed data.
-}
-\subsection{Examples}{
-\if{html}{\out{<div class="r example copy">}}
-\preformatted{\dontrun{
-qc <- QueryChat$new(mtcars, "mtcars")
-
-server <- function(input, output, session) {
-  qc$server()
-
-  output$table <- renderDataTable({
-    qc$df()  # Reactive - will update when query changes
-  })
-}
-}
-}
-\if{html}{\out{</div>}}
-
-}
-
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-QueryChat-sql"></a>}}
-\if{latex}{\out{\hypertarget{method-QueryChat-sql}{}}}
-\subsection{Method \code{sql()}}{
-Get or set the current SQL query.
-
-This method provides both getter and setter functionality for the SQL
-query. When called without arguments, it returns the current query.
-When called with a query string, it sets the query and returns whether
-the query changed.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{QueryChat$sql(query = NULL)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{query}}{Optional SQL query string. If provided, sets the current
-query to this value. If \code{NULL} (default), returns the current query.}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
+A list containing session-specific reactive values and the chat
+client with the following elements:
 \itemize{
-\item When \code{query = NULL} (getter): Returns the current SQL query as a string
-(may be an empty string \code{""} if no query has been set).
-\item When \code{query} is provided (setter): Returns \code{TRUE} if the query was
-changed to a new value, \code{FALSE} if it was the same as the current value.
+\item \code{df}: Reactive expression returning the current filtered data frame
+\item \code{sql}: Reactive value for the current SQL query string
+\item \code{title}: Reactive value for the current title
+\item \code{client}: The session-specific chat client instance
 }
 }
 \subsection{Examples}{
@@ -674,71 +521,11 @@ changed to a new value, \code{FALSE} if it was the same as the current value.
 qc <- QueryChat$new(mtcars, "mtcars")
 
 server <- function(input, output, session) {
-  qc$server()
+  qc_vals <- qc$server()
 
-  # Get current query
-  output$current_query <- renderText({
-    qc$sql()
-  })
-
-  # Set query programmatically
-  observeEvent(input$filter_button, {
-    qc$sql("SELECT * FROM mtcars WHERE cyl = 6")
-  })
-}
-}
-}
-\if{html}{\out{</div>}}
-
-}
-
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-QueryChat-title"></a>}}
-\if{latex}{\out{\hypertarget{method-QueryChat-title}{}}}
-\subsection{Method \code{title()}}{
-Get or set the current title.
-
-The title is a short description of the current query that the LLM
-provides whenever it generates a new SQL query. It can be used as a
-status string for the data dashboard.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{QueryChat$title(value = NULL)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{value}}{Optional title string. If provided, sets the current title
-to this value. If \code{NULL} (default), returns the current title.}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-\itemize{
-\item When \code{value = NULL} (getter): Returns the current title as a string,
-or \code{NULL} if no title has been set (because no SQL query has been set).
-\item When \code{value} is provided (setter): Returns \code{TRUE} if the title was
-changed to a new value, \code{FALSE} if it was the same as the current value.
-}
-}
-\subsection{Examples}{
-\if{html}{\out{<div class="r example copy">}}
-\preformatted{\dontrun{
-qc <- QueryChat$new(mtcars, "mtcars")
-
-server <- function(input, output, session) {
-  qc$server()
-
-  # Get current title
-  output$title <- renderText({
-    qc$title() \%||\% "No Query"
-  })
-
-  # Set title programmatically
-  observeEvent(input$set_title, {
-    qc$title("Filtered Cars")
-  })
+  output$data <- renderDataTable(qc_vals$df())
+  output$query <- renderText(qc_vals$sql())
+  output$title <- renderText(qc_vals$title() \%||\% "No Query")
 }
 }
 }

@@ -71,12 +71,12 @@ ui <- page_sidebar(
 # Define server logic
 server <- function(input, output, session) {
   # Initialize QueryChat server
-  qc$server()
+  qc_vals <- qc$server()
 
   # Render the data table
   output$data_table <- DT::renderDT(
     {
-      qc$df()
+      qc_vals$df()
     },
     fillContainer = TRUE,
     options = list(pageLength = 25, scrollX = TRUE)
@@ -84,7 +84,7 @@ server <- function(input, output, session) {
 
   # Render the SQL query
   output$sql_query <- renderText({
-    query <- qc$sql()
+    query <- qc_vals$sql()
     if (query == "") {
       "No filter applied - showing all data"
     } else {

@@ -75,18 +75,18 @@ ui <- page_sidebar(
 )
 
 server <- function(input, output, session) {
-  qc$server()
+  qc_vals <- qc$server()
 
   output$data_table <- DT::renderDT(
     {
-      qc$df()
+      qc_vals$df()
     },
     fillContainer = TRUE,
     options = list(pageLength = 10, scrollX = TRUE)
   )
 
   output$sql_query <- renderText({
-    query <- qc$sql()
+    query <- qc_vals$sql()
     if (query == "") {
       "No filter applied - showing all data"
     } else {

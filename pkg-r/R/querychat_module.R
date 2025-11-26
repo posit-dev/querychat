@@ -95,7 +95,7 @@ mod_server <- function(id, data_source, greeting, client) {
     })
 
     list(
-      chat = chat,
+      client = chat,
       sql = current_query,
       title = current_title,
       df = filtered_df

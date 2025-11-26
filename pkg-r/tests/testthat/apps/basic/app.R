@@ -42,17 +42,17 @@ ui <- page_sidebar(
 )
 
 server <- function(input, output, session) {
-  qc$server()
+  qc_vals <- qc$server()
 
   output$data_table <- DT::renderDT(
     {
-      qc$df()
+      qc_vals$df()
     },
     options = list(pageLength = 5)
   )
 
   output$sql_query <- renderText({
-    query <- qc$sql()
+    query <- qc_vals$sql()
     if (query == "") "No filter applied" else query
   })
 

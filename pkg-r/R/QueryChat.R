@@ -12,8 +12,8 @@
 #' The `QueryChat` class takes your data (a data frame or database connection)
 #' as input and provides methods to:
 #' - Generate a chat UI for natural language queries (e.g., `$app()`, `$sidebar()`)
-#' - Reactively read SQL results in your Shiny app (e.g., `$df()`)
-#' - Programmatically get/set the current query and title (e.g., `$sql()`, `$title()`)
+#' - Initialize server logic that returns session-specific reactive values (via `$server()`)
+#' - Access reactive data, SQL queries, and titles through the returned server values
 #'
 #' @section Usage:
 #' ```r
@@ -33,36 +33,14 @@
 #' )
 #'
 #' server <- function(input, output, session) {
-#'   qc$server()
+#'   qc_vals <- qc$server()
 #'
-#'   output$sql <- renderText(qc$sql())
-#'   output$data <- renderDataTable(qc$df())
+#'   output$sql <- renderText(qc_vals$sql())
+#'   output$data <- renderDataTable(qc_vals$df())
 #' }
 #'
 #' shinyApp(ui, server)
 #' ```
-#'
-#' @section Constructor:
-#' `QueryChat$new(data_source, table_name, id = NULL, greeting = NULL,
-#'                client = NULL, data_description = NULL,
-#'                extra_instructions = NULL, prompt_template = NULL)`
-#'
-#' @section Methods:
-#' \describe{
-#'   \item{`$new(...)`}{Create a new QueryChat object.}
-#'   \item{`$sidebar(...)`}{Create a sidebar UI with chat interface.}
-#'   \item{`$ui(...)`}{Create the chat UI component.}
-#'   \item{`$server()`}{Initialize server logic (call within server function).}
-#'   \item{`$df()`}{Get the current filtered data frame (reactive).}
-#'   \item{`$sql(query)`}{Get or set the current SQL query (reactive).}
-#'   \item{`$title(value)`}{Get or set the current title (reactive).}
-#'   \item{`$app()`}{Create a complete Shiny app with sensible defaults.}
-#'   \item{`$generate_greeting(echo)`}{Generate a greeting message using the LLM.}
-#'   \item{`$cleanup()`}{Clean up data source resources.}
-#' }
-#'
-#' @field greeting The greeting message displayed to users.
-#' @field id The module ID for namespacing.
 #'
 #' @export
 #' @examples
@@ -92,7 +70,9 @@ QueryChat <- R6::R6Class(
     .client = NULL
   ),
   public = list(
+    #' @field greeting The greeting message displayed to users.
     greeting = NULL,
+    #' @field id The module ID for namespacing.
     id = NULL,
 
     #' @description
@@ -235,7 +215,11 @@ QueryChat <- R6::R6Class(
     #'   [shiny::enableBookmarking()]. If `"url"` or `"server"`, the chat state
     #'   (including current query) will be bookmarked. Default is `"url"`.
     #'
-    #' @return Invisibly returns the chat object after the app stops.
+    #' @return Invisibly returns a list of session-specific values:
+    #'  - `df`: The final filtered data frame
+    #'  - `sql`: The final SQL query string
+    #'  - `title`: The final title
+    #'  - `client`: The session-specific chat client instance
     #'
     #' @examples
     #' \dontrun{
@@ -247,8 +231,8 @@ QueryChat <- R6::R6Class(
     #'
     app = function(..., bookmark_store = "url") {
       app <- self$app_obj(..., bookmark_store = bookmark_store)
-      tryCatch(shiny::runGadget(app), interrupt = function(cnd) NULL)
-      invisible(private$server_values$chat)
+      vals <- tryCatch(shiny::runGadget(app), interrupt = function(cnd) NULL)
+      invisible(vals)
     },
 
     #' @description
@@ -325,18 +309,18 @@ QueryChat <- R6::R6Class(
       }
 
       server <- function(input, output, session) {
-        self$server()
+        qc_vals <- self$server()
 
         output$query_title <- shiny::renderText({
-          if (shiny::isTruthy(self$title())) {
-            self$title()
+          if (shiny::isTruthy(qc_vals$title())) {
+            qc_vals$title()
           } else {
             "SQL Query"
           }
         })
 
         output$ui_reset <- shiny::renderUI({
-          shiny::req(self$sql())
+          shiny::req(qc_vals$sql())
 
           shiny::actionButton(
             "reset_query",
@@ -346,21 +330,21 @@ QueryChat <- R6::R6Class(
         })
 
         shiny::observeEvent(input$reset_query, label = "on_reset_query", {
-          self$sql("")
-          self$title(NULL)
+          qc_vals$sql("")
+          qc_vals$title(NULL)
         })
 
         output$dt <- DT::renderDT({
           DT::datatable(
-            self$df(),
+            qc_vals$df(),
             fillContainer = TRUE,
             options = list(pageLength = 25, scrollX = TRUE)
           )
         })
 
         output$sql_output <- shiny::renderUI({
-          sql <- if (shiny::isTruthy(self$sql())) {
-            self$sql()
+          sql <- if (shiny::isTruthy(qc_vals$sql())) {
+            qc_vals$sql()
           } else {
             paste("SELECT * FROM", table_name)
           }
@@ -376,7 +360,12 @@ QueryChat <- R6::R6Class(
         })
 
         shiny::observeEvent(input$close_btn, label = "on_close_btn", {
-          shiny::stopApp()
+          shiny::stopApp(list(
+            df = qc_vals$df(),
+            sql = qc_vals$sql(),
+            title = qc_vals$title(),
+            client = qc_vals$client
+          ))
         })
       }
 
@@ -440,23 +429,28 @@ QueryChat <- R6::R6Class(
     #' Initialize the querychat server logic.
     #'
     #' This method must be called within a Shiny server function. It sets up
-    #' the reactive logic for the chat interface and populates the internal
-    #' server values that are accessed via `$df()`, `$sql()`, and `$title()`.
+    #' the reactive logic for the chat interface and returns session-specific
+    #' reactive values.
     #'
     #' @param session The Shiny session object.
     #'
-    #' @return Invisibly returns `NULL`. Access reactive values via `$df()`,
-    #'   `$sql()`, and `$title()` methods.
+    #' @return A list containing session-specific reactive values and the chat
+    #'   client with the following elements:
+    #'   - `df`: Reactive expression returning the current filtered data frame
+    #'   - `sql`: Reactive value for the current SQL query string
+    #'   - `title`: Reactive value for the current title
+    #'   - `client`: The session-specific chat client instance
     #'
     #' @examples
     #' \dontrun{
     #' qc <- QueryChat$new(mtcars, "mtcars")
     #'
     #' server <- function(input, output, session) {
-    #'   qc$server()
+    #'   qc_vals <- qc$server()
     #'
-    #'   output$data <- renderDataTable(qc$df())
-    #'   output$query <- renderText(qc$sql())
+    #'   output$data <- renderDataTable(qc_vals$df())
+    #'   output$query <- renderText(qc_vals$sql())
+    #'   output$title <- renderText(qc_vals$title() %||% "No Query")
     #' }
     #' }
     server = function(session = shiny::getDefaultReactiveDomain()) {
@@ -466,147 +460,12 @@ QueryChat <- R6::R6Class(
         )
       }
 
-      private$server_values <- mod_server(
+      mod_server(
         self$id,
         data_source = private$.data_source,
         greeting = self$greeting,
         client = private$.client
       )
-
-      invisible(NULL)
-    },
-
-    #' @description
-    #' Get the current filtered data frame.
-    #'
-    #' This is a reactive expression that returns the data after applying the
-    #' current SQL query. If no query has been set, returns the unfiltered data.
-    #'
-    #' @return A data.frame with the filtered/transformed data.
-    #'
-    #' @examples
-    #' \dontrun{
-    #' qc <- QueryChat$new(mtcars, "mtcars")
-    #'
-    #' server <- function(input, output, session) {
-    #'   qc$server()
-    #'
-    #'   output$table <- renderDataTable({
-    #'     qc$df()  # Reactive - will update when query changes
-    #'   })
-    #' }
-    #' }
-    df = function() {
-      vals <- private$server_values
-      if (is.null(vals)) {
-        rlang::abort(
-          "Must call $server() before accessing $df(). Make sure to call server() within your Shiny server function."
-        )
-      }
-      vals$df()
-    },
-
-    #' @description
-    #' Get or set the current SQL query.
-    #'
-    #' This method provides both getter and setter functionality for the SQL
-    #' query. When called without arguments, it returns the current query.
-    #' When called with a query string, it sets the query and returns whether
-    #' the query changed.
-    #'
-    #' @param query Optional SQL query string. If provided, sets the current
-    #'   query to this value. If `NULL` (default), returns the current query.
-    #'
-    #' @return
-    #' - When `query = NULL` (getter): Returns the current SQL query as a string
-    #'   (may be an empty string `""` if no query has been set).
-    #' - When `query` is provided (setter): Returns `TRUE` if the query was
-    #'   changed to a new value, `FALSE` if it was the same as the current value.
-    #'
-    #' @examples
-    #' \dontrun{
-    #' qc <- QueryChat$new(mtcars, "mtcars")
-    #'
-    #' server <- function(input, output, session) {
-    #'   qc$server()
-    #'
-    #'   # Get current query
-    #'   output$current_query <- renderText({
-    #'     qc$sql()
-    #'   })
-    #'
-    #'   # Set query programmatically
-    #'   observeEvent(input$filter_button, {
-    #'     qc$sql("SELECT * FROM mtcars WHERE cyl = 6")
-    #'   })
-    #' }
-    #' }
-    sql = function(query = NULL) {
-      vals <- private$server_values
-      if (is.null(vals)) {
-        rlang::abort(
-          "Must call $server() before accessing $sql(). Make sure to call $server() within your Shiny server function."
-        )
-      }
-
-      if (is.null(query)) {
-        vals$sql()
-      } else {
-        old_query <- shiny::isolate(vals$sql())
-        vals$sql(query)
-        return(!identical(old_query, query))
-      }
-    },
-
-    #' @description
-    #' Get or set the current title.
-    #'
-    #' The title is a short description of the current query that the LLM
-    #' provides whenever it generates a new SQL query. It can be used as a
-    #' status string for the data dashboard.
-    #'
-    #' @param value Optional title string. If provided, sets the current title
-    #'   to this value. If `NULL` (default), returns the current title.
-    #'
-    #' @return
-    #' - When `value = NULL` (getter): Returns the current title as a string,
-    #'   or `NULL` if no title has been set (because no SQL query has been set).
-    #' - When `value` is provided (setter): Returns `TRUE` if the title was
-    #'   changed to a new value, `FALSE` if it was the same as the current value.
-    #'
-    #' @examples
-    #' \dontrun{
-    #' qc <- QueryChat$new(mtcars, "mtcars")
-    #'
-    #' server <- function(input, output, session) {
-    #'   qc$server()
-    #'
-    #'   # Get current title
-    #'   output$title <- renderText({
-    #'     qc$title() %||% "No Query"
-    #'   })
-    #'
-    #'   # Set title programmatically
-    #'   observeEvent(input$set_title, {
-    #'     qc$title("Filtered Cars")
-    #'   })
-    #' }
-    #' }
-    title = function(value = NULL) {
-      vals <- private$server_values
-      if (is.null(vals)) {
-        rlang::abort(
-          "Must call $server() before accessing $title(). Make sure to call $server() within your Shiny server function."
-        )
-      }
-
-      if (is.null(value)) {
-        vals$title()
-      } else {
-        old_value <- shiny::isolate(vals$title())
-        vals$title(value)
-        return(!identical(old_value, value))
-      }
     },
 
     #' @description
@@ -660,13 +519,9 @@ QueryChat <- R6::R6Class(
     }
   ),
   active = list(
-    #' @field client Get the (session-specific) chat client.
-    client = function() {
-      vals <- private$server_values
-      if (is.null(vals)) {
-        rlang::abort("Must call $server() before accessing $client")
-      }
-      vals$chat
+    #' @field system_prompt Get the system prompt.
+    system_prompt = function() {
+      private$.client$get_system_prompt()
     },
 
     #' @field data_source Get the current data source.

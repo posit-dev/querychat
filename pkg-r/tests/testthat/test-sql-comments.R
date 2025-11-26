@@ -12,7 +12,7 @@ test_that("execute_query handles SQL with inline comments", {
   )
 
   # Create data source
-  df_source <- querychat_data_source(test_df, table_name = "test_table")
+  df_source <- as_querychat_data_source(test_df, table_name = "test_table")
   withr::defer(cleanup_source(df_source))
 
   # Test with inline comments
@@ -51,7 +51,7 @@ test_that("execute_query handles SQL with multiline comments", {
   )
 
   # Create data source
-  df_source <- querychat_data_source(test_df, table_name = "test_table")
+  df_source <- as_querychat_data_source(test_df, table_name = "test_table")
   withr::defer(cleanup_source(df_source))
 
   # Test with multiline comments
@@ -95,7 +95,7 @@ test_that("execute_query handles SQL with trailing semicolons", {
   )
 
   # Create data source
-  df_source <- querychat_data_source(test_df, table_name = "test_table")
+  df_source <- as_querychat_data_source(test_df, table_name = "test_table")
   withr::defer(cleanup_source(df_source))
 
   # Test with trailing semicolon
@@ -132,7 +132,7 @@ test_that("execute_query handles SQL with mixed comments and semicolons", {
   )
 
   # Create data source
-  df_source <- querychat_data_source(test_df, table_name = "test_table")
+  df_source <- as_querychat_data_source(test_df, table_name = "test_table")
   withr::defer(cleanup_source(df_source))
 
   # Test with a mix of comment styles and semicolons
@@ -180,7 +180,7 @@ test_that("execute_query handles SQL with unusual whitespace patterns", {
   )
 
   # Create data source
-  df_source <- querychat_data_source(test_df, table_name = "test_table")
+  df_source <- as_querychat_data_source(test_df, table_name = "test_table")
   withr::defer(cleanup_source(df_source))
 
   # Test with unusual whitespace patterns (which LLMs might generate)

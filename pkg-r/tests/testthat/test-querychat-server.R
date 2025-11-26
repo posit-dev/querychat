@@ -20,7 +20,7 @@ test_that("database source query functionality", {
   dbWriteTable(conn, "users", test_data, overwrite = TRUE)
 
   # Create database source
-  db_source <- querychat_data_source(conn, "users")
+  db_source <- as_querychat_data_source(conn, "users")
 
   # Test that we can execute queries
   result <- execute_query(db_source, "SELECT * FROM users WHERE age > 30")

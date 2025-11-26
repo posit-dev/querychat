@@ -1,28 +1,22 @@
 #' Create a data source for querychat
 #'
-#' Generic function to create a data source for querychat. This function
-#' dispatches to appropriate methods based on input.
+#' An entrypoint for developers to create custom data sources for use with
+#' querychat. Most users shouldn't use this function directly; instead, they
+#' should pass their data to `QueryChat$new()`.
 #'
 #' @param x A data frame or DBI connection
 #' @param table_name The name to use for the table in the data source. Can be:
 #'   - A character string (e.g., "table_name")
 #'   - Or, for tables contained within catalogs or schemas, a [DBI::Id()] object (e.g., `DBI::Id(schema = "schema_name", table = "table_name")`)
-#' @param categorical_threshold For text columns, the maximum number of unique values to consider as a categorical variable
-#' @param ... Additional arguments passed to specific methods
 #' @return A querychat_data_source object
+#' @keywords internal
 #' @export
-querychat_data_source <- function(x, ...) {
-  UseMethod("querychat_data_source")
+as_querychat_data_source <- function(x, table_name = NULL, ...) {
+  UseMethod("as_querychat_data_source")
 }
 
 #' @export
-#' @rdname querychat_data_source
-querychat_data_source.data.frame <- function(
-  x,
-  table_name = NULL,
-  categorical_threshold = 20,
-  ...
-) {
+as_querychat_data_source.data.frame <- function(x, table_name = NULL, ...) {
   if (is.null(table_name)) {
     # Infer table name from dataframe name, if not already added
     table_name <- deparse(substitute(x))
@@ -47,23 +41,13 @@ querychat_data_source.data.frame <- function(
   duckdb::duckdb_register(conn, table_name, x, experimental = FALSE)
 
   structure(
-    list(
-      conn = conn,
-      table_name = table_name,
-      categorical_threshold = categorical_threshold
-    ),
+    list(conn = conn, table_name = table_name),
     class = c("data_frame_source", "dbi_source", "querychat_data_source")
   )
 }
 
 #' @export
-#' @rdname querychat_data_source
-querychat_data_source.DBIConnection <- function(
-  x,
-  table_name,
-  categorical_threshold = 20,
-  ...
-) {
+as_querychat_data_source.DBIConnection <- function(x, table_name, ...) {
   # Handle different types of table_name inputs
   if (inherits(table_name, "Id")) {
     # DBI::Id object - keep as is
@@ -87,21 +71,26 @@ querychat_data_source.DBIConnection <- function(
   }
 
   structure(
-    list(
-      conn = x,
-      table_name = table_name,
-      categorical_threshold = categorical_threshold
-    ),
+    list(conn = x, table_name = table_name),
     class = c("dbi_source", "querychat_data_source")
   )
 }
 
-#' Execute a SQL query on a data source
+is_data_source <- function(x) {
+  inherits(x, "querychat_data_source")
+}
+
+#' Execute an SQL query on a data source
+#'
+#' An entrypoint for developers to create custom data source objects for use
+#' with querychat. Most users shouldn't use this function directly; instead,
+#' they call the `$sql()` method on the [QueryChat] object to run queries.
 #'
 #' @param source A querychat_data_source object
 #' @param query SQL query string
 #' @param ... Additional arguments passed to methods
 #' @return Result of the query as a data frame
+#' @keywords internal
 #' @export
 execute_query <- function(source, query, ...) {
   UseMethod("execute_query")
@@ -122,10 +111,15 @@ execute_query.dbi_source <- function(source, query, ...) {
 
 #' Test a SQL query on a data source.
 #'
+#' An entrypoint for developers to create custom data sources for use with
+#' querychat. Most users shouldn't use this function directly; instead, they
+#' should call the `$sql()` method on the [QueryChat] object to run queries.
+#'
 #' @param source A querychat_data_source object
 #' @param query SQL query string
 #' @param ... Additional arguments passed to methods
 #' @return Result of the query, limited to one row of data.
+#' @keywords internal
 #' @export
 test_query <- function(source, query, ...) {
   UseMethod("test_query")
@@ -142,9 +136,14 @@ test_query.dbi_source <- function(source, query, ...) {
 
 #' Get type information for a data source
 #'
+#' An entrypoint for developers to create custom data sources for use with
+#' querychat. Most users shouldn't use this function directly; instead, they
+#' should call the `$set_system_prompt()` method on the [QueryChat] object.
+#'
 #' @param source A querychat_data_source object
 #' @param ... Additional arguments passed to methods
 #' @return A character string containing the type information
+#' @keywords internal
 #' @export
 get_db_type <- function(source, ...) {
   UseMethod("get_db_type")
@@ -184,16 +183,24 @@ get_db_type.dbi_source <- function(source, ...) {
 
 #' Create a system prompt for the data source
 #'
+#' An entrypoint for developers to create custom data sources for use with
+#' querychat. Most users shouldn't use this function directly; instead, they
+#' should call the `$set_system_prompt()` method on the [QueryChat] object.
+#'
 #' @param source A querychat_data_source object
 #' @param data_description Optional description of the data
 #' @param extra_instructions Optional additional instructions
+#' @param categorical_threshold For text columns, the maximum number of unique
+#' values to consider as a categorical variable
 #' @param ... Additional arguments passed to methods
 #' @return A string with the system prompt
+#' @keywords internal
 #' @export
 create_system_prompt <- function(
   source,
   data_description = NULL,
   extra_instructions = NULL,
+  categorical_threshold = 20,
   ...
 ) {
   UseMethod("create_system_prompt")
@@ -204,6 +211,7 @@ create_system_prompt.querychat_data_source <- function(
   source,
   data_description = NULL,
   extra_instructions = NULL,
+  categorical_threshold = 20,
   ...
 ) {
   if (!is.null(data_description)) {
@@ -219,7 +227,7 @@ create_system_prompt.querychat_data_source <- function(
   prompt_text <- paste(prompt_content, collapse = "\n")
 
   # Get schema for the data source
-  schema <- get_schema(source)
+  schema <- get_schema(source, categorical_threshold = categorical_threshold)
 
   # Examine the data source and get the type for the prompt
   db_type <- get_db_type(source)
@@ -238,9 +246,14 @@ create_system_prompt.querychat_data_source <- function(
 
 #' Clean up a data source (close connections, etc.)
 #'
+#' An entrypoint for developers to create custom data sources for use with
+#' querychat. Most users shouldn't use this function directly; instead, they
+#' should call the `$cleanup()` method on the [QueryChat] object.
+#'
 #' @param source A querychat_data_source object
 #' @param ... Additional arguments passed to methods
 #' @return NULL (invisibly)
+#' @keywords internal
 #' @export
 cleanup_source <- function(source, ...) {
   UseMethod("cleanup_source")
@@ -257,19 +270,24 @@ cleanup_source.dbi_source <- function(source, ...) {
 
 #' Get schema for a data source
 #'
+#' An entrypoint for developers to create custom data sources for use with
+#' querychat. Most users shouldn't use this function directly; instead, they
+#' should call the `$set_system_prompt()` method on the [QueryChat] object.
+#'
 #' @param source A querychat_data_source object
+#' @param categorical_threshold For text columns, the maximum number of unique values to consider as a categorical variable
 #' @param ... Additional arguments passed to methods
 #' @return A character string describing the schema
+#' @keywords internal
 #' @export
-get_schema <- function(source, ...) {
+get_schema <- function(source, categorical_threshold = 20, ...) {
   UseMethod("get_schema")
 }
 
 #' @export
-get_schema.dbi_source <- function(source, ...) {
+get_schema.dbi_source <- function(source, categorical_threshold = 20, ...) {
   conn <- source$conn
   table_name <- source$table_name
-  categorical_threshold <- source$categorical_threshold
 
   # Get column information
   columns <- DBI::dbListFields(conn, table_name)

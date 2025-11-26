@@ -2,12 +2,74 @@
 % Please edit documentation in R/querychat-package.R
 \docType{package}
 \name{querychat-package}
-\alias{querychat}
 \alias{querychat-package}
-\title{querychat: Filter and Query Data Frames in 'shiny' Using an LLM Chat Interface}
+\title{querychat: Chat with Your Data Using Natural Language}
 \description{
-Adds an LLM-powered chatbot to your 'shiny' app, that can turn your users' natural language questions into SQL queries that run against your data, and return the result as a reactive dataframe. Use it to drive reactive calculations, visualizations, downloads, etc.
+querychat provides an interactive chat interface for querying data using
+natural language. It translates your questions into SQL queries, executes
+them against your data, and displays the results. The package works with
+both data frames and database connections.
 }
+\section{Quick Start}{
+
+The easiest way to get started is with the \link{QueryChat} R6 class:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{library(querychat)
+
+# Create a QueryChat object
+qc <- QueryChat$new(mtcars, "mtcars")
+
+# Option 1: Run a complete app with sensible defaults
+qc$app()
+
+# Option 2: Build a custom Shiny app
+ui <- page_sidebar(
+  qc$sidebar(),
+  dataTableOutput("data")
+)
+
+server <- function(input, output, session) \{
+  qc$server()
+  output$data <- renderDataTable(qc$df())
+\}
+
+shinyApp(ui, server)
+}\if{html}{\out{</div>}}
+}
+
+\section{Key Features}{
+
+\itemize{
+\item \strong{Natural language queries}: Ask questions in plain English
+\item \strong{SQL transparency}: See the generated SQL queries
+\item \strong{Multiple data sources}: Works with data frames and database connections
+\item \strong{Customizable}: Add data descriptions, extra instructions, and custom greetings
+\item \strong{LLM agnostic}: Works with OpenAI, Anthropic, Google, and other providers via ellmer
+}
+}
+
+\section{Main Components}{
+
+\itemize{
+\item \link{QueryChat}: The main R6 class for creating chat interfaces
+\item \code{\link[=as_querychat_data_source]{as_querychat_data_source()}}: (Advanced) Create custom data source objects
+}
+}
+
+\section{Examples}{
+
+To see examples included with the package, run:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{shiny::runExample(package = "querychat")
+}\if{html}{\out{</div>}}
+
+This provides a list of available examples. To run a specific example, like
+'01-hello-app', use:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{shiny::runExample("01-hello-app", package = "querychat")
+}\if{html}{\out{</div>}}
+}
+
 \seealso{
 Useful links:
 \itemize{

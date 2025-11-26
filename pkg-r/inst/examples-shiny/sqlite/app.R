@@ -15,8 +15,6 @@ onStop(function() {
 })
 
 conn <- dbConnect(RSQLite::SQLite(), temp_db)
-# The connection will automatically be closed when the app stops, thanks to
-# querychat_init
 
 # Create sample data in the database
 dbWriteTable(conn, "penguins", palmerpenguins::penguins, overwrite = TRUE)
@@ -35,12 +33,10 @@ Try asking:
 - <span class=\"suggestion\">Create a summary of measurements grouped by species and island</span>
 "
 
-# Create data source using querychat_data_source
-penguins_source <- querychat_data_source(conn, table_name = "penguins")
-
-# Configure querychat for database
-querychat_config <- querychat_init(
-  data_source = penguins_source,
+# Create QueryChat object with database connection
+qc <- QueryChat$new(
+  conn,
+  "penguins",
   greeting = greeting,
   data_description = "This database contains the Palmer Penguins dataset with measurements of bill dimensions, flipper length, body mass, sex, and species (Adelie, Chinstrap, and Gentoo) collected from three islands in the Palmer Archipelago, Antarctica.",
   extra_instructions = "When showing results, always explain what the data represents and highlight any interesting patterns you observe."
@@ -48,39 +44,49 @@ querychat_config <- querychat_init(
 
 ui <- page_sidebar(
   title = "Database Query Chat",
-  sidebar = querychat_sidebar("chat"),
+  sidebar = qc$sidebar(),
 
-  h2("Current Data View"),
-  p(
-    "The table below shows the current filtered data based on your chat queries:"
+  card(
+    fill = FALSE,
+    card_header("Current SQL Query"),
+    verbatimTextOutput("sql_query")
   ),
-  DT::DTOutput("data_table", fill = FALSE),
 
-  h2("Current SQL Query"),
-  verbatimTextOutput("sql_query"),
-
-  h2("Dataset Information"),
-  p("This demo database contains:"),
-  tags$ul(
-    tags$li("penguins - Palmer Penguins dataset (344 rows, 8 columns)"),
-    tags$li(
-      "Columns: species, island, bill_length_mm, bill_depth_mm, flipper_length_mm, body_mass_g, sex, year"
+  card(
+    full_screen = TRUE,
+    card_header(
+      "Current Data View",
+      tooltip(
+        bsicons::bs_icon("question-circle-fill", class = "mx-1"),
+        "The table below shows the current filtered data based on your chat queries"
+      ),
+      tooltip(
+        bsicons::bs_icon("info-circle-fill"),
+        "The penguins dataset contains measurements on 344 penguins."
+      )
+    ),
+    DT::DTOutput("data_table"),
+    card_footer(
+      markdown(
+        "Data source: [palmerpenguins package](https://allisonhorst.github.io/palmerpenguins/)"
+      )
     )
   )
 )
 
 server <- function(input, output, session) {
-  chat <- querychat_server("chat", querychat_config)
+  qc_vals <- qc$server()
 
   output$data_table <- DT::renderDT(
     {
-      chat$df()
+      qc_vals$df()
     },
+    fillContainer = TRUE,
     options = list(pageLength = 10, scrollX = TRUE)
   )
 
   output$sql_query <- renderText({
-    query <- chat$sql()
+    query <- qc_vals$sql()
     if (query == "") {
       "No filter applied - showing all data"
     } else {

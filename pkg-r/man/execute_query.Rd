@@ -2,7 +2,7 @@
 % Please edit documentation in R/data_source.R
 \name{execute_query}
 \alias{execute_query}
-\title{Execute a SQL query on a data source}
+\title{Execute an SQL query on a data source}
 \usage{
 execute_query(source, query, ...)
 }
@@ -17,5 +17,8 @@ execute_query(source, query, ...)
 Result of the query as a data frame
 }
 \description{
-Execute a SQL query on a data source
+An entrypoint for developers to create custom data source objects for use
+with querychat. Most users shouldn't use this function directly; instead,
+they call the \verb{$sql()} method on the \link{QueryChat} object to run queries.
 }
+\keyword{internal}

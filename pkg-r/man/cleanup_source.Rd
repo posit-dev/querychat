@@ -15,5 +15,8 @@ cleanup_source(source, ...)
 NULL (invisibly)
 }
 \description{
-Clean up a data source (close connections, etc.)
+An entrypoint for developers to create custom data sources for use with
+querychat. Most users shouldn't use this function directly; instead, they
+should call the \verb{$cleanup()} method on the \link{QueryChat} object.
 }
+\keyword{internal}

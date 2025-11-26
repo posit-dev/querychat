@@ -21,20 +21,20 @@ conn <- dbConnect(RSQLite::SQLite(), temp_db)
 dbWriteTable(conn, "iris", iris, overwrite = TRUE)
 dbDisconnect(conn)
 
-# Setup database source
+# Setup database source and QueryChat instance
 db_conn <- dbConnect(RSQLite::SQLite(), temp_db)
-iris_source <- querychat_data_source(db_conn, "iris")
 
-# Configure querychat with mock
-querychat_config <- querychat_init(
-  data_source = iris_source,
+# Create QueryChat instance
+qc <- QueryChat$new(
+  data_source = db_conn,
+  table_name = "iris",
   greeting = "Welcome to the test app!",
   client = MockChat$new(ellmer::Provider("test", "test", "test"))
 )
 
 ui <- page_sidebar(
   title = "Test Database App",
-  sidebar = querychat_sidebar("chat"),
+  sidebar = qc$sidebar(),
   h2("Data"),
   DT::DTOutput("data_table"),
   h3("SQL Query"),
@@ -42,17 +42,17 @@ ui <- page_sidebar(
 )
 
 server <- function(input, output, session) {
-  chat <- querychat_server("chat", querychat_config)
+  qc_vals <- qc$server()
 
   output$data_table <- DT::renderDT(
     {
-      chat$df()
+      qc_vals$df()
     },
     options = list(pageLength = 5)
   )
 
   output$sql_query <- renderText({
-    query <- chat$sql()
+    query <- qc_vals$sql()
     if (query == "") "No filter applied" else query
   })
 

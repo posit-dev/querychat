@@ -217,7 +217,7 @@ A more useful, but slightly more involved example like the one below might incor
 
 
 <details>
-<summary><code>app.R</code></summary>
+<summary><code>app.py</code></summary>
 
 ```python
 from shiny.express import render, ui

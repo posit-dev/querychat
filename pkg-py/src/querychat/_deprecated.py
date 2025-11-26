@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     import sqlalchemy
     from narwhals.stable.v1.typing import IntoFrame
 
-    from .datasource import DataSource
+    from ._datasource import DataSource
 
 
 def init(

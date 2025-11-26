@@ -11,8 +11,8 @@ from ._icons import bs_icon
 from ._utils import df_to_html
 
 if TYPE_CHECKING:
+    from ._datasource import DataSource
     from ._querychat_module import ReactiveString, ReactiveStringOrNone
-    from .datasource import DataSource
 
 
 def _read_prompt_template(filename: str, **kwargs) -> str:

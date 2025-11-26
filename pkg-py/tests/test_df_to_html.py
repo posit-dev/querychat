@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
+from querychat._datasource import DataFrameSource, SQLAlchemySource
 from querychat._utils import df_to_html
-from querychat.datasource import DataFrameSource, SQLAlchemySource
 from sqlalchemy import create_engine
 
 

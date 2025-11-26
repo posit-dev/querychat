@@ -61,21 +61,3 @@ def test_querychat_custom_id(sample_df):
 
     assert qc.id == "custom_id"
 
-
-def test_querychat_core_reactive_access_before_server_raises(sample_df):
-    """Test that accessing reactive properties before .server() raises error."""
-    qc = QueryChat(
-        data_source=sample_df,
-        table_name="test_table",
-        greeting="Hello!",
-    )
-
-    # Accessing reactive properties before .server() should raise
-    with pytest.raises(RuntimeError, match="Must call \\.server\\(\\)"):
-        qc.title()
-
-    with pytest.raises(RuntimeError, match="Must call \\.server\\(\\)"):
-        qc.sql()
-
-    with pytest.raises(RuntimeError, match="Must call \\.server\\(\\)"):
-        qc.df()

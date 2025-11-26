@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from shiny import Inputs, Outputs, Session
     from shiny.bookmark import BookmarkState, RestoreState
 
-    from .datasource import DataSource
+    from ._datasource import DataSource
 
 ReactiveString = reactive.Value[str]
 """A reactive string value."""
@@ -44,7 +44,36 @@ def mod_ui(**kwargs):
 
 
 @dataclass
-class ModServerResult:
+class ServerValues:
+    """
+    Session-specific reactive values and client returned by QueryChat.server().
+
+    This dataclass contains all the session-specific reactive state for a QueryChat
+    instance. Each session gets its own ServerValues to ensure proper isolation
+    between concurrent sessions.
+
+    Attributes
+    ----------
+    df
+        A reactive Calc that returns the current filtered data frame. If no SQL
+        query has been set, this returns the unfiltered data from the data source.
+        Call it like `.df()` to reactively read the current data frame.
+    sql
+        A reactive Value containing the current SQL query string. Access the value
+        by calling `.sql()`, or set it with `.sql.set("SELECT ...")`.
+        An empty string `""` indicates no query has been set.
+    title
+        A reactive Value containing the current title for the query. The LLM
+        provides this title when generating a new SQL query. Access it with
+        `.title()`, or set it with `.title.set("...")`. Returns
+        `None` if no title has been set.
+    client
+        The session-specific chat client instance. This is a deep copy of the
+        base client configured for this specific session, containing the chat
+        history and tool registrations for this session only.
+
+    """
+
     df: Callable[[], pd.DataFrame]
     sql: ReactiveString
     title: ReactiveStringOrNone
@@ -150,4 +179,4 @@ def mod_server(
             if "querychat_has_greeted" in vals:
                 has_greeted.set(vals["querychat_has_greeted"])
 
-    return ModServerResult(df=filtered_df, sql=sql, title=title, client=chat)
+    return ServerValues(df=filtered_df, sql=sql, title=title, client=chat)

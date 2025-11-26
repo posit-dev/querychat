@@ -15,9 +15,9 @@ from shiny.express._stub_session import ExpressStubSession
 from shiny.session import get_current_session
 from shinychat import output_markdown_stream
 
+from ._datasource import DataFrameSource, DataSource, SQLAlchemySource
 from ._icons import bs_icon
-from ._querychat_module import ModServerResult, mod_server, mod_ui
-from .datasource import DataFrameSource, DataSource, SQLAlchemySource
+from ._querychat_module import ServerValues, mod_server, mod_ui
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -71,9 +71,6 @@ class QueryChatBase:
         self._client = copy.deepcopy(client)
         self._client.set_turns([])
         self._client.system_prompt = prompt
-
-        # Populated when ._server() gets called (in an active session)
-        self._server_values: ModServerResult | None = None
 
     def app(
         self, *, bookmark_store: Literal["url", "server", "disable"] = "url"
@@ -130,15 +127,21 @@ class QueryChatBase:
             )
 
         def app_server(input: Inputs, output: Outputs, session: Session):
-            self._server(enable_bookmarking=enable_bookmarking)
+            vals = mod_server(
+                self.id,
+                data_source=self._data_source,
+                greeting=self.greeting,
+                client=self._client,
+                enable_bookmarking=enable_bookmarking,
+            )
 
             @render.text
             def query_title():
-                return self.title() or "SQL Query"
+                return vals.title() or "SQL Query"
 
             @render.ui
             def ui_reset():
-                req(self.sql())
+                req(vals.sql())
                 return ui.input_action_button(
                     "reset_query",
                     "Reset Query",
@@ -148,17 +151,17 @@ class QueryChatBase:
             @reactive.effect
             @reactive.event(input.reset_query)
             def _():
-                self.sql("")
-                self.title(None)
+                vals.sql.set("")
+                vals.title.set(None)
 
             @render.data_frame
             def dt():
-                return self.df()
+                return vals.df()
 
             @render.ui
             def sql_output():
-                sql = self.sql() or f"SELECT * FROM {table_name}"
-                sql_code = f"```sql\n{sql}\n```"
+                sql_value = vals.sql() or f"SELECT * FROM {table_name}"
+                sql_code = f"```sql\n{sql_value}\n```"
                 return output_markdown_stream(
                     "sql_code",
                     content=sql_code,
@@ -218,142 +221,6 @@ class QueryChatBase:
         """
         return mod_ui(self.id, **kwargs)
 
-    def _server(self, *, enable_bookmarking: bool = False) -> None:
-        """
-        Initialize the server module.
-
-        Note:
-        ----
-        This is a private method since it is called automatically in Express mode.
-
-        """
-        # Must be called within an active Shiny session
-        session = get_current_session()
-        if session is None:
-            raise RuntimeError(
-                "A Shiny session must be active in order to initialize QueryChat's server logic. "
-                "If you're using Shiny Core, make sure to call .server() within your server function."
-            )
-
-        # No-op for Express' stub session (i.e., it's 1st run)
-        if session.is_stub_session():
-            return
-
-        # Call the server module
-        self._server_values = mod_server(
-            self.id,
-            data_source=self._data_source,
-            greeting=self.greeting,
-            client=self._client,
-            enable_bookmarking=enable_bookmarking,
-        )
-
-        return
-
-    def df(self) -> pd.DataFrame:
-        """
-        Reactively read the current filtered data frame that is in effect.
-
-        Returns
-        -------
-        :
-            The current filtered data frame as a pandas DataFrame. If no query
-            has been set, this will return the unfiltered data frame from the
-            data source.
-
-        Raises
-        ------
-        RuntimeError
-            If `.server()` has not been called yet.
-
-        """
-        vals = self._server_values
-        if vals is None:
-            raise RuntimeError("Must call .server() before accessing .df()")
-
-        return vals.df()
-
-    @overload
-    def sql(self, query: None = None) -> str: ...
-
-    @overload
-    def sql(self, query: str) -> bool: ...
-
-    def sql(self, query: Optional[str] = None) -> str | bool:
-        """
-        Reactively read (or set) the current SQL query that is in effect.
-
-        Parameters
-        ----------
-        query
-            If provided, sets the current SQL query to this value.
-
-        Returns
-        -------
-        :
-            If no `query` is provided, returns the current SQL query as a string
-            (possibly `""` if no query has been set). If a `query` is provided,
-            returns `True` if the query was changed to a new value, or `False`
-            if it was the same as the current value.
-
-        Raises
-        ------
-        RuntimeError
-            If `.server()` has not been called yet.
-
-        """
-        vals = self._server_values
-        if vals is None:
-            raise RuntimeError("Must call .server() before accessing .sql()")
-
-        if query is None:
-            return vals.sql()
-        else:
-            return vals.sql.set(query)
-
-    @overload
-    def title(self, value: None = None) -> str | None: ...
-
-    @overload
-    def title(self, value: str) -> bool: ...
-
-    def title(self, value: Optional[str] = None) -> str | None | bool:
-        """
-        Reactively read (or set) the current title that is in effect.
-
-        The title is a short description of the current query that the LLM
-        provides to us whenever it generates a new SQL query. It can be used as
-        a status string for the data dashboard.
-
-        Parameters
-        ----------
-        value
-            If provided, sets the current title to this value.
-
-        Returns
-        -------
-        :
-            If no `value` is provided, returns the current title as a string, or
-            `None` if no title has been set due to no SQL query being set. If a
-            `value` is provided, sets the current title to this value and
-            returns `True` if the title was changed to a new value, or `False`
-            if it was the same as the current value.
-
-        Raises
-        ------
-        RuntimeError
-            If `.server()` has not been called yet.
-
-        """
-        vals = self._server_values
-        if vals is None:
-            raise RuntimeError("Must call .server() before accessing .title()")
-
-        if value is None:
-            return vals.title()
-        else:
-            return vals.title.set(value)
-
     def generate_greeting(self, *, echo: Literal["none", "output"] = "none"):
         """
         Generate a welcome greeting for the chat.
@@ -381,20 +248,17 @@ class QueryChatBase:
         return str(client.chat(prompt, echo=echo))
 
     @property
-    def client(self):
+    def system_prompt(self) -> str:
         """
-        Get the (session-specific) chat client.
+        Get the system prompt.
 
         Returns
         -------
         :
-            The current chat client.
+            The system prompt string.
 
         """
-        vals = self._server_values
-        if vals is None:
-            raise RuntimeError("Must call .server() before accessing .client")
-        return vals.client
+        return self._client.system_prompt or ""
 
     @property
     def data_source(self):
@@ -476,7 +340,7 @@ class QueryChat(QueryChatBase):
 
     """
 
-    def server(self, *, enable_bookmarking: bool = False) -> None:
+    def server(self, *, enable_bookmarking: bool = False) -> ServerValues:
         """
         Initialize Shiny server logic.
 
@@ -515,15 +379,15 @@ class QueryChat(QueryChatBase):
 
 
         def server(input, output, session):
-            qc.server(enable_bookmarking=True)
+            qc_vals = qc.server(enable_bookmarking=True)
 
             @render.data_frame
             def data_table():
-                return qc.df()
+                return qc_vals.df()
 
             @render.text
-            def title():
-                return qc.title() or "My Data"
+            def title_text():
+                return qc_vals.title() or "My Data"
 
 
         app = App(app_ui, server, bookmark_store="url")
@@ -532,10 +396,24 @@ class QueryChat(QueryChatBase):
         Returns
         -------
         :
-            None
+            A ServerValues dataclass containing session-specific reactive values
+            and the chat client. See ServerValues documentation for details on
+            the available attributes.
 
         """
-        return self._server(enable_bookmarking=enable_bookmarking)
+        session = get_current_session()
+        if session is None:
+            raise RuntimeError(
+                ".server() must be called within an active Shiny session (i.e., within the server function). "
+            )
+
+        return mod_server(
+            self.id,
+            data_source=self._data_source,
+            greeting=self.greeting,
+            client=self._client,
+            enable_bookmarking=enable_bookmarking,
+        )
 
 
 class QueryChatExpress(QueryChatBase):
@@ -645,6 +523,14 @@ class QueryChatExpress(QueryChatBase):
         prompt_template: Optional[str | Path] = None,
         enable_bookmarking: Literal["auto", True, False] = "auto",
     ):
+        # Sanity check: Express should always have a (stub/real) session
+        session = get_current_session()
+        if session is None:
+            raise RuntimeError(
+                "Unexpected error: No active Shiny session found."
+                "Is express.QueryChat() being called outside of a Shiny Express app?",
+            )
+
         super().__init__(
             data_source,
             table_name,
@@ -661,8 +547,7 @@ class QueryChatExpress(QueryChatBase):
         # querychat's bookmarking
         enable: bool
         if enable_bookmarking == "auto":
-            session = get_current_session()
-            if session and isinstance(session, ExpressStubSession):
+            if isinstance(session, ExpressStubSession):
                 store = session.app_opts.get("bookmark_store", "disable")
                 enable = store != "disable"
             else:
@@ -670,7 +555,103 @@ class QueryChatExpress(QueryChatBase):
         else:
             enable = enable_bookmarking
 
-        self._server(enable_bookmarking=enable)
+        self._vals = mod_server(
+            self.id,
+            data_source=self._data_source,
+            greeting=self.greeting,
+            client=self._client,
+            enable_bookmarking=enable,
+        )
+
+    def df(self) -> pd.DataFrame:
+        """
+        Reactively read the current filtered data frame that is in effect.
+
+        Returns
+        -------
+        :
+            The current filtered data frame as a pandas DataFrame. If no query
+            has been set, this will return the unfiltered data frame from the
+            data source.
+
+        """
+        return self._vals.df()
+
+    @overload
+    def sql(self, query: None = None) -> str: ...
+
+    @overload
+    def sql(self, query: str) -> bool: ...
+
+    def sql(self, query: Optional[str] = None) -> str | bool:
+        """
+        Reactively read (or set) the current SQL query that is in effect.
+
+        Parameters
+        ----------
+        query
+            If provided, sets the current SQL query to this value.
+
+        Returns
+        -------
+        :
+            If no `query` is provided, returns the current SQL query as a string
+            (possibly `""` if no query has been set). If a `query` is provided,
+            returns `True` if the query was changed to a new value, or `False`
+            if it was the same as the current value.
+
+        """
+        if query is None:
+            return self._vals.sql()
+        else:
+            return self._vals.sql.set(query)
+
+    @overload
+    def title(self, value: None = None) -> str | None: ...
+
+    @overload
+    def title(self, value: str) -> bool: ...
+
+    def title(self, value: Optional[str] = None) -> str | None | bool:
+        """
+        Reactively read (or set) the current title that is in effect.
+
+        The title is a short description of the current query that the LLM
+        provides to us whenever it generates a new SQL query. It can be used as
+        a status string for the data dashboard.
+
+        Parameters
+        ----------
+        value
+            If provided, sets the current title to this value.
+
+        Returns
+        -------
+        :
+            If no `value` is provided, returns the current title as a string, or
+            `None` if no title has been set due to no SQL query being set. If a
+            `value` is provided, sets the current title to this value and
+            returns `True` if the title was changed to a new value, or `False`
+            if it was the same as the current value.
+
+        """
+        if value is None:
+            return self._vals.title()
+        else:
+            return self._vals.title.set(value)
+
+    @property
+    def client(self):
+        """
+        Get the (session-specific) chat client.
+
+        Returns
+        -------
+        :
+            The current chat client.
+
+        """
+        return self._vals.client
 
 
 def normalize_data_source(

@@ -3,7 +3,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from querychat.datasource import SQLAlchemySource
+from querychat._datasource import SQLAlchemySource
 from sqlalchemy import create_engine, text
 
 

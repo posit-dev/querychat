@@ -15,11 +15,11 @@ test_that("test_query correctly retrieves one row of data", {
   # Setup DBI source
   temp_db <- withr::local_tempfile(fileext = ".db")
   conn <- dbConnect(RSQLite::SQLite(), temp_db)
-  withr::defer(dbDisconnect(conn))
 
   dbWriteTable(conn, "test_table", test_df, overwrite = TRUE)
 
   dbi_source <- DBISource$new(conn, "test_table")
+  withr::defer(dbi_source$cleanup())
 
   # Test basic query - should only return one row
   result <- dbi_source$test_query("SELECT * FROM test_table")

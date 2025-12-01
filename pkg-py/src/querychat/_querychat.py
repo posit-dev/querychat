@@ -34,7 +34,7 @@ class QueryChatBase:
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         data_description: Optional[str | Path] = None,
-        categorical_threshold: int = 10,
+        categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
     ):
@@ -532,7 +532,7 @@ class QueryChatExpress(QueryChatBase):
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         data_description: Optional[str | Path] = None,
-        categorical_threshold: int = 10,
+        categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
         enable_bookmarking: Literal["auto", True, False] = "auto",
@@ -697,7 +697,7 @@ def get_system_prompt(
     *,
     data_description: Optional[str | Path] = None,
     extra_instructions: Optional[str | Path] = None,
-    categorical_threshold: int = 10,
+    categorical_threshold: int = 20,
     prompt_template: Optional[str | Path] = None,
 ) -> str:
     # Read the prompt file

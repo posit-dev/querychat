@@ -273,6 +273,20 @@ class QueryChatBase:
         """
         return self._data_source
 
+    def cleanup(self) -> None:
+        """
+        Clean up resources associated with the data source.
+
+        Call this method when you are done using the QueryChat object to close
+        database connections and avoid resource leaks.
+
+        Returns
+        -------
+        None
+
+        """
+        self._data_source.cleanup()
+
 
 class QueryChat(QueryChatBase):
     """

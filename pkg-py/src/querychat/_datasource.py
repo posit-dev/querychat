@@ -83,6 +83,20 @@ class DataSource(ABC):
         """
         ...
 
+    @abstractmethod
+    def cleanup(self) -> None:
+        """
+        Clean up resources associated with the data source.
+
+        This method should clean up any connections or resources used by the
+        data source.
+
+        Returns
+        -------
+        None
+
+        """
+
 
 class DataFrameSource(DataSource):
     """A DataSource implementation that wraps a pandas DataFrame using DuckDB."""
@@ -211,6 +225,18 @@ class DataFrameSource(DataSource):
         """
         # TODO(@gadenbuie): This should just return `self._df` and not a pandas DataFrame
         return self._df.lazy().collect().to_pandas()
+
+    def cleanup(self) -> None:
+        """
+        Close the DuckDB connection.
+
+        Returns
+        -------
+        None
+
+        """
+        if self._conn:
+            self._conn.close()
 
 
 class SQLAlchemySource(DataSource):
@@ -440,3 +466,15 @@ class SQLAlchemySource(DataSource):
     def _get_connection(self) -> Connection:
         """Get a connection to use for queries."""
         return self._engine.connect()
+
+    def cleanup(self) -> None:
+        """
+        Dispose of the SQLAlchemy engine.
+
+        Returns
+        -------
+        None
+
+        """
+        if self._engine:
+            self._engine.dispose()

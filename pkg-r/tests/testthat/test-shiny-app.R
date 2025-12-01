@@ -35,7 +35,7 @@ test_that("database reactive functionality works correctly", {
   db_conn <- dbConnect(RSQLite::SQLite(), temp_db)
   withr::defer(dbDisconnect(db_conn))
 
-  iris_source <- as_querychat_data_source(db_conn, "iris")
+  iris_source <- DBISource$new(db_conn, "iris")
 
   # Mock chat function
   mock_client <- ellmer::chat_openai(api_key = "boop")
@@ -48,18 +48,17 @@ test_that("database reactive functionality works correctly", {
     client = mock_client
   )
 
-  expect_s3_class(qc$data_source, "dbi_source")
-  expect_s3_class(qc$data_source, "querychat_data_source")
+  expect_s3_class(qc$data_source, "DBISource")
+  expect_s3_class(qc$data_source, "DataSource")
 
   # Test that we can get all data
-  result_data <- execute_query(qc$data_source, NULL)
+  result_data <- qc$data_source$execute_query(NULL)
   expect_s3_class(result_data, "data.frame")
   expect_equal(nrow(result_data), 150)
   expect_equal(ncol(result_data), 5)
 
   # Test with a specific query
-  query_result <- execute_query(
-    qc$data_source,
+  query_result <- qc$data_source$execute_query(
     "SELECT \"Sepal.Length\", \"Sepal.Width\" FROM iris WHERE \"Species\" = 'setosa'"
   )
   expect_s3_class(query_result, "data.frame")

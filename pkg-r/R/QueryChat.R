@@ -175,7 +175,7 @@ QueryChat <- R6::R6Class(
         ))
       }
 
-      prompt <- create_system_prompt(
+      prompt <- get_system_prompt(
         private$.data_source,
         data_description = data_description,
         categorical_threshold = categorical_threshold,
@@ -515,7 +515,10 @@ QueryChat <- R6::R6Class(
     #'
     #' @return Invisibly returns `NULL`. Resources are cleaned up internally.
     cleanup = function() {
-      cleanup_source(private$.data_source)
+      if (!is.null(private$.data_source)) {
+        private$.data_source$cleanup()
+      }
+      invisible(NULL)
     }
   ),
   active = list(
@@ -674,8 +677,21 @@ querychat_app <- function(
 
 normalize_data_source <- function(data_source, table_name) {
   if (is_data_source(data_source)) {
-    data_source
-  } else {
-    as_querychat_data_source(data_source, table_name)
+    return(data_source)
   }
+
+  if (is.data.frame(data_source)) {
+    return(DataFrameSource$new(data_source, table_name))
+  }
+
+  if (inherits(data_source, "DBIConnection")) {
+    return(DBISource$new(data_source, table_name))
+  }
+  
+  rlang::abort(
+    paste0(
+      "`data_source` must be a DataSource, data.frame, or DBIConnection. ",
+      "Got: ", paste(class(data_source), collapse = ", ")
+    )
+  )
 }

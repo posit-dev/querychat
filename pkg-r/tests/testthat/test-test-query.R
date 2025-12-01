@@ -3,7 +3,7 @@ library(DBI)
 library(RSQLite)
 library(querychat)
 
-test_that("test_query.dbi_source correctly retrieves one row of data", {
+test_that("test_query correctly retrieves one row of data", {
   # Create a simple data frame
   test_df <- data.frame(
     id = 1:5,
@@ -15,27 +15,26 @@ test_that("test_query.dbi_source correctly retrieves one row of data", {
   # Setup DBI source
   temp_db <- withr::local_tempfile(fileext = ".db")
   conn <- dbConnect(RSQLite::SQLite(), temp_db)
+  withr::defer(dbDisconnect(conn))
 
   dbWriteTable(conn, "test_table", test_df, overwrite = TRUE)
 
-  dbi_source <- as_querychat_data_source(conn, "test_table")
-  withr::defer(cleanup_source(dbi_source))
+  dbi_source <- DBISource$new(conn, "test_table")
 
   # Test basic query - should only return one row
-  result <- test_query(dbi_source, "SELECT * FROM test_table")
+  result <- dbi_source$test_query("SELECT * FROM test_table")
   expect_s3_class(result, "data.frame")
   expect_equal(nrow(result), 1) # Should only return 1 row
   expect_equal(result$id, 1) # Should be first row
 
   # Test with WHERE clause
-  result <- test_query(dbi_source, "SELECT * FROM test_table WHERE value > 25")
+  result <- dbi_source$test_query("SELECT * FROM test_table WHERE value > 25")
   expect_s3_class(result, "data.frame")
   expect_equal(nrow(result), 1) # Should only return 1 row
   expect_equal(result$value, 30) # Should return first row with value > 25
 
   # Test with ORDER BY - should get the highest value
-  result <- test_query(
-    dbi_source,
+  result <- dbi_source$test_query(
     "SELECT * FROM test_table ORDER BY value DESC"
   )
   expect_s3_class(result, "data.frame")
@@ -43,12 +42,12 @@ test_that("test_query.dbi_source correctly retrieves one row of data", {
   expect_equal(result$value, 50) # Should be the highest value
 
   # Test with query returning no results
-  result <- test_query(dbi_source, "SELECT * FROM test_table WHERE value > 100")
+  result <- dbi_source$test_query("SELECT * FROM test_table WHERE value > 100")
   expect_s3_class(result, "data.frame")
   expect_equal(nrow(result), 0) # Should return empty data frame
 })
 
-test_that("test_query.dbi_source handles errors correctly", {
+test_that("test_query handles errors correctly", {
   # Setup DBI source
   temp_db <- withr::local_tempfile(fileext = ".db")
   conn <- dbConnect(RSQLite::SQLite(), temp_db)
@@ -62,23 +61,21 @@ test_that("test_query.dbi_source handles errors correctly", {
   )
   dbWriteTable(conn, "test_table", test_df, overwrite = TRUE)
 
-  dbi_source <- as_querychat_data_source(conn, "test_table")
-  withr::defer(cleanup_source(dbi_source), priority = "last")
+  dbi_source <- DBISource$new(conn, "test_table")
 
   # Test with invalid SQL
-  expect_error(test_query(dbi_source, "SELECT * WRONG SYNTAX"))
+  expect_error(dbi_source$test_query("SELECT * WRONG SYNTAX"))
 
   # Test with non-existent table
-  expect_error(test_query(dbi_source, "SELECT * FROM non_existent_table"))
+  expect_error(dbi_source$test_query("SELECT * FROM non_existent_table"))
 
   # Test with non-existent column
-  expect_error(test_query(
-    dbi_source,
+  expect_error(dbi_source$test_query(
     "SELECT non_existent_column FROM test_table"
   ))
 })
 
-test_that("test_query.dbi_source works with different data types", {
+test_that("test_query works with different data types", {
   # Create a data frame with different data types
   test_df <- data.frame(
     id = 1:3,
@@ -96,11 +93,10 @@ test_that("test_query.dbi_source works with different data types", {
 
   dbWriteTable(conn, "types_table", test_df, overwrite = TRUE)
 
-  dbi_source <- as_querychat_data_source(conn, "types_table")
-  withr::defer(cleanup_source(dbi_source), priority = "last")
+  dbi_source <- DBISource$new(conn, "types_table")
 
   # Test query with different column types
-  result <- test_query(dbi_source, "SELECT * FROM types_table")
+  result <- dbi_source$test_query("SELECT * FROM types_table")
   expect_s3_class(result, "data.frame")
   expect_equal(nrow(result), 1)
   expect_type(result$text_col, "character")

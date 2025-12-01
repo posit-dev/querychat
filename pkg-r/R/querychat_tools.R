@@ -8,7 +8,7 @@ tool_update_dashboard <- function(
   current_query,
   current_title
 ) {
-  db_type <- get_db_type(data_source)
+  db_type <- data_source$get_db_type()
 
   ellmer::tool(
     tool_update_dashboard_impl(data_source, current_query, current_title),
@@ -82,7 +82,7 @@ tool_reset_dashboard <- function(reset_fn) {
 # @return The results of the query as a data frame.
 tool_query <- function(data_source) {
   force(data_source)
-  db_type <- get_db_type(data_source)
+  db_type <- data_source$get_db_type()
 
   ellmer::tool(
     function(query, `_intent` = "") {
@@ -125,10 +125,10 @@ querychat_tool_result <- function(
     switch(
       action,
       update = {
-        test_query(data_source, query)
+        data_source$test_query(query)
         NULL
       },
-      query = execute_query(data_source, query),
+      query = data_source$execute_query(query),
       reset = "The dashboard has been reset to show all data."
     ),
     error = function(err) err

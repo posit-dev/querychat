@@ -23,10 +23,9 @@ Here's a basic example of this tool in action with the `.app()` method. Notice h
 
 ```{.python filename="titanic-app.py"}
 from querychat import QueryChat
-from seaborn import load_dataset
+from querychat.data import titanic
 
-titanic = load_dataset("titanic")
-qc = QueryChat(titanic, "titanic")
+qc = QueryChat(titanic(), "titanic")
 app = qc.app()
 ```
 
@@ -46,10 +45,9 @@ Here's an example of it in action:
 
 ```{.python filename="titanic-app.py"}
 from querychat import QueryChat
-from seaborn import load_dataset
+from querychat.data import titanic
 
-titanic = load_dataset("titanic")
-qc = QueryChat(titanic, "titanic")
+qc = QueryChat(titanic(), "titanic")
 app = qc.app()
 ```
 

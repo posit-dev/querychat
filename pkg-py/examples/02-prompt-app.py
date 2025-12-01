@@ -1,15 +1,13 @@
 
 from pathlib import Path
-from seaborn import load_dataset
 from querychat import QueryChat
-
-titanic = load_dataset("titanic")
+from querychat.data import titanic
 
 greeting = Path(__file__).parent / "greeting.md"
 data_desc = Path(__file__).parent / "data_description.md"
 
 qc = QueryChat(
-    titanic,
+    titanic(),
     "titanic",
     greeting=greeting,
     data_description=data_desc,

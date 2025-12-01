@@ -60,4 +60,3 @@ def test_querychat_custom_id(sample_df):
     )
 
     assert qc.id == "custom_id"
-

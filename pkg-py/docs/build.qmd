@@ -181,14 +181,13 @@ Thanks to Shiny's support for [Jupyter Widgets](https://shiny.posit.co/py/docs/j
 ```python
 import plotly.express as px
 
-from seaborn import load_dataset
 from shiny.express import render, ui
 from shinywidgets import render_plotly
 
 from querychat.express import QueryChat
+from querychat.data import titanic
 
-titanic = load_dataset("titanic")
-qc = QueryChat(titanic, "titanic")
+qc = QueryChat(titanic(), "titanic")
 qc.sidebar()
 
 with ui.layout_columns():
@@ -223,12 +222,11 @@ A more useful, but slightly more involved example like the one below might incor
 from shiny.express import render, ui
 from shinywidgets import render_plotly
 from querychat.express import QueryChat
-from seaborn import load_dataset
+from querychat.data import titanic
 from faicons import icon_svg
 import plotly.express as px
 
-titanic = load_dataset("titanic")
-qc = QueryChat(titanic, "titanic")
+qc = QueryChat(titanic(), "titanic")
 qc.sidebar()
 
 with ui.layout_column_wrap(fill=False):
@@ -356,11 +354,11 @@ You can use multiple QueryChat instances in a single app to explore different da
 from seaborn import load_dataset
 from shiny.express import render, ui
 from querychat.express import QueryChat
+from querychat.data import titanic
 
-titanic = load_dataset("titanic")
 penguins = load_dataset("penguins")
 
-qc_titanic = QueryChat(titanic, "titanic")
+qc_titanic = QueryChat(titanic(), "titanic")
 qc_penguins = QueryChat(penguins, "penguins")
 
 with ui.sidebar():
@@ -396,15 +394,12 @@ Here's a complete example bringing together multiple concepts - a Titanic surviv
 ```python
 from shiny.express import render, ui
 from querychat.express import QueryChat
-from seaborn import load_dataset
+from querychat.data import titanic
 import plotly.express as px
-
-# Load data
-titanic = load_dataset("titanic")
 
 # Create QueryChat
 qc = QueryChat(
-    titanic,
+    titanic(),
     "titanic",
     data_description="Titanic passenger data with survival outcomes",
 )

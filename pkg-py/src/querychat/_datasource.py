@@ -88,17 +88,12 @@ class DataSource(ABC):
         """
         Clean up resources associated with the data source.
 
-        This method should be called when you are done using the data source
-        to properly close database connections and avoid resource leaks.
-
-        The default implementation does nothing. Subclasses should override
-        this method if they need to clean up resources (e.g., close database
-        connections).
+        This method should be called when the data source is no longer needed
+        (to properly close database connections and avoid resource leaks).
 
         Returns
         -------
-        :
-            None
+        None
 
         """
 
@@ -237,8 +232,7 @@ class DataFrameSource(DataSource):
 
         Returns
         -------
-        :
-            None
+        None
 
         """
         if self._conn:
@@ -479,8 +473,7 @@ class SQLAlchemySource(DataSource):
 
         Returns
         -------
-        :
-            None
+        None
 
         """
         if self._engine:

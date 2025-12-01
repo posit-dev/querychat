@@ -14,9 +14,7 @@ For full visibility into the full system prompt that Querychat generates for the
 from querychat import QueryChat
 from querychat.data import titanic
 
-titanic = titanic()
-
-qc = QueryChat(titanic, "titanic")
+qc = QueryChat(titanic(), "titanic")
 print(qc.system_prompt)
 ```
 

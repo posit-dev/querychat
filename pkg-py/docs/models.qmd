@@ -12,10 +12,8 @@ To use a particular model, pass a `"{provider}/{model}"` string to the `client` 
 from querychat import QueryChat
 from querychat.data import titanic
 
-titanic = titanic()
-
 qc = QueryChat(
-    titanic,
+    titanic(),
     "titanic",
     client="anthropic/claude-sonnet-4-5"
 )

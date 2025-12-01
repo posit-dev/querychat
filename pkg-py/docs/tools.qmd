@@ -25,8 +25,7 @@ Here's a basic example of this tool in action with the `.app()` method. Notice h
 from querychat import QueryChat
 from querychat.data import titanic
 
-titanic = titanic()
-qc = QueryChat(titanic, "titanic")
+qc = QueryChat(titanic(), "titanic")
 app = qc.app()
 ```
 
@@ -48,8 +47,7 @@ Here's an example of it in action:
 from querychat import QueryChat
 from querychat.data import titanic
 
-titanic = titanic()
-qc = QueryChat(titanic, "titanic")
+qc = QueryChat(titanic(), "titanic")
 app = qc.app()
 ```
 

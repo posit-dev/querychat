@@ -43,8 +43,7 @@ The quickest way to start chatting is to call the `.app()` method, which returns
 from querychat import QueryChat
 from querychat.data import titanic
 
-titanic = titanic()
-qc = QueryChat(titanic, "titanic", client="openai/gpt-4.1")
+qc = QueryChat(titanic(), "titanic", client="openai/gpt-4.1")
 app = qc.app()
 ```
 

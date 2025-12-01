@@ -187,8 +187,7 @@ from shinywidgets import render_plotly
 from querychat.express import QueryChat
 from querychat.data import titanic
 
-titanic = titanic()
-qc = QueryChat(titanic, "titanic")
+qc = QueryChat(titanic(), "titanic")
 qc.sidebar()
 
 with ui.layout_columns():
@@ -227,8 +226,7 @@ from querychat.data import titanic
 from faicons import icon_svg
 import plotly.express as px
 
-titanic = titanic()
-qc = QueryChat(titanic, "titanic")
+qc = QueryChat(titanic(), "titanic")
 qc.sidebar()
 
 with ui.layout_column_wrap(fill=False):
@@ -358,10 +356,9 @@ from shiny.express import render, ui
 from querychat.express import QueryChat
 from querychat.data import titanic
 
-titanic = titanic()
 penguins = load_dataset("penguins")
 
-qc_titanic = QueryChat(titanic, "titanic")
+qc_titanic = QueryChat(titanic(), "titanic")
 qc_penguins = QueryChat(penguins, "penguins")
 
 with ui.sidebar():
@@ -400,12 +397,9 @@ from querychat.express import QueryChat
 from querychat.data import titanic
 import plotly.express as px
 
-# Load data
-titanic = titanic()
-
 # Create QueryChat
 qc = QueryChat(
-    titanic,
+    titanic(),
     "titanic",
     data_description="Titanic passenger data with survival outcomes",
 )

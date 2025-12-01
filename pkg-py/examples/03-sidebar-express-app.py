@@ -2,10 +2,8 @@ from shiny.express import render, ui
 from querychat.express import QueryChat
 from querychat.data import titanic
 
-titanic = titanic()
-
 # 1. Provide data source to QueryChat
-qc = QueryChat(titanic, "titanic")
+qc = QueryChat(titanic(), "titanic")
 
 # 2. Add sidebar chat control
 qc.sidebar()

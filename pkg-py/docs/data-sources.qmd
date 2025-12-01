@@ -162,10 +162,8 @@ import duckdb
 import pandas as pd
 from querychat.data import titanic
 
-titanic = titanic()
-
 conn = duckdb.connect("my_database.duckdb")
-conn.register('titanic_df', titanic)
+conn.register('titanic_df', titanic())
 conn.execute("""
     CREATE TABLE titanic AS
     SELECT * FROM titanic_df

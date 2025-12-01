@@ -106,7 +106,9 @@ test_that("execute_query works for both source types", {
   dbWriteTable(conn, "test_table", test_df, overwrite = TRUE)
 
   dbi_source <- DBISource$new(conn, "test_table")
-  result <- dbi_source$execute_query("SELECT * FROM test_table WHERE value > 25")
+  result <- dbi_source$execute_query(
+    "SELECT * FROM test_table WHERE value > 25"
+  )
   expect_s3_class(result, "data.frame")
   expect_equal(nrow(result), 3) # Should return 3 rows (30, 40, 50)
 })

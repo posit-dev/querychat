@@ -687,11 +687,12 @@ normalize_data_source <- function(data_source, table_name) {
   if (inherits(data_source, "DBIConnection")) {
     return(DBISource$new(data_source, table_name))
   }
-  
+
   rlang::abort(
     paste0(
       "`data_source` must be a DataSource, data.frame, or DBIConnection. ",
-      "Got: ", paste(class(data_source), collapse = ", ")
+      "Got: ",
+      paste(class(data_source), collapse = ", ")
     )
   )
 }

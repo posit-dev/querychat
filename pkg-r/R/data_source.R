@@ -150,7 +150,12 @@ DataFrameSource <- R6::R6Class(
 
       # Create DuckDB connection and register the data frame
       private$conn <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
-      duckdb::duckdb_register(private$conn, table_name, df, experimental = FALSE)
+      duckdb::duckdb_register(
+        private$conn,
+        table_name,
+        df,
+        experimental = FALSE
+      )
     },
 
     #' @description Get the database type
@@ -598,9 +603,10 @@ get_system_prompt <- function(
   if (!is_data_source(source)) {
     rlang::abort("`source` must be a DataSource object")
   }
-  
+
   prompt_text <- read_text(
-    prompt_template %||% system.file("prompts", "prompt.md", package = "querychat")
+    prompt_template %||%
+      system.file("prompts", "prompt.md", package = "querychat")
   )
 
   if (!is.null(data_description)) {

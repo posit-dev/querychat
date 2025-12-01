@@ -285,6 +285,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <ul class="collapse">
   <li><a href="#methods" id="toc-methods" class="nav-link" data-scroll-target="#methods">Methods</a>
   <ul class="collapse">
+  <li><a href="#querychat.types.SQLAlchemySource.cleanup" id="toc-querychat.types.SQLAlchemySource.cleanup" class="nav-link" data-scroll-target="#querychat.types.SQLAlchemySource.cleanup">cleanup</a></li>
   <li><a href="#querychat.types.SQLAlchemySource.execute_query" id="toc-querychat.types.SQLAlchemySource.execute_query" class="nav-link" data-scroll-target="#querychat.types.SQLAlchemySource.execute_query">execute_query</a></li>
   <li><a href="#querychat.types.SQLAlchemySource.get_data" id="toc-querychat.types.SQLAlchemySource.get_data" class="nav-link" data-scroll-target="#querychat.types.SQLAlchemySource.get_data">get_data</a></li>
   <li><a href="#querychat.types.SQLAlchemySource.get_db_type" id="toc-querychat.types.SQLAlchemySource.get_db_type" class="nav-link" data-scroll-target="#querychat.types.SQLAlchemySource.get_db_type">get_db_type</a></li>
@@ -316,26 +317,54 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
+<td><a href="#querychat.types.SQLAlchemySource.cleanup">cleanup</a></td>
+<td>Dispose of the SQLAlchemy engine.</td>
+</tr>
+<tr class="even">
 <td><a href="#querychat.types.SQLAlchemySource.execute_query">execute_query</a></td>
 <td>Execute SQL query and return results as DataFrame.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><a href="#querychat.types.SQLAlchemySource.get_data">get_data</a></td>
 <td>Return the unfiltered data as a DataFrame.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><a href="#querychat.types.SQLAlchemySource.get_db_type">get_db_type</a></td>
 <td>Get the database type.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><a href="#querychat.types.SQLAlchemySource.get_schema">get_schema</a></td>
 <td>Generate schema information from database table.</td>
 </tr>
 </tbody>
 </table>
+<section id="querychat.types.SQLAlchemySource.cleanup" class="level3">
+<h3 class="anchored" data-anchor-id="querychat.types.SQLAlchemySource.cleanup">cleanup</h3>
+<div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>types.SQLAlchemySource.cleanup()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Dispose of the SQLAlchemy engine.</p>
+<section id="returns" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns">Returns</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td>None</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
 <section id="querychat.types.SQLAlchemySource.execute_query" class="level3">
 <h3 class="anchored" data-anchor-id="querychat.types.SQLAlchemySource.execute_query">execute_query</h3>
-<div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>types.SQLAlchemySource.execute_query(query)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>types.SQLAlchemySource.execute_query(query)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Execute SQL query and return results as DataFrame.</p>
 <section id="parameters" class="level4 doc-section doc-section-parameters">
 <h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h4>
@@ -358,8 +387,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 </section>
-<section id="returns" class="level4 doc-section doc-section-returns">
-<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns">Returns</h4>
+<section id="returns-1" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-1">Returns</h4>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 8%">
@@ -385,10 +414,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="querychat.types.SQLAlchemySource.get_data" class="level3">
 <h3 class="anchored" data-anchor-id="querychat.types.SQLAlchemySource.get_data">get_data</h3>
-<div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>types.SQLAlchemySource.get_data()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>types.SQLAlchemySource.get_data()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Return the unfiltered data as a DataFrame.</p>
-<section id="returns-1" class="level4 doc-section doc-section-returns">
-<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-1">Returns</h4>
+<section id="returns-2" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-2">Returns</h4>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 8%">
@@ -414,13 +443,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="querychat.types.SQLAlchemySource.get_db_type" class="level3">
 <h3 class="anchored" data-anchor-id="querychat.types.SQLAlchemySource.get_db_type">get_db_type</h3>
-<div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>types.SQLAlchemySource.get_db_type()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>types.SQLAlchemySource.get_db_type()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Get the database type.</p>
 <p>Returns the specific database type (e.g., POSTGRESQL, MYSQL, SQLITE) by inspecting the SQLAlchemy engine. Removes ” SQL” suffix if present.</p>
 </section>
 <section id="querychat.types.SQLAlchemySource.get_schema" class="level3">
 <h3 class="anchored" data-anchor-id="querychat.types.SQLAlchemySource.get_schema">get_schema</h3>
-<div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>types.SQLAlchemySource.get_schema(categorical_threshold)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>types.SQLAlchemySource.get_schema(categorical_threshold)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Generate schema information from database table.</p>
 <p>Returns: String describing the schema</p>
 

@@ -286,6 +286,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#attributes" id="toc-attributes" class="nav-link" data-scroll-target="#attributes">Attributes</a></li>
   <li><a href="#methods" id="toc-methods" class="nav-link" data-scroll-target="#methods">Methods</a>
   <ul class="collapse">
+  <li><a href="#querychat.types.DataSource.cleanup" id="toc-querychat.types.DataSource.cleanup" class="nav-link" data-scroll-target="#querychat.types.DataSource.cleanup">cleanup</a></li>
   <li><a href="#querychat.types.DataSource.execute_query" id="toc-querychat.types.DataSource.execute_query" class="nav-link" data-scroll-target="#querychat.types.DataSource.execute_query">execute_query</a></li>
   <li><a href="#querychat.types.DataSource.get_data" id="toc-querychat.types.DataSource.get_data" class="nav-link" data-scroll-target="#querychat.types.DataSource.get_data">get_data</a></li>
   <li><a href="#querychat.types.DataSource.get_db_type" id="toc-querychat.types.DataSource.get_db_type" class="nav-link" data-scroll-target="#querychat.types.DataSource.get_db_type">get_db_type</a></li>
@@ -335,26 +336,55 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
+<td><a href="#querychat.types.DataSource.cleanup">cleanup</a></td>
+<td>Clean up resources associated with the data source.</td>
+</tr>
+<tr class="even">
 <td><a href="#querychat.types.DataSource.execute_query">execute_query</a></td>
 <td>Execute SQL query and return results as DataFrame.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><a href="#querychat.types.DataSource.get_data">get_data</a></td>
 <td>Return the unfiltered data as a DataFrame.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><a href="#querychat.types.DataSource.get_db_type">get_db_type</a></td>
 <td>Name for the database behind the SQL execution.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><a href="#querychat.types.DataSource.get_schema">get_schema</a></td>
 <td>Return schema information about the table as a string.</td>
 </tr>
 </tbody>
 </table>
+<section id="querychat.types.DataSource.cleanup" class="level3">
+<h3 class="anchored" data-anchor-id="querychat.types.DataSource.cleanup">cleanup</h3>
+<div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>types.DataSource.cleanup()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Clean up resources associated with the data source.</p>
+<p>This method should clean up any connections or resources used by the data source.</p>
+<section id="returns" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns">Returns</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td>None</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
 <section id="querychat.types.DataSource.execute_query" class="level3">
 <h3 class="anchored" data-anchor-id="querychat.types.DataSource.execute_query">execute_query</h3>
-<div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>types.DataSource.execute_query(query)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>types.DataSource.execute_query(query)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Execute SQL query and return results as DataFrame.</p>
 <section id="parameters" class="level4 doc-section doc-section-parameters">
 <h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h4>
@@ -377,8 +407,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 </section>
-<section id="returns" class="level4 doc-section doc-section-returns">
-<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns">Returns</h4>
+<section id="returns-1" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-1">Returns</h4>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 8%">
@@ -404,10 +434,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="querychat.types.DataSource.get_data" class="level3">
 <h3 class="anchored" data-anchor-id="querychat.types.DataSource.get_data">get_data</h3>
-<div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>types.DataSource.get_data()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>types.DataSource.get_data()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Return the unfiltered data as a DataFrame.</p>
-<section id="returns-1" class="level4 doc-section doc-section-returns">
-<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-1">Returns</h4>
+<section id="returns-2" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-2">Returns</h4>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 8%">
@@ -433,12 +463,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="querychat.types.DataSource.get_db_type" class="level3">
 <h3 class="anchored" data-anchor-id="querychat.types.DataSource.get_db_type">get_db_type</h3>
-<div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>types.DataSource.get_db_type()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>types.DataSource.get_db_type()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Name for the database behind the SQL execution.</p>
 </section>
 <section id="querychat.types.DataSource.get_schema" class="level3">
 <h3 class="anchored" data-anchor-id="querychat.types.DataSource.get_schema">get_schema</h3>
-<div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>types.DataSource.get_schema(categorical_threshold)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>types.DataSource.get_schema(categorical_threshold)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Return schema information about the table as a string.</p>
 <section id="parameters-1" class="level4 doc-section doc-section-parameters">
 <h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-1">Parameters</h4>
@@ -461,8 +491,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 </section>
-<section id="returns-2" class="level4 doc-section doc-section-returns">
-<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-2">Returns</h4>
+<section id="returns-3" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-3">Returns</h4>
 <table class="caption-top table">
 <thead>
 <tr class="header">

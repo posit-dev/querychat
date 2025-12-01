@@ -289,6 +289,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#methods" id="toc-methods" class="nav-link" data-scroll-target="#methods">Methods</a>
   <ul class="collapse">
   <li><a href="#querychat.QueryChat.app" id="toc-querychat.QueryChat.app" class="nav-link" data-scroll-target="#querychat.QueryChat.app">app</a></li>
+  <li><a href="#querychat.QueryChat.cleanup" id="toc-querychat.QueryChat.cleanup" class="nav-link" data-scroll-target="#querychat.QueryChat.cleanup">cleanup</a></li>
   <li><a href="#querychat.QueryChat.generate_greeting" id="toc-querychat.QueryChat.generate_greeting" class="nav-link" data-scroll-target="#querychat.QueryChat.generate_greeting">generate_greeting</a></li>
   <li><a href="#querychat.QueryChat.server" id="toc-querychat.QueryChat.server" class="nav-link" data-scroll-target="#querychat.QueryChat.server">server</a></li>
   <li><a href="#querychat.QueryChat.sidebar" id="toc-querychat.QueryChat.sidebar" class="nav-link" data-scroll-target="#querychat.QueryChat.sidebar">sidebar</a></li>
@@ -431,18 +432,22 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>Quickly chat with a dataset.</td>
 </tr>
 <tr class="even">
+<td><a href="#querychat.QueryChat.cleanup">cleanup</a></td>
+<td>Clean up resources associated with the data source.</td>
+</tr>
+<tr class="odd">
 <td><a href="#querychat.QueryChat.generate_greeting">generate_greeting</a></td>
 <td>Generate a welcome greeting for the chat.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><a href="#querychat.QueryChat.server">server</a></td>
 <td>Initialize Shiny server logic.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><a href="#querychat.QueryChat.sidebar">sidebar</a></td>
 <td>Create a sidebar containing the querychat UI.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><a href="#querychat.QueryChat.ui">ui</a></td>
 <td>Create the UI for the querychat component.</td>
 </tr>
@@ -499,9 +504,34 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </table>
 </section>
 </section>
+<section id="querychat.QueryChat.cleanup" class="level3">
+<h3 class="anchored" data-anchor-id="querychat.QueryChat.cleanup">cleanup</h3>
+<div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>QueryChat.cleanup()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Clean up resources associated with the data source.</p>
+<p>Call this method when you are done using the QueryChat object to close database connections and avoid resource leaks.</p>
+<section id="returns-1" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-1">Returns</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td>None</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
 <section id="querychat.QueryChat.generate_greeting" class="level3">
 <h3 class="anchored" data-anchor-id="querychat.QueryChat.generate_greeting">generate_greeting</h3>
-<div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>QueryChat.generate_greeting(echo<span class="op">=</span><span class="st">'none'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>QueryChat.generate_greeting(echo<span class="op">=</span><span class="st">'none'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Generate a welcome greeting for the chat.</p>
 <p>By default, <code>QueryChat()</code> generates a greeting at the start of every new conversation, which is convenient for getting started and development, but also might add unnecessary latency and cost. Use this method to generate a greeting once and save it for reuse.</p>
 <section id="parameters-2" class="level4 doc-section doc-section-parameters">
@@ -525,8 +555,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 </section>
-<section id="returns-1" class="level4 doc-section doc-section-returns">
-<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-1">Returns</h4>
+<section id="returns-2" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-2">Returns</h4>
 <table class="caption-top table">
 <thead>
 <tr class="header">
@@ -547,7 +577,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="querychat.QueryChat.server" class="level3">
 <h3 class="anchored" data-anchor-id="querychat.QueryChat.server">server</h3>
-<div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>QueryChat.server(enable_bookmarking<span class="op">=</span><span class="va">False</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>QueryChat.server(enable_bookmarking<span class="op">=</span><span class="va">False</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Initialize Shiny server logic.</p>
 <p>This method is intended for use in Shiny Code mode, where the user must explicitly call <code>.server()</code> within the Shiny server function. In Shiny Express mode, you can use <code>querychat.express.QueryChat</code> instead of <code>querychat.QueryChat</code>, which calls <code>.server()</code> automatically.</p>
 <section id="parameters-3" class="level4 doc-section doc-section-parameters">
@@ -573,43 +603,43 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="examples-1" class="level4 doc-section doc-section-examples">
 <h4 class="doc-section doc-section-examples anchored" data-anchor-id="examples-1">Examples</h4>
-<div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> shiny <span class="im">import</span> App, render, ui</span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> seaborn <span class="im">import</span> load_dataset</span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat <span class="im">import</span> QueryChat</span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>titanic <span class="op">=</span> load_dataset(<span class="st">"titanic"</span>)</span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(titanic, <span class="st">"titanic"</span>)</span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> app_ui(request):</span>
-<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> ui.page_sidebar(</span>
-<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>        qc.sidebar(),</span>
-<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>        ui.card(</span>
-<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a>            ui.card_header(ui.output_text(<span class="st">"title"</span>)),</span>
-<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>            ui.output_data_frame(<span class="st">"data_table"</span>),</span>
-<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a>        ),</span>
-<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a>        title<span class="op">=</span><span class="st">"Titanic QueryChat App"</span>,</span>
-<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a>        fillable<span class="op">=</span><span class="va">True</span>,</span>
-<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a>    )</span>
-<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> server(<span class="bu">input</span>, output, session):</span>
-<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a>    qc_vals <span class="op">=</span> qc.server(enable_bookmarking<span class="op">=</span><span class="va">True</span>)</span>
-<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a>    <span class="at">@render.data_frame</span></span>
-<span id="cb6-26"><a href="#cb6-26" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> data_table():</span>
-<span id="cb6-27"><a href="#cb6-27" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> qc_vals.df()</span>
-<span id="cb6-28"><a href="#cb6-28" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-29"><a href="#cb6-29" aria-hidden="true" tabindex="-1"></a>    <span class="at">@render.text</span></span>
-<span id="cb6-30"><a href="#cb6-30" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> title():</span>
-<span id="cb6-31"><a href="#cb6-31" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> qc_vals.title() <span class="kw">or</span> <span class="st">"My Data"</span></span>
-<span id="cb6-32"><a href="#cb6-32" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-33"><a href="#cb6-33" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb6-34"><a href="#cb6-34" aria-hidden="true" tabindex="-1"></a>app <span class="op">=</span> App(app_ui, server, bookmark_store<span class="op">=</span><span class="st">"url"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> shiny <span class="im">import</span> App, render, ui</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> seaborn <span class="im">import</span> load_dataset</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat <span class="im">import</span> QueryChat</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>titanic <span class="op">=</span> load_dataset(<span class="st">"titanic"</span>)</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(titanic, <span class="st">"titanic"</span>)</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> app_ui(request):</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> ui.page_sidebar(</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>        qc.sidebar(),</span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>        ui.card(</span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>            ui.card_header(ui.output_text(<span class="st">"title"</span>)),</span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>            ui.output_data_frame(<span class="st">"data_table"</span>),</span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a>        ),</span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>        title<span class="op">=</span><span class="st">"Titanic QueryChat App"</span>,</span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a>        fillable<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> server(<span class="bu">input</span>, output, session):</span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>    qc_vals <span class="op">=</span> qc.server(enable_bookmarking<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a>    <span class="at">@render.data_frame</span></span>
+<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> data_table():</span>
+<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> qc_vals.df()</span>
+<span id="cb7-28"><a href="#cb7-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-29"><a href="#cb7-29" aria-hidden="true" tabindex="-1"></a>    <span class="at">@render.text</span></span>
+<span id="cb7-30"><a href="#cb7-30" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> title():</span>
+<span id="cb7-31"><a href="#cb7-31" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> qc_vals.title() <span class="kw">or</span> <span class="st">"My Data"</span></span>
+<span id="cb7-32"><a href="#cb7-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-33"><a href="#cb7-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-34"><a href="#cb7-34" aria-hidden="true" tabindex="-1"></a>app <span class="op">=</span> App(app_ui, server, bookmark_store<span class="op">=</span><span class="st">"url"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
-<section id="returns-2" class="level4 doc-section doc-section-returns">
-<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-2">Returns</h4>
+<section id="returns-3" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-3">Returns</h4>
 <table class="caption-top table">
 <thead>
 <tr class="header">
@@ -630,7 +660,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="querychat.QueryChat.sidebar" class="level3">
 <h3 class="anchored" data-anchor-id="querychat.QueryChat.sidebar">sidebar</h3>
-<div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>QueryChat.sidebar(width<span class="op">=</span><span class="dv">400</span>, height<span class="op">=</span><span class="st">'100%'</span>, <span class="op">**</span>kwargs)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>QueryChat.sidebar(width<span class="op">=</span><span class="dv">400</span>, height<span class="op">=</span><span class="st">'100%'</span>, <span class="op">**</span>kwargs)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Create a sidebar containing the querychat UI.</p>
 <section id="parameters-4" class="level4 doc-section doc-section-parameters">
 <h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-4">Parameters</h4>
@@ -665,8 +695,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 </section>
-<section id="returns-3" class="level4 doc-section doc-section-returns">
-<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-3">Returns</h4>
+<section id="returns-4" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-4">Returns</h4>
 <table class="caption-top table">
 <thead>
 <tr class="header">
@@ -687,7 +717,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="querychat.QueryChat.ui" class="level3">
 <h3 class="anchored" data-anchor-id="querychat.QueryChat.ui">ui</h3>
-<div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>QueryChat.ui(<span class="op">**</span>kwargs)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>QueryChat.ui(<span class="op">**</span>kwargs)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Create the UI for the querychat component.</p>
 <section id="parameters-5" class="level4 doc-section doc-section-parameters">
 <h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-5">Parameters</h4>
@@ -716,8 +746,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 </section>
-<section id="returns-4" class="level4 doc-section doc-section-returns">
-<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-4">Returns</h4>
+<section id="returns-5" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-5">Returns</h4>
 <table class="caption-top table">
 <thead>
 <tr class="header">

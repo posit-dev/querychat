@@ -16,6 +16,7 @@ Depends:
     R (>= 4.1.0)
 Imports:
     bslib,
+    cli,
     DBI,
     duckdb,
     ellmer (>= 0.3.0),

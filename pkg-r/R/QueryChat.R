@@ -155,7 +155,7 @@ QueryChat <- R6::R6Class(
 
       # Validate table name
       if (!grepl("^[a-zA-Z][a-zA-Z0-9_]*$", table_name)) {
-        rlang::abort(
+        cli::cli_abort(
           "Table name must begin with a letter and contain only letters, numbers, and underscores"
         )
       }
@@ -168,7 +168,7 @@ QueryChat <- R6::R6Class(
       self$greeting <- greeting
 
       if (is.null(greeting)) {
-        rlang::warn(c(
+        cli::cli_warn(c(
           "No greeting provided; the LLM will be invoked at conversation start to generate one.",
           "*" = "For faster startup, lower cost, and determinism, please save a greeting and pass it to QueryChat$new().",
           "i" = "You can generate a greeting with $generate_greeting()."
@@ -196,7 +196,7 @@ QueryChat <- R6::R6Class(
 
       if (cleanup) {
         shiny::onStop(function() {
-          message("Closing data source...")
+          cli::cli_inform("Closing data source...")
           self$cleanup()
         })
       }
@@ -455,7 +455,7 @@ QueryChat <- R6::R6Class(
     #' }
     server = function(session = shiny::getDefaultReactiveDomain()) {
       if (is.null(session)) {
-        rlang::abort(
+        cli::cli_abort(
           "$server() must be called within a Shiny server function."
         )
       }

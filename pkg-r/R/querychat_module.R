@@ -60,7 +60,7 @@ mod_server <- function(id, data_source, greeting, client) {
       greeting
     } else {
       # Generate greeting on the fly if none provided
-      rlang::warn(c(
+      cli::cli_warn(c(
         "No greeting provided; generating one now. This adds latency and cost.",
         "i" = "Consider using $generate_greeting() to create a reusable greeting."
       ))

@@ -7,7 +7,7 @@ lightbox: true
 
 1. Any [narwhals-compatible](https://narwhals-dev.github.io/narwhals/) data frame.
 2. Any [SQLAlchemy](https://www.sqlalchemy.org/) database.
-3. A custom [DataSource](reference/datasource.DataSource.qmd) interface/protocol.
+3. A custom [DataSource](reference/types.DataSource.qmd) interface/protocol.
 
 The sections below describe how to use each type of data source with `querychat`.
 
@@ -176,4 +176,4 @@ Then you can connect to this database using the DuckDB example above (changing t
 
 ## Custom sources
 
-If you have a custom data source that doesn't fit into the above categories, you can implement the [DataSource](reference/datasource.DataSource.qmd) interface/protocol. This requires implementing methods for getting schema information and executing queries.
+If you have a custom data source that doesn't fit into the above categories, you can implement the [DataSource](reference/types.DataSource.qmd) interface/protocol. This requires implementing methods for getting schema information and executing queries.

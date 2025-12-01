@@ -282,8 +282,7 @@ class QueryChatBase:
 
         Returns
         -------
-        :
-            None
+        None
 
         """
         self._data_source.cleanup()

@@ -88,8 +88,8 @@ class DataSource(ABC):
         """
         Clean up resources associated with the data source.
 
-        This method should be called when the data source is no longer needed
-        (to properly close database connections and avoid resource leaks).
+        This method should clean up any connections or resources used by the
+        data source.
 
         Returns
         -------

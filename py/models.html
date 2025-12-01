@@ -263,14 +263,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h3 class="anchored" data-anchor-id="specify-a-model">Specify a model</h3>
 <p>To use a particular model, pass a <code>"{provider}/{model}"</code> string to the <code>client</code> parameter. Under the hood, this gets passed along to <a href="https://posit-dev.github.io/chatlas/reference/ChatAuto.html"><code>chatlas.ChatAuto</code></a></p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat <span class="im">import</span> QueryChat</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> seaborn <span class="im">import</span> load_dataset</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>titanic <span class="op">=</span> load_dataset(<span class="st">"titanic"</span>)</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    titanic,</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    <span class="st">"titanic"</span>,</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    client<span class="op">=</span><span class="st">"anthropic/claude-sonnet-4-5"</span></span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat.data <span class="im">import</span> titanic</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    titanic(),</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">"titanic"</span>,</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    client<span class="op">=</span><span class="st">"anthropic/claude-sonnet-4-5"</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>And, if you’d like to effectively set a new default model, you can use the <code>QUERYCHAT_CLIENT</code> environment variable.</p>
 <pre class="shell"><code>export QUERYCHAT_CLIENT="anthropic/claude-sonnet-4-5"</code></pre>
 <p>Note that it can also be useful to pass a full <code>Chat</code> object to the <code>client</code> parameter for more advanced use cases (e.g., custom <a href="https://posit-dev.github.io/chatlas/get-started/parameters.html">parameters</a>, <a href="https://posit-dev.github.io/chatlas/get-started/tools.html">tools</a>, etc). It can also be useful for getting some <a href="https://posit-dev.github.io/chatlas/get-started/models.html#model-type-hints">helpful autocomplete</a> of available models.</p>

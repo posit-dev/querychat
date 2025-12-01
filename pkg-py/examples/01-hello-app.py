@@ -1,6 +1,6 @@
-from seaborn import load_dataset
 from querychat import QueryChat
+from querychat.data import titanic
 
-titanic = load_dataset("titanic")
+titanic = titanic()
 qc = QueryChat(titanic, "titanic")
 app = qc.app()

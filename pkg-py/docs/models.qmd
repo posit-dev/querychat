@@ -10,8 +10,9 @@ To use a particular model, pass a `"{provider}/{model}"` string to the `client` 
 
 ```python
 from querychat import QueryChat
-from seaborn import load_dataset
-titanic = load_dataset("titanic")
+from querychat.data import titanic
+
+titanic = titanic()
 
 qc = QueryChat(
     titanic,

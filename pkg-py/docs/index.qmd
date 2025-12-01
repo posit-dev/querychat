@@ -40,10 +40,10 @@ The quickest way to start chatting is to call the `.app()` method, which returns
 
 
 ```{.python filename="titanic-app.py"}
-from seaborn import load_dataset
 from querychat import QueryChat
+from querychat.data import titanic
 
-titanic = load_dataset("titanic")
+titanic = titanic()
 qc = QueryChat(titanic, "titanic", client="openai/gpt-4.1")
 app = qc.app()
 ```

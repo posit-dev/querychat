@@ -160,9 +160,9 @@ Or, if you have a pandas DataFrame, you can create the DuckDB database like so:
 ```{.python filename="create-duckdb-from-pandas.py"}
 import duckdb
 import pandas as pd
+from querychat.data import titanic
 
-from seaborn import load_dataset
-titanic = load_dataset("titanic")
+titanic = titanic()
 
 conn = duckdb.connect("my_database.duckdb")
 conn.register('titanic_df', titanic)

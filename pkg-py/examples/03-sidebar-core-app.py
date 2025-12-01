@@ -1,8 +1,8 @@
-from seaborn import load_dataset
 from shiny import App, render, ui
 from querychat import QueryChat
+from querychat.data import titanic
 
-titanic = load_dataset("titanic")
+titanic = titanic()
 
 # 1. Provide data source to QueryChat
 qc = QueryChat(titanic, "titanic")

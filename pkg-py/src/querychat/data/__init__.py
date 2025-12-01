@@ -34,7 +34,7 @@ def titanic() -> pd.DataFrame:
 
     """
     # Get the path to the gzipped CSV file using importlib.resources
-    data_file = files(__package__) / "titanic.csv.gz"
+    data_file = files("querychat.data") / "titanic.csv.gz"
     return pd.read_csv(str(data_file), compression="gzip")
 
 
@@ -61,7 +61,7 @@ def tips() -> pd.DataFrame:
 
     """
     # Get the path to the gzipped CSV file using importlib.resources
-    data_file = files(__package__) / "tips.csv.gz"
+    data_file = files("querychat.data") / "tips.csv.gz"
     return pd.read_csv(str(data_file), compression="gzip")
 
 

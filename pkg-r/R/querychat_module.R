@@ -20,7 +20,13 @@ mod_ui <- function(id, ...) {
 }
 
 # Main module server function
-mod_server <- function(id, data_source, greeting, client, enable_bookmarking = FALSE) {
+mod_server <- function(
+  id,
+  data_source,
+  greeting,
+  client,
+  enable_bookmarking = FALSE
+) {
   shiny::moduleServer(id, function(input, output, session) {
     current_title <- shiny::reactiveVal(NULL, label = "current_title")
     current_query <- shiny::reactiveVal("", label = "current_query")

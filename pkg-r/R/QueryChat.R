@@ -461,7 +461,10 @@ QueryChat <- R6::R6Class(
     #'   output$title <- renderText(qc_vals$title() %||% "No Query")
     #' }
     #' }
-    server = function(enable_bookmarking = FALSE, session = shiny::getDefaultReactiveDomain()) {
+    server = function(
+      enable_bookmarking = FALSE,
+      session = shiny::getDefaultReactiveDomain()
+    ) {
       if (is.null(session)) {
         rlang::abort(
           "$server() must be called within a Shiny server function."

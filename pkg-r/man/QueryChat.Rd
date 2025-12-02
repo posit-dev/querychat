@@ -76,8 +76,6 @@ writeLines(greeting, "mtcars_greeting.md")
 # Basic usage
 qc <- QueryChat$new(mtcars)
 
-qc <- QueryChat$new(mtcars, "mtcars")
-
 # With options
 qc <- QueryChat$new(
   mtcars,
@@ -290,8 +288,6 @@ A new \code{QueryChat} object.
 \preformatted{\dontrun{
 # Basic usage
 qc <- QueryChat$new(mtcars)
-
-qc <- QueryChat$new(mtcars, "mtcars")
 
 # With options
 qc <- QueryChat$new(

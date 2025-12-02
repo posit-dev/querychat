@@ -122,8 +122,6 @@ QueryChat <- R6::R6Class(
     #' # Basic usage
     #' qc <- QueryChat$new(mtcars)
     #'
-    #' qc <- QueryChat$new(mtcars, "mtcars")
-    #'
     #' # With options
     #' qc <- QueryChat$new(
     #'   mtcars,

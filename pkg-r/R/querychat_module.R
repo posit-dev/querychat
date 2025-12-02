@@ -20,10 +20,11 @@ mod_ui <- function(id, ...) {
 }
 
 # Main module server function
-mod_server <- function(id, data_source, greeting, client) {
+mod_server <- function(id, data_source, greeting, client, enable_bookmarking = FALSE) {
   shiny::moduleServer(id, function(input, output, session) {
     current_title <- shiny::reactiveVal(NULL, label = "current_title")
     current_query <- shiny::reactiveVal("", label = "current_query")
+    has_greeted <- shiny::reactiveVal(FALSE, label = "has_greeted")
     filtered_df <- shiny::reactive(label = "filtered_df", {
       execute_query(data_source, query = DBI::SQL(current_query()))
     })
@@ -56,20 +57,26 @@ mod_server <- function(id, data_source, greeting, client) {
     # Prepopulate the chat UI with a welcome message that appears to be from the
     # chat model (but is actually hard-coded). This is just for the user, not for
     # the chat model to see.
-    greeting_content <- if (!is.null(greeting) && any(nzchar(greeting))) {
-      greeting
-    } else {
-      # Generate greeting on the fly if none provided
-      rlang::warn(c(
-        "No greeting provided; generating one now. This adds latency and cost.",
-        "i" = "Consider using $generate_greeting() to create a reusable greeting."
-      ))
-      chat_temp <- client$clone()
-      prompt <- "Please give me a friendly greeting. Include a few sample prompts in a two-level bulleted list."
-      chat_temp$stream_async(prompt)
-    }
+    shiny::observe(label = "greet_on_startup", {
+      if (has_greeted()) {
+        return()
+      }
 
-    shinychat::chat_append("chat", greeting_content)
+      greeting_content <- if (!is.null(greeting) && any(nzchar(greeting))) {
+        greeting
+      } else {
+        # Generate greeting on the fly if none provided
+        rlang::warn(c(
+          "No greeting provided; generating one now. This adds latency and cost.",
+          "i" = "Consider using $generate_greeting() to create a reusable greeting."
+        ))
+        prompt <- "Please give me a friendly greeting. Include a few sample prompts in a two-level bulleted list."
+        chat$stream_async(prompt)
+      }
+
+      shinychat::chat_append("chat", greeting_content)
+      has_greeted(TRUE)
+    })
 
     append_stream_task <- shiny::ExtendedTask$new(
       function(client, user_input) {
@@ -93,6 +100,28 @@ mod_server <- function(id, data_source, greeting, client) {
       current_query(input$chat_update$query)
       current_title(input$chat_update$title)
     })
+
+    if (enable_bookmarking) {
+      shinychat::chat_restore("chat", chat, session = session)
+
+      shiny::onBookmark(function(state) {
+        state$values$querychat_sql <- current_query()
+        state$values$querychat_title <- current_title()
+        state$values$querychat_has_greeted <- has_greeted()
+      })
+
+      shiny::onRestore(function(state) {
+        if (!is.null(state$values$querychat_sql)) {
+          current_query(state$values$querychat_sql)
+        }
+        if (!is.null(state$values$querychat_title)) {
+          current_title(state$values$querychat_title)
+        }
+        if (!is.null(state$values$querychat_has_greeted)) {
+          has_greeted(state$values$querychat_has_greeted)
+        }
+      })
+    }
 
     list(
       client = chat,

@@ -20,7 +20,7 @@
 #' library(querychat)
 #'
 #' # Create a QueryChat object
-#' qc <- QueryChat$new(mtcars, "mtcars")
+#' qc <- QueryChat$new(mtcars)
 #'
 #' # Quick start: run a complete app
 #' qc$app()
@@ -46,18 +46,18 @@
 #' @examples
 #' \dontrun{
 #' # Basic usage with a data frame
-#' qc <- QueryChat$new(mtcars, "mtcars")
+#' qc <- QueryChat$new(mtcars)
 #' app <- qc$app()
 #'
 #' # With a custom greeting
 #' greeting <- "Welcome! Ask me about the mtcars dataset."
-#' qc <- QueryChat$new(mtcars, "mtcars", greeting = greeting)
+#' qc <- QueryChat$new(mtcars, greeting = greeting)
 #'
 #' # With a specific LLM provider
-#' qc <- QueryChat$new(mtcars, "mtcars", client = "anthropic/claude-sonnet-4-5")
+#' qc <- QueryChat$new(mtcars, client = "anthropic/claude-sonnet-4-5")
 #'
 #' # Generate a greeting for reuse
-#' qc <- QueryChat$new(mtcars, "mtcars")
+#' qc <- QueryChat$new(mtcars)
 #' greeting <- qc$generate_greeting(echo = "text")
 #' # Save greeting for next time
 #' writeLines(greeting, "mtcars_greeting.md")
@@ -82,8 +82,9 @@ QueryChat <- R6::R6Class(
     #'   connection).
     #' @param table_name A string specifying the table name to use in SQL queries.
     #'   If `data_source` is a data.frame, this is the name to refer to it by in
-    #'   queries (typically the variable name). If `data_source` is a database
-    #'   connection, this is the name of the table in the database.
+    #'   queries (typically the variable name). If not provided, will be inferred
+    #'   from the variable name for data.frame inputs. For database connections,
+    #'   this parameter is required.
     #' @param ... Additional arguments (currently unused).
     #' @param id Optional module ID for the QueryChat instance. If not provided,
     #'   will be auto-generated from `table_name`. The ID is used to namespace
@@ -119,12 +120,13 @@ QueryChat <- R6::R6Class(
     #' @examples
     #' \dontrun{
     #' # Basic usage
+    #' qc <- QueryChat$new(mtcars)
+    #'
     #' qc <- QueryChat$new(mtcars, "mtcars")
     #'
     #' # With options
     #' qc <- QueryChat$new(
     #'   mtcars,
-    #'   "mtcars",
     #'   greeting = "Welcome to the mtcars explorer!",
     #'   client = "openai/gpt-4o",
     #'   data_description = "Motor Trend car road tests dataset"
@@ -138,7 +140,7 @@ QueryChat <- R6::R6Class(
     #' }
     initialize = function(
       data_source,
-      table_name,
+      table_name = rlang::missing_arg(),
       ...,
       id = NULL,
       greeting = NULL,
@@ -150,6 +152,10 @@ QueryChat <- R6::R6Class(
       cleanup = NA
     ) {
       rlang::check_dots_empty()
+
+      if (rlang::is_missing(table_name) && is.data.frame(data_source)) {
+        table_name <- deparse1(substitute(data_source))
+      }
 
       private$.data_source <- normalize_data_source(data_source, table_name)
 
@@ -225,7 +231,7 @@ QueryChat <- R6::R6Class(
     #' \dontrun{
     #' library(querychat)
     #'
-    #' qc <- QueryChat$new(mtcars, "mtcars")
+    #' qc <- QueryChat$new(mtcars)
     #' qc$app()
     #' }
     #'
@@ -255,7 +261,7 @@ QueryChat <- R6::R6Class(
     #' \dontrun{
     #' library(querychat)
     #'
-    #' qc <- QueryChat$new(mtcars, "mtcars")
+    #' qc <- QueryChat$new(mtcars)
     #' app <- qc$app_obj()
     #' shiny::runApp(app)
     #' }
@@ -386,7 +392,7 @@ QueryChat <- R6::R6Class(
     #'
     #' @examples
     #' \dontrun{
-    #' qc <- QueryChat$new(mtcars, "mtcars")
+    #' qc <- QueryChat$new(mtcars)
     #'
     #' ui <- page_sidebar(
     #'   qc$sidebar(),
@@ -415,7 +421,7 @@ QueryChat <- R6::R6Class(
     #'
     #' @examples
     #' \dontrun{
-    #' qc <- QueryChat$new(mtcars, "mtcars")
+    #' qc <- QueryChat$new(mtcars)
     #'
     #' ui <- fluidPage(
     #'   qc$ui()
@@ -443,7 +449,7 @@ QueryChat <- R6::R6Class(
     #'
     #' @examples
     #' \dontrun{
-    #' qc <- QueryChat$new(mtcars, "mtcars")
+    #' qc <- QueryChat$new(mtcars)
     #'
     #' server <- function(input, output, session) {
     #'   qc_vals <- qc$server()
@@ -484,14 +490,14 @@ QueryChat <- R6::R6Class(
     #' @examples
     #' \dontrun{
     #' # Create QueryChat object
-    #' qc <- QueryChat$new(mtcars, "mtcars")
+    #' qc <- QueryChat$new(mtcars)
     #'
     #' # Generate a greeting and save it
     #' greeting <- qc$generate_greeting()
     #' writeLines(greeting, "mtcars_greeting.md")
     #'
     #' # Later, use the saved greeting
-    #' qc2 <- QueryChat$new(mtcars, "mtcars", greeting = "mtcars_greeting.md")
+    #' qc2 <- QueryChat$new(mtcars, greeting = "mtcars_greeting.md")
     #' }
     generate_greeting = function(echo = c("none", "output")) {
       echo <- match.arg(echo)
@@ -531,7 +537,6 @@ QueryChat <- R6::R6Class(
   )
 )
 
-
 #' QueryChat convenience functions
 #'
 #' Convenience functions for wrapping [QueryChat] creation (i.e., `querychat()`)
@@ -541,8 +546,9 @@ QueryChat <- R6::R6Class(
 #'   connection).
 #' @param table_name A string specifying the table name to use in SQL queries.
 #'   If `data_source` is a data.frame, this is the name to refer to it by in
-#'   queries (typically the variable name). If `data_source` is a database
-#'   connection, this is the name of the table in the database.
+#'   queries (typically the variable name). If not provided, will be inferred
+#'   from the variable name for data.frame inputs. For database connections,
+#'   this parameter is required.
 #' @param ... Additional arguments (currently unused).
 #' @param id Optional module ID for the QueryChat instance. If not provided,
 #'   will be auto-generated from `table_name`. The ID is used to namespace
@@ -581,24 +587,23 @@ QueryChat <- R6::R6Class(
 #' @examples
 #' \dontrun{
 #' # Quick start - chat with mtcars dataset in one line
-#' querychat_app(mtcars, "mtcars")
+#' querychat_app(mtcars)
 #'
 #' # Add options
 #' querychat_app(
 #'   mtcars,
-#'   "mtcars",
 #'   greeting = "Welcome to the mtcars explorer!",
 #'   client = "openai/gpt-4o"
 #' )
 #'
-#' # Chat with a database table
+#' # Chat with a database table (table_name required)
 #' library(DBI)
 #' conn <- dbConnect(RSQLite::SQLite(), ":memory:")
 #' dbWriteTable(conn, "mtcars", mtcars)
 #' querychat_app(conn, "mtcars")
 #'
 #' # Create QueryChat class object
-#' qc <- querychat(mtcars, "mtcars")
+#' qc <- querychat(mtcars)
 #'
 #' # Run the app later
 #' qc$app()
@@ -606,7 +611,7 @@ QueryChat <- R6::R6Class(
 #' }
 querychat <- function(
   data_source,
-  table_name,
+  table_name = rlang::missing_arg(),
   ...,
   id = NULL,
   greeting = NULL,
@@ -617,6 +622,10 @@ querychat <- function(
   prompt_template = NULL,
   cleanup = NA
 ) {
+  if (rlang::is_missing(table_name) && is.data.frame(data_source)) {
+    table_name <- deparse1(substitute(data_source))
+  }
+
   QueryChat$new(
     data_source = data_source,
     table_name = table_name,
@@ -632,7 +641,6 @@ querychat <- function(
   )
 }
 
-
 #' @rdname querychat-convenience
 #' @param bookmark_store The bookmarking storage method. Passed to
 #'   [shiny::enableBookmarking()]. If `"url"` or `"server"`, the chat state
@@ -642,7 +650,7 @@ querychat <- function(
 #' @export
 querychat_app <- function(
   data_source,
-  table_name,
+  table_name = rlang::missing_arg(),
   ...,
   id = NULL,
   greeting = NULL,
@@ -654,6 +662,11 @@ querychat_app <- function(
   cleanup = TRUE,
   bookmark_store = "url"
 ) {
+
+  if (rlang::is_missing(table_name) && is.data.frame(data_source)) {
+    table_name <- deparse1(substitute(data_source))
+  }
+
   qc <- QueryChat$new(
     data_source = data_source,
     table_name = table_name,
@@ -670,7 +683,6 @@ querychat_app <- function(
 
   qc$app(bookmark_store = bookmark_store)
 }
-
 
 normalize_data_source <- function(data_source, table_name) {
   if (is_data_source(data_source)) {

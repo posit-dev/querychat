@@ -12,8 +12,8 @@
 #' ```r
 #' library(querychat)
 #'
-#' # Create a QueryChat object
-#' qc <- QueryChat$new(mtcars, "mtcars")
+#' # Create a QueryChat object (table name inferred from variable)
+#' qc <- QueryChat$new(mtcars)
 #'
 #' # Option 1: Run a complete app with sensible defaults
 #' qc$app()

@@ -25,7 +25,7 @@ as input and provides methods to:
 \if{html}{\out{<div class="sourceCode r">}}\preformatted{library(querychat)
 
 # Create a QueryChat object
-qc <- QueryChat$new(mtcars, "mtcars")
+qc <- QueryChat$new(mtcars)
 
 # Quick start: run a complete app
 qc$app()
@@ -51,18 +51,18 @@ shinyApp(ui, server)
 \examples{
 \dontrun{
 # Basic usage with a data frame
-qc <- QueryChat$new(mtcars, "mtcars")
+qc <- QueryChat$new(mtcars)
 app <- qc$app()
 
 # With a custom greeting
 greeting <- "Welcome! Ask me about the mtcars dataset."
-qc <- QueryChat$new(mtcars, "mtcars", greeting = greeting)
+qc <- QueryChat$new(mtcars, greeting = greeting)
 
 # With a specific LLM provider
-qc <- QueryChat$new(mtcars, "mtcars", client = "anthropic/claude-sonnet-4-5")
+qc <- QueryChat$new(mtcars, client = "anthropic/claude-sonnet-4-5")
 
 # Generate a greeting for reuse
-qc <- QueryChat$new(mtcars, "mtcars")
+qc <- QueryChat$new(mtcars)
 greeting <- qc$generate_greeting(echo = "text")
 # Save greeting for next time
 writeLines(greeting, "mtcars_greeting.md")
@@ -74,12 +74,13 @@ writeLines(greeting, "mtcars_greeting.md")
 
 \dontrun{
 # Basic usage
+qc <- QueryChat$new(mtcars)
+
 qc <- QueryChat$new(mtcars, "mtcars")
 
 # With options
 qc <- QueryChat$new(
   mtcars,
-  "mtcars",
   greeting = "Welcome to the mtcars explorer!",
   client = "openai/gpt-4o",
   data_description = "Motor Trend car road tests dataset"
@@ -99,7 +100,7 @@ qc <- QueryChat$new(conn, "mtcars")
 \dontrun{
 library(querychat)
 
-qc <- QueryChat$new(mtcars, "mtcars")
+qc <- QueryChat$new(mtcars)
 qc$app()
 }
 
@@ -111,7 +112,7 @@ qc$app()
 \dontrun{
 library(querychat)
 
-qc <- QueryChat$new(mtcars, "mtcars")
+qc <- QueryChat$new(mtcars)
 app <- qc$app_obj()
 shiny::runApp(app)
 }
@@ -122,7 +123,7 @@ shiny::runApp(app)
 ## ------------------------------------------------
 
 \dontrun{
-qc <- QueryChat$new(mtcars, "mtcars")
+qc <- QueryChat$new(mtcars)
 
 ui <- page_sidebar(
   qc$sidebar(),
@@ -135,7 +136,7 @@ ui <- page_sidebar(
 ## ------------------------------------------------
 
 \dontrun{
-qc <- QueryChat$new(mtcars, "mtcars")
+qc <- QueryChat$new(mtcars)
 
 ui <- fluidPage(
   qc$ui()
@@ -147,7 +148,7 @@ ui <- fluidPage(
 ## ------------------------------------------------
 
 \dontrun{
-qc <- QueryChat$new(mtcars, "mtcars")
+qc <- QueryChat$new(mtcars)
 
 server <- function(input, output, session) {
   qc_vals <- qc$server()
@@ -164,14 +165,14 @@ server <- function(input, output, session) {
 
 \dontrun{
 # Create QueryChat object
-qc <- QueryChat$new(mtcars, "mtcars")
+qc <- QueryChat$new(mtcars)
 
 # Generate a greeting and save it
 greeting <- qc$generate_greeting()
 writeLines(greeting, "mtcars_greeting.md")
 
 # Later, use the saved greeting
-qc2 <- QueryChat$new(mtcars, "mtcars", greeting = "mtcars_greeting.md")
+qc2 <- QueryChat$new(mtcars, greeting = "mtcars_greeting.md")
 }
 }
 \section{Public fields}{
@@ -214,7 +215,7 @@ Create a new QueryChat object.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{QueryChat$new(
   data_source,
-  table_name,
+  table_name = rlang::missing_arg(),
   ...,
   id = NULL,
   greeting = NULL,
@@ -235,8 +236,9 @@ connection).}
 
 \item{\code{table_name}}{A string specifying the table name to use in SQL queries.
 If \code{data_source} is a data.frame, this is the name to refer to it by in
-queries (typically the variable name). If \code{data_source} is a database
-connection, this is the name of the table in the database.}
+queries (typically the variable name). If not provided, will be inferred
+from the variable name for data.frame inputs. For database connections,
+this parameter is required.}
 
 \item{\code{...}}{Additional arguments (currently unused).}
 
@@ -287,12 +289,13 @@ A new \code{QueryChat} object.
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{\dontrun{
 # Basic usage
+qc <- QueryChat$new(mtcars)
+
 qc <- QueryChat$new(mtcars, "mtcars")
 
 # With options
 qc <- QueryChat$new(
   mtcars,
-  "mtcars",
   greeting = "Welcome to the mtcars explorer!",
   client = "openai/gpt-4o",
   data_description = "Motor Trend car road tests dataset"
@@ -349,7 +352,7 @@ Invisibly returns a list of session-specific values:
 \preformatted{\dontrun{
 library(querychat)
 
-qc <- QueryChat$new(mtcars, "mtcars")
+qc <- QueryChat$new(mtcars)
 qc$app()
 }
 
@@ -395,7 +398,7 @@ A Shiny app object that can be run with \code{shiny::runApp()}.
 \preformatted{\dontrun{
 library(querychat)
 
-qc <- QueryChat$new(mtcars, "mtcars")
+qc <- QueryChat$new(mtcars)
 app <- qc$app_obj()
 shiny::runApp(app)
 }
@@ -435,7 +438,7 @@ A \code{\link[bslib:sidebar]{bslib::sidebar()}} UI component.
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{\dontrun{
-qc <- QueryChat$new(mtcars, "mtcars")
+qc <- QueryChat$new(mtcars)
 
 ui <- page_sidebar(
   qc$sidebar(),
@@ -473,7 +476,7 @@ A UI component containing the chat interface.
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{\dontrun{
-qc <- QueryChat$new(mtcars, "mtcars")
+qc <- QueryChat$new(mtcars)
 
 ui <- fluidPage(
   qc$ui()
@@ -518,7 +521,7 @@ client with the following elements:
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{\dontrun{
-qc <- QueryChat$new(mtcars, "mtcars")
+qc <- QueryChat$new(mtcars)
 
 server <- function(input, output, session) {
   qc_vals <- qc$server()
@@ -563,14 +566,14 @@ The greeting string in Markdown format.
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{\dontrun{
 # Create QueryChat object
-qc <- QueryChat$new(mtcars, "mtcars")
+qc <- QueryChat$new(mtcars)
 
 # Generate a greeting and save it
 greeting <- qc$generate_greeting()
 writeLines(greeting, "mtcars_greeting.md")
 
 # Later, use the saved greeting
-qc2 <- QueryChat$new(mtcars, "mtcars", greeting = "mtcars_greeting.md")
+qc2 <- QueryChat$new(mtcars, greeting = "mtcars_greeting.md")
 }
 }
 \if{html}{\out{</div>}}

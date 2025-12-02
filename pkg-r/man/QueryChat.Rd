@@ -150,7 +150,7 @@ ui <- fluidPage(
 qc <- QueryChat$new(mtcars, "mtcars")
 
 server <- function(input, output, session) {
-  qc_vals <- qc$server()
+  qc_vals <- qc$server(enable_bookmarking = TRUE)
 
   output$data <- renderDataTable(qc_vals$df())
   output$query <- renderText(qc_vals$sql())
@@ -495,12 +495,22 @@ This method must be called within a Shiny server function. It sets up
 the reactive logic for the chat interface and returns session-specific
 reactive values.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{QueryChat$server(session = shiny::getDefaultReactiveDomain())}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{QueryChat$server(
+  enable_bookmarking = FALSE,
+  session = shiny::getDefaultReactiveDomain()
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
+\item{\code{enable_bookmarking}}{Whether to enable bookmarking for the chat
+state. Default is \code{FALSE}. When enabled, the chat state (including
+current query, title, and chat history) will be saved and restored
+with Shiny bookmarks. This requires that the Shiny app has bookmarking
+enabled via \code{shiny::enableBookmarking()} or the \code{enableBookmarking}
+parameter of \code{shiny::shinyApp()}.}
+
 \item{\code{session}}{The Shiny session object.}
 }
 \if{html}{\out{</div>}}
@@ -521,7 +531,7 @@ client with the following elements:
 qc <- QueryChat$new(mtcars, "mtcars")
 
 server <- function(input, output, session) {
-  qc_vals <- qc$server()
+  qc_vals <- qc$server(enable_bookmarking = TRUE)
 
   output$data <- renderDataTable(qc_vals$df())
   output$query <- renderText(qc_vals$sql())

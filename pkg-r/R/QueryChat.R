@@ -660,7 +660,6 @@ querychat_app <- function(
   cleanup = TRUE,
   bookmark_store = "url"
 ) {
-
   if (rlang::is_missing(table_name) && is.data.frame(data_source)) {
     table_name <- deparse1(substitute(data_source))
   }

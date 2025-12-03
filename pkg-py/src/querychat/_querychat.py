@@ -287,8 +287,23 @@ class QueryChatBase:
                     with st.chat_message(message["role"]):
                         st.markdown(message["content"], unsafe_allow_html=True)
 
+                        # Display tool results if present
+                        if "tool_results" in message:
+                            for tool_result in message["tool_results"]:
+                                display_info = (
+                                    tool_result.extra.get("display")
+                                    if tool_result.extra
+                                    else None
+                                )
+                                if display_info and hasattr(display_info, "markdown"):
+                                    st.markdown(
+                                        display_info.markdown, unsafe_allow_html=True
+                                    )
+
                         # If this is an assistant message, extract and show clickable suggestions
                         if message["role"] == "assistant":
+                            import re
+
                             # Find all suggestions wrapped in <span class="suggestion">
                             suggestions = []
                             pattern = r'<span class="suggestion">([^<]+)</span>'
@@ -335,25 +350,68 @@ class QueryChatBase:
 
                 # Get streaming response from LLM
                 full_response = ""
+                tool_results = []
                 with chat_container:
                     with st.chat_message("user"):
                         st.markdown(prompt)
 
                     with st.chat_message("assistant"):
                         message_placeholder = st.empty()
+                        tool_placeholder = st.container()
+
                         # Stream the response with cursor
-                        for chunk in st.session_state.client.stream(
-                            prompt, echo="none"
-                        ):
-                            full_response += str(chunk)
-                            # Show cursor while streaming
-                            message_placeholder.markdown(full_response + "▌")
+                        from chatlas import ContentToolResult
+
+                        try:
+                            for chunk in st.session_state.client.stream(
+                                prompt, echo="none", content="all"
+                            ):
+                                # Check if this chunk is a tool result
+                                if isinstance(chunk, ContentToolResult):
+                                    # Store tool result for display
+                                    tool_results.append(chunk)
+
+                                    # Display tool result inline
+                                    with tool_placeholder:
+                                        # Get display metadata if available
+                                        display_info = (
+                                            chunk.extra.get("display")
+                                            if chunk.extra
+                                            else None
+                                        )
+
+                                        if display_info and hasattr(
+                                            display_info, "markdown"
+                                        ):
+                                            # Display the markdown content (includes SQL and table)
+                                            st.markdown(
+                                                display_info.markdown,
+                                                unsafe_allow_html=True,
+                                            )
+                                        else:
+                                            # Fallback: just show the chunk value
+                                            st.markdown(str(chunk))
+                                else:
+                                    # Regular text chunk
+                                    full_response += str(chunk)
+                                    # Show cursor while streaming
+                                    message_placeholder.markdown(full_response + "▌")
+                        except Exception:
+                            # Fallback to non-streaming if streaming fails
+                            full_response = str(
+                                st.session_state.client.chat(prompt, echo="none")
+                            )
+
                         # Remove cursor when done
                         message_placeholder.markdown(full_response)
 
-                # Add assistant response to chat history
+                # Add assistant response to chat history (including tool results)
                 st.session_state.chat_history.append(
-                    {"role": "assistant", "content": full_response}
+                    {
+                        "role": "assistant",
+                        "content": full_response,
+                        "tool_results": tool_results,
+                    }
                 )
 
                 # Force rerun to update the data display

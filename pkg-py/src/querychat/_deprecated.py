@@ -77,7 +77,7 @@ def system_prompt(
     *,
     data_description: Optional[str | Path] = None,
     extra_instructions: Optional[str | Path] = None,
-    categorical_threshold: int = 10,
+    categorical_threshold: int = 20,
     prompt_template: Optional[str | Path] = None,
 ) -> str:
     """

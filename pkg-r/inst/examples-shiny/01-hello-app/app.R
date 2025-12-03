@@ -2,7 +2,7 @@ library(querychat)
 library(palmerpenguins)
 
 # Create a QueryChat object and generate a complete app with $app()
-qc <- QueryChat$new(penguins, "penguins")
+qc <- QueryChat$new(penguins)
 qc$app()
 
 # That's it! The app includes:

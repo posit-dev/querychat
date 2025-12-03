@@ -18,7 +18,7 @@ DataSource <- R6::R6Class(
     #'
     #' @return A string describing the database type (e.g., "DuckDB", "SQLite")
     get_db_type = function() {
-      rlang::abort(
+      cli::cli_abort(
         "get_db_type() must be implemented by subclass",
         class = "not_implemented_error"
       )
@@ -31,7 +31,7 @@ DataSource <- R6::R6Class(
     #'   column to be considered categorical
     #' @return A string containing schema information formatted for LLM prompts
     get_schema = function(categorical_threshold = 20) {
-      rlang::abort(
+      cli::cli_abort(
         "get_schema() must be implemented by subclass",
         class = "not_implemented_error"
       )
@@ -43,7 +43,7 @@ DataSource <- R6::R6Class(
     #' @param query SQL query string to execute
     #' @return A data frame containing query results
     execute_query = function(query) {
-      rlang::abort(
+      cli::cli_abort(
         "execute_query() must be implemented by subclass",
         class = "not_implemented_error"
       )
@@ -55,7 +55,7 @@ DataSource <- R6::R6Class(
     #' @param query SQL query string to test
     #' @return A data frame containing one row of results (or empty if no matches)
     test_query = function(query) {
-      rlang::abort(
+      cli::cli_abort(
         "test_query() must be implemented by subclass",
         class = "not_implemented_error"
       )
@@ -66,7 +66,7 @@ DataSource <- R6::R6Class(
     #'
     #' @return A data frame containing all data from the table
     get_data = function() {
-      rlang::abort(
+      cli::cli_abort(
         "get_data() must be implemented by subclass",
         class = "not_implemented_error"
       )
@@ -77,7 +77,7 @@ DataSource <- R6::R6Class(
     #'
     #' @return NULL (invisibly)
     cleanup = function() {
-      rlang::abort(
+      cli::cli_abort(
         "cleanup() must be implemented by subclass",
         class = "not_implemented_error"
       )
@@ -132,17 +132,16 @@ DataFrameSource <- R6::R6Class(
     #' }
     initialize = function(df, table_name) {
       if (!is.data.frame(df)) {
-        rlang::abort("`df` must be a data frame")
+        cli::cli_abort("`df` must be a data frame")
       }
 
       # Validate table name
       is_table_name_ok <- is.character(table_name) &&
         length(table_name) == 1 &&
         grepl("^[a-zA-Z][a-zA-Z0-9_]*$", table_name, perl = TRUE)
-
       if (!is_table_name_ok) {
-        rlang::abort(
-          "`table_name` must be a string containing a valid table name"
+        cli::cli_abort(
+          "`table_name` argument must be a string containing alphanumeric characters and underscores, starting with a letter."
         )
       }
 
@@ -274,7 +273,7 @@ DBISource <- R6::R6Class(
     #' }
     initialize = function(conn, table_name) {
       if (!inherits(conn, "DBIConnection")) {
-        rlang::abort("`conn` must be a DBI connection")
+        cli::cli_abort("`conn` must be a DBI connection")
       }
 
       # Validate table_name type
@@ -283,18 +282,16 @@ DBISource <- R6::R6Class(
       } else if (is.character(table_name) && length(table_name) == 1) {
         # Character string - keep as is
       } else {
-        rlang::abort(
+        cli::cli_abort(
           "`table_name` must be a single character string or a DBI::Id object"
         )
       }
 
       # Check if table exists
       if (!DBI::dbExistsTable(conn, table_name)) {
-        rlang::abort(paste0(
-          "Table ",
-          DBI::dbQuoteIdentifier(conn, table_name),
-          " not found in database. If you're using a table in a catalog or schema, ",
-          "pass a DBI::Id object to `table_name`"
+        cli::cli_abort(c(
+          "Table {DBI::dbQuoteIdentifier(x, table_name)} not found in database.",
+          "i" = "If you're using a table in a catalog or schema, pass a DBI::Id object to `table_name`"
         ))
       }
 
@@ -601,7 +598,7 @@ get_system_prompt <- function(
   prompt_template = NULL
 ) {
   if (!is_data_source(source)) {
-    rlang::abort("`source` must be a DataSource object")
+    cli::cli_abort("`source` must be a DataSource object")
   }
 
   prompt_text <- read_text(

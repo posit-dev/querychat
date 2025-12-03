@@ -27,7 +27,7 @@ The fastest way to get started is with the built-in app:
 ```r
 library(querychat)
 
-qc <- QueryChat$new(mtcars, "mtcars")
+qc <- QueryChat$new(mtcars)
 qc$app()
 ```
 
@@ -43,7 +43,7 @@ library(bslib)
 library(querychat)
 
 # 1. Create a QueryChat instance with your data
-qc <- QueryChat$new(mtcars, "mtcars")
+qc <- QueryChat$new(mtcars)
 
 ui <- page_sidebar(
   # 2. Use qc$sidebar() in a bslib::page_sidebar.
@@ -139,14 +139,14 @@ This gives the user a few ideas to explore on their own.
 You can use the `$generate_greeting()` method to help create a greeting:
 
 ```r
-qc <- QueryChat$new(mtcars, "mtcars")
+qc <- QueryChat$new(mtcars)
 greeting <- qc$generate_greeting(echo = "text")
 
 # Save it for reuse
 writeLines(greeting, "greeting.md")
 
 # Then use it in your app
-qc <- QueryChat$new(mtcars, "mtcars", greeting = "greeting.md")
+qc <- QueryChat$new(mtcars, greeting = "greeting.md")
 ```
 
 Alternatively, you can completely suppress the greeting by passing `greeting = ""`.
@@ -200,7 +200,6 @@ which you can then pass via:
 ```r
 qc <- QueryChat$new(
   mtcars,
-  "mtcars",
   data_description = "data_description.md"
 )
 ```
@@ -214,7 +213,6 @@ You can add additional instructions of your own to the end of the system prompt,
 ```r
 qc <- QueryChat$new(
   mtcars,
-  "mtcars",
   extra_instructions = c(
     "You're speaking to a British audience--please use appropriate spelling conventions.",
     "Use lots of emojis! 😃 Emojis everywhere, 🌍 emojis forever. ♾️",
@@ -236,7 +234,6 @@ library(ellmer)
 
 qc <- QueryChat$new(
   mtcars,
-  "mtcars",
   client = ellmer::chat_anthropic(model = "claude-3-7-sonnet-latest")
 )
 ```
@@ -249,7 +246,6 @@ Alternatively, you can use a provider-model string, which will be passed to `ell
 ```r
 qc <- QueryChat$new(
   mtcars,
-  "mtcars",
   client = "anthropic/claude-3-7-sonnet-latest"
 )
 ```

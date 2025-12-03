@@ -12,11 +12,9 @@ For full visibility into the full system prompt that Querychat generates for the
 
 ```python
 from querychat import QueryChat
-from seaborn import load_dataset
+from querychat.data import titanic
 
-titanic = load_dataset("titanic")
-
-qc = QueryChat(titanic, "titanic")
+qc = QueryChat(titanic(), "titanic")
 print(qc.system_prompt)
 ```
 

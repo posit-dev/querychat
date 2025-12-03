@@ -7,7 +7,7 @@
 \usage{
 querychat(
   data_source,
-  table_name,
+  table_name = rlang::missing_arg(),
   ...,
   id = NULL,
   greeting = NULL,
@@ -21,7 +21,7 @@ querychat(
 
 querychat_app(
   data_source,
-  table_name,
+  table_name = rlang::missing_arg(),
   ...,
   id = NULL,
   greeting = NULL,
@@ -40,8 +40,9 @@ connection).}
 
 \item{table_name}{A string specifying the table name to use in SQL queries.
 If \code{data_source} is a data.frame, this is the name to refer to it by in
-queries (typically the variable name). If \code{data_source} is a database
-connection, this is the name of the table in the database.}
+queries (typically the variable name). If not provided, will be inferred
+from the variable name for data.frame inputs. For database connections,
+this parameter is required.}
 
 \item{...}{Additional arguments (currently unused).}
 
@@ -99,24 +100,23 @@ and app launching (i.e., \code{querychat_app()}).
 \examples{
 \dontrun{
 # Quick start - chat with mtcars dataset in one line
-querychat_app(mtcars, "mtcars")
+querychat_app(mtcars)
 
 # Add options
 querychat_app(
   mtcars,
-  "mtcars",
   greeting = "Welcome to the mtcars explorer!",
   client = "openai/gpt-4o"
 )
 
-# Chat with a database table
+# Chat with a database table (table_name required)
 library(DBI)
 conn <- dbConnect(RSQLite::SQLite(), ":memory:")
 dbWriteTable(conn, "mtcars", mtcars)
 querychat_app(conn, "mtcars")
 
 # Create QueryChat class object
-qc <- querychat(mtcars, "mtcars")
+qc <- querychat(mtcars)
 
 # Run the app later
 qc$app()

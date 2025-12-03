@@ -5,11 +5,17 @@ title: Greet users
 
 ### Provide a greeting
 
-When the querychat UI first appears, you will usually want it to greet the user with some basic instructions. By default, these instructions are auto-generated every time a user arrives; this is slow, wasteful, and unpredictable. Instead, you should create a greeting file and pass it when creating your `QueryChat` object:
+When the querychat UI first appears, you will usually want it to greet the user with some basic instructions. By default, these instructions are auto-generated every time a user arrives. In a production setting with multiple users/visitors, this is slow, wasteful, and non-deterministic. Instead, you should create a greeting file and pass it when creating your `QueryChat` object:
 
-```python
+```{.python filename="titanic-app.py"}
+from querychat import QueryChat
+from querychat.data import titanic
 from pathlib import Path
-qc = QueryChat(titanic, "titanic", greeting=Path("greeting.md"))
+
+app_dir = Path(__file__).parent
+
+qc = QueryChat(titanic(), "titanic", greeting=app_dir / "greeting.md")
+app = qc.app()
 ```
 
 You can provide suggestions to the user by using the `<span class="suggestion"> </span>` tag:
@@ -33,13 +39,13 @@ You can see this behavior in our [`querychat template`](https://shiny.posit.co/p
 
 If you need help coming up with a greeting, you can use the `.generate_greeting()` method:
 
-```python
+```{.python filename="penguins-greeting.py"}
 from palmerpenguins import load_penguins
 from querychat import QueryChat
+from pathlib import Path
 
 # Create QueryChat object with your dataset
-penguins = load_penguins()
-qc = QueryChat(penguins, "penguins")
+qc = QueryChat(load_penguins(), "penguins")
 
 # Generate a greeting (this calls the LLM)
 greeting_text = qc.generate_greeting()
@@ -50,9 +56,21 @@ greeting_text = qc.generate_greeting()
 # Save it for reuse
 with open("penguins_greeting.md", "w") as f:
     f.write(greeting_text)
-
-# Then use the saved greeting in your app
-qc = QueryChat(penguins, "penguins", greeting=Path("penguins_greeting.md"))
 ```
 
 This approach generates a greeting once and saves it for reuse, avoiding the latency and cost of generating it for every user.
+
+```{.python filename="penguins-app.py"}
+from palmerpenguins import load_penguins
+from querychat import QueryChat
+from pathlib import Path
+
+# Then use the saved greeting in your app
+app_dir = Path(__file__).parent
+qc = QueryChat(
+  load_penguins(), 
+  "penguins", 
+  greeting=app_dir / "penguins_greeting.md",
+)
+app = qc.app()
+```

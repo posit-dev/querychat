@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * The current SQL query and title can now be programmatically set through the `.sql()` and `.title()` methods of `QueryChat()`. (#98, #101)
 
+* New `querychat.data` module provides sample datasets (`titanic()` and `tips()`) to make it easier to get started without external dependencies. (#118)
+
 * Added a `.generate_greeting()` method to help you create a greeting message for your querychat bot. (#87)
 
 * Added `querychat_reset_dashboard()` tool for easily resetting the dashboard filters when asked by the user. (#81)

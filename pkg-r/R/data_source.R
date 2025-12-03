@@ -585,11 +585,6 @@ assemble_system_prompt <- function(
     cli::cli_abort("`source` must be a DataSource object")
   }
 
-  check_string(data_description, allow_null = TRUE)
-  check_string(extra_instructions, allow_null = TRUE)
-  check_number_whole(categorical_threshold, min = 1)
-  check_string(prompt_template, allow_null = TRUE)
-
   prompt_text <- read_text(
     prompt_template %||%
       system.file("prompts", "prompt.md", package = "querychat")

@@ -620,8 +620,8 @@ assemble_system_prompt <- function(
 
 read_text <- function(x) {
   if (file.exists(x)) {
-    x <- readLines(x, warn = FALSE)
+    read_utf8(x)
+  } else {
+    paste(x, collapse = "\n")
   }
-
-  paste(x, collapse = "\n")
 }

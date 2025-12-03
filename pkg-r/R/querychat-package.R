@@ -68,3 +68,12 @@
 #' @importFrom rlang %||%
 ## usethis namespace: end
 NULL
+
+# @staticimports pkg:staticimports
+#   read_utf8
+
+release_bullets <- function() {
+  c(
+    "Run `staticimports::import()` to update static imports"
+  )
+}

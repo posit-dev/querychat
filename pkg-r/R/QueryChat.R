@@ -167,7 +167,7 @@ QueryChat <- R6::R6Class(
       self$id <- id %||% table_name
 
       if (!is.null(greeting) && file.exists(greeting)) {
-        greeting <- paste(readLines(greeting), collapse = "\n")
+        greeting <- read_utf8(greeting)
       }
       self$greeting <- greeting
 

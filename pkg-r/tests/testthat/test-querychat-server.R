@@ -20,23 +20,22 @@ test_that("database source query functionality", {
   dbWriteTable(conn, "users", test_data, overwrite = TRUE)
 
   # Create database source
-  db_source <- as_querychat_data_source(conn, "users")
+  db_source <- DBISource$new(conn, "users")
 
   # Test that we can execute queries
-  result <- execute_query(db_source, "SELECT * FROM users WHERE age > 30")
+  result <- db_source$execute_query("SELECT * FROM users WHERE age > 30")
   expect_s3_class(result, "data.frame")
   expect_equal(nrow(result), 2) # Charlie and Eve
   expect_equal(result$name, c("Charlie", "Eve"))
 
   # Test that we can get all data
-  all_data <- execute_query(db_source, NULL)
+  all_data <- db_source$execute_query(NULL)
   expect_s3_class(all_data, "data.frame")
   expect_equal(nrow(all_data), 5)
   expect_equal(ncol(all_data), 3)
 
   # Test ordering works
-  ordered_result <- execute_query(
-    db_source,
+  ordered_result <- db_source$execute_query(
     "SELECT * FROM users ORDER BY age DESC"
   )
   expect_equal(ordered_result$name[1], "Charlie") # Oldest first

@@ -1,282 +1,395 @@
-#' Create a data source for querychat
+#' Data Source Base Class
 #'
-#' An entrypoint for developers to create custom data sources for use with
-#' querychat. Most users shouldn't use this function directly; instead, they
-#' should pass their data to `QueryChat$new()`.
+#' @description
+#' An abstract R6 class defining the interface that custom QueryChat data
+#' sources must implement. This class should not be instantiated directly;
+#' instead, use one of its concrete implementations like [DataFrameSource] or
+#' [DBISource].
 #'
-#' @param x A data frame or DBI connection
-#' @param table_name The name to use for the table in the data source. Can be:
-#'   - A character string (e.g., "table_name")
-#'   - Or, for tables contained within catalogs or schemas, a [DBI::Id()] object (e.g., `DBI::Id(schema = "schema_name", table = "table_name")`)
-#' @return A querychat_data_source object
+#' @export
+DataSource <- R6::R6Class(
+  "DataSource",
+  public = list(
+    #' @field table_name Name of the table to be used in SQL queries
+    table_name = NULL,
+
+    #' @description
+    #' Get the database type
+    #'
+    #' @return A string describing the database type (e.g., "DuckDB", "SQLite")
+    get_db_type = function() {
+      cli::cli_abort(
+        "get_db_type() must be implemented by subclass",
+        class = "not_implemented_error"
+      )
+    },
+
+    #' @description
+    #' Get schema information about the table
+    #'
+    #' @param categorical_threshold Maximum number of unique values for a text
+    #'   column to be considered categorical
+    #' @return A string containing schema information formatted for LLM prompts
+    get_schema = function(categorical_threshold = 20) {
+      cli::cli_abort(
+        "get_schema() must be implemented by subclass",
+        class = "not_implemented_error"
+      )
+    },
+
+    #' @description
+    #' Execute a SQL query and return results
+    #'
+    #' @param query SQL query string to execute
+    #' @return A data frame containing query results
+    execute_query = function(query) {
+      cli::cli_abort(
+        "execute_query() must be implemented by subclass",
+        class = "not_implemented_error"
+      )
+    },
+
+    #' @description
+    #' Test a SQL query by fetching only one row
+    #'
+    #' @param query SQL query string to test
+    #' @return A data frame containing one row of results (or empty if no matches)
+    test_query = function(query) {
+      cli::cli_abort(
+        "test_query() must be implemented by subclass",
+        class = "not_implemented_error"
+      )
+    },
+
+    #' @description
+    #' Get the unfiltered data as a data frame
+    #'
+    #' @return A data frame containing all data from the table
+    get_data = function() {
+      cli::cli_abort(
+        "get_data() must be implemented by subclass",
+        class = "not_implemented_error"
+      )
+    },
+
+    #' @description
+    #' Clean up resources (close connections, etc.)
+    #'
+    #' @return NULL (invisibly)
+    cleanup = function() {
+      cli::cli_abort(
+        "cleanup() must be implemented by subclass",
+        class = "not_implemented_error"
+      )
+    }
+  )
+)
+
+
+#' Data Frame Source
+#'
+#' @description
+#' A DataSource implementation that wraps a data frame using DuckDB for SQL
+#' query execution.
+#'
+#' @details
+#' This class creates an in-memory DuckDB connection and registers the provided
+#' data frame as a table. All SQL queries are executed against this DuckDB table.
+#'
+#' @export
+#' @examples
+#' \dontrun{
+#' # Create a data frame source
+#' df_source <- DataFrameSource$new(mtcars, "mtcars")
+#'
+#' # Get database type
+#' df_source$get_db_type()  # Returns "DuckDB"
+#'
+#' # Execute a query
+#' result <- df_source$execute_query("SELECT * FROM mtcars WHERE mpg > 25")
+#'
+#' # Clean up when done
+#' df_source$cleanup()
+#' }
+DataFrameSource <- R6::R6Class(
+  "DataFrameSource",
+  inherit = DataSource,
+  private = list(
+    conn = NULL
+  ),
+  public = list(
+    #' @description
+    #' Create a new DataFrameSource
+    #'
+    #' @param df A data frame.
+    #' @param table_name Name to use for the table in SQL queries. Must be a
+    #'   valid table name (start with letter, contain only letters, numbers,
+    #'   and underscores)
+    #' @return A new DataFrameSource object
+    #' @examples
+    #' \dontrun{
+    #' source <- DataFrameSource$new(iris, "iris")
+    #' }
+    initialize = function(df, table_name) {
+      if (!is.data.frame(df)) {
+        cli::cli_abort("`df` must be a data frame")
+      }
+
+      # Validate table name
+      is_table_name_ok <- is.character(table_name) &&
+        length(table_name) == 1 &&
+        grepl("^[a-zA-Z][a-zA-Z0-9_]*$", table_name, perl = TRUE)
+      if (!is_table_name_ok) {
+        cli::cli_abort(
+          "`table_name` argument must be a string containing alphanumeric characters and underscores, starting with a letter."
+        )
+      }
+
+      self$table_name <- table_name
+
+      # Create DuckDB connection and register the data frame
+      private$conn <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
+      duckdb::duckdb_register(
+        private$conn,
+        table_name,
+        df,
+        experimental = FALSE
+      )
+    },
+
+    #' @description Get the database type
+    #' @return The string "DuckDB"
+    get_db_type = function() {
+      "DuckDB"
+    },
+
+    #' @description
+    #' Get schema information for the data frame
+    #'
+    #' @param categorical_threshold Maximum number of unique values for a text
+    #'   column to be considered categorical (default: 20)
+    #' @return A string describing the schema
+    get_schema = function(categorical_threshold = 20) {
+      get_schema_impl(private$conn, self$table_name, categorical_threshold)
+    },
+
+    #' @description
+    #' Execute a SQL query
+    #'
+    #' @param query SQL query string. If NULL or empty, returns all data
+    #' @return A data frame with query results
+    execute_query = function(query) {
+      if (is.null(query) || query == "") {
+        query <- paste0(
+          "SELECT * FROM ",
+          DBI::dbQuoteIdentifier(private$conn, self$table_name)
+        )
+      }
+      DBI::dbGetQuery(private$conn, query)
+    },
+
+    #' @description
+    #' Test a SQL query by fetching only one row
+    #'
+    #' @param query SQL query string
+    #' @return A data frame with one row of results
+    test_query = function(query) {
+      rs <- DBI::dbSendQuery(private$conn, query)
+      df <- DBI::dbFetch(rs, n = 1)
+      DBI::dbClearResult(rs)
+      df
+    },
+
+    #' @description
+    #' Get all data from the table
+    #'
+    #' @return A data frame containing all data
+    get_data = function() {
+      self$execute_query(NULL)
+    },
+
+    #' @description
+    #' Close the DuckDB connection
+    #'
+    #' @return NULL (invisibly)
+    cleanup = function() {
+      if (!is.null(private$conn) && DBI::dbIsValid(private$conn)) {
+        DBI::dbDisconnect(private$conn)
+      }
+      invisible(NULL)
+    }
+  )
+)
+
+
+#' DBI Source
+#'
+#' @description
+#' A DataSource implementation for DBI database connections (SQLite, PostgreSQL,
+#' MySQL, etc.).
+#'
+#' @details
+#' This class wraps a DBI connection and provides SQL query execution against
+#' a specified table in the database.
+#'
+#' @export
+#' @examples
+#' \dontrun{
+#' # Connect to a database
+#' conn <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
+#' DBI::dbWriteTable(conn, "mtcars", mtcars)
+#'
+#' # Create a DBI source
+#' db_source <- DBISource$new(conn, "mtcars")
+#'
+#' # Get database type
+#' db_source$get_db_type()  # Returns "SQLite"
+#'
+#' # Execute a query
+#' result <- db_source$execute_query("SELECT * FROM mtcars WHERE mpg > 25")
+#'
+#' # Note: cleanup() will disconnect the connection
+#' # If you want to keep the connection open, don't call cleanup()
+#' }
+DBISource <- R6::R6Class(
+  "DBISource",
+  inherit = DataSource,
+  private = list(
+    conn = NULL
+  ),
+  public = list(
+    #' @description
+    #' Create a new DBISource
+    #'
+    #' @param conn A DBI connection object
+    #' @param table_name Name of the table in the database. Can be a character
+    #'   string or a [DBI::Id()] object for tables in catalogs/schemas
+    #' @return A new DBISource object
+    #' @examples
+    #' \dontrun{
+    #' conn <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
+    #' DBI::dbWriteTable(conn, "iris", iris)
+    #' source <- DBISource$new(conn, "iris")
+    #' }
+    initialize = function(conn, table_name) {
+      if (!inherits(conn, "DBIConnection")) {
+        cli::cli_abort("`conn` must be a DBI connection")
+      }
+
+      # Validate table_name type
+      if (inherits(table_name, "Id")) {
+        # DBI::Id object - keep as is
+      } else if (is.character(table_name) && length(table_name) == 1) {
+        # Character string - keep as is
+      } else {
+        cli::cli_abort(
+          "`table_name` must be a single character string or a DBI::Id object"
+        )
+      }
+
+      # Check if table exists
+      if (!DBI::dbExistsTable(conn, table_name)) {
+        cli::cli_abort(c(
+          "Table {DBI::dbQuoteIdentifier(x, table_name)} not found in database.",
+          "i" = "If you're using a table in a catalog or schema, pass a DBI::Id object to `table_name`"
+        ))
+      }
+
+      private$conn <- conn
+      self$table_name <- table_name
+    },
+
+    #' @description Get the database type
+    #' @return A string identifying the database type
+    get_db_type = function() {
+      # Special handling for known database types
+      if (inherits(private$conn, "duckdb_connection")) {
+        return("DuckDB")
+      }
+      if (inherits(private$conn, "SQLiteConnection")) {
+        return("SQLite")
+      }
+
+      # Default to 'POSIX' if dbms name not found
+      conn_info <- DBI::dbGetInfo(private$conn)
+      dbms_name <- purrr::pluck(conn_info, "dbms.name", .default = "POSIX")
+
+      # Remove ' SQL', if exists (SQL is already in the prompt)
+      gsub(" SQL", "", dbms_name)
+    },
+
+    #' @description
+    #' Get schema information for the database table
+    #'
+    #' @param categorical_threshold Maximum number of unique values for a text
+    #'   column to be considered categorical (default: 20)
+    #' @return A string describing the schema
+    get_schema = function(categorical_threshold = 20) {
+      get_schema_impl(private$conn, self$table_name, categorical_threshold)
+    },
+
+    #' @description
+    #' Execute a SQL query
+    #'
+    #' @param query SQL query string. If NULL or empty, returns all data
+    #' @return A data frame with query results
+    execute_query = function(query) {
+      if (is.null(query) || query == "") {
+        query <- paste0(
+          "SELECT * FROM ",
+          DBI::dbQuoteIdentifier(private$conn, self$table_name)
+        )
+      }
+      DBI::dbGetQuery(private$conn, query)
+    },
+
+    #' @description
+    #' Test a SQL query by fetching only one row
+    #'
+    #' @param query SQL query string
+    #' @return A data frame with one row of results
+    test_query = function(query) {
+      rs <- DBI::dbSendQuery(private$conn, query)
+      df <- DBI::dbFetch(rs, n = 1)
+      DBI::dbClearResult(rs)
+      df
+    },
+
+    #' @description
+    #' Get all data from the table
+    #'
+    #' @return A data frame containing all data
+    get_data = function() {
+      self$execute_query(NULL)
+    },
+
+    #' @description
+    #' Disconnect from the database
+    #'
+    #' @return NULL (invisibly)
+    cleanup = function() {
+      if (!is.null(private$conn) && DBI::dbIsValid(private$conn)) {
+        DBI::dbDisconnect(private$conn)
+      }
+      invisible(NULL)
+    }
+  )
+)
+
+
+# Helper Functions -------------------------------------------------------------
+
+#' Check if object is a DataSource
+#'
+#' @param x Object to check
+#' @return TRUE if x is a DataSource, FALSE otherwise
 #' @keywords internal
-#' @export
-as_querychat_data_source <- function(x, table_name, ...) {
-  UseMethod("as_querychat_data_source")
-}
-
-#' @export
-as_querychat_data_source.data.frame <- function(x, table_name, ...) {
-  is_table_name_ok <- is.character(table_name) &&
-    length(table_name) == 1 &&
-    grepl("^[a-zA-Z][a-zA-Z0-9_]*$", table_name, perl = TRUE)
-  if (!is_table_name_ok) {
-    cli::cli_abort(
-      "`table_name` argument must be a string containing alphanumeric characters and underscores, starting with a letter."
-    )
-  }
-
-  # Create duckdb connection
-  conn <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
-  duckdb::duckdb_register(conn, table_name, x, experimental = FALSE)
-
-  structure(
-    list(conn = conn, table_name = table_name),
-    class = c("data_frame_source", "dbi_source", "querychat_data_source")
-  )
-}
-
-#' @export
-as_querychat_data_source.DBIConnection <- function(x, table_name, ...) {
-  # Handle different types of table_name inputs
-  if (inherits(table_name, "Id")) {
-    # DBI::Id object - keep as is
-  } else if (is.character(table_name) && length(table_name) == 1) {
-    # Character string - keep as is
-  } else {
-    # Invalid input
-    cli::cli_abort(
-      "`table_name` must be a single character string or a DBI::Id object"
-    )
-  }
-
-  # Check if table exists
-  if (!DBI::dbExistsTable(x, table_name)) {
-    cli::cli_abort(c(
-      "Table {DBI::dbQuoteIdentifier(x, table_name)} not found in database.",
-      "i" = "If you're using a table in a catalog or schema, pass a DBI::Id object to `table_name`"
-    ))
-  }
-
-  structure(
-    list(conn = x, table_name = table_name),
-    class = c("dbi_source", "querychat_data_source")
-  )
-}
-
 is_data_source <- function(x) {
-  inherits(x, "querychat_data_source")
-}
-
-#' Execute an SQL query on a data source
-#'
-#' An entrypoint for developers to create custom data source objects for use
-#' with querychat. Most users shouldn't use this function directly; instead,
-#' they call the `$sql()` method on the [QueryChat] object to run queries.
-#'
-#' @param source A querychat_data_source object
-#' @param query SQL query string
-#' @param ... Additional arguments passed to methods
-#' @return Result of the query as a data frame
-#' @keywords internal
-#' @export
-execute_query <- function(source, query, ...) {
-  UseMethod("execute_query")
-}
-
-#' @export
-execute_query.dbi_source <- function(source, query, ...) {
-  if (is.null(query) || query == "") {
-    # For a null or empty query, default to returning the whole table (ie SELECT *)
-    query <- paste0(
-      "SELECT * FROM ",
-      DBI::dbQuoteIdentifier(source$conn, source$table_name)
-    )
-  }
-  # Execute the query directly
-  DBI::dbGetQuery(source$conn, query)
-}
-
-#' Test a SQL query on a data source.
-#'
-#' An entrypoint for developers to create custom data sources for use with
-#' querychat. Most users shouldn't use this function directly; instead, they
-#' should call the `$sql()` method on the [QueryChat] object to run queries.
-#'
-#' @param source A querychat_data_source object
-#' @param query SQL query string
-#' @param ... Additional arguments passed to methods
-#' @return Result of the query, limited to one row of data.
-#' @keywords internal
-#' @export
-test_query <- function(source, query, ...) {
-  UseMethod("test_query")
-}
-
-#' @export
-test_query.dbi_source <- function(source, query, ...) {
-  rs <- DBI::dbSendQuery(source$conn, query)
-  df <- DBI::dbFetch(rs, n = 1)
-  DBI::dbClearResult(rs)
-  df
+  inherits(x, "DataSource")
 }
 
 
-#' Get type information for a data source
-#'
-#' An entrypoint for developers to create custom data sources for use with
-#' querychat. Most users shouldn't use this function directly; instead, they
-#' should call the `$set_system_prompt()` method on the [QueryChat] object.
-#'
-#' @param source A querychat_data_source object
-#' @param ... Additional arguments passed to methods
-#' @return A character string containing the type information
-#' @keywords internal
-#' @export
-get_db_type <- function(source, ...) {
-  UseMethod("get_db_type")
-}
-
-#' @export
-get_db_type.default <- function(source, ...) {
-  "standard"
-}
-
-#' @export
-get_db_type.data_frame_source <- function(source, ...) {
-  # Local dataframes are always duckdb!
-  "DuckDB"
-}
-
-#' @export
-get_db_type.dbi_source <- function(source, ...) {
-  conn <- source$conn
-
-  # Special handling for known database types
-  if (inherits(conn, "duckdb_connection")) {
-    return("DuckDB")
-  }
-  if (inherits(conn, "SQLiteConnection")) {
-    return("SQLite")
-  }
-
-  # default to 'POSIX' if dbms name not found
-  conn_info <- DBI::dbGetInfo(conn)
-  dbms_name <- purrr::pluck(conn_info, "dbms.name", .default = "POSIX")
-
-  # remove ' SQL', if exists (SQL is already in the prompt)
-  gsub(" SQL", "", dbms_name)
-}
-
-
-#' Create a system prompt for the data source
-#'
-#' An entrypoint for developers to create custom data sources for use with
-#' querychat. Most users shouldn't use this function directly; instead, they
-#' should call the `$set_system_prompt()` method on the [QueryChat] object.
-#'
-#' @param source A querychat_data_source object
-#' @param data_description Optional description of the data
-#' @param extra_instructions Optional additional instructions
-#' @param categorical_threshold For text columns, the maximum number of unique
-#' values to consider as a categorical variable
-#' @param ... Additional arguments passed to methods
-#' @return A string with the system prompt
-#' @keywords internal
-#' @export
-create_system_prompt <- function(
-  source,
-  data_description = NULL,
-  extra_instructions = NULL,
-  categorical_threshold = 20,
-  ...
-) {
-  UseMethod("create_system_prompt")
-}
-
-#' @export
-create_system_prompt.querychat_data_source <- function(
-  source,
-  data_description = NULL,
-  extra_instructions = NULL,
-  categorical_threshold = 20,
-  ...
-) {
-  if (!is.null(data_description)) {
-    data_description <- paste(data_description, collapse = "\n")
-  }
-  if (!is.null(extra_instructions)) {
-    extra_instructions <- paste(extra_instructions, collapse = "\n")
-  }
-
-  # Read the prompt file
-  prompt_path <- system.file("prompts", "prompt.md", package = "querychat")
-  prompt_content <- readLines(prompt_path, warn = FALSE)
-  prompt_text <- paste(prompt_content, collapse = "\n")
-
-  # Get schema for the data source
-  schema <- get_schema(source, categorical_threshold = categorical_threshold)
-
-  # Examine the data source and get the type for the prompt
-  db_type <- get_db_type(source)
-
-  whisker::whisker.render(
-    prompt_text,
-    list(
-      schema = schema,
-      data_description = data_description,
-      extra_instructions = extra_instructions,
-      db_type = db_type,
-      is_duck_db = identical(db_type, "DuckDB")
-    )
-  )
-}
-
-#' Clean up a data source (close connections, etc.)
-#'
-#' An entrypoint for developers to create custom data sources for use with
-#' querychat. Most users shouldn't use this function directly; instead, they
-#' should call the `$cleanup()` method on the [QueryChat] object.
-#'
-#' @param source A querychat_data_source object
-#' @param ... Additional arguments passed to methods
-#' @return NULL (invisibly)
-#' @keywords internal
-#' @export
-cleanup_source <- function(source, ...) {
-  UseMethod("cleanup_source")
-}
-
-#' @export
-cleanup_source.dbi_source <- function(source, ...) {
-  if (!is.null(source$conn) && DBI::dbIsValid(source$conn)) {
-    DBI::dbDisconnect(source$conn)
-  }
-  invisible(NULL)
-}
-
-
-#' Get schema for a data source
-#'
-#' An entrypoint for developers to create custom data sources for use with
-#' querychat. Most users shouldn't use this function directly; instead, they
-#' should call the `$set_system_prompt()` method on the [QueryChat] object.
-#'
-#' @param source A querychat_data_source object
-#' @param categorical_threshold For text columns, the maximum number of unique values to consider as a categorical variable
-#' @param ... Additional arguments passed to methods
-#' @return A character string describing the schema
-#' @keywords internal
-#' @export
-get_schema <- function(source, categorical_threshold = 20, ...) {
-  UseMethod("get_schema")
-}
-
-#' @export
-get_schema.dbi_source <- function(source, categorical_threshold = 20, ...) {
-  conn <- source$conn
-  table_name <- source$table_name
-
+get_schema_impl <- function(conn, table_name, categorical_threshold = 20) {
   # Get column information
   columns <- DBI::dbListFields(conn, table_name)
 
@@ -448,7 +561,7 @@ get_schema.dbi_source <- function(source, categorical_threshold = 20, ...) {
 }
 
 
-# Helper function to map R classes to SQL types
+# Map R classes to SQL types
 r_class_to_sql_type <- function(r_class) {
   switch(
     r_class,
@@ -463,4 +576,52 @@ r_class_to_sql_type <- function(r_class) {
     "factor" = "TEXT",
     "TEXT" # default
   )
+}
+
+
+assemble_system_prompt <- function(
+  source,
+  data_description = NULL,
+  extra_instructions = NULL,
+  categorical_threshold = 20,
+  prompt_template = NULL
+) {
+  if (!is_data_source(source)) {
+    cli::cli_abort("`source` must be a DataSource object")
+  }
+
+  prompt_text <- read_text(
+    prompt_template %||%
+      system.file("prompts", "prompt.md", package = "querychat")
+  )
+
+  if (!is.null(data_description)) {
+    data_description <- read_text(data_description)
+  }
+  if (!is.null(extra_instructions)) {
+    extra_instructions <- read_text(extra_instructions)
+  }
+
+  schema <- source$get_schema(categorical_threshold = categorical_threshold)
+  db_type <- source$get_db_type()
+
+  whisker::whisker.render(
+    prompt_text,
+    list(
+      schema = schema,
+      data_description = data_description,
+      extra_instructions = extra_instructions,
+      db_type = db_type,
+      is_duck_db = identical(db_type, "DuckDB")
+    )
+  )
+}
+
+
+read_text <- function(x) {
+  if (file.exists(x)) {
+    x <- readLines(x, warn = FALSE)
+  }
+
+  paste(x, collapse = "\n")
 }

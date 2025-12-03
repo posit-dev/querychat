@@ -49,7 +49,7 @@ class QueryChatBase:
 
         self.greeting = greeting.read_text() if isinstance(greeting, Path) else greeting
 
-        prompt = get_system_prompt(
+        prompt = assemble_system_prompt(
             self._data_source,
             data_description=data_description,
             extra_instructions=extra_instructions,
@@ -682,7 +682,7 @@ def as_querychat_client(client: str | chatlas.Chat | None) -> chatlas.Chat:
     return chatlas.ChatAuto(provider_model=client)
 
 
-def get_system_prompt(
+def assemble_system_prompt(
     data_source: DataSource,
     *,
     data_description: Optional[str | Path] = None,

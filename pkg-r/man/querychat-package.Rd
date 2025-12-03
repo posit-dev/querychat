@@ -52,7 +52,7 @@ shinyApp(ui, server)
 
 \itemize{
 \item \link{QueryChat}: The main R6 class for creating chat interfaces
-\item \code{\link[=as_querychat_data_source]{as_querychat_data_source()}}: (Advanced) Create custom data source objects
+\item \link{DataSource}, \link{DataFrameSource}, \link{DBISource}: R6 classes for data sources
 }
 }
 

@@ -12,8 +12,8 @@ test_that("execute_query handles SQL with inline comments", {
   )
 
   # Create data source
-  df_source <- as_querychat_data_source(test_df, table_name = "test_table")
-  withr::defer(cleanup_source(df_source))
+  df_source <- DataFrameSource$new(test_df, "test_table")
+  withr::defer(df_source$cleanup())
 
   # Test with inline comments
   inline_comment_query <- "
@@ -22,7 +22,7 @@ test_that("execute_query handles SQL with inline comments", {
   WHERE value > 25 -- Filter for higher values
   "
 
-  result <- execute_query(df_source, inline_comment_query)
+  result <- df_source$execute_query(inline_comment_query)
   expect_s3_class(result, "data.frame")
   expect_equal(nrow(result), 3) # Should return 3 rows (30, 40, 50)
   expect_equal(ncol(result), 2)
@@ -36,7 +36,7 @@ test_that("execute_query handles SQL with inline comments", {
   WHERE value > 25 -- Only higher values
   "
 
-  result <- execute_query(df_source, multiple_comments_query)
+  result <- df_source$execute_query(multiple_comments_query)
   expect_s3_class(result, "data.frame")
   expect_equal(nrow(result), 3)
   expect_equal(ncol(result), 2)
@@ -51,8 +51,8 @@ test_that("execute_query handles SQL with multiline comments", {
   )
 
   # Create data source
-  df_source <- as_querychat_data_source(test_df, table_name = "test_table")
-  withr::defer(cleanup_source(df_source))
+  df_source <- DataFrameSource$new(test_df, "test_table")
+  withr::defer(df_source$cleanup())
 
   # Test with multiline comments
   multiline_comment_query <- "
@@ -65,7 +65,7 @@ test_that("execute_query handles SQL with multiline comments", {
   WHERE value > 25
   "
 
-  result <- execute_query(df_source, multiline_comment_query)
+  result <- df_source$execute_query(multiline_comment_query)
   expect_s3_class(result, "data.frame")
   expect_equal(nrow(result), 3)
   expect_equal(ncol(result), 2)
@@ -80,7 +80,7 @@ test_that("execute_query handles SQL with multiline comments", {
   WHERE value /* another comment */ > 25
   "
 
-  result <- execute_query(df_source, embedded_multiline_query)
+  result <- df_source$execute_query(embedded_multiline_query)
   expect_s3_class(result, "data.frame")
   expect_equal(nrow(result), 3)
   expect_equal(ncol(result), 2)
@@ -95,8 +95,8 @@ test_that("execute_query handles SQL with trailing semicolons", {
   )
 
   # Create data source
-  df_source <- as_querychat_data_source(test_df, table_name = "test_table")
-  withr::defer(cleanup_source(df_source))
+  df_source <- DataFrameSource$new(test_df, "test_table")
+  withr::defer(df_source$cleanup())
 
   # Test with trailing semicolon
   query_with_semicolon <- "
@@ -105,7 +105,7 @@ test_that("execute_query handles SQL with trailing semicolons", {
   WHERE value > 25;
   "
 
-  result <- execute_query(df_source, query_with_semicolon)
+  result <- df_source$execute_query(query_with_semicolon)
   expect_s3_class(result, "data.frame")
   expect_equal(nrow(result), 3)
   expect_equal(ncol(result), 2)
@@ -117,7 +117,7 @@ test_that("execute_query handles SQL with trailing semicolons", {
   WHERE value > 25;;;;
   "
 
-  result <- execute_query(df_source, query_with_multiple_semicolons)
+  result <- df_source$execute_query(query_with_multiple_semicolons)
   expect_s3_class(result, "data.frame")
   expect_equal(nrow(result), 3)
   expect_equal(ncol(result), 2)
@@ -132,8 +132,8 @@ test_that("execute_query handles SQL with mixed comments and semicolons", {
   )
 
   # Create data source
-  df_source <- as_querychat_data_source(test_df, table_name = "test_table")
-  withr::defer(cleanup_source(df_source))
+  df_source <- DataFrameSource$new(test_df, "test_table")
+  withr::defer(df_source$cleanup())
 
   # Test with a mix of comment styles and semicolons
   complex_query <- "
@@ -150,7 +150,7 @@ test_that("execute_query handles SQL with mixed comments and semicolons", {
     value > 25; -- End of query
   "
 
-  result <- execute_query(df_source, complex_query)
+  result <- df_source$execute_query(complex_query)
   expect_s3_class(result, "data.frame")
   expect_equal(nrow(result), 3)
   expect_equal(ncol(result), 2)
@@ -165,7 +165,7 @@ test_that("execute_query handles SQL with mixed comments and semicolons", {
   WHERE value > 25 -- WHERE id = 'value; DROP TABLE test;'
   "
 
-  result <- execute_query(df_source, tricky_comment_query)
+  result <- df_source$execute_query(tricky_comment_query)
   expect_s3_class(result, "data.frame")
   expect_equal(nrow(result), 3)
   expect_equal(ncol(result), 2)
@@ -180,8 +180,8 @@ test_that("execute_query handles SQL with unusual whitespace patterns", {
   )
 
   # Create data source
-  df_source <- as_querychat_data_source(test_df, table_name = "test_table")
-  withr::defer(cleanup_source(df_source))
+  df_source <- DataFrameSource$new(test_df, "test_table")
+  withr::defer(df_source$cleanup())
 
   # Test with unusual whitespace patterns (which LLMs might generate)
   unusual_whitespace_query <- "
@@ -194,7 +194,7 @@ test_that("execute_query handles SQL with unusual whitespace patterns", {
 
   "
 
-  result <- execute_query(df_source, unusual_whitespace_query)
+  result <- df_source$execute_query(unusual_whitespace_query)
   expect_s3_class(result, "data.frame")
   expect_equal(nrow(result), 3)
   expect_equal(ncol(result), 2)

@@ -511,8 +511,7 @@ QueryChat <- R6::R6Class(
       chat <- private$.client$clone()
       chat$set_turns(list())
 
-      prompt <- "Please give me a friendly greeting. Include a few sample prompts in a two-level bulleted list."
-      as.character(chat$chat(prompt, echo = echo))
+      as.character(chat$chat(GREETING_PROMPT, echo = echo))
     },
 
     #' @description

@@ -71,13 +71,11 @@ mod_server <- function(
       greeting_content <- if (!is.null(greeting) && any(nzchar(greeting))) {
         greeting
       } else {
-        # Generate greeting on the fly if none provided
         rlang::warn(c(
-          "No greeting provided; generating one now. This adds latency and cost.",
-          "i" = "Consider using $generate_greeting() to create a reusable greeting."
+          "No greeting provided to `QueryChat()`. Using the LLM `client` to generate one now.",
+          "i" = "For faster startup, lower cost, and determinism, consider providing a greeting to `QueryChat()` and `$generate_greeting()` to generate one beforehand."
         ))
-        prompt <- "Please give me a friendly greeting. Include a few sample prompts in a two-level bulleted list."
-        chat$stream_async(prompt)
+        chat$stream_async(GREETING_PROMPT)
       }
 
       shinychat::chat_append("chat", greeting_content)
@@ -137,3 +135,7 @@ mod_server <- function(
     )
   })
 }
+
+
+
+GREETING_PROMPT <- "Please give me a friendly greeting. Include a few sample prompts in a two-level bulleted list."

@@ -138,7 +138,7 @@ QueryChat <- R6::R6Class(
     #' }
     initialize = function(
       data_source,
-      table_name = rlang::missing_arg(),
+      table_name = missing_arg(),
       ...,
       id = NULL,
       greeting = NULL,
@@ -149,7 +149,7 @@ QueryChat <- R6::R6Class(
       prompt_template = NULL,
       cleanup = NA
     ) {
-      rlang::check_dots_empty()
+      check_dots_empty()
 
       # Validate arguments
       check_string(id, allow_null = TRUE)
@@ -160,7 +160,7 @@ QueryChat <- R6::R6Class(
       check_string(prompt_template, allow_null = TRUE)
       check_bool(cleanup, allow_na = TRUE)
 
-      if (rlang::is_missing(table_name) && is.data.frame(data_source)) {
+      if (is_missing(table_name) && is.data.frame(data_source)) {
         table_name <- deparse1(substitute(data_source))
       }
 
@@ -262,9 +262,9 @@ QueryChat <- R6::R6Class(
     #' }
     #'
     app_obj = function(..., bookmark_store = "url") {
-      rlang::check_installed("DT")
-      rlang::check_installed("bsicons")
-      rlang::check_dots_empty()
+      check_installed("DT")
+      check_installed("bsicons")
+      check_dots_empty()
 
       table_name <- private$.data_source$table_name
 
@@ -620,7 +620,7 @@ QueryChat <- R6::R6Class(
 #' }
 querychat <- function(
   data_source,
-  table_name = rlang::missing_arg(),
+  table_name = missing_arg(),
   ...,
   id = NULL,
   greeting = NULL,
@@ -631,7 +631,7 @@ querychat <- function(
   prompt_template = NULL,
   cleanup = NA
 ) {
-  if (rlang::is_missing(table_name) && is.data.frame(data_source)) {
+  if (is_missing(table_name) && is.data.frame(data_source)) {
     table_name <- deparse1(substitute(data_source))
   }
 
@@ -659,7 +659,7 @@ querychat <- function(
 #' @export
 querychat_app <- function(
   data_source,
-  table_name = rlang::missing_arg(),
+  table_name = missing_arg(),
   ...,
   id = NULL,
   greeting = NULL,
@@ -671,7 +671,7 @@ querychat_app <- function(
   cleanup = TRUE,
   bookmark_store = "url"
 ) {
-  if (rlang::is_missing(table_name) && is.data.frame(data_source)) {
+  if (is_missing(table_name) && is.data.frame(data_source)) {
     table_name <- deparse1(substitute(data_source))
   }
 

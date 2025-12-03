@@ -65,11 +65,6 @@
 #' @importFrom lifecycle deprecated
 #' @importFrom R6 R6Class
 #' @importFrom bslib sidebar
-#' @importFrom rlang %||%
-#' @importFrom rlang is_string is_null is_character is_logical is_na is_missing
-#' @importFrom rlang is_symbol is_call is_environment is_function is_closure
-#' @importFrom rlang is_formula caller_arg caller_env abort is_vector is_list
-#' @importFrom rlang ffi_standalone_check_number_1.0.7 ffi_standalone_is_bool_1.0.7
-#' @importFrom rlang env_get_list
+#' @import rlang
 ## usethis namespace: end
 NULL

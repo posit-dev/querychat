@@ -114,7 +114,7 @@ querychat_tool_result <- function(
   title = NULL,
   action = "update"
 ) {
-  action <- rlang::arg_match(action, c("update", "query", "reset"))
+  action <- arg_match(action, c("update", "query", "reset"))
 
   if (action == "reset") {
     query <- ""
@@ -134,7 +134,7 @@ querychat_tool_result <- function(
     error = function(err) err
   )
 
-  is_error <- rlang::is_condition(res)
+  is_error <- is_condition(res)
 
   output <- ""
   if (!is_error && action == "query") {

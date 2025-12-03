@@ -25,13 +25,13 @@ as_querychat_client <- function(client = NULL) {
     return(ellmer::chat_openai())
   }
 
-  if (rlang::is_function(client)) {
+  if (is_function(client)) {
     # `client` as a function was the first interface we supported and expected
     # `system_prompt` as an argument. This avoids breaking existing code.
     client <- client(system_prompt = NULL)
   }
 
-  if (rlang::is_string(client)) {
+  if (is_string(client)) {
     client <- ellmer::chat(client)
   }
 

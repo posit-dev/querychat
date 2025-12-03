@@ -18,10 +18,10 @@ check_sql_table_name <- function(
   x,
   ...,
   allow_null = FALSE,
-  arg = rlang::caller_arg(x),
-  call = rlang::caller_env()
+  arg = caller_arg(x),
+  call = caller_env()
 ) {
-  rlang::check_dots_empty()
+  check_dots_empty()
 
   # Check if NULL is allowed
   if (allow_null && is.null(x)) {

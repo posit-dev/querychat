@@ -389,13 +389,6 @@ is_data_source <- function(x) {
 }
 
 
-#' Get schema implementation (shared by DataFrameSource and DBISource)
-#'
-#' @param conn DBI connection
-#' @param table_name Table name
-#' @param categorical_threshold Threshold for categorical variables
-#' @return Schema string
-#' @keywords internal
 get_schema_impl <- function(conn, table_name, categorical_threshold = 20) {
   # Get column information
   columns <- DBI::dbListFields(conn, table_name)
@@ -568,11 +561,7 @@ get_schema_impl <- function(conn, table_name, categorical_threshold = 20) {
 }
 
 
-#' Map R classes to SQL types
-#'
-#' @param r_class R class name
-#' @return SQL type name
-#' @keywords internal
+# Map R classes to SQL types
 r_class_to_sql_type <- function(r_class) {
   switch(
     r_class,

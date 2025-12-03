@@ -32,7 +32,7 @@ mod_server <- function(
     current_query <- shiny::reactiveVal("", label = "current_query")
     has_greeted <- shiny::reactiveVal(FALSE, label = "has_greeted")
     filtered_df <- shiny::reactive(label = "filtered_df", {
-      execute_query(data_source, query = DBI::SQL(current_query()))
+      data_source$execute_query(query = DBI::SQL(current_query()))
     })
 
     append_output <- function(...) {

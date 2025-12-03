@@ -108,6 +108,37 @@ tool_query <- function(data_source) {
   )
 }
 
+resolve_tool_open_state <- function(action, is_error) {
+  # If there's an error, always show collapsed
+  if (is_error) {
+    return(FALSE)
+  }
+
+  # Get the tool details setting
+  setting <- querychat_tool_details_option()
+
+  # If no setting, use default behavior
+  if (is.null(setting)) {
+    return(action != "reset")
+  }
+
+  # Validate and apply the setting
+  setting <- tolower(setting)
+  switch(
+    setting,
+    "expanded" = TRUE,
+    "collapsed" = FALSE,
+    "default" = action != "reset",
+    {
+      cli::cli_warn(c(
+        "Invalid value for {.code querychat.tool_details} or {.envvar QUERYCHAT_TOOL_DETAILS}: {.val {setting}}",
+        "i" = "Must be one of: {.val expanded}, {.val collapsed}, or {.val default}"
+      ))
+      action != "reset"
+    }
+  )
+}
+
 querychat_tool_result <- function(
   data_source,
   query,
@@ -182,7 +213,7 @@ querychat_tool_result <- function(
         title = if (action == "update" && !is.null(title)) title,
         show_request = is_error,
         markdown = display_md,
-        open = !is_error && action != "reset"
+        open = resolve_tool_open_state(action, is_error)
       )
     )
   )

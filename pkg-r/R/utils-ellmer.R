@@ -57,3 +57,17 @@ querychat_client_option <- function() {
 
   NULL
 }
+
+querychat_tool_details_option <- function() {
+  opt <- getOption("querychat.tool_details", NULL)
+  if (!is.null(opt)) {
+    return(opt)
+  }
+
+  env <- Sys.getenv("QUERYCHAT_TOOL_DETAILS", "")
+  if (nzchar(env)) {
+    return(env)
+  }
+
+  NULL
+}

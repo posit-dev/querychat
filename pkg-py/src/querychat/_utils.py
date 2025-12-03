@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import warnings
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Optional
 
@@ -51,6 +52,65 @@ def temp_env_vars(env_vars: dict[str, Optional[str]]):
             else:
                 # Restore original value
                 os.environ[key] = original_value
+
+
+def get_tool_details_setting() -> Optional[str]:
+    """
+    Get the tool details setting from environment variable.
+
+    Returns
+    -------
+    Optional[str]
+        The value of QUERYCHAT_TOOL_DETAILS environment variable, or None if not set
+
+    """
+    return os.environ.get("QUERYCHAT_TOOL_DETAILS")
+
+
+def resolve_tool_open_state(action: str, is_error: bool) -> bool:
+    """
+    Determine whether a tool card should be open based on action and setting.
+
+    Parameters
+    ----------
+    action : str
+        The action type ('update', 'query', or 'reset')
+    is_error : bool
+        Whether an error occurred
+
+    Returns
+    -------
+    bool
+        True if the tool card should be open, False otherwise
+
+    """
+    # If there's an error, always show collapsed
+    if is_error:
+        return False
+
+    # Get the tool details setting
+    setting = get_tool_details_setting()
+
+    # If no setting, use default behavior
+    if setting is None:
+        return action != "reset"
+
+    # Validate and apply the setting
+    setting_lower = setting.lower()
+    if setting_lower == "expanded":
+        return True
+    elif setting_lower == "collapsed":
+        return False
+    elif setting_lower == "default":
+        return action != "reset"
+    else:
+        warnings.warn(
+            f"Invalid value for QUERYCHAT_TOOL_DETAILS: {setting!r}. "
+            "Must be one of: 'expanded', 'collapsed', or 'default'",
+            UserWarning,
+            stacklevel=2,
+        )
+        return action != "reset"
 
 
 def df_to_html(df: IntoFrame, maxrows: int = 5) -> str:

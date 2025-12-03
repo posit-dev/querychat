@@ -272,8 +272,7 @@ DBISource <- R6::R6Class(
       if (inherits(table_name, "Id")) {
         # DBI::Id object - keep as is
       } else if (is.character(table_name) && length(table_name) == 1) {
-        # Character string - validate SQL table name format
-        check_sql_table_name(table_name)
+        # Character string - keep as is
       } else {
         cli::cli_abort(
           "`table_name` must be a single character string or a DBI::Id object"

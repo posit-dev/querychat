@@ -213,7 +213,7 @@ Create a new QueryChat object.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{QueryChat$new(
   data_source,
-  table_name = rlang::missing_arg(),
+  table_name = missing_arg(),
   ...,
   id = NULL,
   greeting = NULL,

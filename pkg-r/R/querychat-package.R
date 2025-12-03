@@ -65,7 +65,7 @@
 #' @importFrom lifecycle deprecated
 #' @importFrom R6 R6Class
 #' @importFrom bslib sidebar
-#' @importFrom rlang %||%
+#' @import rlang
 ## usethis namespace: end
 NULL
 

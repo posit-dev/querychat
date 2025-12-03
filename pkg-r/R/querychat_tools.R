@@ -127,7 +127,7 @@ querychat_tool_details_option <- function() {
   if (!setting %in% valid_settings) {
     cli::cli_warn(c(
       "Invalid value for {.code querychat.tool_details} or {.envvar QUERYCHAT_TOOL_DETAILS}: {.val {setting}}",
-      "i" = "Must be one of: {.val expanded}, {.val collapsed}, or {.val default}"
+      "i" = "Must be one of: {.or {.val {valid_settings}}}"
     ))
     return(NULL)
   }
@@ -146,7 +146,7 @@ querychat_tool_starts_open <- function(action) {
     setting,
     "expanded" = TRUE,
     "collapsed" = FALSE,
-    "default" = action != "reset"
+    action != "reset"
   )
 }
 

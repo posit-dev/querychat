@@ -13,8 +13,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
-* Added `QUERYCHAT_TOOL_DETAILS` environment variable to control whether tool detail cards (SQL query and results) are shown expanded or collapsed by default. Valid values are `"expanded"`, `"collapsed"`, or `"default"`. (#137)
-
 * New `QueryChat.app()` method enables quicker/easier chatting with a dataset. (#104)
 
 * Enabled bookmarking by default in both `.app()` and `.server()` methods. In latter case, you'll need to also specify the `bookmark_store` (either in `shiny.App()` or `shiny.express.app_opts()`) for it to take effect. (#104)

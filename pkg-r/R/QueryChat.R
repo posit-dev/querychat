@@ -159,7 +159,7 @@ QueryChat <- R6::R6Class(
 
       # Validate table name
       if (!grepl("^[a-zA-Z][a-zA-Z0-9_]*$", table_name)) {
-        rlang::abort(
+        cli::cli_abort(
           "Table name must begin with a letter and contain only letters, numbers, and underscores"
         )
       }
@@ -192,7 +192,7 @@ QueryChat <- R6::R6Class(
 
       if (cleanup) {
         shiny::onStop(function() {
-          message("Closing data source...")
+          cli::cli_inform("Closing data source...")
           self$cleanup()
         })
       }
@@ -462,7 +462,7 @@ QueryChat <- R6::R6Class(
       session = shiny::getDefaultReactiveDomain()
     ) {
       if (is.null(session)) {
-        rlang::abort(
+        cli::cli_abort(
           "$server() must be called within a Shiny server function."
         )
       }

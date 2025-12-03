@@ -21,7 +21,7 @@ as_querychat_data_source.data.frame <- function(x, table_name, ...) {
     length(table_name) == 1 &&
     grepl("^[a-zA-Z][a-zA-Z0-9_]*$", table_name, perl = TRUE)
   if (!is_table_name_ok) {
-    rlang::abort(
+    cli::cli_abort(
       "`table_name` argument must be a string containing alphanumeric characters and underscores, starting with a letter."
     )
   }
@@ -45,18 +45,16 @@ as_querychat_data_source.DBIConnection <- function(x, table_name, ...) {
     # Character string - keep as is
   } else {
     # Invalid input
-    rlang::abort(
+    cli::cli_abort(
       "`table_name` must be a single character string or a DBI::Id object"
     )
   }
 
   # Check if table exists
   if (!DBI::dbExistsTable(x, table_name)) {
-    rlang::abort(paste0(
-      "Table ",
-      DBI::dbQuoteIdentifier(x, table_name),
-      " not found in database. If you're using a table in a catalog or schema, pass a DBI::Id",
-      " object to `table_name`"
+    cli::cli_abort(c(
+      "Table {DBI::dbQuoteIdentifier(x, table_name)} not found in database.",
+      "i" = "If you're using a table in a catalog or schema, pass a DBI::Id object to `table_name`"
     ))
   }
 

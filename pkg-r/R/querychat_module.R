@@ -71,7 +71,7 @@ mod_server <- function(
       greeting_content <- if (!is.null(greeting) && any(nzchar(greeting))) {
         greeting
       } else {
-        rlang::warn(c(
+        cli::cli_warn(c(
           "No greeting provided to `QueryChat()`. Using the LLM `client` to generate one now.",
           "i" = "For faster startup, lower cost, and determinism, consider providing a greeting to `QueryChat()` and `$generate_greeting()` to generate one beforehand."
         ))

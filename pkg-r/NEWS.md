@@ -1,5 +1,7 @@
 # querychat (development version)
 
+* Added bookmarking support to `QueryChat$server()` and `querychat_app()`. When bookmarking is enabled (via `bookmark_store = "url"` or `"server"` in `querychat_app()` or `$app_obj()`, or via `enable_bookmarking = TRUE` in `$server()`), the chat state (including current query, title, and chat history) will be saved and restored with Shiny bookmarks. (#107)
+
 * Nearly the entire functional API (i.e., `querychat_init()`, `querychat_sidebar()`, `querychat_server()`, etc) has been hard deprecated in favor of a simpler OOP-based API. Namely, the new `QueryChat$new()` class is now the main entry point (instead of `querychat_init()`) and has methods to replace old functions (e.g., `$sidebar()`, `$server()`, etc). (#109)
     * In addition, `querychat_data_source()` was renamed to `as_querychat_data_source()`, and remains exported for a developer extension point, but users no longer have to explicitly create a data source. (#109)
 

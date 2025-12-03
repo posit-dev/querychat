@@ -309,7 +309,9 @@ QueryChat <- R6::R6Class(
       }
 
       server <- function(input, output, session) {
-        qc_vals <- self$server()
+        # Enable bookmarking if bookmark_store is enabled
+        enable_bookmarking <- bookmark_store %in% c("url", "server")
+        qc_vals <- self$server(enable_bookmarking = enable_bookmarking)
 
         output$query_title <- shiny::renderText({
           if (shiny::isTruthy(qc_vals$title())) {
@@ -432,6 +434,12 @@ QueryChat <- R6::R6Class(
     #' the reactive logic for the chat interface and returns session-specific
     #' reactive values.
     #'
+    #' @param enable_bookmarking Whether to enable bookmarking for the chat
+    #'   state. Default is `FALSE`. When enabled, the chat state (including
+    #'   current query, title, and chat history) will be saved and restored
+    #'   with Shiny bookmarks. This requires that the Shiny app has bookmarking
+    #'   enabled via `shiny::enableBookmarking()` or the `enableBookmarking`
+    #'   parameter of `shiny::shinyApp()`.
     #' @param session The Shiny session object.
     #'
     #' @return A list containing session-specific reactive values and the chat
@@ -446,14 +454,17 @@ QueryChat <- R6::R6Class(
     #' qc <- QueryChat$new(mtcars, "mtcars")
     #'
     #' server <- function(input, output, session) {
-    #'   qc_vals <- qc$server()
+    #'   qc_vals <- qc$server(enable_bookmarking = TRUE)
     #'
     #'   output$data <- renderDataTable(qc_vals$df())
     #'   output$query <- renderText(qc_vals$sql())
     #'   output$title <- renderText(qc_vals$title() %||% "No Query")
     #' }
     #' }
-    server = function(session = shiny::getDefaultReactiveDomain()) {
+    server = function(
+      enable_bookmarking = FALSE,
+      session = shiny::getDefaultReactiveDomain()
+    ) {
       if (is.null(session)) {
         cli::cli_abort(
           "$server() must be called within a Shiny server function."
@@ -464,7 +475,8 @@ QueryChat <- R6::R6Class(
         self$id,
         data_source = private$.data_source,
         greeting = self$greeting,
-        client = private$.client
+        client = private$.client,
+        enable_bookmarking = enable_bookmarking
       )
     },
 
@@ -499,8 +511,7 @@ QueryChat <- R6::R6Class(
       chat <- private$.client$clone()
       chat$set_turns(list())
 
-      prompt <- "Please give me a friendly greeting. Include a few sample prompts in a two-level bulleted list."
-      as.character(chat$chat(prompt, echo = echo))
+      as.character(chat$chat(GREETING_PROMPT, echo = echo))
     },
 
     #' @description

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import warnings
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable, Union
@@ -134,10 +135,14 @@ def mod_server(
         if greeting:
             await chat_ui.append_message(greeting)
         elif greeting is None:
-            stream = await chat.stream_async(
-                "Please give me a friendly greeting. Include a few sample prompts in a two-level bulleted list.",
-                echo="none",
+            warnings.warn(
+                "No greeting provided to `QueryChat()`. Using the LLM `client` to generate one now. "
+                "For faster startup, lower cost, and determinism, consider providing a greeting "
+                "to `QueryChat()` and `.generate_greeting()` to generate one beforehand.",
+                GreetWarning,
+                stacklevel=2,
             )
+            stream = await chat.stream_async(GREETING_PROMPT, echo="none")
             await chat_ui.append_message_stream(stream)
 
         has_greeted.set(True)
@@ -180,3 +185,10 @@ def mod_server(
                 has_greeted.set(vals["querychat_has_greeted"])
 
     return ServerValues(df=filtered_df, sql=sql, title=title, client=chat)
+
+
+GREETING_PROMPT: str = "Please give me a friendly greeting. Include a few sample prompts in a two-level bulleted list."
+
+
+class GreetWarning(Warning):
+    """Warning raised when no greeting is provided to QueryChat."""

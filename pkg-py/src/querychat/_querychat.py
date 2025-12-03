@@ -3,7 +3,6 @@ from __future__ import annotations
 import copy
 import os
 import re
-import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal, Optional, overload
 
@@ -17,7 +16,7 @@ from shinychat import output_markdown_stream
 
 from ._datasource import DataFrameSource, DataSource, SQLAlchemySource
 from ._icons import bs_icon
-from ._querychat_module import ServerValues, mod_server, mod_ui
+from ._querychat_module import GREETING_PROMPT, ServerValues, mod_server, mod_ui
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -47,14 +46,6 @@ class QueryChatBase:
             )
 
         self.id = id or table_name
-
-        if greeting is None:
-            print(
-                "Warning: No greeting provided; the LLM will be invoked at conversation start to generate one. "
-                "For faster startup, lower cost, and determinism, please save a greeting and pass it to init().",
-                "You can also use `querychat.greeting()` to help generate a greeting.",
-                file=sys.stderr,
-            )
 
         self.greeting = greeting.read_text() if isinstance(greeting, Path) else greeting
 
@@ -244,8 +235,7 @@ class QueryChatBase:
         """
         client = copy.deepcopy(self._client)
         client.set_turns([])
-        prompt = "Please give me a friendly greeting. Include a few sample prompts in a two-level bulleted list."
-        return str(client.chat(prompt, echo=echo))
+        return str(client.chat(GREETING_PROMPT, echo=echo))
 
     @property
     def system_prompt(self) -> str:

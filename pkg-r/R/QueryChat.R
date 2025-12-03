@@ -167,14 +167,6 @@ QueryChat <- R6::R6Class(
       }
       self$greeting <- greeting
 
-      if (is.null(greeting)) {
-        cli::cli_warn(c(
-          "No greeting provided; the LLM will be invoked at conversation start to generate one.",
-          "*" = "For faster startup, lower cost, and determinism, please save a greeting and pass it to QueryChat$new().",
-          "i" = "You can generate a greeting with $generate_greeting()."
-        ))
-      }
-
       prompt <- create_system_prompt(
         private$.data_source,
         data_description = data_description,

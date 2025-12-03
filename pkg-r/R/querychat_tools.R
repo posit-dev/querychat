@@ -121,7 +121,6 @@ querychat_tool_details_option <- function() {
     }
   }
 
-  # Validate the setting
   setting <- tolower(setting)
   valid_settings <- c("expanded", "collapsed", "default")
 
@@ -137,15 +136,12 @@ querychat_tool_details_option <- function() {
 }
 
 querychat_tool_starts_open <- function(action) {
-  # Get the tool details setting (already validated)
   setting <- querychat_tool_details_option()
 
-  # If no setting, use default behavior
   if (is.null(setting)) {
     return(action != "reset")
   }
 
-  # Apply the setting
   switch(
     setting,
     "expanded" = TRUE,

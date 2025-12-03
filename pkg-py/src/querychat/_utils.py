@@ -70,7 +70,6 @@ def get_tool_details_setting() -> Optional[str]:
     if setting is None:
         return None
 
-    # Validate the setting
     setting_lower = setting.lower()
     valid_settings = {"expanded", "collapsed", "default"}
 
@@ -101,14 +100,11 @@ def querychat_tool_starts_open(action: str) -> bool:
         True if the tool card should be open, False otherwise
 
     """
-    # Get the tool details setting (already validated)
     setting = get_tool_details_setting()
 
-    # If no setting, use default behavior
     if setting is None:
         return action != "reset"
 
-    # Apply the setting
     if setting == "expanded":
         return True
     elif setting == "collapsed":

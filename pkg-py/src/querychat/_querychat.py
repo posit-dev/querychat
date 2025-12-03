@@ -22,6 +22,11 @@ if TYPE_CHECKING:
     import pandas as pd
     from narwhals.stable.v1.typing import IntoFrame
 
+    try:
+        import streamlit as st
+    except ImportError:
+        pass
+
 
 class QueryChatBase:
     def __init__(
@@ -161,6 +166,178 @@ class QueryChatBase:
                 )
 
         return App(app_ui, app_server, bookmark_store=bookmark_store)
+
+    def streamlit_app(self) -> None:
+        """
+        Create a Streamlit app to chat with a dataset.
+
+        Creates a Streamlit interface with a chat sidebar and data table view --
+        providing a quick-and-easy way to start chatting with your data using Streamlit.
+
+        This method should be called as the main content of a Streamlit app file.
+        The function configures the Streamlit page and sets up all necessary UI elements.
+
+        Returns
+        -------
+        None
+            This function has side effects (renders Streamlit UI) but doesn't return a value.
+
+        Raises
+        ------
+        ImportError
+            If streamlit is not installed.
+
+        Examples
+        --------
+        Create a file named `app.py`:
+
+        ```python
+        from querychat import QueryChat
+        from seaborn import load_dataset
+
+        titanic = load_dataset("titanic")
+        qc = QueryChat(titanic, "titanic")
+        qc.streamlit_app()
+        ```
+
+        Then run with: `streamlit run app.py`
+
+        """
+        try:
+            import streamlit as st
+        except ImportError as e:
+            msg = (
+                "streamlit is required to use streamlit_app(). "
+                "Install it with: pip install streamlit"
+            )
+            raise ImportError(msg) from e
+
+        from .tools import tool_query, tool_reset_dashboard, tool_update_dashboard
+
+        table_name = self._data_source.table_name
+
+        # Set page configuration (only if not already set)
+        try:
+            st.set_page_config(
+                page_title=f"querychat with {table_name}",
+                layout="wide",
+                initial_sidebar_state="expanded",
+            )
+        except Exception:
+            # Page config already set - that's ok
+            pass
+
+        # Helper class to wrap session state as reactive values
+        class SessionStateReactive:
+            def __init__(self, key: str, default=None):
+                self.key = key
+                if key not in st.session_state:
+                    st.session_state[key] = default
+
+            def set(self, value):
+                st.session_state[self.key] = value
+
+            def get(self):
+                return st.session_state[self.key]
+
+        # Initialize session state
+        if "querychat_initialized" not in st.session_state:
+            st.session_state.querychat_initialized = True
+            st.session_state.chat_history = []
+            st.session_state.client = copy.deepcopy(self._client)
+            st.session_state.sql = ""
+            st.session_state.title = None
+            st.session_state.has_greeted = False
+            st.session_state.tools_registered = False
+
+        # Register tools with the client (only once)
+        if not st.session_state.tools_registered:
+            sql_reactive = SessionStateReactive("sql", "")
+            title_reactive = SessionStateReactive("title", None)
+
+            st.session_state.client.register_tool(
+                tool_update_dashboard(self._data_source, sql_reactive, title_reactive)
+            )
+            st.session_state.client.register_tool(tool_query(self._data_source))
+            st.session_state.client.register_tool(
+                tool_reset_dashboard(sql_reactive, title_reactive)
+            )
+            st.session_state.tools_registered = True
+
+        # Sidebar with chat interface
+        with st.sidebar:
+            st.title("Chat with your data")
+
+            # Display greeting on first load
+            if not st.session_state.has_greeted:
+                if self.greeting:
+                    greeting_text = self.greeting
+                else:
+                    greeting_text = str(
+                        st.session_state.client.chat(GREETING_PROMPT, echo="none")
+                    )
+                st.session_state.chat_history.append(
+                    {"role": "assistant", "content": greeting_text}
+                )
+                st.session_state.has_greeted = True
+
+            # Display chat history
+            for message in st.session_state.chat_history:
+                with st.chat_message(message["role"]):
+                    st.markdown(message["content"])
+
+            # Chat input
+            if prompt := st.chat_input("Ask a question about your data..."):
+                # Add user message to chat history
+                st.session_state.chat_history.append(
+                    {"role": "user", "content": prompt}
+                )
+
+                # Display user message
+                with st.chat_message("user"):
+                    st.markdown(prompt)
+
+                # Get response from LLM
+                with st.chat_message("assistant"):
+                    message_placeholder = st.empty()
+                    response = str(st.session_state.client.chat(prompt, echo="none"))
+                    message_placeholder.markdown(response)
+
+                # Add assistant response to chat history
+                st.session_state.chat_history.append(
+                    {"role": "assistant", "content": response}
+                )
+
+                # Force rerun to update the data display
+                st.rerun()
+
+        # Main content area
+        st.title(f"querychat with `{table_name}`")
+
+        # SQL Query display
+        st.subheader(st.session_state.title or "SQL Query")
+
+        col1, col2 = st.columns([0.9, 0.1])
+        with col1:
+            sql_display = st.session_state.sql or f"SELECT * FROM {table_name}"
+            st.code(sql_display, language="sql")
+
+        with col2:
+            if st.session_state.sql:
+                if st.button("Reset Query", type="secondary"):
+                    st.session_state.sql = ""
+                    st.session_state.title = None
+                    st.rerun()
+
+        # Data display
+        st.subheader("Data")
+
+        if st.session_state.sql:
+            df = self._data_source.execute_query(st.session_state.sql)
+        else:
+            df = self._data_source.get_data()
+
+        st.dataframe(df, use_container_width=True, height=400)
 
     def sidebar(
         self,

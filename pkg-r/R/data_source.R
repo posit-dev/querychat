@@ -11,28 +11,18 @@
 #' @return A querychat_data_source object
 #' @keywords internal
 #' @export
-as_querychat_data_source <- function(x, table_name = NULL, ...) {
+as_querychat_data_source <- function(x, table_name, ...) {
   UseMethod("as_querychat_data_source")
 }
 
 #' @export
-as_querychat_data_source.data.frame <- function(x, table_name = NULL, ...) {
-  if (is.null(table_name)) {
-    # Infer table name from dataframe name, if not already added
-    table_name <- deparse(substitute(x))
-    if (is.null(table_name) || table_name == "NULL" || table_name == "x") {
-      cli::cli_abort(
-        "Unable to infer table name. Please specify `table_name` argument explicitly."
-      )
-    }
-  }
-
+as_querychat_data_source.data.frame <- function(x, table_name, ...) {
   is_table_name_ok <- is.character(table_name) &&
     length(table_name) == 1 &&
     grepl("^[a-zA-Z][a-zA-Z0-9_]*$", table_name, perl = TRUE)
   if (!is_table_name_ok) {
     cli::cli_abort(
-      "`table_name` argument must be a string containing a valid table name."
+      "`table_name` argument must be a string containing alphanumeric characters and underscores, starting with a letter."
     )
   }
 

@@ -20,7 +20,6 @@ Try asking:
 # Create QueryChat object with custom options
 qc <- QueryChat$new(
   penguins,
-  "penguins",
   greeting = greeting,
   data_description = paste(
     "The Palmer Penguins dataset contains measurements of bill",
@@ -33,7 +32,6 @@ qc <- QueryChat$new(
     "and highlight any interesting patterns you observe."
   )
 )
-
 
 # Define custom UI with sidebar
 ui <- page_sidebar(

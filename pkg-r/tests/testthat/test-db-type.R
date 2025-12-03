@@ -24,14 +24,14 @@ test_that("get_db_type returns correct type for DBISource with SQLite", {
   expect_equal(db_source$get_db_type(), "SQLite")
 })
 
-test_that("get_db_type is correctly used in get_system_prompt", {
+test_that("get_db_type is correctly used in assemble_system_prompt", {
   # Create a simple data frame source
   df <- data.frame(x = 1:5, y = letters[1:5])
   df_source <- DataFrameSource$new(df, "test_table")
   withr::defer(df_source$cleanup())
 
   # Generate system prompt
-  sys_prompt <- get_system_prompt(df_source)
+  sys_prompt <- assemble_system_prompt(df_source)
 
   # Check that "DuckDB" appears in the prompt content
   expect_true(grepl("DuckDB SQL", sys_prompt, fixed = TRUE))
@@ -52,6 +52,6 @@ test_that("get_db_type is used to customize prompt template", {
   # Verify the value is used in the system prompt
   # This is an indirect test that doesn't need mocking
   # We just check that the string appears somewhere in the system prompt
-  prompt <- get_system_prompt(df_source)
+  prompt <- assemble_system_prompt(df_source)
   expect_true(grepl(db_type, prompt, fixed = TRUE))
 })

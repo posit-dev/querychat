@@ -579,7 +579,7 @@ r_class_to_sql_type <- function(r_class) {
 }
 
 
-get_system_prompt <- function(
+assemble_system_prompt <- function(
   source,
   data_description = NULL,
   extra_instructions = NULL,

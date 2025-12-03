@@ -179,7 +179,7 @@ test_that("get_schema correctly reports min/max values for numeric columns", {
   expect_match(schema, "- count \\(FLOAT\\)\\n  Range: 50 to 200")
 })
 
-test_that("get_system_prompt generates appropriate system prompt", {
+test_that("assemble_system_prompt generates appropriate system prompt", {
   test_df <- data.frame(
     id = 1:3,
     name = c("A", "B", "C"),
@@ -189,7 +189,7 @@ test_that("get_system_prompt generates appropriate system prompt", {
   df_source <- DataFrameSource$new(test_df, "test_table")
   withr::defer(df_source$cleanup())
 
-  prompt <- get_system_prompt(
+  prompt <- assemble_system_prompt(
     df_source,
     data_description = "A test dataframe"
   )

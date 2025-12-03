@@ -38,7 +38,8 @@ test_that("database reactive functionality works correctly", {
   iris_source <- DBISource$new(db_conn, "iris")
 
   # Mock chat function
-  mock_client <- ellmer::chat_openai(api_key = "boop")
+  withr::local_envvar(OPENAI_API_KEY = "boop")
+  mock_client <- ellmer::chat_openai()
 
   # Test QueryChat$new() with database source
   qc <- QueryChat$new(

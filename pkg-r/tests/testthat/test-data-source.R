@@ -292,3 +292,97 @@ test_that("get_data returns all data", {
   expect_equal(nrow(result), 5)
   expect_equal(ncol(result), 2)
 })
+
+test_that("get_db_type returns correct type for DataFrameSource", {
+  # Create a simple data frame source
+  df <- data.frame(x = 1:5, y = letters[1:5])
+  df_source <- DataFrameSource$new(df, "test_table")
+  withr::defer(df_source$cleanup())
+
+  # Test that get_db_type returns "DuckDB"
+  expect_equal(df_source$get_db_type(), "DuckDB")
+})
+
+test_that("get_db_type returns correct type for DBISource with SQLite", {
+  skip_if_not_installed("RSQLite")
+
+  # Create a SQLite database source
+  temp_db <- withr::local_tempfile(fileext = ".db")
+  conn <- DBI::dbConnect(RSQLite::SQLite(), temp_db)
+  withr::defer(DBI::dbDisconnect(conn))
+  DBI::dbWriteTable(conn, "test_table", data.frame(x = 1:5, y = letters[1:5]))
+  db_source <- DBISource$new(conn, "test_table")
+
+  # Test that get_db_type returns the correct database type
+  expect_equal(db_source$get_db_type(), "SQLite")
+})
+
+test_that("get_db_type is correctly used in assemble_system_prompt", {
+  # Create a simple data frame source
+  df <- data.frame(x = 1:5, y = letters[1:5])
+  df_source <- DataFrameSource$new(df, "test_table")
+  withr::defer(df_source$cleanup())
+
+  # Generate system prompt
+  sys_prompt <- assemble_system_prompt(df_source)
+
+  # Check that "DuckDB" appears in the prompt content
+  expect_true(grepl("DuckDB SQL", sys_prompt, fixed = TRUE))
+})
+
+test_that("get_db_type is used to customize prompt template", {
+  # Create a simple data frame source
+  df <- data.frame(x = 1:5, y = letters[1:5])
+  df_source <- DataFrameSource$new(df, "test_table")
+  withr::defer(df_source$cleanup())
+
+  # Get the db_type
+  db_type <- df_source$get_db_type()
+
+  # Check that the db_type is correctly returned
+  expect_equal(db_type, "DuckDB")
+
+  # Verify the value is used in the system prompt
+  # This is an indirect test that doesn't need mocking
+  # We just check that the string appears somewhere in the system prompt
+  prompt <- assemble_system_prompt(df_source)
+  expect_true(grepl(db_type, prompt, fixed = TRUE))
+})
+
+test_that("database source query functionality", {
+  # Create temporary SQLite database
+  temp_db <- withr::local_tempfile(fileext = ".db")
+  conn <- dbConnect(RSQLite::SQLite(), temp_db)
+  withr::defer(dbDisconnect(conn))
+
+  # Create test table
+  test_data <- data.frame(
+    id = 1:5,
+    name = c("Alice", "Bob", "Charlie", "Diana", "Eve"),
+    age = c(25, 30, 35, 28, 32),
+    stringsAsFactors = FALSE
+  )
+
+  dbWriteTable(conn, "users", test_data, overwrite = TRUE)
+
+  # Create database source
+  db_source <- DBISource$new(conn, "users")
+
+  # Test that we can execute queries
+  result <- db_source$execute_query("SELECT * FROM users WHERE age > 30")
+  expect_s3_class(result, "data.frame")
+  expect_equal(nrow(result), 2) # Charlie and Eve
+  expect_equal(result$name, c("Charlie", "Eve"))
+
+  # Test that we can get all data
+  all_data <- db_source$execute_query(NULL)
+  expect_s3_class(all_data, "data.frame")
+  expect_equal(nrow(all_data), 5)
+  expect_equal(ncol(all_data), 3)
+
+  # Test ordering works
+  ordered_result <- db_source$execute_query(
+    "SELECT * FROM users ORDER BY age DESC"
+  )
+  expect_equal(ordered_result$name[1], "Charlie") # Oldest first
+})

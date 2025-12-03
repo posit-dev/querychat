@@ -703,7 +703,8 @@ normalize_data_source <- function(data_source, table_name) {
   cli::cli_abort(
     paste0(
       "`data_source` must be a DataSource, data.frame, or DBIConnection. ",
-      "Got: ", class(data_source)[1]
+      "Got: ",
+      class(data_source)[1]
     )
   )
 }

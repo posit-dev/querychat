@@ -131,19 +131,8 @@ DataFrameSource <- R6::R6Class(
     #' source <- DataFrameSource$new(iris, "iris")
     #' }
     initialize = function(df, table_name) {
-      if (!is.data.frame(df)) {
-        cli::cli_abort("`df` must be a data frame")
-      }
-
-      # Validate table name
-      is_table_name_ok <- is.character(table_name) &&
-        length(table_name) == 1 &&
-        grepl("^[a-zA-Z][a-zA-Z0-9_]*$", table_name, perl = TRUE)
-      if (!is_table_name_ok) {
-        cli::cli_abort(
-          "`table_name` argument must be a string containing alphanumeric characters and underscores, starting with a letter."
-        )
-      }
+      check_data_frame(df)
+      check_sql_table_name(table_name)
 
       self$table_name <- table_name
 
@@ -170,6 +159,7 @@ DataFrameSource <- R6::R6Class(
     #'   column to be considered categorical (default: 20)
     #' @return A string describing the schema
     get_schema = function(categorical_threshold = 20) {
+      check_number_whole(categorical_threshold, min = 1)
       get_schema_impl(private$conn, self$table_name, categorical_threshold)
     },
 
@@ -179,6 +169,7 @@ DataFrameSource <- R6::R6Class(
     #' @param query SQL query string. If NULL or empty, returns all data
     #' @return A data frame with query results
     execute_query = function(query) {
+      check_string(query, allow_null = TRUE, allow_empty = TRUE)
       if (is.null(query) || query == "") {
         query <- paste0(
           "SELECT * FROM ",
@@ -194,6 +185,7 @@ DataFrameSource <- R6::R6Class(
     #' @param query SQL query string
     #' @return A data frame with one row of results
     test_query = function(query) {
+      check_string(query)
       rs <- DBI::dbSendQuery(private$conn, query)
       df <- DBI::dbFetch(rs, n = 1)
       DBI::dbClearResult(rs)
@@ -280,7 +272,8 @@ DBISource <- R6::R6Class(
       if (inherits(table_name, "Id")) {
         # DBI::Id object - keep as is
       } else if (is.character(table_name) && length(table_name) == 1) {
-        # Character string - keep as is
+        # Character string - validate SQL table name format
+        check_sql_table_name(table_name)
       } else {
         cli::cli_abort(
           "`table_name` must be a single character string or a DBI::Id object"
@@ -325,6 +318,7 @@ DBISource <- R6::R6Class(
     #'   column to be considered categorical (default: 20)
     #' @return A string describing the schema
     get_schema = function(categorical_threshold = 20) {
+      check_number_whole(categorical_threshold, min = 1)
       get_schema_impl(private$conn, self$table_name, categorical_threshold)
     },
 
@@ -334,6 +328,7 @@ DBISource <- R6::R6Class(
     #' @param query SQL query string. If NULL or empty, returns all data
     #' @return A data frame with query results
     execute_query = function(query) {
+      check_string(query, allow_null = TRUE, allow_empty = TRUE)
       if (is.null(query) || query == "") {
         query <- paste0(
           "SELECT * FROM ",
@@ -349,6 +344,7 @@ DBISource <- R6::R6Class(
     #' @param query SQL query string
     #' @return A data frame with one row of results
     test_query = function(query) {
+      check_string(query)
       rs <- DBI::dbSendQuery(private$conn, query)
       df <- DBI::dbFetch(rs, n = 1)
       DBI::dbClearResult(rs)
@@ -589,6 +585,11 @@ assemble_system_prompt <- function(
   if (!is_data_source(source)) {
     cli::cli_abort("`source` must be a DataSource object")
   }
+
+  check_string(data_description, allow_null = TRUE)
+  check_string(extra_instructions, allow_null = TRUE)
+  check_number_whole(categorical_threshold, min = 1)
+  check_string(prompt_template, allow_null = TRUE)
 
   prompt_text <- read_text(
     prompt_template %||%

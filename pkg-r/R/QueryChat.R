@@ -151,6 +151,15 @@ QueryChat <- R6::R6Class(
     ) {
       rlang::check_dots_empty()
 
+      # Validate arguments
+      check_string(id, allow_null = TRUE)
+      check_string(greeting, allow_null = TRUE)
+      check_string(data_description, allow_null = TRUE)
+      check_number_whole(categorical_threshold, min = 1)
+      check_string(extra_instructions, allow_null = TRUE)
+      check_string(prompt_template, allow_null = TRUE)
+      check_bool(cleanup, allow_na = TRUE)
+
       if (rlang::is_missing(table_name) && is.data.frame(data_source)) {
         table_name <- deparse1(substitute(data_source))
       }
@@ -158,11 +167,7 @@ QueryChat <- R6::R6Class(
       private$.data_source <- normalize_data_source(data_source, table_name)
 
       # Validate table name
-      if (!grepl("^[a-zA-Z][a-zA-Z0-9_]*$", table_name)) {
-        cli::cli_abort(
-          "Table name must begin with a letter and contain only letters, numbers, and underscores"
-        )
-      }
+      check_sql_table_name(table_name)
 
       self$id <- id %||% table_name
 

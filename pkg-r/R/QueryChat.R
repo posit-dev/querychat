@@ -171,7 +171,7 @@ QueryChat <- R6::R6Class(
       }
       self$greeting <- greeting
 
-      prompt <- create_system_prompt(
+      prompt <- assemble_system_prompt(
         private$.data_source,
         data_description = data_description,
         categorical_threshold = categorical_threshold,

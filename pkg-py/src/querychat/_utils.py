@@ -56,15 +56,34 @@ def temp_env_vars(env_vars: dict[str, Optional[str]]):
 
 def get_tool_details_setting() -> Optional[str]:
     """
-    Get the tool details setting from environment variable.
+    Get and validate the tool details setting from environment variable.
 
     Returns
     -------
     Optional[str]
-        The value of QUERYCHAT_TOOL_DETAILS environment variable, or None if not set
+        The validated value of QUERYCHAT_TOOL_DETAILS environment variable
+        (one of 'expanded', 'collapsed', or 'default'), or None if not set
+        or invalid
 
     """
-    return os.environ.get("QUERYCHAT_TOOL_DETAILS")
+    setting = os.environ.get("QUERYCHAT_TOOL_DETAILS")
+    if setting is None:
+        return None
+
+    # Validate the setting
+    setting_lower = setting.lower()
+    valid_settings = {"expanded", "collapsed", "default"}
+
+    if setting_lower not in valid_settings:
+        warnings.warn(
+            f"Invalid value for QUERYCHAT_TOOL_DETAILS: {setting!r}. "
+            "Must be one of: 'expanded', 'collapsed', or 'default'",
+            UserWarning,
+            stacklevel=2,
+        )
+        return None
+
+    return setting_lower
 
 
 def querychat_tool_starts_open(action: str) -> bool:
@@ -82,28 +101,19 @@ def querychat_tool_starts_open(action: str) -> bool:
         True if the tool card should be open, False otherwise
 
     """
-    # Get the tool details setting
+    # Get the tool details setting (already validated)
     setting = get_tool_details_setting()
 
     # If no setting, use default behavior
     if setting is None:
         return action != "reset"
 
-    # Validate and apply the setting
-    setting_lower = setting.lower()
-    if setting_lower == "expanded":
+    # Apply the setting
+    if setting == "expanded":
         return True
-    elif setting_lower == "collapsed":
+    elif setting == "collapsed":
         return False
-    elif setting_lower == "default":
-        return action != "reset"
-    else:
-        warnings.warn(
-            f"Invalid value for QUERYCHAT_TOOL_DETAILS: {setting!r}. "
-            "Must be one of: 'expanded', 'collapsed', or 'default'",
-            UserWarning,
-            stacklevel=2,
-        )
+    else:  # setting == "default"
         return action != "reset"
 
 

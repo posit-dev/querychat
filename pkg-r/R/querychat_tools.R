@@ -108,8 +108,36 @@ tool_query <- function(data_source) {
   )
 }
 
+querychat_tool_details_option <- function() {
+  opt <- getOption("querychat.tool_details", NULL)
+  if (!is.null(opt)) {
+    setting <- opt
+  } else {
+    env <- Sys.getenv("QUERYCHAT_TOOL_DETAILS", "")
+    if (nzchar(env)) {
+      setting <- env
+    } else {
+      return(NULL)
+    }
+  }
+
+  # Validate the setting
+  setting <- tolower(setting)
+  valid_settings <- c("expanded", "collapsed", "default")
+
+  if (!setting %in% valid_settings) {
+    cli::cli_warn(c(
+      "Invalid value for {.code querychat.tool_details} or {.envvar QUERYCHAT_TOOL_DETAILS}: {.val {setting}}",
+      "i" = "Must be one of: {.val expanded}, {.val collapsed}, or {.val default}"
+    ))
+    return(NULL)
+  }
+
+  setting
+}
+
 querychat_tool_starts_open <- function(action) {
-  # Get the tool details setting
+  # Get the tool details setting (already validated)
   setting <- querychat_tool_details_option()
 
   # If no setting, use default behavior
@@ -117,20 +145,12 @@ querychat_tool_starts_open <- function(action) {
     return(action != "reset")
   }
 
-  # Validate and apply the setting
-  setting <- tolower(setting)
+  # Apply the setting
   switch(
     setting,
     "expanded" = TRUE,
     "collapsed" = FALSE,
-    "default" = action != "reset",
-    {
-      cli::cli_warn(c(
-        "Invalid value for {.code querychat.tool_details} or {.envvar QUERYCHAT_TOOL_DETAILS}: {.val {setting}}",
-        "i" = "Must be one of: {.val expanded}, {.val collapsed}, or {.val default}"
-      ))
-      action != "reset"
-    }
+    "default" = action != "reset"
   )
 }
 

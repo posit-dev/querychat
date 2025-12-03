@@ -67,7 +67,7 @@ def get_tool_details_setting() -> Optional[str]:
     return os.environ.get("QUERYCHAT_TOOL_DETAILS")
 
 
-def resolve_tool_open_state(action: str) -> bool:
+def querychat_tool_starts_open(action: str) -> bool:
     """
     Determine whether a tool card should be open based on action and setting.
 

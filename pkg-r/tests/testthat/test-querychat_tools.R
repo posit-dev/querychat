@@ -1,67 +1,67 @@
-test_that("resolve_tool_open_state respects default behavior", {
+test_that("querychat_tool_starts_open respects default behavior", {
   withr::local_options(querychat.tool_details = NULL)
   withr::local_envvar(QUERYCHAT_TOOL_DETAILS = NA)
 
-  expect_true(resolve_tool_open_state("query"))
-  expect_true(resolve_tool_open_state("update"))
-  expect_false(resolve_tool_open_state("reset"))
+  expect_true(querychat_tool_starts_open("query"))
+  expect_true(querychat_tool_starts_open("update"))
+  expect_false(querychat_tool_starts_open("reset"))
 })
 
-test_that("resolve_tool_open_state respects 'expanded' setting via option", {
+test_that("querychat_tool_starts_open respects 'expanded' setting via option", {
   withr::local_options(querychat.tool_details = "expanded")
 
-  expect_true(resolve_tool_open_state("query"))
-  expect_true(resolve_tool_open_state("update"))
-  expect_true(resolve_tool_open_state("reset"))
+  expect_true(querychat_tool_starts_open("query"))
+  expect_true(querychat_tool_starts_open("update"))
+  expect_true(querychat_tool_starts_open("reset"))
 })
 
-test_that("resolve_tool_open_state respects 'collapsed' setting via option", {
+test_that("querychat_tool_starts_open respects 'collapsed' setting via option", {
   withr::local_options(querychat.tool_details = "collapsed")
 
-  expect_false(resolve_tool_open_state("query"))
-  expect_false(resolve_tool_open_state("update"))
-  expect_false(resolve_tool_open_state("reset"))
+  expect_false(querychat_tool_starts_open("query"))
+  expect_false(querychat_tool_starts_open("update"))
+  expect_false(querychat_tool_starts_open("reset"))
 })
 
-test_that("resolve_tool_open_state respects 'default' setting via option", {
+test_that("querychat_tool_starts_open respects 'default' setting via option", {
   withr::local_options(querychat.tool_details = "default")
 
-  expect_true(resolve_tool_open_state("query"))
-  expect_true(resolve_tool_open_state("update"))
-  expect_false(resolve_tool_open_state("reset"))
+  expect_true(querychat_tool_starts_open("query"))
+  expect_true(querychat_tool_starts_open("update"))
+  expect_false(querychat_tool_starts_open("reset"))
 })
 
-test_that("resolve_tool_open_state respects 'expanded' setting via envvar", {
+test_that("querychat_tool_starts_open respects 'expanded' setting via envvar", {
   withr::local_options(querychat.tool_details = NULL)
   withr::local_envvar(QUERYCHAT_TOOL_DETAILS = "expanded")
 
-  expect_true(resolve_tool_open_state("query"))
-  expect_true(resolve_tool_open_state("update"))
-  expect_true(resolve_tool_open_state("reset"))
+  expect_true(querychat_tool_starts_open("query"))
+  expect_true(querychat_tool_starts_open("update"))
+  expect_true(querychat_tool_starts_open("reset"))
 })
 
-test_that("resolve_tool_open_state respects 'collapsed' setting via envvar", {
+test_that("querychat_tool_starts_open respects 'collapsed' setting via envvar", {
   withr::local_options(querychat.tool_details = NULL)
   withr::local_envvar(QUERYCHAT_TOOL_DETAILS = "collapsed")
 
-  expect_false(resolve_tool_open_state("query"))
-  expect_false(resolve_tool_open_state("update"))
-  expect_false(resolve_tool_open_state("reset"))
+  expect_false(querychat_tool_starts_open("query"))
+  expect_false(querychat_tool_starts_open("update"))
+  expect_false(querychat_tool_starts_open("reset"))
 })
 
-test_that("resolve_tool_open_state is case-insensitive", {
+test_that("querychat_tool_starts_open is case-insensitive", {
   withr::local_options(querychat.tool_details = "EXPANDED")
-  expect_true(resolve_tool_open_state("query"))
+  expect_true(querychat_tool_starts_open("query"))
 
   withr::local_options(querychat.tool_details = "Collapsed")
-  expect_false(resolve_tool_open_state("query"))
+  expect_false(querychat_tool_starts_open("query"))
 })
 
-test_that("resolve_tool_open_state warns on invalid setting", {
+test_that("querychat_tool_starts_open warns on invalid setting", {
   withr::local_options(querychat.tool_details = "invalid")
 
   expect_warning(
-    resolve_tool_open_state("query"),
+    querychat_tool_starts_open("query"),
     "Invalid value for"
   )
 })
@@ -70,5 +70,5 @@ test_that("option takes precedence over environment variable", {
   withr::local_options(querychat.tool_details = "collapsed")
   withr::local_envvar(QUERYCHAT_TOOL_DETAILS = "expanded")
 
-  expect_false(resolve_tool_open_state("query"))
+  expect_false(querychat_tool_starts_open("query"))
 })

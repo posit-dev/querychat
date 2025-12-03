@@ -108,7 +108,7 @@ tool_query <- function(data_source) {
   )
 }
 
-resolve_tool_open_state <- function(action) {
+querychat_tool_starts_open <- function(action) {
   # Get the tool details setting
   setting <- querychat_tool_details_option()
 
@@ -208,7 +208,7 @@ querychat_tool_result <- function(
         title = if (action == "update" && !is.null(title)) title,
         show_request = is_error,
         markdown = display_md,
-        open = resolve_tool_open_state(action)
+        open = querychat_tool_starts_open(action)
       )
     )
   )

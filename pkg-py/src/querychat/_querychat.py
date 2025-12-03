@@ -17,6 +17,7 @@ from shinychat import output_markdown_stream
 from ._datasource import DataFrameSource, DataSource, SQLAlchemySource
 from ._icons import bs_icon
 from ._querychat_module import GREETING_PROMPT, ServerValues, mod_server, mod_ui
+from .tools import tool_query, tool_reset_dashboard, tool_update_dashboard
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -212,8 +213,6 @@ class QueryChatBase:
             )
             raise ImportError(msg) from e
 
-        from .tools import tool_query, tool_reset_dashboard, tool_update_dashboard
-
         table_name = self._data_source.table_name
 
         # Set page configuration (only if not already set)
@@ -266,46 +265,95 @@ class QueryChatBase:
 
         # Sidebar with chat interface
         with st.sidebar:
-            st.title("Chat with your data")
+            # Container for chat messages with fixed height (scrollable)
+            chat_container = st.container(height="stretch")
 
-            # Display greeting on first load
-            if not st.session_state.has_greeted:
-                if self.greeting:
-                    greeting_text = self.greeting
-                else:
-                    greeting_text = str(
-                        st.session_state.client.chat(GREETING_PROMPT, echo="none")
+            with chat_container:
+                # Display greeting on first load
+                if not st.session_state.has_greeted:
+                    if self.greeting:
+                        greeting_text = self.greeting
+                    else:
+                        greeting_text = str(
+                            st.session_state.client.chat(GREETING_PROMPT, echo="none")
+                        )
+                    st.session_state.chat_history.append(
+                        {"role": "assistant", "content": greeting_text}
                     )
-                st.session_state.chat_history.append(
-                    {"role": "assistant", "content": greeting_text}
-                )
-                st.session_state.has_greeted = True
+                    st.session_state.has_greeted = True
 
-            # Display chat history
-            for message in st.session_state.chat_history:
-                with st.chat_message(message["role"]):
-                    st.markdown(message["content"])
+                # Display chat history
+                for idx, message in enumerate(st.session_state.chat_history):
+                    with st.chat_message(message["role"]):
+                        st.markdown(message["content"], unsafe_allow_html=True)
 
-            # Chat input
-            if prompt := st.chat_input("Ask a question about your data..."):
+                        # If this is an assistant message, extract and show clickable suggestions
+                        if message["role"] == "assistant":
+                            # Find all suggestions wrapped in <span class="suggestion">
+                            suggestions = []
+                            pattern = r'<span class="suggestion">([^<]+)</span>'
+                            matches = re.findall(pattern, message["content"])
+                            for match in matches:
+                                suggestion = match.strip()
+                                # Remove markdown formatting
+                                suggestion = re.sub(r"`([^`]+)`", r"\1", suggestion)
+                                # Remove any remaining markdown symbols
+                                suggestion = re.sub(r"[*_~]", "", suggestion)
+                                if suggestion and len(suggestion) < 200:
+                                    suggestions.append(suggestion)
+
+                            # Show clickable buttons for suggestions (max 5)
+                            for i, suggestion in enumerate(suggestions[:5]):
+                                if st.button(
+                                    f"💡 {suggestion}",
+                                    key=f"suggestion_{idx}_{i}",
+                                    use_container_width=True,
+                                ):
+                                    # Store the suggestion to process after the container
+                                    st.session_state.querychat_pending_prompt = (
+                                        suggestion
+                                    )
+                                    st.rerun()
+
+            # Chat input (stays at bottom of sidebar, outside the scrollable container)
+            if prompt := st.chat_input(
+                "Ask a question about your data...",
+                key="chat_input",
+            ):
+                st.session_state.querychat_pending_prompt = prompt
+                st.rerun()
+
+            # Process pending prompt if any (from chat input or suggestion button)
+            if st.session_state.get("querychat_pending_prompt"):
+                prompt = st.session_state.querychat_pending_prompt
+                st.session_state.querychat_pending_prompt = None
+
                 # Add user message to chat history
                 st.session_state.chat_history.append(
                     {"role": "user", "content": prompt}
                 )
 
-                # Display user message
-                with st.chat_message("user"):
-                    st.markdown(prompt)
+                # Get streaming response from LLM
+                full_response = ""
+                with chat_container:
+                    with st.chat_message("user"):
+                        st.markdown(prompt)
 
-                # Get response from LLM
-                with st.chat_message("assistant"):
-                    message_placeholder = st.empty()
-                    response = str(st.session_state.client.chat(prompt, echo="none"))
-                    message_placeholder.markdown(response)
+                    with st.chat_message("assistant"):
+                        message_placeholder = st.empty()
+                        # Stream the response with cursor
+                        for chunk in st.session_state.client.stream(
+                            prompt, echo="none"
+                        ):
+                            full_response += str(chunk)
+                            # Show cursor while streaming
+                            message_placeholder.markdown(full_response + "▌")
+                        # Remove cursor when done
+                        message_placeholder.markdown(full_response)
 
                 # Add assistant response to chat history
                 st.session_state.chat_history.append(
-                    {"role": "assistant", "content": response}
+                    {"role": "assistant", "content": full_response}
                 )
 
                 # Force rerun to update the data display

@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
+
 * New `QueryChat.app()` method enables quicker/easier chatting with a dataset. (#104)
 
 * Enabled bookmarking by default in both `.app()` and `.server()` methods. In latter case, you'll need to also specify the `bookmark_store` (either in `shiny.App()` or `shiny.express.app_opts()`) for it to take effect. (#104)
@@ -30,6 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Added rich tool UI support using shinychat development version and chatlas >= 0.11.1. (#67)
 
 * querychat's system prompt and tool descriptions were rewritten for clarity and future extensibility. (#90)
+
+* Tool detail cards can now be expanded or collapsed by default when querychat runs a query or updates the dashboard via the `QUERYCHAT_TOOL_DETAILS` environment variable. Valid values are `"expanded"`, `"collapsed"`, or `"default"`. (#137)
 
 ## [0.2.2] - 2025-09-04
 

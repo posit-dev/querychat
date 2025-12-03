@@ -4,7 +4,7 @@
 \alias{as_querychat_data_source}
 \title{Create a data source for querychat}
 \usage{
-as_querychat_data_source(x, table_name = NULL, ...)
+as_querychat_data_source(x, table_name, ...)
 }
 \arguments{
 \item{x}{A data frame or DBI connection}

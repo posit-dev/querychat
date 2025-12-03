@@ -54,7 +54,7 @@ def temp_env_vars(env_vars: dict[str, Optional[str]]):
                 os.environ[key] = original_value
 
 
-def get_tool_details_setting() -> Literal['expanded', 'collapsed', 'default', None]:
+def get_tool_details_setting() -> Optional[Literal["expanded", "collapsed", "default"]]:
     """
     Get and validate the tool details setting from environment variable.
 
@@ -71,7 +71,7 @@ def get_tool_details_setting() -> Literal['expanded', 'collapsed', 'default', No
         return None
 
     setting_lower = setting.lower()
-    valid_settings = {"expanded", "collapsed", "default"}
+    valid_settings = ("expanded", "collapsed", "default")
 
     if setting_lower not in valid_settings:
         warnings.warn(
@@ -85,7 +85,7 @@ def get_tool_details_setting() -> Literal['expanded', 'collapsed', 'default', No
     return setting_lower
 
 
-def querychat_tool_starts_open(action: Literal['update', 'query', 'reset']) -> bool:
+def querychat_tool_starts_open(action: Literal["update", "query", "reset"]) -> bool:
     """
     Determine whether a tool card should be open based on action and setting.
 

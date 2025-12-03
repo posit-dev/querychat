@@ -108,12 +108,7 @@ tool_query <- function(data_source) {
   )
 }
 
-resolve_tool_open_state <- function(action, is_error) {
-  # If there's an error, always show collapsed
-  if (is_error) {
-    return(FALSE)
-  }
-
+resolve_tool_open_state <- function(action) {
   # Get the tool details setting
   setting <- querychat_tool_details_option()
 
@@ -213,7 +208,7 @@ querychat_tool_result <- function(
         title = if (action == "update" && !is.null(title)) title,
         show_request = is_error,
         markdown = display_md,
-        open = resolve_tool_open_state(action, is_error)
+        open = resolve_tool_open_state(action)
       )
     )
   )

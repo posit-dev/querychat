@@ -67,7 +67,7 @@ def get_tool_details_setting() -> Optional[str]:
     return os.environ.get("QUERYCHAT_TOOL_DETAILS")
 
 
-def resolve_tool_open_state(action: str, is_error: bool) -> bool:
+def resolve_tool_open_state(action: str) -> bool:
     """
     Determine whether a tool card should be open based on action and setting.
 
@@ -75,8 +75,6 @@ def resolve_tool_open_state(action: str, is_error: bool) -> bool:
     ----------
     action : str
         The action type ('update', 'query', or 'reset')
-    is_error : bool
-        Whether an error occurred
 
     Returns
     -------
@@ -84,10 +82,6 @@ def resolve_tool_open_state(action: str, is_error: bool) -> bool:
         True if the tool card should be open, False otherwise
 
     """
-    # If there's an error, always show collapsed
-    if is_error:
-        return False
-
     # Get the tool details setting
     setting = get_tool_details_setting()
 

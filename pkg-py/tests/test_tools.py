@@ -2,8 +2,6 @@
 
 import warnings
 
-import pytest
-
 from querychat._utils import resolve_tool_open_state
 
 

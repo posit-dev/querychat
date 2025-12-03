@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import warnings
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Literal, Optional
 
 import narwhals.stable.v1 as nw
 
@@ -54,7 +54,7 @@ def temp_env_vars(env_vars: dict[str, Optional[str]]):
                 os.environ[key] = original_value
 
 
-def get_tool_details_setting() -> Optional[str]:
+def get_tool_details_setting() -> Literal['expanded', 'collapsed', 'default', None]:
     """
     Get and validate the tool details setting from environment variable.
 
@@ -85,7 +85,7 @@ def get_tool_details_setting() -> Optional[str]:
     return setting_lower
 
 
-def querychat_tool_starts_open(action: str) -> bool:
+def querychat_tool_starts_open(action: Literal['update', 'query', 'reset']) -> bool:
     """
     Determine whether a tool card should be open based on action and setting.
 

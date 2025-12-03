@@ -7,7 +7,7 @@
 \usage{
 querychat(
   data_source,
-  table_name = rlang::missing_arg(),
+  table_name = missing_arg(),
   ...,
   id = NULL,
   greeting = NULL,
@@ -21,7 +21,7 @@ querychat(
 
 querychat_app(
   data_source,
-  table_name = rlang::missing_arg(),
+  table_name = missing_arg(),
   ...,
   id = NULL,
   greeting = NULL,

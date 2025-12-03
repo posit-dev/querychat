@@ -31,6 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * querychat's system prompt and tool descriptions were rewritten for clarity and future extensibility. (#90)
 
+* Tool detail cards can now be expanded or collapsed by default when querychat runs a query or updates the dashboard via the `QUERYCHAT_TOOL_DETAILS` environment variable. Valid values are `"expanded"`, `"collapsed"`, or `"default"`. (#137)
+
 ## [0.2.2] - 2025-09-04
 
 * Fixed another issue with data sources that aren't already narwhals DataFrames (#83)

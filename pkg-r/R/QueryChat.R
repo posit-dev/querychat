@@ -138,7 +138,7 @@ QueryChat <- R6::R6Class(
     #' }
     initialize = function(
       data_source,
-      table_name = rlang::missing_arg(),
+      table_name = missing_arg(),
       ...,
       id = NULL,
       greeting = NULL,
@@ -149,25 +149,30 @@ QueryChat <- R6::R6Class(
       prompt_template = NULL,
       cleanup = NA
     ) {
-      rlang::check_dots_empty()
+      check_dots_empty()
 
-      if (rlang::is_missing(table_name) && is.data.frame(data_source)) {
+      # Validate arguments
+      check_string(id, allow_null = TRUE)
+      check_string(greeting, allow_null = TRUE)
+      check_string(data_description, allow_null = TRUE)
+      check_number_whole(categorical_threshold, min = 1)
+      check_string(extra_instructions, allow_null = TRUE)
+      check_string(prompt_template, allow_null = TRUE)
+      check_bool(cleanup, allow_na = TRUE)
+
+      if (is_missing(table_name) && is.data.frame(data_source)) {
         table_name <- deparse1(substitute(data_source))
       }
 
       private$.data_source <- normalize_data_source(data_source, table_name)
 
       # Validate table name
-      if (!grepl("^[a-zA-Z][a-zA-Z0-9_]*$", table_name)) {
-        cli::cli_abort(
-          "Table name must begin with a letter and contain only letters, numbers, and underscores"
-        )
-      }
+      check_sql_table_name(table_name)
 
       self$id <- id %||% table_name
 
       if (!is.null(greeting) && file.exists(greeting)) {
-        greeting <- paste(readLines(greeting), collapse = "\n")
+        greeting <- read_utf8(greeting)
       }
       self$greeting <- greeting
 
@@ -257,9 +262,9 @@ QueryChat <- R6::R6Class(
     #' }
     #'
     app_obj = function(..., bookmark_store = "url") {
-      rlang::check_installed("DT")
-      rlang::check_installed("bsicons")
-      rlang::check_dots_empty()
+      check_installed("DT")
+      check_installed("bsicons")
+      check_dots_empty()
 
       table_name <- private$.data_source$table_name
 
@@ -615,7 +620,7 @@ QueryChat <- R6::R6Class(
 #' }
 querychat <- function(
   data_source,
-  table_name = rlang::missing_arg(),
+  table_name = missing_arg(),
   ...,
   id = NULL,
   greeting = NULL,
@@ -626,7 +631,7 @@ querychat <- function(
   prompt_template = NULL,
   cleanup = NA
 ) {
-  if (rlang::is_missing(table_name) && is.data.frame(data_source)) {
+  if (is_missing(table_name) && is.data.frame(data_source)) {
     table_name <- deparse1(substitute(data_source))
   }
 
@@ -654,7 +659,7 @@ querychat <- function(
 #' @export
 querychat_app <- function(
   data_source,
-  table_name = rlang::missing_arg(),
+  table_name = missing_arg(),
   ...,
   id = NULL,
   greeting = NULL,
@@ -666,7 +671,7 @@ querychat_app <- function(
   cleanup = TRUE,
   bookmark_store = "url"
 ) {
-  if (rlang::is_missing(table_name) && is.data.frame(data_source)) {
+  if (is_missing(table_name) && is.data.frame(data_source)) {
     table_name <- deparse1(substitute(data_source))
   }
 

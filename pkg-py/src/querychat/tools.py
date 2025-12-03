@@ -8,7 +8,7 @@ from chatlas import ContentToolResult, Tool
 from shinychat.types import ToolResultDisplay
 
 from ._icons import bs_icon
-from ._utils import df_to_html
+from ._utils import df_to_html, querychat_tool_starts_open
 
 if TYPE_CHECKING:
     from ._datasource import DataSource
@@ -65,7 +65,7 @@ def _update_dashboard_impl(
                     markdown=markdown + f"\n\n{button_html}",
                     title=title,
                     show_request=False,
-                    open=True,
+                    open=querychat_tool_starts_open("update"),
                     icon=bs_icon("funnel-fill"),
                 ),
             },
@@ -139,7 +139,7 @@ def _reset_dashboard_impl(
                     markdown=button_html,
                     title=None,
                     show_request=False,
-                    open=False,
+                    open=querychat_tool_starts_open("reset"),
                     icon=bs_icon("arrow-counterclockwise"),
                 ),
             },
@@ -208,7 +208,7 @@ def _query_impl(data_source: DataSource) -> Callable[[str, str], ContentToolResu
                 "display": ToolResultDisplay(
                     markdown=markdown,
                     show_request=False,
-                    open=True,
+                    open=querychat_tool_starts_open("query"),
                     icon=bs_icon("table"),
                 ),
             },

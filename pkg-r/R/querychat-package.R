@@ -65,6 +65,15 @@
 #' @importFrom lifecycle deprecated
 #' @importFrom R6 R6Class
 #' @importFrom bslib sidebar
-#' @importFrom rlang %||%
+#' @import rlang
 ## usethis namespace: end
 NULL
+
+# @staticimports pkg:staticimports
+#   read_utf8
+
+release_bullets <- function() {
+  c(
+    "Run `staticimports::import()` to update static imports"
+  )
+}

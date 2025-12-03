@@ -108,13 +108,55 @@ tool_query <- function(data_source) {
   )
 }
 
+querychat_tool_details_option <- function() {
+  opt <- getOption("querychat.tool_details", NULL)
+  if (!is.null(opt)) {
+    setting <- opt
+  } else {
+    env <- Sys.getenv("QUERYCHAT_TOOL_DETAILS", "")
+    if (nzchar(env)) {
+      setting <- env
+    } else {
+      return(NULL)
+    }
+  }
+
+  setting <- tolower(setting)
+  valid_settings <- c("expanded", "collapsed", "default")
+
+  if (!setting %in% valid_settings) {
+    cli::cli_warn(c(
+      "Invalid value for {.code querychat.tool_details} or {.envvar QUERYCHAT_TOOL_DETAILS}: {.val {setting}}",
+      "i" = "Must be one of: {.or {.val {valid_settings}}}"
+    ))
+    return(NULL)
+  }
+
+  setting
+}
+
+querychat_tool_starts_open <- function(action) {
+  setting <- querychat_tool_details_option()
+
+  if (is.null(setting)) {
+    return(action != "reset")
+  }
+
+  switch(
+    setting,
+    "expanded" = TRUE,
+    "collapsed" = FALSE,
+    action != "reset"
+  )
+}
+
 querychat_tool_result <- function(
   data_source,
   query,
   title = NULL,
   action = "update"
 ) {
-  action <- rlang::arg_match(action, c("update", "query", "reset"))
+  action <- arg_match(action, c("update", "query", "reset"))
 
   if (action == "reset") {
     query <- ""
@@ -134,7 +176,7 @@ querychat_tool_result <- function(
     error = function(err) err
   )
 
-  is_error <- rlang::is_condition(res)
+  is_error <- is_condition(res)
 
   output <- ""
   if (!is_error && action == "query") {
@@ -182,7 +224,7 @@ querychat_tool_result <- function(
         title = if (action == "update" && !is.null(title)) title,
         show_request = is_error,
         markdown = display_md,
-        open = !is_error && action != "reset"
+        open = querychat_tool_starts_open(action)
       )
     )
   )

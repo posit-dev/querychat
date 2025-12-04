@@ -198,7 +198,14 @@ class QueryChatBase:
         Then run with: `streamlit run app.py`
 
         """
-        from ._streamlit import run_streamlit_app  # noqa: PLC0415
+        try:
+            from ._streamlit import run_streamlit_app  # noqa: PLC0415
+        except ImportError as e:
+            msg = (
+                "streamlit is required to use streamlit_app(). "
+                "Install it with: pip install streamlit"
+            )
+            raise ImportError(msg) from e
 
         run_streamlit_app(
             data_source=self._data_source,

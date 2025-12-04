@@ -2,12 +2,10 @@
 
 ## Project Overview
 
-querychat is a multilingual package that allows users to chat with their data using natural language queries. It's available for:
-
-- R (Shiny)
-- Python (Shiny for Python)
+querychat is a multilingual package that allows users to chat with their data using natural language queries. It's available for R (Shiny) and Python (Shiny for Python).
 
 The core functionality translates natural language queries into SQL statements that are executed against data sources. This approach ensures reliability, transparency, and reproducibility by:
+
 1. Leveraging LLMs' strengths in writing SQL
 2. Providing transparency with visible SQL queries
 3. Enabling reproducibility through reusable queries
@@ -139,3 +137,4 @@ make py-docs-preview
 6. Always ask about file names before writing any new code
 7. Always pay attention to your working directory when running commands, especially when working in a sub-package.
 8. When planning, talk through all function and argument names, file names and locations.
+9. Additional, context-specific instructions can be found in `.claude/`.

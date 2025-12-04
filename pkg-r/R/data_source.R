@@ -185,7 +185,11 @@ DataFrameSource <- R6::R6Class(
     #' @param query SQL query string
     #' @return A data frame with one row of results
     test_query = function(query) {
-      check_string(query)
+      check_string(query, allow_null = TRUE, allow_empty = TRUE)
+      if (is.null(query) || !nzchar(query)) {
+        return(invisible(NULL))
+      }
+
       rs <- DBI::dbSendQuery(private$conn, query)
       df <- DBI::dbFetch(rs, n = 1)
       DBI::dbClearResult(rs)

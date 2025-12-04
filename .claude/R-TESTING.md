@@ -12,6 +12,7 @@ Test files should be placed in `pkg-r/tests/testthat/`. Test file names should d
 2. **Group by method/function**: One `describe()` block per method or function being tested
 3. **Shared fixtures**: Set up at the top of `describe()` blocks, not inside `it()` blocks, when possible
 4. **Self-contained tests**: Each `it()` block should be runnable independently after running the shared setup
+5. Only use `describe()` blocks for grouped behavior-oriented tests. Use `test_that()` for single or unit tests
 
 ### Describe Block Structure
 

@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Literal, Optional, overload
 import chatlas
 import chevron
 import sqlalchemy
-from chatlas import ContentToolRequest, ContentToolResult
 from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 from shiny.express._stub_session import ExpressStubSession
 from shiny.session import get_current_session
@@ -18,17 +17,10 @@ from shinychat import output_markdown_stream
 from ._datasource import DataFrameSource, DataSource, SQLAlchemySource
 from ._icons import bs_icon
 from ._querychat_module import GREETING_PROMPT, ServerValues, mod_server, mod_ui
-from .tools import tool_query, tool_reset_dashboard, tool_update_dashboard
 
 if TYPE_CHECKING:
     import pandas as pd
-    from chatlas import Chat
     from narwhals.stable.v1.typing import IntoFrame
-
-    try:
-        import streamlit as st
-    except ImportError:
-        pass
 
 
 class QueryChatBase:
@@ -206,177 +198,13 @@ class QueryChatBase:
         Then run with: `streamlit run app.py`
 
         """
-        try:
-            import streamlit as st
-        except ImportError as e:
-            msg = (
-                "streamlit is required to use streamlit_app(). "
-                "Install it with: pip install streamlit"
-            )
-            raise ImportError(msg) from e
+        from ._streamlit import run_streamlit_app  # noqa: PLC0415
 
-        table_name = self._data_source.table_name
-
-        # Set page configuration (only if not already set)
-        try:
-            st.set_page_config(
-                page_title=f"querychat with {table_name}",
-                layout="wide",
-                initial_sidebar_state="expanded",
-            )
-        except Exception:
-            # Page config already set - that's ok
-            pass
-
-        # Helper class to wrap session state as reactive values
-        class SessionStateReactive:
-            def __init__(self, key: str, default=None):
-                self.key = key
-                if key not in st.session_state:
-                    st.session_state[key] = default
-
-            def set(self, value):
-                st.session_state[self.key] = value
-
-            def get(self):
-                return st.session_state[self.key]
-
-        # Initialize session state
-        if "querychat_initialized" not in st.session_state:
-            st.session_state.querychat_initialized = True
-            st.session_state.chat_history = []
-            st.session_state.client = copy.deepcopy(self._client)
-            st.session_state.sql = ""
-            st.session_state.title = None
-            st.session_state.tools_registered = False
-
-        # Register tools with the client (only once)
-        if not st.session_state.tools_registered:
-            sql_reactive = SessionStateReactive("sql", "")
-            title_reactive = SessionStateReactive("title", None)
-
-            st.session_state.client.register_tool(
-                tool_update_dashboard(self._data_source, sql_reactive, title_reactive)
-            )
-            st.session_state.client.register_tool(tool_query(self._data_source))
-            st.session_state.client.register_tool(
-                tool_reset_dashboard(sql_reactive, title_reactive)
-            )
-            st.session_state.tools_registered = True
-
-        def streamlit_generator(prompt: str, client: Chat):
-            for chunk in client.stream(prompt, content="all", echo="none"):
-                if isinstance(chunk, ContentToolRequest):
-                    # Show request doesn't seem all that useful since result follows and will show the SQL
-                    yield ""
-                elif isinstance(chunk, ContentToolResult):
-                    # Get display metadata if available
-                    display_info = chunk.extra.get("display") if chunk.extra else None
-
-                    if display_info and hasattr(display_info, "markdown"):
-                        res = "\n\n" + display_info.markdown + "\n\n"
-                    else:
-                        res = "\n\n" + str(chunk) + "\n\n"
-
-                    # yield st.markdown(res, unsafe_allow_html=True)
-                    yield res
-
-                elif isinstance(chunk, str):
-                    yield chunk
-
-        # Sidebar with chat interface
-        with st.sidebar:
-            # Container for chat messages with fixed height (scrollable)
-            chat_container = st.container(height="stretch")
-
-            with chat_container:
-                for message in st.session_state.chat_history:
-                    with st.chat_message(message["role"]):
-                        st.markdown(message["content"], unsafe_allow_html=True)
-
-                if not st.session_state.chat_history:
-                    greeting = self.greeting
-                    if not greeting:
-                        stream = streamlit_generator(
-                            GREETING_PROMPT, st.session_state.client
-                        )
-                        greeting = ""
-                        with st.chat_message("assistant"):
-                            message_placeholder = st.empty()
-                            for chunk in stream:
-                                greeting += chunk
-                                message_placeholder.markdown(greeting, unsafe_allow_html=True)
-
-                    st.session_state.chat_history.append(
-                        {"role": "assistant", "content": greeting}
-                    )
-
-            # Chat input (stays at bottom of sidebar, outside the scrollable container)
-            if prompt := st.chat_input(
-                "Ask a question about your data...",
-                key="chat_input",
-            ):
-                st.session_state.querychat_pending_prompt = prompt
-                st.rerun()
-
-            # Process pending prompt if any (from chat input or suggestion button)
-            if st.session_state.get("querychat_pending_prompt"):
-                prompt = st.session_state.querychat_pending_prompt
-                st.session_state.querychat_pending_prompt = None
-
-                st.session_state.chat_history.append(
-                    {"role": "user", "content": prompt}
-                )
-
-                with chat_container:
-                    with st.chat_message("user"):
-                        st.markdown(prompt)
-
-                    stream = streamlit_generator(prompt, st.session_state.client)
-                    stream_content = ""
-                    with st.chat_message("assistant"):
-                        message_placeholder = st.empty()
-                        for chunk in stream:
-                            stream_content += chunk
-                            message_placeholder.markdown(stream_content, unsafe_allow_html=True)
-
-                st.session_state.chat_history.append(
-                    {
-                        "role": "assistant",
-                        "content": stream_content,
-                    }
-                )
-
-                # Force rerun to update the data display
-                st.rerun()
-
-        # Main content area
-        st.title(f"querychat with `{table_name}`")
-
-        # SQL Query display
-        st.subheader(st.session_state.title or "SQL Query")
-
-        col1, col2 = st.columns([0.9, 0.1])
-        with col1:
-            sql_display = st.session_state.sql or f"SELECT * FROM {table_name}"
-            st.code(sql_display, language="sql")
-
-        with col2:
-            if st.session_state.sql:
-                if st.button("Reset Query", type="secondary"):
-                    st.session_state.sql = ""
-                    st.session_state.title = None
-                    st.rerun()
-
-        # Data display
-        st.subheader("Data")
-
-        if st.session_state.sql:
-            df = self._data_source.execute_query(st.session_state.sql)
-        else:
-            df = self._data_source.get_data()
-
-        st.dataframe(df, use_container_width=True, height=400)
+        run_streamlit_app(
+            data_source=self._data_source,
+            client=self._client,
+            greeting=self.greeting,
+        )
 
     def sidebar(
         self,

@@ -507,8 +507,6 @@ QueryChat <- R6::R6Class(
     #' qc2 <- QueryChat$new(mtcars, greeting = "mtcars_greeting.md")
     #' }
     generate_greeting = function(echo = c("none", "output")) {
-      echo <- match.arg(echo)
-
       chat <- private$.client$clone()
       chat$set_turns(list())
 

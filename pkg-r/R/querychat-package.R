@@ -81,3 +81,8 @@ release_bullets <- function() {
     "Run `staticimports::import()` to update static imports"
   )
 }
+
+suppress_rcmdcheck <- function() {
+  duckdb::duckdb
+  S7::S7_class
+}

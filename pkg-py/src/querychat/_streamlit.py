@@ -23,11 +23,11 @@ class AppState:
     """Type-safe container for Streamlit session state."""
 
     chat_history: list[dict[str, str]] = field(default_factory=list)
-    client: Optional[chatlas.Chat] = None
+    client: chatlas.Chat | None = None
     sql: str = ""
-    title: Optional[str] = None
+    title: str | None = None
     tools_registered: bool = False
-    querychat_pending_prompt: Optional[str] = None
+    querychat_pending_prompt: str | None = None
 
     @staticmethod
     def get(st_module: Any) -> AppState:
@@ -92,6 +92,7 @@ def run_streamlit_app(  # noqa: PLR0912
     """
     try:
         import streamlit as st  # noqa: PLC0415
+        import streamlit.components.v1 as components  # noqa: PLC0415
     except ImportError as e:
         msg = (
             "streamlit is required to use streamlit_app(). "
@@ -111,6 +112,10 @@ def run_streamlit_app(  # noqa: PLR0912
     except Exception:  # noqa: S110
         # Page config already set - that's ok
         pass
+
+    # Inject CSS and JavaScript for suggestion handling
+    st.html(SUGGGESTION_CSS)
+    components.html(SUGGESTION_JS)
 
     # Get or initialize typed session state
     state = AppState.get(st)
@@ -221,8 +226,66 @@ def run_streamlit_app(  # noqa: PLR0912
     # Data display
     st.subheader("Data")
 
-    df = (
-        data_source.execute_query(state.sql) if state.sql else data_source.get_data()
-    )
+    df = data_source.execute_query(state.sql) if state.sql else data_source.get_data()
 
     st.dataframe(df, use_container_width=True, height=400)
+
+
+SUGGGESTION_CSS = """
+    <style>
+        .suggestion {
+            color: #0066cc;
+            cursor: pointer;
+            text-decoration: underline;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            display: inline;
+        }
+
+        .suggestion:hover {
+            color: #0052a3;
+            text-decoration: none;
+            background-color: rgba(0, 102, 204, 0.1);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+        .suggestion:active {
+            transform: scale(0.98);
+        }
+
+        .querychat-update-dashboard-btn {
+            display: none;
+        }
+    </style>
+"""
+
+SUGGESTION_JS = """
+<script>
+    // Access parent window to attach handler to main document
+    const targetDoc = window.parent.document;
+
+    targetDoc.addEventListener('click', function(e) {
+        const suggestion = e.target.closest('.suggestion');
+
+        if (suggestion) {
+            e.preventDefault();
+
+            const suggestionText = suggestion.textContent.trim();
+            const chatInput = targetDoc.querySelector('textarea[data-testid="stChatInputTextArea"]');
+
+            if (chatInput) {
+                // Use native setter to update the value (works with React)
+                const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+                    window.parent.HTMLTextAreaElement.prototype,
+                    'value'
+                ).set;
+                nativeInputValueSetter.call(chatInput, suggestionText);
+
+                chatInput.dispatchEvent(new Event('input', { bubbles: true }));
+                chatInput.focus();
+            }
+        }
+    });
+</script>
+"""

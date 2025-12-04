@@ -1,8 +1,3 @@
-library(testthat)
-library(DBI)
-library(RSQLite)
-library(querychat)
-
 test_that("DataFrameSource$new() creates proper R6 object", {
   # Create a simple data frame
   test_df <- data.frame(
@@ -24,8 +19,8 @@ test_that("DataFrameSource$new() creates proper R6 object", {
 test_that("DBISource$new() creates proper R6 object", {
   # Create temporary SQLite database
   temp_db <- withr::local_tempfile(fileext = ".db")
-  conn <- dbConnect(RSQLite::SQLite(), temp_db)
-  withr::defer(dbDisconnect(conn))
+  conn <- DBI::dbConnect(RSQLite::SQLite(), temp_db)
+  withr::defer(DBI::dbDisconnect(conn))
 
   # Create test table
   test_data <- data.frame(
@@ -35,7 +30,7 @@ test_that("DBISource$new() creates proper R6 object", {
     stringsAsFactors = FALSE
   )
 
-  dbWriteTable(conn, "users", test_data, overwrite = TRUE)
+  DBI::dbWriteTable(conn, "users", test_data, overwrite = TRUE)
 
   # Test DBI source creation
   db_source <- DBISource$new(conn, "users")
@@ -69,10 +64,10 @@ test_that("DataSource$get_schema() returns proper schema", {
 
   # Test with DBI source
   temp_db <- withr::local_tempfile(fileext = ".db")
-  conn <- dbConnect(RSQLite::SQLite(), temp_db)
-  withr::defer(dbDisconnect(conn))
+  conn <- DBI::dbConnect(RSQLite::SQLite(), temp_db)
+  withr::defer(DBI::dbDisconnect(conn))
 
-  dbWriteTable(conn, "test_table", test_df, overwrite = TRUE)
+  DBI::dbWriteTable(conn, "test_table", test_df, overwrite = TRUE)
 
   dbi_source <- DBISource$new(conn, "test_table")
   schema <- dbi_source$get_schema()
@@ -101,9 +96,9 @@ test_that("DataSource$execute_query() works for both source types", {
 
   # Test with DBI source
   temp_db <- withr::local_tempfile(fileext = ".db")
-  conn <- dbConnect(RSQLite::SQLite(), temp_db)
-  withr::defer(dbDisconnect(conn))
-  dbWriteTable(conn, "test_table", test_df, overwrite = TRUE)
+  conn <- DBI::dbConnect(RSQLite::SQLite(), temp_db)
+  withr::defer(DBI::dbDisconnect(conn))
+  DBI::dbWriteTable(conn, "test_table", test_df, overwrite = TRUE)
 
   dbi_source <- DBISource$new(conn, "test_table")
   result <- dbi_source$execute_query(
@@ -138,10 +133,10 @@ test_that("DataSource$execute_query() works with empty/null queries", {
 
   # Test with DBI source
   temp_db <- withr::local_tempfile(fileext = ".db")
-  conn <- dbConnect(RSQLite::SQLite(), temp_db)
-  withr::defer(dbDisconnect(conn))
+  conn <- DBI::dbConnect(RSQLite::SQLite(), temp_db)
+  withr::defer(DBI::dbDisconnect(conn))
 
-  dbWriteTable(conn, "test_table", test_df, overwrite = TRUE)
+  DBI::dbWriteTable(conn, "test_table", test_df, overwrite = TRUE)
 
   dbi_source <- DBISource$new(conn, "test_table")
 
@@ -249,10 +244,10 @@ test_that("QueryChat$new() works with both source types", {
 
   # Test with database connection
   temp_db <- withr::local_tempfile(fileext = ".db")
-  conn <- dbConnect(RSQLite::SQLite(), temp_db)
-  withr::defer(dbDisconnect(conn))
+  conn <- DBI::dbConnect(RSQLite::SQLite(), temp_db)
+  withr::defer(DBI::dbDisconnect(conn))
 
-  dbWriteTable(conn, "test_table", test_df, overwrite = TRUE)
+  DBI::dbWriteTable(conn, "test_table", test_df, overwrite = TRUE)
 
   dbi_source <- DBISource$new(conn, "test_table")
   qc2 <- QueryChat$new(
@@ -282,9 +277,9 @@ test_that("DataSource$get_data() returns all data", {
 
   # Test with DBI source
   temp_db <- withr::local_tempfile(fileext = ".db")
-  conn <- dbConnect(RSQLite::SQLite(), temp_db)
-  withr::defer(dbDisconnect(conn))
-  dbWriteTable(conn, "test_table", test_df, overwrite = TRUE)
+  conn <- DBI::dbConnect(RSQLite::SQLite(), temp_db)
+  withr::defer(DBI::dbDisconnect(conn))
+  DBI::dbWriteTable(conn, "test_table", test_df, overwrite = TRUE)
 
   dbi_source <- DBISource$new(conn, "test_table")
   result <- dbi_source$get_data()
@@ -352,8 +347,8 @@ test_that("DataSource$get_db_type() is used to customize prompt template", {
 test_that("DBISource$execute_query() handles filter and sort queries", {
   # Create temporary SQLite database
   temp_db <- withr::local_tempfile(fileext = ".db")
-  conn <- dbConnect(RSQLite::SQLite(), temp_db)
-  withr::defer(dbDisconnect(conn))
+  conn <- DBI::dbConnect(RSQLite::SQLite(), temp_db)
+  withr::defer(DBI::dbDisconnect(conn))
 
   # Create test table
   test_data <- data.frame(
@@ -363,7 +358,7 @@ test_that("DBISource$execute_query() handles filter and sort queries", {
     stringsAsFactors = FALSE
   )
 
-  dbWriteTable(conn, "users", test_data, overwrite = TRUE)
+  DBI::dbWriteTable(conn, "users", test_data, overwrite = TRUE)
 
   # Create database source
   db_source <- DBISource$new(conn, "users")

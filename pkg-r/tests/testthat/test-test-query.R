@@ -1,8 +1,3 @@
-library(testthat)
-library(DBI)
-library(RSQLite)
-library(querychat)
-
 test_that("DataSource$test_query() correctly retrieves one row of data", {
   # Create a simple data frame
   test_df <- data.frame(

@@ -1,5 +1,3 @@
-library(testthat)
-
 test_that("Shiny app example loads without errors", {
   skip_if_not_installed("DT")
   skip_if_not_installed("RSQLite")

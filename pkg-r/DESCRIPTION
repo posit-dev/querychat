@@ -23,7 +23,6 @@ Imports:
     htmltools,
     lifecycle,
     promises,
-    purrr,
     R6,
     rlang (>= 1.1.0),
     S7,

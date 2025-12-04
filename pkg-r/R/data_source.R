@@ -304,7 +304,7 @@ DBISource <- R6::R6Class(
 
       # Default to 'POSIX' if dbms name not found
       conn_info <- DBI::dbGetInfo(private$conn)
-      dbms_name <- purrr::pluck(conn_info, "dbms.name", .default = "POSIX")
+      dbms_name <- if (is.null(conn_info[["dbms.name"]])) "POSIX" else conn_info[["dbms.name"]]
 
       # Remove ' SQL', if exists (SQL is already in the prompt)
       gsub(" SQL", "", dbms_name)

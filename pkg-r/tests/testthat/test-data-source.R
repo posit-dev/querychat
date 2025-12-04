@@ -3,7 +3,7 @@ library(DBI)
 library(RSQLite)
 library(querychat)
 
-test_that("DataFrameSource creates proper R6 object", {
+test_that("DataFrameSource$new() creates proper R6 object", {
   # Create a simple data frame
   test_df <- data.frame(
     id = 1:5,
@@ -21,7 +21,7 @@ test_that("DataFrameSource creates proper R6 object", {
   expect_equal(source$table_name, "test_table")
 })
 
-test_that("DBISource creates proper R6 object", {
+test_that("DBISource$new() creates proper R6 object", {
   # Create temporary SQLite database
   temp_db <- withr::local_tempfile(fileext = ".db")
   conn <- dbConnect(RSQLite::SQLite(), temp_db)
@@ -44,7 +44,7 @@ test_that("DBISource creates proper R6 object", {
   expect_equal(db_source$table_name, "users")
 })
 
-test_that("get_schema methods return proper schema", {
+test_that("DataSource$get_schema() returns proper schema", {
   # Test with data frame source
   test_df <- data.frame(
     id = 1:5,
@@ -85,7 +85,7 @@ test_that("get_schema methods return proper schema", {
   expect_match(schema, "- id \\(INTEGER\\)\\n  Range: 1 to 5")
 })
 
-test_that("execute_query works for both source types", {
+test_that("DataSource$execute_query() works for both source types", {
   # Test with data frame source
   test_df <- data.frame(
     id = 1:5,
@@ -113,7 +113,7 @@ test_that("execute_query works for both source types", {
   expect_equal(nrow(result), 3) # Should return 3 rows (30, 40, 50)
 })
 
-test_that("execute_query works with empty/null queries", {
+test_that("DataSource$execute_query() works with empty/null queries", {
   # Test with data frame source
   test_df <- data.frame(
     id = 1:5,
@@ -159,7 +159,7 @@ test_that("execute_query works with empty/null queries", {
 })
 
 
-test_that("get_schema correctly reports min/max values for numeric columns", {
+test_that("DataSource$get_schema() correctly reports min/max values for numeric columns", {
   # Create a dataframe with multiple numeric columns
   test_df <- data.frame(
     id = 1:5,
@@ -264,7 +264,7 @@ test_that("QueryChat$new() works with both source types", {
   expect_equal(qc2$data_source$table_name, "test_table")
 })
 
-test_that("get_data returns all data", {
+test_that("DataSource$get_data() returns all data", {
   # Test with data frame source
   test_df <- data.frame(
     id = 1:5,
@@ -293,7 +293,7 @@ test_that("get_data returns all data", {
   expect_equal(ncol(result), 2)
 })
 
-test_that("get_db_type returns correct type for DataFrameSource", {
+test_that("DataFrameSource$get_db_type() returns correct type", {
   # Create a simple data frame source
   df <- data.frame(x = 1:5, y = letters[1:5])
   df_source <- DataFrameSource$new(df, "test_table")
@@ -303,7 +303,7 @@ test_that("get_db_type returns correct type for DataFrameSource", {
   expect_equal(df_source$get_db_type(), "DuckDB")
 })
 
-test_that("get_db_type returns correct type for DBISource with SQLite", {
+test_that("DBISource$get_db_type() returns correct type for SQLite", {
   skip_if_not_installed("RSQLite")
 
   # Create a SQLite database source
@@ -317,7 +317,7 @@ test_that("get_db_type returns correct type for DBISource with SQLite", {
   expect_equal(db_source$get_db_type(), "SQLite")
 })
 
-test_that("get_db_type is correctly used in assemble_system_prompt", {
+test_that("DataSource$get_db_type() is correctly used in assemble_system_prompt()", {
   # Create a simple data frame source
   df <- data.frame(x = 1:5, y = letters[1:5])
   df_source <- DataFrameSource$new(df, "test_table")
@@ -330,7 +330,7 @@ test_that("get_db_type is correctly used in assemble_system_prompt", {
   expect_true(grepl("DuckDB SQL", sys_prompt, fixed = TRUE))
 })
 
-test_that("get_db_type is used to customize prompt template", {
+test_that("DataSource$get_db_type() is used to customize prompt template", {
   # Create a simple data frame source
   df <- data.frame(x = 1:5, y = letters[1:5])
   df_source <- DataFrameSource$new(df, "test_table")
@@ -349,7 +349,7 @@ test_that("get_db_type is used to customize prompt template", {
   expect_true(grepl(db_type, prompt, fixed = TRUE))
 })
 
-test_that("database source query functionality", {
+test_that("DBISource$execute_query() handles filter and sort queries", {
   # Create temporary SQLite database
   temp_db <- withr::local_tempfile(fileext = ".db")
   conn <- dbConnect(RSQLite::SQLite(), temp_db)
@@ -387,7 +387,7 @@ test_that("database source query functionality", {
   expect_equal(ordered_result$name[1], "Charlie") # Oldest first
 })
 
-test_that("execute_query handles SQL with inline comments", {
+test_that("DataSource$execute_query() handles SQL with inline comments", {
   # Create a simple test dataframe
   test_df <- data.frame(
     id = 1:5,
@@ -426,7 +426,7 @@ test_that("execute_query handles SQL with inline comments", {
   expect_equal(ncol(result), 2)
 })
 
-test_that("execute_query handles SQL with multiline comments", {
+test_that("DataSource$execute_query() handles SQL with multiline comments", {
   # Create a simple test dataframe
   test_df <- data.frame(
     id = 1:5,
@@ -470,7 +470,7 @@ test_that("execute_query handles SQL with multiline comments", {
   expect_equal(ncol(result), 2)
 })
 
-test_that("execute_query handles SQL with trailing semicolons", {
+test_that("DataSource$execute_query() handles SQL with trailing semicolons", {
   # Create a simple test dataframe
   test_df <- data.frame(
     id = 1:5,
@@ -507,7 +507,7 @@ test_that("execute_query handles SQL with trailing semicolons", {
   expect_equal(ncol(result), 2)
 })
 
-test_that("execute_query handles SQL with mixed comments and semicolons", {
+test_that("DataSource$execute_query() handles SQL with mixed comments and semicolons", {
   # Create a simple test dataframe
   test_df <- data.frame(
     id = 1:5,
@@ -555,7 +555,7 @@ test_that("execute_query handles SQL with mixed comments and semicolons", {
   expect_equal(ncol(result), 2)
 })
 
-test_that("execute_query handles SQL with unusual whitespace patterns", {
+test_that("DataSource$execute_query() handles SQL with unusual whitespace patterns", {
   # Create a simple test dataframe
   test_df <- data.frame(
     id = 1:5,

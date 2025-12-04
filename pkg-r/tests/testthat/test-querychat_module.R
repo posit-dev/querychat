@@ -1,6 +1,6 @@
 library(testthat)
 
-test_that("app database example loads without errors", {
+test_that("Shiny app example loads without errors", {
   skip_if_not_installed("DT")
   skip_if_not_installed("RSQLite")
   skip_if_not_installed("shinytest2")
@@ -19,7 +19,10 @@ test_that("app database example loads without errors", {
   })
 })
 
-test_that("database reactive functionality works correctly", {
+# TODO: This test (QueryChat$new() with DBISource and $execute_query() work together)
+# should be moved to a more appropriate location, possibly test-QueryChat.R or
+# a new test-integration.R file when those are created.
+test_that("QueryChat$new() with DBISource and $execute_query() work together", {
   skip_if_not_installed("RSQLite")
 
   library(DBI)

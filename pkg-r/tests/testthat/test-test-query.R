@@ -3,7 +3,7 @@ library(DBI)
 library(RSQLite)
 library(querychat)
 
-test_that("test_query correctly retrieves one row of data", {
+test_that("DataSource$test_query() correctly retrieves one row of data", {
   # Create a simple data frame
   test_df <- data.frame(
     id = 1:5,
@@ -47,7 +47,7 @@ test_that("test_query correctly retrieves one row of data", {
   expect_equal(nrow(result), 0) # Should return empty data frame
 })
 
-test_that("test_query handles errors correctly", {
+test_that("DataSource$test_query() handles errors correctly", {
   # Setup DBI source
   temp_db <- withr::local_tempfile(fileext = ".db")
   conn <- dbConnect(RSQLite::SQLite(), temp_db)
@@ -75,7 +75,7 @@ test_that("test_query handles errors correctly", {
   ))
 })
 
-test_that("test_query works with different data types", {
+test_that("DataSource$test_query() works with different data types", {
   # Create a data frame with different data types
   test_df <- data.frame(
     id = 1:3,

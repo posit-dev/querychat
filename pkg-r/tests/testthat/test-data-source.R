@@ -1,3 +1,4 @@
+# $new() ----------------------------------------------------------------------
 test_that("DataFrameSource$new() creates proper R6 object", {
   # Create a simple data frame
   test_df <- data.frame(
@@ -39,6 +40,7 @@ test_that("DBISource$new() creates proper R6 object", {
   expect_equal(db_source$table_name, "users")
 })
 
+# $get_schema() ---------------------------------------------------------------
 test_that("DataSource$get_schema() returns proper schema", {
   # Test with data frame source
   test_df <- data.frame(
@@ -80,6 +82,134 @@ test_that("DataSource$get_schema() returns proper schema", {
   expect_match(schema, "- id \\(INTEGER\\)\\n  Range: 1 to 5")
 })
 
+test_that("DataSource$get_schema() correctly reports min/max values for numeric columns", {
+  # Create a dataframe with multiple numeric columns
+  test_df <- data.frame(
+    id = 1:5,
+    score = c(10.5, 20.3, 15.7, 30.1, 25.9),
+    count = c(100, 200, 150, 50, 75),
+    stringsAsFactors = FALSE
+  )
+
+  df_source <- DataFrameSource$new(test_df, "test_metrics")
+  withr::defer(df_source$cleanup())
+  schema <- df_source$get_schema()
+
+  # Check that each numeric column has the correct min/max values
+  expect_match(schema, "- id \\(INTEGER\\)\\n  Range: 1 to 5")
+  expect_match(schema, "- score \\(FLOAT\\)\\n  Range: 10\\.5 to 30\\.1")
+  # Note: In the test output, count was detected as FLOAT rather than INTEGER
+  expect_match(schema, "- count \\(FLOAT\\)\\n  Range: 50 to 200")
+})
+
+test_that("assemble_system_prompt generates appropriate system prompt", {
+  test_df <- data.frame(
+    id = 1:3,
+    name = c("A", "B", "C"),
+    stringsAsFactors = FALSE
+  )
+
+  df_source <- DataFrameSource$new(test_df, "test_table")
+  withr::defer(df_source$cleanup())
+
+  prompt <- assemble_system_prompt(
+    df_source,
+    data_description = "A test dataframe"
+  )
+  expect_type(prompt, "character")
+  expect_true(nchar(prompt) > 0)
+  expect_match(prompt, "A test dataframe")
+  expect_match(prompt, "Table: test_table")
+})
+
+# $get_data() -----------------------------------------------------------------
+test_that("DataSource$get_data() returns all data", {
+  # Test with data frame source
+  test_df <- data.frame(
+    id = 1:5,
+    value = c(10, 20, 30, 40, 50),
+    stringsAsFactors = FALSE
+  )
+
+  df_source <- DataFrameSource$new(test_df, "test_table")
+  withr::defer(df_source$cleanup())
+
+  result <- df_source$get_data()
+  expect_s3_class(result, "data.frame")
+  expect_equal(nrow(result), 5)
+  expect_equal(ncol(result), 2)
+
+  # Test with DBI source
+  temp_db <- withr::local_tempfile(fileext = ".db")
+  conn <- DBI::dbConnect(RSQLite::SQLite(), temp_db)
+  withr::defer(DBI::dbDisconnect(conn))
+  DBI::dbWriteTable(conn, "test_table", test_df, overwrite = TRUE)
+
+  dbi_source <- DBISource$new(conn, "test_table")
+  result <- dbi_source$get_data()
+  expect_s3_class(result, "data.frame")
+  expect_equal(nrow(result), 5)
+  expect_equal(ncol(result), 2)
+})
+
+# $get_db_type() --------------------------------------------------------------
+test_that("DataFrameSource$get_db_type() returns correct type", {
+  # Create a simple data frame source
+  df <- data.frame(x = 1:5, y = letters[1:5])
+  df_source <- DataFrameSource$new(df, "test_table")
+  withr::defer(df_source$cleanup())
+
+  # Test that get_db_type returns "DuckDB"
+  expect_equal(df_source$get_db_type(), "DuckDB")
+})
+
+test_that("DBISource$get_db_type() returns correct type for SQLite", {
+  skip_if_not_installed("RSQLite")
+
+  # Create a SQLite database source
+  temp_db <- withr::local_tempfile(fileext = ".db")
+  conn <- DBI::dbConnect(RSQLite::SQLite(), temp_db)
+  withr::defer(DBI::dbDisconnect(conn))
+  DBI::dbWriteTable(conn, "test_table", data.frame(x = 1:5, y = letters[1:5]))
+  db_source <- DBISource$new(conn, "test_table")
+
+  # Test that get_db_type returns the correct database type
+  expect_equal(db_source$get_db_type(), "SQLite")
+})
+
+test_that("DataSource$get_db_type() is correctly used in assemble_system_prompt()", {
+  # Create a simple data frame source
+  df <- data.frame(x = 1:5, y = letters[1:5])
+  df_source <- DataFrameSource$new(df, "test_table")
+  withr::defer(df_source$cleanup())
+
+  # Generate system prompt
+  sys_prompt <- assemble_system_prompt(df_source)
+
+  # Check that "DuckDB" appears in the prompt content
+  expect_true(grepl("DuckDB SQL", sys_prompt, fixed = TRUE))
+})
+
+test_that("DataSource$get_db_type() is used to customize prompt template", {
+  # Create a simple data frame source
+  df <- data.frame(x = 1:5, y = letters[1:5])
+  df_source <- DataFrameSource$new(df, "test_table")
+  withr::defer(df_source$cleanup())
+
+  # Get the db_type
+  db_type <- df_source$get_db_type()
+
+  # Check that the db_type is correctly returned
+  expect_equal(db_type, "DuckDB")
+
+  # Verify the value is used in the system prompt
+  # This is an indirect test that doesn't need mocking
+  # We just check that the string appears somewhere in the system prompt
+  prompt <- assemble_system_prompt(df_source)
+  expect_true(grepl(db_type, prompt, fixed = TRUE))
+})
+
+# $execute_query() ------------------------------------------------------------
 test_that("DataSource$execute_query() works for both source types", {
   # Test with data frame source
   test_df <- data.frame(
@@ -151,197 +281,6 @@ test_that("DataSource$execute_query() works with empty/null queries", {
   expect_s3_class(result_empty, "data.frame")
   expect_equal(nrow(result_empty), 5) # Should return all rows
   expect_equal(ncol(result_empty), 2) # Should return all columns
-})
-
-
-test_that("DataSource$get_schema() correctly reports min/max values for numeric columns", {
-  # Create a dataframe with multiple numeric columns
-  test_df <- data.frame(
-    id = 1:5,
-    score = c(10.5, 20.3, 15.7, 30.1, 25.9),
-    count = c(100, 200, 150, 50, 75),
-    stringsAsFactors = FALSE
-  )
-
-  df_source <- DataFrameSource$new(test_df, "test_metrics")
-  withr::defer(df_source$cleanup())
-  schema <- df_source$get_schema()
-
-  # Check that each numeric column has the correct min/max values
-  expect_match(schema, "- id \\(INTEGER\\)\\n  Range: 1 to 5")
-  expect_match(schema, "- score \\(FLOAT\\)\\n  Range: 10\\.5 to 30\\.1")
-  # Note: In the test output, count was detected as FLOAT rather than INTEGER
-  expect_match(schema, "- count \\(FLOAT\\)\\n  Range: 50 to 200")
-})
-
-test_that("assemble_system_prompt generates appropriate system prompt", {
-  test_df <- data.frame(
-    id = 1:3,
-    name = c("A", "B", "C"),
-    stringsAsFactors = FALSE
-  )
-
-  df_source <- DataFrameSource$new(test_df, "test_table")
-  withr::defer(df_source$cleanup())
-
-  prompt <- assemble_system_prompt(
-    df_source,
-    data_description = "A test dataframe"
-  )
-  expect_type(prompt, "character")
-  expect_true(nchar(prompt) > 0)
-  expect_match(prompt, "A test dataframe")
-  expect_match(prompt, "Table: test_table")
-})
-
-test_that("QueryChat$new() automatically handles data.frame inputs", {
-  # Test that QueryChat$new() accepts data frames directly
-  test_df <- data.frame(id = 1:3, name = c("A", "B", "C"))
-
-  # Should work with data frame and auto-convert it
-  qc <- QueryChat$new(
-    data_source = test_df,
-    table_name = "test_df",
-    greeting = "Test greeting"
-  )
-  withr::defer(qc$cleanup())
-
-  expect_s3_class(qc$data_source, "DataSource")
-  expect_s3_class(qc$data_source, "DataFrameSource")
-
-  # Should work with proper data source too
-  df_source <- DataFrameSource$new(test_df, "test_table")
-  withr::defer(df_source$cleanup())
-
-  qc2 <- QueryChat$new(
-    data_source = df_source,
-    table_name = "test_table",
-    greeting = "Test greeting"
-  )
-  expect_s3_class(qc2$data_source, "DataSource")
-})
-
-test_that("QueryChat$new() works with both source types", {
-  # Test with data frame
-  test_df <- data.frame(
-    id = 1:3,
-    name = c("A", "B", "C"),
-    stringsAsFactors = FALSE
-  )
-
-  # Create data source and test with QueryChat$new()
-  df_source <- DataFrameSource$new(test_df, "test_source")
-  withr::defer(df_source$cleanup())
-
-  qc <- QueryChat$new(
-    data_source = df_source,
-    table_name = "test_source",
-    greeting = "Test greeting"
-  )
-
-  expect_s3_class(qc$data_source, "DataFrameSource")
-  expect_equal(qc$data_source$table_name, "test_source")
-
-  # Test with database connection
-  temp_db <- withr::local_tempfile(fileext = ".db")
-  conn <- DBI::dbConnect(RSQLite::SQLite(), temp_db)
-  withr::defer(DBI::dbDisconnect(conn))
-
-  DBI::dbWriteTable(conn, "test_table", test_df, overwrite = TRUE)
-
-  dbi_source <- DBISource$new(conn, "test_table")
-  qc2 <- QueryChat$new(
-    data_source = dbi_source,
-    table_name = "test_table",
-    greeting = "Test greeting"
-  )
-  expect_s3_class(qc2$data_source, "DBISource")
-  expect_equal(qc2$data_source$table_name, "test_table")
-})
-
-test_that("DataSource$get_data() returns all data", {
-  # Test with data frame source
-  test_df <- data.frame(
-    id = 1:5,
-    value = c(10, 20, 30, 40, 50),
-    stringsAsFactors = FALSE
-  )
-
-  df_source <- DataFrameSource$new(test_df, "test_table")
-  withr::defer(df_source$cleanup())
-
-  result <- df_source$get_data()
-  expect_s3_class(result, "data.frame")
-  expect_equal(nrow(result), 5)
-  expect_equal(ncol(result), 2)
-
-  # Test with DBI source
-  temp_db <- withr::local_tempfile(fileext = ".db")
-  conn <- DBI::dbConnect(RSQLite::SQLite(), temp_db)
-  withr::defer(DBI::dbDisconnect(conn))
-  DBI::dbWriteTable(conn, "test_table", test_df, overwrite = TRUE)
-
-  dbi_source <- DBISource$new(conn, "test_table")
-  result <- dbi_source$get_data()
-  expect_s3_class(result, "data.frame")
-  expect_equal(nrow(result), 5)
-  expect_equal(ncol(result), 2)
-})
-
-test_that("DataFrameSource$get_db_type() returns correct type", {
-  # Create a simple data frame source
-  df <- data.frame(x = 1:5, y = letters[1:5])
-  df_source <- DataFrameSource$new(df, "test_table")
-  withr::defer(df_source$cleanup())
-
-  # Test that get_db_type returns "DuckDB"
-  expect_equal(df_source$get_db_type(), "DuckDB")
-})
-
-test_that("DBISource$get_db_type() returns correct type for SQLite", {
-  skip_if_not_installed("RSQLite")
-
-  # Create a SQLite database source
-  temp_db <- withr::local_tempfile(fileext = ".db")
-  conn <- DBI::dbConnect(RSQLite::SQLite(), temp_db)
-  withr::defer(DBI::dbDisconnect(conn))
-  DBI::dbWriteTable(conn, "test_table", data.frame(x = 1:5, y = letters[1:5]))
-  db_source <- DBISource$new(conn, "test_table")
-
-  # Test that get_db_type returns the correct database type
-  expect_equal(db_source$get_db_type(), "SQLite")
-})
-
-test_that("DataSource$get_db_type() is correctly used in assemble_system_prompt()", {
-  # Create a simple data frame source
-  df <- data.frame(x = 1:5, y = letters[1:5])
-  df_source <- DataFrameSource$new(df, "test_table")
-  withr::defer(df_source$cleanup())
-
-  # Generate system prompt
-  sys_prompt <- assemble_system_prompt(df_source)
-
-  # Check that "DuckDB" appears in the prompt content
-  expect_true(grepl("DuckDB SQL", sys_prompt, fixed = TRUE))
-})
-
-test_that("DataSource$get_db_type() is used to customize prompt template", {
-  # Create a simple data frame source
-  df <- data.frame(x = 1:5, y = letters[1:5])
-  df_source <- DataFrameSource$new(df, "test_table")
-  withr::defer(df_source$cleanup())
-
-  # Get the db_type
-  db_type <- df_source$get_db_type()
-
-  # Check that the db_type is correctly returned
-  expect_equal(db_type, "DuckDB")
-
-  # Verify the value is used in the system prompt
-  # This is an indirect test that doesn't need mocking
-  # We just check that the string appears somewhere in the system prompt
-  prompt <- assemble_system_prompt(df_source)
-  expect_true(grepl(db_type, prompt, fixed = TRUE))
 })
 
 test_that("DBISource$execute_query() handles filter and sort queries", {
@@ -577,4 +516,107 @@ test_that("DataSource$execute_query() handles SQL with unusual whitespace patter
   expect_s3_class(result, "data.frame")
   expect_equal(nrow(result), 3)
   expect_equal(ncol(result), 2)
+})
+
+# $test_query() ---------------------------------------------------------------
+test_that("DataSource$test_query() correctly retrieves one row of data", {
+  # Create a simple data frame
+  test_df <- data.frame(
+    id = 1:5,
+    name = c("Alice", "Bob", "Charlie", "Diana", "Eve"),
+    value = c(10, 20, 30, 40, 50),
+    stringsAsFactors = FALSE
+  )
+
+  # Setup DBI source
+  temp_db <- withr::local_tempfile(fileext = ".db")
+  conn <- dbConnect(RSQLite::SQLite(), temp_db)
+
+  dbWriteTable(conn, "test_table", test_df, overwrite = TRUE)
+
+  dbi_source <- DBISource$new(conn, "test_table")
+  withr::defer(dbi_source$cleanup())
+
+  # Test basic query - should only return one row
+  result <- dbi_source$test_query("SELECT * FROM test_table")
+  expect_s3_class(result, "data.frame")
+  expect_equal(nrow(result), 1) # Should only return 1 row
+  expect_equal(result$id, 1) # Should be first row
+
+  # Test with WHERE clause
+  result <- dbi_source$test_query("SELECT * FROM test_table WHERE value > 25")
+  expect_s3_class(result, "data.frame")
+  expect_equal(nrow(result), 1) # Should only return 1 row
+  expect_equal(result$value, 30) # Should return first row with value > 25
+
+  # Test with ORDER BY - should get the highest value
+  result <- dbi_source$test_query(
+    "SELECT * FROM test_table ORDER BY value DESC"
+  )
+  expect_s3_class(result, "data.frame")
+  expect_equal(nrow(result), 1)
+  expect_equal(result$value, 50) # Should be the highest value
+
+  # Test with query returning no results
+  result <- dbi_source$test_query("SELECT * FROM test_table WHERE value > 100")
+  expect_s3_class(result, "data.frame")
+  expect_equal(nrow(result), 0) # Should return empty data frame
+})
+
+test_that("DataSource$test_query() handles errors correctly", {
+  # Setup DBI source
+  temp_db <- withr::local_tempfile(fileext = ".db")
+  conn <- dbConnect(RSQLite::SQLite(), temp_db)
+  withr::defer(dbDisconnect(conn))
+
+  # Create a test table
+  test_df <- data.frame(
+    id = 1:3,
+    value = c(10, 20, 30),
+    stringsAsFactors = FALSE
+  )
+  dbWriteTable(conn, "test_table", test_df, overwrite = TRUE)
+
+  dbi_source <- DBISource$new(conn, "test_table")
+
+  # Test with invalid SQL
+  expect_error(dbi_source$test_query("SELECT * WRONG SYNTAX"))
+
+  # Test with non-existent table
+  expect_error(dbi_source$test_query("SELECT * FROM non_existent_table"))
+
+  # Test with non-existent column
+  expect_error(dbi_source$test_query(
+    "SELECT non_existent_column FROM test_table"
+  ))
+})
+
+test_that("DataSource$test_query() works with different data types", {
+  # Create a data frame with different data types
+  test_df <- data.frame(
+    id = 1:3,
+    text_col = c("text1", "text2", "text3"),
+    num_col = c(1.1, 2.2, 3.3),
+    int_col = c(10L, 20L, 30L),
+    bool_col = c(TRUE, FALSE, TRUE),
+    stringsAsFactors = FALSE
+  )
+
+  # Setup DBI source
+  temp_db <- withr::local_tempfile(fileext = ".db")
+  conn <- dbConnect(RSQLite::SQLite(), temp_db)
+  withr::defer(dbDisconnect(conn))
+
+  dbWriteTable(conn, "types_table", test_df, overwrite = TRUE)
+
+  dbi_source <- DBISource$new(conn, "types_table")
+
+  # Test query with different column types
+  result <- dbi_source$test_query("SELECT * FROM types_table")
+  expect_s3_class(result, "data.frame")
+  expect_equal(nrow(result), 1)
+  expect_type(result$text_col, "character")
+  expect_type(result$num_col, "double")
+  expect_type(result$int_col, "integer")
+  expect_type(result$bool_col, "integer") # SQLite stores booleans as integers
 })

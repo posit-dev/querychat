@@ -1,4 +1,35 @@
-describe("DataSource$new()", {
+describe("DataSource base class", {
+  it("throws not_implemented_error for all abstract methods", {
+    # Create a base DataSource object (shouldn't be done in practice)
+    base_source <- DataSource$new()
+
+    expect_snapshot(error = TRUE, {
+      base_source$get_db_type()
+    })
+
+    expect_snapshot(error = TRUE, {
+      base_source$get_schema()
+    })
+
+    expect_snapshot(error = TRUE, {
+      base_source$execute_query("SELECT * FROM test")
+    })
+
+    expect_snapshot(error = TRUE, {
+      base_source$test_query("SELECT * FROM test LIMIT 1")
+    })
+
+    expect_snapshot(error = TRUE, {
+      base_source$get_data()
+    })
+
+    expect_snapshot(error = TRUE, {
+      base_source$cleanup()
+    })
+  })
+})
+
+describe("DataFrameSource$new()", {
   it("creates proper R6 object for DataFrameSource", {
     test_df <- new_test_df()
 
@@ -10,6 +41,29 @@ describe("DataSource$new()", {
     expect_equal(source$table_name, "test_table")
   })
 
+  it("errors with non-data.frame input", {
+    expect_snapshot(
+      error = TRUE,
+      DataFrameSource$new(list(a = 1, b = 2), "test_table")
+    )
+    expect_snapshot(error = TRUE, DataFrameSource$new(c(1, 2, 3), "test_table"))
+    expect_snapshot(error = TRUE, DataFrameSource$new(NULL, "test_table"))
+  })
+
+  it("errors with invalid table names", {
+    test_df <- new_test_df()
+
+    expect_snapshot(error = TRUE, {
+      DataFrameSource$new(test_df, "123_invalid")
+      DataFrameSource$new(test_df, "table-name")
+      DataFrameSource$new(test_df, "table name")
+      DataFrameSource$new(test_df, "")
+      DataFrameSource$new(test_df, NULL)
+    })
+  })
+})
+
+describe("DBISource$new()", {
   it("creates proper R6 object for DBISource", {
     db <- local_sqlite_connection(new_users_df(), "users")
 
@@ -17,6 +71,44 @@ describe("DataSource$new()", {
     expect_s3_class(db_source, "DBISource")
     expect_s3_class(db_source, "DataSource")
     expect_equal(db_source$table_name, "users")
+  })
+
+  it("errors with non-DBI connection", {
+    expect_snapshot(error = TRUE, {
+      DBISource$new(list(fake = "connection"), "test_table")
+    })
+
+    expect_snapshot(error = TRUE, {
+      DBISource$new(NULL, "test_table")
+    })
+
+    expect_snapshot(error = TRUE, {
+      DBISource$new("not a connection", "test_table")
+    })
+  })
+
+  it("errors with invalid table_name types", {
+    db <- local_sqlite_connection(new_test_df())
+
+    expect_snapshot(error = TRUE, {
+      DBISource$new(db$conn, 123)
+    })
+
+    expect_snapshot(error = TRUE, {
+      DBISource$new(db$conn, c("table1", "table2"))
+    })
+
+    expect_snapshot(error = TRUE, {
+      DBISource$new(db$conn, list(name = "table"))
+    })
+  })
+
+  it("errors when table does not exist", {
+    db <- local_sqlite_connection(new_test_df(), "existing_table")
+
+    expect_snapshot(error = TRUE, {
+      DBISource$new(db$conn, "non_existent_table")
+    })
   })
 })
 
@@ -78,6 +170,93 @@ describe("assemble_system_prompt()", {
 
     expect_equal(df_source$get_db_type(), "DuckDB")
     expect_true(grepl("DuckDB SQL Tips", sys_prompt, fixed = TRUE))
+  })
+
+  it("errors with non-DataSource input", {
+    expect_snapshot(error = TRUE, {
+      assemble_system_prompt(
+        list(not = "a data source"),
+        data_description = "Test"
+      )
+    })
+
+    expect_snapshot(error = TRUE, {
+      assemble_system_prompt(
+        data.frame(x = 1:3),
+        data_description = "Test"
+      )
+    })
+  })
+
+  it("works without extra_instructions", {
+    prompt <- assemble_system_prompt(
+      df_source,
+      data_description = "A test dataframe",
+      extra_instructions = NULL
+    )
+
+    expect_type(prompt, "character")
+    expect_true(nchar(prompt) > 0)
+    expect_match(prompt, "A test dataframe")
+    expect_match(prompt, "Table: test_table")
+  })
+
+  it("accepts file paths for data_description", {
+    temp_file <- withr::local_tempfile(fileext = ".txt")
+    writeLines("This is a description from a file", temp_file)
+
+    prompt <- assemble_system_prompt(
+      df_source,
+      data_description = temp_file
+    )
+
+    expect_type(prompt, "character")
+    expect_match(prompt, "This is a description from a file")
+  })
+
+  it("accepts file paths for extra_instructions", {
+    temp_file <- withr::local_tempfile(fileext = ".txt")
+    writeLines("Extra instructions from file", temp_file)
+
+    prompt <- assemble_system_prompt(
+      df_source,
+      extra_instructions = temp_file
+    )
+
+    expect_type(prompt, "character")
+    expect_match(prompt, "Extra instructions from file")
+  })
+
+  it("accepts inline text for data_description", {
+    prompt <- assemble_system_prompt(
+      df_source,
+      data_description = "Inline description text"
+    )
+
+    expect_type(prompt, "character")
+    expect_match(prompt, "Inline description text")
+  })
+
+  it("accepts inline text for extra_instructions", {
+    prompt <- assemble_system_prompt(
+      df_source,
+      extra_instructions = "Inline extra instructions"
+    )
+
+    expect_type(prompt, "character")
+    expect_match(prompt, "Inline extra instructions")
+  })
+
+  it("works with both description and instructions as inline text", {
+    prompt <- assemble_system_prompt(
+      df_source,
+      data_description = "Description here",
+      extra_instructions = "Instructions here"
+    )
+
+    expect_type(prompt, "character")
+    expect_match(prompt, "Description here")
+    expect_match(prompt, "Instructions here")
   })
 })
 
@@ -310,7 +489,7 @@ describe("DataSource$execute_query()", {
   })
 })
 
-describe("DataSource$test_query()", {
+describe("DBISource$test_query()", {
   test_df <- new_users_df()
   db <- local_sqlite_connection(test_df, "test_table")
   dbi_source <- DBISource$new(db$conn, "test_table")
@@ -361,5 +540,35 @@ describe("DataSource$test_query()", {
     expect_type(result$num_col, "double")
     expect_type(result$int_col, "integer")
     expect_type(result$bool_col, "integer")
+  })
+})
+
+describe("DataFrameSource$test_query()", {
+  test_df <- new_users_df()
+  df_source <- local_data_frame_source(test_df, "test_table")
+
+  it("correctly retrieves one row of data", {
+    result <- df_source$test_query("SELECT * FROM test_table")
+    expect_s3_class(result, "data.frame")
+    expect_equal(nrow(result), 1)
+    expect_equal(result$id, 1)
+
+    result <- df_source$test_query("SELECT * FROM test_table WHERE age > 29")
+    expect_s3_class(result, "data.frame")
+    expect_equal(nrow(result), 1)
+    expect_equal(result$age, 30)
+
+    result <- df_source$test_query(
+      "SELECT * FROM test_table ORDER BY age DESC"
+    )
+    expect_s3_class(result, "data.frame")
+    expect_equal(nrow(result), 1)
+    expect_equal(result$age, 35)
+
+    result <- df_source$test_query(
+      "SELECT * FROM test_table WHERE age > 100"
+    )
+    expect_s3_class(result, "data.frame")
+    expect_equal(nrow(result), 0)
   })
 })

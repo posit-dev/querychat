@@ -556,6 +556,7 @@ get_schema_impl <- function(conn, table_name, categorical_threshold = 20) {
 }
 
 
+# nocov start
 # Map R classes to SQL types
 r_class_to_sql_type <- function(r_class) {
   switch(
@@ -572,7 +573,7 @@ r_class_to_sql_type <- function(r_class) {
     "TEXT" # default
   )
 }
-
+# nocov end
 
 assemble_system_prompt <- function(
   source,

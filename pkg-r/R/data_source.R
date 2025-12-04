@@ -185,7 +185,11 @@ DataFrameSource <- R6::R6Class(
     #' @param query SQL query string
     #' @return A data frame with one row of results
     test_query = function(query) {
-      check_string(query)
+      check_string(query, allow_null = TRUE, allow_empty = TRUE)
+      if (is.null(query) || !nzchar(query)) {
+        return(invisible(NULL))
+      }
+
       rs <- DBI::dbSendQuery(private$conn, query)
       df <- DBI::dbFetch(rs, n = 1)
       DBI::dbClearResult(rs)
@@ -556,6 +560,7 @@ get_schema_impl <- function(conn, table_name, categorical_threshold = 20) {
 }
 
 
+# nocov start
 # Map R classes to SQL types
 r_class_to_sql_type <- function(r_class) {
   switch(
@@ -572,7 +577,7 @@ r_class_to_sql_type <- function(r_class) {
     "TEXT" # default
   )
 }
-
+# nocov end
 
 assemble_system_prompt <- function(
   source,

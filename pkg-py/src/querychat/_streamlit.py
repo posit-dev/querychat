@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import copy
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Optional
 
 from chatlas import ContentToolRequest, ContentToolResult
 
@@ -18,27 +17,40 @@ if TYPE_CHECKING:
     from ._datasource import DataSource
 
 
-@dataclass
 class AppState:
-    """Type-safe container for Streamlit session state."""
+    """Typed session state for Streamlit apps using QueryChat."""
 
-    chat_history: list[dict[str, str]] = field(default_factory=list)
-    client: chatlas.Chat | None = None
-    sql: str = ""
-    title: str | None = None
-    tools_registered: bool = False
-    querychat_pending_prompt: str | None = None
+    def __init__(self, client: chatlas.Chat, data_source: DataSource):
+        client = copy.deepcopy(client)
+        client.set_turns([])
+
+        self.client: chatlas.Chat = client
+        self.chat_history: list[dict[str, str]] = []
+        self.sql: str = ""
+        self.title: Optional[str] = None
+        self.querychat_pending_prompt: Optional[str] = None
+
+        sql_reactive = AppStateReactive(self, "sql")
+        title_reactive = AppStateReactive(self, "title")
+
+        self.client.register_tool(
+            tool_update_dashboard(data_source, sql_reactive, title_reactive)
+        )
+        self.client.register_tool(tool_query(data_source))
+        self.client.register_tool(tool_reset_dashboard(sql_reactive, title_reactive))
 
     @staticmethod
-    def get(st_module: Any) -> AppState:
+    def get(client: Chat, data_source: DataSource) -> AppState:
         """Get or initialize AppState from Streamlit session state."""
-        if "_querychat_state" not in st_module.session_state:
-            st_module.session_state._querychat_state = AppState()
-        return st_module.session_state._querychat_state
+        import streamlit as st  # noqa: PLC0415
+
+        if "_querychat_state" not in st.session_state:
+            st.session_state._querychat_state = AppState(client, data_source)
+        return st.session_state._querychat_state
 
 
 class AppStateReactive:
-    """Helper class to wrap AppState fields as reactive values for tools."""
+    """Helper class to wrap AppState fields as 'reactive values' for tools."""
 
     def __init__(self, state: AppState, attr: str):
         self.state = state
@@ -51,28 +63,7 @@ class AppStateReactive:
         return getattr(self.state, self.attr)
 
 
-def streamlit_generator(prompt: str, client: Chat):
-    """Yield chunks from the LLM stream."""
-    for chunk in client.stream(prompt, content="all", echo="none"):
-        if isinstance(chunk, ContentToolRequest):
-            # Show request doesn't seem all that useful since result follows and will show the SQL
-            yield ""
-        elif isinstance(chunk, ContentToolResult):
-            # Get display metadata if available
-            display_info = chunk.extra.get("display") if chunk.extra else None
-
-            if display_info and hasattr(display_info, "markdown"):
-                res = "\n\n" + display_info.markdown + "\n\n"
-            else:
-                res = "\n\n" + str(chunk) + "\n\n"
-
-            yield res
-
-        elif isinstance(chunk, str):
-            yield chunk
-
-
-def run_streamlit_app(  # noqa: PLR0912
+def run_streamlit_app(
     data_source: DataSource,
     client: chatlas.Chat,
     greeting: Optional[str] = None,
@@ -118,27 +109,7 @@ def run_streamlit_app(  # noqa: PLR0912
     components.html(SUGGESTION_JS)
 
     # Get or initialize typed session state
-    state = AppState.get(st)
-
-    # Initialize client if needed
-    if state.client is None:
-        state.client = copy.deepcopy(client)
-
-    # Register tools with the client (only once)
-    if not state.tools_registered:
-        sql_reactive = AppStateReactive(state, "sql")
-        title_reactive = AppStateReactive(state, "title")
-
-        # Type assertion: client is guaranteed to be non-None at this point
-        if state.client is None:
-            msg = "Client should be initialized at this point"
-            raise RuntimeError(msg)
-        state.client.register_tool(
-            tool_update_dashboard(data_source, sql_reactive, title_reactive)
-        )
-        state.client.register_tool(tool_query(data_source))
-        state.client.register_tool(tool_reset_dashboard(sql_reactive, title_reactive))
-        state.tools_registered = True
+    state = AppState.get(client, data_source)
 
     # Sidebar with chat interface
     with st.sidebar:
@@ -231,33 +202,54 @@ def run_streamlit_app(  # noqa: PLR0912
     st.dataframe(df, use_container_width=True, height=400)
 
 
+def streamlit_generator(prompt: str, client: Chat):
+    """Yield markdown strings for Streamlit from chatlas client stream."""
+    for chunk in client.stream(prompt, content="all", echo="none"):
+        if isinstance(chunk, ContentToolRequest):
+            # Show request doesn't seem all that useful since result follows and will show the SQL
+            yield ""
+        elif isinstance(chunk, ContentToolResult):
+            # Get display metadata if available
+            display_info = chunk.extra.get("display") if chunk.extra else None
+
+            if display_info and hasattr(display_info, "markdown"):
+                res = "\n\n" + display_info.markdown + "\n\n"
+            else:
+                res = "\n\n" + str(chunk) + "\n\n"
+
+            yield res
+
+        elif isinstance(chunk, str):
+            yield chunk
+
+
 SUGGGESTION_CSS = """
-    <style>
-        .suggestion {
-            color: #0066cc;
-            cursor: pointer;
-            text-decoration: underline;
-            font-weight: 500;
-            transition: all 0.2s ease;
-            display: inline;
-        }
+<style>
+    .suggestion {
+        color: #0066cc;
+        cursor: pointer;
+        text-decoration: underline;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        display: inline;
+    }
 
-        .suggestion:hover {
-            color: #0052a3;
-            text-decoration: none;
-            background-color: rgba(0, 102, 204, 0.1);
-            padding: 2px 4px;
-            border-radius: 3px;
-        }
+    .suggestion:hover {
+        color: #0052a3;
+        text-decoration: none;
+        background-color: rgba(0, 102, 204, 0.1);
+        padding: 2px 4px;
+        border-radius: 3px;
+    }
 
-        .suggestion:active {
-            transform: scale(0.98);
-        }
+    .suggestion:active {
+        transform: scale(0.98);
+    }
 
-        .querychat-update-dashboard-btn {
-            display: none;
-        }
-    </style>
+    .querychat-update-dashboard-btn {
+        display: none;
+    }
+</style>
 """
 
 SUGGESTION_JS = """

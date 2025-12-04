@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Any, Callable, Protocol, runtime_checkable
 
 import chevron
 from chatlas import ContentToolResult, Tool
@@ -12,7 +12,20 @@ from ._utils import df_to_html, querychat_tool_starts_open
 
 if TYPE_CHECKING:
     from ._datasource import DataSource
-    from ._querychat_module import ReactiveString, ReactiveStringOrNone
+
+
+@runtime_checkable
+class ReactiveString(Protocol):
+    """Protocol for a reactive string value."""
+
+    def set(self, value: str) -> Any: ...
+
+
+@runtime_checkable
+class ReactiveStringOrNone(Protocol):
+    """Protocol for a reactive string (or None) value."""
+
+    def set(self, value: str | None) -> Any: ...
 
 
 def _read_prompt_template(filename: str, **kwargs) -> str:

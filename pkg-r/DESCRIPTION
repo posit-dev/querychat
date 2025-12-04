@@ -26,6 +26,7 @@ Imports:
     purrr,
     R6,
     rlang (>= 1.1.0),
+    S7,
     shiny,
     shinychat (>= 0.2.0.9000),
     utils,

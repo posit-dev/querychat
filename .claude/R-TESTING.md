@@ -4,6 +4,8 @@
 
 Use testthat 3rd-edition style tests. For tests covering a single behavior, use standard `test_that()` style. For testing classes, methods and functions, use **BDD style** with `describe()` and `it()` blocks.
 
+Test files should be placed in `pkg-r/tests/testthat/`. Test file names should directly match the R source file, e.g. `R/{name}.R` --> `tests/testthat/test-{name}.R`.
+
 ### Key BDD Principles
 
 1. **Flat structure**: No nested `describe()` blocks
@@ -67,6 +69,20 @@ describe("querychat_tool_starts_open()", {
     expect_false(querychat_tool_starts_open("reset"))
   })
 })
+```
+
+## Common patterns
+
+### Testing Errors
+
+Prefer snapshot testing around expected errors so that the error message is captured in the snapshot.
+
+```r
+# Don't do this
+expect_error(foo_will_error())
+
+# Do this
+expect_snapshot(error = TRUE, foo_will_error())
 ```
 
 ## Running Tests

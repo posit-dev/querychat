@@ -22,6 +22,7 @@ from .tools import tool_query, tool_reset_dashboard, tool_update_dashboard
 
 if TYPE_CHECKING:
     import pandas as pd
+    from chatlas import Chat
     from narwhals.stable.v1.typing import IntoFrame
 
     try:
@@ -247,7 +248,6 @@ class QueryChatBase:
             st.session_state.client = copy.deepcopy(self._client)
             st.session_state.sql = ""
             st.session_state.title = None
-            st.session_state.has_greeted = False
             st.session_state.tools_registered = False
 
         # Register tools with the client (only once)
@@ -264,59 +264,52 @@ class QueryChatBase:
             )
             st.session_state.tools_registered = True
 
+        def streamlit_generator(prompt: str, client: Chat):
+            for chunk in client.stream(prompt, content="all", echo="none"):
+                if isinstance(chunk, ContentToolRequest):
+                    # Show request doesn't seem all that useful since result follows and will show the SQL
+                    yield ""
+                elif isinstance(chunk, ContentToolResult):
+                    # Get display metadata if available
+                    display_info = chunk.extra.get("display") if chunk.extra else None
+
+                    if display_info and hasattr(display_info, "markdown"):
+                        res = "\n\n" + display_info.markdown + "\n\n"
+                    else:
+                        res = "\n\n" + str(chunk) + "\n\n"
+
+                    # yield st.markdown(res, unsafe_allow_html=True)
+                    yield res
+
+                elif isinstance(chunk, str):
+                    yield chunk
+
         # Sidebar with chat interface
         with st.sidebar:
             # Container for chat messages with fixed height (scrollable)
             chat_container = st.container(height="stretch")
 
             with chat_container:
-                # Display greeting on first load
-                if not st.session_state.has_greeted:
-                    if self.greeting:
-                        greeting_text = self.greeting
-                    else:
-                        greeting_text = str(
-                            st.session_state.client.chat(GREETING_PROMPT, echo="none")
-                        )
-                    st.session_state.chat_history.append(
-                        {"role": "assistant", "content": greeting_text}
-                    )
-                    st.session_state.has_greeted = True
-
-                # Display chat history
-                for idx, message in enumerate(st.session_state.chat_history):
+                for message in st.session_state.chat_history:
                     with st.chat_message(message["role"]):
                         st.markdown(message["content"], unsafe_allow_html=True)
 
-                        # If this is an assistant message, extract and show clickable suggestions
-                        if message["role"] == "assistant":
-                            import re
+                if not st.session_state.chat_history:
+                    greeting = self.greeting
+                    if not greeting:
+                        stream = streamlit_generator(
+                            GREETING_PROMPT, st.session_state.client
+                        )
+                        greeting = ""
+                        with st.chat_message("assistant"):
+                            message_placeholder = st.empty()
+                            for chunk in stream:
+                                greeting += chunk
+                                message_placeholder.markdown(greeting, unsafe_allow_html=True)
 
-                            # Find all suggestions wrapped in <span class="suggestion">
-                            suggestions = []
-                            pattern = r'<span class="suggestion">([^<]+)</span>'
-                            matches = re.findall(pattern, message["content"])
-                            for match in matches:
-                                suggestion = match.strip()
-                                # Remove markdown formatting
-                                suggestion = re.sub(r"`([^`]+)`", r"\1", suggestion)
-                                # Remove any remaining markdown symbols
-                                suggestion = re.sub(r"[*_~]", "", suggestion)
-                                if suggestion and len(suggestion) < 200:
-                                    suggestions.append(suggestion)
-
-                            # Show clickable buttons for suggestions (max 5)
-                            for i, suggestion in enumerate(suggestions[:5]):
-                                if st.button(
-                                    f"💡 {suggestion}",
-                                    key=f"suggestion_{idx}_{i}",
-                                    use_container_width=True,
-                                ):
-                                    # Store the suggestion to process after the container
-                                    st.session_state.querychat_pending_prompt = (
-                                        suggestion
-                                    )
-                                    st.rerun()
+                    st.session_state.chat_history.append(
+                        {"role": "assistant", "content": greeting}
+                    )
 
             # Chat input (stays at bottom of sidebar, outside the scrollable container)
             if prompt := st.chat_input(
@@ -331,56 +324,26 @@ class QueryChatBase:
                 prompt = st.session_state.querychat_pending_prompt
                 st.session_state.querychat_pending_prompt = None
 
-                # Add user message to chat history
                 st.session_state.chat_history.append(
                     {"role": "user", "content": prompt}
                 )
 
-                # Get streaming response from LLM
-                full_response = ""
                 with chat_container:
                     with st.chat_message("user"):
                         st.markdown(prompt)
 
+                    stream = streamlit_generator(prompt, st.session_state.client)
+                    stream_content = ""
                     with st.chat_message("assistant"):
+                        message_placeholder = st.empty()
+                        for chunk in stream:
+                            stream_content += chunk
+                            message_placeholder.markdown(stream_content, unsafe_allow_html=True)
 
-                        def stream_generator():
-                            nonlocal full_response
-                            for chunk in st.session_state.client.stream(
-                                prompt, echo="none", content="all"
-                            ):
-                                # Check if this chunk is a tool result
-                                if isinstance(chunk, ContentToolResult):
-                                    # Get display metadata if available
-                                    display_info = (
-                                        chunk.extra.get("display")
-                                        if chunk.extra
-                                        else None
-                                    )
-
-                                    if display_info and hasattr(
-                                        display_info, "markdown"
-                                    ):
-                                        text = "\n\n" + display_info.markdown + "\n\n"
-                                    else:
-                                        # Fallback: just yield the chunk value
-                                        text = "\n\n" + str(chunk) + "\n\n"
-                                elif isinstance(chunk, ContentToolRequest):
-                                    text = ""
-                                else:
-                                    text = str(chunk)
-
-                                full_response += text
-                                yield text
-
-                        # Use st.write_stream to display the response
-                        st.write_stream(stream_generator())
-
-                # Add assistant response to chat history (including tool results)
                 st.session_state.chat_history.append(
                     {
                         "role": "assistant",
-                        "content": full_response,
+                        "content": stream_content,
                     }
                 )
 

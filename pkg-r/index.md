@@ -1,9 +1,4 @@
-# querychat <a href="https://posit-dev.github.io/querychat/r/"><img src="man/figures/logo.png" align="right" height="138" alt="querychat website" /></a>
-
-<!-- badges: start -->
-[![R-CMD-check](https://github.com/posit-dev/querychat/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/posit-dev/querychat/actions/workflows/R-CMD-check.yaml)
-[![CRAN status](https://www.r-pkg.org/badges/version/querychat)](https://CRAN.R-project.org/package=querychat)
-<!-- badges: end -->
+# querychat
 
 QueryChat facilitates safe and reliable natural language exploration of tabular data, powered by SQL and large language models (LLMs). For analysts, it offers an intuitive web application where they can quickly ask questions of their data and receive verifiable data-driven answers. For software developers, QueryChat provides a comprehensive R interface to access core functionality -- including the chat UI, generated SQL statements, resulting data, and. This capability enables the seamless integration of natural language querying into bespoke data applications.
 
@@ -57,7 +52,8 @@ Querychat is designed to be highly extensible -- it provides programmatic access
 This makes it easy to build custom web apps that (safely) leverage natural language interaction with your data.
 For example, [here](https://github.com/posit-conf-2025/llm/blob/main/_solutions/25_querychat/25_querychat_02-end-app.R)'s a bespoke app for exploring Airbnb listings in Ashville, NC:
 
-![](man/figures/airbnb.png){alt="A custom app for exploring Airbnb listings, powered by QueryChat." class="shadow rounded mb-3"}
+![](/images/airbnb.png){fig-alt="A custom app for exploring Airbnb listings, powered by QueryChat." class="lightbox shadow rounded mb-3"}
+
 
 To learn more, see [Build an app](articles/build.html) for a step-by-step guide.
 

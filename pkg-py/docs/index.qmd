@@ -22,8 +22,7 @@ Explore data using natural language queries
 <!-- badges end -->
 </div>
 
-
-Querychat makes it easy to explore data with natural language through the power of [Shiny](https://shiny.posit.co/py) and large language models (LLMs). Start chatting with your data in just one line of code. Or, with a few more lines, design your own rich user experience around data exploration and analysis through natural language.
+QueryChat facilitates safe and reliable natural language exploration of tabular data, powered by SQL and large language models (LLMs). For analysts, it offers an intuitive web application where they can quickly ask questions of their data and receive verifiable data-driven answers. For software developers, QueryChat provides a comprehensive Python API to access core functionality -- including chat UI, generated SQL statements, resulting data, and more. This capability enables the seamless integration of natural language querying into bespoke data applications.
 
 ## Installation
 
@@ -45,6 +44,7 @@ from querychat.data import titanic
 
 qc = QueryChat(titanic(), "titanic", client="openai/gpt-4.1")
 app = qc.app()
+# app.run()
 ```
 
 With the above code saved to `titanic-app.py` and an API key set[^api-key], you can [run the app](https://shiny.posit.co/py/get-started/create-run.html#run-your-shiny-application) from a terminal (or [VSCode](https://marketplace.visualstudio.com/items?itemName=Posit.shiny)):
@@ -72,10 +72,15 @@ Querychat can also handle more general questions about the data that require cal
 
 ![](/images/quickstart-summary.png){fig-alt="Screenshot of the querychat's app with a summary statistic inlined in the chat." class="lightbox shadow rounded mb-3"}
 
-As you'll learn later in [Build an app](build.qmd), you can also access the SQL query and filtered/sorted data frame programmatically for use elsewhere in your app. This makes it rather seemless to have natural language interaction with your data alongside other visualizations and analyses.
+## Custom apps
 
-Before we build though, let's take a moment to better understand how querychat works under the hood, and whether it's right for you.
+Querychat is designed to be highly extensible -- it provides programmatic access to the chat interface, the filtered/sorted data frame, SQL queries, and more.
+This makes it easy to build custom web apps that (safely) leverage natural language interaction with your data.
+For example, [here](https://github.com/posit-conf-2025/llm/blob/main/_solutions/25_querychat/25_querychat_02-end-app.R)'s a bespoke app for exploring Airbnb listings in Ashville, NC:
 
+![](/images/airbnb.png){fig-alt="A custom app for exploring Airbnb listings, powered by QueryChat." class="lightbox shadow rounded mb-3"}
+
+To learn more, see [Build an app](build.qmd) for a step-by-step guide.
 
 ## How it works
 
@@ -91,15 +96,6 @@ See the [Provide context](context.qmd) and [Tools](tools.qmd) articles to learn 
 ::::
 
 [^duckdb]: Duckdb is extremely fast and has a surprising number of [statistical functions](https://duckdb.org/docs/stable/sql/functions/aggregates.html#statistical-aggregates).
-
-### Bespoke interfaces
-
-While the quickstart app is a great way to get started, querychat is designed to be highly extensible.
-You can not only customize the underlying model and data source, but also build fully custom Shiny apps around the core chat functionality.
-
-For a motivating example, consider the following ([sidebot](https://shiny.posit.co/py/docs/genai-inspiration.html#sidebot)) app that leverages querychat's tooling to create reactive summaries and visualizations based on the user's natural language queries:
-
-![](/images/sidebot.png){fig-alt="Screenshot of sidebot, a custom shiny app built with querychat." class="lightbox shadow rounded mb-3"}
 
 
 ## Next steps

@@ -346,9 +346,25 @@ def _():
 
 This is equivalent to the user asking the LLM to "reset" or "show all data".
 
-## Multiple datasets
+## Multiple tables
 
-You can use multiple QueryChat instances in a single app to explore different datasets. Just ensure each instance has a different table name (or `id` which derives the table name) to avoid conflicts. Here's an example with two datasets:
+Currently, you have two options for exploring multiple tables in QueryChat:
+
+1. Join the tables into a single tables before passing to QueryChat
+2. Use multiple QueryChat instances in the same app
+
+The first option makes it possible to chat with multiple tables inside a single chat interface, whereas the second option requires a separate chat interface for each table.
+
+::: {.callout-note}
+### Multiple filtered tables
+
+We do intend on supporting multiple filtered tables in a future release -- if you're interested in this feature, please up vote [the relevant issue](https://github.com/posit-dev/querychat/issues/6)
+:::
+
+Here's an example of the second approach, using two separate `QueryChat` instances to explore both the `titanic` and `penguins` datasets within the same app:
+
+<details>
+<summary> <code>app.py </code> </summary>
 
 ```python
 from seaborn import load_dataset
@@ -384,127 +400,10 @@ ui.page_opts(
 )
 ```
 
+</details>
+
 ![](/images/multiple-datasets.png){fig-alt="Screenshot of a querychat app with two datasets: titanic and penguins." class="lightbox shadow rounded mb-3"}
 
-
-## Complete example
-
-Here's a complete example bringing together multiple concepts - a Titanic survival analysis dashboard with natural language exploration, coordinated visualizations, and custom controls:
-
-```python
-from shiny.express import render, ui
-from querychat.express import QueryChat
-from querychat.data import titanic
-import plotly.express as px
-
-# Create QueryChat
-qc = QueryChat(
-    titanic(),
-    "titanic",
-    data_description="Titanic passenger data with survival outcomes",
-)
-
-# Page configuration
-ui.page_opts(
-    title="Titanic Survival Analysis",
-    fillable=True,
-    class_="bslib-page-dashboard",
-)
-
-# Create sidebar with chat
-with ui.sidebar(width=400):
-    qc.ui()
-    ui.hr()
-    ui.input_action_button("reset", "Reset Filters", class_="w-100")
-
-# Summary cards
-with ui.layout_columns():
-    with ui.value_box(showcase=ui.icon("users")):
-        "Passengers"
-
-        @render.text
-        def count():
-            return str(len(qc.df()))
-
-    with ui.value_box(showcase=ui.icon("heart")):
-        "Survival Rate"
-
-        @render.text
-        def survival():
-            rate = qc.df()['survived'].mean() * 100
-            return f"{rate:.1f}%"
-
-    with ui.value_box(showcase=ui.icon("coins")):
-        "Avg Fare"
-
-        @render.text
-        def fare():
-            avg = qc.df()['fare'].mean()
-            return f"${avg:.2f}"
-
-# Main content area with visualizations
-with ui.layout_columns():
-    with ui.card():
-        with ui.card_header():
-            "Data Table"
-
-            @render.text
-            def table_title():
-                return f" - {qc.title()}" if qc.title() else ""
-
-        @render.data_frame
-        def data_table():
-            return qc.df()
-
-    with ui.card():
-        ui.card_header("Survival by Class")
-
-        @render.plot
-        def survival_by_class():
-            df = qc.df()
-            summary = df.groupby('pclass')['survived'].mean().reset_index()
-            fig = px.bar(
-                summary,
-                x='pclass',
-                y='survived',
-                labels={'pclass': 'Class', 'survived': 'Survival Rate'},
-            )
-            return fig
-
-with ui.layout_columns():
-    with ui.card():
-        ui.card_header("Age Distribution")
-
-        @render.plot
-        def age_dist():
-            df = qc.df()
-            fig = px.histogram(df, x='age', nbins=30)
-            return fig
-
-    with ui.card():
-        ui.card_header("Fare by Class")
-
-        @render.plot
-        def fare_by_class():
-            df = qc.df()
-            fig = px.box(df, x='pclass', y='fare', color='survived')
-            return fig
-
-# Reset button handler
-@reactive.effect
-@reactive.event(input.reset)
-def handle_reset():
-    qc.sql("")
-    qc.title(None)
-    ui.notification_show("Filters cleared", type="message")
-```
-
-This dashboard demonstrates:
-- Natural language filtering through chat
-- Multiple coordinated views (cards, table, plots)
-- Custom reset button alongside natural language
-- Dynamic titles reflecting current state
-- Responsive layout that updates together
 
 ## See also
 

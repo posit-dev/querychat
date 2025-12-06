@@ -72,10 +72,17 @@ Querychat can also handle more general questions about the data that require cal
 
 ![](/images/quickstart-summary.png){fig-alt="Screenshot of the querychat's app with a summary statistic inlined in the chat." class="lightbox shadow rounded mb-3"}
 
-As you'll learn later in [Build an app](build.qmd), you can also access the SQL query and filtered/sorted data frame programmatically for use elsewhere in your app. This makes it rather seemless to have natural language interaction with your data alongside other visualizations and analyses.
 
-Before we build though, let's take a moment to better understand how querychat works under the hood, and whether it's right for you.
+## Custom apps
 
+Querychat is designed to be highly extensible -- it provides programmatic access to the chat interface, the filtered/sorted data frame, SQL queries, and more.
+This makes it easy to build custom web apps that (safely) leverage natural language interaction with your data.
+
+For a motivating example, consider the following ([sidebot](https://shiny.posit.co/py/docs/genai-inspiration.html#sidebot)) app that leverages querychat's tooling to create reactive summaries and visualizations based on the user's natural language queries:
+
+![](/images/sidebot.png){fig-alt="Screenshot of sidebot, a custom shiny app built with querychat." class="lightbox shadow rounded mb-3"}
+
+To learn more, see [Build an app](build.qmd) for a step-by-step guide.
 
 ## How it works
 
@@ -92,14 +99,6 @@ See the [Provide context](context.qmd) and [Tools](tools.qmd) articles to learn 
 
 [^duckdb]: Duckdb is extremely fast and has a surprising number of [statistical functions](https://duckdb.org/docs/stable/sql/functions/aggregates.html#statistical-aggregates).
 
-### Bespoke interfaces
-
-While the quickstart app is a great way to get started, querychat is designed to be highly extensible. 
-You can not only customize the underlying model and data source, but also build fully custom Shiny apps around the core chat functionality.
-
-For a motivating example, consider the following ([sidebot](https://shiny.posit.co/py/docs/genai-inspiration.html#sidebot)) app that leverages querychat's tooling to create reactive summaries and visualizations based on the user's natural language queries:
-
-![](/images/sidebot.png){fig-alt="Screenshot of sidebot, a custom shiny app built with querychat." class="lightbox shadow rounded mb-3"}
 
 
 ## Next steps

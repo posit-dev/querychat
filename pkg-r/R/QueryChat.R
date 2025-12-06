@@ -401,6 +401,7 @@ QueryChat <- R6::R6Class(
         width = width,
         height = height,
         class = "querychat-sidebar",
+        fillable = TRUE,
         ...,
         self$ui()
       )

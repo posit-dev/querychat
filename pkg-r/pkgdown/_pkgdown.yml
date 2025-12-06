@@ -29,7 +29,39 @@ template:
   bslib:
     brand: pkgdown/_brand.yml
 
+navbar:
+  structure:
+    left:  [articles, reference, news]
+    right: [search, github, lightswitch]
+  components:
+    articles:
+      text: Articles 
+      menu:
+      - text: Models
+        href: articles/models.html
+      - text: Data Sources
+        href: articles/data-sources.html
+      - text: Provide context
+        href: articles/context.html
+      - text: Build an app
+        href: articles/build.html
+      - text: Greet users
+        href: articles/greet.html
+      - text: Tools
+        href: articles/tools.html
+
+#home:
+#  strip_header: true
+
 reference:
 - title: Chat interfaces
   contents:
   - QueryChat
+- title: Data sources
+  contents:
+  - DataSource
+  - DataFrameSource
+  - DBISource
+- title: Package
+  contents:
+  - querychat

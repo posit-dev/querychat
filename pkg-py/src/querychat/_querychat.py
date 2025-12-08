@@ -167,6 +167,7 @@ class QueryChatBase:
         *,
         width: int = 400,
         height: str = "100%",
+        fillable: bool = True,
         **kwargs,
     ) -> ui.Sidebar:
         """
@@ -178,6 +179,8 @@ class QueryChatBase:
             Width of the sidebar in pixels.
         height
             Height of the sidebar.
+        fillable
+            Whether the sidebar should be fillable. Default is `True`.
         **kwargs
             Additional arguments passed to `shiny.ui.sidebar()`.
 
@@ -191,6 +194,7 @@ class QueryChatBase:
             self.ui(),
             width=width,
             height=height,
+            fillable=fillable,
             class_="querychat-sidebar",
             **kwargs,
         )

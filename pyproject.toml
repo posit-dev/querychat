@@ -21,7 +21,7 @@ maintainers = [
 dependencies = [
     "duckdb",
     "pandas",
-    "shiny",
+    "shiny>=1.5.1",
     "shinywidgets",
     "htmltools",
     "chatlas>=0.13.2",

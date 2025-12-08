@@ -12,7 +12,7 @@ from ._utils import df_to_html, querychat_tool_starts_open
 
 if TYPE_CHECKING:
     from ._datasource import DataSource
-    from ._querychat_module import ReactiveString, ReactiveStringOrNone
+    from ._querychat_module import ReactiveStringOrNone
 
 
 def _read_prompt_template(filename: str, **kwargs) -> str:

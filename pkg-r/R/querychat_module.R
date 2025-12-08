@@ -29,7 +29,7 @@ mod_server <- function(
 ) {
   shiny::moduleServer(id, function(input, output, session) {
     current_title <- shiny::reactiveVal(NULL, label = "current_title")
-    current_query <- shiny::reactiveVal("", label = "current_query")
+    current_query <- shiny::reactiveVal(NULL, label = "current_query")
     has_greeted <- shiny::reactiveVal(FALSE, label = "has_greeted")
     filtered_df <- shiny::reactive(label = "filtered_df", {
       data_source$execute_query(query = DBI::SQL(current_query()))
@@ -47,7 +47,7 @@ mod_server <- function(
     }
 
     reset_query <- function() {
-      current_query("")
+      current_query(NULL)
       current_title(NULL)
       querychat_tool_result(action = "reset")
     }

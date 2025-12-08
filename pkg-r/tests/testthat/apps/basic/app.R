@@ -53,7 +53,7 @@ server <- function(input, output, session) {
 
   output$sql_query <- renderText({
     query <- qc_vals$sql()
-    if (query == "") "No filter applied" else query
+    if (is.null(query) || !nzchar(query)) "No filter applied" else query
   })
 
   session$onSessionEnded(function() {

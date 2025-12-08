@@ -62,7 +62,7 @@ class ServerValues:
     sql
         A reactive Value containing the current SQL query string. Access the value
         by calling `.sql()`, or set it with `.sql.set("SELECT ...")`.
-        An empty string `""` indicates no query has been set.
+        Returns `None` if no query has been set.
     title
         A reactive Value containing the current title for the query. The LLM
         provides this title when generating a new SQL query. Access it with
@@ -76,7 +76,7 @@ class ServerValues:
     """
 
     df: Callable[[], pd.DataFrame]
-    sql: ReactiveString
+    sql: ReactiveStringOrNone
     title: ReactiveStringOrNone
     client: chatlas.Chat
 
@@ -93,7 +93,7 @@ def mod_server(
     enable_bookmarking: bool,
 ):
     # Reactive values to store state
-    sql = ReactiveString("")
+    sql = ReactiveStringOrNone(None)
     title = ReactiveStringOrNone(None)
     has_greeted = reactive.value[bool](False)  # noqa: FBT003
 
@@ -113,10 +113,11 @@ def mod_server(
     # Execute query when SQL changes
     @reactive.calc
     def filtered_df():
-        if sql.get() == "":
+        query = sql.get()
+        if not query:
             return data_source.get_data()
         else:
-            return data_source.execute_query(sql.get())
+            return data_source.execute_query(query)
 
     # Chat UI logic
     chat_ui = shinychat.Chat(CHAT_ID)

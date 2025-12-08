@@ -24,7 +24,7 @@ def _read_prompt_template(filename: str, **kwargs) -> str:
 
 def _update_dashboard_impl(
     data_source: DataSource,
-    current_query: ReactiveString,
+    current_query: ReactiveStringOrNone,
     current_title: ReactiveStringOrNone,
 ) -> Callable[[str, str], ContentToolResult]:
     """Create the implementation function for updating the dashboard."""
@@ -76,7 +76,7 @@ def _update_dashboard_impl(
 
 def tool_update_dashboard(
     data_source: DataSource,
-    current_query: ReactiveString,
+    current_query: ReactiveStringOrNone,
     current_title: ReactiveStringOrNone,
 ) -> Tool:
     """
@@ -113,14 +113,14 @@ def tool_update_dashboard(
 
 
 def _reset_dashboard_impl(
-    current_query: ReactiveString,
+    current_query: ReactiveStringOrNone,
     current_title: ReactiveStringOrNone,
 ) -> Callable[[], ContentToolResult]:
     """Create the implementation function for resetting the dashboard."""
 
     def reset_dashboard() -> ContentToolResult:
         # Reset current query and title
-        current_query.set("")
+        current_query.set(None)
         current_title.set(None)
 
         # Add Reset Filter button
@@ -149,7 +149,7 @@ def _reset_dashboard_impl(
 
 
 def tool_reset_dashboard(
-    current_query: ReactiveString,
+    current_query: ReactiveStringOrNone,
     current_title: ReactiveStringOrNone,
 ) -> Tool:
     """

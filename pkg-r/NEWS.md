@@ -1,5 +1,7 @@
 # querychat (development version)
 
+* **Breaking change:** The `$sql()` method now returns `NULL` instead of `""` (empty string) when no query has been set, aligning with the behavior of `$title()` for consistency. Most code using `isTruthy()` or similar falsy checks will continue working without changes. Code that explicitly checks `sql() == ""` should be updated to use falsy checks (e.g., `!isTruthy(sql())`) or explicit null checks (`is.null(sql())`). (#146)
+
 * Tool detail cards can now be expanded or collapsed by default when querychat runs a query or updates the dashboard via the `querychat.tool_details` R option or the `QUERYCHAT_TOOL_DETAILS` environment variable. Valid values are `"expanded"`, `"collapsed"`, or `"default"`. (#137)
 
 * Added bookmarking support to `QueryChat$server()` and `querychat_app()`. When bookmarking is enabled (via `bookmark_store = "url"` or `"server"` in `querychat_app()` or `$app_obj()`, or via `enable_bookmarking = TRUE` in `$server()`), the chat state (including current query, title, and chat history) will be saved and restored with Shiny bookmarks. (#107)

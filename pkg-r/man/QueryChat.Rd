@@ -414,7 +414,7 @@ Create a sidebar containing the querychat UI.
 This method generates a \code{\link[bslib:sidebar]{bslib::sidebar()}} component containing the chat
 interface, suitable for use with \code{\link[bslib:page_sidebar]{bslib::page_sidebar()}} or similar layouts.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{QueryChat$sidebar(width = 400, height = "100\%", ...)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{QueryChat$sidebar(width = 400, height = "100\%", fillable = TRUE, ...)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -423,6 +423,8 @@ interface, suitable for use with \code{\link[bslib:page_sidebar]{bslib::page_sid
 \item{\code{width}}{Width of the sidebar in pixels. Default is 400.}
 
 \item{\code{height}}{Height of the sidebar. Default is "100\%".}
+
+\item{\code{fillable}}{Whether the sidebar should be fillable. Default is \code{TRUE}.}
 
 \item{\code{...}}{Additional arguments passed to \code{\link[bslib:sidebar]{bslib::sidebar()}}.}
 }

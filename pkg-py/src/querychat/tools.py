@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 import chevron
 from chatlas import ContentToolResult, Tool
@@ -11,6 +11,8 @@ from ._icons import bs_icon
 from ._utils import df_to_html, querychat_tool_starts_open
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from ._datasource import DataSource
     from ._querychat_module import ReactiveString, ReactiveStringOrNone
 

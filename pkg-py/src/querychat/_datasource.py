@@ -341,7 +341,7 @@ class SQLAlchemySource(DataSource):
                     result = conn.execute(stats_query).fetchone()
                     if result:
                         # Convert result to dict for easier access
-                        column_stats = dict(zip(result._fields, result))
+                        column_stats = dict(zip(result._fields, result, strict=False))
             except Exception:  # noqa: S110
                 pass  # Fall back to no statistics if query fails
 

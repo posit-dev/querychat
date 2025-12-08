@@ -7,7 +7,7 @@ name = "querychat"
 version = "0.2.2"
 description = "Chat with your data using natural language"
 readme = "pkg-py/README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = { file = "pkg-py/LICENSE" }
 authors = [
   { name = "Joe Cheng", email = "joe@posit.co" },
@@ -21,7 +21,7 @@ maintainers = [
 dependencies = [
     "duckdb",
     "pandas",
-    "shiny",
+    "shiny>=1.5.1",
     "shinywidgets",
     "htmltools",
     "chatlas>=0.13.2",
@@ -32,12 +32,11 @@ dependencies = [
 ]
 classifiers = [
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
 
 [project.urls]
@@ -101,7 +100,7 @@ exclude = [
 line-length = 88
 indent-width = 4
 
-target-version = "py39"
+target-version = "py310"
 
 [tool.ruff.lint]
 extend-ignore = [
@@ -200,7 +199,7 @@ include = ["pkg-py/src/querychat"]
 [tool.tox]
 legacy_tox_ini = """
 [tox]
-env_list = py3{9,10,11,12}
+env_list = py3{10,11,12,13,14}
 isolated_build = True
 
 [testenv]

@@ -4,7 +4,7 @@ import copy
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, Union
+from typing import TYPE_CHECKING, Union
 
 import shinychat
 from shiny import module, reactive, ui
@@ -12,6 +12,8 @@ from shiny import module, reactive, ui
 from .tools import tool_query, tool_reset_dashboard, tool_update_dashboard
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     import chatlas
     import pandas as pd
     from shiny import Inputs, Outputs, Session

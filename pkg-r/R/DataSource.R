@@ -170,7 +170,7 @@ DataFrameSource <- R6::R6Class(
     #' @return A data frame with query results
     execute_query = function(query) {
       check_string(query, allow_null = TRUE, allow_empty = TRUE)
-      if (is.null(query) || query == "") {
+      if (is.null(query) || !nzchar(query)) {
         query <- paste0(
           "SELECT * FROM ",
           DBI::dbQuoteIdentifier(private$conn, self$table_name)
@@ -334,7 +334,7 @@ DBISource <- R6::R6Class(
     #' @return A data frame with query results
     execute_query = function(query) {
       check_string(query, allow_null = TRUE, allow_empty = TRUE)
-      if (is.null(query) || query == "") {
+      if (is.null(query) || !nzchar(query)) {
         query <- paste0(
           "SELECT * FROM ",
           DBI::dbQuoteIdentifier(private$conn, self$table_name)

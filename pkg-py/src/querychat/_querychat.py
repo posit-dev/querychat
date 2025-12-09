@@ -142,7 +142,7 @@ class QueryChatBase:
             @reactive.effect
             @reactive.event(input.reset_query)
             def _():
-                vals.sql.set("")
+                vals.sql.set(None)
                 vals.title.set(None)
 
             @render.data_frame
@@ -586,12 +586,12 @@ class QueryChatExpress(QueryChatBase):
         return self._vals.df()
 
     @overload
-    def sql(self, query: None = None) -> str: ...
+    def sql(self, query: None = None) -> str | None: ...
 
     @overload
     def sql(self, query: str) -> bool: ...
 
-    def sql(self, query: Optional[str] = None) -> str | bool:
+    def sql(self, query: Optional[str] = None) -> str | None | bool:
         """
         Reactively read (or set) the current SQL query that is in effect.
 
@@ -604,7 +604,7 @@ class QueryChatExpress(QueryChatBase):
         -------
         :
             If no `query` is provided, returns the current SQL query as a string
-            (possibly `""` if no query has been set). If a `query` is provided,
+            (or `None` if no query has been set). If a `query` is provided,
             returns `True` if the query was changed to a new value, or `False`
             if it was the same as the current value.
 

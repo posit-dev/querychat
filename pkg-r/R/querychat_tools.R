@@ -159,7 +159,7 @@ querychat_tool_result <- function(
   action <- arg_match(action, c("update", "query", "reset"))
 
   if (action == "reset") {
-    query <- ""
+    query <- NULL
     title <- NULL
   }
 

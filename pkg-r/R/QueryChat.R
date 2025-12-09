@@ -333,7 +333,7 @@ QueryChat <- R6::R6Class(
         })
 
         shiny::observeEvent(input$reset_query, label = "on_reset_query", {
-          qc_vals$sql("")
+          qc_vals$sql(NULL)
           qc_vals$title(NULL)
         })
 

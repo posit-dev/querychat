@@ -7,9 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
-### Changes
+### Breaking Changes
 
 * The entire functional API (i.e., `init()`, `sidebar()`, `server()`, etc) has been hard deprecated in favor of a simpler OOP-based API. Namely, the new `QueryChat()` class is now the main entry point (instead of `init()`) and has methods to replace old functions (e.g., `.sidebar()`, `.server()`, etc). (#101)
+
+* The `.sql()` method now returns `None` instead of `""` (empty string) when no query has been set, aligning with the behavior of `.title()` for consistency. Most code using the `or` operator or `req()` for falsy checks will continue working without changes. Code that explicitly checks `sql() == ""` should be updated to use falsy checks (`if not sql()`) or explicit null checks (`if sql() is None`). (#146)
 
 ### New features
 

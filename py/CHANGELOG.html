@@ -127,7 +127,7 @@ ul.task-list li input[type="checkbox"] {
   <ul class="collapse">
   <li><a href="#unreleased" id="toc-unreleased" class="nav-link" data-scroll-target="#unreleased">[UNRELEASED]</a>
   <ul class="collapse">
-  <li><a href="#changes" id="toc-changes" class="nav-link" data-scroll-target="#changes">Changes</a></li>
+  <li><a href="#breaking-changes" id="toc-breaking-changes" class="nav-link" data-scroll-target="#breaking-changes">Breaking Changes</a></li>
   <li><a href="#new-features" id="toc-new-features" class="nav-link" data-scroll-target="#new-features">New features</a></li>
   <li><a href="#improvements" id="toc-improvements" class="nav-link" data-scroll-target="#improvements">Improvements</a></li>
   </ul></li>
@@ -151,10 +151,11 @@ ul.task-list li input[type="checkbox"] {
 <p>The format is based on <a href="https://keepachangelog.com/en/1.1.0/">Keep a Changelog</a>, and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
 <section id="unreleased" class="level2">
 <h2 class="anchored" data-anchor-id="unreleased">[UNRELEASED]</h2>
-<section id="changes" class="level3">
-<h3 class="anchored" data-anchor-id="changes">Changes</h3>
+<section id="breaking-changes" class="level3">
+<h3 class="anchored" data-anchor-id="breaking-changes">Breaking Changes</h3>
 <ul>
-<li>The entire functional API (i.e., <code>init()</code>, <code>sidebar()</code>, <code>server()</code>, etc) has been hard deprecated in favor of a simpler OOP-based API. Namely, the new <code>QueryChat()</code> class is now the main entry point (instead of <code>init()</code>) and has methods to replace old functions (e.g., <code>.sidebar()</code>, <code>.server()</code>, etc). (#101)</li>
+<li><p>The entire functional API (i.e., <code>init()</code>, <code>sidebar()</code>, <code>server()</code>, etc) has been hard deprecated in favor of a simpler OOP-based API. Namely, the new <code>QueryChat()</code> class is now the main entry point (instead of <code>init()</code>) and has methods to replace old functions (e.g., <code>.sidebar()</code>, <code>.server()</code>, etc). (#101)</p></li>
+<li><p>The <code>.sql()</code> method now returns <code>None</code> instead of <code>""</code> (empty string) when no query has been set, aligning with the behavior of <code>.title()</code> for consistency. Most code using the <code>or</code> operator or <code>req()</code> for falsy checks will continue working without changes. Code that explicitly checks <code>sql() == ""</code> should be updated to use falsy checks (<code>if not sql()</code>) or explicit null checks (<code>if sql() is None</code>). (#146)</p></li>
 </ul>
 </section>
 <section id="new-features" class="level3">

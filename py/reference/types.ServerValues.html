@@ -317,8 +317,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tr>
 <tr class="even">
 <td>sql</td>
-<td><code>ReactiveString</code></td>
-<td>A reactive Value containing the current SQL query string. Access the value by calling <code>.sql()</code>, or set it with <code>.sql.set("SELECT ...")</code>. An empty string <code>""</code> indicates no query has been set.</td>
+<td><code>ReactiveStringOrNone</code></td>
+<td>A reactive Value containing the current SQL query string. Access the value by calling <code>.sql()</code>, or set it with <code>.sql.set("SELECT ...")</code>. Returns <code>None</code> if no query has been set.</td>
 </tr>
 <tr class="odd">
 <td>title</td>

@@ -744,8 +744,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td></td>
-<td><a href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | <a href="https://docs.python.org/3/library/functions.html#bool">bool</a></td>
-<td>If no <code>query</code> is provided, returns the current SQL query as a string (possibly <code>""</code> if no query has been set). If a <code>query</code> is provided, returns <code>True</code> if the query was changed to a new value, or <code>False</code> if it was the same as the current value.</td>
+<td><a href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | None | <a href="https://docs.python.org/3/library/functions.html#bool">bool</a></td>
+<td>If no <code>query</code> is provided, returns the current SQL query as a string (or <code>None</code> if no query has been set). If a <code>query</code> is provided, returns <code>True</code> if the query was changed to a new value, or <code>False</code> if it was the same as the current value.</td>
 </tr>
 </tbody>
 </table>

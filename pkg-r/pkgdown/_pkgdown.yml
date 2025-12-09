@@ -32,4 +32,11 @@ template:
 reference:
 - title: Chat interfaces
   contents:
+  - querychat
   - QueryChat
+
+- title: Data Sources
+  contents:
+  - DataSource
+  - DataFrameSource
+  - DBISource

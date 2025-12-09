@@ -27,8 +27,8 @@ website:
     background: "#193D56"
     search: true
     title: '<span class="ms-3 fs-3 lead" style="vertical-align:middle;">QueryChat</span>'
-    #title: '<img src="/images/hex.png" height="40px" alt="querychat website"/><span class="ms-3 fs-3 lead header text-white" style="vertical-align:middle;">QueryChat</span>'
-    
+    #title: '<img src="/images/querychat.png" height="40px" alt="querychat website"/><span class="ms-3 fs-3 lead header text-white" style="vertical-align:middle;">QueryChat</span>'
+
     right:
       - text: API Reference
         href: reference/index.qmd
@@ -57,7 +57,7 @@ website:
 
 format:
   html:
-    theme: 
+    theme:
       - styles.scss
     toc: true
 
@@ -94,7 +94,7 @@ quartodoc:
           signature_name: short
         - name: types.SQLAlchemySource
           signature_name: short
-    
+
     - title: Tools
       desc: The underlying tools provided to the LLM
       contents:

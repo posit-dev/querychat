@@ -72,8 +72,9 @@ mod_server <- function(
         greeting
       } else {
         cli::cli_warn(c(
-          "No greeting provided to `QueryChat()`. Using the LLM `client` to generate one now.",
-          "i" = "For faster startup, lower cost, and determinism, consider providing a greeting to `QueryChat()` and `$generate_greeting()` to generate one beforehand."
+          "No {.arg greeting} provided to {.fn QueryChat}. Using the LLM {.arg client} to generate one now.",
+          "i" = "For faster startup, lower cost, and determinism, consider providing a {.arg greeting} to {.fn QueryChat}.",
+          "i" = "You can use your {.help querychat::QueryChat} object's {.fn $generate_greeting} method to generate a greeting."
         ))
         chat$stream_async(GREETING_PROMPT)
       }

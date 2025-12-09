@@ -1,4 +1,4 @@
-# querychat: Chat with Shiny apps (R)
+# querychat: Chat with Shiny apps (R) <a href="https://posit-dev.github.io/querychat/r/"><img src="man/figures/logo.png" align="right" height="138" alt="querychat website" /></a>
 
 Imagine typing questions like these directly into your Shiny dashboard, and seeing the results in realtime:
 

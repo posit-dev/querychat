@@ -383,6 +383,7 @@ QueryChat <- R6::R6Class(
     #'
     #' @param width Width of the sidebar in pixels. Default is 400.
     #' @param height Height of the sidebar. Default is "100%".
+    #' @param fillable Whether the sidebar should be fillable. Default is `TRUE`.
     #' @param ... Additional arguments passed to [bslib::sidebar()].
     #'
     #' @return A [bslib::sidebar()] UI component.
@@ -396,10 +397,11 @@ QueryChat <- R6::R6Class(
     #'   # Main content here
     #' )
     #' }
-    sidebar = function(width = 400, height = "100%", ...) {
+    sidebar = function(width = 400, height = "100%", fillable = TRUE, ...) {
       bslib::sidebar(
         width = width,
         height = height,
+        fillable = fillable,
         class = "querychat-sidebar",
         ...,
         self$ui()

@@ -126,7 +126,7 @@ querychat_tool_details_option <- function() {
 
   if (!setting %in% valid_settings) {
     cli::cli_warn(c(
-      "Invalid value for {.code querychat.tool_details} or {.envvar QUERYCHAT_TOOL_DETAILS}: {.val {setting}}",
+      "Invalid value for {.code querychat.tool_details} option or {.envvar QUERYCHAT_TOOL_DETAILS} environment variable: {.val {setting}}",
       "i" = "Must be one of: {.or {.val {valid_settings}}}"
     ))
     return(NULL)

@@ -37,7 +37,7 @@ as_querychat_client <- function(client = NULL) {
 
   if (!inherits(client, "Chat")) {
     cli::cli_abort(
-      "`client` must be an {ellmer} Chat object or a function that returns one."
+      "{.arg client} must be an {.pkg ellmer} {.cls Chat} object or a function that returns one"
     )
   }
 

@@ -470,7 +470,7 @@ QueryChat <- R6::R6Class(
     ) {
       if (is.null(session)) {
         cli::cli_abort(
-          "$server() must be called within a Shiny server function."
+          "{.fn $server} must be called within a Shiny server function"
         )
       }
 
@@ -706,10 +706,6 @@ normalize_data_source <- function(data_source, table_name) {
   }
 
   cli::cli_abort(
-    paste0(
-      "`data_source` must be a DataSource, data.frame, or DBIConnection. ",
-      "Got: ",
-      class(data_source)[1]
-    )
+    "{.arg data_source} must be a {.cls DataSource}, {.cls data.frame}, or {.cls DBIConnection}, not {.obj_type_friendly {data_source}}."
   )
 }

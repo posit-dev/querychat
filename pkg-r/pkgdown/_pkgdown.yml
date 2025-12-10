@@ -29,6 +29,13 @@ template:
   bslib:
     brand: pkgdown/_brand.yml
 
+navbar:
+  structure:
+    left:  [get-started, articles, reference, news]
+    right: [search, github, lightswitch]
+  components:
+    home: ~
+
 reference:
 - title: Chat interfaces
   contents:

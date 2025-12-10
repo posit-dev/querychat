@@ -378,7 +378,7 @@ The first option makes it possible to chat with multiple tables inside a single 
 ::: {.alert .alert-info}
 ### Multiple filtered tables
 
-We do intend on supporting multiple filtered tables in a future release -- if you're interested in this feature, please up vote [the relevant issue](https://github.com/posit-dev/querychat/issues/6)
+We do intend on supporting multiple filtered tables in a future release -- if you're interested in this feature, please upvote [the relevant issue](https://github.com/posit-dev/querychat/issues/6)
 :::
 
 <details>

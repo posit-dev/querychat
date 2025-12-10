@@ -69,7 +69,7 @@ If you're [building an app](build.qmd), note you can read the queried data frame
 
 You can also connect `querychat` directly to any database supported by [SQLAlchemy](https://www.sqlalchemy.org/). This includes popular databases like SQLite, DuckDB, PostgreSQL, MySQL, and many more.
 
-Assuming you have a database set up and accessible, you can pass a SQLAlchemy [database URL](https://docs.sqlalchemy.org/en/20/core/engines.html) to `create_engine()`, and then pass the resulting engine to `QueryChat`. Below are some examples for common databases.
+Assuming you have a database set up and accessible, you can pass a SQLAlchemy [database URL](https://docs.sqlalchemy.org/en/20/core/engines.html) to `create_engine()`, and then pass the resulting engine to `querychat`. Below are some examples for common databases.
 
 
 ::: {.panel-tabset}

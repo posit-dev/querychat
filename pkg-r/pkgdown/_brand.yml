@@ -1,6 +1,7 @@
 color:
   palette:
     blue: "#007bc2"
+    navy: "#193D56"
     indigo: "#4b00c1"
     purple: "#74149c"
     pink: "#bf007f"
@@ -28,11 +29,14 @@ typography:
   fonts:
     - family: Open Sans
       source: bunny
+    - family: Hubot Sans
+      source: bunny
     - family: Source Code Pro
       source: bunny
 
   headings:
-    family: Open Sans
+    family: Hubot Sans
+    color: navy
     weight: 400
   monospace: Source Code Pro
   monospace-inline:
@@ -43,5 +47,5 @@ typography:
 defaults:
   bootstrap:
     defaults:
-      navbar-bg: $brand-blue
+      navbar-bg: $brand-navy
       code-color-dark: "#fa88d4"

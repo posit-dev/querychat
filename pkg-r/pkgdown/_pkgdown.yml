@@ -2,8 +2,8 @@ url: https://posit-dev.github.io/querychat
 
 destination: "../docs/r"
 
-development:
-  mode: auto
+# development:
+#   mode: auto
 
 authors:
   Posit Software, PBC:

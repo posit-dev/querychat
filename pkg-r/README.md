@@ -5,7 +5,7 @@
 [![CRAN status](https://www.r-pkg.org/badges/version/querychat)](https://CRAN.R-project.org/package=querychat)
 <!-- badges: end -->
 
-QueryChat facilitates safe and reliable natural language exploration of tabular data, powered by SQL and large language models (LLMs). For analysts, it offers an intuitive web application where they can quickly ask questions of their data and receive verifiable data-driven answers. For software developers, QueryChat provides a comprehensive R interface to access core functionality -- including the chat UI, generated SQL statements, resulting data, and. This capability enables the seamless integration of natural language querying into bespoke data applications.
+QueryChat facilitates safe and reliable natural language exploration of tabular data, powered by SQL and large language models (LLMs). For analysts, it offers an intuitive web application where they can quickly ask questions of their data and receive verifiable data-driven answers. For software developers, QueryChat provides a comprehensive R interface to access core functionality -- including the chat UI, generated SQL statements, resulting data, and associated metadata. This capability enables the seamless integration of natural language querying into bespoke data applications.
 
 ## Installation
 

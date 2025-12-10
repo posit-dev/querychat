@@ -47,13 +47,13 @@ Suppose we pick a suggestion like "Show me Adelie penguins". Since this is a fil
 
 ![](man/figures/quickstart-filter.png){alt="Screenshot of the querychat's app with the penguins dataset filtered." class="rounded shadow"}
 
-Querychat can also handle more general questions about the data that require calculations and aggregations. For example, we can ask "What is the average bill length by species?". In this case, querychat will generate/execute the SQL query to perform the relevant calculation, and return the result in the chat:
+QueryChat can also handle more general questions about the data that require calculations and aggregations. For example, we can ask "What is the average bill length by species?". In this case, QueryChat will generate/execute the SQL query to perform the relevant calculation, and return the result in the chat:
 
 ![](man/figures/quickstart-summary.png){alt="Screenshot of the querychat's app with a summary statistic inlined in the chat." class="rounded shadow"}
 
 ## Custom apps
 
-Querychat is designed to be highly extensible -- it provides programmatic access to the chat interface, the filtered/sorted data frame, SQL queries, and more.
+QueryChat is designed to be highly extensible -- it provides programmatic access to the chat interface, the filtered/sorted data frame, SQL queries, and more.
 This makes it easy to build custom web apps that (safely) leverage natural language interaction with your data.
 For example, [here](https://github.com/posit-conf-2025/llm/blob/main/_solutions/25_querychat/25_querychat_02-end-app.R)'s a bespoke app for exploring Airbnb listings in Ashville, NC:
 
@@ -63,9 +63,9 @@ To learn more, see [Build an app](articles/build.html) for a step-by-step guide.
 
 ## How it works
 
-Querychat leverages LLMs' incredible capability to translate natural language into SQL queries. Frontier models are shockingly good at this task, but even the best models still need to know the overall data structure to perform well. For this reason, querychat supplies a [system prompt](articles/context.html) with the schema of the data (i.e., column names, types, ranges, etc), but never the raw data itself.
+QueryChat leverages LLMs' incredible capability to translate natural language into SQL queries. Frontier models are shockingly good at this task, but even the best models still need to know the overall data structure to perform well. For this reason, QueryChat supplies a [system prompt](articles/context.html) with the schema of the data (i.e., column names, types, ranges, etc), but never the raw data itself.
 
-When the LLM generates a SQL query, querychat executes it against a SQL database (DuckDB[^duckdb] by default) to get results in a **safe**, **reliable**, and **verifiable** manner. In short, this execution is **safe** since only `SELECT` statements are allowed, **reliable** since the database engine handles all calculations, and **verifiable** since the user can always see the SQL query that was run. This makes querychat a trustworthy tool for data exploration, as every action taken by the LLM is transparent and independently reproducible.
+When the LLM generates a SQL query, QueryChat executes it against a SQL database (DuckDB[^duckdb] by default) to get results in a **safe**, **reliable**, and **verifiable** manner. In short, this execution is **safe** since only `SELECT` statements are allowed, **reliable** since the database engine handles all calculations, and **verifiable** since the user can always see the SQL query that was run. This makes QueryChat a trustworthy tool for data exploration, as every action taken by the LLM is transparent and independently reproducible.
 
 ::: {.alert .alert-warning}
 **Data privacy**

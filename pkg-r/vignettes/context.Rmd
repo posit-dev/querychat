@@ -15,7 +15,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-To improve the LLM's ability to accurately translate natural language queries into SQL, it often helps to provide relevant metadata. Querychat automatically provides things like column names and data types to the LLM, but you can enhance this further with additional context like [data descriptions](#data-description). You can also provide [custom instructions](#extra-instructions) to add additional behaviors and even supply a fully [custom prompt template](#custom-template), if desired.
+To improve the LLM's ability to accurately translate natural language queries into SQL, it often helps to provide relevant metadata. QueryChat automatically provides things like column names and data types to the LLM, but you can enhance this further with additional context like [data descriptions](#data-description). You can also provide [custom instructions](#extra-instructions) to add additional behaviors and even supply a fully [custom prompt template](#custom-template), if desired.
 
 All of this information is provided to the LLM as part of the **system prompt** -- a string of text containing instructions and context for the LLM to consider when responding to user queries.
 
@@ -26,7 +26,7 @@ library(palmerpenguins)
 
 ## Default prompt
 
-For full visibility into the full system prompt that Querychat generates for the LLM, see the `system_prompt` field. This is useful for debugging and understanding exactly what context the LLM is using:
+For full visibility into the full system prompt that QueryChat generates for the LLM, see the `system_prompt` field. This is useful for debugging and understanding exactly what context the LLM is using:
 
 ```{r}
 qc <- querychat(penguins)
@@ -46,7 +46,7 @@ By default, the system prompt contains the following components:
 
 ## Data description {#data-description}
 
-If your column names are descriptive, Querychat may already work well without additional context. However, if your columns are named `x`, `V1`, `value`, etc., you should provide a data description. Use the `data_description` parameter for this:
+If your column names are descriptive, QueryChat may already work well without additional context. However, if your columns are named `x`, `V1`, `value`, etc., you should provide a data description. Use the `data_description` parameter for this:
 
 ```{r}
 qc <- querychat(
@@ -57,7 +57,7 @@ qc <- querychat(
 cat(qc$system_prompt)
 ```
 
-Querychat doesn't need this information in any particular format -- just provide what a human would find helpful:
+QueryChat doesn't need this information in any particular format -- just provide what a human would find helpful:
 
 ```markdown
 # data_description.md

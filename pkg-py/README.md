@@ -34,7 +34,7 @@ app = qc.app()
 ```
 
 <p align="center">
-  <img src="docs/images/quickstart.png" alt="Querychat interface showing natural language queries" width="85%">
+  <img src="docs/images/quickstart.png" alt="QueryChat interface showing natural language queries" width="85%">
 </p>
 
 ## Custom apps

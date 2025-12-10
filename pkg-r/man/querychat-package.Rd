@@ -75,11 +75,19 @@ Useful links:
 \itemize{
   \item \url{https://posit-dev.github.io/querychat/pkg-r}
   \item \url{https://posit-dev.github.io/querychat}
+  \item \url{https://github.com/posit-dev/querychat}
+  \item Report bugs at \url{https://github.com/posit-dev/querychat/issues}
 }
 
 }
 \author{
-\strong{Maintainer}: Joe Cheng \email{joe@posit.co}
+\strong{Maintainer}: Garrick Aden-Buie \email{garrick@posit.co} (\href{https://orcid.org/0000-0002-7111-0077}{ORCID})
+
+Authors:
+\itemize{
+  \item Joe Cheng \email{joe@posit.co} [conceptor]
+  \item Carson Sievert \email{carson@posit.co} (\href{https://orcid.org/0000-0002-4958-2844}{ORCID})
+}
 
 Other contributors:
 \itemize{

@@ -358,7 +358,7 @@ The first option makes it possible to chat with multiple tables inside a single 
 ::: {.callout-note}
 ### Multiple filtered tables
 
-We do intend on supporting multiple filtered tables in a future release -- if you're interested in this feature, please up vote [the relevant issue](https://github.com/posit-dev/querychat/issues/6)
+We plan to support multiple filtered tables in a future release -- if you're interested in this feature, please up vote [the relevant issue](https://github.com/posit-dev/querychat/issues/6)
 :::
 
 Here's an example of the second approach, using two separate `QueryChat` instances to explore both the `titanic` and `penguins` datasets within the same app:

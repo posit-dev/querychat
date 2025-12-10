@@ -90,11 +90,9 @@ DataSource <- R6::R6Class(
 #'
 #' @description
 #' A DataSource implementation that wraps a data frame using DuckDB for SQL
-#' query execution.
-#'
-#' @details
-#' This class creates an in-memory DuckDB connection and registers the provided
-#' data frame as a table. All SQL queries are executed against this DuckDB table.
+#' query execution. This class creates an in-memory DuckDB connection and
+#' registers the provided data frame as a table. All SQL queries are executed
+#' against this DuckDB table.
 #'
 #' @export
 #' @examples
@@ -222,11 +220,8 @@ DataFrameSource <- R6::R6Class(
 #'
 #' @description
 #' A DataSource implementation for DBI database connections (SQLite, PostgreSQL,
-#' MySQL, etc.).
-#'
-#' @details
-#' This class wraps a DBI connection and provides SQL query execution against
-#' a specified table in the database.
+#' MySQL, etc.). This class wraps a DBI connection and provides SQL query
+#' execution against a single table in the database.
 #'
 #' @export
 #' @examples

@@ -5,11 +5,9 @@
 \title{Data Frame Source}
 \description{
 A DataSource implementation that wraps a data frame using DuckDB for SQL
-query execution.
-}
-\details{
-This class creates an in-memory DuckDB connection and registers the provided
-data frame as a table. All SQL queries are executed against this DuckDB table.
+query execution. This class creates an in-memory DuckDB connection and
+registers the provided data frame as a table. All SQL queries are executed
+against this DuckDB table.
 }
 \examples{
 \dontrun{

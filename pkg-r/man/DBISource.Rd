@@ -5,11 +5,8 @@
 \title{DBI Source}
 \description{
 A DataSource implementation for DBI database connections (SQLite, PostgreSQL,
-MySQL, etc.).
-}
-\details{
-This class wraps a DBI connection and provides SQL query execution against
-a specified table in the database.
+MySQL, etc.). This class wraps a DBI connection and provides SQL query
+execution against a single table in the database.
 }
 \examples{
 \dontrun{

@@ -78,7 +78,8 @@ NULL
 
 release_bullets <- function() {
   c(
-    "Run `staticimports::import()` to update static imports"
+    "Run `staticimports::import()` to update static imports",
+    "Enable `development.mode: auto` in `_pkgdown.yml` and remove this release bullet."
   )
 }
 

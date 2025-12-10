@@ -2,8 +2,8 @@ url: https://posit-dev.github.io/querychat
 
 destination: "../docs/r"
 
-development:
-  mode: auto
+# development:
+#   mode: auto
 
 authors:
   Posit Software, PBC:
@@ -28,6 +28,13 @@ template:
   theme-dark: github-dark
   bslib:
     brand: pkgdown/_brand.yml
+
+navbar:
+  structure:
+    left:  [get-started, articles, reference, news]
+    right: [search, github, lightswitch]
+  components:
+    home: ~
 
 reference:
 - title: Chat interfaces

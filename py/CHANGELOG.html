@@ -125,16 +125,16 @@ ul.task-list li input[type="checkbox"] {
   <ul>
   <li><a href="#changelog" id="toc-changelog" class="nav-link active" data-scroll-target="#changelog">Changelog</a>
   <ul class="collapse">
-  <li><a href="#unreleased" id="toc-unreleased" class="nav-link" data-scroll-target="#unreleased">[UNRELEASED]</a>
+  <li><a href="#section" id="toc-section" class="nav-link" data-scroll-target="#section">[0.3.0] - 2025-12-10</a>
   <ul class="collapse">
   <li><a href="#breaking-changes" id="toc-breaking-changes" class="nav-link" data-scroll-target="#breaking-changes">Breaking Changes</a></li>
   <li><a href="#new-features" id="toc-new-features" class="nav-link" data-scroll-target="#new-features">New features</a></li>
   <li><a href="#improvements" id="toc-improvements" class="nav-link" data-scroll-target="#improvements">Improvements</a></li>
   </ul></li>
-  <li><a href="#section" id="toc-section" class="nav-link" data-scroll-target="#section">[0.2.2] - 2025-09-04</a></li>
-  <li><a href="#section-1" id="toc-section-1" class="nav-link" data-scroll-target="#section-1">[0.2.1] - 2025-09-04</a></li>
-  <li><a href="#section-2" id="toc-section-2" class="nav-link" data-scroll-target="#section-2">[0.2.0] - 2025-09-02</a></li>
-  <li><a href="#section-3" id="toc-section-3" class="nav-link" data-scroll-target="#section-3">[0.1.0] - 2025-05-24</a></li>
+  <li><a href="#section-1" id="toc-section-1" class="nav-link" data-scroll-target="#section-1">[0.2.2] - 2025-09-04</a></li>
+  <li><a href="#section-2" id="toc-section-2" class="nav-link" data-scroll-target="#section-2">[0.2.1] - 2025-09-04</a></li>
+  <li><a href="#section-3" id="toc-section-3" class="nav-link" data-scroll-target="#section-3">[0.2.0] - 2025-09-02</a></li>
+  <li><a href="#section-4" id="toc-section-4" class="nav-link" data-scroll-target="#section-4">[0.1.0] - 2025-05-24</a></li>
   </ul></li>
   </ul>
 <div class="toc-actions"><ul><li><a href="https://github.com/posit-dev/querychat/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li><li><a href="https://github.com/posit-dev/querychat/edit/main/pkg-py/docs/CHANGELOG.md" class="toc-action"><i class="bi empty"></i>Edit this page</a></li></ul></div></nav>
@@ -149,8 +149,8 @@ ul.task-list li input[type="checkbox"] {
 <h1>Changelog</h1>
 <p>All notable changes to this project will be documented in this file.</p>
 <p>The format is based on <a href="https://keepachangelog.com/en/1.1.0/">Keep a Changelog</a>, and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
-<section id="unreleased" class="level2">
-<h2 class="anchored" data-anchor-id="unreleased">[UNRELEASED]</h2>
+<section id="section" class="level2">
+<h2 class="anchored" data-anchor-id="section">[0.3.0] - 2025-12-10</h2>
 <section id="breaking-changes" class="level3">
 <h3 class="anchored" data-anchor-id="breaking-changes">Breaking Changes</h3>
 <ul>
@@ -178,20 +178,20 @@ ul.task-list li input[type="checkbox"] {
 </ul>
 </section>
 </section>
-<section id="section" class="level2">
-<h2 class="anchored" data-anchor-id="section">[0.2.2] - 2025-09-04</h2>
+<section id="section-1" class="level2">
+<h2 class="anchored" data-anchor-id="section-1">[0.2.2] - 2025-09-04</h2>
 <ul>
 <li>Fixed another issue with data sources that aren’t already narwhals DataFrames (#83)</li>
 </ul>
 </section>
-<section id="section-1" class="level2">
-<h2 class="anchored" data-anchor-id="section-1">[0.2.1] - 2025-09-04</h2>
+<section id="section-2" class="level2">
+<h2 class="anchored" data-anchor-id="section-2">[0.2.1] - 2025-09-04</h2>
 <ul>
 <li>Fixed an issue with the query tool when used with SQLAlchemy data sources. (<span class="citation" data-cites="npelikan">@npelikan</span> #79)</li>
 </ul>
 </section>
-<section id="section-2" class="level2">
-<h2 class="anchored" data-anchor-id="section-2">[0.2.0] - 2025-09-02</h2>
+<section id="section-3" class="level2">
+<h2 class="anchored" data-anchor-id="section-3">[0.2.0] - 2025-09-02</h2>
 <ul>
 <li><p><code>querychat.init()</code> now accepts a <code>client</code> argument, replacing the previous <code>create_chat_callback</code> argument. (#60)</p>
 <p>The <code>client</code> can be:</p>
@@ -204,8 +204,8 @@ ul.task-list li input[type="checkbox"] {
 <li><p><code>querychat.ui()</code> now adds a <code>.querychat</code> class to the chat container and <code>querychat.sidebar()</code> adds a <code>.querychat-sidebar</code> class to the sidebar, allowing for easier customization via CSS. (#68)</p></li>
 </ul>
 </section>
-<section id="section-3" class="level2">
-<h2 class="anchored" data-anchor-id="section-3">[0.1.0] - 2025-05-24</h2>
+<section id="section-4" class="level2">
+<h2 class="anchored" data-anchor-id="section-4">[0.1.0] - 2025-05-24</h2>
 <p>This first release of the <code>querychat</code> package.</p>
 
 

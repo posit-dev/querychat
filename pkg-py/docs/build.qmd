@@ -350,7 +350,7 @@ This is equivalent to the user asking the LLM to "reset" or "show all data".
 
 Currently, you have two options for exploring multiple tables in QueryChat:
 
-1. Join the tables into a single tables before passing to QueryChat
+1. Join the tables into a single table before passing to QueryChat
 2. Use multiple QueryChat instances in the same app
 
 The first option makes it possible to chat with multiple tables inside a single chat interface, whereas the second option requires a separate chat interface for each table.

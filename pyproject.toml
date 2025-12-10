@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "querychat"
-version = "0.3.0"
+version = "0.3.0.9000"
 description = "Chat with your data using natural language"
 readme = "pkg-py/README.md"
 requires-python = ">=3.10"
@@ -12,6 +12,7 @@ license = { file = "pkg-py/LICENSE" }
 authors = [
   { name = "Joe Cheng", email = "joe@posit.co" },
   { name = "Garrick Aden-Buie", email = "garrick@posit.co" },
+  { name = "Carson Sievert", email = "carson@posit.co" },
   { name = "Dan Chen", email = "daniel.chen@posit.co" },
   { name = "Barret Schloerke", email = "barret@posit.co" }
 ]

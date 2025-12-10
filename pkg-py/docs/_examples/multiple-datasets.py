@@ -1,7 +1,7 @@
+from querychat.data import titanic
+from querychat.express import QueryChat
 from seaborn import load_dataset
 from shiny.express import render, ui
-from querychat.express import QueryChat
-from querychat.data import titanic
 
 penguins = load_dataset("penguins")
 

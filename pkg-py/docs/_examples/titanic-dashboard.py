@@ -1,9 +1,9 @@
+import plotly.express as px
+from faicons import icon_svg
+from querychat.data import titanic
+from querychat.express import QueryChat
 from shiny.express import render, ui
 from shinywidgets import render_plotly
-from querychat.express import QueryChat
-from querychat.data import titanic
-from faicons import icon_svg
-import plotly.express as px
 
 qc = QueryChat(titanic(), "titanic")
 qc.sidebar()
@@ -21,7 +21,7 @@ with ui.layout_column_wrap(fill=False):
 
         @render.text
         def survival():
-            rate = qc.df()['survived'].mean() * 100
+            rate = qc.df()["survived"].mean() * 100
             return f"{rate:.1f}%"
 
     with ui.value_box(showcase=icon_svg("coins")):
@@ -29,7 +29,7 @@ with ui.layout_column_wrap(fill=False):
 
         @render.text
         def fare():
-            avg = qc.df()['fare'].mean()
+            avg = qc.df()["fare"].mean()
             return f"${avg:.2f}"
 
 with ui.layout_columns():
@@ -51,12 +51,12 @@ with ui.layout_columns():
         @render_plotly
         def survival_by_class():
             df = qc.df()
-            summary = df.groupby('pclass')['survived'].mean().reset_index()
+            summary = df.groupby("pclass")["survived"].mean().reset_index()
             return px.bar(
                 summary,
-                x='pclass',
-                y='survived',
-                labels={'pclass': 'Class', 'survived': 'Survival Rate'},
+                x="pclass",
+                y="survived",
+                labels={"pclass": "Class", "survived": "Survival Rate"},
             )
 
 with ui.layout_columns():
@@ -66,7 +66,7 @@ with ui.layout_columns():
         @render_plotly
         def age_dist():
             df = qc.df()
-            return px.histogram(df, x='age', nbins=30)
+            return px.histogram(df, x="age", nbins=30)
 
     with ui.card():
         ui.card_header("Fare by Class")
@@ -74,7 +74,7 @@ with ui.layout_columns():
         @render_plotly
         def fare_by_class():
             df = qc.df()
-            return px.box(df, x='pclass', y='fare', color='survived')
+            return px.box(df, x="pclass", y="fare", color="survived")
 
 ui.page_opts(
     title="Titanic Survival Analysis",

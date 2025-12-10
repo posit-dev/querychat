@@ -106,6 +106,7 @@ target-version = "py310"
 extend-ignore = [
     "A002",    # Shadowing a built-in
     "ARG001",  # Unused argument
+    "D103",    # Missing docstring in public function
     "D200",    # One-line docstring should fit on one line with quotes
     "D203",    # 1 blank line required before class docstring
     "D212",    # Multi-line docstring summary should start at the first line

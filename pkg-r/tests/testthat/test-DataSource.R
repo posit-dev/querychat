@@ -258,6 +258,60 @@ describe("assemble_system_prompt()", {
     expect_match(prompt, "Description here")
     expect_match(prompt, "Instructions here")
   })
+
+  it("accepts custom schema parameter", {
+    custom_schema <- "Table: custom_table\nColumns:\n- id (INTEGER)\n- name (TEXT)"
+
+    prompt <- assemble_system_prompt(
+      df_source,
+      schema = custom_schema
+    )
+
+    expect_type(prompt, "character")
+    expect_match(prompt, "Table: custom_table")
+    expect_match(prompt, "id \\(INTEGER\\)")
+    expect_match(prompt, "name \\(TEXT\\)")
+    # Should use custom schema, not auto-generated one
+    expect_false(grepl("Table: test_table", prompt, fixed = TRUE))
+  })
+
+  it("auto-generates schema when schema parameter is NULL", {
+    prompt_no_schema <- assemble_system_prompt(
+      df_source,
+      schema = NULL
+    )
+
+    # Should contain auto-generated schema from the source
+    expect_type(prompt_no_schema, "character")
+    expect_match(prompt_no_schema, "Table: test_table")
+    expect_match(prompt_no_schema, "id \\(INTEGER\\)")
+    expect_match(prompt_no_schema, "name \\(TEXT\\)")
+  })
+
+  it("allows custom categorical_threshold via source$get_schema()", {
+    # Create a source with categorical data
+    df_with_categories <- data.frame(
+      id = 1:10,
+      category = rep(c("A", "B", "C", "D", "E"), each = 2)
+    )
+    cat_source <- local_data_frame_source(df_with_categories)
+
+    # With low threshold, categories should not be listed
+    schema_low_threshold <- cat_source$get_schema(categorical_threshold = 3)
+    prompt_low <- assemble_system_prompt(
+      cat_source,
+      schema = schema_low_threshold
+    )
+    expect_false(grepl("Categorical values:", prompt_low))
+
+    # With high threshold, categories should be listed
+    schema_high_threshold <- cat_source$get_schema(categorical_threshold = 10)
+    prompt_high <- assemble_system_prompt(
+      cat_source,
+      schema = schema_high_threshold
+    )
+    expect_match(prompt_high, "Categorical values:")
+  })
 })
 
 describe("DataSource$get_db_type()", {

@@ -68,7 +68,22 @@ QueryChat <- R6::R6Class(
     server_values = NULL,
     .data_source = NULL,
     .client = NULL,
-    .client_console = NULL
+    .client_console = NULL,
+    prompt_template = NULL,
+    prompt_parts = list(
+      data_description = NULL,
+      extra_instructions = NULL,
+      schema = NULL
+    ),
+    assemble_system_prompt = function() {
+      assemble_system_prompt(
+        source = private$.data_source,
+        prompt_template = private$prompt_template,
+        data_description = private$prompt_parts$data_description,
+        extra_instructions = private$prompt_parts$extra_instructions,
+        schema = private$prompt_parts$schema
+      )
+    }
   ),
   public = list(
     #' @field greeting The greeting message displayed to users.
@@ -188,19 +203,27 @@ QueryChat <- R6::R6Class(
       }
       self$greeting <- greeting
 
-      prompt <- assemble_system_prompt(
-        private$.data_source,
-        data_description = data_description,
-        categorical_threshold = categorical_threshold,
-        extra_instructions = extra_instructions,
-        prompt_template = prompt_template
+      # Assemble the pieces of the system prompt
+      private$prompt_template <- read_text(
+        prompt_template %||%
+          system.file("prompts", "prompt.md", package = "querychat")
+      )
+
+      if (!is.null(data_description)) {
+        private$prompt_parts$data_description <- read_text(data_description)
+      }
+      if (!is.null(extra_instructions)) {
+        private$prompt_parts$extra_instructions <- read_text(extra_instructions)
+      }
+
+      private$prompt_parts$schema <- private$.data_source$get_schema(
+        categorical_threshold = categorical_threshold
       )
 
       # Fork and empty chat now so the per-session forks are fast
       client <- as_querychat_client(client)
       private$.client <- client$clone()
       private$.client$set_turns(list())
-      private$.client$set_system_prompt(prompt)
 
       # By default, only close automatically if a Shiny session is active
       if (is.na(cleanup)) {
@@ -237,6 +260,7 @@ QueryChat <- R6::R6Class(
       }
 
       chat <- private$.client$clone()
+      chat$set_system_prompt(private$assemble_system_prompt())
 
       if (is.null(tools)) {
         return(chat)
@@ -586,7 +610,7 @@ QueryChat <- R6::R6Class(
     #' qc2 <- QueryChat$new(mtcars, greeting = "mtcars_greeting.md")
     #' }
     generate_greeting = function(echo = c("none", "output")) {
-      chat <- private$.client$clone()
+      chat <- self$client()
       chat$set_turns(list())
 
       as.character(chat$chat(GREETING_PROMPT, echo = echo))
@@ -613,7 +637,7 @@ QueryChat <- R6::R6Class(
   active = list(
     #' @field system_prompt Get the system prompt.
     system_prompt = function() {
-      private$.client$get_system_prompt()
+      private$assemble_system_prompt()
     },
 
     #' @field data_source Get the current data source.

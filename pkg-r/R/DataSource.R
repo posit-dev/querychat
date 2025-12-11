@@ -585,7 +585,7 @@ assemble_system_prompt <- function(
   source,
   data_description = NULL,
   extra_instructions = NULL,
-  categorical_threshold = 20,
+  schema = NULL,
   prompt_template = NULL
 ) {
   if (!is_data_source(source)) {
@@ -594,7 +594,7 @@ assemble_system_prompt <- function(
     )
   }
 
-  prompt_text <- read_text(
+  template <- read_text(
     prompt_template %||%
       system.file("prompts", "prompt.md", package = "querychat")
   )
@@ -606,11 +606,11 @@ assemble_system_prompt <- function(
     extra_instructions <- read_text(extra_instructions)
   }
 
-  schema <- source$get_schema(categorical_threshold = categorical_threshold)
+  schema <- schema %||% source$get_schema(categorical_threshold = 20)
   db_type <- source$get_db_type()
 
   whisker::whisker.render(
-    prompt_text,
+    template,
     list(
       schema = schema,
       data_description = data_description,

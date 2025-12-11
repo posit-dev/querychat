@@ -533,7 +533,7 @@ QueryChat <- R6::R6Class(
         self$id,
         data_source = private$.data_source,
         greeting = self$greeting,
-        client = private$.client,
+        client = self$client,
         enable_bookmarking = enable_bookmarking
       )
     },

@@ -244,6 +244,195 @@ describe("QueryChat$data_source", {
   })
 })
 
+describe("QueryChat$client()", {
+  it("uses default tools when tools = NA", {
+    qc <- QueryChat$new(
+      new_test_df(),
+      "test_df",
+      tools = c("update", "query")
+    )
+    withr::defer(qc$cleanup())
+
+    client <- qc$client(tools = NA)
+
+    # Should have both update and query tools
+    tool_names <- sapply(client$get_tools(), function(t) t@name)
+    expect_contains(tool_names, "querychat_update_dashboard")
+    expect_contains(tool_names, "querychat_reset_dashboard")
+    expect_contains(tool_names, "querychat_query")
+  })
+
+  it("overrides default tools when tools parameter is provided", {
+    qc <- QueryChat$new(
+      new_test_df(),
+      "test_df",
+      tools = c("update", "query")
+    )
+    withr::defer(qc$cleanup())
+
+    client <- qc$client(tools = "query")
+
+    # Should only have query tool
+    tool_names <- sapply(client$get_tools(), function(t) t@name)
+    expect_contains(tool_names, "querychat_query")
+    expect_false("querychat_update_dashboard" %in% tool_names)
+    expect_false("querychat_reset_dashboard" %in% tool_names)
+  })
+
+  it("registers only update tools when tools = 'update'", {
+    qc <- QueryChat$new(
+      new_test_df(),
+      "test_df"
+    )
+    withr::defer(qc$cleanup())
+
+    client <- qc$client(tools = "update")
+
+    tool_names <- sapply(client$get_tools(), function(t) t@name)
+    expect_contains(tool_names, "querychat_update_dashboard")
+    expect_contains(tool_names, "querychat_reset_dashboard")
+    expect_false("querychat_query" %in% tool_names)
+  })
+
+  it("registers only query tool when tools = 'query'", {
+    qc <- QueryChat$new(
+      new_test_df(),
+      "test_df"
+    )
+    withr::defer(qc$cleanup())
+
+    client <- qc$client(tools = "query")
+
+    tool_names <- sapply(client$get_tools(), function(t) t@name)
+    expect_contains(tool_names, "querychat_query")
+    expect_false("querychat_update_dashboard" %in% tool_names)
+    expect_false("querychat_reset_dashboard" %in% tool_names)
+  })
+
+  it("returns client with no tools when tools = NULL", {
+    qc <- QueryChat$new(
+      new_test_df(),
+      "test_df"
+    )
+    withr::defer(qc$cleanup())
+
+    client <- qc$client(tools = NULL)
+
+    expect_length(client$get_tools(), 0)
+  })
+
+  it("sets system prompt based on tools parameter", {
+    qc <- QueryChat$new(
+      new_test_df(),
+      "test_df"
+    )
+    withr::defer(qc$cleanup())
+
+    client_query <- qc$client(tools = "query")
+    client_update <- qc$client(tools = "update")
+
+    prompt_query <- client_query$get_system_prompt()
+    prompt_update <- client_update$get_system_prompt()
+
+    # Query client should have query instructions but not update
+    expect_match(prompt_query, "Answering Questions About Data")
+    expect_no_match(prompt_query, "Filtering and Sorting Data")
+
+    # Update client should have update instructions but not query
+    expect_match(prompt_update, "Filtering and Sorting Data")
+    expect_no_match(prompt_update, "Answering Questions About Data")
+  })
+
+  it("passes update_dashboard callback to tool", {
+    qc <- QueryChat$new(
+      new_test_df(),
+      "test_df"
+    )
+    withr::defer(qc$cleanup())
+
+    update_calls <- list()
+    client <- qc$client(
+      tools = "update",
+      update_dashboard = function(query, title) {
+        update_calls <<- list(query = query, title = title)
+      }
+    )
+
+    # Find and call the update tool
+    tools <- client$get_tools()
+    update_tool <- tools[[which(sapply(tools, function(t) t@name == "querychat_update_dashboard"))]]
+
+    # Call the tool - it should execute the query and call the callback
+    result <- update_tool(
+      query = "SELECT * FROM test_df WHERE id = 1",
+      title = "Test Filter"
+    )
+
+    expect_null(result@error)
+    expect_equal(update_calls$query, "SELECT * FROM test_df WHERE id = 1")
+    expect_equal(update_calls$title, "Test Filter")
+  })
+
+  it("passes reset_dashboard callback to tool", {
+    qc <- QueryChat$new(
+      new_test_df(),
+      "test_df"
+    )
+    withr::defer(qc$cleanup())
+
+    reset_called <- FALSE
+    client <- qc$client(
+      tools = "update",
+      reset_dashboard = function() {
+        reset_called <<- TRUE
+      }
+    )
+
+    # Find and call the reset tool
+    tools <- client$get_tools()
+    reset_tool <- tools[[which(sapply(tools, function(t) t@name == "querychat_reset_dashboard"))]]
+
+    # Call the tool
+    reset_tool()
+
+    expect_true(reset_called)
+  })
+
+  it("returns independent client instances on each call", {
+    qc <- QueryChat$new(
+      new_test_df(),
+      "test_df"
+    )
+    withr::defer(qc$cleanup())
+
+    client1 <- qc$client()
+    client2 <- qc$client()
+
+    # Should be different objects
+    expect_false(identical(client1, client2))
+
+    # Modifying one shouldn't affect the other
+    client1$set_turns(list(ellmer::Turn("user", "test message")))
+    expect_length(client1$get_turns(), 1)
+    expect_length(client2$get_turns(), 0)
+  })
+
+  it("respects QueryChat initialization tools by default", {
+    qc_query_only <- QueryChat$new(
+      new_test_df(),
+      "test_df",
+      tools = "query"
+    )
+    withr::defer(qc_query_only$cleanup())
+
+    client <- qc_query_only$client()
+    tool_names <- sapply(client$get_tools(), function(t) t@name)
+
+    expect_contains(tool_names, "querychat_query")
+    expect_false("querychat_update_dashboard" %in% tool_names)
+  })
+})
+
 test_that("QueryChat$generate_greeting() generates a greeting using the LLM client", {
   MockChat <- R6::R6Class(
     "MockChat",

@@ -67,7 +67,8 @@ QueryChat <- R6::R6Class(
   private = list(
     server_values = NULL,
     .data_source = NULL,
-    .client = NULL
+    .client = NULL,
+    .client_console = NULL
   ),
   public = list(
     #' @field greeting The greeting message displayed to users.
@@ -239,6 +240,22 @@ QueryChat <- R6::R6Class(
 
       chat
     },
+
+    #' @description
+    #' Launch a console-based chat interface with the data source.
+    #'
+    #' @param new Whether to create a new chat client instance or continue the
+    #'   conversation from the last console chat session (the default).
+    #' @param ... Additional arguments passed to the `$client()` method.
+    #' @param tools Which querychat tools to include in the chat client. See
+    #'   `$client()` for details. Ignored when not creating a new chat client.
+    console = function(new = FALSE, ..., tools = "query") {
+      check_bool(new)
+      if (new || is.null(private$.client_console)) {
+        private$.client_console <- self$client(tools = tools, ...)
+      }
+
+      ellmer::live_console(private$.client_console)
     },
 
     #' @description

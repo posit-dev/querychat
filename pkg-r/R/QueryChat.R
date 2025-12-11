@@ -256,11 +256,15 @@ QueryChat <- R6::R6Class(
       update_dashboard = function(query, title) {},
       reset_dashboard = function() {}
     ) {
-      if (is.na(tools)) {
+      if (is_na(tools)) {
         tools <- self$tools
       }
       if (!is.null(tools)) {
-        tools <- arg_match(tools, values = c("update", "query"))
+        tools <- arg_match(
+          tools,
+          values = c("update", "query"),
+          multiple = TRUE
+        )
       }
 
       chat <- private$.client$clone()

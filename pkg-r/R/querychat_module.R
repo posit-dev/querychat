@@ -46,6 +46,15 @@ mod_server <- function(
       )
     }
 
+    update_dashboard <- function(query, title) {
+      if (!is.null(query)) {
+        current_query(query)
+      }
+      if (!is.null(title)) {
+        current_title(title)
+      }
+    }
+
     reset_query <- function() {
       current_query(NULL)
       current_title(NULL)
@@ -55,7 +64,7 @@ mod_server <- function(
     # Set up the chat object for this session
     chat <- client$clone()
     chat$register_tool(
-      tool_update_dashboard(data_source, current_query, current_title)
+      tool_update_dashboard(data_source, update_fn = update_dashboard)
     )
     chat$register_tool(tool_query(data_source))
     chat$register_tool(tool_reset_dashboard(reset_query))

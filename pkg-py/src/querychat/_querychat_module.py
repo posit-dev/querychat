@@ -6,15 +6,20 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Union
 
+import chatlas
 import shinychat
 from shiny import module, reactive, ui
 
-from .tools import tool_query, tool_reset_dashboard, tool_update_dashboard
+from .tools import (
+    UpdateDashboardData,
+    tool_query,
+    tool_reset_dashboard,
+    tool_update_dashboard,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    import chatlas
     import pandas as pd
     from shiny import Inputs, Outputs, Session
     from shiny.bookmark import BookmarkState, RestoreState
@@ -91,7 +96,7 @@ def mod_server(
     *,
     data_source: DataSource,
     greeting: str | None,
-    client: chatlas.Chat,
+    client: chatlas.Chat | Callable,
     enable_bookmarking: bool,
 ):
     # Reactive values to store state
@@ -99,18 +104,29 @@ def mod_server(
     title = ReactiveStringOrNone(None)
     has_greeted = reactive.value[bool](False)  # noqa: FBT003
 
+    def update_dashboard(data: UpdateDashboardData):
+        if data["query"] is not None:
+            sql.set(data["query"])
+        if data["title"] is not None:
+            title.set(data["title"])
+
+    def reset_dashboard():
+        sql.set(None)
+        title.set(None)
+
     # Set up the chat object for this session
-    chat = copy.deepcopy(client)
+    # Support both a callable that creates a client and legacy instance pattern
+    if callable(client) and not isinstance(client, chatlas.Chat):
+        chat = client(
+            update_dashboard=update_dashboard, reset_dashboard=reset_dashboard
+        )
+    else:
+        # Legacy pattern: client is Chat instance
+        chat = copy.deepcopy(client)
 
-    # Create the tool functions
-    update_dashboard_tool = tool_update_dashboard(data_source, sql, title)
-    reset_dashboard_tool = tool_reset_dashboard(sql, title)
-    query_tool = tool_query(data_source)
-
-    # Register tools with annotations for the UI
-    chat.register_tool(update_dashboard_tool)
-    chat.register_tool(query_tool)
-    chat.register_tool(reset_dashboard_tool)
+        chat.register_tool(tool_update_dashboard(data_source, update_dashboard))
+        chat.register_tool(tool_query(data_source))
+        chat.register_tool(tool_reset_dashboard(reset_dashboard))
 
     # Execute query when SQL changes
     @reactive.calc
@@ -168,7 +184,7 @@ def mod_server(
             title.set(new_title)
 
     if enable_bookmarking:
-        chat_ui.enable_bookmarking(client)
+        chat_ui.enable_bookmarking(chat)
 
         @session.bookmark.on_bookmark
         def _on_bookmark(x: BookmarkState) -> None:

@@ -17,10 +17,17 @@ from shinychat import output_markdown_stream
 from ._datasource import DataFrameSource, DataSource, SQLAlchemySource
 from ._icons import bs_icon
 from ._querychat_module import GREETING_PROMPT, ServerValues, mod_server, mod_ui
+from .tools import (
+    tool_query,
+    tool_reset_dashboard,
+    tool_update_dashboard,
+)
 
 if TYPE_CHECKING:
     import pandas as pd
     from narwhals.stable.v1.typing import IntoFrame
+
+TOOL_GROUPS = Literal["update", "query"]
 
 
 class QueryChatBase:
@@ -32,6 +39,7 @@ class QueryChatBase:
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
+        tools: Optional[list[TOOL_GROUPS]] = None,
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -46,22 +54,45 @@ class QueryChatBase:
             )
 
         self.id = id or table_name
+        self.tools = tools or ["update", "query"]
 
         self.greeting = greeting.read_text() if isinstance(greeting, Path) else greeting
 
-        prompt = assemble_system_prompt(
-            self._data_source,
-            data_description=data_description,
-            extra_instructions=extra_instructions,
-            categorical_threshold=categorical_threshold,
-            prompt_template=prompt_template,
+        # Store prompt components for lazy assembly
+        if prompt_template is None:
+            prompt_template = Path(__file__).parent / "prompts" / "prompt.md"
+        self._prompt_template = (
+            prompt_template.read_text()
+            if isinstance(prompt_template, Path)
+            else prompt_template
         )
+
+        self._prompt_parts = {
+            "data_description": (
+                data_description.read_text()
+                if isinstance(data_description, Path)
+                else data_description
+            ),
+            "extra_instructions": (
+                extra_instructions.read_text()
+                if isinstance(extra_instructions, Path)
+                else extra_instructions
+            ),
+            "schema": self._data_source.get_schema(
+                categorical_threshold=categorical_threshold
+            ),
+            "categorical_threshold": categorical_threshold,
+        }
 
         # Fork and empty chat now so the per-session forks are fast
         client = as_querychat_client(client)
         self._client = copy.deepcopy(client)
         self._client.set_turns([])
-        self._client.system_prompt = prompt
+        # Set system prompt for backward compatibility
+        self._client.system_prompt = self._assemble_system_prompt()
+
+        # Storage for console client
+        self._client_console = None
 
     def app(
         self, *, bookmark_store: Literal["url", "server", "disable"] = "url"
@@ -241,6 +272,162 @@ class QueryChatBase:
         client.set_turns([])
         return str(client.chat(GREETING_PROMPT, echo=echo))
 
+    def _assemble_system_prompt(self, tools: Optional[list[TOOL_GROUPS]] = None) -> str:
+        """Assemble the system prompt with optional tool configuration."""
+        if tools is None:
+            tools = self.tools
+
+        is_duck_db = self._data_source.get_db_type().lower() == "duckdb"
+
+        return chevron.render(
+            self._prompt_template,
+            {
+                "db_type": self._data_source.get_db_type(),
+                "is_duck_db": is_duck_db,
+                "schema": self._prompt_parts["schema"],
+                "data_description": self._prompt_parts.get("data_description"),
+                "extra_instructions": self._prompt_parts.get("extra_instructions"),
+                "has_tool_update": "update" in tools if tools else False,
+                "has_tool_query": "query" in tools if tools else False,
+            },
+        )
+
+    def client(
+        self,
+        *,
+        tools: Optional[list[str]] = None,
+        update_dashboard=None,
+        reset_dashboard=None,
+    ) -> chatlas.Chat:
+        """
+        Create a chat client with registered tools.
+
+        This method creates a standalone chat client configured with the specified tools
+        and callbacks. Each call returns an independent client instance with its own
+        conversation state.
+
+        Parameters
+        ----------
+        tools
+            Which tools to include: "update", "query", or both. If None, uses the tools
+            specified during initialization (default: ["update", "query"]).
+        update_dashboard
+            Optional callback function to call when the update_dashboard tool succeeds.
+            Takes a dict with "query" and "title" keys. Only used if "update" is in tools.
+        reset_dashboard
+            Optional callback function to call when the reset_dashboard tool is invoked.
+            Takes no arguments. Only used if "update" is in tools.
+
+        Returns
+        -------
+        chatlas.Chat
+            A configured chat client with tools registered based on the tools parameter.
+
+        Examples
+        --------
+        ```python
+        from querychat import QueryChat
+        import pandas as pd
+
+        df = pd.DataFrame({"a": [1, 2, 3]})
+        qc = QueryChat(df, "my_data")
+
+        # Create client with all tools (default)
+        client = qc.client()
+        response = client.chat("What's the average of column a?")
+
+        # Create client with only query tool
+        client = qc.client(tools=["query"])
+
+
+        # Create client with custom callbacks
+        def my_update(data):
+            print(f"Query: {data['query']}, Title: {data['title']}")
+
+
+        client = qc.client(update_dashboard=my_update)
+        ```
+
+        """
+        # Use instance default if not specified
+        if tools is None:
+            tools = self.tools
+
+        # Clone the base client
+        chat = copy.deepcopy(self._client)
+        chat.set_turns([])
+
+        # Set system prompt with appropriate tool instructions
+        chat.system_prompt = self._assemble_system_prompt(tools)
+
+        # Register tools based on selection
+        if tools is None:
+            return chat
+
+        if "update" in tools:
+            # Default callbacks that do nothing
+            update_fn = update_dashboard or (lambda _: None)
+            reset_fn = reset_dashboard or (lambda: None)
+
+            chat.register_tool(tool_update_dashboard(self._data_source, update_fn))
+            chat.register_tool(tool_reset_dashboard(reset_fn))
+
+        if "query" in tools:
+            chat.register_tool(tool_query(self._data_source))
+
+        return chat
+
+    def console(
+        self, *, new: bool = False, tools: Optional[list[str]] = None, **kwargs
+    ) -> None:
+        """
+        Launch an interactive console chat with the data.
+
+        This method provides a REPL (Read-Eval-Print Loop) interface for chatting with
+        your data from the command line. The console session persists by default, so you
+        can exit and return to continue your conversation.
+
+        Parameters
+        ----------
+        new
+            If True, creates a new chat client and starts a fresh conversation.
+            If False (default), continues the conversation from the previous console session.
+        tools
+            Which tools to include: "update", "query", or both. Defaults to ["query"] only
+            for privacy (prevents the LLM from accessing data values). Ignored if new=False
+            and a console session already exists.
+        **kwargs
+            Additional arguments passed to the `client()` method when creating a new client.
+
+        Examples
+        --------
+        ```python
+        from querychat import QueryChat
+        import pandas as pd
+
+        df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+        qc = QueryChat(df, "my_data")
+
+        # Start console (query tool only by default)
+        qc.console()
+
+        # Start fresh console with all tools
+        qc.console(new=True, tools=["update", "query"])
+
+        # Continue previous console session
+        qc.console()  # picks up where you left off
+        ```
+
+        """
+        # Default to query-only for console (privacy)
+        if tools is None and (new or self._client_console is None):
+            tools = ["query"]
+
+        if new or self._client_console is None:
+            self._client_console = self.client(tools=tools, **kwargs)
+
+        self._client_console.console()
+
     @property
     def system_prompt(self) -> str:
         """
@@ -252,7 +439,7 @@ class QueryChatBase:
             The system prompt string.
 
         """
-        return self._client.system_prompt or ""
+        return self._assemble_system_prompt()
 
     @property
     def data_source(self):
@@ -419,7 +606,7 @@ class QueryChat(QueryChatBase):
             self.id,
             data_source=self._data_source,
             greeting=self.greeting,
-            client=self._client,
+            client=self.client,
             enable_bookmarking=enable_bookmarking,
         )
 
@@ -647,19 +834,6 @@ class QueryChatExpress(QueryChatBase):
             return self._vals.title()
         else:
             return self._vals.title.set(value)
-
-    @property
-    def client(self):
-        """
-        Get the (session-specific) chat client.
-
-        Returns
-        -------
-        :
-            The current chat client.
-
-        """
-        return self._vals.client
 
 
 def normalize_data_source(

@@ -170,6 +170,64 @@ describe("QueryChat$system_prompt", {
     # Should contain table name
     expect_true(grepl("test_df", prompt, fixed = TRUE))
   })
+
+  it("doesn't include update instructions if not enabled", {
+    template <- "{{#has_tool_update}}update tool enabled!{{/has_tool_update}}"
+
+    qc <- QueryChat$new(
+      new_test_df(),
+      "test_df",
+      tools = "query",
+      prompt_template = template
+    )
+    withr::defer(qc$cleanup())
+
+    expect_equal(qc$system_prompt, "")
+  })
+
+  it("doesn't include query instructions if not enabled", {
+    template <- "{{#has_tool_query}}query tool enabled!{{/has_tool_query}}"
+
+    qc <- QueryChat$new(
+      new_test_df(),
+      "test_df",
+      tools = "update",
+      prompt_template = template
+    )
+    withr::defer(qc$cleanup())
+
+    expect_equal(qc$system_prompt, "")
+  })
+
+  it("doesn't include update instructions if not enabled (full prompt)", {
+    qc <- QueryChat$new(
+      new_test_df(),
+      "test_df",
+      tools = "query"
+    )
+    withr::defer(qc$cleanup())
+
+    tool_header <- "Filtering and Sorting Data"
+
+    expect_no_match(qc$system_prompt, tool_header)
+    expect_no_match(qc$client()$get_system_prompt(), tool_header)
+    expect_match(qc$client(tools = "update")$get_system_prompt(), tool_header)
+  })
+
+  it("doesn't include query instructions if not enabled (full prompt)", {
+    qc <- QueryChat$new(
+      new_test_df(),
+      "test_df",
+      tools = "update"
+    )
+    withr::defer(qc$cleanup())
+
+    tool_header <- "Answering Questions About Data"
+
+    expect_no_match(qc$system_prompt, tool_header)
+    expect_no_match(qc$client()$get_system_prompt(), tool_header)
+    expect_match(qc$client(tools = "query")$get_system_prompt(), tool_header)
+  })
 })
 
 describe("QueryChat$data_source", {

@@ -75,10 +75,11 @@ QueryChat <- R6::R6Class(
       extra_instructions = NULL,
       schema = NULL
     ),
-    assemble_system_prompt = function() {
+    assemble_system_prompt = function(tools = self$tools) {
       assemble_system_prompt(
         source = private$.data_source,
         prompt_template = private$prompt_template,
+        tools = tools,
         data_description = private$prompt_parts$data_description,
         extra_instructions = private$prompt_parts$extra_instructions,
         schema = private$prompt_parts$schema
@@ -258,15 +259,16 @@ QueryChat <- R6::R6Class(
       if (is.na(tools)) {
         tools <- self$tools
       }
+      if (!is.null(tools)) {
+        tools <- arg_match(tools, values = c("update", "query"))
+      }
 
       chat <- private$.client$clone()
-      chat$set_system_prompt(private$assemble_system_prompt())
+      chat$set_system_prompt(private$assemble_system_prompt(tools = tools))
 
       if (is.null(tools)) {
         return(chat)
       }
-
-      tools <- arg_match(tools, values = c("update", "query"))
 
       if ("update" %in% tools) {
         chat$register_tool(

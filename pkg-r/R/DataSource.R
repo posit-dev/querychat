@@ -586,8 +586,11 @@ assemble_system_prompt <- function(
   data_description = NULL,
   extra_instructions = NULL,
   schema = NULL,
+  tools = c("update", "query"),
   prompt_template = NULL
 ) {
+  check_character(tools, allow_null = TRUE)
+
   if (!is_data_source(source)) {
     cli::cli_abort(
       "{.arg source} must be a {.cls DataSource} object, not {.obj_type_friendly {source}}"
@@ -616,6 +619,8 @@ assemble_system_prompt <- function(
       data_description = data_description,
       extra_instructions = extra_instructions,
       db_type = db_type,
+      has_tool_update = if ("update" %in% tools) "true",
+      has_tool_query = if ("query" %in% tools) "true",
       is_duck_db = identical(db_type, "DuckDB")
     )
   )

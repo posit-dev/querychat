@@ -1,3 +1,21 @@
+test_that("tool_update_dashboard() checks inputs", {
+  expect_snapshot(error = TRUE, tool_update_dashboard("foo"))
+
+  df_source <- local_data_frame_source(new_test_df())
+  expect_snapshot(error = TRUE, {
+    tool_update_dashboard(df_source, current_query = NULL)
+    tool_update_dashboard(df_source, current_title = FALSE)
+  })
+})
+
+test_that("tool_reset_dashboard() checks inputs", {
+  expect_snapshot(error = TRUE, tool_reset_dashboard("not_a_function"))
+})
+
+test_that("tool_query() checks inputs", {
+  expect_snapshot(error = TRUE, tool_query("invalid_source"))
+})
+
 describe("querychat_tool_starts_open()", {
   it("uses the tool default when options are unset", {
     withr::local_options(querychat.tool_details = NULL)

@@ -5,9 +5,13 @@
 #   summarizing the intent of the SQL query.
 tool_update_dashboard <- function(
   data_source,
-  current_query,
-  current_title
+  current_query = identity,
+  current_title = identity
 ) {
+  check_data_source(data_source)
+  check_function(current_query)
+  check_function(current_title)
+
   db_type <- data_source$get_db_type()
 
   ellmer::tool(
@@ -64,7 +68,9 @@ tool_update_dashboard_impl <- function(
 }
 
 
-tool_reset_dashboard <- function(reset_fn) {
+tool_reset_dashboard <- function(reset_fn = identity) {
+  check_function(reset_fn)
+
   ellmer::tool(
     reset_fn,
     name = "querychat_reset_dashboard",
@@ -81,7 +87,8 @@ tool_reset_dashboard <- function(reset_fn) {
 # @param query A SQL query; must be a SELECT statement.
 # @return The results of the query as a data frame.
 tool_query <- function(data_source) {
-  force(data_source)
+  check_data_source(data_source)
+
   db_type <- data_source$get_db_type()
 
   ellmer::tool(

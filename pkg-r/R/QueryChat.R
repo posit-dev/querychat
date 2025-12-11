@@ -239,7 +239,7 @@ QueryChat <- R6::R6Class(
       }
     },
 
-    #' @descrption
+    #' @description
     #' Create a chat client, complete with registered tools, for the current
     #' data source.
     #'
@@ -590,9 +590,9 @@ QueryChat <- R6::R6Class(
     #' Generate a welcome greeting for the chat.
     #'
     #' By default, `QueryChat$new()` generates a greeting at the start of every
-    #' new conversation, which is convenient for getting started and development,
-    #' but also might add unnecessary latency and cost. Use this method to
-    #' generate a greeting once and save it for reuse.
+    #' new conversation, which is convenient for getting started and
+    #' development, but also might add unnecessary latency and cost. Use this
+    #' method to generate a greeting once and save it for reuse.
     #'
     #' @param echo Whether to print the greeting to the console. Options are
     #'   `"none"` (default, no output) or `"output"` (print to console).

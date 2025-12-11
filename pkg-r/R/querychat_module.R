@@ -155,5 +155,5 @@ mod_server <- function(
   })
 }
 
-
+# TODO: Make this dependent on enabled tools
 GREETING_PROMPT <- "Please give me a friendly greeting. Include a few sample prompts in a two-level bulleted list."

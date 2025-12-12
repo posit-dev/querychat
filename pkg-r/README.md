@@ -1,257 +1,95 @@
-# querychat: Chat with Shiny apps (R) <a href="https://posit-dev.github.io/querychat/r/"><img src="man/figures/logo.png" align="right" height="138" alt="querychat website" /></a>
+# querychat <a href="https://posit-dev.github.io/querychat/r/"><img src="man/figures/logo.png" align="right" height="138" alt="querychat website" /></a>
 
-Imagine typing questions like these directly into your Shiny dashboard, and seeing the results in realtime:
+<!-- badges: start -->
+[![R-CMD-check](https://github.com/posit-dev/querychat/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/posit-dev/querychat/actions/workflows/R-CMD-check.yaml)
+[![CRAN status](https://www.r-pkg.org/badges/version/querychat)](https://CRAN.R-project.org/package=querychat)
+<!-- badges: end -->
 
-* "Show only penguins that are not species Gentoo and have a bill length greater than 50mm."
-* "Show only blue states with an incidence rate greater than 100 per 100,000 people."
-* "What is the average mpg of cars with 6 cylinders?"
-
-querychat is a drop-in component for Shiny that allows users to query a data frame using natural language. The results are available as a reactive data frame, so they can be easily used from Shiny outputs, reactive expressions, downloads, etc.
-
-**This is not as terrible an idea as you might think!** We need to be very careful when bringing LLMs into data analysis, as we all know that they are prone to hallucinations and other classes of errors. querychat is designed to excel in reliability, transparency, and reproducibility by using this one technique: denying it raw access to the data, and forcing it to write SQL queries instead. See the section below on ["How it works"](#how-it-works) for more.
+querychat facilitates safe and reliable natural language exploration of tabular data, powered by SQL and large language models (LLMs). For users, it offers an intuitive web application where they can quickly ask questions of their data and receive verifiable data-driven answers. As a developer, you can access the chat UI component, generated SQL queries, and filtered data to build custom applications that integrate natural language querying into your data workflows.
 
 ## Installation
 
+Install the stable release from CRAN:
+
 ```r
+install.packages("querychat")
+```
+
+Or the development version from GitHub:
+
+```r
+# install.packages("pak")
 pak::pak("posit-dev/querychat/pkg-r")
 ```
 
-## How to use
+## Quick start
 
-First, you'll need an OpenAI API key. See the [instructions from Ellmer](https://ellmer.tidyverse.org/reference/chat_openai.html). (Or use a different LLM provider, see below.)
-
-### Quick Start
-
-The fastest way to get started is with the built-in app:
+The quickest way to start chatting with your data is via `querychat_app()`, which provides a fully polished Shiny app. It requires a [data source](articles/data-sources.html) (e.g., data.frame, database connection, etc.) and optionally other parameters (e.g. the LLM `client` [model](articles/models.html)).
 
 ```r
 library(querychat)
+library(palmerpenguins)
 
-qc <- QueryChat$new(mtcars)
-qc$app()
+querychat_app(penguins, client = "openai/gpt-4.1")
 ```
 
-This launches a complete Shiny app with a chat interface, SQL query display, and data table. Perfect for quick exploration and prototyping!
+Once running (which requires an API key[^api-key]), you'll notice 3 main views:
 
-### Custom Shiny Apps
+[^api-key]: By default, querychat uses OpenAI to power the chat experience. So, for this example to work, you'll need [an OpenAI API key](https://platform.openai.com/). See the [Models](articles/models.html) article for details on how to set up credentials for other model providers.
 
-For more control, integrate querychat into your own Shiny app:
+1. A sidebar chat with suggestions on where to start exploring.
+2. A data table that updates to reflect filtering and sorting queries.
+3. The SQL query behind the data table, for transparency and reproducibility.
 
-```r
-library(shiny)
-library(bslib)
-library(querychat)
+![](man/figures/quickstart.png){alt="Screenshot of querychat's app with the penguins dataset." class="rounded shadow"}
 
-# 1. Create a QueryChat instance with your data
-qc <- QueryChat$new(mtcars)
+Suppose we pick a suggestion like "Show me Adelie penguins". Since this is a filtering operation, both the data table and SQL query update accordingly.
 
-ui <- page_sidebar(
-  # 2. Use qc$sidebar() in a bslib::page_sidebar.
-  #    Alternatively, use qc$ui() elsewhere if you don't want your
-  #    chat interface to live in a sidebar.
-  sidebar = qc$sidebar(),
-  DT::DTOutput("dt")
-)
+![](man/figures/quickstart-filter.png){alt="Screenshot of the querychat's app with the penguins dataset filtered." class="rounded shadow"}
 
-server <- function(input, output, session) {
-  # 3. Initialize the QueryChat server (returns session-specific reactive values)
-  qc_vals <- qc$server()
+querychat can also handle more general questions about the data that require calculations and aggregations. For example, we can ask "What is the average bill length by species?". The LLM will generate the SQL query to perform the calculation, querychat will execute it, and return the result in the chat:
 
-  output$dt <- DT::renderDT({
-    # 4. Use the filtered/sorted data frame anywhere you wish, via qc_vals$df()
-    DT::datatable(qc_vals$df())
-  })
-}
+![](man/figures/quickstart-summary.png){alt="Screenshot of the querychat's app with a summary statistic inlined in the chat." class="rounded shadow"}
 
-shinyApp(ui, server)
-```
+## Custom apps
 
-## Using Database Sources
+querychat is designed to be highly extensible -- it provides programmatic access to the chat interface, the filtered/sorted data frame, SQL queries, and more.
+This makes it easy to build custom web apps that leverage natural language interaction with your data.
+For example, [here](https://github.com/posit-conf-2025/llm/blob/main/_solutions/25_querychat/25_querychat_02-end-app.R)'s a bespoke app for exploring Airbnb listings in Ashville, NC:
 
-In addition to data frames, querychat can connect to external databases via DBI:
+![](man/figures/airbnb.png){alt="A custom app for exploring Airbnb listings, powered by querychat." class="shadow rounded mb-3"}
 
-```r
-library(shiny)
-library(bslib)
-library(querychat)
-library(DBI)
-library(RSQLite)
-
-# 1. Connect to a database
-conn <- DBI::dbConnect(RSQLite::SQLite(), "path/to/database.db")
-
-# 2. Create a QueryChat instance with the database connection
-qc <- QueryChat$new(conn, "table_name")
-
-# 3. Use it in your Shiny app as shown above
-qc$app()
-```
+To learn more, see [Build an app](articles/build.html) for a step-by-step guide.
 
 ## How it works
 
-### Powered by LLMs
+querychat leverages the incredible capabilities of large language models to translate natural language into SQL queries.
+Models of all sizes, from small models you can run locally on your laptop to large frontier models by major AI providers, are all surprisingly good at this task.
+That said, even the best models still need to know the overall data structure to perform well.
+For this reason, QueryChat includes a description of the data's schema -- column names, types, ranges, categorical values -- in the LLM's [system prompt](articles/context.html).
+Note that QueryChat **does not** send the raw data itself to the model! 
+Instead, it shares just enough of a description of the data that the model can reliably generate SQL queries.
 
-querychat's natural language chat experience is powered by LLMs. You may use any model that [ellmer](https://ellmer.tidyverse.org) supports that has the ability to do tool calls, but we currently recommend (as of March 2025):
+When the LLM generates a query, querychat executes it against a SQL database (DuckDB[^duckdb] by default) to get results in a **safe**, **reliable**, and **verifiable** manner. 
+In short, this execution is **safe** since only `SELECT` statements are allowed, **reliable** since the database engine handles all calculations, and **verifiable** since the user can always see the SQL query that was run.
+This makes QueryChat a trustworthy tool for data exploration, as every action taken by the LLM is transparent and independently reproducible.
 
-* GPT-4o
-* Claude 3.5 Sonnet
-* Claude 3.7 Sonnet
+::: {.alert .alert-warning}
+**Data privacy**
 
-In our testing, we've found that those models strike a good balance between accuracy and latency. Smaller models like GPT-4o-mini are fine for simple queries but make surprising mistakes with moderately complex ones; and reasoning models like o3-mini slow down responses without providing meaningfully better results.
+See the [Provide context](articles/context.html) and [Tools](articles/tools.html) articles to learn more about what information is provided to the LLM and what it's capable of doing with code execution.
+:::
 
-The small open source models (8B and below) we've tested have fared extremely poorly. Sorry. 🤷
+[^duckdb]: DuckDB is extremely fast and has a surprising number of [statistical functions](https://duckdb.org/docs/stable/sql/functions/aggregates.html#statistical-aggregates).
 
-### Powered by SQL
 
-querychat does not have direct access to the raw data; it can _only_ read or filter the data by writing SQL `SELECT` statements. This is crucial for ensuring relability, transparency, and reproducibility:
+## Next steps
 
-- **Reliability:** Today's LLMs are excellent at writing SQL, but bad at direct calculation.
-- **Transparency:** querychat always displays the SQL to the user, so it can be vetted instead of blindly trusted.
-- **Reproducibility:** The SQL query can be easily copied and reused.
+From here, you might want to learn more about:
 
-Currently, querychat uses DuckDB for its SQL engine when working with data frames. For database sources, it uses the native SQL dialect of the connected database. DuckDB is extremely fast and has a surprising number of [statistical functions](https://duckdb.org/docs/stable/sql/functions/aggregates.html#statistical-aggregates).
-
-## Customizing querychat
-
-### Provide a greeting (recommended)
-
-When the querychat UI first appears, you will usually want it to greet the user with some basic instructions. By default, these instructions are auto-generated every time a user arrives; this is potentially slow, wasteful, and unpredictable. Instead, you should create a file called `greeting.md`, and when creating your `QueryChat` instance, pass `greeting = "greeting.md"` (or use `readLines()` to read the file as a string).
-
-You can provide suggestions to the user by using the `<span class="suggestion"> </span>` tag.
-
-For example:
-
-```markdown
-* **Filter and sort the data:**
-  * <span class="suggestion">Show only survivors</span>
-  * <span class="suggestion">Filter to first class passengers under 30</span>
-  * <span class="suggestion">Sort by fare from highest to lowest</span>
-
-* **Answer questions about the data:**
-  * <span class="suggestion">What was the survival rate by gender?</span>
-  * <span class="suggestion">What's the average age of children who survived?</span>
-  * <span class="suggestion">How many passengers were traveling alone?</span>
-```
-
-These suggestions appear in the greeting and automatically populate the chat text box when clicked.
-This gives the user a few ideas to explore on their own.
-
-You can use the `$generate_greeting()` method to help create a greeting:
-
-```r
-qc <- QueryChat$new(mtcars)
-greeting <- qc$generate_greeting(echo = "text")
-
-# Save it for reuse
-writeLines(greeting, "greeting.md")
-
-# Then use it in your app
-qc <- QueryChat$new(mtcars, greeting = "greeting.md")
-```
-
-Alternatively, you can completely suppress the greeting by passing `greeting = ""`.
-
-### Augment the system prompt (recommended)
-
-In LLM parlance, the _system prompt_ is the set of instructions and specific knowledge you want the model to use during a conversation. querychat automatically creates a system prompt which is comprised of:
-
-1. The basic set of behaviors the LLM must follow in order for querychat to work properly. (See `inst/prompt/prompt.md` if you're curious what this looks like.)
-2. The SQL schema of the data source you provided.
-3. (Optional) Any additional description of the data you choose to provide.
-4. (Optional) Any additional instructions you want to use to guide querychat's behavior.
-
-#### Data description
-
-If you give querychat your dataset and nothing else, it will provide the LLM with the basic schema of your data:
-
-- Column names
-- SQL data type (integer, float, boolean, datetime, text)
-- For text columns with less than 10 unique values, we assume they are categorical variables and include the list of values
-- For integer and float columns, we include the range
-
-And that's all the LLM will know about your data.
-The actual data does not get passed into the LLM.
-We calculate these values before we pass the schema information into the LLM.
-
-If the column names are usefully descriptive, it may be able to make a surprising amount of sense out of the data. But if your data frame's columns are `x`, `V1`, `value`, etc., then the model will need to be given more background info--just like a human would.
-
-To provide this information, use the `data_description` argument. For example, the `mtcars` data frame used in the example above has pretty minimal column names. You might create a `data_description.md` like this:
-
-```markdown
-The data was extracted from the 1974 Motor Trend US magazine, and
-comprises fuel consumption and 10 aspects of automobile design and
-performance for 32 automobiles (1973–74 models).
-
-- mpg:  Miles/(US) gallon
-- cyl:  Number of cylinders
-- disp: Displacement (cu.in.)
-- hp:   Gross horsepower
-- drat: Rear axle ratio
-- wt:   Weight (1000 lbs)
-- qsec: 1/4 mile time
-- vs:   Engine (0 = V-shaped, 1 = straight)
-- am:   Transmission (0 = automatic, 1 = manual)
-- gear: Number of forward gears
-- carb: Number of carburetors
-```
-
-which you can then pass via:
-
-```r
-qc <- QueryChat$new(
-  mtcars,
-  data_description = "data_description.md"
-)
-```
-
-querychat doesn't need this information in any particular format; just put whatever information, in whatever format, you think a human would find helpful.
-
-#### Additional instructions
-
-You can add additional instructions of your own to the end of the system prompt, by passing `extra_instructions` to `QueryChat$new()`.
-
-```r
-qc <- QueryChat$new(
-  mtcars,
-  extra_instructions = c(
-    "You're speaking to a British audience--please use appropriate spelling conventions.",
-    "Use lots of emojis! 😃 Emojis everywhere, 🌍 emojis forever. ♾️",
-    "Stay on topic, only talk about the data dashboard and refuse to answer other questions."
-  )
-)
-```
-
-You can also put these instructions in a separate file and pass the file path, as we did for `data_description` above.
-
-**Warning:** It is not 100% guaranteed that the LLM will always—or in many cases, ever—obey your instructions, and it can be difficult to predict which instructions will be a problem. So be sure to test extensively each time you change your instructions, and especially, if you change the model you use.
-
-### Use a different LLM provider
-
-By default, querychat uses OpenAI with the default model chosen by `ellmer::chat_openai()`. If you want to use a different model, you can provide an ellmer chat object to the `client` argument of `QueryChat$new()`.
-
-```r
-library(ellmer)
-
-qc <- QueryChat$new(
-  mtcars,
-  client = ellmer::chat_anthropic(model = "claude-3-7-sonnet-latest")
-)
-```
-
-This would use Claude 3.7 Sonnet instead, which would require you to provide an API key.
-See the [instructions from Ellmer](https://ellmer.tidyverse.org/reference/chat_anthropic.html) for more information on how to authenticate with different providers.
-
-Alternatively, you can use a provider-model string, which will be passed to `ellmer::chat()`:
-
-```r
-qc <- QueryChat$new(
-  mtcars,
-  client = "anthropic/claude-3-7-sonnet-latest"
-)
-```
-
-Or you can set the `querychat.client` R option to a chat object or provider-model string, which will be used as the default client for all querychat apps in your session:
-
-```r
-options(querychat.client = "anthropic/claude-3-7-sonnet-latest")
-```
+- [Models](articles/models.html): customize the LLM behind querychat.
+- [Data sources](articles/data-sources.html): different data sources you can use with querychat.
+- [Provide context](articles/context.html): provide the LLM with the context it needs to work well.
+- [Build an app](articles/build.html): design a custom Shiny app around querychat.
+- [Greet users](articles/greet.html): create welcoming onboarding experiences.
+- [Tools](articles/tools.html): understand what querychat can do under the hood.

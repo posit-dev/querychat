@@ -1,0 +1,93 @@
+---
+title: "Models"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Models}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+Under the hood, `querychat` is powered by [ellmer](https://ellmer.tidyverse.org/), a library for building chat-based applications with large language models (LLMs). `ellmer` supports a wide range of LLM providers -- [see here](https://ellmer.tidyverse.org/reference/index.html#chat-constructors) for a full list.
+
+```{r}
+library(querychat)
+library(palmerpenguins)
+library(ellmer)
+```
+
+## Specify a model
+
+To use a particular model, pass a `"{provider}/{model}"` string to the `client` parameter. Under the hood, this gets passed along to `ellmer::chat()`:
+
+```{r}
+querychat_app(penguins, client = "anthropic/claude-sonnet-4-5")
+```
+
+And, if you'd like to effectively set a new default model, you can use the `querychat.client` R option or the `QUERYCHAT_CLIENT` environment variable.
+
+```{r}
+# In your .Rprofile
+options(querychat.client = "anthropic/claude-sonnet-4-5")
+```
+
+Note that it can also be useful to pass a full `Chat` object to the `client` parameter for more advanced use cases (e.g., custom parameters, tools, etc):
+
+```{r}
+client <- chat_anthropic(model = "claude-sonnet-4-5")
+querychat_app(penguins, client = client)
+```
+
+## Credentials
+
+Most models require an API key or some other form of authentication. See the reference page for the relevant model provider (e.g., [`chat_anthropic()`](https://ellmer.tidyverse.org/reference/chat_anthropic.html)) to learn more on how to set up credentials.
+
+::: {.alert .alert-info}
+**GitHub model marketplace**
+
+If you are already setup with GitHub credentials, [GitHub model marketplace](https://github.com/marketplace/models) provides a free and easy way to get started. See [here](https://ellmer.tidyverse.org/reference/chat_github.html) for more details on how to get setup.
+
+```{r}
+library(ellmer)
+
+# Just works if GITHUB_TOKEN is set in your environment
+client <- chat_github(model = "gpt-4.1")
+```
+:::
+
+In general, most providers will prefer credentials stored as environment variables. Common practice is to use an `.Renviron` file to manage these variables. For example, for `chat_openai()`, you might add to your `.Renviron` file:
+
+```bash
+OPENAI_API_KEY="your_api_key_here"
+```
+
+Then, you can edit your `.Renviron` file using:
+
+```{r}
+usethis::edit_r_environ()
+```
+
+## Recommended models
+
+In theory, you could use any model that has tool calling support, but we currently recommend (as of November 2025):
+
+- GPT-4.1 (the default)
+- Claude 4.5 Sonnet
+- Google Gemini 3.0
+
+In our testing, we've found that those models strike a good balance between accuracy and latency. Smaller/cheaper models like GPT-4o-mini are fine for simple queries but make surprising mistakes with more complex ones; and reasoning models like o3-mini slow down responses without providing meaningfully better results.
+
+We've also seen some decent results with frontier local models, but even if you have the compute to run the largest models, they still tend to lag behind the cloud-hosted options in terms of accuracy and speed.
+
+::: {.alert .alert-info}
+**Data privacy concerns?**
+
+If you have data privacy concerns, consider that your org may provide access to private instances of these models with data residency guarantees. For example, Azure, AWS Bedrock, and Google Vertex AI all provide private instances of popular LLMs. You can interface with these enterprise providers by passing the right string (e.g., `"bedrock-anthropic"`) or `Chat` object (e.g., `chat_bedrock_anthropic()`) to the `client` parameter. See the [ellmer docs](https://ellmer.tidyverse.org/reference/index.html#chat-constructors) for more details.
+:::

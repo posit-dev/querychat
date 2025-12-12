@@ -72,7 +72,7 @@ quartodoc:
   sidebar: reference/_sidebar.yml
   css: reference/_styles-quartodoc.css
   sections:
-    - title: The Querychat class
+    - title: The QueryChat class
       desc: The starting point for any QueryChat session
       contents:
         - name: QueryChat

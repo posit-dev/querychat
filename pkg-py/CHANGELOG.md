@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### New features
 
+* `QueryChat.client()` can now create standalone querychat-enabled chat clients with configurable tools and callbacks, enabling use outside of Shiny applications. (#168)
+
+* `QueryChat.console()` was added to launch interactive console-based chat sessions with your data source, with persistent conversation state across invocations. (#168)
+
+* The tools used in a `QueryChat` chatbot are now configurable. Use the new `tools` parameter of `QueryChat()` to select either or both `"query"` or `"update"` tools. Choose `tools=["update"]` if you only want QueryChat to be able to update the dashboard (useful when you want to be 100% certain that the LLM will not see _any_ raw data). (#168)
 
 ## [0.3.0] - 2025-12-10
 

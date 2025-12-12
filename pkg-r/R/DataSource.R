@@ -585,16 +585,19 @@ assemble_system_prompt <- function(
   source,
   data_description = NULL,
   extra_instructions = NULL,
-  categorical_threshold = 20,
+  schema = NULL,
+  tools = c("update", "query"),
   prompt_template = NULL
 ) {
+  check_character(tools, allow_null = TRUE)
+
   if (!is_data_source(source)) {
     cli::cli_abort(
       "{.arg source} must be a {.cls DataSource} object, not {.obj_type_friendly {source}}"
     )
   }
 
-  prompt_text <- read_text(
+  template <- read_text(
     prompt_template %||%
       system.file("prompts", "prompt.md", package = "querychat")
   )
@@ -606,16 +609,18 @@ assemble_system_prompt <- function(
     extra_instructions <- read_text(extra_instructions)
   }
 
-  schema <- source$get_schema(categorical_threshold = categorical_threshold)
+  schema <- schema %||% source$get_schema(categorical_threshold = 20)
   db_type <- source$get_db_type()
 
   whisker::whisker.render(
-    prompt_text,
+    template,
     list(
       schema = schema,
       data_description = data_description,
       extra_instructions = extra_instructions,
       db_type = db_type,
+      has_tool_update = if ("update" %in% tools) "true",
+      has_tool_query = if ("query" %in% tools) "true",
       is_duck_db = identical(db_type, "DuckDB")
     )
   )

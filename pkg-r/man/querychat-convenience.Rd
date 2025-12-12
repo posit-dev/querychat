@@ -12,6 +12,7 @@ querychat(
   id = NULL,
   greeting = NULL,
   client = NULL,
+  tools = c("update", "query"),
   data_description = NULL,
   categorical_threshold = 20,
   extra_instructions = NULL,
@@ -26,6 +27,7 @@ querychat_app(
   id = NULL,
   greeting = NULL,
   client = NULL,
+  tools = c("update", "query"),
   data_description = NULL,
   categorical_threshold = 20,
   extra_instructions = NULL,
@@ -64,6 +66,13 @@ a greeting to save and reuse.}
 \code{QUERYCHAT_CLIENT} environment variable, or defaults to
 \code{\link[ellmer:chat_openai]{ellmer::chat_openai()}}
 }}
+
+\item{tools}{Which querychat tools to include in the chat client, by
+default. \code{"update"} includes the tools for updating and resetting the
+dashboard and \code{"query"} includes the tool for executing SQL queries.
+Use \code{tools = "update"} when you only want the dashboard updating tools,
+or when you want to disable the querying tool entirely to prevent the
+LLM from seeing any of the data in your dataset.}
 
 \item{data_description}{Optional description of the data in plain text or
 Markdown. Can be a string or a file path. This provides context to the

@@ -677,11 +677,10 @@ querychat_app <- function(
 
   check_bool(cleanup, allow_na = TRUE)
   if (is.na(cleanup)) {
-    is_df <-
-      is.data.frame(data_source) ||
-      inherits(data_source, "DataFrameSource")
-
-    cleanup <- !in_shiny_session() && is_df && interactive()
+    cleanup <-
+      is.data.frame(data_source) &&
+      !in_shiny_session() &&
+      interactive()
   }
 
   qc <- QueryChat$new(

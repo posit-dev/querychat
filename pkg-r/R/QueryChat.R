@@ -192,7 +192,7 @@ QueryChat <- R6::R6Class(
 
       # By default, only close automatically if a Shiny session is active
       if (is.na(cleanup)) {
-        cleanup <- !is.null(shiny::getDefaultReactiveDomain())
+        cleanup <- in_shiny_session()
       }
 
       if (cleanup) {
@@ -668,11 +668,19 @@ querychat_app <- function(
   categorical_threshold = 20,
   extra_instructions = NULL,
   prompt_template = NULL,
-  cleanup = TRUE,
+  cleanup = NA,
   bookmark_store = "url"
 ) {
   if (is_missing(table_name) && is.data.frame(data_source)) {
     table_name <- deparse1(substitute(data_source))
+  }
+
+  check_bool(cleanup, allow_na = TRUE)
+  if (is.na(cleanup)) {
+    cleanup <-
+      is.data.frame(data_source) &&
+      !in_shiny_session() &&
+      is_interactive()
   }
 
   qc <- QueryChat$new(

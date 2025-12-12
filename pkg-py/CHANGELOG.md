@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### Improvements
+
+* If a `QueryChat` instance is created inside a Shiny app context, the data source is automatically cleaned up when the app session ends. This can be configured manually via the `cleanup` parameter of the `QueryChat` constructor. (#164)
 
 
 ## [0.3.0] - 2025-12-10

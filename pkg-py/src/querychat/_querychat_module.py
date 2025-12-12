@@ -93,6 +93,7 @@ def mod_server(
     greeting: str | None,
     client: chatlas.Chat,
     enable_bookmarking: bool,
+    cleanup: bool = False,
 ):
     # Reactive values to store state
     sql = ReactiveStringOrNone(None)
@@ -186,6 +187,13 @@ def mod_server(
                 title.set(vals["querychat_title"])
             if "querychat_has_greeted" in vals:
                 has_greeted.set(vals["querychat_has_greeted"])
+
+    if cleanup:
+        # Clean up the data source when the session ends
+
+        @session.on_ended
+        def _cleanup() -> None:
+            data_source.cleanup()
 
     return ServerValues(df=filtered_df, sql=sql, title=title, client=chat)
 

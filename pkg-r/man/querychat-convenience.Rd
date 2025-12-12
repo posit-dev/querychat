@@ -30,7 +30,7 @@ querychat_app(
   categorical_threshold = 20,
   extra_instructions = NULL,
   prompt_template = NULL,
-  cleanup = TRUE,
+  cleanup = NA,
   bookmark_store = "url"
 )
 }

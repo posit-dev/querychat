@@ -675,13 +675,13 @@ querychat_app <- function(
     table_name <- deparse1(substitute(data_source))
   }
 
-  if (is.na(cleanup) && interactive() && !in_shiny_session()) {
-    if (
+  check_bool(cleanup, allow_na = TRUE)
+  if (is.na(cleanup)) {
+    is_df <-
       is.data.frame(data_source) ||
-        inherits(data_source, "DataFrameSource")
-    ) {
-      cleanup <- TRUE
-    }
+      inherits(data_source, "DataFrameSource")
+
+    cleanup <- !in_shiny_session() && is_df && interactive()
   }
 
   qc <- QueryChat$new(

@@ -17,6 +17,7 @@ from shinychat import output_markdown_stream
 from ._datasource import DataFrameSource, DataSource, SQLAlchemySource
 from ._icons import bs_icon
 from ._querychat_module import GREETING_PROMPT, ServerValues, mod_server, mod_ui
+from ._utils import MISSING, MISSING_TYPE
 from .tools import (
     tool_query,
     tool_reset_dashboard,
@@ -275,10 +276,10 @@ class QueryChatBase:
         return str(client.chat(GREETING_PROMPT, echo=echo))
 
     def _assemble_system_prompt(
-        self, tools: Optional[Sequence[TOOL_GROUPS]] = None
+        self, tools: Optional[Sequence[TOOL_GROUPS] | MISSING_TYPE] = MISSING
     ) -> str:
         """Assemble the system prompt with optional tool configuration."""
-        if tools is None:
+        if isinstance(tools, MISSING_TYPE):
             tools = self.tools
 
         is_duck_db = self._data_source.get_db_type().lower() == "duckdb"
@@ -299,28 +300,31 @@ class QueryChatBase:
     def client(
         self,
         *,
-        tools: Optional[Sequence[TOOL_GROUPS]] = None,
+        tools: Optional[Sequence[TOOL_GROUPS] | MISSING_TYPE] = MISSING,
         update_dashboard=None,
         reset_dashboard=None,
     ) -> chatlas.Chat:
         """
         Create a chat client with registered tools.
 
-        This method creates a standalone chat client configured with the specified tools
-        and callbacks. Each call returns an independent client instance with its own
-        conversation state.
+        This method creates a standalone chat client configured with the
+        specified tools and callbacks. Each call returns an independent client
+        instance with its own conversation state.
 
         Parameters
         ----------
         tools
-            Which tools to include: "update", "query", or both. If None, uses the tools
-            specified during initialization (default: ["update", "query"]).
+            Which tools to include: `"update"`, `"query"`, or both. If no value
+            is provided, uses the tools specified during initialization
+            (default: `["update", "query"]`). Set to `None` to skip adding any
+            tools.
         update_dashboard
-            Optional callback function to call when the update_dashboard tool succeeds.
-            Takes a dict with "query" and "title" keys. Only used if "update" is in tools.
+            Optional callback function to call when the update_dashboard tool
+            succeeds. Takes a dict with `"query"` and `"title"` keys. Only used
+            if `"update"` is in tools.
         reset_dashboard
-            Optional callback function to call when the reset_dashboard tool is invoked.
-            Takes no arguments. Only used if "update" is in tools.
+            Optional callback function to call when the `tool_reset_dashboard`
+            is invoked. Takes no arguments. Only used if `"update"` is in tools.
 
         Returns
         -------
@@ -356,18 +360,14 @@ class QueryChatBase:
         ```
 
         """
-        # Use instance default if not specified
-        if tools is None:
+        if isinstance(tools, MISSING_TYPE):
             tools = self.tools
 
-        # Clone the base client
         chat = copy.deepcopy(self._client)
         chat.set_turns([])
 
-        # Set system prompt with appropriate tool instructions
         chat.system_prompt = self._assemble_system_prompt(tools)
 
-        # Register tools based on selection
         if tools is None:
             return chat
 

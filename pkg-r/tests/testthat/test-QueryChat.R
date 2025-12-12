@@ -438,9 +438,7 @@ describe("QueryChat$client()", {
 })
 
 test_that("QueryChat$generate_greeting() generates a greeting using the LLM client", {
-  MockChat <- R6::R6Class(
-    "MockChat",
-    inherit = asNamespace("ellmer")[["Chat"]],
+  client <- mock_ellmer_chat_client(
     public = list(
       chat = function(message, ...) {
         expect_equal(message, GREETING_PROMPT)
@@ -450,7 +448,6 @@ test_that("QueryChat$generate_greeting() generates a greeting using the LLM clie
   )
 
   test_df <- new_test_df()
-  client <- MockChat$new(ellmer::Provider("test", "test", "test"))
 
   # Create a mock client that returns a fixed greeting
   qc <- QueryChat$new(test_df, client = client)

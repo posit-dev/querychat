@@ -77,3 +77,18 @@ local_data_frame_source <- function(
   withr::defer(df_source$cleanup(), envir = env)
   df_source
 }
+
+mock_ellmer_chat_client <- function(
+  public = list(),
+  private = list(),
+  env = parent.frame()
+) {
+  MockChat <- R6::R6Class(
+    "MockChat",
+    inherit = asNamespace("ellmer")[["Chat"]],
+    public = public,
+    private = private
+  )
+
+  MockChat$new(ellmer::Provider("test", "test", "test"))
+}

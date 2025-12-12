@@ -17,10 +17,42 @@ if TYPE_CHECKING:
 
 
 class UpdateDashboardData(TypedDict):
-    """Data passed to update_dashboard callback."""
+    """
+    Data passed to update_dashboard callback.
 
-    query: str | None
-    title: str | None
+    This TypedDict defines the structure of data passed to the
+    `tool_update_dashboard` callback function when the LLM requests an update to
+    the dashboard's data based on a SQL query.
+
+    Attributes
+    ----------
+    query
+        The SQL query string to execute for filtering/sorting the dashboard.
+    title
+        A descriptive title for the query, typically displayed in the UI.
+
+    Examples
+    --------
+    ```python
+    import pandas as pd
+    from querychat import QueryChat
+    from querychat.types import UpdateDashboardData
+
+
+    def log_update(data: UpdateDashboardData):
+        print(f"Executing: {data['query']}")
+        print(f"Title: {data['title']}")
+
+
+    df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+    qc = QueryChat(df, "my_data")
+    client = qc.client(update_dashboard=log_update)
+    ```
+
+    """
+
+    query: str
+    title: str
 
 
 def _read_prompt_template(filename: str, **kwargs) -> str:

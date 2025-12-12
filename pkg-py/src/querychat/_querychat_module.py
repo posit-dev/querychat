@@ -10,12 +10,7 @@ import chatlas
 import shinychat
 from shiny import module, reactive, ui
 
-from .tools import (
-    UpdateDashboardData,
-    tool_query,
-    tool_reset_dashboard,
-    tool_update_dashboard,
-)
+from .tools import tool_query, tool_reset_dashboard, tool_update_dashboard
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -25,6 +20,7 @@ if TYPE_CHECKING:
     from shiny.bookmark import BookmarkState, RestoreState
 
     from ._datasource import DataSource
+    from .types import UpdateDashboardData
 
 ReactiveString = reactive.Value[str]
 """A reactive string value."""
@@ -105,10 +101,8 @@ def mod_server(
     has_greeted = reactive.value[bool](False)  # noqa: FBT003
 
     def update_dashboard(data: UpdateDashboardData):
-        if data["query"] is not None:
-            sql.set(data["query"])
-        if data["title"] is not None:
-            title.set(data["title"])
+        sql.set(data["query"])
+        title.set(data["title"])
 
     def reset_dashboard():
         sql.set(None)

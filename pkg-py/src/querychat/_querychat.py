@@ -24,6 +24,8 @@ from .tools import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     import pandas as pd
     from narwhals.stable.v1.typing import IntoFrame
 
@@ -272,7 +274,9 @@ class QueryChatBase:
         client.set_turns([])
         return str(client.chat(GREETING_PROMPT, echo=echo))
 
-    def _assemble_system_prompt(self, tools: Optional[list[TOOL_GROUPS]] = None) -> str:
+    def _assemble_system_prompt(
+        self, tools: Optional[Sequence[TOOL_GROUPS]] = None
+    ) -> str:
         """Assemble the system prompt with optional tool configuration."""
         if tools is None:
             tools = self.tools
@@ -295,7 +299,7 @@ class QueryChatBase:
     def client(
         self,
         *,
-        tools: Optional[list[str]] = None,
+        tools: Optional[Sequence[TOOL_GROUPS]] = None,
         update_dashboard=None,
         reset_dashboard=None,
     ) -> chatlas.Chat:
@@ -341,7 +345,10 @@ class QueryChatBase:
 
 
         # Create client with custom callbacks
-        def my_update(data):
+        from querychat import UpdateDashboardData
+
+
+        def my_update(data: UpdateDashboardData):
             print(f"Query: {data['query']}, Title: {data['title']}")
 
 
@@ -378,7 +385,11 @@ class QueryChatBase:
         return chat
 
     def console(
-        self, *, new: bool = False, tools: Optional[list[str]] = None, **kwargs
+        self,
+        *,
+        new: bool = False,
+        tools: Optional[Sequence[TOOL_GROUPS]] = None,
+        **kwargs,
     ) -> None:
         """
         Launch an interactive console chat with the data.
@@ -473,12 +484,52 @@ class QueryChat(QueryChatBase):
     """
     Create a QueryChat instance.
 
+    QueryChat enables natural language interaction with your data through an
+    LLM-powered chat interface. It can be used in Shiny applications, as a
+    standalone chat client, or in an interactive console.
+
     Examples
     --------
+    **Basic Shiny app:**
     ```python
     from querychat import QueryChat
 
     qc = QueryChat(my_dataframe, "my_data")
+    qc.app()
+    ```
+
+    **Standalone chat client:**
+    ```python
+    from querychat import QueryChat
+    import pandas as pd
+
+    df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+    qc = QueryChat(df, "my_data")
+
+    # Get a chat client with all tools
+    client = qc.client()
+    response = client.chat("What's the average of column a?")
+
+    # Get a query-only client (no data modification)
+    client = qc.client(tools=["query"])
+    ```
+
+    **Interactive console:**
+    ```python
+    from querychat import QueryChat
+    import pandas as pd
+
+    df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+    qc = QueryChat(df, "my_data")
+
+    # Start an interactive console chat (query-only by default)
+    qc.console()
+    ```
+
+    **Privacy-focused mode:** Only allow dashboard filtering, ensuring the LLM
+    can't see any raw data.
+    ```python
+    qc = QueryChat(df, "my_data", tools=["update"])
     qc.app()
     ```
 
@@ -511,6 +562,19 @@ class QueryChat(QueryChatBase):
         If `client` is not provided, querychat consults the
         `QUERYCHAT_CLIENT` environment variable. If that is not set, it
         defaults to `"openai"`.
+    tools
+        Which querychat tools to include in the chat client by default.
+        Can be a list containing `"update"` (for filtering/sorting dashboard),
+        `"query"` (for answering questions about data), or both.
+
+        Default is `["update", "query"]` (both tools enabled).
+
+        Set to `["update"]` to prevent the LLM from accessing data values, only
+        allowing dashboard filtering without answering questions. Set to `None`
+        to disable all tools.
+
+        The tools can be overridden per-client by passing a different `tools`
+        parameter to the `.client()` method.
     data_description
         Description of the data in plain text or Markdown. If a pathlib.Path
         object is passed, querychat will read the contents of the path into a

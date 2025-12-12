@@ -58,6 +58,10 @@ local_sqlite_connection <- function(
   table_name = "test_table",
   env = parent.frame()
 ) {
+  if (testthat::is_testing()) {
+    skip_if_not_installed("RSQLite")
+  }
+
   temp_db <- withr::local_tempfile(fileext = ".db", .local_envir = env)
   conn <- DBI::dbConnect(RSQLite::SQLite(), temp_db)
   withr::defer(DBI::dbDisconnect(conn), envir = env)

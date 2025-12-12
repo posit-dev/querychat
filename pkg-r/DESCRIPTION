@@ -38,6 +38,8 @@ Imports:
     whisker
 Suggests:
     bsicons,
+    dbplyr,
+    dplyr,
     DT,
     palmerpenguins,
     RSQLite,

@@ -160,8 +160,10 @@ QueryChat <- R6::R6Class(
       check_string(prompt_template, allow_null = TRUE)
       check_bool(cleanup, allow_na = TRUE)
 
-      if (is_missing(table_name) && is.data.frame(data_source)) {
-        table_name <- deparse1(substitute(data_source))
+      if (is_missing(table_name)) {
+        if (is.data.frame(data_source) || inherits(data_source, "tbl_sql")) {
+          table_name <- deparse1(substitute(data_source))
+        }
       }
 
       private$.data_source <- normalize_data_source(data_source, table_name)
@@ -338,8 +340,15 @@ QueryChat <- R6::R6Class(
         })
 
         output$dt <- DT::renderDT({
+          df <- qc_vals$df()
+          if (inherits(df, "tbl_sql")) {
+            # Materialize the query to get a data frame, {dplyr} guaranteed by
+            # TblLazySource interface
+            df <- dplyr::collect(df)
+          }
+
           DT::datatable(
-            qc_vals$df(),
+            df,
             fillContainer = TRUE,
             options = list(pageLength = 25, scrollX = TRUE)
           )
@@ -631,8 +640,10 @@ querychat <- function(
   prompt_template = NULL,
   cleanup = NA
 ) {
-  if (is_missing(table_name) && is.data.frame(data_source)) {
-    table_name <- deparse1(substitute(data_source))
+  if (is_missing(table_name)) {
+    if (is.data.frame(data_source) || inherits(data_source, "tbl_sql")) {
+      table_name <- deparse1(substitute(data_source))
+    }
   }
 
   QueryChat$new(
@@ -699,6 +710,10 @@ normalize_data_source <- function(data_source, table_name) {
 
   if (is.data.frame(data_source)) {
     return(DataFrameSource$new(data_source, table_name))
+  }
+
+  if (inherits(data_source, "tbl_lazy")) {
+    return(TblLazySource$new(data_source, table_name))
   }
 
   if (inherits(data_source, "DBIConnection")) {

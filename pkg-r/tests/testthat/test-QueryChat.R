@@ -509,6 +509,93 @@ describe("querychat()", {
   })
 })
 
+describe("QueryChat$console()", {
+  local_mocked_r6_class(
+    QueryChat,
+    public = list(
+      get_client_console = function() {
+        private$.client_console
+      }
+    )
+  )
+
+  it("defaults to query-only tools (privacy-focused)", {
+    qc <- local_querychat()
+
+    live_console_called <- FALSE
+    local_mocked_bindings(
+      live_console = function(chat) {
+        live_console_called <<- TRUE
+      },
+      .package = "ellmer"
+    )
+
+    qc$console()
+    expect_true(live_console_called)
+
+    console_client <- qc$get_client_console()
+    expect_s3_class(console_client, "Chat")
+
+    tools <- console_client$get_tools()
+    expect_equal(names(tools), "querychat_query")
+  })
+
+  it("persists console client across calls", {
+    qc <- local_querychat()
+
+    # Track live_console calls
+    live_console_call_count <- 0
+    local_mocked_bindings(
+      live_console = function(chat) {
+        live_console_call_count <<- live_console_call_count + 1
+      },
+      .package = "ellmer"
+    )
+
+    qc$console()
+    first_client <- qc$get_client_console()
+
+    qc$console()
+    second_client <- qc$get_client_console()
+
+    expect_identical(first_client, second_client)
+    expect_equal(live_console_call_count, 2)
+  })
+
+  it("creates fresh client when `new = TRUE`", {
+    qc <- local_querychat()
+    local_mocked_bindings(live_console = identity, .package = "ellmer")
+
+    qc$console()
+    first_client <- qc$get_client_console()
+
+    qc$console(new = TRUE)
+    second_client <- qc$get_client_console()
+
+    expect_false(identical(first_client, second_client))
+  })
+
+  it("allows overriding tools via `tools` parameter", {
+    qc <- local_querychat()
+    local_mocked_bindings(live_console = identity, .package = "ellmer")
+
+    qc$console(tools = c("update", "query"))
+
+    console_client <- qc$get_client_console()
+    expect_s3_class(console_client, "Chat")
+
+    tools <- console_client$get_tools()
+    expect_setequal(
+      names(tools),
+      c(
+        "querychat_query",
+        "querychat_update_dashboard",
+        "querychat_reset_dashboard"
+      )
+    )
+  })
+})
+
 describe("normalize_data_source()", {
   it("returns DataSource objects unchanged", {
     test_df <- new_test_df()

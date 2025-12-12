@@ -680,7 +680,7 @@ querychat_app <- function(
     cleanup <-
       is.data.frame(data_source) &&
       !in_shiny_session() &&
-      interactive()
+      is_interactive()
   }
 
   qc <- QueryChat$new(

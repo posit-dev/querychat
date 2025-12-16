@@ -19,12 +19,15 @@ from ._icons import bs_icon
 from ._querychat_module import GREETING_PROMPT, ServerValues, mod_server, mod_ui
 from ._utils import MISSING, MISSING_TYPE
 from .tools import (
+    UpdateDashboardData,
     tool_query,
     tool_reset_dashboard,
     tool_update_dashboard,
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     import pandas as pd
     from narwhals.stable.v1.typing import IntoFrame
 
@@ -299,8 +302,8 @@ class QueryChatBase:
         self,
         *,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None | MISSING_TYPE = MISSING,
-        update_dashboard=None,
-        reset_dashboard=None,
+        update_dashboard: Callable[[UpdateDashboardData], None] | None = None,
+        reset_dashboard: Callable[[], None] | None = None,
     ) -> chatlas.Chat:
         """
         Create a chat client with registered tools.

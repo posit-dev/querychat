@@ -684,6 +684,8 @@ querychat_app <- function(
   check_bool(cleanup, allow_na = TRUE)
   if (is.data.frame(data_source)) {
     cleanup <- TRUE
+  } else if (is.na(cleanup)) {
+    cleanup <- FALSE
   }
 
   qc <- QueryChat$new(

@@ -585,8 +585,11 @@ QueryChat <- R6::R6Class(
 #'   used. See the package prompts directory for the default template format.
 #' @param cleanup Whether or not to automatically run `$cleanup()` when the
 #'   Shiny session/app stops. By default, cleanup only occurs if `QueryChat`
-#'   gets created within a Shiny session. Set to `TRUE` to always clean up,
-#'   or `FALSE` to never clean up automatically.
+#'   is created within a Shiny app. Set to `TRUE` to always clean up, or
+#'   `FALSE` to never clean up automatically.
+#'
+#'   In `querychat_app()`, in-memory databases created for data frames are
+#'   always cleaned up.
 #'
 #' @return A `QueryChat` object. See [QueryChat] for available methods.
 #'
@@ -682,8 +685,8 @@ querychat_app <- function(
   }
 
   check_bool(cleanup, allow_na = TRUE)
-  if (is.na(cleanup)) {
-    cleanup <- is.data.frame(data_source)
+  if (is.data.frame(data_source)) {
+    cleanup <- TRUE
   }
 
   qc <- QueryChat$new(

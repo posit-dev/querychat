@@ -2,6 +2,25 @@
 
 ## querychat (development version)
 
+- `QueryChat$client()` can now create standalone querychat-enabled chat
+  clients with configurable tools and callbacks, enabling use outside of
+  Shiny applications.
+  ([\#168](https://github.com/posit-dev/querychat/issues/168))
+
+- `QueryChat$console()` was added to launch interactive console-based
+  chat sessions with your data source, with persistent conversation
+  state across invocations.
+  ([\#168](https://github.com/posit-dev/querychat/issues/168))
+
+- The tools used in a `QueryChat` chatbot are now configurable. Use the
+  new `tools` parameter of
+  [`querychat()`](https://posit-dev.github.io/querychat/reference/querychat-convenience.md)
+  or `QueryChat$new()` to select either or both `"query"` or `"update"`
+  tools. Choose `tools = "update"` if you only want QueryChat to be able
+  to update the dashboard (useful when you want to be 100% certain that
+  the LLM will not see *any* raw data).
+  ([\#168](https://github.com/posit-dev/querychat/issues/168))
+
 - [`querychat_app()`](https://posit-dev.github.io/querychat/reference/querychat-convenience.md)
   will now only automatically clean up the data source if QueryChat
   creates the data source internally from a data frame.

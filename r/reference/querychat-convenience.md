@@ -15,6 +15,7 @@ querychat(
   id = NULL,
   greeting = NULL,
   client = NULL,
+  tools = c("update", "query"),
   data_description = NULL,
   categorical_threshold = 20,
   extra_instructions = NULL,
@@ -29,6 +30,7 @@ querychat_app(
   id = NULL,
   greeting = NULL,
   client = NULL,
+  tools = c("update", "query"),
   data_description = NULL,
   categorical_threshold = 20,
   extra_instructions = NULL,
@@ -84,6 +86,15 @@ querychat_app(
   - `NULL` (default): Uses the `querychat.client` option, the
     `QUERYCHAT_CLIENT` environment variable, or defaults to
     [`ellmer::chat_openai()`](https://ellmer.tidyverse.org/reference/chat_openai.html)
+
+- tools:
+
+  Which querychat tools to include in the chat client, by default.
+  `"update"` includes the tools for updating and resetting the dashboard
+  and `"query"` includes the tool for executing SQL queries. Use
+  `tools = "update"` when you only want the dashboard updating tools, or
+  when you want to disable the querying tool entirely to prevent the LLM
+  from seeing any of the data in your dataset.
 
 - data_description:
 

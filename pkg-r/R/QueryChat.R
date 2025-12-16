@@ -192,7 +192,7 @@ QueryChat <- R6::R6Class(
 
       # By default, only close automatically if a Shiny session is active
       if (is.na(cleanup)) {
-        cleanup <- in_shiny_session()
+        cleanup <- shiny::isRunning()
       }
 
       if (cleanup) {

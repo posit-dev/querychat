@@ -9,10 +9,10 @@
 ---
 
     Code
-      tool_update_dashboard(df_source, udpate_fn = NULL)
+      tool_update_dashboard(df_source, update_fn = NULL)
     Condition
       Error in `tool_update_dashboard()`:
-      ! unused argument (udpate_fn = NULL)
+      ! `update_fn` must be a function, not `NULL`.
     Code
       tool_update_dashboard(df_source, update_fn = function(query) { })
     Condition

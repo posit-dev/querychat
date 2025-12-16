@@ -486,18 +486,6 @@ class QueryChat(QueryChatBase):
     client = qc.client()
     response = client.chat("What's the average of column a?")
 
-    # Get a query-only client (no data modification)
-    client = qc.client(tools="query")
-    ```
-
-    **Interactive console:**
-    ```python
-    from querychat import QueryChat
-    import pandas as pd
-
-    df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
-    qc = QueryChat(df, "my_data")
-
     # Start an interactive console chat
     qc.console()
     ```

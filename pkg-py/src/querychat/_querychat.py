@@ -44,7 +44,7 @@ class QueryChatBase:
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
-        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None | MISSING_TYPE = MISSING,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -60,7 +60,7 @@ class QueryChatBase:
 
         self.id = id or table_name
 
-        self.tools = _normalize_tools(tools, default=("update", "query"))
+        self.tools = normalize_tools(tools, default=("update", "query"))
         self.greeting = greeting.read_text() if isinstance(greeting, Path) else greeting
 
         # Store prompt components for lazy assembly
@@ -327,7 +327,7 @@ class QueryChatBase:
         ```
 
         """
-        tools = _normalize_tools(tools, default=self.tools)
+        tools = normalize_tools(tools, default=self.tools)
 
         chat = copy.deepcopy(self._client)
         chat.set_turns([])
@@ -354,7 +354,7 @@ class QueryChatBase:
         self,
         *,
         new: bool = False,
-        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None | MISSING_TYPE = MISSING,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = "query",
         **kwargs,
     ) -> None:
         """
@@ -406,9 +406,7 @@ class QueryChatBase:
         ```
 
         """
-        # Default to query-only for console (privacy)
-        if isinstance(tools, MISSING_TYPE) and (new or self._client_console is None):
-            tools = ("query",)
+        tools = normalize_tools(tools, default=("query",))
 
         if new or self._client_console is None:
             self._client_console = self.client(tools=tools, **kwargs)
@@ -935,30 +933,10 @@ def assemble_system_prompt(
     )
 
 
-def _normalize_tools(
+def normalize_tools(
     tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None | MISSING_TYPE,
     default: tuple[TOOL_GROUPS, ...] | None,
 ) -> tuple[TOOL_GROUPS, ...] | None:
-    """
-    Normalize tools parameter to a tuple or None.
-
-    Parameters
-    ----------
-    tools
-        The tools parameter to normalize. Can be:
-        - A single tool string
-        - A tuple of tools
-        - An empty tuple (converted to None)
-        - None
-    default
-        The value to use if tools is `MISSING`.
-
-    Returns
-    -------
-    tuple[TOOL_GROUPS, ...] | None
-        A tuple of tools, or None if no tools should be included.
-
-    """
     if tools is None or tools == ():
         return None
     elif isinstance(tools, MISSING_TYPE):

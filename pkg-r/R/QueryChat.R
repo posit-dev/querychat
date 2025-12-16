@@ -166,9 +166,6 @@ QueryChat <- R6::R6Class(
 
       private$.data_source <- normalize_data_source(data_source, table_name)
 
-      # Validate table name
-      check_sql_table_name(table_name)
-
       self$id <- id %||% table_name
 
       if (!is.null(greeting) && file.exists(greeting)) {
@@ -192,7 +189,7 @@ QueryChat <- R6::R6Class(
 
       # By default, only close automatically if a Shiny session is active
       if (is.na(cleanup)) {
-        cleanup <- !is.null(shiny::getDefaultReactiveDomain())
+        cleanup <- shiny::isRunning()
       }
 
       if (cleanup) {
@@ -585,8 +582,11 @@ QueryChat <- R6::R6Class(
 #'   used. See the package prompts directory for the default template format.
 #' @param cleanup Whether or not to automatically run `$cleanup()` when the
 #'   Shiny session/app stops. By default, cleanup only occurs if `QueryChat`
-#'   gets created within a Shiny session. Set to `TRUE` to always clean up,
-#'   or `FALSE` to never clean up automatically.
+#'   is created within a Shiny app. Set to `TRUE` to always clean up, or
+#'   `FALSE` to never clean up automatically.
+#'
+#'   In `querychat_app()`, in-memory databases created for data frames are
+#'   always cleaned up.
 #'
 #' @return A `QueryChat` object. See [QueryChat] for available methods.
 #'
@@ -668,11 +668,24 @@ querychat_app <- function(
   categorical_threshold = 20,
   extra_instructions = NULL,
   prompt_template = NULL,
-  cleanup = TRUE,
+  cleanup = NA,
   bookmark_store = "url"
 ) {
+  if (shiny::isRunning()) {
+    cli::cli_abort(
+      "{.fn querychat_app} cannot be called from within a Shiny app. Use {.fn querychat} instead."
+    )
+  }
+
   if (is_missing(table_name) && is.data.frame(data_source)) {
     table_name <- deparse1(substitute(data_source))
+  }
+
+  check_bool(cleanup, allow_na = TRUE)
+  if (is.data.frame(data_source)) {
+    cleanup <- TRUE
+  } else if (is.na(cleanup)) {
+    cleanup <- FALSE
   }
 
   qc <- QueryChat$new(
@@ -696,6 +709,8 @@ normalize_data_source <- function(data_source, table_name) {
   if (is_data_source(data_source)) {
     return(data_source)
   }
+
+  check_sql_table_name(table_name, call = caller_env())
 
   if (is.data.frame(data_source)) {
     return(DataFrameSource$new(data_source, table_name))

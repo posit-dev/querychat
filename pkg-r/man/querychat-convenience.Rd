@@ -30,7 +30,7 @@ querychat_app(
   categorical_threshold = 20,
   extra_instructions = NULL,
   prompt_template = NULL,
-  cleanup = TRUE,
+  cleanup = NA,
   bookmark_store = "url"
 )
 }
@@ -81,8 +81,11 @@ used. See the package prompts directory for the default template format.}
 
 \item{cleanup}{Whether or not to automatically run \verb{$cleanup()} when the
 Shiny session/app stops. By default, cleanup only occurs if \code{QueryChat}
-gets created within a Shiny session. Set to \code{TRUE} to always clean up,
-or \code{FALSE} to never clean up automatically.}
+is created within a Shiny app. Set to \code{TRUE} to always clean up, or
+\code{FALSE} to never clean up automatically.
+
+In \code{querychat_app()}, in-memory databases created for data frames are
+always cleaned up.}
 
 \item{bookmark_store}{The bookmarking storage method. Passed to
 \code{\link[shiny:enableBookmarking]{shiny::enableBookmarking()}}. If \code{"url"} or \code{"server"}, the chat state

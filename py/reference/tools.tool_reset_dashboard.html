@@ -296,17 +296,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <section id="querychat.tools.tool_reset_dashboard" class="level1">
 <h1>tools.tool_reset_dashboard</h1>
-<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>tool_reset_dashboard(current_query, current_title)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>tool_reset_dashboard(reset_fn)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Create a tool that resets the dashboard to show all data.</p>
 <section id="parameters" class="level2 doc-section doc-section-parameters">
 <h2 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h2>
 <table class="caption-top table">
-<colgroup>
-<col style="width: 9%">
-<col style="width: 49%">
-<col style="width: 32%">
-<col style="width: 7%">
-</colgroup>
 <thead>
 <tr class="header">
 <th>Name</th>
@@ -317,15 +311,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
-<td>current_query</td>
-<td><code>ReactiveStringOrNone</code></td>
-<td>Reactive value for storing the current SQL query</td>
-<td><em>required</em></td>
-</tr>
-<tr class="even">
-<td>current_title</td>
-<td><code>ReactiveStringOrNone</code></td>
-<td>Reactive value for storing the current title</td>
+<td>reset_fn</td>
+<td><a href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable">Callable</a>[[], None]</td>
+<td>Callback function to call when reset is invoked</td>
 <td><em>required</em></td>
 </tr>
 </tbody>

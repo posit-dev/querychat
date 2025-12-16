@@ -125,11 +125,14 @@ ul.task-list li input[type="checkbox"] {
   <ul>
   <li><a href="#changelog" id="toc-changelog" class="nav-link active" data-scroll-target="#changelog">Changelog</a>
   <ul class="collapse">
-  <li><a href="#unreleased" id="toc-unreleased" class="nav-link" data-scroll-target="#unreleased">[UNRELEASED]</a></li>
+  <li><a href="#unreleased" id="toc-unreleased" class="nav-link" data-scroll-target="#unreleased">[UNRELEASED]</a>
+  <ul class="collapse">
+  <li><a href="#new-features" id="toc-new-features" class="nav-link" data-scroll-target="#new-features">New features</a></li>
+  </ul></li>
   <li><a href="#section" id="toc-section" class="nav-link" data-scroll-target="#section">[0.3.0] - 2025-12-10</a>
   <ul class="collapse">
   <li><a href="#breaking-changes" id="toc-breaking-changes" class="nav-link" data-scroll-target="#breaking-changes">Breaking Changes</a></li>
-  <li><a href="#new-features" id="toc-new-features" class="nav-link" data-scroll-target="#new-features">New features</a></li>
+  <li><a href="#new-features-1" id="toc-new-features-1" class="nav-link" data-scroll-target="#new-features-1">New features</a></li>
   <li><a href="#improvements" id="toc-improvements" class="nav-link" data-scroll-target="#improvements">Improvements</a></li>
   </ul></li>
   <li><a href="#section-1" id="toc-section-1" class="nav-link" data-scroll-target="#section-1">[0.2.2] - 2025-09-04</a></li>
@@ -152,6 +155,14 @@ ul.task-list li input[type="checkbox"] {
 <p>The format is based on <a href="https://keepachangelog.com/en/1.1.0/">Keep a Changelog</a>, and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
 <section id="unreleased" class="level2">
 <h2 class="anchored" data-anchor-id="unreleased">[UNRELEASED]</h2>
+<section id="new-features" class="level3">
+<h3 class="anchored" data-anchor-id="new-features">New features</h3>
+<ul>
+<li><p><code>QueryChat.client()</code> can now create standalone querychat-enabled chat clients with configurable tools and callbacks, enabling use outside of Shiny applications. (#168)</p></li>
+<li><p><code>QueryChat.console()</code> was added to launch interactive console-based chat sessions with your data source, with persistent conversation state across invocations. (#168)</p></li>
+<li><p>The tools used in a <code>QueryChat</code> chatbot are now configurable. Use the new <code>tools</code> parameter of <code>QueryChat()</code> to select either or both <code>"query"</code> or <code>"update"</code> tools. Choose <code>tools=["update"]</code> if you only want QueryChat to be able to update the dashboard (useful when you want to be 100% certain that the LLM will not see <em>any</em> raw data). (#168)</p></li>
+</ul>
+</section>
 </section>
 <section id="section" class="level2">
 <h2 class="anchored" data-anchor-id="section">[0.3.0] - 2025-12-10</h2>
@@ -162,8 +173,8 @@ ul.task-list li input[type="checkbox"] {
 <li><p>The <code>.sql()</code> method now returns <code>None</code> instead of <code>""</code> (empty string) when no query has been set, aligning with the behavior of <code>.title()</code> for consistency. Most code using the <code>or</code> operator or <code>req()</code> for falsy checks will continue working without changes. Code that explicitly checks <code>sql() == ""</code> should be updated to use falsy checks (<code>if not sql()</code>) or explicit null checks (<code>if sql() is None</code>). (#146)</p></li>
 </ul>
 </section>
-<section id="new-features" class="level3">
-<h3 class="anchored" data-anchor-id="new-features">New features</h3>
+<section id="new-features-1" class="level3">
+<h3 class="anchored" data-anchor-id="new-features-1">New features</h3>
 <ul>
 <li><p>New <code>QueryChat.app()</code> method enables quicker/easier chatting with a dataset. (#104)</p></li>
 <li><p>Enabled bookmarking by default in both <code>.app()</code> and <code>.server()</code> methods. In latter case, you’ll need to also specify the <code>bookmark_store</code> (either in <code>shiny.App()</code> or <code>shiny.express.app_opts()</code>) for it to take effect. (#104)</p></li>

@@ -290,6 +290,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <ul class="collapse">
   <li><a href="#querychat.express.QueryChat.app" id="toc-querychat.express.QueryChat.app" class="nav-link" data-scroll-target="#querychat.express.QueryChat.app">app</a></li>
   <li><a href="#querychat.express.QueryChat.cleanup" id="toc-querychat.express.QueryChat.cleanup" class="nav-link" data-scroll-target="#querychat.express.QueryChat.cleanup">cleanup</a></li>
+  <li><a href="#querychat.express.QueryChat.client" id="toc-querychat.express.QueryChat.client" class="nav-link" data-scroll-target="#querychat.express.QueryChat.client">client</a></li>
+  <li><a href="#querychat.express.QueryChat.console" id="toc-querychat.express.QueryChat.console" class="nav-link" data-scroll-target="#querychat.express.QueryChat.console">console</a></li>
   <li><a href="#querychat.express.QueryChat.df" id="toc-querychat.express.QueryChat.df" class="nav-link" data-scroll-target="#querychat.express.QueryChat.df">df</a></li>
   <li><a href="#querychat.express.QueryChat.generate_greeting" id="toc-querychat.express.QueryChat.generate_greeting" class="nav-link" data-scroll-target="#querychat.express.QueryChat.generate_greeting">generate_greeting</a></li>
   <li><a href="#querychat.express.QueryChat.sidebar" id="toc-querychat.express.QueryChat.sidebar" class="nav-link" data-scroll-target="#querychat.express.QueryChat.sidebar">sidebar</a></li>
@@ -434,14 +436,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
-<td><a href="#querychat.express.QueryChat.client">client</a></td>
-<td>Get the (session-specific) chat client.</td>
-</tr>
-<tr class="even">
 <td><a href="#querychat.express.QueryChat.data_source">data_source</a></td>
 <td>Get the current data source.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><a href="#querychat.express.QueryChat.system_prompt">system_prompt</a></td>
 <td>Get the system prompt.</td>
 </tr>
@@ -465,6 +463,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr class="even">
 <td><a href="#querychat.express.QueryChat.cleanup">cleanup</a></td>
 <td>Clean up resources associated with the data source.</td>
+</tr>
+<tr class="odd">
+<td><a href="#querychat.express.QueryChat.client">client</a></td>
+<td>Create a chat client with registered tools.</td>
+</tr>
+<tr class="even">
+<td><a href="#querychat.express.QueryChat.console">console</a></td>
+<td>Launch an interactive console chat with the data.</td>
 </tr>
 <tr class="odd">
 <td><a href="#querychat.express.QueryChat.df">df</a></td>
@@ -568,12 +574,166 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </table>
 </section>
 </section>
-<section id="querychat.express.QueryChat.df" class="level3">
-<h3 class="anchored" data-anchor-id="querychat.express.QueryChat.df">df</h3>
-<div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>express.QueryChat.df()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>Reactively read the current filtered data frame that is in effect.</p>
+<section id="querychat.express.QueryChat.client" class="level3">
+<h3 class="anchored" data-anchor-id="querychat.express.QueryChat.client">client</h3>
+<div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>express.QueryChat.client(</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    tools<span class="op">=</span>MISSING,</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    update_dashboard<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    reset_dashboard<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Create a chat client with registered tools.</p>
+<p>This method creates a standalone chat client configured with the specified tools and callbacks. Each call returns an independent client instance with its own conversation state.</p>
+<section id="parameters-2" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-2">Parameters</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>tools</td>
+<td><code>TOOL_GROUPS</code> | <a href="https://docs.python.org/3/library/stdtypes.html#tuple">tuple</a>[<code>TOOL_GROUPS</code>, …] | None | <code>MISSING_TYPE</code></td>
+<td>Which tools to include: <code>"update"</code>, <code>"query"</code>, or both. Can be: - A single tool string: <code>"update"</code> or <code>"query"</code> - A tuple of tools: <code>("update", "query")</code> - <code>None</code> or <code>()</code> to skip adding any tools - If not provided (default), uses the tools specified during initialization</td>
+<td><code>MISSING</code></td>
+</tr>
+<tr class="even">
+<td>update_dashboard</td>
+<td><a href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable">Callable</a>[[<code>UpdateDashboardData</code>], None] | None</td>
+<td>Optional callback function to call when the update_dashboard tool succeeds. Takes a dict with <code>"query"</code> and <code>"title"</code> keys. Only used if <code>"update"</code> is in tools.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="odd">
+<td>reset_dashboard</td>
+<td><a href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable">Callable</a>[[], None] | None</td>
+<td>Optional callback function to call when the <code>tool_reset_dashboard</code> is invoked. Takes no arguments. Only used if <code>"update"</code> is in tools.</td>
+<td><code>None</code></td>
+</tr>
+</tbody>
+</table>
+</section>
 <section id="returns-2" class="level4 doc-section doc-section-returns">
 <h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-2">Returns</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 6%">
+<col style="width: 34%">
+<col style="width: 59%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td><code>chatlas</code>.<code>Chat</code></td>
+<td>A configured chat client with tools registered based on the tools parameter.</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="examples-1" class="level4 doc-section doc-section-examples">
+<h4 class="doc-section doc-section-examples anchored" data-anchor-id="examples-1">Examples</h4>
+<div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat <span class="im">import</span> QueryChat</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> pd.DataFrame({<span class="st">"a"</span>: [<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>]})</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(df, <span class="st">"my_data"</span>)</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Create client with all tools (default)</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>client <span class="op">=</span> qc.client()</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>response <span class="op">=</span> client.chat(<span class="st">"What's the average of column a?"</span>)</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Create client with only query tool (single string)</span></span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>client <span class="op">=</span> qc.client(tools<span class="op">=</span><span class="st">"query"</span>)</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a><span class="co"># Create client with only query tool (tuple)</span></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a>client <span class="op">=</span> qc.client(tools<span class="op">=</span>(<span class="st">"query"</span>,))</span>
+<span id="cb6-16"><a href="#cb6-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-17"><a href="#cb6-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Create client with custom callbacks</span></span>
+<span id="cb6-18"><a href="#cb6-18" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat <span class="im">import</span> UpdateDashboardData</span>
+<span id="cb6-19"><a href="#cb6-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-20"><a href="#cb6-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-21"><a href="#cb6-21" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> my_update(data: UpdateDashboardData):</span>
+<span id="cb6-22"><a href="#cb6-22" aria-hidden="true" tabindex="-1"></a>    <span class="bu">print</span>(<span class="ss">f"Query: </span><span class="sc">{</span>data[<span class="st">'query'</span>]<span class="sc">}</span><span class="ss">, Title: </span><span class="sc">{</span>data[<span class="st">'title'</span>]<span class="sc">}</span><span class="ss">"</span>)</span>
+<span id="cb6-23"><a href="#cb6-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-24"><a href="#cb6-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-25"><a href="#cb6-25" aria-hidden="true" tabindex="-1"></a>client <span class="op">=</span> qc.client(update_dashboard<span class="op">=</span>my_update)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+</section>
+<section id="querychat.express.QueryChat.console" class="level3">
+<h3 class="anchored" data-anchor-id="querychat.express.QueryChat.console">console</h3>
+<div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>express.QueryChat.console(new<span class="op">=</span><span class="va">False</span>, tools<span class="op">=</span><span class="st">'query'</span>, <span class="op">**</span>kwargs)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Launch an interactive console chat with the data.</p>
+<p>This method provides a REPL (Read-Eval-Print Loop) interface for chatting with your data from the command line. The console session persists by default, so you can exit and return to continue your conversation.</p>
+<section id="parameters-3" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-3">Parameters</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>new</td>
+<td><a href="https://docs.python.org/3/library/functions.html#bool">bool</a></td>
+<td>If True, creates a new chat client and starts a fresh conversation. If False (default), continues the conversation from the previous console session.</td>
+<td><code>False</code></td>
+</tr>
+<tr class="even">
+<td>tools</td>
+<td><code>TOOL_GROUPS</code> | <a href="https://docs.python.org/3/library/stdtypes.html#tuple">tuple</a>[<code>TOOL_GROUPS</code>, …] | None</td>
+<td>Which tools to include: “update”, “query”, or both. Can be: - A single tool string: <code>"update"</code> or <code>"query"</code> - A tuple of tools: <code>("update", "query")</code> - <code>None</code> or <code>()</code> to skip adding any tools - If not provided (default), defaults to <code>("query",)</code> only for privacy (prevents the LLM from accessing data values) Ignored if <code>new=False</code> and a console session already exists.</td>
+<td><code>'query'</code></td>
+</tr>
+<tr class="odd">
+<td>**kwargs</td>
+<td></td>
+<td>Additional arguments passed to the <code>client()</code> method when creating a new client.</td>
+<td><code>{}</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="examples-2" class="level4 doc-section doc-section-examples">
+<h4 class="doc-section doc-section-examples anchored" data-anchor-id="examples-2">Examples</h4>
+<div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat <span class="im">import</span> QueryChat</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> pd.DataFrame({<span class="st">"a"</span>: [<span class="dv">1</span>, <span class="dv">2</span>, <span class="dv">3</span>], <span class="st">"b"</span>: [<span class="dv">4</span>, <span class="dv">5</span>, <span class="dv">6</span>]})</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(df, <span class="st">"my_data"</span>)</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Start console (query tool only by default)</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>qc.console()</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Start fresh console with all tools (using tuple)</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>qc.console(new<span class="op">=</span><span class="va">True</span>, tools<span class="op">=</span>(<span class="st">"update"</span>, <span class="st">"query"</span>))</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Start fresh console with all tools (using single string for one tool)</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>qc.console(new<span class="op">=</span><span class="va">True</span>, tools<span class="op">=</span><span class="st">"query"</span>)</span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a><span class="co"># Continue previous console session</span></span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>qc.console()  <span class="co"># picks up where you left off</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+</section>
+<section id="querychat.express.QueryChat.df" class="level3">
+<h3 class="anchored" data-anchor-id="querychat.express.QueryChat.df">df</h3>
+<div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>express.QueryChat.df()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Reactively read the current filtered data frame that is in effect.</p>
+<section id="returns-3" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-3">Returns</h4>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 3%">
@@ -599,11 +759,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="querychat.express.QueryChat.generate_greeting" class="level3">
 <h3 class="anchored" data-anchor-id="querychat.express.QueryChat.generate_greeting">generate_greeting</h3>
-<div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>express.QueryChat.generate_greeting(echo<span class="op">=</span><span class="st">'none'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>express.QueryChat.generate_greeting(echo<span class="op">=</span><span class="st">'none'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Generate a welcome greeting for the chat.</p>
 <p>By default, <code>QueryChat()</code> generates a greeting at the start of every new conversation, which is convenient for getting started and development, but also might add unnecessary latency and cost. Use this method to generate a greeting once and save it for reuse.</p>
-<section id="parameters-2" class="level4 doc-section doc-section-parameters">
-<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-2">Parameters</h4>
+<section id="parameters-4" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-4">Parameters</h4>
 <table class="caption-top table">
 <thead>
 <tr class="header">
@@ -623,8 +783,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 </section>
-<section id="returns-3" class="level4 doc-section doc-section-returns">
-<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-3">Returns</h4>
+<section id="returns-4" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-4">Returns</h4>
 <table class="caption-top table">
 <thead>
 <tr class="header">
@@ -645,10 +805,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="querychat.express.QueryChat.sidebar" class="level3">
 <h3 class="anchored" data-anchor-id="querychat.express.QueryChat.sidebar">sidebar</h3>
-<div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>express.QueryChat.sidebar(width<span class="op">=</span><span class="dv">400</span>, height<span class="op">=</span><span class="st">'100%'</span>, fillable<span class="op">=</span><span class="va">True</span>, <span class="op">**</span>kwargs)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>express.QueryChat.sidebar(width<span class="op">=</span><span class="dv">400</span>, height<span class="op">=</span><span class="st">'100%'</span>, fillable<span class="op">=</span><span class="va">True</span>, <span class="op">**</span>kwargs)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Create a sidebar containing the querychat UI.</p>
-<section id="parameters-3" class="level4 doc-section doc-section-parameters">
-<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-3">Parameters</h4>
+<section id="parameters-5" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-5">Parameters</h4>
 <table class="caption-top table">
 <thead>
 <tr class="header">
@@ -686,8 +846,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 </section>
-<section id="returns-4" class="level4 doc-section doc-section-returns">
-<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-4">Returns</h4>
+<section id="returns-5" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-5">Returns</h4>
 <table class="caption-top table">
 <thead>
 <tr class="header">
@@ -708,10 +868,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="querychat.express.QueryChat.sql" class="level3">
 <h3 class="anchored" data-anchor-id="querychat.express.QueryChat.sql">sql</h3>
-<div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>express.QueryChat.sql(query<span class="op">=</span><span class="va">None</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>express.QueryChat.sql(query<span class="op">=</span><span class="va">None</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Reactively read (or set) the current SQL query that is in effect.</p>
-<section id="parameters-4" class="level4 doc-section doc-section-parameters">
-<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-4">Parameters</h4>
+<section id="parameters-6" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-6">Parameters</h4>
 <table class="caption-top table">
 <thead>
 <tr class="header">
@@ -731,8 +891,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 </section>
-<section id="returns-5" class="level4 doc-section doc-section-returns">
-<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-5">Returns</h4>
+<section id="returns-6" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-6">Returns</h4>
 <table class="caption-top table">
 <thead>
 <tr class="header">
@@ -753,11 +913,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="querychat.express.QueryChat.title" class="level3">
 <h3 class="anchored" data-anchor-id="querychat.express.QueryChat.title">title</h3>
-<div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>express.QueryChat.title(value<span class="op">=</span><span class="va">None</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>express.QueryChat.title(value<span class="op">=</span><span class="va">None</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Reactively read (or set) the current title that is in effect.</p>
 <p>The title is a short description of the current query that the LLM provides to us whenever it generates a new SQL query. It can be used as a status string for the data dashboard.</p>
-<section id="parameters-5" class="level4 doc-section doc-section-parameters">
-<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-5">Parameters</h4>
+<section id="parameters-7" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-7">Parameters</h4>
 <table class="caption-top table">
 <thead>
 <tr class="header">
@@ -777,8 +937,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 </section>
-<section id="returns-6" class="level4 doc-section doc-section-returns">
-<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-6">Returns</h4>
+<section id="returns-7" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-7">Returns</h4>
 <table class="caption-top table">
 <thead>
 <tr class="header">
@@ -799,10 +959,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="querychat.express.QueryChat.ui" class="level3">
 <h3 class="anchored" data-anchor-id="querychat.express.QueryChat.ui">ui</h3>
-<div class="sourceCode" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>express.QueryChat.ui(<span class="op">**</span>kwargs)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>express.QueryChat.ui(<span class="op">**</span>kwargs)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Create the UI for the querychat component.</p>
-<section id="parameters-6" class="level4 doc-section doc-section-parameters">
-<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-6">Parameters</h4>
+<section id="parameters-8" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-8">Parameters</h4>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 11%">
@@ -828,8 +988,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 </section>
-<section id="returns-7" class="level4 doc-section doc-section-returns">
-<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-7">Returns</h4>
+<section id="returns-8" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-8">Returns</h4>
 <table class="caption-top table">
 <thead>
 <tr class="header">

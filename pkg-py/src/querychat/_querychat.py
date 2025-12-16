@@ -498,7 +498,7 @@ class QueryChat(QueryChatBase):
     df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
     qc = QueryChat(df, "my_data")
 
-    # Start an interactive console chat (query-only by default)
+    # Start an interactive console chat
     qc.console()
     ```
 

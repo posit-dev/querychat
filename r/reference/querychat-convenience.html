@@ -72,7 +72,7 @@ and app launching (i.e., <code>querychat_app()</code>).</p>
 <span>  categorical_threshold <span class="op">=</span> <span class="fl">20</span>,</span>
 <span>  extra_instructions <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  prompt_template <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  cleanup <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  cleanup <span class="op">=</span> <span class="cn">NA</span>,</span>
 <span>  bookmark_store <span class="op">=</span> <span class="st">"url"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -146,8 +146,10 @@ used. See the package prompts directory for the default template format.</p></dd
 <dt id="arg-cleanup">cleanup<a class="anchor" aria-label="anchor" href="#arg-cleanup"></a></dt>
 <dd><p>Whether or not to automatically run <code>$cleanup()</code> when the
 Shiny session/app stops. By default, cleanup only occurs if <code>QueryChat</code>
-gets created within a Shiny session. Set to <code>TRUE</code> to always clean up,
-or <code>FALSE</code> to never clean up automatically.</p></dd>
+is created within a Shiny app. Set to <code>TRUE</code> to always clean up, or
+<code>FALSE</code> to never clean up automatically.</p>
+<p>In <code>querychat_app()</code>, in-memory databases created for data frames are
+always cleaned up.</p></dd>
 
 
 <dt id="arg-bookmark-store">bookmark_store<a class="anchor" aria-label="anchor" href="#arg-bookmark-store"></a></dt>

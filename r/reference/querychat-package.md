@@ -76,9 +76,21 @@ Useful links:
 
 - <https://posit-dev.github.io/querychat>
 
+- <https://github.com/posit-dev/querychat>
+
+- Report bugs at <https://github.com/posit-dev/querychat/issues>
+
 ## Author
 
-**Maintainer**: Joe Cheng <joe@posit.co>
+**Maintainer**: Garrick Aden-Buie <garrick@posit.co>
+([ORCID](https://orcid.org/0000-0002-7111-0077))
+
+Authors:
+
+- Joe Cheng <joe@posit.co> \[conceptor\]
+
+- Carson Sievert <carson@posit.co>
+  ([ORCID](https://orcid.org/0000-0002-4958-2844))
 
 Other contributors:
 

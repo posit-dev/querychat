@@ -2,7 +2,7 @@ pandoc: 3.1.11
 pkgdown: 2.2.0
 pkgdown_sha: ~
 articles: {}
-last_built: 2025-12-10T15:40Z
+last_built: 2025-12-16T16:57Z
 urls:
   reference: https://posit-dev.github.io/querychat/reference
   article: https://posit-dev.github.io/querychat/articles

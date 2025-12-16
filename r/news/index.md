@@ -2,6 +2,11 @@
 
 ## querychat (development version)
 
+- [`querychat_app()`](https://posit-dev.github.io/querychat/reference/querychat-convenience.md)
+  will now only automatically clean up the data source if QueryChat
+  creates the data source internally from a data frame.
+  ([\#164](https://github.com/posit-dev/querychat/issues/164))
+
 - **Breaking change:** The `$sql()` method now returns `NULL` instead of
   `""` (empty string) when no query has been set, aligning with the
   behavior of `$title()` for consistency. Most code using

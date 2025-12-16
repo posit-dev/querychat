@@ -33,7 +33,7 @@ querychat_app(
   categorical_threshold = 20,
   extra_instructions = NULL,
   prompt_template = NULL,
-  cleanup = TRUE,
+  cleanup = NA,
   bookmark_store = "url"
 )
 ```
@@ -110,9 +110,12 @@ querychat_app(
 - cleanup:
 
   Whether or not to automatically run `$cleanup()` when the Shiny
-  session/app stops. By default, cleanup only occurs if `QueryChat` gets
-  created within a Shiny session. Set to `TRUE` to always clean up, or
+  session/app stops. By default, cleanup only occurs if `QueryChat` is
+  created within a Shiny app. Set to `TRUE` to always clean up, or
   `FALSE` to never clean up automatically.
+
+  In `querychat_app()`, in-memory databases created for data frames are
+  always cleaned up.
 
 - bookmark_store:
 

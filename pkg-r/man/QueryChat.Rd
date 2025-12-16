@@ -178,7 +178,7 @@ qc2 <- QueryChat$new(mtcars, greeting = "mtcars_greeting.md")
 \describe{
 \item{\code{greeting}}{The greeting message displayed to users.}
 
-\item{\code{id}}{The module ID for namespacing.}
+\item{\code{id}}{ID for the QueryChat instance.}
 
 \item{\code{tools}}{The allowed tools for the chat client.}
 }
@@ -484,19 +484,28 @@ Create a sidebar containing the querychat UI.
 This method generates a \code{\link[bslib:sidebar]{bslib::sidebar()}} component containing the chat
 interface, suitable for use with \code{\link[bslib:page_sidebar]{bslib::page_sidebar()}} or similar layouts.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{QueryChat$sidebar(width = 400, height = "100\%", fillable = TRUE, ...)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{QueryChat$sidebar(
+  ...,
+  width = 400,
+  height = "100\%",
+  fillable = TRUE,
+  ns = NULL
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
+\item{\code{...}}{Additional arguments passed to \code{\link[bslib:sidebar]{bslib::sidebar()}}.}
+
 \item{\code{width}}{Width of the sidebar in pixels. Default is 400.}
 
 \item{\code{height}}{Height of the sidebar. Default is "100\%".}
 
 \item{\code{fillable}}{Whether the sidebar should be fillable. Default is \code{TRUE}.}
 
-\item{\code{...}}{Additional arguments passed to \code{\link[bslib:sidebar]{bslib::sidebar()}}.}
+\item{\code{ns}}{A Shiny namespacing (i.e., \code{\link[shiny:NS]{shiny::NS()}}) function.
+Only needed when calling this method within a module UI function.}
 }
 \if{html}{\out{</div>}}
 }
@@ -528,13 +537,16 @@ Create the UI for the querychat chat interface.
 This method generates the chat UI component. Typically you'll use
 \verb{$sidebar()} instead, which wraps this in a sidebar layout.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{QueryChat$ui(...)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{QueryChat$ui(..., ns = NULL)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{...}}{Additional arguments passed to \code{\link[shinychat:chat_ui]{shinychat::chat_ui()}}.}
+
+\item{\code{ns}}{A Shiny namespacing (i.e., \code{\link[shiny:NS]{shiny::NS()}}) function.
+Only needed when calling this method within a module UI function.}
 }
 \if{html}{\out{</div>}}
 }

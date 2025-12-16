@@ -74,7 +74,7 @@ QueryChat <- R6::R6Class(
   public = list(
     #' @field greeting The greeting message displayed to users.
     greeting = NULL,
-    #' @field id The module ID for namespacing.
+    #' @field id ID for the QueryChat instance.
     id = NULL,
     #' @field tools The allowed tools for the chat client.
     tools = c("update", "query"),
@@ -470,10 +470,12 @@ QueryChat <- R6::R6Class(
     #' This method generates a [bslib::sidebar()] component containing the chat
     #' interface, suitable for use with [bslib::page_sidebar()] or similar layouts.
     #'
+    #' @param ... Additional arguments passed to [bslib::sidebar()].
     #' @param width Width of the sidebar in pixels. Default is 400.
     #' @param height Height of the sidebar. Default is "100%".
     #' @param fillable Whether the sidebar should be fillable. Default is `TRUE`.
-    #' @param ... Additional arguments passed to [bslib::sidebar()].
+    #' @param ns A Shiny namespacing (i.e., [shiny::NS()]) function.
+    #' Only needed when calling this method within a module UI function.
     #'
     #' @return A [bslib::sidebar()] UI component.
     #'
@@ -486,14 +488,20 @@ QueryChat <- R6::R6Class(
     #'   # Main content here
     #' )
     #' }
-    sidebar = function(width = 400, height = "100%", fillable = TRUE, ...) {
+    sidebar = function(
+      ...,
+      width = 400,
+      height = "100%",
+      fillable = TRUE,
+      ns = NULL
+    ) {
       bslib::sidebar(
         width = width,
         height = height,
         fillable = fillable,
         class = "querychat-sidebar",
         ...,
-        self$ui()
+        self$ui(ns = ns)
       )
     },
 
@@ -504,6 +512,8 @@ QueryChat <- R6::R6Class(
     #' `$sidebar()` instead, which wraps this in a sidebar layout.
     #'
     #' @param ... Additional arguments passed to [shinychat::chat_ui()].
+    #' @param ns A Shiny namespacing (i.e., [shiny::NS()]) function.
+    #' Only needed when calling this method within a module UI function.
     #'
     #' @return A UI component containing the chat interface.
     #'
@@ -515,8 +525,29 @@ QueryChat <- R6::R6Class(
     #'   qc$ui()
     #' )
     #' }
-    ui = function(...) {
-      mod_ui(self$id, ...)
+    ui = function(..., ns = NULL) {
+      check_function(ns, allow_null = TRUE)
+
+      # If called within another module, the UI id needs to be namespaced
+      # by that "parent" module. If called in a module *server* context, we
+      # can infer the namespace from the session, but if not, the user
+      # will need to provide it.
+      # NOTE: this isn't a problem for Python since id namespacing is handled implicitly
+      # by UI functions like shinychat.chat_ui().
+      id <- self$id
+      id <- if (is.null(ns)) namespaced_id(id) else ns(id)
+
+      # Provide a helpful error if the user tries to set id directly
+      if ("id" %in% names(list2(...))) {
+        cli::cli_abort(
+          c(
+            "Not allowed to set {.arg id} to {.fn $ui()} (or {.fn $sidebar()}).",
+            "i" = "Use the {.arg ns} argument instead to namespace the UI id."
+          )
+        )
+      }
+
+      mod_ui(id, ...)
     },
 
     #' @description
@@ -825,4 +856,13 @@ normalize_data_source <- function(data_source, table_name) {
   cli::cli_abort(
     "{.arg data_source} must be a {.cls DataSource}, {.cls data.frame}, or {.cls DBIConnection}, not {.obj_type_friendly {data_source}}."
   )
+}
+
+
+namespaced_id <- function(id, session = shiny::getDefaultReactiveDomain()) {
+  if (is.null(session)) {
+    id
+  } else {
+    session$ns(id)
+  }
 }

@@ -1,0 +1,106 @@
+#' System Prompt Management for QueryChat
+#'
+#' @description
+#' `QueryChatSystemPrompt` is an R6 class that encapsulates system prompt
+#' template and component management for QueryChat. It handles loading of
+#' prompt templates, data descriptions, and extra instructions from files or
+#' strings, and renders them with tool configuration using Mustache templates.
+#'
+#' @noRd
+QueryChatSystemPrompt <- R6::R6Class(
+  "QueryChatSystemPrompt",
+
+  public = list(
+    #' @field template The Mustache template string for the system prompt, or
+    #'   a path to a file containing a system prompt template.
+    template = NULL,
+
+    #' @field data_description Optional description of the data context, or a
+    #'   path to a file containing the data description.
+    data_description = NULL,
+
+    #' @field extra_instructions Optional custom instructions for the LLM, or a
+    #'   path to a file containing the extra instructions.
+    extra_instructions = NULL,
+
+    #' @field schema The database schema information.
+    schema = NULL,
+
+    #' @field categorical_threshold Threshold for categorical column detection.
+    categorical_threshold = NULL,
+
+    #' @field data_source Reference to the data source object.
+    data_source = NULL,
+
+    #' @description
+    #' Create a new QueryChatSystemPrompt object.
+    #'
+    #' @param prompt_template Path to template file or template string.
+    #' @param data_source A DataSource object for schema access.
+    #' @param data_description Optional path to data description file or description string.
+    #' @param extra_instructions Optional path to instructions file or instructions string.
+    #' @param categorical_threshold Threshold for categorical column detection (default: 10).
+    #'
+    #' @return A new `QueryChatSystemPrompt` object.
+    initialize = function(
+      prompt_template,
+      data_source,
+      data_description = NULL,
+      extra_instructions = NULL,
+      categorical_threshold = 10
+    ) {
+      # Load template (file or string) using helper
+      self$template <- read_text(prompt_template)
+
+      # Load data_description (file, string, or NULL)
+      if (!is.null(data_description)) {
+        self$data_description <- read_text(data_description)
+      }
+
+      # Load extra_instructions (file, string, or NULL)
+      if (!is.null(extra_instructions)) {
+        self$extra_instructions <- read_text(extra_instructions)
+      }
+
+      # Store schema and other fields
+      self$schema <- data_source$get_schema(
+        categorical_threshold = categorical_threshold
+      )
+      self$categorical_threshold <- categorical_threshold
+      self$data_source <- data_source
+    },
+
+    #' @description
+    #' Render the system prompt with tool configuration.
+    #'
+    #' @param tools Character vector of tool names to enable (e.g.,
+    #'   `c("query", "update"))`, or `NULL` for no tools.
+    #'
+    #' @return A character string containing the rendered system prompt.
+    render = function(tools) {
+      # Build context for whisker rendering
+      is_duck_db <- tolower(self$data_source$get_db_type()) == "duckdb"
+
+      context <- list(
+        db_type = self$data_source$get_db_type(),
+        is_duck_db = is_duck_db,
+        schema = self$schema,
+        data_description = self$data_description,
+        extra_instructions = self$extra_instructions,
+        has_tool_update = if ("update" %in% tools) "true",
+        has_tool_query = if ("query" %in% tools) "true"
+      )
+
+      whisker::whisker.render(self$template, context)
+    }
+  )
+)
+
+# Utility function for loading file or string content
+read_text <- function(x) {
+  if (file.exists(x)) {
+    readLines(x, warn = FALSE) |> paste(collapse = "\n")
+  } else {
+    paste(x, collapse = "\n")
+  }
+}

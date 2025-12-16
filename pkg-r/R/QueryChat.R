@@ -69,22 +69,7 @@ QueryChat <- R6::R6Class(
     .data_source = NULL,
     .client = NULL,
     .client_console = NULL,
-    prompt_template = NULL,
-    prompt_parts = list(
-      data_description = NULL,
-      extra_instructions = NULL,
-      schema = NULL
-    ),
-    assemble_system_prompt = function(tools = self$tools) {
-      assemble_system_prompt(
-        source = private$.data_source,
-        prompt_template = private$prompt_template,
-        tools = tools,
-        data_description = private$prompt_parts$data_description,
-        extra_instructions = private$prompt_parts$extra_instructions,
-        schema = private$prompt_parts$schema
-      )
-    }
+    .system_prompt = NULL
   ),
   public = list(
     #' @field greeting The greeting message displayed to users.
@@ -204,20 +189,16 @@ QueryChat <- R6::R6Class(
       }
       self$greeting <- greeting
 
-      # Assemble the pieces of the system prompt
-      private$prompt_template <- read_text(
-        prompt_template %||%
-          system.file("prompts", "prompt.md", package = "querychat")
-      )
-
-      if (!is.null(data_description)) {
-        private$prompt_parts$data_description <- read_text(data_description)
-      }
-      if (!is.null(extra_instructions)) {
-        private$prompt_parts$extra_instructions <- read_text(extra_instructions)
+      # Create system prompt manager
+      if (is.null(prompt_template)) {
+        prompt_template <- system.file("prompts", "prompt.md", package = "querychat")
       }
 
-      private$prompt_parts$schema <- private$.data_source$get_schema(
+      private$.system_prompt <- QueryChatSystemPrompt$new(
+        prompt_template = prompt_template,
+        data_source = private$.data_source,
+        data_description = data_description,
+        extra_instructions = extra_instructions,
         categorical_threshold = categorical_threshold
       )
 
@@ -268,7 +249,7 @@ QueryChat <- R6::R6Class(
       }
 
       chat <- private$.client$clone()
-      chat$set_system_prompt(private$assemble_system_prompt(tools = tools))
+      chat$set_system_prompt(private$.system_prompt$render(tools = tools))
 
       if (is.null(tools)) {
         return(chat)
@@ -643,7 +624,7 @@ QueryChat <- R6::R6Class(
   active = list(
     #' @field system_prompt Get the system prompt.
     system_prompt = function() {
-      private$assemble_system_prompt()
+      private$.system_prompt$render(tools = self$tools)
     },
 
     #' @field data_source Get the current data source.

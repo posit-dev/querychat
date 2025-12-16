@@ -163,19 +163,3 @@
       ! Table "`non_existent_table`" not found in database
       i If you're using a table in a catalog or schema, pass a `DBI::Id()` object to `table_name`
 
-# assemble_system_prompt() / errors with non-DataSource input
-
-    Code
-      assemble_system_prompt(list(not = "a data source"), data_description = "Test")
-    Condition
-      Error in `assemble_system_prompt()`:
-      ! `source` must be a <DataSource> object, not a list
-
----
-
-    Code
-      assemble_system_prompt(data.frame(x = 1:3), data_description = "Test")
-    Condition
-      Error in `assemble_system_prompt()`:
-      ! `source` must be a <DataSource> object, not a data frame
-

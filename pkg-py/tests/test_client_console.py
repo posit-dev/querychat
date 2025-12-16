@@ -60,7 +60,7 @@ class TestClientMethod:
     def test_client_override_tools_query_only(self, sample_df):
         """Test that client() can override tools to query-only."""
         qc = QueryChat(sample_df, "test_table", greeting="Hello!")
-        client = qc.client(tools=["query"])
+        client = qc.client(tools="query")
 
         # Check that system prompt excludes update tool section
         prompt = client.system_prompt
@@ -70,7 +70,7 @@ class TestClientMethod:
     def test_client_override_tools_update_only(self, sample_df):
         """Test that client() can override tools to update-only."""
         qc = QueryChat(sample_df, "test_table", greeting="Hello!")
-        client = qc.client(tools=["update"])
+        client = qc.client(tools="update")
 
         # Check that system prompt excludes query tool section
         prompt = client.system_prompt
@@ -134,7 +134,7 @@ class TestClientMethod:
 
     def test_client_respects_initialization_tools(self, sample_df):
         """Test that client() respects tools set at initialization."""
-        qc = QueryChat(sample_df, "test_table", greeting="Hello!", tools=["query"])
+        qc = QueryChat(sample_df, "test_table", greeting="Hello!", tools="query")
 
         # Should default to query-only
         client = qc.client()
@@ -145,10 +145,10 @@ class TestClientMethod:
 
     def test_client_can_override_initialization_tools(self, sample_df):
         """Test that client() can override tools set at initialization."""
-        qc = QueryChat(sample_df, "test_table", greeting="Hello!", tools=["query"])
+        qc = QueryChat(sample_df, "test_table", greeting="Hello!", tools="query")
 
         # Override to include update
-        client = qc.client(tools=["update", "query"])
+        client = qc.client(tools=("update", "query"))
         prompt = client.system_prompt
 
         assert "Filtering and Sorting Data" in prompt
@@ -206,7 +206,7 @@ class TestConsoleMethod:
         with patch.object(chatlas.Chat, "console"):
             qc = QueryChat(sample_df, "test_table", greeting="Hello!")
 
-            qc.console(tools=["update", "query"])
+            qc.console(tools=("update", "query"))
 
             # Check the console client includes both tools
             prompt = qc._client_console.system_prompt
@@ -230,7 +230,7 @@ class TestPromptConditionalSections:
 
     def test_prompt_excludes_update_when_query_only(self, sample_df):
         """Test that system prompt excludes update section with query-only tools."""
-        qc = QueryChat(sample_df, "test_table", greeting="Hello!", tools=["query"])
+        qc = QueryChat(sample_df, "test_table", greeting="Hello!", tools="query")
 
         prompt = qc.system_prompt
 
@@ -239,7 +239,7 @@ class TestPromptConditionalSections:
 
     def test_prompt_excludes_query_when_update_only(self, sample_df):
         """Test that system prompt excludes query section with update-only tools."""
-        qc = QueryChat(sample_df, "test_table", greeting="Hello!", tools=["update"])
+        qc = QueryChat(sample_df, "test_table", greeting="Hello!", tools="update")
 
         prompt = qc.system_prompt
 
@@ -251,12 +251,12 @@ class TestPromptConditionalSections:
         qc = QueryChat(sample_df, "test_table", greeting="Hello!")
 
         # Test with query-only
-        prompt_query = qc._assemble_system_prompt(tools=["query"])
+        prompt_query = qc._assemble_system_prompt(tools="query")
         assert "Answering Questions About Data" in prompt_query
         assert "Filtering and Sorting Data" not in prompt_query
 
         # Test with update-only
-        prompt_update = qc._assemble_system_prompt(tools=["update"])
+        prompt_update = qc._assemble_system_prompt(tools="update")
         assert "Filtering and Sorting Data" in prompt_update
         assert "Answering Questions About Data" not in prompt_update
 
@@ -269,7 +269,7 @@ class TestBackwardCompatibility:
         # Without tools parameter, should include both tools (like before)
         qc = QueryChat(sample_df, "test_table", greeting="Hello!")
 
-        assert qc.tools == ["update", "query"]
+        assert qc.tools == ("update", "query")
 
         prompt = qc.system_prompt
         assert "Filtering and Sorting Data" in prompt
@@ -288,4 +288,4 @@ class TestBackwardCompatibility:
 
         assert qc is not None
         assert qc.id == "test_table"
-        assert qc.tools == ["update", "query"]
+        assert qc.tools == ("update", "query")

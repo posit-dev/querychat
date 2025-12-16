@@ -25,8 +25,6 @@ from .tools import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
-
     import pandas as pd
     from narwhals.stable.v1.typing import IntoFrame
 
@@ -42,7 +40,7 @@ class QueryChatBase:
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
-        tools: Optional[list[TOOL_GROUPS]] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None | MISSING_TYPE = MISSING,
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -57,8 +55,8 @@ class QueryChatBase:
             )
 
         self.id = id or table_name
-        self.tools = tools or ["update", "query"]
 
+        self.tools = _normalize_tools(tools, default=("update", "query"))
         self.greeting = greeting.read_text() if isinstance(greeting, Path) else greeting
 
         # Store prompt components for lazy assembly
@@ -276,11 +274,11 @@ class QueryChatBase:
         return str(client.chat(GREETING_PROMPT, echo=echo))
 
     def _assemble_system_prompt(
-        self, tools: Optional[Sequence[TOOL_GROUPS] | MISSING_TYPE] = MISSING
+        self,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None | MISSING_TYPE = MISSING,
     ) -> str:
         """Assemble the system prompt with optional tool configuration."""
-        if isinstance(tools, MISSING_TYPE):
-            tools = self.tools
+        tools = _normalize_tools(tools, default=self.tools)
 
         is_duck_db = self._data_source.get_db_type().lower() == "duckdb"
 
@@ -300,7 +298,7 @@ class QueryChatBase:
     def client(
         self,
         *,
-        tools: Optional[Sequence[TOOL_GROUPS] | MISSING_TYPE] = MISSING,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None | MISSING_TYPE = MISSING,
         update_dashboard=None,
         reset_dashboard=None,
     ) -> chatlas.Chat:
@@ -314,10 +312,11 @@ class QueryChatBase:
         Parameters
         ----------
         tools
-            Which tools to include: `"update"`, `"query"`, or both. If no value
-            is provided, uses the tools specified during initialization
-            (default: `["update", "query"]`). Set to `None` to skip adding any
-            tools.
+            Which tools to include: `"update"`, `"query"`, or both. Can be:
+            - A single tool string: `"update"` or `"query"`
+            - A tuple of tools: `("update", "query")`
+            - `None` or `()` to skip adding any tools
+            - If not provided (default), uses the tools specified during initialization
         update_dashboard
             Optional callback function to call when the update_dashboard tool
             succeeds. Takes a dict with `"query"` and `"title"` keys. Only used
@@ -344,9 +343,11 @@ class QueryChatBase:
         client = qc.client()
         response = client.chat("What's the average of column a?")
 
-        # Create client with only query tool
-        client = qc.client(tools=["query"])
+        # Create client with only query tool (single string)
+        client = qc.client(tools="query")
 
+        # Create client with only query tool (tuple)
+        client = qc.client(tools=("query",))
 
         # Create client with custom callbacks
         from querychat import UpdateDashboardData
@@ -360,8 +361,7 @@ class QueryChatBase:
         ```
 
         """
-        if isinstance(tools, MISSING_TYPE):
-            tools = self.tools
+        tools = _normalize_tools(tools, default=self.tools)
 
         chat = copy.deepcopy(self._client)
         chat.set_turns([])
@@ -388,27 +388,34 @@ class QueryChatBase:
         self,
         *,
         new: bool = False,
-        tools: Optional[Sequence[TOOL_GROUPS]] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None | MISSING_TYPE = MISSING,
         **kwargs,
     ) -> None:
         """
         Launch an interactive console chat with the data.
 
-        This method provides a REPL (Read-Eval-Print Loop) interface for chatting with
-        your data from the command line. The console session persists by default, so you
-        can exit and return to continue your conversation.
+        This method provides a REPL (Read-Eval-Print Loop) interface for
+        chatting with your data from the command line. The console session
+        persists by default, so you can exit and return to continue your
+        conversation.
 
         Parameters
         ----------
         new
             If True, creates a new chat client and starts a fresh conversation.
-            If False (default), continues the conversation from the previous console session.
+            If False (default), continues the conversation from the previous
+            console session.
         tools
-            Which tools to include: "update", "query", or both. Defaults to ["query"] only
-            for privacy (prevents the LLM from accessing data values). Ignored if new=False
-            and a console session already exists.
+            Which tools to include: "update", "query", or both. Can be:
+            - A single tool string: `"update"` or `"query"`
+            - A tuple of tools: `("update", "query")`
+            - `None` or `()` to skip adding any tools
+            - If not provided (default), defaults to `("query",)` only for
+              privacy (prevents the LLM from accessing data values)
+            Ignored if `new=False` and a console session already exists.
         **kwargs
-            Additional arguments passed to the `client()` method when creating a new client.
+            Additional arguments passed to the `client()` method when creating a
+            new client.
 
         Examples
         --------
@@ -422,8 +429,11 @@ class QueryChatBase:
         # Start console (query tool only by default)
         qc.console()
 
-        # Start fresh console with all tools
-        qc.console(new=True, tools=["update", "query"])
+        # Start fresh console with all tools (using tuple)
+        qc.console(new=True, tools=("update", "query"))
+
+        # Start fresh console with all tools (using single string for one tool)
+        qc.console(new=True, tools="query")
 
         # Continue previous console session
         qc.console()  # picks up where you left off
@@ -431,8 +441,8 @@ class QueryChatBase:
 
         """
         # Default to query-only for console (privacy)
-        if tools is None and (new or self._client_console is None):
-            tools = ["query"]
+        if isinstance(tools, MISSING_TYPE) and (new or self._client_console is None):
+            tools = ("query",)
 
         if new or self._client_console is None:
             self._client_console = self.client(tools=tools, **kwargs)
@@ -511,7 +521,7 @@ class QueryChat(QueryChatBase):
     response = client.chat("What's the average of column a?")
 
     # Get a query-only client (no data modification)
-    client = qc.client(tools=["query"])
+    client = qc.client(tools="query")
     ```
 
     **Interactive console:**
@@ -529,7 +539,7 @@ class QueryChat(QueryChatBase):
     **Privacy-focused mode:** Only allow dashboard filtering, ensuring the LLM
     can't see any raw data.
     ```python
-    qc = QueryChat(df, "my_data", tools=["update"])
+    qc = QueryChat(df, "my_data", tools="update")
     qc.app()
     ```
 
@@ -563,15 +573,15 @@ class QueryChat(QueryChatBase):
         `QUERYCHAT_CLIENT` environment variable. If that is not set, it
         defaults to `"openai"`.
     tools
-        Which querychat tools to include in the chat client by default.
-        Can be a list containing `"update"` (for filtering/sorting dashboard),
-        `"query"` (for answering questions about data), or both.
+        Which querychat tools to include in the chat client by default. Can be:
+        - A single tool string: `"update"` or `"query"`
+        - A tuple of tools: `("update", "query")`
+        - `None` or `()` to disable all tools
 
-        Default is `["update", "query"]` (both tools enabled).
+        Default is `("update", "query")` (both tools enabled).
 
-        Set to `["update"]` to prevent the LLM from accessing data values, only
-        allowing dashboard filtering without answering questions. Set to `None`
-        to disable all tools.
+        Set to `"update"` to prevent the LLM from accessing data values, only
+        allowing dashboard filtering without answering questions.
 
         The tools can be overridden per-client by passing a different `tools`
         parameter to the `.client()` method.
@@ -969,3 +979,40 @@ def assemble_system_prompt(
             "extra_instructions": extra_instructions_str,
         },
     )
+
+
+def _normalize_tools(
+    tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None | MISSING_TYPE,
+    default: tuple[TOOL_GROUPS, ...] | None,
+) -> tuple[TOOL_GROUPS, ...] | None:
+    """
+    Normalize tools parameter to a tuple or None.
+
+    Parameters
+    ----------
+    tools
+        The tools parameter to normalize. Can be:
+        - A single tool string
+        - A tuple of tools
+        - An empty tuple (converted to None)
+        - None
+    default
+        The value to use if tools is `MISSING`.
+
+    Returns
+    -------
+    tuple[TOOL_GROUPS, ...] | None
+        A tuple of tools, or None if no tools should be included.
+
+    """
+    if tools is None or tools == ():
+        return None
+    elif isinstance(tools, MISSING_TYPE):
+        return default
+    elif isinstance(tools, str):
+        return (tools,)
+    elif isinstance(tools, tuple):
+        return tools
+    else:
+        # Convert any other sequence to tuple
+        return tuple(tools)

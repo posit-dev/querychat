@@ -166,9 +166,6 @@ QueryChat <- R6::R6Class(
 
       private$.data_source <- normalize_data_source(data_source, table_name)
 
-      # Validate table name
-      check_sql_table_name(table_name)
-
       self$id <- id %||% table_name
 
       if (!is.null(greeting) && file.exists(greeting)) {
@@ -710,6 +707,8 @@ normalize_data_source <- function(data_source, table_name) {
   if (is_data_source(data_source)) {
     return(data_source)
   }
+
+  check_sql_table_name(table_name, call = caller_env())
 
   if (is.data.frame(data_source)) {
     return(DataFrameSource$new(data_source, table_name))

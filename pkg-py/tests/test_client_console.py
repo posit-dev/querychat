@@ -247,16 +247,20 @@ class TestPromptConditionalSections:
         assert "Answering Questions About Data" not in prompt
 
     def test_prompt_assembly_respects_client_tools(self, sample_df):
-        """Test that _assemble_system_prompt respects tools parameter."""
+        """Test that client() method respects tools parameter in system prompt."""
         qc = QueryChat(sample_df, "test_table", greeting="Hello!")
 
         # Test with query-only
-        prompt_query = qc._assemble_system_prompt(tools="query")
+        client_query = qc.client(tools="query")
+        prompt_query = client_query.system_prompt
+        assert prompt_query is not None
         assert "Answering Questions About Data" in prompt_query
         assert "Filtering and Sorting Data" not in prompt_query
 
         # Test with update-only
-        prompt_update = qc._assemble_system_prompt(tools="update")
+        client_update = qc.client(tools="update")
+        prompt_update = client_update.system_prompt
+        assert prompt_update is not None
         assert "Filtering and Sorting Data" in prompt_update
         assert "Answering Questions About Data" not in prompt_update
 

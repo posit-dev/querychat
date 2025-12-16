@@ -17,6 +17,7 @@ from shinychat import output_markdown_stream
 from ._datasource import DataFrameSource, DataSource, SQLAlchemySource
 from ._icons import bs_icon
 from ._querychat_module import GREETING_PROMPT, ServerValues, mod_server, mod_ui
+from ._system_prompt import QueryChatSystemPrompt
 from ._utils import MISSING, MISSING_TYPE
 from .tools import (
     UpdateDashboardData,
@@ -65,35 +66,19 @@ class QueryChatBase:
         # Store prompt components for lazy assembly
         if prompt_template is None:
             prompt_template = Path(__file__).parent / "prompts" / "prompt.md"
-        self._prompt_template = (
-            prompt_template.read_text()
-            if isinstance(prompt_template, Path)
-            else prompt_template
-        )
 
-        self._prompt_parts = {
-            "data_description": (
-                data_description.read_text()
-                if isinstance(data_description, Path)
-                else data_description
-            ),
-            "extra_instructions": (
-                extra_instructions.read_text()
-                if isinstance(extra_instructions, Path)
-                else extra_instructions
-            ),
-            "schema": self._data_source.get_schema(
-                categorical_threshold=categorical_threshold
-            ),
-            "categorical_threshold": categorical_threshold,
-        }
+        self._system_prompt = QueryChatSystemPrompt(
+            prompt_template=prompt_template,
+            data_source=self._data_source,
+            data_description=data_description,
+            extra_instructions=extra_instructions,
+            categorical_threshold=categorical_threshold,
+        )
 
         # Fork and empty chat now so the per-session forks are fast
         client = as_querychat_client(client)
         self._client = copy.deepcopy(client)
         self._client.set_turns([])
-        # Set system prompt for backward compatibility
-        self._client.system_prompt = self._assemble_system_prompt()
 
         # Storage for console client
         self._client_console = None
@@ -276,28 +261,6 @@ class QueryChatBase:
         client.set_turns([])
         return str(client.chat(GREETING_PROMPT, echo=echo))
 
-    def _assemble_system_prompt(
-        self,
-        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None | MISSING_TYPE = MISSING,
-    ) -> str:
-        """Assemble the system prompt with optional tool configuration."""
-        tools = _normalize_tools(tools, default=self.tools)
-
-        is_duck_db = self._data_source.get_db_type().lower() == "duckdb"
-
-        return chevron.render(
-            self._prompt_template,
-            {
-                "db_type": self._data_source.get_db_type(),
-                "is_duck_db": is_duck_db,
-                "schema": self._prompt_parts["schema"],
-                "data_description": self._prompt_parts.get("data_description"),
-                "extra_instructions": self._prompt_parts.get("extra_instructions"),
-                "has_tool_update": "update" in tools if tools else False,
-                "has_tool_query": "query" in tools if tools else False,
-            },
-        )
-
     def client(
         self,
         *,
@@ -369,7 +332,7 @@ class QueryChatBase:
         chat = copy.deepcopy(self._client)
         chat.set_turns([])
 
-        chat.system_prompt = self._assemble_system_prompt(tools)
+        chat.system_prompt = self._system_prompt.render(tools)
 
         if tools is None:
             return chat
@@ -463,7 +426,7 @@ class QueryChatBase:
             The system prompt string.
 
         """
-        return self._assemble_system_prompt()
+        return self._system_prompt.render(self.tools)
 
     @property
     def data_source(self):

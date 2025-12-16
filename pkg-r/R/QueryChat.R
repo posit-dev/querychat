@@ -671,16 +671,19 @@ querychat_app <- function(
   cleanup = NA,
   bookmark_store = "url"
 ) {
+  if (shiny::isRunning()) {
+    cli::cli_abort(
+      "{.fn querychat_app} cannot be called from within a Shiny app. Use {.fn querychat} instead."
+    )
+  }
+
   if (is_missing(table_name) && is.data.frame(data_source)) {
     table_name <- deparse1(substitute(data_source))
   }
 
   check_bool(cleanup, allow_na = TRUE)
   if (is.na(cleanup)) {
-    cleanup <-
-      is.data.frame(data_source) &&
-      !in_shiny_session() &&
-      is_interactive()
+    cleanup <- is.data.frame(data_source)
   }
 
   qc <- QueryChat$new(

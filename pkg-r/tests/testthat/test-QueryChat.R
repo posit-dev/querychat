@@ -641,3 +641,39 @@ describe("normalize_data_source()", {
     })
   })
 })
+
+test_that("querychat_app() only cleans up data frame sources on exit", {
+  local_mocked_r6_class(
+    QueryChat,
+    public = list(
+      initialize = function(..., cleanup) {
+        # have to use an option because the code is evaluated in a far-away env
+        options(.test_cleanup = cleanup)
+      },
+      app = function(...) {}
+    )
+  )
+  withr::local_options(rlang_interactive = TRUE)
+
+  withr::with_options(list(.test_cleanup = NULL), {
+    test_df <- new_test_df()
+    querychat_app(test_df)
+    cleanup_result <- getOption(".test_cleanup")
+    expect_true(cleanup_result)
+  })
+
+  withr::with_options(list(.test_cleanup = NULL), {
+    test_ds <- local_data_frame_source(new_test_df())
+    querychat_app(test_ds)
+    cleanup_result <- getOption(".test_cleanup")
+    expect_false(cleanup_result)
+  })
+
+  withr::with_options(list(.test_cleanup = NULL), {
+    con <- local_sqlite_connection(new_test_df())
+    test_ds <- DBISource$new(con$conn, "test_table")
+    querychat_app(test_ds)
+    cleanup_result <- getOption(".test_cleanup")
+    expect_false(cleanup_result)
+  })
+})

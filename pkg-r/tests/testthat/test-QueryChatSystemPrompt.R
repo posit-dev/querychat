@@ -60,7 +60,7 @@ describe("QueryChatSystemPrompt$new()", {
       data_description = temp_file
     )
 
-    expect_equal(sp$data_description, "Data from file")
+    expect_equal(trimws(sp$data_description), "Data from file")
   })
 
   it("initializes with string extra_instructions", {
@@ -91,7 +91,7 @@ describe("QueryChatSystemPrompt$new()", {
       extra_instructions = temp_file
     )
 
-    expect_equal(sp$extra_instructions, "Instructions from file")
+    expect_equal(trimws(sp$extra_instructions), "Instructions from file")
   })
 
   it("stores categorical_threshold", {

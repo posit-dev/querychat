@@ -99,7 +99,7 @@ QueryChatSystemPrompt <- R6::R6Class(
 # Utility function for loading file or string content
 read_text <- function(x) {
   if (file.exists(x)) {
-    readLines(x, warn = FALSE) |> paste(collapse = "\n")
+    read_utf8(x)
   } else {
     paste(x, collapse = "\n")
   }

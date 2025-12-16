@@ -374,7 +374,11 @@ describe("QueryChatSystemPrompt with full prompt.md template", {
     withr::defer(ds$cleanup())
 
     sp <- QueryChatSystemPrompt$new(
-      prompt_template = system.file("prompts", "prompt.md", package = "querychat"),
+      prompt_template = system.file(
+        "prompts",
+        "prompt.md",
+        package = "querychat"
+      ),
       data_source = ds,
       data_description = "A test dataframe"
     )
@@ -392,7 +396,11 @@ describe("QueryChatSystemPrompt with full prompt.md template", {
     withr::defer(ds$cleanup())
 
     sp <- QueryChatSystemPrompt$new(
-      prompt_template = system.file("prompts", "prompt.md", package = "querychat"),
+      prompt_template = system.file(
+        "prompts",
+        "prompt.md",
+        package = "querychat"
+      ),
       data_source = ds
     )
     sys_prompt <- sp$render(NULL)
@@ -412,7 +420,11 @@ describe("QueryChatSystemPrompt with full prompt.md template", {
 
     # With low threshold, categories should not be listed
     sp_low <- QueryChatSystemPrompt$new(
-      prompt_template = system.file("prompts", "prompt.md", package = "querychat"),
+      prompt_template = system.file(
+        "prompts",
+        "prompt.md",
+        package = "querychat"
+      ),
       data_source = cat_source,
       categorical_threshold = 3
     )
@@ -421,7 +433,11 @@ describe("QueryChatSystemPrompt with full prompt.md template", {
 
     # With high threshold, categories should be listed
     sp_high <- QueryChatSystemPrompt$new(
-      prompt_template = system.file("prompts", "prompt.md", package = "querychat"),
+      prompt_template = system.file(
+        "prompts",
+        "prompt.md",
+        package = "querychat"
+      ),
       data_source = cat_source,
       categorical_threshold = 10
     )

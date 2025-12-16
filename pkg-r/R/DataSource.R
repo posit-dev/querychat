@@ -580,4 +580,3 @@ r_class_to_sql_type <- function(r_class) {
   )
 }
 # nocov end
-

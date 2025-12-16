@@ -191,7 +191,11 @@ QueryChat <- R6::R6Class(
 
       # Create system prompt manager
       if (is.null(prompt_template)) {
-        prompt_template <- system.file("prompts", "prompt.md", package = "querychat")
+        prompt_template <- system.file(
+          "prompts",
+          "prompt.md",
+          package = "querychat"
+        )
       }
 
       private$.system_prompt <- QueryChatSystemPrompt$new(

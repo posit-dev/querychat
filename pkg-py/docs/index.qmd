@@ -86,24 +86,28 @@ To learn more, see [Build an app](build.qmd) for a step-by-step guide.
 
 ## How it works
 
-querychat leverages the incredible capabilities of large language models to translate natural language into SQL queries.
-Models of all sizes, from small models you can run locally on your laptop to large frontier models by major AI providers, are all surprisingly good at this task.
-That said, even the best models still need to know the overall data structure to perform well.
-For this reason, QueryChat includes a description of the data's schema -- column names, types, ranges, categorical values -- in the LLM's [system prompt](context.qmd).
-Note that QueryChat **does not** send the raw data itself to the model! 
-Instead, it shares just enough of a description of the data that the model can reliably generate SQL queries.
+querychat uses LLMs to translate natural language into SQL queries. Models of all sizes, from small ones you can run locally to large frontier models from major AI providers, are remarkably effective at this task. But even the best models need to understand your data's overall structure to perform well.
 
-When the LLM generates a query, querychat executes it against a SQL database (DuckDB[^duckdb] by default) to get results in a **safe**, **reliable**, and **verifiable** manner. 
-In short, this execution is **safe** since only `SELECT` statements are allowed, **reliable** since the database engine handles all calculations, and **verifiable** since the user can always see the SQL query that was run.
-This makes QueryChat a trustworthy tool for data exploration, as every action taken by the LLM is transparent and independently reproducible.
+To address this, querychat includes schema metadata -- column names, types, ranges, categorical values -- in the LLM's [system prompt](context.qmd). Importantly, querychat **does not** send raw data to the LLM; it shares only enough structural information for the model to generate accurate queries. When the LLM produces a query, querychat executes it in a SQL database (DuckDB[^duckdb], by default) to obtain precise results.
+
+This design makes querychat reliable, safe, and reproducible:
+
+- **Reliable**: query results come from a real database, not LLM-generated summaries -- so outputs are precise, verifiable, and less vulnerable to hallucination[^hallucination].
+- **Safe**: querychat's tools are read-only by design, avoiding destructive actions on your data.[^permissions]
+- **Reproducible**: generated SQL can be exported and re-run in other environments, so your analysis isn't locked into a single tool.
 
 ::: callout-important
-### Data privacy
+**Data privacy**
 
-See the [Provide context](context.qmd) and [Tools](tools.qmd) articles to learn more about what information is provided to the LLM and what it's capable of doing with code execution.
-::::
+See the [Provide context](context.qmd) and [Tools](tools.qmd)  articles for more details on exactly what information is provided to the LLM and how customize it.
+:::
 
-[^duckdb]: Duckdb is extremely fast and has a surprising number of [statistical functions](https://duckdb.org/docs/stable/sql/functions/aggregates.html#statistical-aggregates).
+[^duckdb]: DuckDB is extremely fast and has a surprising number of [statistical functions](https://duckdb.org/docs/stable/sql/functions/aggregates.html#statistical-aggregates).
+
+[^hallucination]: The [query tool](tools.qmd) gives query results to the model for context and interpretation. Thus, there is *some* potential that the model to mis-interpret those results. 
+
+[^permissions]: To fully guarantee no destructive actions on your production database, ensure querychat's database permissions are read-only.
+
 
 
 ## Next steps

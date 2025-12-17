@@ -15,7 +15,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-`querychat` supports different types of data sources, including:
+`querychat` supports several different data sources, including:
 
 1. Data frames
 2. DBI database connections (e.g., SQLite, PostgreSQL, MySQL, DuckDB)
@@ -38,7 +38,7 @@ Behind the scenes, `querychat` creates an in-memory DuckDB database and register
 
 ## Database connections
 
-You can also connect `querychat` directly to any database supported by [DBI](https://dbi.r-dbi.org/). This includes popular databases like SQLite, DuckDB, PostgreSQL, MySQL, and many more.
+You can also connect `querychat` directly to a table in any database supported by [DBI](https://dbi.r-dbi.org/). This includes popular databases like SQLite, DuckDB, PostgreSQL, MySQL, and many more.
 
 Assuming you have a database set up and accessible, you can create a DBI connection and pass it to `QueryChat$new()`. Below are some examples for common databases.
 

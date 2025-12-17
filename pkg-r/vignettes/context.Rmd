@@ -32,7 +32,7 @@ library(palmerpenguins)
 
 ## Default prompt
 
-For full visibility into the full system prompt that querychat generates for the LLM, see the `system_prompt` field. This is useful for debugging and understanding exactly what context the LLM is using:
+For full visibility into the system prompt that querychat generates for the LLM, you can inspect the `system_prompt` field. This is useful for debugging and understanding exactly what context the LLM is using:
 
 ```{r}
 qc <- querychat(penguins)
@@ -66,7 +66,7 @@ cat(qc$system_prompt)
 querychat doesn't need this information in any particular format -- just provide what a human would find helpful:
 
 ```markdown
-# data_description.md
+<!-- data_description.md -->
 
 This dataset contains information about Palmer Archipelago penguins,
 collected for studying penguin populations.

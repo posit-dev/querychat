@@ -537,7 +537,7 @@ Create the UI for the querychat chat interface.
 This method generates the chat UI component. Typically you'll use
 \verb{$sidebar()} instead, which wraps this in a sidebar layout.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{QueryChat$ui(..., ns = NULL)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{QueryChat$ui(..., id = NULL)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -545,8 +545,11 @@ This method generates the chat UI component. Typically you'll use
 \describe{
 \item{\code{...}}{Additional arguments passed to \code{\link[shinychat:chat_ui]{shinychat::chat_ui()}}.}
 
-\item{\code{ns}}{A Shiny namespacing (i.e., \code{\link[shiny:NS]{shiny::NS()}}) function.
-Only needed when calling this method within a module UI function.}
+\item{\code{id}}{Optional ID for the QueryChat instance. If not provided,
+will use the ID provided at initialization. This argument is included
+for use within Shiny modules; in which case you'll need to provide
+\code{id = ns("your_id")} where \code{ns} is the namespacing function from
+\code{\link[shiny:NS]{shiny::NS()}}.}
 }
 \if{html}{\out{</div>}}
 }
@@ -580,6 +583,8 @@ reactive values.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{QueryChat$server(
   enable_bookmarking = FALSE,
+  ...,
+  id = NULL,
   session = shiny::getDefaultReactiveDomain()
 )}\if{html}{\out{</div>}}
 }
@@ -593,6 +598,12 @@ current query, title, and chat history) will be saved and restored
 with Shiny bookmarks. This requires that the Shiny app has bookmarking
 enabled via \code{shiny::enableBookmarking()} or the \code{enableBookmarking}
 parameter of \code{shiny::shinyApp()}.}
+
+\item{\code{...}}{Ignored.}
+
+\item{\code{id}}{Optional module ID for the QueryChat instance. If not provided,
+will use the ID provided at initialization. When used in Shiny modules,
+this \code{id} should match the \code{id} used in the corresponding UI function.}
 
 \item{\code{session}}{The Shiny session object.}
 }

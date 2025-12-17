@@ -512,8 +512,11 @@ QueryChat <- R6::R6Class(
     #' `$sidebar()` instead, which wraps this in a sidebar layout.
     #'
     #' @param ... Additional arguments passed to [shinychat::chat_ui()].
-    #' @param ns A Shiny namespacing (i.e., [shiny::NS()]) function.
-    #' Only needed when calling this method within a module UI function.
+    #' @param id Optional ID for the QueryChat instance. If not provided,
+    #'   will use the ID provided at initialization. This argument is included
+    #'   for use within Shiny modules; in which case you'll need to provide
+    #'   `id = ns("your_id")` where `ns` is the namespacing function from
+    #'   [shiny::NS()].
     #'
     #' @return A UI component containing the chat interface.
     #'
@@ -525,27 +528,16 @@ QueryChat <- R6::R6Class(
     #'   qc$ui()
     #' )
     #' }
-    ui = function(..., ns = NULL) {
-      check_function(ns, allow_null = TRUE)
+    ui = function(..., id = NULL) {
+      check_string(id, allow_null = TRUE, allow_empty = FALSE)
 
       # If called within another module, the UI id needs to be namespaced
       # by that "parent" module. If called in a module *server* context, we
       # can infer the namespace from the session, but if not, the user
       # will need to provide it.
-      # NOTE: this isn't a problem for Python since id namespacing is handled implicitly
-      # by UI functions like shinychat.chat_ui().
-      id <- self$id
-      id <- if (is.null(ns)) namespaced_id(id) else ns(id)
-
-      # Provide a helpful error if the user tries to set id directly
-      if ("id" %in% names(list2(...))) {
-        cli::cli_abort(
-          c(
-            "Not allowed to set {.arg id} to {.fn $ui()} (or {.fn $sidebar()}).",
-            "i" = "Use the {.arg ns} argument instead to namespace the UI id."
-          )
-        )
-      }
+      # NOTE: this isn't a problem for Python since id namespacing is handled
+      # implicitly by UI functions like shinychat.chat_ui().
+      id <- id %||% namespaced_id(self$id)
 
       mod_ui(id, ...)
     },
@@ -563,6 +555,10 @@ QueryChat <- R6::R6Class(
     #'   with Shiny bookmarks. This requires that the Shiny app has bookmarking
     #'   enabled via `shiny::enableBookmarking()` or the `enableBookmarking`
     #'   parameter of `shiny::shinyApp()`.
+    #' @param ... Ignored.
+    #' @param id Optional module ID for the QueryChat instance. If not provided,
+    #'   will use the ID provided at initialization. When used in Shiny modules,
+    #'   this `id` should match the `id` used in the corresponding UI function.
     #' @param session The Shiny session object.
     #'
     #' @return A list containing session-specific reactive values and the chat
@@ -586,8 +582,13 @@ QueryChat <- R6::R6Class(
     #' }
     server = function(
       enable_bookmarking = FALSE,
+      ...,
+      id = NULL,
       session = shiny::getDefaultReactiveDomain()
     ) {
+      check_string(id, allow_null = TRUE, allow_empty = FALSE)
+      check_dots_empty()
+
       if (is.null(session)) {
         cli::cli_abort(
           "{.fn $server} must be called within a Shiny server function"
@@ -595,7 +596,7 @@ QueryChat <- R6::R6Class(
       }
 
       mod_server(
-        self$id,
+        id %||% self$id,
         data_source = private$.data_source,
         greeting = self$greeting,
         client = self$client,

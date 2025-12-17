@@ -474,8 +474,10 @@ QueryChat <- R6::R6Class(
     #' @param width Width of the sidebar in pixels. Default is 400.
     #' @param height Height of the sidebar. Default is "100%".
     #' @param fillable Whether the sidebar should be fillable. Default is `TRUE`.
-    #' @param ns A Shiny namespacing (i.e., [shiny::NS()]) function.
-    #' Only needed when calling this method within a module UI function.
+    #' @param id Optional ID for the QueryChat instance. If not provided,
+    #'   will use the ID provided at initialization. If using `$sidebar()` in
+    #'   a Shiny module, you'll need to provide `id = ns("your_id")` where `ns`
+    #'   is the namespacing function from [shiny::NS()].
     #'
     #' @return A [bslib::sidebar()] UI component.
     #'
@@ -493,7 +495,7 @@ QueryChat <- R6::R6Class(
       width = 400,
       height = "100%",
       fillable = TRUE,
-      ns = NULL
+      id = NULL
     ) {
       bslib::sidebar(
         width = width,
@@ -501,7 +503,7 @@ QueryChat <- R6::R6Class(
         fillable = fillable,
         class = "querychat-sidebar",
         ...,
-        self$ui(ns = ns)
+        self$ui(id = id)
       )
     },
 
@@ -513,10 +515,9 @@ QueryChat <- R6::R6Class(
     #'
     #' @param ... Additional arguments passed to [shinychat::chat_ui()].
     #' @param id Optional ID for the QueryChat instance. If not provided,
-    #'   will use the ID provided at initialization. This argument is included
-    #'   for use within Shiny modules; in which case you'll need to provide
-    #'   `id = ns("your_id")` where `ns` is the namespacing function from
-    #'   [shiny::NS()].
+    #'   will use the ID provided at initialization. If using `$ui()` in a Shiny
+    #'   module, you'll need to provide `id = ns("your_id")` where `ns` is the
+    #'   namespacing function from [shiny::NS()].
     #'
     #' @return A UI component containing the chat interface.
     #'
@@ -558,7 +559,9 @@ QueryChat <- R6::R6Class(
     #' @param ... Ignored.
     #' @param id Optional module ID for the QueryChat instance. If not provided,
     #'   will use the ID provided at initialization. When used in Shiny modules,
-    #'   this `id` should match the `id` used in the corresponding UI function.
+    #'   this `id` should match the `id` used in the corresponding UI function
+    #'   (i.e., `qc$ui(id = ns("your_id"))` pairs with `qc$server(id =
+    #'   "your_id")`).
     #' @param session The Shiny session object.
     #'
     #' @return A list containing session-specific reactive values and the chat

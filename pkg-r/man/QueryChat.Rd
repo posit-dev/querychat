@@ -489,7 +489,7 @@ interface, suitable for use with \code{\link[bslib:page_sidebar]{bslib::page_sid
   width = 400,
   height = "100\%",
   fillable = TRUE,
-  ns = NULL
+  id = NULL
 )}\if{html}{\out{</div>}}
 }
 
@@ -504,8 +504,10 @@ interface, suitable for use with \code{\link[bslib:page_sidebar]{bslib::page_sid
 
 \item{\code{fillable}}{Whether the sidebar should be fillable. Default is \code{TRUE}.}
 
-\item{\code{ns}}{A Shiny namespacing (i.e., \code{\link[shiny:NS]{shiny::NS()}}) function.
-Only needed when calling this method within a module UI function.}
+\item{\code{id}}{Optional ID for the QueryChat instance. If not provided,
+will use the ID provided at initialization. If using \verb{$sidebar()} in
+a Shiny module, you'll need to provide \code{id = ns("your_id")} where \code{ns}
+is the namespacing function from \code{\link[shiny:NS]{shiny::NS()}}.}
 }
 \if{html}{\out{</div>}}
 }
@@ -546,10 +548,9 @@ This method generates the chat UI component. Typically you'll use
 \item{\code{...}}{Additional arguments passed to \code{\link[shinychat:chat_ui]{shinychat::chat_ui()}}.}
 
 \item{\code{id}}{Optional ID for the QueryChat instance. If not provided,
-will use the ID provided at initialization. This argument is included
-for use within Shiny modules; in which case you'll need to provide
-\code{id = ns("your_id")} where \code{ns} is the namespacing function from
-\code{\link[shiny:NS]{shiny::NS()}}.}
+will use the ID provided at initialization. If using \verb{$ui()} in a Shiny
+module, you'll need to provide \code{id = ns("your_id")} where \code{ns} is the
+namespacing function from \code{\link[shiny:NS]{shiny::NS()}}.}
 }
 \if{html}{\out{</div>}}
 }
@@ -603,7 +604,8 @@ parameter of \code{shiny::shinyApp()}.}
 
 \item{\code{id}}{Optional module ID for the QueryChat instance. If not provided,
 will use the ID provided at initialization. When used in Shiny modules,
-this \code{id} should match the \code{id} used in the corresponding UI function.}
+this \code{id} should match the \code{id} used in the corresponding UI function
+(i.e., \code{qc$ui(id = ns("your_id"))} pairs with \code{qc$server(id = "your_id")}).}
 
 \item{\code{session}}{The Shiny session object.}
 }

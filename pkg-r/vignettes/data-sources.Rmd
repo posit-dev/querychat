@@ -25,13 +25,14 @@ The sections below describe how to use each type of data source with `querychat`
 
 ## Data frames
 
-You can use any data frame as a data source in `querychat`. Simply pass it to `QueryChat$new()`:
+You can use any data frame as a data source in `querychat`. Simply pass it to `querychat()`:
 
 ```{r}
 library(querychat)
 library(palmerpenguins)
 
-querychat_app(mtcars)
+qc <- querychat(mtcars)
+qc$app()  # Launch the app
 ```
 
 Behind the scenes, `querychat` creates an in-memory DuckDB database and registers your data frame as a table for SQL query execution.

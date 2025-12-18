@@ -76,7 +76,7 @@ In theory, you could use any model that has tool calling support, but we current
 - Claude 4.5 Sonnet
 - Google Gemini 3.0
 
-In our testing, we've found that those models strike a good balance between accuracy and latency. Smaller/cheaper models like GPT-4o-mini are fine for simple queries but make surprising mistakes with more complex ones; and reasoning models like o3-mini slow down responses without providing meaningfully better results.
+In our testing, we've found that those models strike a good balance between accuracy and latency. That said, smaller/faster models like GPT-4.1-mini or Claude Haiku 4.5 work well for most tables and are worth trying first—they're significantly cheaper and faster. You can always switch to a larger model if you find the results aren't meeting your needs. On the other end of the spectrum, reasoning models like o3-mini tend to slow down responses without providing meaningfully better results for this task.
 
 We've also seen some decent results with frontier local models (e.g., `gpt-oss:20b`), but even if you have the compute to run the largest models, they still tend to lag behind the cloud-hosted options in terms of accuracy and speed.
 

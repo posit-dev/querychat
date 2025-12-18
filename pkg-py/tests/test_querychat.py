@@ -39,7 +39,7 @@ def test_querychat_init(sample_df):
 
     # Verify basic attributes are set
     assert qc is not None
-    assert qc.id == "test_table"
+    assert qc.id == "querychat_test_table"
 
     # Even without server initialization, we should be able to query the data source
     result = qc.data_source.execute_query(

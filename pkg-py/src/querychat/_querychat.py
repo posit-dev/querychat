@@ -58,7 +58,7 @@ class QueryChatBase:
                 "Table name must begin with a letter and contain only letters, numbers, and underscores",
             )
 
-        self.id = id or table_name
+        self.id = id or f"querychat_{table_name}"
 
         self.tools = normalize_tools(tools, default=("update", "query"))
         self.greeting = greeting.read_text() if isinstance(greeting, Path) else greeting

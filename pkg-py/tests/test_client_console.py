@@ -291,5 +291,5 @@ class TestBackwardCompatibility:
         )
 
         assert qc is not None
-        assert qc.id == "test_table"
+        assert qc.id == "querychat_test_table"
         assert qc.tools == ("update", "query")

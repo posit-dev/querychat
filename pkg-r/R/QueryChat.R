@@ -178,7 +178,7 @@ QueryChat <- R6::R6Class(
 
       private$.data_source <- normalize_data_source(data_source, table_name)
 
-      self$id <- id %||% table_name
+      self$id <- id %||% sprintf("querychat_%s", table_name)
       self$tools <- tools
 
       if (!is.null(greeting) && file.exists(greeting)) {

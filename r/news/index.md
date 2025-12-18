@@ -2,6 +2,16 @@
 
 ## querychat (development version)
 
+- `QueryChat$sidebar()`, `QueryChat$ui()`, and `QueryChat$server()` now
+  support an optional `id` parameter to enable use within Shiny modules.
+  When used in a module UI function, pass `id = ns("your_id")` where
+  `ns` is the namespacing function from
+  [`shiny::NS()`](https://rdrr.io/pkg/shiny/man/NS.html). In the
+  corresponding module server function, pass the unwrapped ID to
+  `QueryChat$server(id = "your_id")`. This enables multiple independent
+  QueryChat instances from the same QueryChat object.
+  ([\#172](https://github.com/posit-dev/querychat/issues/172))
+
 - `QueryChat$client()` can now create standalone querychat-enabled chat
   clients with configurable tools and callbacks, enabling use outside of
   Shiny applications.

@@ -54,7 +54,7 @@ connection) as input and provides methods to:
 
 - `id`:
 
-  The module ID for namespacing.
+  ID for the QueryChat instance.
 
 - `tools`:
 
@@ -403,9 +403,20 @@ or similar layouts.
 
 #### Usage
 
-    QueryChat$sidebar(width = 400, height = "100%", fillable = TRUE, ...)
+    QueryChat$sidebar(
+      ...,
+      width = 400,
+      height = "100%",
+      fillable = TRUE,
+      id = NULL
+    )
 
 #### Arguments
+
+- `...`:
+
+  Additional arguments passed to
+  [`bslib::sidebar()`](https://rstudio.github.io/bslib/reference/sidebar.html).
 
 - `width`:
 
@@ -419,10 +430,13 @@ or similar layouts.
 
   Whether the sidebar should be fillable. Default is `TRUE`.
 
-- `...`:
+- `id`:
 
-  Additional arguments passed to
-  [`bslib::sidebar()`](https://rstudio.github.io/bslib/reference/sidebar.html).
+  Optional ID for the QueryChat instance. If not provided, will use the
+  ID provided at initialization. If using `$sidebar()` in a Shiny
+  module, you'll need to provide `id = ns("your_id")` where `ns` is the
+  namespacing function from
+  [`shiny::NS()`](https://rdrr.io/pkg/shiny/man/NS.html).
 
 #### Returns
 
@@ -452,7 +466,7 @@ This method generates the chat UI component. Typically you'll use
 
 #### Usage
 
-    QueryChat$ui(...)
+    QueryChat$ui(..., id = NULL)
 
 #### Arguments
 
@@ -460,6 +474,14 @@ This method generates the chat UI component. Typically you'll use
 
   Additional arguments passed to
   [`shinychat::chat_ui()`](https://posit-dev.github.io/shinychat/r/reference/chat_ui.html).
+
+- `id`:
+
+  Optional ID for the QueryChat instance. If not provided, will use the
+  ID provided at initialization. If using `$ui()` in a Shiny module,
+  you'll need to provide `id = ns("your_id")` where `ns` is the
+  namespacing function from
+  [`shiny::NS()`](https://rdrr.io/pkg/shiny/man/NS.html).
 
 #### Returns
 
@@ -489,6 +511,8 @@ reactive values.
 
     QueryChat$server(
       enable_bookmarking = FALSE,
+      ...,
+      id = NULL,
       session = shiny::getDefaultReactiveDomain()
     )
 
@@ -503,6 +527,18 @@ reactive values.
   [`shiny::enableBookmarking()`](https://rdrr.io/pkg/shiny/man/enableBookmarking.html)
   or the `enableBookmarking` parameter of
   [`shiny::shinyApp()`](https://rdrr.io/pkg/shiny/man/shinyApp.html).
+
+- `...`:
+
+  Ignored.
+
+- `id`:
+
+  Optional module ID for the QueryChat instance. If not provided, will
+  use the ID provided at initialization. When used in Shiny modules,
+  this `id` should match the `id` used in the corresponding UI function
+  (i.e., `qc$ui(id = ns("your_id"))` pairs with
+  `qc$server(id = "your_id")`).
 
 - `session`:
 

@@ -25,10 +25,11 @@ library(palmerpenguins)
 When the querychat UI first appears, you will usually want it to greet the user with some basic instructions. By default, these instructions are auto-generated every time a user arrives. In a production setting with multiple users/visitors, this approach has some downsides: it's slower, uses more API tokens, and produces different results each time. Instead, you should create a greeting file and pass it when creating your `QueryChat` object:
 
 ```{r}
-querychat_app(
+qc <- querychat(
   penguins,
   greeting = "greeting.md"
 )
+qc$app()  # Launch the app
 ```
 
 You can provide suggestions to the user by using the `<span class="suggestion"> </span>` tag:

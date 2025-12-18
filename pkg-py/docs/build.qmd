@@ -4,6 +4,23 @@ title: Build an app
 
 While the [`.app()` method](reference/querychat.qmd#querychat.querychat.app) provides a quick way to start exploring data, building bespoke Shiny apps with querychat unlocks the full power of integrating natural language data exploration with custom visualizations, layouts, and interactivity. This guide shows you how to integrate querychat into your own Shiny applications and leverage its reactive data outputs to create rich, interactive dashboards.
 
+querychat is a particularly good fit for Shiny apps that have:
+
+1. **A single data source** (or a set of related tables that can be joined)
+2. **Multiple filters** that let users slice and explore the data in different ways
+3. **Several visualizations and outputs** that all depend on the same filtered data
+
+In these apps, querychat can replace or augment your filtering UI by allowing users to describe what they want to see in natural language. Instead of building complex filter controls, users can simply ask questions like "show me customers from California who spent over $1000 last quarter" and querychat will generate the appropriate SQL query.
+
+This is especially valuable when:
+
+- Your data has many columns and building a UI for all possible filters would be overwhelming
+- Users want to explore ad-hoc combinations of filters that you didn't anticipate
+- You want to make data exploration more accessible to users who aren't comfortable with traditional filtering UIs
+
+If you have an existing app with a reactive data frame that flows through multiple outputs, querychat can be a natural addition to provide an alternative way to filter that data.
+
+
 ## Starter template
 
 Integrating querychat into a Shiny app requires just three steps:

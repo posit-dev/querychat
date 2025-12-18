@@ -15,14 +15,31 @@ knitr::opts_chunk$set(
 )
 ```
 
-While `querychat_app()` provides a quick way to start exploring data, building bespoke Shiny apps with QueryChat unlocks the full power of integrating natural language data exploration with custom visualizations, layouts, and interactivity. This guide shows you how to integrate QueryChat into your own Shiny applications and leverage its reactive data outputs to create rich, interactive dashboards.
+While `querychat_app()` provides a quick way to start exploring data, building bespoke Shiny apps with querychat unlocks the full power of integrating natural language data exploration with custom visualizations, layouts, and interactivity. This guide shows you how to integrate querychat into your own Shiny applications and leverage its reactive data outputs to create rich, interactive dashboards.
+
+querychat is a particularly good fit for Shiny apps that have:
+
+1. **A single data source** (or a set of related tables that can be joined)
+2. **Multiple filters** that let users slice and explore the data in different ways
+3. **Several visualizations and outputs** that all depend on the same filtered data
+
+In these apps, querychat can replace or augment your filtering UI by allowing users to describe what they want to see in natural language. Instead of building complex filter controls, users can simply ask questions like "show me customers from California who spent over $1000 last quarter" and querychat will generate the appropriate SQL query.
+
+This is especially valuable when:
+
+- Your data has many columns and building a UI for all possible filters would be overwhelming
+- Users want to explore ad-hoc combinations of filters that you didn't anticipate
+- You want to make data exploration more accessible to users who aren't comfortable with traditional filtering UIs
+
+If you have an existing app with a reactive data frame that flows through multiple outputs, querychat can be a natural addition to provide an alternative way to filter that data.
+
 
 ## Starter template
 
-Integrating QueryChat into a Shiny app requires just three steps:
+Integrating querychat into a Shiny app requires just three steps:
 
 1. Initialize a `QueryChat` instance with your data
-2. Add the QueryChat UI component (either `$sidebar()` or `$ui()`)
+2. Add the UI component (either `$sidebar()` or `$ui()`)
 3. Use reactive values like `$df()`, `$sql()`, and `$title()` to build outputs that respond to user queries
 
 Here's a starter template demonstrating these steps:
@@ -68,12 +85,12 @@ shinyApp(ui, server)
 ```
 
 ::: {.alert .alert-info}
-You'll need to call the `qc$server()` method within your server function to set up QueryChat's reactive behavior, and capture its return value to access reactive data.
+You'll need to call the `qc$server()` method within your server function to set up querychat's reactive behavior, and capture its return value to access reactive data.
 :::
 
 ## Reactives
 
-There are three main reactive values provided by QueryChat for use in your app:
+There are three main reactive values provided by querychat for use in your app:
 
 ### Filtered data {#filtered-data}
 
@@ -334,7 +351,7 @@ shinyApp(ui = ui, server = server)
 
 ## Programmatic updates {#programmatic-filtering}
 
-QueryChat's reactive state can be updated programmatically. For example, you might want to add a "Reset Filters" button that clears any active filters and returns the data table to its original state. You can do this by setting both the SQL query and title to their default values. This way you don't have to rely on both the user and LLM to send the right prompt.
+querychat's reactive state can be updated programmatically. For example, you might want to add a "Reset Filters" button that clears any active filters and returns the data table to its original state. You can do this by setting both the SQL query and title to their default values. This way you don't have to rely on both the user and LLM to send the right prompt.
 
 ```{r}
 ui <- page_sidebar(
@@ -368,10 +385,10 @@ This is equivalent to the user asking the LLM to "reset" or "show all data".
 
 ## Multiple tables
 
-Currently, you have two options for exploring multiple tables in QueryChat:
+Currently, you have two options for exploring multiple tables in querychat:
 
-1. Join the tables into a single table before passing to QueryChat
-2. Use multiple QueryChat instances in the same app
+1. Join the tables into a single table before passing to querychat
+2. Use multiple querychat instances in the same app
 
 The first option makes it possible to chat with multiple tables inside a single chat interface, whereas the second option requires a separate chat interface for each table.
 
@@ -440,4 +457,4 @@ shinyApp(ui, server)
 
 - [Greet users](greet.html) - Create welcoming onboarding experiences
 - [Provide context](context.html) - Help the LLM understand your data better
-- [Tools](tools.html) - Understand what QueryChat can do under the hood
+- [Tools](tools.html) - Understand what querychat can do under the hood

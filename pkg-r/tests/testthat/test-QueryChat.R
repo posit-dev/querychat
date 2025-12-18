@@ -44,7 +44,7 @@ describe("QueryChat$new()", {
     withr::defer(qc$cleanup())
 
     expect_equal(qc$data_source$table_name, "my_data")
-    expect_equal(qc$id, "my_data")
+    expect_equal(qc$id, "querychat_my_data")
   })
 
   it("loads greeting from file if file exists", {

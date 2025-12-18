@@ -178,7 +178,7 @@ qc2 <- QueryChat$new(mtcars, greeting = "mtcars_greeting.md")
 \describe{
 \item{\code{greeting}}{The greeting message displayed to users.}
 
-\item{\code{id}}{The module ID for namespacing.}
+\item{\code{id}}{ID for the QueryChat instance.}
 
 \item{\code{tools}}{The allowed tools for the chat client.}
 }
@@ -484,19 +484,30 @@ Create a sidebar containing the querychat UI.
 This method generates a \code{\link[bslib:sidebar]{bslib::sidebar()}} component containing the chat
 interface, suitable for use with \code{\link[bslib:page_sidebar]{bslib::page_sidebar()}} or similar layouts.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{QueryChat$sidebar(width = 400, height = "100\%", fillable = TRUE, ...)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{QueryChat$sidebar(
+  ...,
+  width = 400,
+  height = "100\%",
+  fillable = TRUE,
+  id = NULL
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
+\item{\code{...}}{Additional arguments passed to \code{\link[bslib:sidebar]{bslib::sidebar()}}.}
+
 \item{\code{width}}{Width of the sidebar in pixels. Default is 400.}
 
 \item{\code{height}}{Height of the sidebar. Default is "100\%".}
 
 \item{\code{fillable}}{Whether the sidebar should be fillable. Default is \code{TRUE}.}
 
-\item{\code{...}}{Additional arguments passed to \code{\link[bslib:sidebar]{bslib::sidebar()}}.}
+\item{\code{id}}{Optional ID for the QueryChat instance. If not provided,
+will use the ID provided at initialization. If using \verb{$sidebar()} in
+a Shiny module, you'll need to provide \code{id = ns("your_id")} where \code{ns}
+is the namespacing function from \code{\link[shiny:NS]{shiny::NS()}}.}
 }
 \if{html}{\out{</div>}}
 }
@@ -528,13 +539,18 @@ Create the UI for the querychat chat interface.
 This method generates the chat UI component. Typically you'll use
 \verb{$sidebar()} instead, which wraps this in a sidebar layout.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{QueryChat$ui(...)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{QueryChat$ui(..., id = NULL)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{...}}{Additional arguments passed to \code{\link[shinychat:chat_ui]{shinychat::chat_ui()}}.}
+
+\item{\code{id}}{Optional ID for the QueryChat instance. If not provided,
+will use the ID provided at initialization. If using \verb{$ui()} in a Shiny
+module, you'll need to provide \code{id = ns("your_id")} where \code{ns} is the
+namespacing function from \code{\link[shiny:NS]{shiny::NS()}}.}
 }
 \if{html}{\out{</div>}}
 }
@@ -568,6 +584,8 @@ reactive values.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{QueryChat$server(
   enable_bookmarking = FALSE,
+  ...,
+  id = NULL,
   session = shiny::getDefaultReactiveDomain()
 )}\if{html}{\out{</div>}}
 }
@@ -581,6 +599,13 @@ current query, title, and chat history) will be saved and restored
 with Shiny bookmarks. This requires that the Shiny app has bookmarking
 enabled via \code{shiny::enableBookmarking()} or the \code{enableBookmarking}
 parameter of \code{shiny::shinyApp()}.}
+
+\item{\code{...}}{Ignored.}
+
+\item{\code{id}}{Optional module ID for the QueryChat instance. If not provided,
+will use the ID provided at initialization. When used in Shiny modules,
+this \code{id} should match the \code{id} used in the corresponding UI function
+(i.e., \code{qc$ui(id = ns("your_id"))} pairs with \code{qc$server(id = "your_id")}).}
 
 \item{\code{session}}{The Shiny session object.}
 }

@@ -74,7 +74,7 @@ QueryChat <- R6::R6Class(
   public = list(
     #' @field greeting The greeting message displayed to users.
     greeting = NULL,
-    #' @field id The module ID for namespacing.
+    #' @field id ID for the QueryChat instance.
     id = NULL,
     #' @field tools The allowed tools for the chat client.
     tools = c("update", "query"),
@@ -178,7 +178,7 @@ QueryChat <- R6::R6Class(
 
       private$.data_source <- normalize_data_source(data_source, table_name)
 
-      self$id <- id %||% table_name
+      self$id <- id %||% sprintf("querychat_%s", table_name)
       self$tools <- tools
 
       if (!is.null(greeting) && file.exists(greeting)) {
@@ -470,10 +470,14 @@ QueryChat <- R6::R6Class(
     #' This method generates a [bslib::sidebar()] component containing the chat
     #' interface, suitable for use with [bslib::page_sidebar()] or similar layouts.
     #'
+    #' @param ... Additional arguments passed to [bslib::sidebar()].
     #' @param width Width of the sidebar in pixels. Default is 400.
     #' @param height Height of the sidebar. Default is "100%".
     #' @param fillable Whether the sidebar should be fillable. Default is `TRUE`.
-    #' @param ... Additional arguments passed to [bslib::sidebar()].
+    #' @param id Optional ID for the QueryChat instance. If not provided,
+    #'   will use the ID provided at initialization. If using `$sidebar()` in
+    #'   a Shiny module, you'll need to provide `id = ns("your_id")` where `ns`
+    #'   is the namespacing function from [shiny::NS()].
     #'
     #' @return A [bslib::sidebar()] UI component.
     #'
@@ -486,14 +490,20 @@ QueryChat <- R6::R6Class(
     #'   # Main content here
     #' )
     #' }
-    sidebar = function(width = 400, height = "100%", fillable = TRUE, ...) {
+    sidebar = function(
+      ...,
+      width = 400,
+      height = "100%",
+      fillable = TRUE,
+      id = NULL
+    ) {
       bslib::sidebar(
         width = width,
         height = height,
         fillable = fillable,
         class = "querychat-sidebar",
         ...,
-        self$ui()
+        self$ui(id = id)
       )
     },
 
@@ -504,6 +514,10 @@ QueryChat <- R6::R6Class(
     #' `$sidebar()` instead, which wraps this in a sidebar layout.
     #'
     #' @param ... Additional arguments passed to [shinychat::chat_ui()].
+    #' @param id Optional ID for the QueryChat instance. If not provided,
+    #'   will use the ID provided at initialization. If using `$ui()` in a Shiny
+    #'   module, you'll need to provide `id = ns("your_id")` where `ns` is the
+    #'   namespacing function from [shiny::NS()].
     #'
     #' @return A UI component containing the chat interface.
     #'
@@ -515,8 +529,18 @@ QueryChat <- R6::R6Class(
     #'   qc$ui()
     #' )
     #' }
-    ui = function(...) {
-      mod_ui(self$id, ...)
+    ui = function(..., id = NULL) {
+      check_string(id, allow_null = TRUE, allow_empty = FALSE)
+
+      # If called within another module, the UI id needs to be namespaced
+      # by that "parent" module. If called in a module *server* context, we
+      # can infer the namespace from the session, but if not, the user
+      # will need to provide it.
+      # NOTE: this isn't a problem for Python since id namespacing is handled
+      # implicitly by UI functions like shinychat.chat_ui().
+      id <- id %||% namespaced_id(self$id)
+
+      mod_ui(id, ...)
     },
 
     #' @description
@@ -532,6 +556,12 @@ QueryChat <- R6::R6Class(
     #'   with Shiny bookmarks. This requires that the Shiny app has bookmarking
     #'   enabled via `shiny::enableBookmarking()` or the `enableBookmarking`
     #'   parameter of `shiny::shinyApp()`.
+    #' @param ... Ignored.
+    #' @param id Optional module ID for the QueryChat instance. If not provided,
+    #'   will use the ID provided at initialization. When used in Shiny modules,
+    #'   this `id` should match the `id` used in the corresponding UI function
+    #'   (i.e., `qc$ui(id = ns("your_id"))` pairs with `qc$server(id =
+    #'   "your_id")`).
     #' @param session The Shiny session object.
     #'
     #' @return A list containing session-specific reactive values and the chat
@@ -555,8 +585,13 @@ QueryChat <- R6::R6Class(
     #' }
     server = function(
       enable_bookmarking = FALSE,
+      ...,
+      id = NULL,
       session = shiny::getDefaultReactiveDomain()
     ) {
+      check_string(id, allow_null = TRUE, allow_empty = FALSE)
+      check_dots_empty()
+
       if (is.null(session)) {
         cli::cli_abort(
           "{.fn $server} must be called within a Shiny server function"
@@ -564,7 +599,7 @@ QueryChat <- R6::R6Class(
       }
 
       mod_server(
-        self$id,
+        id %||% self$id,
         data_source = private$.data_source,
         greeting = self$greeting,
         client = self$client,
@@ -825,4 +860,13 @@ normalize_data_source <- function(data_source, table_name) {
   cli::cli_abort(
     "{.arg data_source} must be a {.cls DataSource}, {.cls data.frame}, or {.cls DBIConnection}, not {.obj_type_friendly {data_source}}."
   )
+}
+
+
+namespaced_id <- function(id, session = shiny::getDefaultReactiveDomain()) {
+  if (is.null(session)) {
+    id
+  } else {
+    session$ns(id)
+  }
 }

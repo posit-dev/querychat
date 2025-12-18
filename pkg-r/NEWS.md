@@ -1,11 +1,13 @@
 # querychat (development version)
 
+* `QueryChat$sidebar()`, `QueryChat$ui()`, and `QueryChat$server()` now support an optional `id` parameter to enable use within Shiny modules. When used in a module UI function, pass `id = ns("your_id")` where `ns` is the namespacing function from `shiny::NS()`. In the corresponding module server function, pass the unwrapped ID to `QueryChat$server(id = "your_id")`. This enables multiple independent QueryChat instances from the same QueryChat object. (#172)
+
 * `QueryChat$client()` can now create standalone querychat-enabled chat clients with configurable tools and callbacks, enabling use outside of Shiny applications. (#168)
 
 * `QueryChat$console()` was added to launch interactive console-based chat sessions with your data source, with persistent conversation state across invocations. (#168)
 
 * The tools used in a `QueryChat` chatbot are now configurable. Use the new `tools` parameter of `querychat()` or `QueryChat$new()` to select either or both `"query"` or `"update"` tools. Choose `tools = "update"` if you only want QueryChat to be able to update the dashboard (useful when you want to be 100% certain that the LLM will not see _any_ raw data). (#168)
- 
+
 * `querychat_app()` will now only automatically clean up the data source if QueryChat creates the data source internally from a data frame. (#164)
 
 * **Breaking change:** The `$sql()` method now returns `NULL` instead of `""` (empty string) when no query has been set, aligning with the behavior of `$title()` for consistency. Most code using `isTruthy()` or similar falsy checks will continue working without changes. Code that explicitly checks `sql() == ""` should be updated to use falsy checks (e.g., `!isTruthy(sql())`) or explicit null checks (`is.null(sql())`). (#146)

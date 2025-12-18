@@ -58,7 +58,7 @@ class QueryChatBase:
                 "Table name must begin with a letter and contain only letters, numbers, and underscores",
             )
 
-        self.id = id or table_name
+        self.id = id or f"querychat_{table_name}"
 
         self.tools = normalize_tools(tools, default=("update", "query"))
         self.greeting = greeting.read_text() if isinstance(greeting, Path) else greeting
@@ -188,6 +188,7 @@ class QueryChatBase:
         width: int = 400,
         height: str = "100%",
         fillable: bool = True,
+        id: Optional[str] = None,
         **kwargs,
     ) -> ui.Sidebar:
         """
@@ -201,6 +202,9 @@ class QueryChatBase:
             Height of the sidebar.
         fillable
             Whether the sidebar should be fillable. Default is `True`.
+        id
+            Optional ID for the QueryChat instance. If not provided,
+            will use the ID provided at initialization.
         **kwargs
             Additional arguments passed to `shiny.ui.sidebar()`.
 
@@ -211,7 +215,7 @@ class QueryChatBase:
 
         """
         return ui.sidebar(
-            self.ui(),
+            self.ui(id=id),
             width=width,
             height=height,
             fillable=fillable,
@@ -219,12 +223,15 @@ class QueryChatBase:
             **kwargs,
         )
 
-    def ui(self, **kwargs):
+    def ui(self, *, id: Optional[str] = None, **kwargs):
         """
         Create the UI for the querychat component.
 
         Parameters
         ----------
+        id
+            Optional ID for the QueryChat instance. If not provided,
+            will use the ID provided at initialization.
         **kwargs
             Additional arguments to pass to `shinychat.chat_ui()`.
 
@@ -234,7 +241,7 @@ class QueryChatBase:
             A UI component.
 
         """
-        return mod_ui(self.id, **kwargs)
+        return mod_ui(id or self.id, **kwargs)
 
     def generate_greeting(self, *, echo: Literal["none", "output"] = "none"):
         """
@@ -561,7 +568,9 @@ class QueryChat(QueryChatBase):
 
     """
 
-    def server(self, *, enable_bookmarking: bool = False) -> ServerValues:
+    def server(
+        self, *, enable_bookmarking: bool = False, id: Optional[str] = None
+    ) -> ServerValues:
         """
         Initialize Shiny server logic.
 
@@ -574,6 +583,10 @@ class QueryChat(QueryChatBase):
         ----------
         enable_bookmarking
             Whether to enable bookmarking for the querychat module.
+        id
+            Optional module ID for the QueryChat instance. If not provided,
+            will use the ID provided at initialization. This must match the ID
+            used in the `.ui()` or `.sidebar()` methods.
 
         Examples
         --------
@@ -629,7 +642,7 @@ class QueryChat(QueryChatBase):
             )
 
         return mod_server(
-            self.id,
+            id or self.id,
             data_source=self._data_source,
             greeting=self.greeting,
             client=self.client,

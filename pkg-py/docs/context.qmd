@@ -4,7 +4,7 @@ title: Provide context
 
 querychat automatically gathers information about your table to help the LLM write accurate SQL queries. This includes column names and types, numerical ranges, and categorical value examples.^[All of this information is provided to the LLM as part of the **system prompt** -- a string of text containing instructions and context for the LLM to consider when responding to user queries.]
 
-Importantly, the LLM never sees the actual data itself -- it doesn't need to in order to write SQL queries for you. It only needs to understand the structure and schema of your data.
+Importantly, we are **not** sending your raw data to the LLM and asking it to do complicated math. The LLM only needs to understand the structure and schema of your data in order to write SQL queries.
 
 You can get even better results by customizing the system prompt in three ways:
 

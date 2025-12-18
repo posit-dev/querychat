@@ -134,10 +134,7 @@ con <- dbConnect(duckdb::duckdb(), dbdir = "my_database.duckdb")
 dbWriteTable(con, "penguins", penguins)
 
 # Or from CSV
-dbExecute(con, "
-  CREATE TABLE my_table AS
-  SELECT * FROM read_csv_auto('path/to/your/file.csv')
-")
+duckdb::duckdb_read_csv(con, "my_table", "path/to/your/file.csv")
 ```
 
 Then you can connect to this database using the DuckDB example above.

@@ -6,7 +6,7 @@ Under the hood, `querychat` is powered by [chatlas](https://posit-dev.github.io/
 
 ### Specify a model
 
-To use a particular model, pass a `"{provider}/{model}"` string to the `client` parameter. Under the hood, this gets passed along to [`chatlas.ChatAuto`](https://posit-dev.github.io/chatlas/reference/ChatAuto.html)
+To use a particular model, pass a `"{provider}/{model}"` string to the `client` parameter, which gets passed along to [`chatlas.ChatAuto`](https://posit-dev.github.io/chatlas/reference/ChatAuto.html)
 
 ```python
 from querychat import QueryChat
@@ -78,7 +78,7 @@ In theory, you could use any model that has tool calling support, but we current
 
 In our testing, we've found that those models strike a good balance between accuracy and latency. Smaller/cheaper models like GPT-4o-mini are fine for simple queries but make surprising mistakes with more complex ones; and reasoning models like o3-mini slow down responses without providing meaningfully better results.
 
-We've also seen some decent results with frontier local models, but even if you have the compute to run the largest models, they still tend to lag behind the cloud-hosted options in terms of accuracy and speed.
+We've also seen some decent results with frontier local models (e.g., `gpt-oss:20b`), but even if you have the compute to run the largest models, they still tend to lag behind the cloud-hosted options in terms of accuracy and speed.
 
 ::: callout-tip
 ## Data privacy concerns?

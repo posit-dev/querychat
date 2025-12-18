@@ -14,7 +14,7 @@ You can get even better results by customizing the system prompt in three ways:
 
 ## Default prompt
 
-For full visibility into the full system prompt that querychat generates for the LLM, see the `system_prompt` property. This is useful for debugging and understanding exactly what context the LLM is using:
+For full visibility into the system prompt that querychat generates for the LLM, you can inspect the `system_prompt` property. This is useful for debugging and understanding exactly what context the LLM is using:
 
 ```python
 from querychat import QueryChat

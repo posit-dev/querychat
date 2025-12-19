@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Literal, Optional, overload
 
 import chatlas
 import chevron
+import narwhals.stable.v1 as nw
 import sqlalchemy
 from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 from shiny.express._stub_session import ExpressStubSession
@@ -29,8 +30,7 @@ from .tools import (
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    import pandas as pd
-    from narwhals.stable.v1.typing import IntoFrame
+    from narwhals.typing import IntoFrame
 
 TOOL_GROUPS = Literal["update", "query"]
 
@@ -797,14 +797,14 @@ class QueryChatExpress(QueryChatBase):
             enable_bookmarking=enable,
         )
 
-    def df(self) -> pd.DataFrame:
+    def df(self) -> nw.DataFrame:
         """
         Reactively read the current filtered data frame that is in effect.
 
         Returns
         -------
         :
-            The current filtered data frame as a pandas DataFrame. If no query
+            The current filtered data frame as a narwhals DataFrame. If no query
             has been set, this will return the unfiltered data frame from the
             data source.
 
@@ -883,7 +883,16 @@ def normalize_data_source(
         return data_source
     if isinstance(data_source, sqlalchemy.Engine):
         return SQLAlchemySource(data_source, table_name)
-    return DataFrameSource(data_source, table_name)
+    src = nw.from_native(data_source, pass_through=True)
+    if isinstance(src, nw.DataFrame):
+        return DataFrameSource(src, table_name)
+    if isinstance(src, nw.LazyFrame):
+        raise NotImplementedError("LazyFrame data sources are not yet supported (they will be soon).")
+    raise TypeError(
+        f"Unsupported data source type: {type(data_source)}."
+        "If you believe this type should be supported, please open an issue at "
+        "https://github.com/posit-dev/querychat/issues"
+    )
 
 
 def as_querychat_client(client: str | chatlas.Chat | None) -> chatlas.Chat:

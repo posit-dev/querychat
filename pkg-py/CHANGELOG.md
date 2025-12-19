@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### Breaking Changes
+
+* Methods like `execute_query()`, `get_data()`, and `df()` now return a `narwhals.DataFrame` instead of a `pandas.DataFrame`. This allows querychat to drop its `pandas` dependency, and for you to use any `narwhals`-compatible dataframe of your choosing.
+  * If this breaks existing code, note you can call `.to_native()` on the new dataframe value to get your `pandas` dataframe back.
+  * Note that `polars` or `pandas` will be needed to realize a `sqlalchemy` connection query as a dataframe. Install with `pip install querychat[pandas]` or `pip install querychat[polars]`
+
 ### New features
 
 * `QueryChat.sidebar()`, `QueryChat.ui()`, and `QueryChat.server()` now support an optional `id` parameter to create multiple chat instances from a single `QueryChat` object. (#172)

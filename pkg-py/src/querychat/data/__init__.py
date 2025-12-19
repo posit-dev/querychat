@@ -8,11 +8,15 @@ to quickly get started without needing to install additional dependencies.
 from __future__ import annotations
 
 from importlib.resources import files
+from typing import TYPE_CHECKING
 
-import pandas as pd
+from querychat._df_compat import read_csv
+
+if TYPE_CHECKING:
+    import narwhals.stable.v1 as nw
 
 
-def titanic() -> pd.DataFrame:
+def titanic() -> nw.DataFrame:
     """
     Load the Titanic dataset.
 
@@ -21,8 +25,9 @@ def titanic() -> pd.DataFrame:
 
     Returns
     -------
-    pandas.DataFrame
-        A DataFrame with 891 rows and 15 columns containing Titanic passenger data.
+    :
+        A narwhals DataFrame with 891 rows and 15 columns containing Titanic
+        passenger data.
 
     Examples
     --------
@@ -35,10 +40,10 @@ def titanic() -> pd.DataFrame:
     """
     # Get the path to the gzipped CSV file using importlib.resources
     data_file = files("querychat.data") / "titanic.csv.gz"
-    return pd.read_csv(str(data_file), compression="gzip")
+    return read_csv(str(data_file))
 
 
-def tips() -> pd.DataFrame:
+def tips() -> nw.DataFrame:
     """
     Load the tips dataset.
 
@@ -48,8 +53,9 @@ def tips() -> pd.DataFrame:
 
     Returns
     -------
-    pandas.DataFrame
-        A DataFrame with 244 rows and 7 columns containing restaurant tip data.
+    :
+        A narwhals DataFrame with 244 rows and 7 columns containing restaurant
+        tip data.
 
     Examples
     --------
@@ -62,7 +68,7 @@ def tips() -> pd.DataFrame:
     """
     # Get the path to the gzipped CSV file using importlib.resources
     data_file = files("querychat.data") / "tips.csv.gz"
-    return pd.read_csv(str(data_file), compression="gzip")
+    return read_csv(str(data_file))
 
 
 __all__ = ["tips", "titanic"]

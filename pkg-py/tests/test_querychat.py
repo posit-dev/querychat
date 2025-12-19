@@ -47,7 +47,7 @@ def test_querychat_init(sample_df):
     )
 
     assert len(result) == 1
-    assert result.iloc[0]["name"] == "Bob"
+    assert result.item(0, "name") == "Bob"
 
 
 def test_querychat_custom_id(sample_df):

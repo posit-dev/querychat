@@ -64,9 +64,8 @@ def test_init_with_narwhals_dataframe():
     assert qc is not None
 
 
-def test_init_with_narwhals_lazyframe_direct_query():
-    """Test that QueryChat() can accept a narwhals LazyFrame and execute queries."""
-    # Create a pandas DataFrame and convert to narwhals LazyFrame
+def test_init_with_narwhals_lazyframe_raises():
+    """Test that QueryChat() raises TypeError for LazyFrames."""
     pdf = pd.DataFrame(
         {
             "id": [1, 2, 3],
@@ -76,20 +75,9 @@ def test_init_with_narwhals_lazyframe_direct_query():
     )
     nw_lazy = nw.from_native(pdf).lazy()
 
-    # Call QueryChat with the narwhals LazyFrame
-    qc = QueryChat(
-        data_source=nw_lazy,  # TODO(@gadebuie): Fix this type error
-        table_name="test_table",
-        greeting="hello!",
-    )
-
-    # Verify the result is correctly configured
-    assert qc is not None
-    assert hasattr(qc, "data_source")
-
-    # Test that we can run a query on the data source
-    query_result = qc.data_source.execute_query(
-        "SELECT * FROM test_table WHERE id = 2",
-    )
-    assert len(query_result) == 1
-    assert query_result.iloc[0]["name"] == "Bob"
+    with pytest.raises(NotImplementedError, match="LazyFrame"):
+        QueryChat(
+            data_source=nw_lazy,
+            table_name="test_table",
+            greeting="hello!",
+        )

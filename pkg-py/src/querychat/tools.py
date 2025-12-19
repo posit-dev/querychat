@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, TypedDict, runtime_checkable
 
 import chevron
 from chatlas import ContentToolResult, Tool
@@ -11,6 +11,8 @@ from ._icons import bs_icon
 from ._utils import df_to_html, querychat_tool_starts_open
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from ._datasource import DataSource
 
 
@@ -28,6 +30,45 @@ class ReactiveStringOrNone(Protocol):
     def set(self, value: str | None) -> Any: ...
 
 
+class UpdateDashboardData(TypedDict):
+    """
+    Data passed to update_dashboard callback.
+
+    This TypedDict defines the structure of data passed to the
+    `tool_update_dashboard` callback function when the LLM requests an update to
+    the dashboard's data based on a SQL query.
+
+    Attributes
+    ----------
+    query
+        The SQL query string to execute for filtering/sorting the dashboard.
+    title
+        A descriptive title for the query, typically displayed in the UI.
+
+    Examples
+    --------
+    ```python
+    import pandas as pd
+    from querychat import QueryChat
+    from querychat.types import UpdateDashboardData
+
+
+    def log_update(data: UpdateDashboardData):
+        print(f"Executing: {data['query']}")
+        print(f"Title: {data['title']}")
+
+
+    df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+    qc = QueryChat(df, "my_data")
+    client = qc.client(update_dashboard=log_update)
+    ```
+
+    """
+
+    query: str
+    title: str
+
+
 def _read_prompt_template(filename: str, **kwargs) -> str:
     """Read and interpolate a prompt template file."""
     template_path = Path(__file__).parent / "prompts" / filename
@@ -37,8 +78,7 @@ def _read_prompt_template(filename: str, **kwargs) -> str:
 
 def _update_dashboard_impl(
     data_source: DataSource,
-    current_query: ReactiveString,
-    current_title: ReactiveStringOrNone,
+    update_fn: Callable[[UpdateDashboardData], None],
 ) -> Callable[[str, str], ContentToolResult]:
     """Create the implementation function for updating the dashboard."""
 
@@ -59,11 +99,8 @@ def _update_dashboard_impl(
                 Apply Filter
             </button>"""
 
-            # Update state on success
-            if query is not None:
-                current_query.set(query)
-            if title is not None:
-                current_title.set(title)
+            # Call the callback with TypedDict data on success
+            update_fn({"query": query, "title": title})
 
         except Exception as e:
             error = str(e)
@@ -89,8 +126,7 @@ def _update_dashboard_impl(
 
 def tool_update_dashboard(
     data_source: DataSource,
-    current_query: ReactiveString,
-    current_title: ReactiveStringOrNone,
+    update_fn: Callable[[UpdateDashboardData], None],
 ) -> Tool:
     """
     Create a tool that modifies the data presented in the dashboard based on the SQL query.
@@ -99,10 +135,8 @@ def tool_update_dashboard(
     ----------
     data_source
         The data source to query against
-    current_query
-        Reactive value for storing the current SQL query
-    current_title
-        Reactive value for storing the current title
+    update_fn
+        Callback function to call with UpdateDashboardData when update succeeds
 
     Returns
     -------
@@ -110,7 +144,7 @@ def tool_update_dashboard(
         A tool that can be registered with chatlas
 
     """
-    impl = _update_dashboard_impl(data_source, current_query, current_title)
+    impl = _update_dashboard_impl(data_source, update_fn)
 
     description = _read_prompt_template(
         "tool-update-dashboard.md",
@@ -126,15 +160,13 @@ def tool_update_dashboard(
 
 
 def _reset_dashboard_impl(
-    current_query: ReactiveString,
-    current_title: ReactiveStringOrNone,
+    reset_fn: Callable[[], None],
 ) -> Callable[[], ContentToolResult]:
     """Create the implementation function for resetting the dashboard."""
 
     def reset_dashboard() -> ContentToolResult:
-        # Reset current query and title
-        current_query.set("")
-        current_title.set(None)
+        # Call the callback to reset
+        reset_fn()
 
         # Add Reset Filter button
         button_html = """<button
@@ -162,18 +194,15 @@ def _reset_dashboard_impl(
 
 
 def tool_reset_dashboard(
-    current_query: ReactiveString,
-    current_title: ReactiveStringOrNone,
+    reset_fn: Callable[[], None],
 ) -> Tool:
     """
     Create a tool that resets the dashboard to show all data.
 
     Parameters
     ----------
-    current_query
-        Reactive value for storing the current SQL query
-    current_title
-        Reactive value for storing the current title
+    reset_fn
+        Callback function to call when reset is invoked
 
     Returns
     -------
@@ -181,7 +210,7 @@ def tool_reset_dashboard(
         A tool that can be registered with chatlas
 
     """
-    impl = _reset_dashboard_impl(current_query, current_title)
+    impl = _reset_dashboard_impl(reset_fn)
 
     description = _read_prompt_template("tool-reset-dashboard.md")
     impl.__doc__ = description

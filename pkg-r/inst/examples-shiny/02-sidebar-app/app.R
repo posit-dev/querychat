@@ -83,7 +83,7 @@ server <- function(input, output, session) {
   # Render the SQL query
   output$sql_query <- renderText({
     query <- qc_vals$sql()
-    if (query == "") {
+    if (is.null(query) || !nzchar(query)) {
       "No filter applied - showing all data"
     } else {
       query

@@ -4,7 +4,7 @@
 *.quarto_ipynb
 objects.txt
 objects.json
-changelog.md
+CHANGELOG.md
 
 # Ignore quartodoc artifacts, these are built in CI
 _sidebar-python.yml

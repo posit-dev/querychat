@@ -7,9 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
-### Changes
+### New features
+
+* `QueryChat.sidebar()`, `QueryChat.ui()`, and `QueryChat.server()` now support an optional `id` parameter to create multiple chat instances from a single `QueryChat` object. (#172)
+
+* `QueryChat.client()` can now create standalone querychat-enabled chat clients with configurable tools and callbacks, enabling use outside of Shiny applications. (#168)
+
+* `QueryChat.console()` was added to launch interactive console-based chat sessions with your data source, with persistent conversation state across invocations. (#168)
+
+* The tools used in a `QueryChat` chatbot are now configurable. Use the new `tools` parameter of `QueryChat()` to select either or both `"query"` or `"update"` tools. Choose `tools=["update"]` if you only want QueryChat to be able to update the dashboard (useful when you want to be 100% certain that the LLM will not see _any_ raw data). (#168)
+
+## [0.3.0] - 2025-12-10
+
+### Breaking Changes
 
 * The entire functional API (i.e., `init()`, `sidebar()`, `server()`, etc) has been hard deprecated in favor of a simpler OOP-based API. Namely, the new `QueryChat()` class is now the main entry point (instead of `init()`) and has methods to replace old functions (e.g., `.sidebar()`, `.server()`, etc). (#101)
+
+* The `.sql()` method now returns `None` instead of `""` (empty string) when no query has been set, aligning with the behavior of `.title()` for consistency. Most code using the `or` operator or `req()` for falsy checks will continue working without changes. Code that explicitly checks `sql() == ""` should be updated to use falsy checks (`if not sql()`) or explicit null checks (`if sql() is None`). (#146)
 
 ### New features
 

@@ -1,3 +1,18 @@
+check_data_source <- function(
+  x,
+  ...,
+  arg = caller_arg(x),
+  call = caller_env()
+) {
+  if (!inherits(x, "DataSource")) {
+    cli::cli_abort(
+      "{.arg {arg}} must be a {.cls DataSource} object, not {.obj_type_friendly {x}}.",
+      call = call
+    )
+  }
+}
+
+
 # SQL table name validation ----------------------------------------------
 
 #' Check SQL table name validity
@@ -34,9 +49,11 @@ check_sql_table_name <- function(
   # Then validate SQL table name pattern
   if (!grepl("^[a-zA-Z][a-zA-Z0-9_]*$", x)) {
     cli::cli_abort(
-      "{.arg {arg}} must be a valid SQL table name.",
-      "i" = "Table names must begin with a letter and contain only letters, numbers, and underscores.",
-      "x" = "You provided: {.val {x}}",
+      c(
+        "{.arg {arg}} must be a valid SQL table name",
+        "i" = "Table names must begin with a letter and contain only letters, numbers, and underscores",
+        "x" = "You provided: {.val {x}}"
+      ),
       call = call
     )
   }

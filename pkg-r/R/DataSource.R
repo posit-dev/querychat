@@ -19,7 +19,7 @@ DataSource <- R6::R6Class(
     #' @return A string describing the database type (e.g., "DuckDB", "SQLite")
     get_db_type = function() {
       cli::cli_abort(
-        "get_db_type() must be implemented by subclass",
+        "{.fn get_db_type} must be implemented by subclass",
         class = "not_implemented_error"
       )
     },
@@ -32,7 +32,7 @@ DataSource <- R6::R6Class(
     #' @return A string containing schema information formatted for LLM prompts
     get_schema = function(categorical_threshold = 20) {
       cli::cli_abort(
-        "get_schema() must be implemented by subclass",
+        "{.fn get_schema} must be implemented by subclass",
         class = "not_implemented_error"
       )
     },
@@ -44,7 +44,7 @@ DataSource <- R6::R6Class(
     #' @return A data frame containing query results
     execute_query = function(query) {
       cli::cli_abort(
-        "execute_query() must be implemented by subclass",
+        "{.fn execute_query} must be implemented by subclass",
         class = "not_implemented_error"
       )
     },
@@ -56,7 +56,7 @@ DataSource <- R6::R6Class(
     #' @return A data frame containing one row of results (or empty if no matches)
     test_query = function(query) {
       cli::cli_abort(
-        "test_query() must be implemented by subclass",
+        "{.fn test_query} must be implemented by subclass",
         class = "not_implemented_error"
       )
     },
@@ -67,7 +67,7 @@ DataSource <- R6::R6Class(
     #' @return A data frame containing all data from the table
     get_data = function() {
       cli::cli_abort(
-        "get_data() must be implemented by subclass",
+        "{.fn get_data} must be implemented by subclass",
         class = "not_implemented_error"
       )
     },
@@ -78,7 +78,7 @@ DataSource <- R6::R6Class(
     #' @return NULL (invisibly)
     cleanup = function() {
       cli::cli_abort(
-        "cleanup() must be implemented by subclass",
+        "{.fn cleanup} must be implemented by subclass",
         class = "not_implemented_error"
       )
     }
@@ -170,7 +170,7 @@ DataFrameSource <- R6::R6Class(
     #' @return A data frame with query results
     execute_query = function(query) {
       check_string(query, allow_null = TRUE, allow_empty = TRUE)
-      if (is.null(query) || query == "") {
+      if (is.null(query) || !nzchar(query)) {
         query <- paste0(
           "SELECT * FROM ",
           DBI::dbQuoteIdentifier(private$conn, self$table_name)
@@ -269,7 +269,9 @@ DBISource <- R6::R6Class(
     #' }
     initialize = function(conn, table_name) {
       if (!inherits(conn, "DBIConnection")) {
-        cli::cli_abort("`conn` must be a DBI connection")
+        cli::cli_abort(
+          "{.arg conn} must be a {.cls DBIConnection}, not {.obj_type_friendly {conn}}"
+        )
       }
 
       # Validate table_name type
@@ -279,15 +281,15 @@ DBISource <- R6::R6Class(
         # Character string - keep as is
       } else {
         cli::cli_abort(
-          "`table_name` must be a single character string or a DBI::Id object"
+          "{.arg table_name} must be a single character string or a {.fn DBI::Id} object"
         )
       }
 
       # Check if table exists
       if (!DBI::dbExistsTable(conn, table_name)) {
         cli::cli_abort(c(
-          "Table {DBI::dbQuoteIdentifier(x, table_name)} not found in database.",
-          "i" = "If you're using a table in a catalog or schema, pass a DBI::Id object to `table_name`"
+          "Table {.val {DBI::dbQuoteIdentifier(conn, table_name)}} not found in database",
+          "i" = "If you're using a table in a catalog or schema, pass a {.fn DBI::Id} object to {.arg table_name}"
         ))
       }
 
@@ -332,7 +334,7 @@ DBISource <- R6::R6Class(
     #' @return A data frame with query results
     execute_query = function(query) {
       check_string(query, allow_null = TRUE, allow_empty = TRUE)
-      if (is.null(query) || query == "") {
+      if (is.null(query) || !nzchar(query)) {
         query <- paste0(
           "SELECT * FROM ",
           DBI::dbQuoteIdentifier(private$conn, self$table_name)
@@ -578,50 +580,3 @@ r_class_to_sql_type <- function(r_class) {
   )
 }
 # nocov end
-
-assemble_system_prompt <- function(
-  source,
-  data_description = NULL,
-  extra_instructions = NULL,
-  categorical_threshold = 20,
-  prompt_template = NULL
-) {
-  if (!is_data_source(source)) {
-    cli::cli_abort("`source` must be a DataSource object")
-  }
-
-  prompt_text <- read_text(
-    prompt_template %||%
-      system.file("prompts", "prompt.md", package = "querychat")
-  )
-
-  if (!is.null(data_description)) {
-    data_description <- read_text(data_description)
-  }
-  if (!is.null(extra_instructions)) {
-    extra_instructions <- read_text(extra_instructions)
-  }
-
-  schema <- source$get_schema(categorical_threshold = categorical_threshold)
-  db_type <- source$get_db_type()
-
-  whisker::whisker.render(
-    prompt_text,
-    list(
-      schema = schema,
-      data_description = data_description,
-      extra_instructions = extra_instructions,
-      db_type = db_type,
-      is_duck_db = identical(db_type, "DuckDB")
-    )
-  )
-}
-
-
-read_text <- function(x) {
-  if (file.exists(x)) {
-    read_utf8(x)
-  } else {
-    paste(x, collapse = "\n")
-  }
-}

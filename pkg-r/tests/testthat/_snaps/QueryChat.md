@@ -36,7 +36,7 @@
       qc$server()
     Condition
       Error in `qc$server()`:
-      ! $server() must be called within a Shiny server function.
+      ! `$server()` must be called within a Shiny server function
 
 # normalize_data_source() / errors with invalid data source types
 
@@ -44,7 +44,7 @@
       normalize_data_source("not_a_data_source", "table_name")
     Condition
       Error in `normalize_data_source()`:
-      ! `data_source` must be a DataSource, data.frame, or DBIConnection. Got: character
+      ! `data_source` must be a <DataSource>, <data.frame>, or <DBIConnection>, not a string.
 
 ---
 
@@ -52,7 +52,7 @@
       normalize_data_source(list(a = 1, b = 2), "table_name")
     Condition
       Error in `normalize_data_source()`:
-      ! `data_source` must be a DataSource, data.frame, or DBIConnection. Got: list
+      ! `data_source` must be a <DataSource>, <data.frame>, or <DBIConnection>, not a list.
 
 ---
 
@@ -60,5 +60,5 @@
       normalize_data_source(NULL, "table_name")
     Condition
       Error in `normalize_data_source()`:
-      ! `data_source` must be a DataSource, data.frame, or DBIConnection. Got: NULL
+      ! `data_source` must be a <DataSource>, <data.frame>, or <DBIConnection>, not NULL.
 

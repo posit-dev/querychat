@@ -4,20 +4,23 @@ import copy
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, Union
+from typing import TYPE_CHECKING, Union
 
+import chatlas
 import shinychat
 from shiny import module, reactive, ui
 
 from .tools import tool_query, tool_reset_dashboard, tool_update_dashboard
 
 if TYPE_CHECKING:
-    import chatlas
+    from collections.abc import Callable
+
     import pandas as pd
     from shiny import Inputs, Outputs, Session
     from shiny.bookmark import BookmarkState, RestoreState
 
     from ._datasource import DataSource
+    from .types import UpdateDashboardData
 
 ReactiveString = reactive.Value[str]
 """A reactive string value."""
@@ -62,7 +65,7 @@ class ServerValues:
     sql
         A reactive Value containing the current SQL query string. Access the value
         by calling `.sql()`, or set it with `.sql.set("SELECT ...")`.
-        An empty string `""` indicates no query has been set.
+        Returns `None` if no query has been set.
     title
         A reactive Value containing the current title for the query. The LLM
         provides this title when generating a new SQL query. Access it with
@@ -76,7 +79,7 @@ class ServerValues:
     """
 
     df: Callable[[], pd.DataFrame]
-    sql: ReactiveString
+    sql: ReactiveStringOrNone
     title: ReactiveStringOrNone
     client: chatlas.Chat
 
@@ -89,34 +92,44 @@ def mod_server(
     *,
     data_source: DataSource,
     greeting: str | None,
-    client: chatlas.Chat,
+    client: chatlas.Chat | Callable,
     enable_bookmarking: bool,
 ):
     # Reactive values to store state
-    sql = ReactiveString("")
+    sql = ReactiveStringOrNone(None)
     title = ReactiveStringOrNone(None)
     has_greeted = reactive.value[bool](False)  # noqa: FBT003
 
+    def update_dashboard(data: UpdateDashboardData):
+        sql.set(data["query"])
+        title.set(data["title"])
+
+    def reset_dashboard():
+        sql.set(None)
+        title.set(None)
+
     # Set up the chat object for this session
-    chat = copy.deepcopy(client)
+    # Support both a callable that creates a client and legacy instance pattern
+    if callable(client) and not isinstance(client, chatlas.Chat):
+        chat = client(
+            update_dashboard=update_dashboard, reset_dashboard=reset_dashboard
+        )
+    else:
+        # Legacy pattern: client is Chat instance
+        chat = copy.deepcopy(client)
 
-    # Create the tool functions
-    update_dashboard_tool = tool_update_dashboard(data_source, sql, title)
-    reset_dashboard_tool = tool_reset_dashboard(sql, title)
-    query_tool = tool_query(data_source)
-
-    # Register tools with annotations for the UI
-    chat.register_tool(update_dashboard_tool)
-    chat.register_tool(query_tool)
-    chat.register_tool(reset_dashboard_tool)
+        chat.register_tool(tool_update_dashboard(data_source, update_dashboard))
+        chat.register_tool(tool_query(data_source))
+        chat.register_tool(tool_reset_dashboard(reset_dashboard))
 
     # Execute query when SQL changes
     @reactive.calc
     def filtered_df():
-        if sql.get() == "":
+        query = sql.get()
+        if not query:
             return data_source.get_data()
         else:
-            return data_source.execute_query(sql.get())
+            return data_source.execute_query(query)
 
     # Chat UI logic
     chat_ui = shinychat.Chat(CHAT_ID)
@@ -165,7 +178,7 @@ def mod_server(
             title.set(new_title)
 
     if enable_bookmarking:
-        chat_ui.enable_bookmarking(client)
+        chat_ui.enable_bookmarking(chat)
 
         @session.bookmark.on_bookmark
         def _on_bookmark(x: BookmarkState) -> None:

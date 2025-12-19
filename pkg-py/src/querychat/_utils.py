@@ -11,6 +11,15 @@ if TYPE_CHECKING:
     from narwhals.stable.v1.typing import IntoFrame
 
 
+class MISSING_TYPE:  # noqa: N801
+    """
+    A singleton representing a missing value.
+    """
+
+
+MISSING = MISSING_TYPE()
+
+
 @contextmanager
 def temp_env_vars(env_vars: dict[str, Optional[str]]):
     """

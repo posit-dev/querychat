@@ -2,7 +2,11 @@ Package: querychat
 Title: Filter and Query Data Frames in 'shiny' Using an LLM Chat Interface
 Version: 0.1.0.9000
 Authors@R: c(
-    person("Joe", "Cheng", , "joe@posit.co", role = c("aut", "cre")),
+    person("Garrick", "Aden-Buie", , "garrick@posit.co", role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0002-7111-0077")),
+    person("Joe", "Cheng", , "joe@posit.co", role = c("aut", "ccp")),
+    person("Carson", "Sievert", , "carson@posit.co", role = "aut",
+           comment = c(ORCID = "0000-0002-4958-2844")),
     person("Posit Software, PBC", role = c("cph", "fnd"))
   )
 Description: Adds an LLM-powered chatbot to your 'shiny' app, that can
@@ -11,7 +15,9 @@ Description: Adds an LLM-powered chatbot to your 'shiny' app, that can
     it to drive reactive calculations, visualizations, downloads, etc.
 License: MIT + file LICENSE
 URL: https://posit-dev.github.io/querychat/pkg-r,
-    https://posit-dev.github.io/querychat
+    https://posit-dev.github.io/querychat,
+    https://github.com/posit-dev/querychat
+BugReports: https://github.com/posit-dev/querychat/issues
 Depends:
     R (>= 4.1.0)
 Imports:
@@ -41,6 +47,7 @@ Suggests:
 Remotes:
     posit-dev/shinychat/pkg-r
 Config/testthat/edition: 3
+Config/testthat/parallel: true
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3

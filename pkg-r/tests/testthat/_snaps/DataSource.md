@@ -4,7 +4,7 @@
       base_source$get_db_type()
     Condition
       Error in `base_source$get_db_type()`:
-      ! get_db_type() must be implemented by subclass
+      ! `get_db_type()` must be implemented by subclass
 
 ---
 
@@ -12,7 +12,7 @@
       base_source$get_schema()
     Condition
       Error in `base_source$get_schema()`:
-      ! get_schema() must be implemented by subclass
+      ! `get_schema()` must be implemented by subclass
 
 ---
 
@@ -20,7 +20,7 @@
       base_source$execute_query("SELECT * FROM test")
     Condition
       Error in `base_source$execute_query()`:
-      ! execute_query() must be implemented by subclass
+      ! `execute_query()` must be implemented by subclass
 
 ---
 
@@ -28,7 +28,7 @@
       base_source$test_query("SELECT * FROM test LIMIT 1")
     Condition
       Error in `base_source$test_query()`:
-      ! test_query() must be implemented by subclass
+      ! `test_query()` must be implemented by subclass
 
 ---
 
@@ -36,7 +36,7 @@
       base_source$get_data()
     Condition
       Error in `base_source$get_data()`:
-      ! get_data() must be implemented by subclass
+      ! `get_data()` must be implemented by subclass
 
 ---
 
@@ -44,7 +44,7 @@
       base_source$cleanup()
     Condition
       Error in `base_source$cleanup()`:
-      ! cleanup() must be implemented by subclass
+      ! `cleanup()` must be implemented by subclass
 
 # DataFrameSource$new() / errors with non-data.frame input
 
@@ -76,22 +76,30 @@
       DataFrameSource$new(test_df, "123_invalid")
     Condition
       Error in `initialize()`:
-      ! `table_name` must be a valid SQL table name.
+      ! `table_name` must be a valid SQL table name
+      i Table names must begin with a letter and contain only letters, numbers, and underscores
+      x You provided: "123_invalid"
     Code
       DataFrameSource$new(test_df, "table-name")
     Condition
       Error in `initialize()`:
-      ! `table_name` must be a valid SQL table name.
+      ! `table_name` must be a valid SQL table name
+      i Table names must begin with a letter and contain only letters, numbers, and underscores
+      x You provided: "table-name"
     Code
       DataFrameSource$new(test_df, "table name")
     Condition
       Error in `initialize()`:
-      ! `table_name` must be a valid SQL table name.
+      ! `table_name` must be a valid SQL table name
+      i Table names must begin with a letter and contain only letters, numbers, and underscores
+      x You provided: "table name"
     Code
       DataFrameSource$new(test_df, "")
     Condition
       Error in `initialize()`:
-      ! `table_name` must be a valid SQL table name.
+      ! `table_name` must be a valid SQL table name
+      i Table names must begin with a letter and contain only letters, numbers, and underscores
+      x You provided: ""
     Code
       DataFrameSource$new(test_df, NULL)
     Condition
@@ -104,7 +112,7 @@
       DBISource$new(list(fake = "connection"), "test_table")
     Condition
       Error in `initialize()`:
-      ! `conn` must be a DBI connection
+      ! `conn` must be a <DBIConnection>, not a list
 
 ---
 
@@ -112,7 +120,7 @@
       DBISource$new(NULL, "test_table")
     Condition
       Error in `initialize()`:
-      ! `conn` must be a DBI connection
+      ! `conn` must be a <DBIConnection>, not NULL
 
 ---
 
@@ -120,7 +128,7 @@
       DBISource$new("not a connection", "test_table")
     Condition
       Error in `initialize()`:
-      ! `conn` must be a DBI connection
+      ! `conn` must be a <DBIConnection>, not a string
 
 # DBISource$new() / errors with invalid table_name types
 
@@ -128,7 +136,7 @@
       DBISource$new(db$conn, 123)
     Condition
       Error in `initialize()`:
-      ! `table_name` must be a single character string or a DBI::Id object
+      ! `table_name` must be a single character string or a `DBI::Id()` object
 
 ---
 
@@ -136,7 +144,7 @@
       DBISource$new(db$conn, c("table1", "table2"))
     Condition
       Error in `initialize()`:
-      ! `table_name` must be a single character string or a DBI::Id object
+      ! `table_name` must be a single character string or a `DBI::Id()` object
 
 ---
 
@@ -144,31 +152,14 @@
       DBISource$new(db$conn, list(name = "table"))
     Condition
       Error in `initialize()`:
-      ! `table_name` must be a single character string or a DBI::Id object
+      ! `table_name` must be a single character string or a `DBI::Id()` object
 
 # DBISource$new() / errors when table does not exist
 
     Code
       DBISource$new(db$conn, "non_existent_table")
     Condition
-      Error:
-      ! ! Could not evaluate cli `{}` expression: `DBI::dbQuoteIdent...`.
-      Caused by error in `h(simpleError(msg, call))`:
-      ! error in evaluating the argument 'conn' in selecting a method for function 'dbQuoteIdentifier': object 'x' not found
-
-# assemble_system_prompt() / errors with non-DataSource input
-
-    Code
-      assemble_system_prompt(list(not = "a data source"), data_description = "Test")
-    Condition
-      Error in `assemble_system_prompt()`:
-      ! `source` must be a DataSource object
-
----
-
-    Code
-      assemble_system_prompt(data.frame(x = 1:3), data_description = "Test")
-    Condition
-      Error in `assemble_system_prompt()`:
-      ! `source` must be a DataSource object
+      Error in `initialize()`:
+      ! Table "`non_existent_table`" not found in database
+      i If you're using a table in a catalog or schema, pass a `DBI::Id()` object to `table_name`
 

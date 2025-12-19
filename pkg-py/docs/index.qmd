@@ -7,7 +7,7 @@ lightbox: true
 <style>h1.title { display:none; }</style>
 ```
 
-<img src="/images/hex.png" alt="querychat website banner image" class="d-block mx-auto mb-3" style="max-width:100%; max-height:425px"/>
+<img src="/images/querychat.png" alt="querychat website banner image" class="d-block mx-auto mb-3" style="max-width:100%; max-height:425px"/>
 
 <p class="fs-2 lead mt-3 mb-3 text-center" style="max-width: 600px; margin: auto;">
 Explore data using natural language queries
@@ -94,7 +94,7 @@ See the [Provide context](context.qmd) and [Tools](tools.qmd) articles to learn 
 
 ### Bespoke interfaces
 
-While the quickstart app is a great way to get started, querychat is designed to be highly extensible. 
+While the quickstart app is a great way to get started, querychat is designed to be highly extensible.
 You can not only customize the underlying model and data source, but also build fully custom Shiny apps around the core chat functionality.
 
 For a motivating example, consider the following ([sidebot](https://shiny.posit.co/py/docs/genai-inspiration.html#sidebot)) app that leverages querychat's tooling to create reactive summaries and visualizations based on the user's natural language queries:

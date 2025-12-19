@@ -229,7 +229,10 @@ class QueryChatBase:
 
         run_streamlit_app(
             data_source=self._data_source,
-            client=self._client,
+            client_factory=lambda update_cb, reset_cb: self.client(
+                update_dashboard=update_cb,
+                reset_dashboard=reset_cb,
+            ),
             greeting=self.greeting,
         )
 

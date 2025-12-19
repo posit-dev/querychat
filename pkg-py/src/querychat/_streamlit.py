@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import copy
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Optional
 
 import streamlit as st
@@ -10,7 +10,7 @@ import streamlit.components.v1 as components
 from chatlas import ContentToolRequest, ContentToolResult
 
 from ._querychat_module import GREETING_PROMPT
-from .tools import tool_query, tool_reset_dashboard, tool_update_dashboard
+from .tools import UpdateDashboardData
 
 if TYPE_CHECKING:
     import chatlas
@@ -18,59 +18,49 @@ if TYPE_CHECKING:
 
     from ._datasource import DataSource
 
+# Type alias for the client factory function
+ClientFactory = Callable[
+    [Callable[[UpdateDashboardData], None], Callable[[], None]],
+    "chatlas.Chat",
+]
+
 
 class AppState:
     """Typed session state for Streamlit apps using QueryChat."""
 
-    def __init__(self, client: chatlas.Chat, data_source: DataSource):
-        client = copy.deepcopy(client)
-        client.set_turns([])
-
-        self.client: chatlas.Chat = client
+    def __init__(self, client_factory: ClientFactory):
         self.chat_history: list[dict[str, str]] = []
         self.sql: str = ""
         self.title: Optional[str] = None
         self.pending_prompt: Optional[str] = None
 
-        sql_reactive = AppStateReactive(self, "sql")
-        title_reactive = AppStateReactive(self, "title")
+        # Create the client with callbacks that update this state
+        def update_callback(data: UpdateDashboardData) -> None:
+            self.sql = data["query"]
+            self.title = data["title"]
 
-        self.client.register_tool(
-            tool_update_dashboard(data_source, sql_reactive, title_reactive)
-        )
-        self.client.register_tool(tool_query(data_source))
-        self.client.register_tool(tool_reset_dashboard(sql_reactive, title_reactive))
+        def reset_callback() -> None:
+            self.sql = ""
+            self.title = None
+
+        self.client: chatlas.Chat = client_factory(update_callback, reset_callback)
 
     @staticmethod
-    def get(client: Chat, data_source: DataSource) -> AppState:
+    def get(client_factory: ClientFactory, table_name: str) -> AppState:
         """Get or initialize AppState from Streamlit session state."""
         if "_querychat_state" not in st.session_state:
-            st.session_state._querychat_state = AppState(client, data_source)
+            st.session_state._querychat_state = AppState(client_factory)
             st.set_page_config(
-                page_title=f"querychat with {data_source.table_name}",
+                page_title=f"querychat with {table_name}",
                 layout="wide",
                 initial_sidebar_state="expanded",
             )
         return st.session_state._querychat_state
 
 
-class AppStateReactive:
-    """Helper class to wrap AppState fields as 'reactive values' for tools."""
-
-    def __init__(self, state: AppState, attr: str):
-        self.state = state
-        self.attr = attr
-
-    def set(self, value):
-        setattr(self.state, self.attr, value)
-
-    def get(self):
-        return getattr(self.state, self.attr)
-
-
 def run_streamlit_app(
     data_source: DataSource,
-    client: chatlas.Chat,
+    client_factory: ClientFactory,
     greeting: Optional[str] = None,
 ) -> None:
     """
@@ -80,14 +70,15 @@ def run_streamlit_app(
     ----------
     data_source
         The data source to query against.
-    client
-        The chatlas Chat client (will be deep copied for the session).
+    client_factory
+        A factory function that creates a chatlas Chat client with callbacks.
+        Takes (update_dashboard_callback, reset_dashboard_callback) and returns a Chat.
     greeting
         Optional greeting message to display at the start.
 
     """
     # Get (or initialize) typed session state
-    state = AppState.get(client, data_source)
+    state = AppState.get(client_factory, data_source.table_name)
 
     # CSS and JS for suggestion handling
     st.html(SUGGGESTION_CSS)

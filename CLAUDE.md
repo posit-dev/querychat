@@ -59,6 +59,14 @@ make py-build
 make py-docs
 ```
 
+Before finishing your implementation or committing any code, you should run:
+
+```bash
+uv run ruff check --fix pkg-py --config pyproject.toml
+```
+
+To get help with making sure code adheres to project standards.
+
 ### R Package
 
 ```bash

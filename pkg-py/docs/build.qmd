@@ -26,7 +26,7 @@ If you have an existing app with a reactive data frame that flows through multip
 Integrating querychat into a Shiny app requires just three steps:
 
 1. Initialize a `querychat()` instance with your data
-2. Add the querychat UI component (either `.sidebar()` or `.ui()`)
+2. Add the UI component (either `.sidebar()` or `.ui()`)
 3. Use reactive values like `.df()`, `.sql()`, and `.title()` to build outputs that respond to user queries
 
 Here's a starter template demonstrating these steps:
@@ -279,8 +279,8 @@ This is equivalent to the user asking the LLM to "reset" or "show all data".
 
 Currently, you have two options for exploring multiple tables in querychat:
 
-1. Join the tables into a single table before passing to QueryChat
-2. Use multiple QueryChat instances in the same app
+1. Join the tables into a single table before passing to querychat
+2. Use multiple querychat instances in the same app
 
 The first option makes it possible to chat with multiple tables inside a single chat interface, whereas the second option requires a separate chat interface for each table.
 
@@ -290,7 +290,7 @@ The first option makes it possible to chat with multiple tables inside a single 
 We plan to support multiple filtered tables in a future release -- if you're interested in this feature, please upvote [the relevant issue](https://github.com/posit-dev/querychat/issues/6)
 :::
 
-Here's an example of the second approach, using two separate QueryChat instances to explore both the `titanic` and `penguins` datasets within the same app:
+Here's an example of the second approach, using two separate querychat instances to explore both the `titanic` and `penguins` datasets within the same app:
 
 ```{.python filename="multiple-datasets.py" code-fold="true" code-summary="Show app code"}
 {{< include _examples/multiple-datasets.py >}}

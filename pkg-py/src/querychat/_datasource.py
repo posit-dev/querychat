@@ -5,12 +5,12 @@ from typing import TYPE_CHECKING
 
 import duckdb
 import narwhals.stable.v1 as nw
-import pandas as pd
 from sqlalchemy import inspect, text
 from sqlalchemy.sql import sqltypes
 
+from ._df_compat import duckdb_result_to_nw, read_sql
+
 if TYPE_CHECKING:
-    from narwhals.stable.v1.typing import IntoFrame
     from sqlalchemy.engine import Connection, Engine
 
 
@@ -53,7 +53,7 @@ class DataSource(ABC):
         ...
 
     @abstractmethod
-    def execute_query(self, query: str) -> pd.DataFrame:
+    def execute_query(self, query: str) -> nw.DataFrame:
         """
         Execute SQL query and return results as DataFrame.
 
@@ -65,20 +65,20 @@ class DataSource(ABC):
         Returns
         -------
         :
-            Query results as a pandas DataFrame
+            Query results as a narwhals DataFrame
 
         """
         ...
 
     @abstractmethod
-    def get_data(self) -> pd.DataFrame:
+    def get_data(self) -> nw.DataFrame:
         """
         Return the unfiltered data as a DataFrame.
 
         Returns
         -------
         :
-            The complete dataset as a pandas DataFrame
+            The complete dataset as a narwhals DataFrame
 
         """
         ...
@@ -99,27 +99,26 @@ class DataSource(ABC):
 
 
 class DataFrameSource(DataSource):
-    """A DataSource implementation that wraps a pandas DataFrame using DuckDB."""
+    """A DataSource implementation that wraps a DataFrame using DuckDB."""
 
-    _df: nw.DataFrame | nw.LazyFrame
+    _df: nw.DataFrame
 
-    def __init__(self, df: IntoFrame, table_name: str):
+    def __init__(self, df: nw.DataFrame, table_name: str):
         """
-        Initialize with a pandas DataFrame.
+        Initialize with a DataFrame.
 
         Parameters
         ----------
         df
-            The DataFrame to wrap
+            The DataFrame to wrap (pandas, polars, or any narwhals-compatible frame)
         table_name
             Name of the table in SQL queries
 
         """
         self._conn = duckdb.connect(database=":memory:")
-        self._df = nw.from_native(df)
+        self._df = nw.from_native(df) if not isinstance(df, nw.DataFrame) else df
         self.table_name = table_name
-        # TODO(@gadenbuie): If the data frame is already SQL-backed, maybe we shouldn't be making a new copy here.
-        self._conn.register(table_name, self._df.lazy().collect().to_pandas())
+        self._conn.register(table_name, self._df.to_native())
 
     def get_db_type(self) -> str:
         """
@@ -151,16 +150,8 @@ class DataFrameSource(DataSource):
         """
         schema = [f"Table: {self.table_name}", "Columns:"]
 
-        # Ensure we're working with a DataFrame, not a LazyFrame
-        ndf = (
-            self._df.head(10).collect()
-            if isinstance(self._df, nw.LazyFrame)
-            else self._df
-        )
-
-        for column in ndf.columns:
-            # Map pandas dtypes to SQL-like types
-            dtype = ndf[column].dtype
+        for column in self._df.columns:
+            dtype = self._df[column].dtype
             if dtype.is_integer():
                 sql_type = "INTEGER"
             elif dtype.is_float():
@@ -176,17 +167,14 @@ class DataFrameSource(DataSource):
 
             column_info = [f"- {column} ({sql_type})"]
 
-            # For TEXT columns, check if they're categorical
             if sql_type == "TEXT":
-                unique_values = ndf[column].drop_nulls().unique()
+                unique_values = self._df[column].drop_nulls().unique()
                 if unique_values.len() <= categorical_threshold:
                     categories = unique_values.to_list()
                     categories_str = ", ".join([f"'{c}'" for c in categories])
                     column_info.append(f"  Categorical values: {categories_str}")
-
-            # For numeric columns, include range
             elif sql_type in ["INTEGER", "FLOAT", "DATE", "TIME"]:
-                rng = ndf[column].min(), ndf[column].max()
+                rng = self._df[column].min(), self._df[column].max()
                 if rng[0] is None and rng[1] is None:
                     column_info.append("  Range: NULL to NULL")
                 else:
@@ -196,9 +184,11 @@ class DataFrameSource(DataSource):
 
         return "\n".join(schema)
 
-    def execute_query(self, query: str) -> pd.DataFrame:
+    def execute_query(self, query: str) -> nw.DataFrame:
         """
         Execute query using DuckDB.
+
+        Uses polars if available, otherwise falls back to pandas.
 
         Parameters
         ----------
@@ -208,23 +198,22 @@ class DataFrameSource(DataSource):
         Returns
         -------
         :
-            Query results as pandas DataFrame
+            Query results as narwhals DataFrame
 
         """
-        return self._conn.execute(query).df()
+        return duckdb_result_to_nw(self._conn.execute(query))
 
-    def get_data(self) -> pd.DataFrame:
+    def get_data(self) -> nw.DataFrame:
         """
         Return the unfiltered data as a DataFrame.
 
         Returns
         -------
         :
-            The complete dataset as a pandas DataFrame
+            The complete dataset as a narwhals DataFrame
 
         """
-        # TODO(@gadenbuie): This should just return `self._df` and not a pandas DataFrame
-        return self._df.lazy().collect().to_pandas()
+        return self._df
 
     def cleanup(self) -> None:
         """
@@ -412,9 +401,11 @@ class SQLAlchemySource(DataSource):
 
         return "\n".join(schema)
 
-    def execute_query(self, query: str) -> pd.DataFrame:
+    def execute_query(self, query: str) -> nw.DataFrame:
         """
         Execute SQL query and return results as DataFrame.
+
+        Uses polars if available, otherwise falls back to pandas.
 
         Parameters
         ----------
@@ -424,20 +415,20 @@ class SQLAlchemySource(DataSource):
         Returns
         -------
         :
-            Query results as pandas DataFrame
+            Query results as narwhals DataFrame
 
         """
         with self._get_connection() as conn:
-            return pd.read_sql_query(text(query), conn)
+            return read_sql(text(query), conn)
 
-    def get_data(self) -> pd.DataFrame:
+    def get_data(self) -> nw.DataFrame:
         """
         Return the unfiltered data as a DataFrame.
 
         Returns
         -------
         :
-            The complete dataset as a pandas DataFrame
+            The complete dataset as a narwhals DataFrame
 
         """
         return self.execute_query(f"SELECT * FROM {self.table_name}")

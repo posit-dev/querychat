@@ -122,6 +122,17 @@ def querychat_tool_starts_open(action: Literal["update", "query", "reset"]) -> b
         return action != "reset"
 
 
+def _escape_html(s: str) -> str:
+    """Escape HTML special characters."""
+    return (
+        str(s)
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+    )
+
+
 def df_to_html(df: IntoFrame, maxrows: int = 5) -> str:
     """
     Convert a DataFrame to an HTML table for display in chat.
@@ -149,11 +160,30 @@ def df_to_html(df: IntoFrame, maxrows: int = 5) -> str:
             "Must be able to convert `df` into a Narwhals DataFrame or LazyFrame",
         )
 
-    # Generate HTML table
-    table_html = df_short.to_pandas().to_html(
-        index=False,
-        classes="table table-striped",
-    )
+    # Generate HTML table directly from narwhals DataFrame
+    columns = df_short.columns
+    rows = df_short.rows()
+
+    # Build HTML table
+    html_parts = ['<table border="1" class="dataframe table table-striped">']
+
+    # Header
+    html_parts.append("  <thead>")
+    html_parts.append('    <tr style="text-align: right;">')
+    html_parts.extend(f"      <th>{_escape_html(col)}</th>" for col in columns)
+    html_parts.append("    </tr>")
+    html_parts.append("  </thead>")
+
+    # Body
+    html_parts.append("  <tbody>")
+    for row in rows:
+        html_parts.append("    <tr>")
+        html_parts.extend(f"      <td>{_escape_html(str(val))}</td>" for val in row)
+        html_parts.append("    </tr>")
+    html_parts.append("  </tbody>")
+
+    html_parts.append("</table>")
+    table_html = "\n".join(html_parts)
 
     # Add note about truncated rows if needed
     if len(df_short) != nrow_full:

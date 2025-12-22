@@ -259,7 +259,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <section id="provide-a-greeting" class="level3">
 <h3 class="anchored" data-anchor-id="provide-a-greeting">Provide a greeting</h3>
-<p>When the querychat UI first appears, you will usually want it to greet the user with some basic instructions. By default, these instructions are auto-generated every time a user arrives. In a production setting with multiple users/visitors, this is slow, wasteful, and non-deterministic. Instead, you should create a greeting file and pass it when creating your <code>QueryChat</code> object:</p>
+<p>When the querychat UI first appears, you will usually want it to greet the user with some basic instructions. By default, these instructions are auto-generated every time a user arrives. In a production setting with multiple users/visitors, this approach has some downsides: it’s slower, uses more API tokens, and produces different results each time. Instead, you should create a greeting file and pass it when creating your <code>QueryChat</code> object:</p>
 <div class="code-with-filename">
 <div class="code-with-filename-file">
 <pre><strong>titanic-app.py</strong></pre>

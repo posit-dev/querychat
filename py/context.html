@@ -259,11 +259,17 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<p>To improve the LLM’s ability to accurately translate natural language queries into SQL, it often helps to provide relevant metadata. Querychat automatically provides things like column names and data types to the LLM, but you can enhance this further with additional context like <a href="#data-description">data descriptions</a>. You can also provide <a href="#extra-instructions">custom instructions</a> to add additional behaviors and even supply a fully <a href="#custom-template">custom prompt template</a>, if desired.</p>
-<p>All of this information is provided to the LLM as part of the <strong>system prompt</strong> – a string of text containing instructions and context for the LLM to consider when responding to user queries.</p>
+<p>querychat automatically gathers information about your table to help the LLM write accurate SQL queries. This includes column names and types, numerical ranges, and categorical value examples.<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a></p>
+<p>Importantly, we are <strong>not</strong> sending your raw data to the LLM and asking it to do complicated math. The LLM only needs to understand the structure and schema of your data in order to write SQL queries.</p>
+<p>You can get even better results by customizing the system prompt in three ways:</p>
+<ol type="1">
+<li>Add a <a href="#data-description">data description</a> to provide more context about what the data represents</li>
+<li>Add <a href="#extra-instructions">custom instructions</a> to guide the LLM’s behavior</li>
+<li>Use a fully <a href="#custom-template">custom prompt template</a> if you want complete control (useful if you want to be certain the model cannot see any literal values from your data)</li>
+</ol>
 <section id="default-prompt" class="level2">
 <h2 class="anchored" data-anchor-id="default-prompt">Default prompt</h2>
-<p>For full visibility into the full system prompt that Querychat generates for the LLM, see the <code>system_prompt</code> property. This is useful for debugging and understanding exactly what context the LLM is using:</p>
+<p>For full visibility into the system prompt that querychat generates for the LLM, you can inspect the <code>system_prompt</code> property. This is useful for debugging and understanding exactly what context the LLM is using:</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat <span class="im">import</span> QueryChat</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat.data <span class="im">import</span> titanic</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -285,7 +291,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="data-description" class="level2">
 <h2 class="anchored" data-anchor-id="data-description">Data description</h2>
-<p>If your column names are descriptive, Querychat may already work well without additional context. However, if your columns are named <code>x</code>, <code>V1</code>, <code>value</code>, etc., you should provide a data description. Use the <code>data_description</code> parameter for this:</p>
+<p>If your column names are descriptive, querychat may already work well without additional context. However, if your columns are named <code>x</code>, <code>V1</code>, <code>value</code>, etc., you should provide a data description. Use the <code>data_description</code> parameter for this:</p>
 <div class="code-with-filename">
 <div class="code-with-filename-file">
 <pre><strong>titanic-app.py</strong></pre>
@@ -300,7 +306,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>app <span class="op">=</span> qc.app()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>Querychat doesn’t need this information in any particular format – just provide what a human would find helpful:</p>
+<p>querychat doesn’t need this information in any particular format – just provide what a human would find helpful:</p>
 <div class="code-with-filename">
 <div class="code-with-filename-file">
 <pre><strong>data_description.md</strong></pre>
@@ -349,12 +355,18 @@ Warning
 </section>
 <section id="custom-template" class="level2">
 <h2 class="anchored" data-anchor-id="custom-template">Custom template</h2>
-<p>If you want more control over the system prompt, you can provide a custom prompt template using the <code>prompt_template</code> parameter. This is for more advanced users who want to fully customize the LLM’s behavior. See the <a href="./reference/QueryChat.html#attributes">API reference</a> for details on the available template variables.</p>
+<p>If you want more control over the system prompt, you can provide a custom prompt template using the <code>prompt_template</code> parameter. This is for more advanced users who want to fully customize the LLM’s behavior. See the <a href="reference/querychat.qmd#attributes">API reference</a> for details on the available template variables.</p>
 
 
 </section>
 
-</main> <!-- /main -->
+
+<div id="quarto-appendix" class="default"><section id="footnotes" class="footnotes footnotes-end-of-document" role="doc-endnotes"><h2 class="anchored quarto-appendix-heading">Footnotes</h2>
+
+<ol>
+<li id="fn1"><p>All of this information is provided to the LLM as part of the <strong>system prompt</strong> – a string of text containing instructions and context for the LLM to consider when responding to user queries.<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+</ol>
+</section></div></main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
     const icon = "";

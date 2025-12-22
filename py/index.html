@@ -242,10 +242,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <ul>
   <li><a href="#installation" id="toc-installation" class="nav-link active" data-scroll-target="#installation">Installation</a></li>
   <li><a href="#quick-start" id="toc-quick-start" class="nav-link" data-scroll-target="#quick-start">Quick start</a></li>
-  <li><a href="#how-it-works" id="toc-how-it-works" class="nav-link" data-scroll-target="#how-it-works">How it works</a>
-  <ul class="collapse">
-  <li><a href="#bespoke-interfaces" id="toc-bespoke-interfaces" class="nav-link" data-scroll-target="#bespoke-interfaces">Bespoke interfaces</a></li>
-  </ul></li>
+  <li><a href="#custom-apps" id="toc-custom-apps" class="nav-link" data-scroll-target="#custom-apps">Custom apps</a></li>
+  <li><a href="#how-it-works" id="toc-how-it-works" class="nav-link" data-scroll-target="#how-it-works">How it works</a></li>
   <li><a href="#next-steps" id="toc-next-steps" class="nav-link" data-scroll-target="#next-steps">Next steps</a></li>
   </ul>
 <div class="toc-actions"><ul><li><a href="https://github.com/posit-dev/querychat/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li><li><a href="https://github.com/posit-dev/querychat/edit/main/pkg-py/docs/index.qmd" class="toc-action"><i class="bi empty"></i>Edit this page</a></li></ul></div></nav>
@@ -281,7 +279,7 @@ Explore data using natural language queries
 <!-- badges start -->
 <p><a href="https://pypi.org/project/querychat/"><img alt="PyPI" src="https://img.shields.io/pypi/v/querychat?logo=python&amp;logoColor=white&amp;color=orange"></a> <a href="https://choosealicense.com/licenses/mit/"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT License"></a> <a href="https://pypi.org/project/querychat"><img src="https://img.shields.io/pypi/pyversions/querychat.svg" alt="versions"></a> <a href="https://github.com/posit-dev/querychat"><img src="https://github.com/posit-dev/querychat/actions/workflows/py-test.yml/badge.svg?branch=main" alt="Python Tests"></a> <!-- badges end --></p>
 </div>
-<p>Querychat makes it easy to explore data with natural language through the power of <a href="https://shiny.posit.co/py">Shiny</a> and large language models (LLMs). Start chatting with your data in just one line of code. Or, with a few more lines, design your own rich user experience around data exploration and analysis through natural language.</p>
+<p>querychat facilitates safe and reliable natural language exploration of tabular data, powered by SQL and large language models (LLMs). For users, it offers an intuitive web application where they can quickly ask questions of their data and receive verifiable data-driven answers. As a developer, you can access the chat UI component, generated SQL queries, and filtered data to build custom applications that integrate natural language querying into your data workflows.</p>
 <section id="installation" class="level2">
 <h2 class="anchored" data-anchor-id="installation">Installation</h2>
 <p>Install the latest stable release <a href="https://pypi.org/project/querychat/">from PyPI</a>:</p>
@@ -297,12 +295,15 @@ Explore data using natural language queries
 <div class="sourceCode" id="cb2" data-filename="titanic-app.py"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat <span class="im">import</span> QueryChat</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat.data <span class="im">import</span> titanic</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(titanic(), <span class="st">"titanic"</span>, client<span class="op">=</span><span class="st">"openai/gpt-4.1"</span>)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(titanic(), <span class="st">"titanic"</span>)</span>
 <span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>app <span class="op">=</span> qc.app()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>With the above code saved to <code>titanic-app.py</code> and an API key set<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a>, you can <a href="https://shiny.posit.co/py/get-started/create-run.html#run-your-shiny-application">run the app</a> from a terminal (or <a href="https://marketplace.visualstudio.com/items?itemName=Posit.shiny">VSCode</a>):</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">OPENAI_API_KEY</span><span class="op">=</span><span class="st">"your_api_key_here"</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="ex">shiny</span> run <span class="at">--reload</span> titanic-app.py</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>With an API key set<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a>, you can run that code in a Python console and then call <code>app.run()</code> to jump into a chat. Or you can save the code to <code>titanic-app.py</code> and <a href="https://shiny.posit.co/py/get-started/create-run.html#run-your-shiny-application">run the app</a> from a terminal (or Positron, or <a href="https://marketplace.visualstudio.com/items?itemName=Posit.shiny">VS Code</a>):</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Optionally, change the default model:</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">QUERYCHAT_CLIENT</span><span class="op">=</span><span class="st">"anthropic/claude-sonnet-4-5"</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co"># And provide appropriate credentials for your chosen model provider</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">ANTHROPIC_API_KEY</span><span class="op">=</span><span class="st">"your_api_key_here"</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="ex">shiny</span> run <span class="at">--reload</span> titanic-app.py</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Once running, you’ll notice 3 main views:</p>
 <ol type="1">
 <li>A sidebar chat with suggestions on where to start exploring.</li>
@@ -312,34 +313,39 @@ Explore data using natural language queries
 <p><a href="./images/quickstart.png" class="lightbox" data-gallery="quarto-lightbox-gallery-1"><img src="./images/quickstart.png" class="shadow rounded mb-3 img-fluid" alt="Screenshot of querychat's app with the titanic dataset."></a></p>
 <p>Suppose we pick a suggestion like “Show me passengers who survived”. Since this is a filtering operation, both the data table and SQL query update accordingly.</p>
 <p><a href="./images/quickstart-filter.png" class="lightbox" data-gallery="quarto-lightbox-gallery-2"><img src="./images/quickstart-filter.png" class="shadow rounded mb-3 img-fluid" alt="Screenshot of the querychat's app with the titanic dataset filtered to passengers who survived."></a></p>
-<p>Querychat can also handle more general questions about the data that require calculations and aggregations. For example, we can ask “What is the average age of passengers who survived?”. In this case, querychat will generate/execute the SQL query to perform the relevant calculation, and return the result in the chat:</p>
+<p>querychat can also handle more general questions about the data that require calculations and aggregations. For example, we can ask “What is the average age of passengers who survived?”. The LLM will generate the SQL query to perform the calculation, querychat will execute it, and return the result in the chat:</p>
 <p><a href="./images/quickstart-summary.png" class="lightbox" data-gallery="quarto-lightbox-gallery-3"><img src="./images/quickstart-summary.png" class="shadow rounded mb-3 img-fluid" alt="Screenshot of the querychat's app with a summary statistic inlined in the chat."></a></p>
-<p>As you’ll learn later in <a href="./build.html">Build an app</a>, you can also access the SQL query and filtered/sorted data frame programmatically for use elsewhere in your app. This makes it rather seemless to have natural language interaction with your data alongside other visualizations and analyses.</p>
-<p>Before we build though, let’s take a moment to better understand how querychat works under the hood, and whether it’s right for you.</p>
+</section>
+<section id="custom-apps" class="level2">
+<h2 class="anchored" data-anchor-id="custom-apps">Custom apps</h2>
+<p>querychat is designed to be highly extensible – it provides programmatic access to the chat interface, the filtered/sorted data frame, SQL queries, and more. This makes it easy to build custom web apps that leverage natural language interaction with your data. For example, <a href="https://github.com/posit-conf-2025/llm/blob/main/_solutions/25_querychat/25_querychat_02-end-app.R">here</a>’s a bespoke app for exploring Airbnb listings in Ashville, NC:</p>
+<p><a href="./images/airbnb.png" class="lightbox" data-gallery="quarto-lightbox-gallery-4"><img src="./images/airbnb.png" class="shadow rounded mb-3 img-fluid" alt="A custom app for exploring Airbnb listings, powered by querychat."></a></p>
+<p>To learn more, see <a href="./build.html">Build an app</a> for a step-by-step guide.</p>
 </section>
 <section id="how-it-works" class="level2">
 <h2 class="anchored" data-anchor-id="how-it-works">How it works</h2>
-<p>Querychat leverages LLMs incredible capability to translate natural language into SQL queries. Frontier models are shockingly good at this task, but even the best models still need to know the overall data structure to perform well. For this reason, querychat supplies a <a href="./context.html">system prompt</a> with the schema of the data (i.e., column names, types, ranges, etc), but never the raw data itself.</p>
-<p>When the LLM generates a SQL query, querychat executes it against a SQL database (DuckDB<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a> by default) to get results in a <strong>safe</strong>, <strong>reliable</strong>, and <strong>verifiable</strong> manner. In short, this execution is <strong>safe</strong> since only <code>SELECT</code> statements are allowed, <strong>reliable</strong> since the database engine handles all calculations, and <strong>verifiable</strong> since the user can always see the SQL query that was run. This makes querychat a trustworthy tool for data exploration, as every action taken by the LLM is transparent and independently reproducible.</p>
+<p>querychat uses LLMs to translate natural language into SQL queries. Models of all sizes, from small ones you can run locally to large frontier models from major AI providers, are remarkably effective at this task. But even the best models need to understand your data’s overall structure to perform well.</p>
+<p>To address this, querychat includes schema metadata – column names, types, ranges, categorical values – in the LLM’s <a href="./context.html">system prompt</a>. Importantly, querychat <strong>does not</strong> send raw data to the LLM; it shares only enough structural information for the model to generate accurate queries. When the LLM produces a query, querychat executes it in a SQL database (DuckDB<a href="#fn2" class="footnote-ref" id="fnref2" role="doc-noteref"><sup>2</sup></a>, by default) to obtain precise results.</p>
+<p>This design makes querychat reliable, safe, and reproducible:</p>
+<ul>
+<li><strong>Reliable</strong>: query results come from a real database, not LLM-generated summaries – so outputs are precise, verifiable, and less vulnerable to hallucination<a href="#fn3" class="footnote-ref" id="fnref3" role="doc-noteref"><sup>3</sup></a>.</li>
+<li><strong>Safe</strong>: querychat’s tools are read-only by design, avoiding destructive actions on your data.<a href="#fn4" class="footnote-ref" id="fnref4" role="doc-noteref"><sup>4</sup></a></li>
+<li><strong>Reproducible</strong>: generated SQL can be exported and re-run in other environments, so your analysis isn’t locked into a single tool.</li>
+</ul>
 <div class="callout callout-style-default callout-important callout-titled">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
 <div class="callout-title-container flex-fill">
-Data privacy
+Important
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>See the <a href="./context.html">Provide context</a> and <a href="./tools.html">Tools</a> articles to learn more about what information is provided to the LLM and what it’s capable of doing with code execution.</p>
+<p><strong>Data privacy</strong></p>
+<p>See the <a href="./context.html">Provide context</a> and <a href="./tools.html">Tools</a> articles for more details on exactly what information is provided to the LLM and how customize it.</p>
 </div>
 </div>
-<section id="bespoke-interfaces" class="level3">
-<h3 class="anchored" data-anchor-id="bespoke-interfaces">Bespoke interfaces</h3>
-<p>While the quickstart app is a great way to get started, querychat is designed to be highly extensible. You can not only customize the underlying model and data source, but also build fully custom Shiny apps around the core chat functionality.</p>
-<p>For a motivating example, consider the following (<a href="https://shiny.posit.co/py/docs/genai-inspiration.html#sidebot">sidebot</a>) app that leverages querychat’s tooling to create reactive summaries and visualizations based on the user’s natural language queries:</p>
-<p><a href="./images/sidebot.png" class="lightbox" data-gallery="quarto-lightbox-gallery-4"><img src="./images/sidebot.png" class="shadow rounded mb-3 img-fluid" alt="Screenshot of sidebot, a custom shiny app built with querychat."></a></p>
-</section>
 </section>
 <section id="next-steps" class="level2">
 <h2 class="anchored" data-anchor-id="next-steps">Next steps</h2>
@@ -358,8 +364,10 @@ Data privacy
 <div id="quarto-appendix" class="default"><section id="footnotes" class="footnotes footnotes-end-of-document" role="doc-endnotes"><h2 class="anchored quarto-appendix-heading">Footnotes</h2>
 
 <ol>
-<li id="fn1"><p>By default, Querychat uses OpenAI to power the chat experience. So, for this example to work, you’ll need <a href="https://platform.openai.com/">an OpenAI API key</a>. See the <a href="./models.html">Models</a> page for details on how to set up credentials for other model providers.<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-<li id="fn2"><p>Duckdb is extremely fast and has a surprising number of <a href="https://duckdb.org/docs/stable/sql/functions/aggregates.html#statistical-aggregates">statistical functions</a>.<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn1"><p>By default, querychat uses OpenAI to power the chat experience. So, for this example to work, you’ll need <a href="https://platform.openai.com/">an OpenAI API key</a>. See the <a href="./models.html">Models</a> page for details on how to set up credentials for other model providers.<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn2"><p>DuckDB is extremely fast and has a surprising number of <a href="https://duckdb.org/docs/stable/sql/functions/aggregates.html#statistical-aggregates">statistical functions</a>.<a href="#fnref2" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn3"><p>The <a href="./tools.html">query tool</a> gives query results to the model for context and interpretation. Thus, there is <em>some</em> potential that the model to mis-interpret those results.<a href="#fnref3" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+<li id="fn4"><p>To fully guarantee no destructive actions on your production database, ensure querychat’s database permissions are read-only.<a href="#fnref4" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
 </ol>
 </section></div></main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">

@@ -258,7 +258,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<p><code>querychat</code> supports many types of data sources, including:</p>
+<p><code>querychat</code> supports several different data sources, including:</p>
 <ol type="1">
 <li>Any <a href="https://narwhals-dev.github.io/narwhals/">narwhals-compatible</a> data frame.</li>
 <li>Any <a href="https://www.sqlalchemy.org/">SQLAlchemy</a> database.</li>
@@ -326,8 +326,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="databases" class="level2">
 <h2 class="anchored" data-anchor-id="databases">Databases</h2>
-<p>You can also connect <code>querychat</code> directly to any database supported by <a href="https://www.sqlalchemy.org/">SQLAlchemy</a>. This includes popular databases like SQLite, DuckDB, PostgreSQL, MySQL, and many more.</p>
-<p>Assuming you have a database set up and accessible, you can pass a SQLAlchemy <a href="https://docs.sqlalchemy.org/en/20/core/engines.html">database URL</a> to <code>create_engine()</code>, and then pass the resulting engine to <code>QueryChat</code>. Below are some examples for common databases.</p>
+<p>You can also connect <code>querychat</code> directly to a table in any database supported by <a href="https://www.sqlalchemy.org/">SQLAlchemy</a>. This includes popular databases like SQLite, DuckDB, PostgreSQL, MySQL, and many more.</p>
+<p>Assuming you have a database set up and accessible, you can pass a SQLAlchemy <a href="https://docs.sqlalchemy.org/en/20/core/engines.html">database URL</a> to <code>create_engine()</code>, and then pass the resulting engine to <code>querychat</code>. Below are some examples for common databases.</p>
 <div class="tabset-margin-container"></div><div class="panel-tabset">
 <ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-2-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-2-1" role="tab" aria-controls="tabset-2-1" aria-selected="true">Duck DB</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-2-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-2-2" role="tab" aria-controls="tabset-2-2" aria-selected="false">SQLite</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-2-3-tab" data-bs-toggle="tab" data-bs-target="#tabset-2-3" role="tab" aria-controls="tabset-2-3" aria-selected="false">PostgreSQL</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-2-4-tab" data-bs-toggle="tab" data-bs-target="#tabset-2-4" role="tab" aria-controls="tabset-2-4" aria-selected="false">MySQL</a></li></ul>
 <div class="tab-content">

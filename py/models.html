@@ -261,7 +261,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <p>Under the hood, <code>querychat</code> is powered by <a href="https://posit-dev.github.io/chatlas/">chatlas</a>, a library for building chat-based applications with large language models (LLMs). <code>chatlas</code> supports a wide range of LLM providers – <a href="https://posit-dev.github.io/chatlas/get-started/models.html">see here</a> for a full list.</p>
 <section id="specify-a-model" class="level3">
 <h3 class="anchored" data-anchor-id="specify-a-model">Specify a model</h3>
-<p>To use a particular model, pass a <code>"{provider}/{model}"</code> string to the <code>client</code> parameter. Under the hood, this gets passed along to <a href="https://posit-dev.github.io/chatlas/reference/ChatAuto.html"><code>chatlas.ChatAuto</code></a></p>
+<p>To use a particular model, pass a <code>"{provider}/{model}"</code> string to the <code>client</code> parameter, which gets passed along to <a href="https://posit-dev.github.io/chatlas/reference/ChatAuto.html"><code>chatlas.ChatAuto</code></a></p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat <span class="im">import</span> QueryChat</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat.data <span class="im">import</span> titanic</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -322,8 +322,8 @@ Github model marketplace
 <li>Claude 4.5 Sonnet</li>
 <li>Google Gemini 3.0</li>
 </ul>
-<p>In our testing, we’ve found that those models strike a good balance between accuracy and latency. Smaller/cheaper models like GPT-4o-mini are fine for simple queries but make surprising mistakes with more complex ones; and reasoning models like o3-mini slow down responses without providing meaningfully better results.</p>
-<p>We’ve also seen some decent results with frontier local models, but even if you have the compute to run the largest models, they still tend to lag behind the cloud-hosted options in terms of accuracy and speed.</p>
+<p>In our testing, we’ve found that those models strike a good balance between accuracy and latency. That said, smaller/faster models like GPT-4.1-mini or Claude Haiku 4.5 work well for most tables and are worth trying first—they’re significantly cheaper and faster. You can always switch to a larger model if you find the results aren’t meeting your needs. On the other end of the spectrum, reasoning models like o3-mini tend to slow down responses without providing meaningfully better results for this task.</p>
+<p>We’ve also seen some decent results with frontier local models (e.g., <code>gpt-oss:20b</code>), but even if you have the compute to run the largest models, they still tend to lag behind the cloud-hosted options in terms of accuracy and speed.</p>
 <div class="callout callout-style-default callout-tip callout-titled">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">

@@ -5,7 +5,7 @@ title: Greet users
 
 ### Provide a greeting
 
-When the querychat UI first appears, you will usually want it to greet the user with some basic instructions. By default, these instructions are auto-generated every time a user arrives. In a production setting with multiple users/visitors, this is slow, wasteful, and non-deterministic. Instead, you should create a greeting file and pass it when creating your `QueryChat` object:
+When the querychat UI first appears, you will usually want it to greet the user with some basic instructions. By default, these instructions are auto-generated every time a user arrives. In a production setting with multiple users/visitors, this approach has some downsides: it's slower, uses more API tokens, and produces different results each time. Instead, you should create a greeting file and pass it when creating your `QueryChat` object:
 
 ```{.python filename="titanic-app.py"}
 from querychat import QueryChat

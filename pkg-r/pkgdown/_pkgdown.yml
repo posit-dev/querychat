@@ -31,19 +31,39 @@ template:
 
 navbar:
   structure:
-    left:  [get-started, articles, reference, news]
+    left:  [articles, reference, news]
     right: [search, github, lightswitch]
   components:
-    home: ~
+    articles:
+      text: Articles 
+      menu:
+      - text: Models
+        href: articles/models.html
+      - text: Data Sources
+        href: articles/data-sources.html
+      - text: Provide context
+        href: articles/context.html
+      - text: Build an app
+        href: articles/build.html
+      - text: Greet users
+        href: articles/greet.html
+      - text: Tools
+        href: articles/tools.html
 
 reference:
-- title: Chat interfaces
+- title: Convenience functions
+  contents:
+  - querychat_app
+  - querychat
+- title: Build a custom app
   contents:
   - querychat
   - QueryChat
-
-- title: Data Sources
+- title: Data sources
   contents:
   - DataSource
   - DataFrameSource
   - DBISource
+- title: Package
+  contents:
+  - querychat

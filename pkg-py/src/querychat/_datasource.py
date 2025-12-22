@@ -14,6 +14,10 @@ if TYPE_CHECKING:
     from sqlalchemy.engine import Connection, Engine
 
 
+class MissingColumnsError(ValueError):
+    """Raised when a query result is missing required columns."""
+
+
 class DataSource(ABC):
     """
     An abstract class defining the interface for data sources used by QueryChat.
@@ -66,6 +70,34 @@ class DataSource(ABC):
         -------
         :
             Query results as a pandas DataFrame
+
+        """
+        ...
+
+    @abstractmethod
+    def test_query(
+        self, query: str, *, require_all_columns: bool = False
+    ) -> pd.DataFrame:
+        """
+        Test SQL query by fetching only one row.
+
+        Parameters
+        ----------
+        query
+            SQL query to test
+        require_all_columns
+            If True, validates that result includes all original table columns.
+            Additional computed columns are allowed.
+
+        Returns
+        -------
+        :
+            Query results as a pandas DataFrame with at most one row
+
+        Raises
+        ------
+        MissingColumnsError
+            If require_all_columns is True and result is missing required columns
 
         """
         ...
@@ -135,6 +167,9 @@ SET disabled_filesystems = 'LocalFileSystem';
 -- freeze configuration so user SQL can't relax anything
 SET lock_configuration = true;
         """)
+
+        # Store original column names for validation
+        self._colnames = list(self._df.columns)
 
     def get_db_type(self) -> str:
         """
@@ -228,6 +263,48 @@ SET lock_configuration = true;
         """
         return self._conn.execute(query).df()
 
+    def test_query(
+        self, query: str, *, require_all_columns: bool = False
+    ) -> pd.DataFrame:
+        """
+        Test query by fetching only one row.
+
+        Parameters
+        ----------
+        query
+            SQL query to test
+        require_all_columns
+            If True, validates that result includes all original table columns
+
+        Returns
+        -------
+        :
+            Query results with at most one row
+
+        Raises
+        ------
+        MissingColumnsError
+            If require_all_columns is True and result is missing required columns
+
+        """
+        result = self._conn.execute(f"{query} LIMIT 1").df()
+
+        if require_all_columns:
+            result_columns = set(result.columns)
+            original_columns_set = set(self._colnames)
+            missing_columns = original_columns_set - result_columns
+
+            if missing_columns:
+                missing_list = ", ".join(f"'{col}'" for col in sorted(missing_columns))
+                original_list = ", ".join(f"'{col}'" for col in self._colnames)
+                raise MissingColumnsError(
+                    f"Query result missing required columns: {missing_list}. "
+                    f"The query must return all original table columns. "
+                    f"Original columns: {original_list}"
+                )
+
+        return result
+
     def get_data(self) -> pd.DataFrame:
         """
         Return the unfiltered data as a DataFrame.
@@ -282,6 +359,10 @@ class SQLAlchemySource(DataSource):
         inspector = inspect(self._engine)
         if not inspector.has_table(table_name):
             raise ValueError(f"Table '{table_name}' not found in database")
+
+        # Store original column names for validation
+        columns_info = inspector.get_columns(table_name)
+        self._colnames = [col["name"] for col in columns_info]
 
     def get_db_type(self) -> str:
         """
@@ -444,6 +525,57 @@ class SQLAlchemySource(DataSource):
         """
         with self._get_connection() as conn:
             return pd.read_sql_query(text(query), conn)
+
+    def test_query(
+        self, query: str, *, require_all_columns: bool = False
+    ) -> pd.DataFrame:
+        """
+        Test query by fetching only one row.
+
+        Parameters
+        ----------
+        query
+            SQL query to test
+        require_all_columns
+            If True, validates that result includes all original table columns
+
+        Returns
+        -------
+        :
+            Query results with at most one row
+
+        Raises
+        ------
+        MissingColumnsError
+            If require_all_columns is True and result is missing required columns
+
+        """
+        with self._get_connection() as conn:
+            # Use pandas read_sql_query with limit to get at most one row
+            limit_query = f"SELECT * FROM ({query}) AS subquery LIMIT 1"
+            try:
+                df = pd.read_sql_query(text(limit_query), conn)
+            except Exception:
+                # If LIMIT syntax doesn't work, fall back to regular read and take first row
+                df = pd.read_sql_query(text(query), conn).head(1)
+
+            if require_all_columns:
+                result_columns = set(df.columns)
+                original_columns_set = set(self._colnames)
+                missing_columns = original_columns_set - result_columns
+
+                if missing_columns:
+                    missing_list = ", ".join(
+                        f"'{col}'" for col in sorted(missing_columns)
+                    )
+                    original_list = ", ".join(f"'{col}'" for col in self._colnames)
+                    raise MissingColumnsError(
+                        f"Query result missing required columns: {missing_list}. "
+                        f"The query must return all original table columns. "
+                        f"Original columns: {original_list}"
+                    )
+
+            return df
 
     def get_data(self) -> pd.DataFrame:
         """

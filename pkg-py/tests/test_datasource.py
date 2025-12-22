@@ -2,8 +2,10 @@ import sqlite3
 import tempfile
 from pathlib import Path
 
+import pandas as pd
 import pytest
-from querychat._datasource import SQLAlchemySource
+from querychat._datasource import DataFrameSource, SQLAlchemySource
+from querychat.types import MissingColumnsError
 from sqlalchemy import create_engine, text
 
 
@@ -217,3 +219,171 @@ def test_invalid_table_name():
 
     with pytest.raises(ValueError, match="Table 'nonexistent' not found in database"):
         SQLAlchemySource(engine, "nonexistent")
+
+
+def test_test_query_validates_all_columns(test_db_engine):
+    """Test that test_query validates all columns when require_all_columns=True."""
+    source = SQLAlchemySource(test_db_engine, "test_table")
+
+    # Should succeed with all columns
+    result = source.test_query("SELECT * FROM test_table", require_all_columns=True)
+    assert len(result) <= 1
+    expected_cols = {
+        "id",
+        "name",
+        "age",
+        "salary",
+        "is_active",
+        "join_date",
+        "category",
+        "score",
+        "description",
+    }
+    assert set(result.columns) == expected_cols
+
+    # Should succeed with all columns in different order
+    result = source.test_query(
+        "SELECT description, id, name, age, salary, is_active, join_date, category, score FROM test_table",
+        require_all_columns=True,
+    )
+    assert len(result) <= 1
+    assert set(result.columns) == expected_cols
+
+
+def test_test_query_allows_additional_columns(test_db_engine):
+    """Test that test_query allows additional computed columns."""
+    source = SQLAlchemySource(test_db_engine, "test_table")
+
+    # Should succeed with all columns plus computed columns
+    result = source.test_query(
+        "SELECT *, age * 2 as double_age FROM test_table", require_all_columns=True
+    )
+    assert len(result) <= 1
+    assert "double_age" in result.columns
+    expected_cols = {
+        "id",
+        "name",
+        "age",
+        "salary",
+        "is_active",
+        "join_date",
+        "category",
+        "score",
+        "description",
+        "double_age",
+    }
+    assert set(result.columns) == expected_cols
+
+
+def test_test_query_fails_on_missing_columns(test_db_engine):
+    """Test that test_query fails when columns are missing."""
+    source = SQLAlchemySource(test_db_engine, "test_table")
+
+    # Should fail when missing columns
+    with pytest.raises(
+        MissingColumnsError, match="Query result missing required columns"
+    ):
+        source.test_query(
+            "SELECT id, name, age FROM test_table", require_all_columns=True
+        )
+
+    # Check that error message lists missing columns
+    with pytest.raises(MissingColumnsError, match="'salary'"):
+        source.test_query(
+            "SELECT id, name, age FROM test_table", require_all_columns=True
+        )
+
+
+def test_test_query_without_validation(test_db_engine):
+    """Test that test_query works without validation by default."""
+    source = SQLAlchemySource(test_db_engine, "test_table")
+
+    # Should succeed with subset of columns when not validating (default)
+    result = source.test_query("SELECT id, name FROM test_table")
+    assert len(result) <= 1
+    assert list(result.columns) == ["id", "name"]
+
+    # Should succeed with explicit require_all_columns=False
+    result = source.test_query(
+        "SELECT id, name FROM test_table", require_all_columns=False
+    )
+    assert len(result) <= 1
+    assert list(result.columns) == ["id", "name"]
+
+
+def test_test_query_empty_result(test_db_engine):
+    """Test that test_query handles empty results correctly."""
+    source = SQLAlchemySource(test_db_engine, "test_table")
+
+    # Query with no matches
+    result = source.test_query(
+        "SELECT * FROM test_table WHERE id = 999", require_all_columns=True
+    )
+    assert len(result) == 0
+    # Should still have column structure for validation
+    expected_cols = {
+        "id",
+        "name",
+        "age",
+        "salary",
+        "is_active",
+        "join_date",
+        "category",
+        "score",
+        "description",
+    }
+    assert set(result.columns) == expected_cols
+
+
+def test_test_query_dataframe_source():
+    """Test that test_query works with DataFrameSource."""
+    # Create test DataFrame
+    test_df = pd.DataFrame(
+        {
+            "id": [1, 2, 3, 4, 5],
+            "name": ["a", "b", "c", "d", "e"],
+            "value": [10, 20, 30, 40, 50],
+        }
+    )
+
+    source = DataFrameSource(test_df, "test_table")
+
+    # Should succeed with all columns
+    result = source.test_query("SELECT * FROM test_table", require_all_columns=True)
+    assert len(result) <= 1
+    assert set(result.columns) == {"id", "name", "value"}
+
+    # Should succeed with additional computed columns
+    result = source.test_query(
+        "SELECT *, value * 2 as doubled FROM test_table", require_all_columns=True
+    )
+    assert len(result) <= 1
+    assert "doubled" in result.columns
+    assert set(result.columns) == {"id", "name", "value", "doubled"}
+
+    # Should fail when missing columns
+    with pytest.raises(
+        MissingColumnsError, match="Query result missing required columns"
+    ):
+        source.test_query("SELECT id FROM test_table", require_all_columns=True)
+
+    # Should succeed without validation (default)
+    result = source.test_query("SELECT id FROM test_table")
+    assert len(result) <= 1
+    assert list(result.columns) == ["id"]
+
+    source.cleanup()
+
+
+def test_test_query_error_message_format(test_db_engine):
+    """Test that error message provides helpful information."""
+    source = SQLAlchemySource(test_db_engine, "test_table")
+
+    # Test error message format
+    with pytest.raises(MissingColumnsError) as exc_info:
+        source.test_query("SELECT id, name FROM test_table", require_all_columns=True)
+
+    error_message = str(exc_info.value)
+    assert "Query result missing required columns" in error_message
+    assert "The query must return all original table columns" in error_message
+    assert "Original columns:" in error_message

@@ -634,3 +634,130 @@ describe("DataFrameSource$test_query()", {
     expect_equal(nrow(result), 0)
   })
 })
+
+describe("test_query() column validation", {
+  skip_if_no_dataframe_engine()
+
+  it("allows all columns through, regardless of order", {
+    source <- local_data_frame_source(new_test_df())
+
+    # Should succeed with all columns
+    result <- source$test_query(
+      "SELECT * FROM test_table",
+      require_all_columns = TRUE
+    )
+    expect_s3_class(result, "data.frame")
+    expect_equal(names(result), c("id", "name", "value"))
+
+    # Should succeed with all columns in different order
+    result <- source$test_query(
+      "SELECT value, id, name FROM test_table",
+      require_all_columns = TRUE
+    )
+    expect_s3_class(result, "data.frame")
+    expect_equal(sort(names(result)), c("id", "name", "value"))
+  })
+
+  it("allows additional computed columns when require_all_columns=TRUE", {
+    source <- local_data_frame_source(new_test_df())
+
+    # Should succeed with all columns plus computed columns
+    result <- source$test_query(
+      "SELECT *, value * 2 as doubled FROM test_table",
+      require_all_columns = TRUE
+    )
+    expect_s3_class(result, "data.frame")
+    expect_true(all(c("id", "name", "value", "doubled") %in% names(result)))
+  })
+
+  it("fails when columns are missing and require_all_columns=TRUE", {
+    source <- local_data_frame_source(new_test_df())
+
+    # Should fail when missing one column
+    expect_error(
+      source$test_query(
+        "SELECT id, name FROM test_table",
+        require_all_columns = TRUE
+      ),
+      class = "querychat_missing_columns_error"
+    )
+
+    # Should fail when missing multiple columns
+    expect_error(
+      source$test_query(
+        "SELECT id FROM test_table",
+        require_all_columns = TRUE
+      ),
+      class = "querychat_missing_columns_error"
+    )
+  })
+
+  it("does not validate when require_all_columns=FALSE (default)", {
+    source <- local_data_frame_source(new_test_df())
+
+    # Should succeed with subset of columns when not validating
+    result <- source$test_query("SELECT id FROM test_table")
+    expect_s3_class(result, "data.frame")
+    expect_equal(names(result), "id")
+
+    result <- source$test_query(
+      "SELECT id FROM test_table",
+      require_all_columns = FALSE
+    )
+    expect_s3_class(result, "data.frame")
+    expect_equal(names(result), "id")
+  })
+
+  it("provides helpful error message listing missing columns", {
+    source <- local_data_frame_source(new_test_df())
+
+    expect_snapshot(error = TRUE, {
+      source$test_query(
+        "SELECT id FROM test_table",
+        require_all_columns = TRUE
+      )
+    })
+
+    expect_snapshot(error = TRUE, {
+      source$test_query(
+        "SELECT id, name FROM test_table",
+        require_all_columns = TRUE
+      )
+    })
+  })
+
+  it("works with DBISource as well", {
+    db <- local_sqlite_connection(new_test_df(), "test_table")
+    source <- DBISource$new(db$conn, "test_table")
+
+    # Should succeed with all columns
+    result <- source$test_query(
+      "SELECT * FROM test_table",
+      require_all_columns = TRUE
+    )
+    expect_s3_class(result, "data.frame")
+    expect_equal(names(result), c("id", "name", "value"))
+
+    # Should fail when missing columns
+    expect_error(
+      source$test_query(
+        "SELECT id FROM test_table",
+        require_all_columns = TRUE
+      ),
+      class = "querychat_missing_columns_error"
+    )
+  })
+
+  it("handles empty result sets correctly", {
+    source <- local_data_frame_source(new_test_df())
+
+    # Query with no matches should still validate columns
+    result <- source$test_query(
+      "SELECT * FROM test_table WHERE id > 999",
+      require_all_columns = TRUE
+    )
+    expect_s3_class(result, "data.frame")
+    expect_equal(nrow(result), 0)
+    expect_equal(names(result), c("id", "name", "value"))
+  })
+})

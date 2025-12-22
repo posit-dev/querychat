@@ -187,3 +187,21 @@
       ! Table "`non_existent_table`" not found in database
       i If you're using a table in a catalog or schema, pass a `DBI::Id()` object to `table_name`
 
+# test_query() column validation / provides helpful error message listing missing columns
+
+    Code
+      source$test_query("SELECT id FROM test_table", require_all_columns = TRUE)
+    Condition
+      Error in `source$test_query()`:
+      ! Query result missing required columns: 'name', 'value'
+      i The query must return all original table columns (in any order).
+
+---
+
+    Code
+      source$test_query("SELECT id, name FROM test_table", require_all_columns = TRUE)
+    Condition
+      Error in `source$test_query()`:
+      ! Query result missing required columns: 'value'
+      i The query must return all original table columns (in any order).
+

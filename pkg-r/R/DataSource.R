@@ -9,6 +9,9 @@
 #' @export
 DataSource <- R6::R6Class(
   "DataSource",
+  private = list(
+    colnames = NULL
+  ),
   public = list(
     #' @field table_name Name of the table to be used in SQL queries
     table_name = NULL,
@@ -53,8 +56,10 @@ DataSource <- R6::R6Class(
     #' Test a SQL query by fetching only one row
     #'
     #' @param query SQL query string to test
+    #' @param require_all_columns If TRUE, validates that the result includes
+    #'   all original table columns (default: FALSE)
     #' @return A data frame containing one row of results (or empty if no matches)
-    test_query = function(query) {
+    test_query = function(query, require_all_columns = FALSE) {
       cli::cli_abort(
         "{.fn test_query} must be implemented by subclass",
         class = "not_implemented_error"
@@ -159,6 +164,7 @@ DataFrameSource <- R6::R6Class(
       arg_match(engine, c("duckdb", "sqlite"))
 
       self$table_name <- table_name
+      private$colnames <- colnames(df)
 
       # Create in-memory connection and register the data frame
       if (engine == "duckdb") {
@@ -277,6 +283,15 @@ DBISource <- R6::R6Class(
 
       private$conn <- conn
       self$table_name <- table_name
+
+      # Store original column names for validation
+      private$colnames <- colnames(DBI::dbGetQuery(
+        conn,
+        sprintf(
+          "SELECT * FROM %s LIMIT 0",
+          DBI::dbQuoteIdentifier(conn, table_name)
+        )
+      ))
     },
 
     #' @description Get the database type
@@ -329,12 +344,33 @@ DBISource <- R6::R6Class(
     #' Test a SQL query by fetching only one row
     #'
     #' @param query SQL query string
+    #' @param require_all_columns If TRUE, validates that the result includes
+    #'   all original table columns (default: FALSE)
     #' @return A data frame with one row of results
-    test_query = function(query) {
+    test_query = function(query, require_all_columns = FALSE) {
       check_string(query)
+      check_bool(require_all_columns)
+
       rs <- DBI::dbSendQuery(private$conn, query)
       df <- DBI::dbFetch(rs, n = 1)
       DBI::dbClearResult(rs)
+
+      if (require_all_columns) {
+        result_columns <- names(df)
+        missing_columns <- setdiff(private$colnames, result_columns)
+
+        if (length(missing_columns) > 0) {
+          missing_list <- paste0("'", missing_columns, "'", collapse = ", ")
+          cli::cli_abort(
+            c(
+              "Query result missing required columns: {missing_list}",
+              "i" = "The query must return all original table columns (in any order)."
+            ),
+            class = "querychat_missing_columns_error"
+          )
+        }
+      }
+
       df
     },
 

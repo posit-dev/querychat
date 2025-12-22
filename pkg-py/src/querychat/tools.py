@@ -75,7 +75,7 @@ def _update_dashboard_impl(
 
         try:
             # Test the query but don't execute it yet
-            data_source.execute_query(query)
+            data_source.test_query(query, require_all_columns=True)
 
             # Add Apply Filter button
             button_html = f"""<button

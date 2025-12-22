@@ -1,4 +1,6 @@
 describe("QueryChat$new()", {
+  skip_if_no_dataframe_engine()
+
   it("automatically converts data.frame to DataFrameSource", {
     qc <- QueryChat$new(
       data_source = new_test_df(),
@@ -231,6 +233,8 @@ describe("QueryChat$system_prompt", {
 })
 
 describe("QueryChat$data_source", {
+  skip_if_no_dataframe_engine()
+
   it("returns the data source object", {
     test_df <- new_test_df()
     qc <- QueryChat$new(test_df, greeting = "Test")
@@ -470,6 +474,7 @@ test_that("QueryChat$server() errors when called outside Shiny context", {
 })
 
 describe("querychat()", {
+  skip_if_no_dataframe_engine()
   withr::local_envvar(OPENAI_API_KEY = "boop")
 
   it("creates a QueryChat object", {
@@ -597,6 +602,8 @@ describe("QueryChat$console()", {
 })
 
 describe("normalize_data_source()", {
+  skip_if_no_dataframe_engine()
+
   it("returns DataSource objects unchanged", {
     test_df <- new_test_df()
     df_source <- DataFrameSource$new(test_df, "test_df")

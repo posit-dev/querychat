@@ -1,5 +1,7 @@
 # querychat (development version)
 
+* `querychat()` and `QueryChat$new()` now use either `{duckdb}` or `{SQLite}` for the in-memory database backend for data frames, depending on which package is installed. If both are installed, `{duckdb}` will be preferred. You can explicitly choose the `engine` in `DataFrameSource$new()` or set `querychat.DataFrameSource.engine` option to choose a global default. (#178)
+
 * `QueryChat$sidebar()`, `QueryChat$ui()`, and `QueryChat$server()` now support an optional `id` parameter to enable use within Shiny modules. When used in a module UI function, pass `id = ns("your_id")` where `ns` is the namespacing function from `shiny::NS()`. In the corresponding module server function, pass the unwrapped ID to `QueryChat$server(id = "your_id")`. This enables multiple independent QueryChat instances from the same QueryChat object. (#172)
 
 * `QueryChat$client()` can now create standalone querychat-enabled chat clients with configurable tools and callbacks, enabling use outside of Shiny applications. (#168)

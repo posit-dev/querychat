@@ -4,26 +4,38 @@
 \alias{DataFrameSource}
 \title{Data Frame Source}
 \description{
-A DataSource implementation that wraps a data frame using DuckDB for SQL
-query execution.
+A DataSource implementation that wraps a data frame using DuckDB or SQLite
+for SQL query execution.
 }
 \details{
-This class creates an in-memory DuckDB connection and registers the provided
-data frame as a table. All SQL queries are executed against this DuckDB table.
+This class creates an in-memory database connection and registers the
+provided data frame as a table. All SQL queries are executed against this
+database table. See \link{DBISource} for the full description of available
+methods.
+
+By default, DataFrameSource uses the first available engine from duckdb
+(checked first) or RSQLite. You can explicitly set the \code{engine} parameter to
+choose between "duckdb" or "sqlite", or set the global option
+\code{querychat.DataFrameSource.engine} to choose the default engine for all
+DataFrameSource instances. At least one of these packages must be installed.
 }
 \examples{
 \dontrun{
-# Create a data frame source
+# Create a data frame source (uses first available: duckdb or sqlite)
 df_source <- DataFrameSource$new(mtcars, "mtcars")
 
 # Get database type
-df_source$get_db_type()  # Returns "DuckDB"
+df_source$get_db_type()  # Returns "DuckDB" or "SQLite"
 
 # Execute a query
 result <- df_source$execute_query("SELECT * FROM mtcars WHERE mpg > 25")
 
+# Explicitly choose an engine
+df_sqlite <- DataFrameSource$new(mtcars, "mtcars", engine = "sqlite")
+
 # Clean up when done
 df_source$cleanup()
+df_sqlite$cleanup()
 }
 
 ## ------------------------------------------------
@@ -34,29 +46,39 @@ df_source$cleanup()
 source <- DataFrameSource$new(iris, "iris")
 }
 }
-\section{Super class}{
-\code{\link[querychat:DataSource]{querychat::DataSource}} -> \code{DataFrameSource}
+\section{Super classes}{
+\code{\link[querychat:DataSource]{querychat::DataSource}} -> \code{\link[querychat:DBISource]{querychat::DBISource}} -> \code{DataFrameSource}
 }
 \section{Methods}{
 \subsection{Public methods}{
 \itemize{
 \item \href{#method-DataFrameSource-new}{\code{DataFrameSource$new()}}
-\item \href{#method-DataFrameSource-get_db_type}{\code{DataFrameSource$get_db_type()}}
-\item \href{#method-DataFrameSource-get_schema}{\code{DataFrameSource$get_schema()}}
-\item \href{#method-DataFrameSource-execute_query}{\code{DataFrameSource$execute_query()}}
-\item \href{#method-DataFrameSource-test_query}{\code{DataFrameSource$test_query()}}
-\item \href{#method-DataFrameSource-get_data}{\code{DataFrameSource$get_data()}}
-\item \href{#method-DataFrameSource-cleanup}{\code{DataFrameSource$cleanup()}}
 \item \href{#method-DataFrameSource-clone}{\code{DataFrameSource$clone()}}
 }
 }
+\if{html}{\out{
+<details><summary>Inherited methods</summary>
+<ul>
+<li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="cleanup"><a href='../../querychat/html/DBISource.html#method-DBISource-cleanup'><code>querychat::DBISource$cleanup()</code></a></span></li>
+<li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="execute_query"><a href='../../querychat/html/DBISource.html#method-DBISource-execute_query'><code>querychat::DBISource$execute_query()</code></a></span></li>
+<li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_data"><a href='../../querychat/html/DBISource.html#method-DBISource-get_data'><code>querychat::DBISource$get_data()</code></a></span></li>
+<li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_db_type"><a href='../../querychat/html/DBISource.html#method-DBISource-get_db_type'><code>querychat::DBISource$get_db_type()</code></a></span></li>
+<li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_schema"><a href='../../querychat/html/DBISource.html#method-DBISource-get_schema'><code>querychat::DBISource$get_schema()</code></a></span></li>
+<li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="test_query"><a href='../../querychat/html/DBISource.html#method-DBISource-test_query'><code>querychat::DBISource$test_query()</code></a></span></li>
+</ul>
+</details>
+}}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-DataFrameSource-new"></a>}}
 \if{latex}{\out{\hypertarget{method-DataFrameSource-new}{}}}
 \subsection{Method \code{new()}}{
 Create a new DataFrameSource
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{DataFrameSource$new(df, table_name)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{DataFrameSource$new(
+  df,
+  table_name,
+  engine = getOption("querychat.DataFrameSource.engine", NULL)
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -67,6 +89,11 @@ Create a new DataFrameSource
 \item{\code{table_name}}{Name to use for the table in SQL queries. Must be a
 valid table name (start with letter, contain only letters, numbers,
 and underscores)}
+
+\item{\code{engine}}{Database engine to use: "duckdb" or "sqlite". Set the
+global option \code{querychat.DataFrameSource.engine} to specify the default
+engine for all instances. If NULL (default), uses the first available
+engine from duckdb or RSQLite (in that order).}
 }
 \if{html}{\out{</div>}}
 }
@@ -83,106 +110,6 @@ source <- DataFrameSource$new(iris, "iris")
 
 }
 
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-DataFrameSource-get_db_type"></a>}}
-\if{latex}{\out{\hypertarget{method-DataFrameSource-get_db_type}{}}}
-\subsection{Method \code{get_db_type()}}{
-Get the database type
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{DataFrameSource$get_db_type()}\if{html}{\out{</div>}}
-}
-
-\subsection{Returns}{
-The string "DuckDB"
-}
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-DataFrameSource-get_schema"></a>}}
-\if{latex}{\out{\hypertarget{method-DataFrameSource-get_schema}{}}}
-\subsection{Method \code{get_schema()}}{
-Get schema information for the data frame
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{DataFrameSource$get_schema(categorical_threshold = 20)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{categorical_threshold}}{Maximum number of unique values for a text
-column to be considered categorical (default: 20)}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-A string describing the schema
-}
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-DataFrameSource-execute_query"></a>}}
-\if{latex}{\out{\hypertarget{method-DataFrameSource-execute_query}{}}}
-\subsection{Method \code{execute_query()}}{
-Execute a SQL query
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{DataFrameSource$execute_query(query)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{query}}{SQL query string. If NULL or empty, returns all data}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-A data frame with query results
-}
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-DataFrameSource-test_query"></a>}}
-\if{latex}{\out{\hypertarget{method-DataFrameSource-test_query}{}}}
-\subsection{Method \code{test_query()}}{
-Test a SQL query by fetching only one row
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{DataFrameSource$test_query(query)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{query}}{SQL query string}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-A data frame with one row of results
-}
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-DataFrameSource-get_data"></a>}}
-\if{latex}{\out{\hypertarget{method-DataFrameSource-get_data}{}}}
-\subsection{Method \code{get_data()}}{
-Get all data from the table
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{DataFrameSource$get_data()}\if{html}{\out{</div>}}
-}
-
-\subsection{Returns}{
-A data frame containing all data
-}
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-DataFrameSource-cleanup"></a>}}
-\if{latex}{\out{\hypertarget{method-DataFrameSource-cleanup}{}}}
-\subsection{Method \code{cleanup()}}{
-Close the DuckDB connection
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{DataFrameSource$cleanup()}\if{html}{\out{</div>}}
-}
-
-\subsection{Returns}{
-NULL (invisibly)
-}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-DataFrameSource-clone"></a>}}

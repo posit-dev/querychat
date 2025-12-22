@@ -30,6 +30,8 @@ describe("DataSource base class", {
 })
 
 describe("DataFrameSource$new()", {
+  skip_if_no_dataframe_engine()
+
   it("creates proper R6 object for DataFrameSource", {
     test_df <- new_test_df()
 
@@ -59,6 +61,160 @@ describe("DataFrameSource$new()", {
       DataFrameSource$new(test_df, "table name")
       DataFrameSource$new(test_df, "")
       DataFrameSource$new(test_df, NULL)
+    })
+  })
+})
+
+describe("DataFrameSource engine parameter", {
+  describe("with duckdb engine", {
+    skip_if_not_installed("duckdb")
+
+    it("creates connection with duckdb backend", {
+      df_source <- local_data_frame_source(new_test_df(), engine = "duckdb")
+
+      expect_s3_class(df_source, "DataFrameSource")
+      expect_s3_class(df_source, "DBISource")
+      expect_equal(df_source$table_name, "test_table")
+      expect_equal(df_source$get_db_type(), "DuckDB")
+    })
+
+    it("executes queries correctly", {
+      test_df <- new_test_df()
+      df_source <- local_data_frame_source(test_df, engine = "duckdb")
+
+      # Test filtering
+      result <- df_source$execute_query(
+        "SELECT * FROM test_table WHERE value > 25"
+      )
+      expect_equal(nrow(result), 3)
+      expect_equal(result$value, c(30, 40, 50))
+
+      # Test get_data
+      all_data <- df_source$get_data()
+      expect_equal(all_data, test_df)
+
+      # Test test_query
+      one_row <- df_source$test_query("SELECT * FROM test_table")
+      expect_equal(nrow(one_row), 1)
+    })
+
+    it("returns correct schema", {
+      df_source <- local_data_frame_source(
+        new_mixed_types_df(),
+        engine = "duckdb"
+      )
+      schema <- df_source$get_schema()
+
+      expect_type(schema, "character")
+      expect_match(schema, "Table: test_table")
+      expect_match(schema, "id \\(INTEGER\\)")
+      expect_match(schema, "name \\(TEXT\\)")
+      expect_match(schema, "active \\(BOOLEAN\\)")
+    })
+  })
+
+  describe("with sqlite engine", {
+    skip_if_not_installed("RSQLite")
+
+    it("creates connection with sqlite backend", {
+      df_source <- local_data_frame_source(new_test_df(), engine = "sqlite")
+
+      expect_s3_class(df_source, "DataFrameSource")
+      expect_s3_class(df_source, "DBISource")
+      expect_equal(df_source$table_name, "test_table")
+      expect_equal(df_source$get_db_type(), "SQLite")
+    })
+
+    it("executes queries correctly", {
+      test_df <- new_test_df()
+      df_source <- local_data_frame_source(test_df, engine = "sqlite")
+
+      # Test filtering
+      result <- df_source$execute_query(
+        "SELECT * FROM test_table WHERE value > 25"
+      )
+      expect_equal(nrow(result), 3)
+      expect_equal(result$value, c(30, 40, 50))
+
+      # Test get_data
+      all_data <- df_source$get_data()
+      expect_equal(all_data, test_df)
+
+      # Test test_query
+      one_row <- df_source$test_query("SELECT * FROM test_table")
+      expect_equal(nrow(one_row), 1)
+    })
+
+    it("returns correct schema", {
+      df_source <- local_data_frame_source(
+        new_mixed_types_df(),
+        engine = "sqlite"
+      )
+      schema <- df_source$get_schema()
+
+      expect_type(schema, "character")
+      expect_match(schema, "Table:")
+      expect_match(schema, "test_table")
+      expect_match(schema, "id \\(INTEGER\\)")
+      expect_match(schema, "name \\(TEXT\\)")
+      # SQLite stores booleans as INTEGER (0/1)
+      expect_match(schema, "active \\(INTEGER\\)")
+    })
+  })
+
+  describe("engine parameter validation", {
+    it("is case-insensitive", {
+      skip_if_not_installed("duckdb")
+      skip_if_not_installed("RSQLite")
+
+      # Test various case combinations
+      df1 <- local_data_frame_source(new_test_df(), engine = "DUCKDB")
+      expect_equal(df1$get_db_type(), "DuckDB")
+
+      df2 <- local_data_frame_source(new_test_df(), engine = "DuckDb")
+      expect_equal(df2$get_db_type(), "DuckDB")
+
+      df3 <- local_data_frame_source(new_test_df(), engine = "SQLite")
+      expect_equal(df3$get_db_type(), "SQLite")
+
+      df4 <- local_data_frame_source(new_test_df(), engine = "SQLITE")
+      expect_equal(df4$get_db_type(), "SQLite")
+    })
+
+    it("errors on invalid engine name", {
+      expect_snapshot(error = TRUE, {
+        DataFrameSource$new(new_test_df(), "test_table", engine = "postgres")
+      })
+
+      expect_snapshot(error = TRUE, {
+        DataFrameSource$new(new_test_df(), "test_table", engine = "invalid")
+      })
+
+      expect_snapshot(error = TRUE, {
+        DataFrameSource$new(new_test_df(), "test_table", engine = "")
+      })
+    })
+
+    it("respects getOption('querychat.DataFrameSource.engine')", {
+      skip_if_not_installed("duckdb")
+      skip_if_not_installed("RSQLite")
+
+      # Test default (duckdb)
+      withr::local_options(querychat.DataFrameSource.engine = NULL)
+      df1 <- DataFrameSource$new(new_test_df(), "test_table")
+      withr::defer(df1$cleanup())
+      expect_equal(df1$get_db_type(), "DuckDB")
+
+      # Test option set to sqlite
+      withr::local_options(querychat.DataFrameSource.engine = "sqlite")
+      df2 <- DataFrameSource$new(new_test_df(), "test_table")
+      withr::defer(df2$cleanup())
+      expect_equal(df2$get_db_type(), "SQLite")
+
+      # Test explicit parameter overrides option
+      withr::local_options(querychat.DataFrameSource.engine = "sqlite")
+      df3 <- local_data_frame_source(new_test_df(), engine = "duckdb")
+      expect_equal(df3$get_db_type(), "DuckDB")
     })
   })
 })
@@ -114,6 +270,8 @@ describe("DBISource$new()", {
 
 describe("DataSource$get_schema()", {
   it("returns proper schema for DataFrameSource", {
+    skip_if_no_dataframe_engine()
+
     df_source <- local_data_frame_source(new_mixed_types_df())
 
     schema <- df_source$get_schema()
@@ -141,6 +299,8 @@ describe("DataSource$get_schema()", {
   })
 
   it("correctly reports min/max values for numeric columns", {
+    skip_if_no_dataframe_engine()
+
     df_source <- local_data_frame_source(new_metrics_df())
 
     schema <- df_source$get_schema()
@@ -152,9 +312,12 @@ describe("DataSource$get_schema()", {
 })
 
 describe("DataSource$get_db_type()", {
-  it("returns DuckDB for DataFrameSource", {
+  it("returns correct database type for DataFrameSource", {
+    skip_if_no_dataframe_engine()
+
     df_source <- local_data_frame_source(new_test_df())
-    expect_equal(df_source$get_db_type(), "DuckDB")
+    db_type <- df_source$get_db_type()
+    expect_true(db_type %in% c("DuckDB", "SQLite"))
   })
 
   it("returns correct type for SQLite connections", {
@@ -171,6 +334,9 @@ describe("DataSource$get_data()", {
   test_df <- new_test_df()
 
   it("returns all data for both DataFrameSource and DBISource", {
+    skip_if_no_dataframe_engine()
+    skip_if_not_installed("RSQLite")
+
     df_source <- local_data_frame_source(test_df)
 
     result <- df_source$get_data()
@@ -189,6 +355,9 @@ describe("DataSource$get_data()", {
 })
 
 describe("DataSource$execute_query()", {
+  skip_if_no_dataframe_engine()
+  skip_if_not_installed("RSQLite")
+
   test_df <- new_test_df(rows = 4)
   df_source <- local_data_frame_source(test_df)
   db <- local_sqlite_connection(test_df)
@@ -435,6 +604,8 @@ describe("DBISource$test_query()", {
 })
 
 describe("DataFrameSource$test_query()", {
+  skip_if_no_dataframe_engine()
+
   test_df <- new_users_df()
   df_source <- local_data_frame_source(test_df, "test_table")
 

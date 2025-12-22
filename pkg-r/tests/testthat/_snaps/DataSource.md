@@ -106,6 +106,30 @@
       Error in `initialize()`:
       ! `table_name` must be a single string, not `NULL`.
 
+# DataFrameSource engine parameter / engine parameter validation / errors on invalid engine name
+
+    Code
+      DataFrameSource$new(new_test_df(), "test_table", engine = "postgres")
+    Condition
+      Error in `initialize()`:
+      ! `engine` must be one of "duckdb" or "sqlite", not "postgres".
+
+---
+
+    Code
+      DataFrameSource$new(new_test_df(), "test_table", engine = "invalid")
+    Condition
+      Error in `initialize()`:
+      ! `engine` must be one of "duckdb" or "sqlite", not "invalid".
+
+---
+
+    Code
+      DataFrameSource$new(new_test_df(), "test_table", engine = "")
+    Condition
+      Error in `initialize()`:
+      ! `engine` must be one of "duckdb" or "sqlite", not "".
+
 # DBISource$new() / errors with non-DBI connection
 
     Code

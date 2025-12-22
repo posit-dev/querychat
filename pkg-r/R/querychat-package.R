@@ -85,4 +85,5 @@ release_bullets <- function() {
 
 suppress_rcmdcheck <- function() {
   S7::S7_class
+  whisker::whisker.render
 }

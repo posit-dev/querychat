@@ -9,6 +9,8 @@ import pandas as pd
 from sqlalchemy import inspect, text
 from sqlalchemy.sql import sqltypes
 
+from ._utils import check_query
+
 if TYPE_CHECKING:
     from narwhals.stable.v1.typing import IntoFrame
     from sqlalchemy.engine import Connection, Engine
@@ -261,6 +263,7 @@ SET lock_configuration = true;
             Query results as pandas DataFrame
 
         """
+        check_query(query)
         return self._conn.execute(query).df()
 
     def test_query(
@@ -523,6 +526,7 @@ class SQLAlchemySource(DataSource):
             Query results as pandas DataFrame
 
         """
+        check_query(query)
         with self._get_connection() as conn:
             return pd.read_sql_query(text(query), conn)
 

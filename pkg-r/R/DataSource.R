@@ -337,6 +337,8 @@ DBISource <- R6::R6Class(
           DBI::dbQuoteIdentifier(private$conn, self$table_name)
         )
       }
+
+      check_query(query)
       DBI::dbGetQuery(private$conn, query)
     },
 

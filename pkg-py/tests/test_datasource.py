@@ -5,6 +5,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 from querychat._datasource import DataFrameSource, SQLAlchemySource
+from querychat._utils import UnsafeQueryError, check_query
 from querychat.types import MissingColumnsError
 from sqlalchemy import create_engine, text
 
@@ -387,3 +388,113 @@ def test_test_query_error_message_format(test_db_engine):
     assert "Query result missing required columns" in error_message
     assert "The query must return all original table columns" in error_message
     assert "Original columns:" in error_message
+
+
+# Tests for check_query() function
+
+
+def test_check_query_allows_valid_select():
+    """Test that check_query allows valid SELECT queries."""
+    check_query("SELECT * FROM test_table")
+    check_query("select * from test_table")
+    check_query("  SELECT * FROM test_table  ")
+    check_query("\nSELECT * FROM test_table\n")
+
+
+def test_check_query_blocks_always_blocked_keywords():
+    """Test that check_query blocks always-blocked keywords."""
+    always_blocked = [
+        "DELETE",
+        "TRUNCATE",
+        "CREATE",
+        "DROP",
+        "ALTER",
+        "GRANT",
+        "REVOKE",
+        "EXEC",
+        "EXECUTE",
+        "CALL",
+    ]
+
+    for keyword in always_blocked:
+        with pytest.raises(UnsafeQueryError, match="disallowed operation"):
+            check_query(f"{keyword} something")
+
+
+def test_check_query_blocks_update_keywords_by_default():
+    """Test that check_query blocks update keywords by default."""
+    update_keywords = ["INSERT", "UPDATE", "MERGE", "REPLACE", "UPSERT"]
+
+    for keyword in update_keywords:
+        with pytest.raises(UnsafeQueryError, match="update operation"):
+            check_query(f"{keyword} something")
+
+
+def test_check_query_normalizes_whitespace_and_case():
+    """Test that check_query normalizes whitespace and case."""
+    with pytest.raises(UnsafeQueryError, match="disallowed"):
+        check_query("  delete   FROM table  ")
+    with pytest.raises(UnsafeQueryError, match="disallowed"):
+        check_query("\n\nDELETE\n\nFROM table")
+    with pytest.raises(UnsafeQueryError, match="disallowed"):
+        check_query("\tDELETE\tFROM\ttable")
+    with pytest.raises(UnsafeQueryError, match="disallowed"):
+        check_query("DeLeTe FROM table")
+
+
+def test_check_query_escape_hatch_enables_update_keywords(monkeypatch):
+    """Test that escape hatch enables update keywords."""
+    monkeypatch.setenv("QUERYCHAT_ENABLE_UPDATE_QUERIES", "true")
+
+    # These should not raise
+    check_query("INSERT INTO table VALUES (1)")
+    check_query("UPDATE table SET x = 1")
+    check_query("MERGE INTO table USING")
+    check_query("REPLACE INTO table VALUES (1)")
+    check_query("UPSERT INTO table VALUES (1)")
+
+
+def test_check_query_escape_hatch_does_not_enable_always_blocked(monkeypatch):
+    """Test that escape hatch does NOT enable always-blocked keywords."""
+    monkeypatch.setenv("QUERYCHAT_ENABLE_UPDATE_QUERIES", "true")
+
+    with pytest.raises(UnsafeQueryError, match="disallowed"):
+        check_query("DELETE FROM table")
+    with pytest.raises(UnsafeQueryError, match="disallowed"):
+        check_query("DROP TABLE table")
+    with pytest.raises(UnsafeQueryError, match="disallowed"):
+        check_query("TRUNCATE TABLE table")
+
+
+def test_check_query_integrated_into_execute_query():
+    """Test that check_query is integrated into execute_query()."""
+    test_df = pd.DataFrame(
+        {
+            "id": [1, 2, 3],
+            "name": ["a", "b", "c"],
+            "value": [10, 20, 30],
+        }
+    )
+
+    source = DataFrameSource(test_df, "test_table")
+
+    with pytest.raises(UnsafeQueryError, match="disallowed operation"):
+        source.execute_query("DELETE FROM test_table")
+
+    with pytest.raises(UnsafeQueryError, match="update operation"):
+        source.execute_query("INSERT INTO test_table VALUES (1, 'a', 1)")
+
+    source.cleanup()
+
+
+def test_check_query_does_not_block_keywords_in_column_names():
+    """Test that keywords in column names or values are not blocked."""
+    check_query("SELECT update_count FROM table")
+    check_query("SELECT * FROM delete_logs")
+
+
+def test_check_query_escape_hatch_accepts_various_values(monkeypatch):
+    """Test that escape hatch accepts various truthy values."""
+    for value in ["true", "TRUE", "1", "yes", "YES"]:
+        monkeypatch.setenv("QUERYCHAT_ENABLE_UPDATE_QUERIES", value)
+        check_query("INSERT INTO table VALUES (1)")  # Should not raise

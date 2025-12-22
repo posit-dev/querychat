@@ -634,3 +634,233 @@ describe("DataFrameSource$test_query()", {
     expect_equal(nrow(result), 0)
   })
 })
+
+describe("test_query() column validation", {
+  skip_if_no_dataframe_engine()
+
+  it("allows all columns through, regardless of order", {
+    source <- local_data_frame_source(new_test_df())
+
+    # Should succeed with all columns
+    result <- source$test_query(
+      "SELECT * FROM test_table",
+      require_all_columns = TRUE
+    )
+    expect_s3_class(result, "data.frame")
+    expect_equal(names(result), c("id", "name", "value"))
+
+    # Should succeed with all columns in different order
+    result <- source$test_query(
+      "SELECT value, id, name FROM test_table",
+      require_all_columns = TRUE
+    )
+    expect_s3_class(result, "data.frame")
+    expect_equal(sort(names(result)), c("id", "name", "value"))
+  })
+
+  it("allows additional computed columns when require_all_columns=TRUE", {
+    source <- local_data_frame_source(new_test_df())
+
+    # Should succeed with all columns plus computed columns
+    result <- source$test_query(
+      "SELECT *, value * 2 as doubled FROM test_table",
+      require_all_columns = TRUE
+    )
+    expect_s3_class(result, "data.frame")
+    expect_true(all(c("id", "name", "value", "doubled") %in% names(result)))
+  })
+
+  it("fails when columns are missing and require_all_columns=TRUE", {
+    source <- local_data_frame_source(new_test_df())
+
+    # Should fail when missing one column
+    expect_error(
+      source$test_query(
+        "SELECT id, name FROM test_table",
+        require_all_columns = TRUE
+      ),
+      class = "querychat_missing_columns_error"
+    )
+
+    # Should fail when missing multiple columns
+    expect_error(
+      source$test_query(
+        "SELECT id FROM test_table",
+        require_all_columns = TRUE
+      ),
+      class = "querychat_missing_columns_error"
+    )
+  })
+
+  it("does not validate when require_all_columns=FALSE (default)", {
+    source <- local_data_frame_source(new_test_df())
+
+    # Should succeed with subset of columns when not validating
+    result <- source$test_query("SELECT id FROM test_table")
+    expect_s3_class(result, "data.frame")
+    expect_equal(names(result), "id")
+
+    result <- source$test_query(
+      "SELECT id FROM test_table",
+      require_all_columns = FALSE
+    )
+    expect_s3_class(result, "data.frame")
+    expect_equal(names(result), "id")
+  })
+
+  it("provides helpful error message listing missing columns", {
+    source <- local_data_frame_source(new_test_df())
+
+    expect_snapshot(error = TRUE, {
+      source$test_query(
+        "SELECT id FROM test_table",
+        require_all_columns = TRUE
+      )
+    })
+
+    expect_snapshot(error = TRUE, {
+      source$test_query(
+        "SELECT id, name FROM test_table",
+        require_all_columns = TRUE
+      )
+    })
+  })
+
+  it("works with DBISource as well", {
+    db <- local_sqlite_connection(new_test_df(), "test_table")
+    source <- DBISource$new(db$conn, "test_table")
+
+    # Should succeed with all columns
+    result <- source$test_query(
+      "SELECT * FROM test_table",
+      require_all_columns = TRUE
+    )
+    expect_s3_class(result, "data.frame")
+    expect_equal(names(result), c("id", "name", "value"))
+
+    # Should fail when missing columns
+    expect_error(
+      source$test_query(
+        "SELECT id FROM test_table",
+        require_all_columns = TRUE
+      ),
+      class = "querychat_missing_columns_error"
+    )
+  })
+
+  it("handles empty result sets correctly", {
+    source <- local_data_frame_source(new_test_df())
+
+    # Query with no matches should still validate columns
+    result <- source$test_query(
+      "SELECT * FROM test_table WHERE id > 999",
+      require_all_columns = TRUE
+    )
+    expect_s3_class(result, "data.frame")
+    expect_equal(nrow(result), 0)
+    expect_equal(names(result), c("id", "name", "value"))
+  })
+})
+
+describe("check_query() blocks dangerous operations", {
+  skip_if_no_dataframe_engine()
+
+  df_source <- local_data_frame_source(new_test_df())
+
+  it("allows valid SELECT queries", {
+    expect_no_error(check_query("SELECT * FROM test_table"))
+    expect_no_error(check_query("select * from test_table"))
+    expect_no_error(check_query("  SELECT * FROM test_table  "))
+    expect_no_error(check_query("\nSELECT * FROM test_table\n"))
+  })
+
+  it("blocks always-blocked keywords", {
+    always_blocked <- c(
+      "DELETE",
+      "TRUNCATE",
+      "CREATE",
+      "DROP",
+      "ALTER",
+      "GRANT",
+      "REVOKE",
+      "EXEC",
+      "EXECUTE",
+      "CALL"
+    )
+
+    for (keyword in always_blocked) {
+      expect_error(
+        check_query(paste(keyword, "something")),
+        regexp = "disallowed operation",
+        info = paste("Failed for keyword:", keyword)
+      )
+    }
+  })
+
+  it("blocks update keywords by default", {
+    update_keywords <- c("INSERT", "UPDATE", "MERGE", "REPLACE", "UPSERT")
+
+    for (keyword in update_keywords) {
+      expect_error(
+        check_query(paste(keyword, "something")),
+        regexp = "update operation",
+        info = paste("Failed for keyword:", keyword)
+      )
+    }
+  })
+
+  it("normalizes whitespace and case", {
+    expect_error(check_query("  delete   FROM table  "), regexp = "disallowed")
+    expect_error(check_query("\n\nDELETE\n\nFROM table"), regexp = "disallowed")
+    expect_error(check_query("\tDELETE\tFROM\ttable"), regexp = "disallowed")
+    expect_error(check_query("DeLeTe FROM table"), regexp = "disallowed")
+  })
+
+  it("escape hatch via option enables update keywords", {
+    withr::local_options(querychat.enable_update_queries = TRUE)
+
+    expect_no_error(check_query("INSERT INTO table VALUES (1)"))
+    expect_no_error(check_query("UPDATE table SET x = 1"))
+    expect_no_error(check_query("MERGE INTO table USING"))
+    expect_no_error(check_query("REPLACE INTO table VALUES (1)"))
+    expect_no_error(check_query("UPSERT INTO table VALUES (1)"))
+  })
+
+  it("escape hatch via envvar enables update keywords", {
+    withr::local_envvar(QUERYCHAT_ENABLE_UPDATE_QUERIES = "true")
+
+    expect_no_error(check_query("INSERT INTO table VALUES (1)"))
+    expect_no_error(check_query("UPDATE table SET x = 1"))
+
+    # Also accepts other truthy values
+    withr::local_envvar(QUERYCHAT_ENABLE_UPDATE_QUERIES = "1")
+    expect_no_error(check_query("INSERT INTO table VALUES (1)"))
+
+    withr::local_envvar(QUERYCHAT_ENABLE_UPDATE_QUERIES = "YES")
+    expect_no_error(check_query("INSERT INTO table VALUES (1)"))
+  })
+
+  it("escape hatch does NOT enable always-blocked keywords", {
+    withr::local_options(querychat.enable_update_queries = TRUE)
+
+    expect_error(check_query("DELETE FROM table"), regexp = "disallowed")
+    expect_error(check_query("DROP TABLE table"), regexp = "disallowed")
+    expect_error(check_query("TRUNCATE TABLE table"), regexp = "disallowed")
+  })
+
+  it("is integrated into execute_query()", {
+    expect_error(
+      df_source$execute_query("DELETE FROM test_table"),
+      regexp = "disallowed operation"
+    )
+    expect_error(
+      df_source$execute_query("INSERT INTO test_table VALUES (1, 'a', 1)"),
+      regexp = "update operation"
+    )
+  })
+
+  it("does not block keywords in column names or values", {
+    expect_no_error(check_query("SELECT update_count FROM table"))
+    expect_no_error(check_query("SELECT * FROM delete_logs"))
+  })
+})

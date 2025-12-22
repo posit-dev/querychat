@@ -115,11 +115,26 @@ class DataFrameSource(DataSource):
             Name of the table in SQL queries
 
         """
-        self._conn = duckdb.connect(database=":memory:")
         self._df = nw.from_native(df)
         self.table_name = table_name
-        # TODO(@gadenbuie): If the data frame is already SQL-backed, maybe we shouldn't be making a new copy here.
+
+        self._conn = duckdb.connect(database=":memory:")
+        # TODO(@gadenbuie): What if the data frame is already SQL-backed?
         self._conn.register(table_name, self._df.lazy().collect().to_pandas())
+        self._conn.execute("""
+-- extensions: lock down supply chain + auto behaviors
+SET allow_community_extensions = false;
+SET allow_unsigned_extensions = false;
+SET autoinstall_known_extensions = false;
+SET autoload_known_extensions = false;
+
+-- external I/O: block file/database/network access from SQL
+SET enable_external_access = false;
+SET disabled_filesystems = 'LocalFileSystem';
+
+-- freeze configuration so user SQL can't relax anything
+SET lock_configuration = true;
+        """)
 
     def get_db_type(self) -> str:
         """

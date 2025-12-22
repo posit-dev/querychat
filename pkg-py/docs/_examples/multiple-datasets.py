@@ -15,14 +15,18 @@ with ui.sidebar():
         qc_penguins.ui()
 
 with ui.nav_panel("Titanic"):
+
     @render.data_frame
     def titanic_table():
         return qc_titanic.df()
 
+
 with ui.nav_panel("Penguins"):
+
     @render.data_frame
     def penguins_table():
         return qc_penguins.df()
+
 
 ui.page_opts(
     id="navbar",

@@ -32,6 +32,7 @@ with ui.layout_column_wrap(fill=False):
             avg = qc.df()["fare"].mean()
             return f"${avg:.2f}"
 
+
 with ui.layout_columns():
     with ui.card():
         with ui.card_header():
@@ -59,6 +60,7 @@ with ui.layout_columns():
                 labels={"pclass": "Class", "survived": "Survival Rate"},
             )
 
+
 with ui.layout_columns():
     with ui.card():
         ui.card_header("Age Distribution")
@@ -75,6 +77,7 @@ with ui.layout_columns():
         def fare_by_class():
             df = qc.df()
             return px.box(df, x="pclass", y="fare", color="survived")
+
 
 ui.page_opts(
     title="Titanic Survival Analysis",

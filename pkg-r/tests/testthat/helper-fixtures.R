@@ -75,9 +75,10 @@ local_sqlite_connection <- function(
 local_data_frame_source <- function(
   data,
   table_name = "test_table",
+  engine = "duckdb",
   env = parent.frame()
 ) {
-  df_source <- DataFrameSource$new(data, table_name)
+  df_source <- DataFrameSource$new(data, table_name, engine = engine)
   withr::defer(df_source$cleanup(), envir = env)
   df_source
 }

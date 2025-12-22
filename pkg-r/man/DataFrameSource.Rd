@@ -4,12 +4,18 @@
 \alias{DataFrameSource}
 \title{Data Frame Source}
 \description{
-A DataSource implementation that wraps a data frame using DuckDB for SQL
-query execution.
+A DataSource implementation that wraps a data frame using DuckDB or SQLite
+for SQL query execution.
 }
 \details{
-This class creates an in-memory DuckDB connection and registers the provided
-data frame as a table. All SQL queries are executed against this DuckDB table.
+This class creates an in-memory database connection and registers the
+provided data frame as a table. All SQL queries are executed against this
+database table. See \link{DBISource} for the full description of available
+methods.
+
+Use the \code{engine} parameter to choose between "duckdb" (default) or "sqlite",
+or set the global option `querychat.DataFrameSource.engine to choose the
+default engine for all DataFrameSource instances.
 }
 \examples{
 \dontrun{
@@ -62,7 +68,11 @@ source <- DataFrameSource$new(iris, "iris")
 \subsection{Method \code{new()}}{
 Create a new DataFrameSource
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{DataFrameSource$new(df, table_name)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{DataFrameSource$new(
+  df,
+  table_name,
+  engine = getOption("querychat.DataFrameSource.engine", "duckdb")
+)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{

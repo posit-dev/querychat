@@ -89,13 +89,18 @@ DataSource <- R6::R6Class(
 #' Data Frame Source
 #'
 #' @description
-#' A DataSource implementation that wraps a data frame using DuckDB for SQL
-#' query execution.
+#' A DataSource implementation that wraps a data frame using DuckDB or SQLite
+#' for SQL query execution.
 #'
 #' @details
-#' This class creates an in-memory DuckDB connection and registers the provided
-#' data frame as a table. All SQL queries are executed against this DuckDB
-#' table. See [DBISource] for the full description of available methods.
+#' This class creates an in-memory database connection and registers the
+#' provided data frame as a table. All SQL queries are executed against this
+#' database table. See [DBISource] for the full description of available
+#' methods.
+#'
+#' Use the `engine` parameter to choose between "duckdb" (default) or "sqlite",
+#' or set the global option `querychat.DataFrameSource.engine to choose the
+#' default engine for all DataFrameSource instances.
 #'
 #' @export
 #' @examples
@@ -131,20 +136,34 @@ DataFrameSource <- R6::R6Class(
     #' \dontrun{
     #' source <- DataFrameSource$new(iris, "iris")
     #' }
-    initialize = function(df, table_name) {
+    initialize = function(
+      df,
+      table_name,
+      engine = getOption("querychat.DataFrameSource.engine", "duckdb")
+    ) {
       check_data_frame(df)
       check_sql_table_name(table_name)
 
+      engine <- tolower(engine)
+      arg_match(engine, c("duckdb", "sqlite"))
+
       self$table_name <- table_name
 
-      # Create DuckDB connection and register the data frame
-      private$conn <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
-      duckdb::duckdb_register(
-        private$conn,
-        table_name,
-        df,
-        experimental = FALSE
-      )
+      # Create in-memory connection and register the data frame
+      if (engine == "duckdb") {
+        check_installed("duckdb")
+        private$conn <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
+        duckdb::duckdb_register(
+          private$conn,
+          table_name,
+          df,
+          experimental = FALSE
+        )
+      } else if (engine == "sqlite") {
+        check_installed("RSQLite")
+        private$conn <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
+        DBI::dbWriteTable(private$conn, table_name, df)
+      }
     }
   )
 )

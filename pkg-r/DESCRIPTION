@@ -24,7 +24,6 @@ Imports:
     bslib,
     cli,
     DBI,
-    duckdb,
     ellmer (>= 0.3.0),
     htmltools,
     lifecycle,
@@ -39,6 +38,7 @@ Imports:
 Suggests:
     bsicons,
     DT,
+    duckdb,
     knitr,
     palmerpenguins,
     rmarkdown,
@@ -46,7 +46,7 @@ Suggests:
     shinytest2,
     testthat (>= 3.0.0),
     withr
-VignetteBuilder: 
+VignetteBuilder:
     knitr
 Remotes:
     posit-dev/shinychat/pkg-r

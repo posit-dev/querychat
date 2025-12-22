@@ -5,6 +5,7 @@ from .._datasource import (  # noqa: A005
     SQLAlchemySource,
 )
 from .._querychat_module import ServerValues
+from .._utils import UnsafeQueryError
 from ..tools import UpdateDashboardData
 
 __all__ = (
@@ -13,5 +14,6 @@ __all__ = (
     "MissingColumnsError",
     "SQLAlchemySource",
     "ServerValues",
+    "UnsafeQueryError",
     "UpdateDashboardData",
 )

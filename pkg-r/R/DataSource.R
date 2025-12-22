@@ -352,6 +352,7 @@ DBISource <- R6::R6Class(
     test_query = function(query, require_all_columns = FALSE) {
       check_string(query)
       check_bool(require_all_columns)
+      check_query(query)
 
       rs <- DBI::dbSendQuery(private$conn, query)
       df <- DBI::dbFetch(rs, n = 1)

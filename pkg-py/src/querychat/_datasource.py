@@ -290,6 +290,7 @@ SET lock_configuration = true;
             If require_all_columns is True and result is missing required columns
 
         """
+        check_query(query)
         result = self._conn.execute(f"{query} LIMIT 1").df()
 
         if require_all_columns:
@@ -554,6 +555,7 @@ class SQLAlchemySource(DataSource):
             If require_all_columns is True and result is missing required columns
 
         """
+        check_query(query)
         with self._get_connection() as conn:
             # Use pandas read_sql_query with limit to get at most one row
             limit_query = f"SELECT * FROM ({query}) AS subquery LIMIT 1"

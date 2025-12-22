@@ -1,4 +1,6 @@
 describe("QueryChatSystemPrompt$new()", {
+  skip_if_no_dataframe_engine()
+
   it("initializes with string template", {
     df <- new_test_df()
     ds <- DataFrameSource$new(df, "test_table")

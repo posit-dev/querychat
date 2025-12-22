@@ -71,6 +71,13 @@ local_sqlite_connection <- function(
   list(conn = conn, path = temp_db)
 }
 
+# Skip test if no DataFrameSource engine is available
+skip_if_no_dataframe_engine <- function() {
+  if (!rlang::is_installed("duckdb") && !rlang::is_installed("RSQLite")) {
+    skip("Neither duckdb nor RSQLite is installed")
+  }
+}
+
 # Create a DataFrameSource with automatic cleanup
 local_data_frame_source <- function(
   data,

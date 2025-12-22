@@ -30,6 +30,8 @@ describe("DataSource base class", {
 })
 
 describe("DataFrameSource$new()", {
+  skip_if_no_dataframe_engine()
+
   it("creates proper R6 object for DataFrameSource", {
     test_df <- new_test_df()
 
@@ -268,6 +270,8 @@ describe("DBISource$new()", {
 
 describe("DataSource$get_schema()", {
   it("returns proper schema for DataFrameSource", {
+    skip_if_no_dataframe_engine()
+
     df_source <- local_data_frame_source(new_mixed_types_df())
 
     schema <- df_source$get_schema()
@@ -295,6 +299,8 @@ describe("DataSource$get_schema()", {
   })
 
   it("correctly reports min/max values for numeric columns", {
+    skip_if_no_dataframe_engine()
+
     df_source <- local_data_frame_source(new_metrics_df())
 
     schema <- df_source$get_schema()
@@ -306,9 +312,12 @@ describe("DataSource$get_schema()", {
 })
 
 describe("DataSource$get_db_type()", {
-  it("returns DuckDB for DataFrameSource", {
+  it("returns correct database type for DataFrameSource", {
+    skip_if_no_dataframe_engine()
+
     df_source <- local_data_frame_source(new_test_df())
-    expect_equal(df_source$get_db_type(), "DuckDB")
+    db_type <- df_source$get_db_type()
+    expect_true(db_type %in% c("DuckDB", "SQLite"))
   })
 
   it("returns correct type for SQLite connections", {
@@ -325,6 +334,9 @@ describe("DataSource$get_data()", {
   test_df <- new_test_df()
 
   it("returns all data for both DataFrameSource and DBISource", {
+    skip_if_no_dataframe_engine()
+    skip_if_not_installed("RSQLite")
+
     df_source <- local_data_frame_source(test_df)
 
     result <- df_source$get_data()
@@ -343,6 +355,9 @@ describe("DataSource$get_data()", {
 })
 
 describe("DataSource$execute_query()", {
+  skip_if_no_dataframe_engine()
+  skip_if_not_installed("RSQLite")
+
   test_df <- new_test_df(rows = 4)
   df_source <- local_data_frame_source(test_df)
   db <- local_sqlite_connection(test_df)
@@ -589,6 +604,8 @@ describe("DBISource$test_query()", {
 })
 
 describe("DataFrameSource$test_query()", {
+  skip_if_no_dataframe_engine()
+
   test_df <- new_users_df()
   df_source <- local_data_frame_source(test_df, "test_table")
 

@@ -84,6 +84,5 @@ release_bullets <- function() {
 }
 
 suppress_rcmdcheck <- function() {
-  duckdb::duckdb
   S7::S7_class
 }

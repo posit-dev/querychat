@@ -13,23 +13,29 @@ provided data frame as a table. All SQL queries are executed against this
 database table. See \link{DBISource} for the full description of available
 methods.
 
-Use the \code{engine} parameter to choose between "duckdb" (default) or "sqlite",
-or set the global option `querychat.DataFrameSource.engine to choose the
-default engine for all DataFrameSource instances.
+By default, DataFrameSource uses the first available engine from duckdb
+(checked first) or RSQLite. You can explicitly set the \code{engine} parameter to
+choose between "duckdb" or "sqlite", or set the global option
+\code{querychat.DataFrameSource.engine} to choose the default engine for all
+DataFrameSource instances. At least one of these packages must be installed.
 }
 \examples{
 \dontrun{
-# Create a data frame source
+# Create a data frame source (uses first available: duckdb or sqlite)
 df_source <- DataFrameSource$new(mtcars, "mtcars")
 
 # Get database type
-df_source$get_db_type()  # Returns "DuckDB"
+df_source$get_db_type()  # Returns "DuckDB" or "SQLite"
 
 # Execute a query
 result <- df_source$execute_query("SELECT * FROM mtcars WHERE mpg > 25")
 
+# Explicitly choose an engine
+df_sqlite <- DataFrameSource$new(mtcars, "mtcars", engine = "sqlite")
+
 # Clean up when done
 df_source$cleanup()
+df_sqlite$cleanup()
 }
 
 ## ------------------------------------------------
@@ -71,7 +77,7 @@ Create a new DataFrameSource
 \if{html}{\out{<div class="r">}}\preformatted{DataFrameSource$new(
   df,
   table_name,
-  engine = getOption("querychat.DataFrameSource.engine", "duckdb")
+  engine = getOption("querychat.DataFrameSource.engine", NULL)
 )}\if{html}{\out{</div>}}
 }
 
@@ -83,6 +89,11 @@ Create a new DataFrameSource
 \item{\code{table_name}}{Name to use for the table in SQL queries. Must be a
 valid table name (start with letter, contain only letters, numbers,
 and underscores)}
+
+\item{\code{engine}}{Database engine to use: "duckdb" or "sqlite". Set the
+global option \code{querychat.DataFrameSource.engine} to specify the default
+engine for all instances. If NULL (default), uses the first available
+engine from duckdb or RSQLite (in that order).}
 }
 \if{html}{\out{</div>}}
 }

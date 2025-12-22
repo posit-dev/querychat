@@ -94,7 +94,8 @@ DataSource <- R6::R6Class(
 #'
 #' @details
 #' This class creates an in-memory DuckDB connection and registers the provided
-#' data frame as a table. All SQL queries are executed against this DuckDB table.
+#' data frame as a table. All SQL queries are executed against this DuckDB
+#' table. See [DBISource] for the full description of available methods.
 #'
 #' @export
 #' @examples
@@ -113,7 +114,7 @@ DataSource <- R6::R6Class(
 #' }
 DataFrameSource <- R6::R6Class(
   "DataFrameSource",
-  inherit = DataSource,
+  inherit = DBISource,
   private = list(
     conn = NULL
   ),
@@ -144,75 +145,6 @@ DataFrameSource <- R6::R6Class(
         df,
         experimental = FALSE
       )
-    },
-
-    #' @description Get the database type
-    #' @return The string "DuckDB"
-    get_db_type = function() {
-      "DuckDB"
-    },
-
-    #' @description
-    #' Get schema information for the data frame
-    #'
-    #' @param categorical_threshold Maximum number of unique values for a text
-    #'   column to be considered categorical (default: 20)
-    #' @return A string describing the schema
-    get_schema = function(categorical_threshold = 20) {
-      check_number_whole(categorical_threshold, min = 1)
-      get_schema_impl(private$conn, self$table_name, categorical_threshold)
-    },
-
-    #' @description
-    #' Execute a SQL query
-    #'
-    #' @param query SQL query string. If NULL or empty, returns all data
-    #' @return A data frame with query results
-    execute_query = function(query) {
-      check_string(query, allow_null = TRUE, allow_empty = TRUE)
-      if (is.null(query) || !nzchar(query)) {
-        query <- paste0(
-          "SELECT * FROM ",
-          DBI::dbQuoteIdentifier(private$conn, self$table_name)
-        )
-      }
-      DBI::dbGetQuery(private$conn, query)
-    },
-
-    #' @description
-    #' Test a SQL query by fetching only one row
-    #'
-    #' @param query SQL query string
-    #' @return A data frame with one row of results
-    test_query = function(query) {
-      check_string(query, allow_null = TRUE, allow_empty = TRUE)
-      if (is.null(query) || !nzchar(query)) {
-        return(invisible(NULL))
-      }
-
-      rs <- DBI::dbSendQuery(private$conn, query)
-      df <- DBI::dbFetch(rs, n = 1)
-      DBI::dbClearResult(rs)
-      df
-    },
-
-    #' @description
-    #' Get all data from the table
-    #'
-    #' @return A data frame containing all data
-    get_data = function() {
-      self$execute_query(NULL)
-    },
-
-    #' @description
-    #' Close the DuckDB connection
-    #'
-    #' @return NULL (invisibly)
-    cleanup = function() {
-      if (!is.null(private$conn) && DBI::dbIsValid(private$conn)) {
-        DBI::dbDisconnect(private$conn)
-      }
-      invisible(NULL)
     }
   )
 )

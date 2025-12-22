@@ -8,7 +8,7 @@ articles:
   greet: greet.html
   models: models.html
   tools: tools.html
-last_built: 2025-12-22T18:06Z
+last_built: 2025-12-22T23:15Z
 urls:
   reference: https://posit-dev.github.io/querychat/reference
   article: https://posit-dev.github.io/querychat/articles

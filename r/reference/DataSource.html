@@ -139,13 +139,18 @@ column to be considered categorical</p></dd>
 <h3 id="method-test-query-">Method <code>test_query()</code><a class="anchor" aria-label="anchor" href="#method-test-query-"></a></h3>
 <p>Test a SQL query by fetching only one row</p><div class="section">
 <h4 id="usage-3">Usage<a class="anchor" aria-label="anchor" href="#usage-3"></a></h4>
-<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">DataSource</span><span class="op">$</span><span class="fu">test_query</span><span class="op">(</span><span class="va">query</span><span class="op">)</span></span></code></pre></div><p></p></div>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">DataSource</span><span class="op">$</span><span class="fu">test_query</span><span class="op">(</span><span class="va">query</span>, require_all_columns <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
 <div class="section">
 <h4 id="arguments-2">Arguments<a class="anchor" aria-label="anchor" href="#arguments-2"></a></h4>
 <p></p><div class="arguments"><dl><dt><code>query</code></dt>
 <dd><p>SQL query string to test</p></dd>
+
+
+<dt><code>require_all_columns</code></dt>
+<dd><p>If TRUE, validates that the result includes
+all original table columns (default: FALSE)</p></dd>
 
 
 </dl><p></p></div>

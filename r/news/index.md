@@ -2,6 +2,18 @@
 
 ## querychat (development version)
 
+- The update tool now requires that the SQL query returns all columns
+  from the original data source, ensuring that the dashboard can display
+  the complete data frame after filtering or sorting. If the query does
+  not return all columns, an informative error message will be provided.
+  ([\#180](https://github.com/posit-dev/querychat/issues/180))
+
+- Obvious SQL keywords that lead to data modification (e.g., `INSERT`,
+  `UPDATE`, `DELETE`, `DROP`, etc.) are now prohibited in queries run
+  via the query tool or update tool, to prevent accidental data changes.
+  If such keywords are detected, an informative error message will be
+  provided. ([\#180](https://github.com/posit-dev/querychat/issues/180))
+
 - [`querychat()`](https://posit-dev.github.io/querychat/reference/querychat-convenience.md)
   and `QueryChat$new()` now use either [duckdb](https://r.duckdb.org/)
   or `{SQLite}` for the in-memory database backend for data frames,

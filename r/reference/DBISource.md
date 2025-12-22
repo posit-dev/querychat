@@ -130,13 +130,18 @@ Test a SQL query by fetching only one row
 
 #### Usage
 
-    DBISource$test_query(query)
+    DBISource$test_query(query, require_all_columns = FALSE)
 
 #### Arguments
 
 - `query`:
 
   SQL query string
+
+- `require_all_columns`:
+
+  If TRUE, validates that the result includes all original table columns
+  (default: FALSE)
 
 #### Returns
 

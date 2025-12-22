@@ -128,12 +128,13 @@ ul.task-list li input[type="checkbox"] {
   <li><a href="#unreleased" id="toc-unreleased" class="nav-link" data-scroll-target="#unreleased">[UNRELEASED]</a>
   <ul class="collapse">
   <li><a href="#new-features" id="toc-new-features" class="nav-link" data-scroll-target="#new-features">New features</a></li>
+  <li><a href="#improvements" id="toc-improvements" class="nav-link" data-scroll-target="#improvements">Improvements</a></li>
   </ul></li>
   <li><a href="#section" id="toc-section" class="nav-link" data-scroll-target="#section">[0.3.0] - 2025-12-10</a>
   <ul class="collapse">
   <li><a href="#breaking-changes" id="toc-breaking-changes" class="nav-link" data-scroll-target="#breaking-changes">Breaking Changes</a></li>
   <li><a href="#new-features-1" id="toc-new-features-1" class="nav-link" data-scroll-target="#new-features-1">New features</a></li>
-  <li><a href="#improvements" id="toc-improvements" class="nav-link" data-scroll-target="#improvements">Improvements</a></li>
+  <li><a href="#improvements-1" id="toc-improvements-1" class="nav-link" data-scroll-target="#improvements-1">Improvements</a></li>
   </ul></li>
   <li><a href="#section-1" id="toc-section-1" class="nav-link" data-scroll-target="#section-1">[0.2.2] - 2025-09-04</a></li>
   <li><a href="#section-2" id="toc-section-2" class="nav-link" data-scroll-target="#section-2">[0.2.1] - 2025-09-04</a></li>
@@ -164,6 +165,13 @@ ul.task-list li input[type="checkbox"] {
 <li><p>The tools used in a <code>QueryChat</code> chatbot are now configurable. Use the new <code>tools</code> parameter of <code>QueryChat()</code> to select either or both <code>"query"</code> or <code>"update"</code> tools. Choose <code>tools=["update"]</code> if you only want QueryChat to be able to update the dashboard (useful when you want to be 100% certain that the LLM will not see <em>any</em> raw data). (#168)</p></li>
 </ul>
 </section>
+<section id="improvements" class="level3">
+<h3 class="anchored" data-anchor-id="improvements">Improvements</h3>
+<ul>
+<li><p>The update tool now requires that the SQL query returns all columns from the original data source, ensuring that the dashboard can display the complete data frame after filtering or sorting. If the query does not return all columns, an informative error message will be provided. (#180)</p></li>
+<li><p>Obvious SQL keywords that lead to data modification (e.g., <code>INSERT</code>, <code>UPDATE</code>, <code>DELETE</code>, <code>DROP</code>, etc.) are now prohibited in queries run via the query tool or update tool, to prevent accidental data changes. If such keywords are detected, an informative error message will be provided. (#180)</p></li>
+</ul>
+</section>
 </section>
 <section id="section" class="level2">
 <h2 class="anchored" data-anchor-id="section">[0.3.0] - 2025-12-10</h2>
@@ -185,8 +193,8 @@ ul.task-list li input[type="checkbox"] {
 <li><p>Added <code>querychat_reset_dashboard()</code> tool for easily resetting the dashboard filters when asked by the user. (#81)</p></li>
 </ul>
 </section>
-<section id="improvements" class="level3">
-<h3 class="anchored" data-anchor-id="improvements">Improvements</h3>
+<section id="improvements-1" class="level3">
+<h3 class="anchored" data-anchor-id="improvements-1">Improvements</h3>
 <ul>
 <li><p>Added rich tool UI support using shinychat development version and chatlas &gt;= 0.11.1. (#67)</p></li>
 <li><p>querychat’s system prompt and tool descriptions were rewritten for clarity and future extensibility. (#90)</p></li>

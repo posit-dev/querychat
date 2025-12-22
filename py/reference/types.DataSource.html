@@ -291,6 +291,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#querychat.types.DataSource.get_data" id="toc-querychat.types.DataSource.get_data" class="nav-link" data-scroll-target="#querychat.types.DataSource.get_data">get_data</a></li>
   <li><a href="#querychat.types.DataSource.get_db_type" id="toc-querychat.types.DataSource.get_db_type" class="nav-link" data-scroll-target="#querychat.types.DataSource.get_db_type">get_db_type</a></li>
   <li><a href="#querychat.types.DataSource.get_schema" id="toc-querychat.types.DataSource.get_schema" class="nav-link" data-scroll-target="#querychat.types.DataSource.get_schema">get_schema</a></li>
+  <li><a href="#querychat.types.DataSource.test_query" id="toc-querychat.types.DataSource.test_query" class="nav-link" data-scroll-target="#querychat.types.DataSource.test_query">test_query</a></li>
   </ul></li>
   </ul></li>
   </ul>
@@ -354,6 +355,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr class="odd">
 <td><a href="#querychat.types.DataSource.get_schema">get_schema</a></td>
 <td>Return schema information about the table as a string.</td>
+</tr>
+<tr class="even">
+<td><a href="#querychat.types.DataSource.test_query">test_query</a></td>
+<td>Test SQL query by fetching only one row.</td>
 </tr>
 </tbody>
 </table>
@@ -506,6 +511,86 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td></td>
 <td><a href="https://docs.python.org/3/library/stdtypes.html#str">str</a></td>
 <td>A string containing the schema information in a format suitable for prompting an LLM about the data structure</td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="querychat.types.DataSource.test_query" class="level3">
+<h3 class="anchored" data-anchor-id="querychat.types.DataSource.test_query">test_query</h3>
+<div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>types.DataSource.test_query(query, <span class="op">*</span>, require_all_columns<span class="op">=</span><span class="va">False</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Test SQL query by fetching only one row.</p>
+<section id="parameters-2" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-2">Parameters</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>query</td>
+<td><a href="https://docs.python.org/3/library/stdtypes.html#str">str</a></td>
+<td>SQL query to test</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>require_all_columns</td>
+<td><a href="https://docs.python.org/3/library/functions.html#bool">bool</a></td>
+<td>If True, validates that result includes all original table columns. Additional computed columns are allowed.</td>
+<td><code>False</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="returns-4" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-4">Returns</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 7%">
+<col style="width: 42%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td><code>pd</code>.<code>DataFrame</code></td>
+<td>Query results as a pandas DataFrame with at most one row</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="raises" class="level4 doc-section doc-section-raises">
+<h4 class="doc-section doc-section-raises anchored" data-anchor-id="raises">Raises</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 5%">
+<col style="width: 46%">
+<col style="width: 48%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td><code>MissingColumnsError</code></td>
+<td>If require_all_columns is True and result is missing required columns</td>
 </tr>
 </tbody>
 </table>

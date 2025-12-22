@@ -290,6 +290,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#querychat.types.SQLAlchemySource.get_data" id="toc-querychat.types.SQLAlchemySource.get_data" class="nav-link" data-scroll-target="#querychat.types.SQLAlchemySource.get_data">get_data</a></li>
   <li><a href="#querychat.types.SQLAlchemySource.get_db_type" id="toc-querychat.types.SQLAlchemySource.get_db_type" class="nav-link" data-scroll-target="#querychat.types.SQLAlchemySource.get_db_type">get_db_type</a></li>
   <li><a href="#querychat.types.SQLAlchemySource.get_schema" id="toc-querychat.types.SQLAlchemySource.get_schema" class="nav-link" data-scroll-target="#querychat.types.SQLAlchemySource.get_schema">get_schema</a></li>
+  <li><a href="#querychat.types.SQLAlchemySource.test_query" id="toc-querychat.types.SQLAlchemySource.test_query" class="nav-link" data-scroll-target="#querychat.types.SQLAlchemySource.test_query">test_query</a></li>
   </ul></li>
   </ul></li>
   </ul>
@@ -335,6 +336,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr class="odd">
 <td><a href="#querychat.types.SQLAlchemySource.get_schema">get_schema</a></td>
 <td>Generate schema information from database table.</td>
+</tr>
+<tr class="even">
+<td><a href="#querychat.types.SQLAlchemySource.test_query">test_query</a></td>
+<td>Test query by fetching only one row.</td>
 </tr>
 </tbody>
 </table>
@@ -411,6 +416,30 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tbody>
 </table>
 </section>
+<section id="raises" class="level4 doc-section doc-section-raises">
+<h4 class="doc-section doc-section-raises anchored" data-anchor-id="raises">Raises</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 7%">
+<col style="width: 39%">
+<col style="width: 52%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td><code>UnsafeQueryError</code></td>
+<td>If the query starts with a disallowed SQL operation</td>
+</tr>
+</tbody>
+</table>
+</section>
 </section>
 <section id="querychat.types.SQLAlchemySource.get_data" class="level3">
 <h3 class="anchored" data-anchor-id="querychat.types.SQLAlchemySource.get_data">get_data</h3>
@@ -452,8 +481,93 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>types.SQLAlchemySource.get_schema(categorical_threshold)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Generate schema information from database table.</p>
 <p>Returns: String describing the schema</p>
+</section>
+<section id="querychat.types.SQLAlchemySource.test_query" class="level3">
+<h3 class="anchored" data-anchor-id="querychat.types.SQLAlchemySource.test_query">test_query</h3>
+<div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>types.SQLAlchemySource.test_query(query, <span class="op">*</span>, require_all_columns<span class="op">=</span><span class="va">False</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Test query by fetching only one row.</p>
+<section id="parameters-1" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-1">Parameters</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>query</td>
+<td><a href="https://docs.python.org/3/library/stdtypes.html#str">str</a></td>
+<td>SQL query to test</td>
+<td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>require_all_columns</td>
+<td><a href="https://docs.python.org/3/library/functions.html#bool">bool</a></td>
+<td>If True, validates that result includes all original table columns</td>
+<td><code>False</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="returns-3" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-3">Returns</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 8%">
+<col style="width: 52%">
+<col style="width: 39%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td><code>pd</code>.<code>DataFrame</code></td>
+<td>Query results with at most one row</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="raises-1" class="level4 doc-section doc-section-raises">
+<h4 class="doc-section doc-section-raises anchored" data-anchor-id="raises-1">Raises</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 5%">
+<col style="width: 46%">
+<col style="width: 48%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td><code>UnsafeQueryError</code></td>
+<td>If the query starts with a disallowed SQL operation</td>
+</tr>
+<tr class="even">
+<td></td>
+<td><code>MissingColumnsError</code></td>
+<td>If require_all_columns is True and result is missing required columns</td>
+</tr>
+</tbody>
+</table>
 
 
+</section>
 </section>
 </section>
 </section>

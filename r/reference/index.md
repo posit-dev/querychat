@@ -1,6 +1,12 @@
 # Package index
 
-## Chat interfaces
+## Convenience functions
+
+- [`querychat()`](https://posit-dev.github.io/querychat/reference/querychat-convenience.md)
+  [`querychat_app()`](https://posit-dev.github.io/querychat/reference/querychat-convenience.md)
+  : QueryChat convenience functions
+
+## Build a custom app
 
 - [`querychat()`](https://posit-dev.github.io/querychat/reference/querychat-convenience.md)
   [`querychat_app()`](https://posit-dev.github.io/querychat/reference/querychat-convenience.md)
@@ -8,7 +14,7 @@
 - [`QueryChat`](https://posit-dev.github.io/querychat/reference/QueryChat.md)
   : QueryChat: Interactive Data Querying with Natural Language
 
-## Data Sources
+## Data sources
 
 - [`DataSource`](https://posit-dev.github.io/querychat/reference/DataSource.md)
   : Data Source Base Class
@@ -16,3 +22,9 @@
   : Data Frame Source
 - [`DBISource`](https://posit-dev.github.io/querychat/reference/DBISource.md)
   : DBI Source
+
+## Package
+
+- [`querychat()`](https://posit-dev.github.io/querychat/reference/querychat-convenience.md)
+  [`querychat_app()`](https://posit-dev.github.io/querychat/reference/querychat-convenience.md)
+  : QueryChat convenience functions

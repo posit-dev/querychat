@@ -36,7 +36,7 @@ this DuckDB table.
 
 ------------------------------------------------------------------------
 
-### Method [`new()`](https://rdrr.io/r/methods/new.html)
+### Method `new()`
 
 Create a new DataFrameSource
 

@@ -35,7 +35,7 @@ against a specified table in the database.
 
 ------------------------------------------------------------------------
 
-### Method [`new()`](https://rdrr.io/r/methods/new.html)
+### Method `new()`
 
 Create a new DBISource
 

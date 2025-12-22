@@ -391,7 +391,7 @@ A Shiny app object that can be run with
 
 ------------------------------------------------------------------------
 
-### Method [`sidebar()`](https://rstudio.github.io/bslib/reference/sidebar.html)
+### Method `sidebar()`
 
 Create a sidebar containing the querychat UI.
 

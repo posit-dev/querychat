@@ -262,6 +262,11 @@ SET lock_configuration = true;
         :
             Query results as pandas DataFrame
 
+        Raises
+        ------
+        UnsafeQueryError
+            If the query starts with a disallowed SQL operation
+
         """
         check_query(query)
         return self._conn.execute(query).df()
@@ -286,6 +291,8 @@ SET lock_configuration = true;
 
         Raises
         ------
+        UnsafeQueryError
+            If the query starts with a disallowed SQL operation
         MissingColumnsError
             If require_all_columns is True and result is missing required columns
 
@@ -526,6 +533,11 @@ class SQLAlchemySource(DataSource):
         :
             Query results as pandas DataFrame
 
+        Raises
+        ------
+        UnsafeQueryError
+            If the query starts with a disallowed SQL operation
+
         """
         check_query(query)
         with self._get_connection() as conn:
@@ -551,6 +563,8 @@ class SQLAlchemySource(DataSource):
 
         Raises
         ------
+        UnsafeQueryError
+            If the query starts with a disallowed SQL operation
         MissingColumnsError
             If require_all_columns is True and result is missing required columns
 

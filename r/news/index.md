@@ -2,6 +2,15 @@
 
 ## querychat (development version)
 
+- [`querychat()`](https://posit-dev.github.io/querychat/reference/querychat-convenience.md)
+  and `QueryChat$new()` now use either [duckdb](https://r.duckdb.org/)
+  or `{SQLite}` for the in-memory database backend for data frames,
+  depending on which package is installed. If both are installed,
+  [duckdb](https://r.duckdb.org/) will be preferred. You can explicitly
+  choose the `engine` in `DataFrameSource$new()` or set
+  `querychat.DataFrameSource.engine` option to choose a global default.
+  ([\#178](https://github.com/posit-dev/querychat/issues/178))
+
 - `QueryChat$sidebar()`, `QueryChat$ui()`, and `QueryChat$server()` now
   support an optional `id` parameter to enable use within Shiny modules.
   When used in a module UI function, pass `id = ns("your_id")` where

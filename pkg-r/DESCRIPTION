@@ -1,6 +1,6 @@
 Package: querychat
 Title: Filter and Query Data Frames in 'shiny' Using an LLM Chat Interface
-Version: 0.1.0.9000
+Version: 0.2.0
 Authors@R: c(
     person("Garrick", "Aden-Buie", , "garrick@posit.co", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-7111-0077")),

@@ -142,9 +142,9 @@ QueryChat <- R6::R6Class(
     #'
     #' # With database
     #' library(DBI)
-    #' conn <- dbConnect(RSQLite::SQLite(), ":memory:")
-    #' dbWriteTable(conn, "mtcars", mtcars)
-    #' qc <- QueryChat$new(conn, "mtcars")
+    #' con <- dbConnect(RSQLite::SQLite(), ":memory:")
+    #' dbWriteTable(con, "mtcars", mtcars)
+    #' qc <- QueryChat$new(con, "mtcars")
     #' }
     initialize = function(
       data_source,
@@ -748,9 +748,9 @@ QueryChat <- R6::R6Class(
 #'
 #' # Chat with a database table (table_name required)
 #' library(DBI)
-#' conn <- dbConnect(RSQLite::SQLite(), ":memory:")
-#' dbWriteTable(conn, "mtcars", mtcars)
-#' querychat_app(conn, "mtcars")
+#' con <- dbConnect(RSQLite::SQLite(), ":memory:")
+#' dbWriteTable(con, "mtcars", mtcars)
+#' querychat_app(con, "mtcars")
 #'
 #' # Create QueryChat class object
 #' qc <- querychat(mtcars)

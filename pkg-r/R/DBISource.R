@@ -9,11 +9,11 @@
 #' @examples
 #' \dontrun{
 #' # Connect to a database
-#' conn <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
-#' DBI::dbWriteTable(conn, "mtcars", mtcars)
+#' con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
+#' DBI::dbWriteTable(con, "mtcars", mtcars)
 #'
 #' # Create a DBI source
-#' db_source <- DBISource$new(conn, "mtcars")
+#' db_source <- DBISource$new(con, "mtcars")
 #'
 #' # Get database type
 #' db_source$get_db_type()  # Returns "SQLite"
@@ -40,9 +40,9 @@ DBISource <- R6::R6Class(
     #' @return A new DBISource object
     #' @examples
     #' \dontrun{
-    #' conn <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
-    #' DBI::dbWriteTable(conn, "iris", iris)
-    #' source <- DBISource$new(conn, "iris")
+    #' con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
+    #' DBI::dbWriteTable(con, "iris", iris)
+    #' source <- DBISource$new(con, "iris")
     #' }
     initialize = function(conn, table_name) {
       if (!inherits(conn, "DBIConnection")) {

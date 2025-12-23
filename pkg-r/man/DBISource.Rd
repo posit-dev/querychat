@@ -11,11 +11,11 @@ execution against a single table in the database.
 \examples{
 \dontrun{
 # Connect to a database
-conn <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
-DBI::dbWriteTable(conn, "mtcars", mtcars)
+con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
+DBI::dbWriteTable(con, "mtcars", mtcars)
 
 # Create a DBI source
-db_source <- DBISource$new(conn, "mtcars")
+db_source <- DBISource$new(con, "mtcars")
 
 # Get database type
 db_source$get_db_type()  # Returns "SQLite"
@@ -32,9 +32,9 @@ result <- db_source$execute_query("SELECT * FROM mtcars WHERE mpg > 25")
 ## ------------------------------------------------
 
 \dontrun{
-conn <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
-DBI::dbWriteTable(conn, "iris", iris)
-source <- DBISource$new(conn, "iris")
+con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
+DBI::dbWriteTable(con, "iris", iris)
+source <- DBISource$new(con, "iris")
 }
 }
 \section{Super class}{
@@ -78,9 +78,9 @@ A new DBISource object
 \subsection{Examples}{
 \if{html}{\out{<div class="r example copy">}}
 \preformatted{\dontrun{
-conn <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
-DBI::dbWriteTable(conn, "iris", iris)
-source <- DBISource$new(conn, "iris")
+con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
+DBI::dbWriteTable(con, "iris", iris)
+source <- DBISource$new(con, "iris")
 }
 }
 \if{html}{\out{</div>}}

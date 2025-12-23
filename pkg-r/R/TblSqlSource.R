@@ -45,8 +45,8 @@ TblSqlSource <- R6::R6Class(
     #'   string, or will be inferred from the `tbl` argument, if possible.
     #' @return A new TblSqlSource object
     #' @examplesIf rlang::is_interactive() && rlang::is_installed("dbplyr") && rlang::is_installed("dplyr") && rlang::is_installed("RSQLite")
-    #' conn <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
-    #' DBI::dbWriteTable(conn, "mtcars", mtcars)
+    #' con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
+    #' DBI::dbWriteTable(con, "mtcars", mtcars)
     #' source <- TblSqlSource$new(dplyr::tbl(con, "mtcars"))
     initialize = function(tbl, table_name = missing_arg()) {
       check_installed("dbplyr")

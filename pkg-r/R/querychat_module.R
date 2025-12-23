@@ -46,6 +46,15 @@ mod_server <- function(
       )
     }
 
+    update_dashboard <- function(query, title) {
+      if (!is.null(query)) {
+        current_query(query)
+      }
+      if (!is.null(title)) {
+        current_title(title)
+      }
+    }
+
     reset_query <- function() {
       current_query(NULL)
       current_title(NULL)
@@ -53,12 +62,21 @@ mod_server <- function(
     }
 
     # Set up the chat object for this session
-    chat <- client$clone()
-    chat$register_tool(
-      tool_update_dashboard(data_source, current_query, current_title)
-    )
-    chat$register_tool(tool_query(data_source))
-    chat$register_tool(tool_reset_dashboard(reset_query))
+    if (is_function(client)) {
+      # This is the `QueryChat$client` function, or generally a function that
+      # takes the update/reset callbacks and returns a realized QC chat client
+      chat <- client(
+        update_dashboard = update_dashboard,
+        reset_dashboard = reset_query
+      )
+    } else {
+      chat <- client$clone()
+      chat$register_tool(
+        tool_update_dashboard(data_source, update_fn = update_dashboard)
+      )
+      chat$register_tool(tool_query(data_source))
+      chat$register_tool(tool_reset_dashboard(reset_query))
+    }
 
     # Prepopulate the chat UI with a welcome message that appears to be from the
     # chat model (but is actually hard-coded). This is just for the user, not for
@@ -137,5 +155,5 @@ mod_server <- function(
   })
 }
 
-
+# TODO: Make this dependent on enabled tools
 GREETING_PROMPT <- "Please give me a friendly greeting. Include a few sample prompts in a two-level bulleted list."

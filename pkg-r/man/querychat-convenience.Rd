@@ -12,6 +12,7 @@ querychat(
   id = NULL,
   greeting = NULL,
   client = NULL,
+  tools = c("update", "query"),
   data_description = NULL,
   categorical_threshold = 20,
   extra_instructions = NULL,
@@ -26,11 +27,12 @@ querychat_app(
   id = NULL,
   greeting = NULL,
   client = NULL,
+  tools = c("update", "query"),
   data_description = NULL,
   categorical_threshold = 20,
   extra_instructions = NULL,
   prompt_template = NULL,
-  cleanup = TRUE,
+  cleanup = NA,
   bookmark_store = "url"
 )
 }
@@ -65,6 +67,13 @@ a greeting to save and reuse.}
 \code{\link[ellmer:chat_openai]{ellmer::chat_openai()}}
 }}
 
+\item{tools}{Which querychat tools to include in the chat client, by
+default. \code{"update"} includes the tools for updating and resetting the
+dashboard and \code{"query"} includes the tool for executing SQL queries.
+Use \code{tools = "update"} when you only want the dashboard updating tools,
+or when you want to disable the querying tool entirely to prevent the
+LLM from seeing any of the data in your dataset.}
+
 \item{data_description}{Optional description of the data in plain text or
 Markdown. Can be a string or a file path. This provides context to the
 LLM about what the data represents.}
@@ -81,8 +90,11 @@ used. See the package prompts directory for the default template format.}
 
 \item{cleanup}{Whether or not to automatically run \verb{$cleanup()} when the
 Shiny session/app stops. By default, cleanup only occurs if \code{QueryChat}
-gets created within a Shiny session. Set to \code{TRUE} to always clean up,
-or \code{FALSE} to never clean up automatically.}
+is created within a Shiny app. Set to \code{TRUE} to always clean up, or
+\code{FALSE} to never clean up automatically.
+
+In \code{querychat_app()}, in-memory databases created for data frames are
+always cleaned up.}
 
 \item{bookmark_store}{The bookmarking storage method. Passed to
 \code{\link[shiny:enableBookmarking]{shiny::enableBookmarking()}}. If \code{"url"} or \code{"server"}, the chat state

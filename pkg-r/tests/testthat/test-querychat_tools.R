@@ -1,3 +1,24 @@
+test_that("tool_update_dashboard() checks inputs", {
+  skip_if_no_dataframe_engine()
+
+  expect_snapshot(error = TRUE, tool_update_dashboard("foo"))
+
+  df_source <- local_data_frame_source(new_test_df())
+  expect_snapshot(error = TRUE, {
+    tool_update_dashboard(df_source, update_fn = NULL)
+    tool_update_dashboard(df_source, update_fn = function(query) {})
+    tool_update_dashboard(df_source, update_fn = function(title, extra) {})
+  })
+})
+
+test_that("tool_reset_dashboard() checks inputs", {
+  expect_snapshot(error = TRUE, tool_reset_dashboard("not_a_function"))
+})
+
+test_that("tool_query() checks inputs", {
+  expect_snapshot(error = TRUE, tool_query("invalid_source"))
+})
+
 describe("querychat_tool_starts_open()", {
   it("uses the tool default when options are unset", {
     withr::local_options(querychat.tool_details = NULL)
@@ -69,6 +90,8 @@ describe("querychat_tool_details_option()", {
 })
 
 describe("querychat_tool_result()", {
+  skip_if_no_dataframe_engine()
+
   it("returns successful result for valid query action", {
     df_source <- local_data_frame_source(new_test_df())
 
@@ -264,6 +287,8 @@ describe("querychat_tool_result()", {
 })
 
 describe("tool_query()", {
+  skip_if_no_dataframe_engine()
+
   it("returns an ellmer tool object", {
     df_source <- local_data_frame_source(new_test_df())
     tool <- tool_query(df_source)
@@ -293,12 +318,12 @@ describe("tool_query()", {
 })
 
 describe("tool_update_dashboard()", {
+  skip_if_no_dataframe_engine()
+
   it("returns an ellmer tool object", {
     df_source <- local_data_frame_source(new_test_df())
-    current_query <- shiny::reactiveVal("SELECT * FROM test_table")
-    current_title <- shiny::reactiveVal("All Data")
 
-    tool <- tool_update_dashboard(df_source, current_query, current_title)
+    tool <- tool_update_dashboard(df_source)
 
     expect_s3_class(tool, "ellmer::ToolDef")
     expect_equal(tool@name, "querychat_update_dashboard")
@@ -306,35 +331,29 @@ describe("tool_update_dashboard()", {
 
   it("includes database type in description", {
     df_source <- local_data_frame_source(new_test_df())
-    current_query <- shiny::reactiveVal("SELECT * FROM test_table")
-    current_title <- shiny::reactiveVal("All Data")
 
-    tool <- tool_update_dashboard(df_source, current_query, current_title)
+    tool <- tool_update_dashboard(df_source)
 
     # DataFrameSource uses DuckDB
     expect_match(tool@description, "DuckDB|duckdb", ignore.case = TRUE)
   })
 
   it("creates a working tool function", {
-    shiny::testServer(
-      app = function(input, output, session) {
-        current_query <- shiny::reactiveVal("SELECT * FROM test_table")
-        current_title <- shiny::reactiveVal("All Data")
+    df_source <- local_data_frame_source(new_test_df())
 
-        df_source <- local_data_frame_source(new_test_df())
-        tool <- tool_update_dashboard(df_source, current_query, current_title)
+    res_update <- NULL
+    tool <- tool_update_dashboard(df_source, function(query, title) {
+      res_update <<- list(query = query, title = title)
+    })
 
-        result <- tool(
-          query = "SELECT * FROM test_table WHERE id > 2",
-          title = "Filtered View"
-        )
-      },
-      expr = {
-        expect_s7_class(result, ellmer::ContentToolResult)
-        expect_equal(current_query(), "SELECT * FROM test_table WHERE id > 2")
-        expect_equal(current_title(), "Filtered View")
-      }
+    res_tool <- tool(
+      query = "SELECT * FROM test_table WHERE id > 2",
+      title = "Filtered View"
     )
+
+    expect_s7_class(res_tool, ellmer::ContentToolResult)
+    expect_equal(res_update$query, "SELECT * FROM test_table WHERE id > 2")
+    expect_equal(res_update$title, "Filtered View")
   })
 })
 
@@ -359,16 +378,14 @@ describe("tool_reset_dashboard()", {
 })
 
 describe("tool_update_dashboard_impl()", {
+  skip_if_no_dataframe_engine()
+
   it("returns a function", {
     df_source <- local_data_frame_source(new_test_df())
     current_query <- shiny::reactiveVal("SELECT * FROM test_table")
     current_title <- shiny::reactiveVal("All Data")
 
-    impl_fn <- tool_update_dashboard_impl(
-      df_source,
-      current_query,
-      current_title
-    )
+    impl_fn <- tool_update_dashboard_impl(df_source)
 
     expect_type(impl_fn, "closure")
   })
@@ -376,106 +393,37 @@ describe("tool_update_dashboard_impl()", {
   it("updates reactive values on successful query", {
     df_source <- local_data_frame_source(new_test_df())
 
-    shiny::testServer(
-      app = function(input, output, session) {
-        current_query <- shiny::reactiveVal("SELECT * FROM test_table")
-        current_title <- shiny::reactiveVal("All Data")
+    res_update <- NULL
+    impl_fn <- tool_update_dashboard_impl(df_source, function(query, title) {
+      res_update <<- list(query = query, title = title)
+    })
 
-        impl_fn <- tool_update_dashboard_impl(
-          df_source,
-          current_query,
-          current_title
-        )
-
-        result <- impl_fn(
-          query = "SELECT * FROM test_table WHERE id < 3",
-          title = "First Two"
-        )
-      },
-      expr = {
-        expect_equal(current_query(), "SELECT * FROM test_table WHERE id < 3")
-        expect_equal(current_title(), "First Two")
-        expect_null(result@error)
-      }
+    res_tool <- impl_fn(
+      query = "SELECT * FROM test_table WHERE id < 3",
+      title = "First Two"
     )
+
+    expect_equal(res_update$query, "SELECT * FROM test_table WHERE id < 3")
+    expect_equal(res_update$title, "First Two")
+    expect_null(res_tool@error)
   })
 
   it("does not update reactive values on query error", {
-    shiny::testServer(
-      app = function(input, output, session) {
-        df_source <- local_data_frame_source(new_test_df())
-        current_query <- shiny::reactiveVal("SELECT * FROM test_table")
-        current_title <- shiny::reactiveVal("All Data")
+    df_source <- local_data_frame_source(new_test_df())
 
-        tool <- tool_update_dashboard_impl(
-          df_source,
-          current_query,
-          current_title
-        )
+    res_update <- NULL
+    impl_fn <- tool_update_dashboard_impl(df_source, function(query, title) {
+      res_update <<- list(query = query, title = title)
+    })
 
-        result <- tool(
-          query = "INVALID SQL",
-          title = "Should Not Update"
-        )
-      },
-      expr = {
-        # Values should remain unchanged
-        expect_equal(current_query(), "SELECT * FROM test_table")
-        expect_equal(current_title(), "All Data")
-        expect_s3_class(result@error, "error")
-      }
+    res_tool <- impl_fn(
+      query = "INVALID SQL",
+      title = "Should Not Update"
     )
-  })
 
-  it("handles NULL query gracefully", {
-    shiny::testServer(
-      app = function(input, output, session) {
-        df_source <- local_data_frame_source(new_test_df())
-        current_query <- shiny::reactiveVal("SELECT * FROM test_table")
-        current_title <- shiny::reactiveVal("All Data")
-
-        tool <- tool_update_dashboard_impl(
-          df_source,
-          current_query,
-          current_title
-        )
-
-        result <- tool(query = NULL, title = "Updated Title")
-      },
-      expr = {
-        expect_s7_class(result, ellmer::ContentToolResult)
-        expect_null(result@error)
-
-        # Query should not be updated when NULL
-        expect_equal(current_query(), "SELECT * FROM test_table")
-        expect_equal(current_title(), "Updated Title")
-      }
-    )
-  })
-
-  it("handles NULL title gracefully", {
-    shiny::testServer(
-      app = function(input, output, session) {
-        df_source <- local_data_frame_source(new_test_df())
-        current_query <- shiny::reactiveVal("SELECT * FROM test_table")
-        current_title <- shiny::reactiveVal("All Data")
-
-        impl_fn <- tool_update_dashboard_impl(
-          df_source,
-          current_query,
-          current_title
-        )
-
-        result <- impl_fn(
-          query = "SELECT * FROM test_table WHERE id = 1",
-          title = NULL
-        )
-      },
-      expr = {
-        # Title should not be updated when NULL
-        expect_equal(current_query(), "SELECT * FROM test_table WHERE id = 1")
-        expect_equal(current_title(), "All Data")
-      }
-    )
+    # `update_fn` was not called
+    expect_null(res_update)
+    # because the tool resulted in an error
+    expect_s3_class(res_tool@error, class = "error")
   })
 })

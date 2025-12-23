@@ -5,13 +5,26 @@
 #   summarizing the intent of the SQL query.
 tool_update_dashboard <- function(
   data_source,
-  current_query,
-  current_title
+  update_fn = function(query, title) {}
 ) {
+  check_data_source(data_source)
+
+  check_function(update_fn)
+  has_args <- intersect(fn_fmls_names(update_fn), c("query", "title"))
+  if (length(has_args) != 2) {
+    missing_args <- setdiff(c("query", "title"), has_args)
+    cli::cli_abort(
+      c(
+        "{.arg update_fn} must accept at least two named arguments: {.val query} and {.val title}.",
+        "x" = "{.val {missing_args}} argument{?s} {?was/were} missing."
+      )
+    )
+  }
+
   db_type <- data_source$get_db_type()
 
   ellmer::tool(
-    tool_update_dashboard_impl(data_source, current_query, current_title),
+    tool_update_dashboard_impl(data_source, update_fn),
     name = "querychat_update_dashboard",
     description = interpolate_package(
       "tool-update-dashboard.md",
@@ -35,11 +48,7 @@ tool_update_dashboard <- function(
   )
 }
 
-tool_update_dashboard_impl <- function(
-  data_source,
-  current_query,
-  current_title
-) {
+tool_update_dashboard_impl <- function(data_source, update_fn) {
   force(data_source)
 
   function(query, title) {
@@ -51,12 +60,7 @@ tool_update_dashboard_impl <- function(
     )
 
     if (is.null(res@error)) {
-      if (!is.null(query)) {
-        current_query(query)
-      }
-      if (!is.null(title)) {
-        current_title(title)
-      }
+      update_fn(query, title)
     }
 
     res
@@ -64,7 +68,9 @@ tool_update_dashboard_impl <- function(
 }
 
 
-tool_reset_dashboard <- function(reset_fn) {
+tool_reset_dashboard <- function(reset_fn = identity) {
+  check_function(reset_fn)
+
   ellmer::tool(
     reset_fn,
     name = "querychat_reset_dashboard",
@@ -81,7 +87,8 @@ tool_reset_dashboard <- function(reset_fn) {
 # @param query A SQL query; must be a SELECT statement.
 # @return The results of the query as a data frame.
 tool_query <- function(data_source) {
-  force(data_source)
+  check_data_source(data_source)
+
   db_type <- data_source$get_db_type()
 
   ellmer::tool(
@@ -167,7 +174,7 @@ querychat_tool_result <- function(
     switch(
       action,
       update = {
-        data_source$test_query(query)
+        data_source$test_query(query, require_all_columns = TRUE)
         NULL
       },
       query = data_source$execute_query(query),

@@ -2,13 +2,19 @@
 title: Provide context
 ---
 
-To improve the LLM's ability to accurately translate natural language queries into SQL, it often helps to provide relevant metadata. Querychat automatically provides things like column names and data types to the LLM, but you can enhance this further with additional context like [data descriptions](#data-description). You can also provide [custom instructions](#extra-instructions) to add additional behaviors and even supply a fully [custom prompt template](#custom-template), if desired.
+querychat automatically gathers information about your table to help the LLM write accurate SQL queries. This includes column names and types, numerical ranges, and categorical value examples.^[All of this information is provided to the LLM as part of the **system prompt** -- a string of text containing instructions and context for the LLM to consider when responding to user queries.]
 
-All of this information is provided to the LLM as part of the **system prompt** -- a string of text containing instructions and context for the LLM to consider when responding to user queries.
+Importantly, we are **not** sending your raw data to the LLM and asking it to do complicated math. The LLM only needs to understand the structure and schema of your data in order to write SQL queries.
+
+You can get even better results by customizing the system prompt in three ways:
+
+1. Add a [data description](#data-description) to provide more context about what the data represents
+2. Add [custom instructions](#extra-instructions) to guide the LLM's behavior
+3. Use a fully [custom prompt template](#custom-template) if you want complete control (useful if you want to be certain the model cannot see any literal values from your data)
 
 ## Default prompt
 
-For full visibility into the full system prompt that Querychat generates for the LLM, see the `system_prompt` property. This is useful for debugging and understanding exactly what context the LLM is using:
+For full visibility into the system prompt that querychat generates for the LLM, you can inspect the `system_prompt` property. This is useful for debugging and understanding exactly what context the LLM is using:
 
 ```python
 from querychat import QueryChat
@@ -32,7 +38,7 @@ By default, the system prompt contains the following components:
 
 ## Data description {#data-description}
 
-If your column names are descriptive, Querychat may already work well without additional context. However, if your columns are named `x`, `V1`, `value`, etc., you should provide a data description. Use the `data_description` parameter for this:
+If your column names are descriptive, querychat may already work well without additional context. However, if your columns are named `x`, `V1`, `value`, etc., you should provide a data description. Use the `data_description` parameter for this:
 
 ```{.python filename="titanic-app.py"}
 from pathlib import Path
@@ -46,7 +52,7 @@ qc = QueryChat(
 app = qc.app()
 ```
 
-Querychat doesn't need this information in any particular format -- just provide what a human would find helpful:
+querychat doesn't need this information in any particular format -- just provide what a human would find helpful:
 
 ```{.markdown filename="data_description.md"}
 This dataset contains information about Titanic passengers, collected for predicting survival.
@@ -95,4 +101,4 @@ LLMs may not always follow your instructions perfectly. Test extensively when ch
 
 ## Custom template {#custom-template}
 
-If you want more control over the system prompt, you can provide a custom prompt template using the `prompt_template` parameter. This is for more advanced users who want to fully customize the LLM's behavior. See the [API reference](reference/QueryChat.qmd#attributes) for details on the available template variables.
+If you want more control over the system prompt, you can provide a custom prompt template using the `prompt_template` parameter. This is for more advanced users who want to fully customize the LLM's behavior. See the [API reference](reference/querychat.qmd#attributes) for details on the available template variables.

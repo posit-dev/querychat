@@ -1,0 +1,120 @@
+---
+title: "Provide Context"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Provide Context}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE
+)
+```
+
+querychat automatically gathers information about your table to help the LLM write accurate SQL queries. This includes column names and types, numerical ranges, and categorical value examples. (All of this information is provided to the LLM as part of the **system prompt** -- a string of text containing instructions and context for the LLM to consider when responding to user queries.)
+
+Importantly, we are **not** sending your raw data to the LLM and asking it to do complicated math. The LLM only needs to understand the structure and schema of your data in order to write SQL queries.
+
+You can get even better results by customizing the system prompt in three ways:
+
+1. Add a [data description](#data-description) to provide more context about what the data represents
+2. Add [custom instructions](#extra-instructions) to guide the LLM's behavior
+3. Use a fully [custom prompt template](#custom-template) if you want complete control (useful if you want to be certain the model cannot see any literal values from your data)
+
+```{r}
+library(querychat)
+library(palmerpenguins)
+```
+
+## Default prompt
+
+For full visibility into the system prompt that querychat generates for the LLM, you can inspect the `system_prompt` field. This is useful for debugging and understanding exactly what context the LLM is using:
+
+```{r}
+qc <- querychat(penguins)
+cat(qc$system_prompt)
+```
+
+By default, the system prompt contains the following components:
+
+1. The basic set of behaviors and guidelines the LLM must follow in order for querychat to work properly, including how to use [tools](tools.html) to execute queries and update the app.
+2. The SQL schema of the data frame you provided. This includes:
+    - Column names
+    - Data types (integer, real, boolean, date/datetime, text)
+    - For text columns with less than 10 unique values, we assume they are categorical variables and include the list of values
+    - For integer and real columns, we include the range
+3. A [data description](#data-description) (if provided via `data_description`)
+4. [Additional instructions](#additional-instructions) you want to use to guide querychat's behavior (if provided via `extra_instructions`).
+
+## Data description {#data-description}
+
+If your column names are descriptive, querychat may already work well without additional context. However, if your columns are named `x`, `V1`, `value`, etc., you should provide a data description. Use the `data_description` parameter for this:
+
+```{r}
+qc <- querychat(
+  penguins,
+  data_description = "data_description.md"
+)
+
+cat(qc$system_prompt)
+```
+
+querychat doesn't need this information in any particular format -- just provide what a human would find helpful:
+
+```markdown
+<!-- data_description.md -->
+
+This dataset contains information about Palmer Archipelago penguins,
+collected for studying penguin populations.
+
+- species: Penguin species (Adelie, Chinstrap, Gentoo)
+- island: Island where observed (Torgersen, Biscoe, Dream)
+- bill_length_mm: Bill length in millimeters
+- bill_depth_mm: Bill depth in millimeters
+- flipper_length_mm: Flipper length in millimeters
+- body_mass_g: Body mass in grams
+- sex: Penguin sex (male, female)
+- year: Year of observation
+```
+
+## Additional instructions {#extra-instructions}
+
+You can add custom instructions to guide the LLM's behavior using the `extra_instructions` parameter:
+
+```{r}
+qc <- querychat(
+  penguins,
+  extra_instructions = "instructions.md"
+)
+
+cat(qc$system_prompt)
+```
+
+Or as a string:
+
+```{r}
+instructions <- "
+- Use British spelling conventions
+- Stay on topic and only discuss the data dashboard
+- Refuse to answer unrelated questions
+"
+
+qc <- querychat(
+  penguins,
+  extra_instructions = instructions
+)
+
+cat(qc$system_prompt)
+```
+
+::: {.alert .alert-warning}
+LLMs may not always follow your instructions perfectly. Test extensively when changing instructions or models.
+:::
+
+## Custom template {#custom-template}
+
+If you want more control over the system prompt, you can provide a custom prompt template using the `prompt_template` parameter. This is for more advanced users who want to fully customize the LLM's behavior. See the [QueryChat reference](../reference/QueryChat.html) for details on the available template variables.

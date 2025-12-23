@@ -106,6 +106,30 @@
       Error in `initialize()`:
       ! `table_name` must be a single string, not `NULL`.
 
+# DataFrameSource engine parameter / engine parameter validation / errors on invalid engine name
+
+    Code
+      DataFrameSource$new(new_test_df(), "test_table", engine = "postgres")
+    Condition
+      Error in `initialize()`:
+      ! `engine` must be one of "duckdb" or "sqlite", not "postgres".
+
+---
+
+    Code
+      DataFrameSource$new(new_test_df(), "test_table", engine = "invalid")
+    Condition
+      Error in `initialize()`:
+      ! `engine` must be one of "duckdb" or "sqlite", not "invalid".
+
+---
+
+    Code
+      DataFrameSource$new(new_test_df(), "test_table", engine = "")
+    Condition
+      Error in `initialize()`:
+      ! `engine` must be one of "duckdb" or "sqlite", not "".
+
 # DBISource$new() / errors with non-DBI connection
 
     Code
@@ -163,19 +187,21 @@
       ! Table "`non_existent_table`" not found in database
       i If you're using a table in a catalog or schema, pass a `DBI::Id()` object to `table_name`
 
-# assemble_system_prompt() / errors with non-DataSource input
+# test_query() column validation / provides helpful error message listing missing columns
 
     Code
-      assemble_system_prompt(list(not = "a data source"), data_description = "Test")
+      source$test_query("SELECT id FROM test_table", require_all_columns = TRUE)
     Condition
-      Error in `assemble_system_prompt()`:
-      ! `source` must be a <DataSource> object, not a list
+      Error in `source$test_query()`:
+      ! Query result missing required columns: 'name', 'value'
+      i The query must return all original table columns (in any order).
 
 ---
 
     Code
-      assemble_system_prompt(data.frame(x = 1:3), data_description = "Test")
+      source$test_query("SELECT id, name FROM test_table", require_all_columns = TRUE)
     Condition
-      Error in `assemble_system_prompt()`:
-      ! `source` must be a <DataSource> object, not a data frame
+      Error in `source$test_query()`:
+      ! Query result missing required columns: 'value'
+      i The query must return all original table columns (in any order).
 

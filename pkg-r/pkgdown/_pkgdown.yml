@@ -35,7 +35,7 @@ navbar:
     right: [search, github, lightswitch]
   components:
     articles:
-      text: Articles 
+      text: Articles
       menu:
       - text: Models
         href: articles/models.html
@@ -64,6 +64,7 @@ reference:
   - DataSource
   - DataFrameSource
   - DBISource
+  - TblSqlSource
 - title: Package
   contents:
   - querychat

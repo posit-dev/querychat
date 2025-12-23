@@ -431,8 +431,7 @@ QueryChat <- R6::R6Class(
         output$dt <- DT::renderDT({
           df <- qc_vals$df()
           if (inherits(df, "tbl_sql")) {
-            # Materialize the query to get a data frame, {dplyr} guaranteed by
-            # TblLazySource interface
+            # Materialize the query for DT, {dplyr} guaranteed by TblLazySource
             df <- dplyr::collect(df)
           }
 

@@ -1,8 +1,8 @@
-describe("TblLazySource$new()", {
-  it("creates proper R6 object for TblLazySource", {
-    source <- local_tbl_lazy_source()
+describe("TblSqlSource$new()", {
+  it("creates proper R6 object for TblSqlSource", {
+    source <- local_tbl_sql_source()
 
-    expect_s3_class(source, "TblLazySource")
+    expect_s3_class(source, "TblSqlSource")
     expect_s3_class(source, "DBISource")
     expect_s3_class(source, "DataSource")
     expect_equal(source$table_name, "test_table")
@@ -14,16 +14,16 @@ describe("TblLazySource$new()", {
     skip_if_not_installed("dbplyr")
 
     expect_snapshot(error = TRUE, {
-      TblLazySource$new(data.frame(a = 1))
+      TblSqlSource$new(data.frame(a = 1))
     })
 
     expect_snapshot(error = TRUE, {
-      TblLazySource$new(list(a = 1, b = 2))
+      TblSqlSource$new(list(a = 1, b = 2))
     })
   })
 
   it("returns lazy tibble from execute_query()", {
-    source <- local_tbl_lazy_source()
+    source <- local_tbl_sql_source()
 
     result <- source$execute_query("SELECT * FROM test_table WHERE value > 25")
     expect_s3_class(result, "tbl_sql")
@@ -36,7 +36,7 @@ describe("TblLazySource$new()", {
   })
 
   it("returns data frame from test_query()", {
-    source <- local_tbl_lazy_source()
+    source <- local_tbl_sql_source()
 
     result <- source$test_query("SELECT * FROM test_table")
     expect_s3_class(result, "data.frame")
@@ -44,7 +44,7 @@ describe("TblLazySource$new()", {
   })
 
   it("returns lazy tibble from get_data()", {
-    source <- local_tbl_lazy_source()
+    source <- local_tbl_sql_source()
 
     result <- source$get_data()
     expect_s3_class(result, "tbl_sql")
@@ -52,9 +52,9 @@ describe("TblLazySource$new()", {
   })
 })
 
-describe("TblLazySource with transformed tbl (CTE mode)", {
+describe("TblSqlSource with transformed tbl (CTE mode)", {
   it("works with filtered tbl", {
-    source <- local_tbl_lazy_source(
+    source <- local_tbl_sql_source(
       tbl_transform = function(tbl) dplyr::filter(tbl, value > 20)
     )
 
@@ -66,7 +66,7 @@ describe("TblLazySource with transformed tbl (CTE mode)", {
   })
 
   it("works with selected columns tbl", {
-    source <- local_tbl_lazy_source(
+    source <- local_tbl_sql_source(
       tbl_transform = function(tbl) dplyr::select(tbl, id, name)
     )
 
@@ -76,14 +76,14 @@ describe("TblLazySource with transformed tbl (CTE mode)", {
   })
 })
 
-describe("TblLazySource edge cases - Category A: Structural Violations", {
-  # Note: TblLazySource uses dplyr::tbl(conn, dplyr::sql(query)) which wraps
+describe("TblSqlSource edge cases - Category A: Structural Violations", {
+  # Note: TblSqlSource uses dplyr::tbl(conn, dplyr::sql(query)) which wraps
 
   # the user's query as a subquery. This means some SQL constructs that work
   # in standalone queries will fail when wrapped.
 
   it("errors on trailing semicolon (subquery wrapping)", {
-    source <- local_tbl_lazy_source()
+    source <- local_tbl_sql_source()
 
     # Semicolons inside subqueries cause syntax errors in DuckDB
     # The query gets wrapped as: SELECT * FROM (SELECT * FROM test_table;) q01
@@ -94,7 +94,7 @@ describe("TblLazySource edge cases - Category A: Structural Violations", {
   })
 
   it("errors on trailing semicolon in CTE mode", {
-    source <- local_tbl_lazy_source(
+    source <- local_tbl_sql_source(
       tbl_transform = function(tbl) dplyr::filter(tbl, value > 10)
     )
 
@@ -106,7 +106,7 @@ describe("TblLazySource edge cases - Category A: Structural Violations", {
   })
 
   it("errors on multiple trailing semicolons", {
-    source <- local_tbl_lazy_source()
+    source <- local_tbl_sql_source()
 
     expect_error(
       dplyr::collect(source$execute_query("SELECT * FROM test_table;;;")),
@@ -115,7 +115,7 @@ describe("TblLazySource edge cases - Category A: Structural Violations", {
   })
 
   it("errors on multiple statements", {
-    source <- local_tbl_lazy_source()
+    source <- local_tbl_sql_source()
 
     # Multiple statements cause syntax errors when wrapped as subquery
     expect_error(
@@ -125,7 +125,7 @@ describe("TblLazySource edge cases - Category A: Structural Violations", {
   })
 
   it("errors on empty SELECT (syntax error)", {
-    source <- local_tbl_lazy_source()
+    source <- local_tbl_sql_source()
 
     expect_error(
       dplyr::collect(source$execute_query("SELECT")),
@@ -134,7 +134,7 @@ describe("TblLazySource edge cases - Category A: Structural Violations", {
   })
 
   it("errors on SELECT with no FROM when columns expected", {
-    source <- local_tbl_lazy_source()
+    source <- local_tbl_sql_source()
 
     # SELECT without FROM is valid for literals but invalid for table columns
     expect_error(
@@ -144,7 +144,7 @@ describe("TblLazySource edge cases - Category A: Structural Violations", {
   })
 
   it("succeeds with query without trailing semicolon", {
-    source <- local_tbl_lazy_source()
+    source <- local_tbl_sql_source()
 
     # Properly formed query without semicolon works
     result <- source$execute_query("SELECT * FROM test_table")
@@ -153,9 +153,9 @@ describe("TblLazySource edge cases - Category A: Structural Violations", {
   })
 })
 
-describe("TblLazySource edge cases - Category B: Column Naming Issues", {
+describe("TblSqlSource edge cases - Category B: Column Naming Issues", {
   it("handles unnamed expressions (auto-generated names)", {
-    source <- local_tbl_lazy_source()
+    source <- local_tbl_sql_source()
 
     # DuckDB auto-generates names for unnamed expressions
     result <- source$execute_query(
@@ -168,7 +168,7 @@ describe("TblLazySource edge cases - Category B: Column Naming Issues", {
   })
 
   it("handles unnamed expressions in CTE mode", {
-    source <- local_tbl_lazy_source(
+    source <- local_tbl_sql_source(
       tbl_transform = function(tbl) dplyr::filter(tbl, value > 10)
     )
 
@@ -186,7 +186,7 @@ describe("TblLazySource edge cases - Category B: Column Naming Issues", {
 
     conn <- local_duckdb_multi_table()
     tbl_a <- dplyr::tbl(conn, "table_a")
-    source <- TblLazySource$new(tbl_a, "table_a")
+    source <- TblSqlSource$new(tbl_a, "table_a")
 
     # SELECT with explicit duplicate column names from JOIN
     # DuckDB allows duplicate names but tibble rejects them on collect
@@ -206,7 +206,7 @@ describe("TblLazySource edge cases - Category B: Column Naming Issues", {
 
     conn <- local_duckdb_multi_table()
     tbl_a <- dplyr::tbl(conn, "table_a")
-    source <- TblLazySource$new(tbl_a, "table_a")
+    source <- TblSqlSource$new(tbl_a, "table_a")
 
     # Using aliases to avoid duplicate column names
     result <- source$execute_query(
@@ -220,7 +220,7 @@ describe("TblLazySource edge cases - Category B: Column Naming Issues", {
   })
 
   it("handles reserved word as alias", {
-    source <- local_tbl_lazy_source()
+    source <- local_tbl_sql_source()
 
     # Using reserved word 'select' as column alias (quoted)
     result <- source$execute_query(
@@ -233,7 +233,7 @@ describe("TblLazySource edge cases - Category B: Column Naming Issues", {
   })
 
   it("handles reserved word as unquoted alias (DuckDB permissive)", {
-    source <- local_tbl_lazy_source()
+    source <- local_tbl_sql_source()
 
     # DuckDB is permissive with reserved words as aliases
     # This may work or fail depending on the specific word
@@ -245,7 +245,7 @@ describe("TblLazySource edge cases - Category B: Column Naming Issues", {
   })
 
   it("handles empty string alias (DB-dependent)", {
-    source <- local_tbl_lazy_source()
+    source <- local_tbl_sql_source()
 
     # Empty string alias - DuckDB behavior
     # This typically creates a column with empty name or errors
@@ -267,7 +267,7 @@ describe("TblLazySource edge cases - Category B: Column Naming Issues", {
 
     conn <- local_duckdb_multi_table()
     tbl_a <- dplyr::tbl(conn, "table_a")
-    source <- TblLazySource$new(tbl_a, "table_a")
+    source <- TblSqlSource$new(tbl_a, "table_a")
 
     # SELECT * from JOIN produces duplicate 'id' columns
     # tibble rejects duplicate names on collect
@@ -287,7 +287,7 @@ describe("TblLazySource edge cases - Category B: Column Naming Issues", {
 
     conn <- local_duckdb_multi_table()
     tbl_a <- dplyr::tbl(conn, "table_a")
-    source <- TblLazySource$new(tbl_a, "table_a")
+    source <- TblSqlSource$new(tbl_a, "table_a")
 
     # USING clause produces single 'id' column
     result <- source$execute_query(
@@ -300,9 +300,9 @@ describe("TblLazySource edge cases - Category B: Column Naming Issues", {
   })
 })
 
-describe("TblLazySource edge cases - Category C: ORDER BY behavior", {
+describe("TblSqlSource edge cases - Category C: ORDER BY behavior", {
   it("handles ORDER BY without LIMIT", {
-    source <- local_tbl_lazy_source()
+    source <- local_tbl_sql_source()
 
     # ORDER BY without LIMIT is valid SQL
     result <- source$execute_query(
@@ -316,7 +316,7 @@ describe("TblLazySource edge cases - Category C: ORDER BY behavior", {
   })
 
   it("handles ORDER BY without LIMIT in CTE mode", {
-    source <- local_tbl_lazy_source(
+    source <- local_tbl_sql_source(
       tbl_transform = function(tbl) dplyr::filter(tbl, value >= 10)
     )
 
@@ -330,7 +330,7 @@ describe("TblLazySource edge cases - Category C: ORDER BY behavior", {
   })
 
   it("handles LIMIT without ORDER BY (non-deterministic but valid)", {
-    source <- local_tbl_lazy_source()
+    source <- local_tbl_sql_source()
 
     # LIMIT without ORDER BY is valid but non-deterministic
     result <- source$execute_query("SELECT * FROM test_table LIMIT 3")
@@ -339,7 +339,7 @@ describe("TblLazySource edge cases - Category C: ORDER BY behavior", {
   })
 
   it("handles ORDER BY with LIMIT", {
-    source <- local_tbl_lazy_source()
+    source <- local_tbl_sql_source()
 
     result <- source$execute_query(
       "SELECT * FROM test_table ORDER BY value DESC LIMIT 2"
@@ -350,7 +350,7 @@ describe("TblLazySource edge cases - Category C: ORDER BY behavior", {
   })
 
   it("handles ORDER BY with LIMIT and OFFSET", {
-    source <- local_tbl_lazy_source()
+    source <- local_tbl_sql_source()
 
     result <- source$execute_query(
       "SELECT * FROM test_table ORDER BY value DESC LIMIT 2 OFFSET 1"
@@ -361,7 +361,7 @@ describe("TblLazySource edge cases - Category C: ORDER BY behavior", {
   })
 
   it("handles ORDER BY with column alias", {
-    source <- local_tbl_lazy_source()
+    source <- local_tbl_sql_source()
 
     result <- source$execute_query(
       "SELECT id, value AS val FROM test_table ORDER BY val DESC"
@@ -372,7 +372,7 @@ describe("TblLazySource edge cases - Category C: ORDER BY behavior", {
   })
 
   it("handles ORDER BY with expression", {
-    source <- local_tbl_lazy_source()
+    source <- local_tbl_sql_source()
 
     result <- source$execute_query(
       "SELECT id, value FROM test_table ORDER BY value * -1"

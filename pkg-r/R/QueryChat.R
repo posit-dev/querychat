@@ -431,7 +431,7 @@ QueryChat <- R6::R6Class(
         output$dt <- DT::renderDT({
           df <- qc_vals$df()
           if (inherits(df, "tbl_sql")) {
-            # Materialize the query for DT, {dplyr} guaranteed by TblLazySource
+            # Materialize the query for DT, {dplyr} guaranteed by TblSqlSource
             df <- dplyr::collect(df)
           }
 
@@ -863,8 +863,8 @@ normalize_data_source <- function(data_source, table_name) {
     return(DataFrameSource$new(data_source, table_name))
   }
 
-  if (inherits(data_source, "tbl_lazy")) {
-    return(TblLazySource$new(data_source, table_name))
+  if (inherits(data_source, "tbl_sql")) {
+    return(TblSqlSource$new(data_source, table_name))
   }
 
   if (inherits(data_source, "DBIConnection")) {

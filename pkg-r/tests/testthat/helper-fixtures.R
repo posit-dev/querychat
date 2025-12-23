@@ -101,8 +101,8 @@ local_querychat <- function(
   qc
 }
 
-# Create a TblLazySource with DuckDB and automatic cleanup
-local_tbl_lazy_source <- function(
+# Create a TblSqlSource with DuckDB and automatic cleanup
+local_tbl_sql_source <- function(
   data = new_test_df(),
   table_name = "test_table",
   tbl_transform = identity,
@@ -119,7 +119,7 @@ local_tbl_lazy_source <- function(
   tbl <- dplyr::tbl(conn, table_name)
   tbl <- tbl_transform(tbl)
 
-  TblLazySource$new(tbl, table_name)
+  TblSqlSource$new(tbl, table_name)
 }
 
 # Create a DuckDB connection with multiple tables for JOIN tests

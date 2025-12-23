@@ -1,14 +1,14 @@
-#' Data Source: Lazy Tibble
+#' Data Source: SQL Tibble
 #'
 #' @description
-#' A DataSource implementation for lazy tibbles connected to databases via
+#' A DataSource implementation for lazy SQL tibbles connected to databases via
 #' [dbplyr::tbl_sql()] or [dplyr::sql()].
 #'
 #' @examplesIf rlang::is_interactive() && rlang::is_installed("dbplyr") && rlang::is_installed("dplyr") && rlang::is_installed("duckdb")
 #' con <- DBI::dbConnect(duckdb::duckdb())
 #' DBI::dbWriteTable(con, "mtcars", mtcars)
 #'
-#' mtcars_source <- TblLazySource$new(tbl(con, "mtcars"))
+#' mtcars_source <- TblSqlSource$new(dplyr::tbl(con, "mtcars"))
 #' mtcars_source$get_db_type()  # "DuckDB"
 #'
 #' result <- mtcars_source$execute_query("SELECT * FROM mtcars WHERE cyl > 4")
@@ -26,8 +26,8 @@
 #' mtcars_source$cleanup()
 #'
 #' @export
-TblLazySource <- R6::R6Class(
-  "TblLazySource",
+TblSqlSource <- R6::R6Class(
+  "TblSqlSource",
   inherit = DBISource,
   private = list(
     tbl = NULL,
@@ -38,23 +38,23 @@ TblLazySource <- R6::R6Class(
     table_name = NULL,
 
     #' @description
-    #' Create a new TblLazySource
+    #' Create a new TblSqlSource
     #'
-    #' @param tbl A [dbplyr::tbl_sql()] (or lazy tibble via [dplyr::tbl()]).
+    #' @param tbl A [dbplyr::tbl_sql()] (or SQL tibble via [dplyr::tbl()]).
     #' @param table_name Name of the table in the database. Can be a character
     #'   string, or will be inferred from the `tbl` argument, if possible.
-    #' @return A new TblLazySource object
+    #' @return A new TblSqlSource object
     #' @examplesIf rlang::is_interactive() && rlang::is_installed("dbplyr") && rlang::is_installed("dplyr") && rlang::is_installed("RSQLite")
     #' conn <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
     #' DBI::dbWriteTable(conn, "mtcars", mtcars)
-    #' source <- TblLazySource$new(dplyr::tbl(con, "mtcars"))
+    #' source <- TblSqlSource$new(dplyr::tbl(con, "mtcars"))
     initialize = function(tbl, table_name = missing_arg()) {
       check_installed("dbplyr")
       check_installed("dplyr")
 
       if (!inherits(tbl, "tbl_sql")) {
         cli::cli_abort(
-          "{.arg tbl} must be a lazy tibble connected to a database, not {.obj_type_friendly {tbl}}"
+          "{.arg tbl} must be a SQL tibble connected to a database, not {.obj_type_friendly {tbl}}"
         )
       }
 

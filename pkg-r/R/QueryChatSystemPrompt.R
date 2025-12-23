@@ -88,7 +88,8 @@ QueryChatSystemPrompt <- R6::R6Class(
         data_description = self$data_description,
         extra_instructions = self$extra_instructions,
         has_tool_update = if ("update" %in% tools) "true",
-        has_tool_query = if ("query" %in% tools) "true"
+        has_tool_query = if ("query" %in% tools) "true",
+        include_query_guidelines = if (length(tools) > 0) "true"
       )
 
       whisker::whisker.render(self$template, context)

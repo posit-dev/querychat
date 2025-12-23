@@ -47,7 +47,7 @@ check_sql_table_name <- function(
   check_string(x, allow_null = allow_null, arg = arg, call = call)
 
   # Then validate SQL table name pattern
-  if (!grepl("^[a-zA-Z][a-zA-Z0-9_]*$", x)) {
+  if (!is_valid_sql_table_name(x)) {
     cli::cli_abort(
       c(
         "{.arg {arg}} must be a valid SQL table name",
@@ -59,6 +59,10 @@ check_sql_table_name <- function(
   }
 
   invisible(NULL)
+}
+
+is_valid_sql_table_name <- function(x) {
+  grepl("^[a-zA-Z][a-zA-Z0-9_]*$", x)
 }
 
 

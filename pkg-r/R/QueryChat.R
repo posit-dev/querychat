@@ -142,9 +142,9 @@ QueryChat <- R6::R6Class(
     #'
     #' # With database
     #' library(DBI)
-    #' conn <- dbConnect(RSQLite::SQLite(), ":memory:")
-    #' dbWriteTable(conn, "mtcars", mtcars)
-    #' qc <- QueryChat$new(conn, "mtcars")
+    #' con <- dbConnect(RSQLite::SQLite(), ":memory:")
+    #' dbWriteTable(con, "mtcars", mtcars)
+    #' qc <- QueryChat$new(con, "mtcars")
     #' }
     initialize = function(
       data_source,
@@ -172,8 +172,10 @@ QueryChat <- R6::R6Class(
       check_string(prompt_template, allow_null = TRUE)
       check_bool(cleanup, allow_na = TRUE)
 
-      if (is_missing(table_name) && is.data.frame(data_source)) {
-        table_name <- deparse1(substitute(data_source))
+      if (is_missing(table_name)) {
+        if (is.data.frame(data_source) || inherits(data_source, "tbl_sql")) {
+          table_name <- deparse1(substitute(data_source))
+        }
       }
 
       private$.data_source <- normalize_data_source(data_source, table_name)
@@ -427,8 +429,14 @@ QueryChat <- R6::R6Class(
         })
 
         output$dt <- DT::renderDT({
+          df <- qc_vals$df()
+          if (inherits(df, "tbl_sql")) {
+            # Materialize the query for DT, {dplyr} guaranteed by TblSqlSource
+            df <- dplyr::collect(df)
+          }
+
           DT::datatable(
-            qc_vals$df(),
+            df,
             fillContainer = TRUE,
             options = list(pageLength = 25, scrollX = TRUE)
           )
@@ -740,9 +748,9 @@ QueryChat <- R6::R6Class(
 #'
 #' # Chat with a database table (table_name required)
 #' library(DBI)
-#' conn <- dbConnect(RSQLite::SQLite(), ":memory:")
-#' dbWriteTable(conn, "mtcars", mtcars)
-#' querychat_app(conn, "mtcars")
+#' con <- dbConnect(RSQLite::SQLite(), ":memory:")
+#' dbWriteTable(con, "mtcars", mtcars)
+#' querychat_app(con, "mtcars")
 #'
 #' # Create QueryChat class object
 #' qc <- querychat(mtcars)
@@ -765,8 +773,10 @@ querychat <- function(
   prompt_template = NULL,
   cleanup = NA
 ) {
-  if (is_missing(table_name) && is.data.frame(data_source)) {
-    table_name <- deparse1(substitute(data_source))
+  if (is_missing(table_name)) {
+    if (is.data.frame(data_source) || inherits(data_source, "tbl_sql")) {
+      table_name <- deparse1(substitute(data_source))
+    }
   }
 
   QueryChat$new(
@@ -851,6 +861,10 @@ normalize_data_source <- function(data_source, table_name) {
 
   if (is.data.frame(data_source)) {
     return(DataFrameSource$new(data_source, table_name))
+  }
+
+  if (inherits(data_source, "tbl_sql")) {
+    return(TblSqlSource$new(data_source, table_name))
   }
 
   if (inherits(data_source, "DBIConnection")) {

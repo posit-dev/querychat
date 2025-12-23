@@ -1,12 +1,8 @@
 # DBI Source
 
 A DataSource implementation for DBI database connections (SQLite,
-PostgreSQL, MySQL, etc.).
-
-## Details
-
-This class wraps a DBI connection and provides SQL query execution
-against a specified table in the database.
+PostgreSQL, MySQL, etc.). This class wraps a DBI connection and provides
+SQL query execution against a single table in the database.
 
 ## Super class
 
@@ -62,9 +58,9 @@ A new DBISource object
 #### Examples
 
     \dontrun{
-    conn <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
-    DBI::dbWriteTable(conn, "iris", iris)
-    source <- DBISource$new(conn, "iris")
+    con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
+    DBI::dbWriteTable(con, "iris", iris)
+    source <- DBISource$new(con, "iris")
     }
 
 ------------------------------------------------------------------------
@@ -196,11 +192,11 @@ The objects of this class are cloneable with this method.
 ``` r
 if (FALSE) { # \dontrun{
 # Connect to a database
-conn <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
-DBI::dbWriteTable(conn, "mtcars", mtcars)
+con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
+DBI::dbWriteTable(con, "mtcars", mtcars)
 
 # Create a DBI source
-db_source <- DBISource$new(conn, "mtcars")
+db_source <- DBISource$new(con, "mtcars")
 
 # Get database type
 db_source$get_db_type()  # Returns "SQLite"
@@ -217,8 +213,8 @@ result <- db_source$execute_query("SELECT * FROM mtcars WHERE mpg > 25")
 ## ------------------------------------------------
 
 if (FALSE) { # \dontrun{
-conn <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
-DBI::dbWriteTable(conn, "iris", iris)
-source <- DBISource$new(conn, "iris")
+con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
+DBI::dbWriteTable(con, "iris", iris)
+source <- DBISource$new(con, "iris")
 } # }
 ```

@@ -224,9 +224,9 @@ A new `QueryChat` object.
 
     # With database
     library(DBI)
-    conn <- dbConnect(RSQLite::SQLite(), ":memory:")
-    dbWriteTable(conn, "mtcars", mtcars)
-    qc <- QueryChat$new(conn, "mtcars")
+    con <- dbConnect(RSQLite::SQLite(), ":memory:")
+    dbWriteTable(con, "mtcars", mtcars)
+    qc <- QueryChat$new(con, "mtcars")
     }
 
 ------------------------------------------------------------------------
@@ -688,9 +688,9 @@ qc <- QueryChat$new(
 
 # With database
 library(DBI)
-conn <- dbConnect(RSQLite::SQLite(), ":memory:")
-dbWriteTable(conn, "mtcars", mtcars)
-qc <- QueryChat$new(conn, "mtcars")
+con <- dbConnect(RSQLite::SQLite(), ":memory:")
+dbWriteTable(con, "mtcars", mtcars)
+qc <- QueryChat$new(con, "mtcars")
 } # }
 
 ## ------------------------------------------------

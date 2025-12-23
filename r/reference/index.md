@@ -22,6 +22,8 @@
   : Data Frame Source
 - [`DBISource`](https://posit-dev.github.io/querychat/reference/DBISource.md)
   : DBI Source
+- [`TblSqlSource`](https://posit-dev.github.io/querychat/reference/TblSqlSource.md)
+  : Data Source: SQL Tibble
 
 ## Package
 

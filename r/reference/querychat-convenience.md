@@ -159,9 +159,9 @@ querychat_app(
 
 # Chat with a database table (table_name required)
 library(DBI)
-conn <- dbConnect(RSQLite::SQLite(), ":memory:")
-dbWriteTable(conn, "mtcars", mtcars)
-querychat_app(conn, "mtcars")
+con <- dbConnect(RSQLite::SQLite(), ":memory:")
+dbWriteTable(con, "mtcars", mtcars)
+querychat_app(con, "mtcars")
 
 # Create QueryChat class object
 qc <- querychat(mtcars)

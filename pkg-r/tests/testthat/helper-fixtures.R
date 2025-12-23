@@ -101,6 +101,61 @@ local_querychat <- function(
   qc
 }
 
+# Create a TblLazySource with DuckDB and automatic cleanup
+local_tbl_lazy_source <- function(
+  data = new_test_df(),
+  table_name = "test_table",
+  tbl_transform = identity,
+  env = parent.frame()
+) {
+  skip_if_not_installed("duckdb")
+  skip_if_not_installed("dbplyr")
+  skip_if_not_installed("dplyr")
+
+  conn <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
+  withr::defer(DBI::dbDisconnect(conn, shutdown = TRUE), envir = env)
+
+  DBI::dbWriteTable(conn, table_name, data, overwrite = TRUE)
+  tbl <- dplyr::tbl(conn, table_name)
+  tbl <- tbl_transform(tbl)
+
+  TblLazySource$new(tbl, table_name)
+}
+
+# Create a DuckDB connection with multiple tables for JOIN tests
+local_duckdb_multi_table <- function(
+  env = parent.frame()
+) {
+  skip_if_not_installed("duckdb")
+
+  conn <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
+  withr::defer(DBI::dbDisconnect(conn, shutdown = TRUE), envir = env)
+
+  # Table A with id and name
+  DBI::dbWriteTable(
+    conn,
+    "table_a",
+    data.frame(
+      id = 1:3,
+      name = c("Alice", "Bob", "Carol"),
+      stringsAsFactors = FALSE
+    )
+  )
+
+  # Table B with id and value
+  DBI::dbWriteTable(
+    conn,
+    "table_b",
+    data.frame(
+      id = 1:3,
+      value = c(100, 200, 300),
+      stringsAsFactors = FALSE
+    )
+  )
+
+  conn
+}
+
 mock_ellmer_chat_client <- function(
   public = list(),
   private = list(),

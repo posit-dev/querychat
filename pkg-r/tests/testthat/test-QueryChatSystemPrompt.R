@@ -134,6 +134,7 @@ describe("QueryChatSystemPrompt$render()", {
     template <- paste(
       "{{#has_tool_update}}update enabled{{/has_tool_update}}",
       "{{#has_tool_query}}query enabled{{/has_tool_query}}",
+      "{{#include_query_guidelines}}query guidelines{{/include_query_guidelines}}",
       sep = "\n"
     )
 
@@ -146,6 +147,7 @@ describe("QueryChatSystemPrompt$render()", {
 
     expect_true(grepl("update enabled", result))
     expect_true(grepl("query enabled", result))
+    expect_true(grepl("query guidelines", result))
   })
 
   it("renders with query only", {
@@ -156,6 +158,7 @@ describe("QueryChatSystemPrompt$render()", {
     template <- paste(
       "{{#has_tool_update}}update enabled{{/has_tool_update}}",
       "{{#has_tool_query}}query enabled{{/has_tool_query}}",
+      "{{#include_query_guidelines}}query guidelines{{/include_query_guidelines}}",
       sep = "\n"
     )
 
@@ -168,6 +171,7 @@ describe("QueryChatSystemPrompt$render()", {
 
     expect_false(grepl("update enabled", result))
     expect_true(grepl("query enabled", result))
+    expect_true(grepl("query guidelines", result))
   })
 
   it("renders with update only", {
@@ -178,6 +182,7 @@ describe("QueryChatSystemPrompt$render()", {
     template <- paste(
       "{{#has_tool_update}}update enabled{{/has_tool_update}}",
       "{{#has_tool_query}}query enabled{{/has_tool_query}}",
+      "{{#include_query_guidelines}}query guidelines{{/include_query_guidelines}}",
       sep = "\n"
     )
 
@@ -190,6 +195,7 @@ describe("QueryChatSystemPrompt$render()", {
 
     expect_true(grepl("update enabled", result))
     expect_false(grepl("query enabled", result))
+    expect_true(grepl("query guidelines", result))
   })
 
   it("renders with NULL tools", {
@@ -200,6 +206,7 @@ describe("QueryChatSystemPrompt$render()", {
     template <- paste(
       "{{#has_tool_update}}update enabled{{/has_tool_update}}",
       "{{#has_tool_query}}query enabled{{/has_tool_query}}",
+      "{{#include_query_guidelines}}query guidelines{{/include_query_guidelines}}",
       "Always shown",
       sep = "\n"
     )
@@ -213,6 +220,7 @@ describe("QueryChatSystemPrompt$render()", {
 
     expect_false(grepl("update enabled", result))
     expect_false(grepl("query enabled", result))
+    expect_false(grepl("query guidelines", result))
     expect_true(grepl("Always shown", result))
   })
 

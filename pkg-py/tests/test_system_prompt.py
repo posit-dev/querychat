@@ -30,7 +30,9 @@ Schema: {{schema}}
 {{#data_description}}Data: {{data_description}}{{/data_description}}
 {{#extra_instructions}}Instructions: {{extra_instructions}}{{/extra_instructions}}
 {{#has_tool_update}}UPDATE TOOL ENABLED{{/has_tool_update}}
-{{#has_tool_query}}QUERY TOOL ENABLED{{/has_tool_query}}"""
+{{#has_tool_query}}QUERY TOOL ENABLED{{/has_tool_query}}
+{{#include_query_guidelines}}QUERY GUIDELINES{{/include_query_guidelines}}
+"""
 
 
 class TestQueryChatSystemPromptInit:
@@ -157,6 +159,7 @@ class TestQueryChatSystemPromptRender:
 
         assert "UPDATE TOOL ENABLED" in rendered
         assert "QUERY TOOL ENABLED" in rendered
+        assert "QUERY GUIDELINES" in rendered
         assert "Database Type:" in rendered
         assert "Schema:" in rendered
 
@@ -171,6 +174,7 @@ class TestQueryChatSystemPromptRender:
 
         assert "UPDATE TOOL ENABLED" not in rendered
         assert "QUERY TOOL ENABLED" in rendered
+        assert "QUERY GUIDELINES" in rendered
 
     def test_render_with_update_only(self, sample_data_source, sample_prompt_template):
         """Test rendering with only update tool enabled."""
@@ -183,6 +187,7 @@ class TestQueryChatSystemPromptRender:
 
         assert "UPDATE TOOL ENABLED" in rendered
         assert "QUERY TOOL ENABLED" not in rendered
+        assert "QUERY GUIDELINES" in rendered
 
     def test_render_with_no_tools(self, sample_data_source, sample_prompt_template):
         """Test rendering with no tools enabled."""
@@ -195,6 +200,7 @@ class TestQueryChatSystemPromptRender:
 
         assert "UPDATE TOOL ENABLED" not in rendered
         assert "QUERY TOOL ENABLED" not in rendered
+        assert "QUERY GUIDELINES" not in rendered
 
     def test_render_includes_data_description(
         self, sample_data_source, sample_prompt_template

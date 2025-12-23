@@ -470,7 +470,7 @@ TblLazySource <- R6::R6Class(
       if (!is_missing(table_name)) {
         check_sql_table_name(table_name)
         self$table_name <- table_name
-        use_cte <- identical(table_name, remote_name %||% remote_table)
+        use_cte <- !identical(table_name, remote_name)
       } else if (!is.null(remote_name)) {
         # Remote name is non-NULL when it points to a table, so we use that next
         self$table_name <- remote_name

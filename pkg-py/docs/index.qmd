@@ -22,8 +22,7 @@ Explore data using natural language queries
 <!-- badges end -->
 </div>
 
-
-Querychat makes it easy to explore data with natural language through the power of [Shiny](https://shiny.posit.co/py) and large language models (LLMs). Start chatting with your data in just one line of code. Or, with a few more lines, design your own rich user experience around data exploration and analysis through natural language.
+querychat facilitates safe and reliable natural language exploration of tabular data, powered by SQL and large language models (LLMs). For users, it offers an intuitive web application where they can quickly ask questions of their data and receive verifiable data-driven answers. As a developer, you can access the chat UI component, generated SQL queries, and filtered data to build custom applications that integrate natural language querying into your data workflows.
 
 ## Installation
 
@@ -43,18 +42,21 @@ The quickest way to start chatting is to call the `.app()` method, which returns
 from querychat import QueryChat
 from querychat.data import titanic
 
-qc = QueryChat(titanic(), "titanic", client="openai/gpt-4.1")
+qc = QueryChat(titanic(), "titanic")
 app = qc.app()
 ```
 
-With the above code saved to `titanic-app.py` and an API key set[^api-key], you can [run the app](https://shiny.posit.co/py/get-started/create-run.html#run-your-shiny-application) from a terminal (or [VSCode](https://marketplace.visualstudio.com/items?itemName=Posit.shiny)):
+With an API key set[^api-key], you can run that code in a Python console and then call `app.run()` to jump into a chat. Or you can save the code to `titanic-app.py` and [run the app](https://shiny.posit.co/py/get-started/create-run.html#run-your-shiny-application) from a terminal (or Positron, or [VS Code](https://marketplace.visualstudio.com/items?itemName=Posit.shiny)):
 
 ```bash
-export OPENAI_API_KEY="your_api_key_here"
+# Optionally, change the default model:
+export QUERYCHAT_CLIENT="anthropic/claude-sonnet-4-5"
+# And provide appropriate credentials for your chosen model provider
+export ANTHROPIC_API_KEY="your_api_key_here"
 shiny run --reload titanic-app.py
 ```
 
-[^api-key]: By default, Querychat uses OpenAI to power the chat experience. So, for this example to work, you'll need [an OpenAI API key](https://platform.openai.com/). See the [Models](models.qmd) page for details on how to set up credentials for other model providers.
+[^api-key]: By default, querychat uses OpenAI to power the chat experience. So, for this example to work, you'll need [an OpenAI API key](https://platform.openai.com/). See the [Models](models.qmd) page for details on how to set up credentials for other model providers.
 
 Once running, you'll notice 3 main views:
 
@@ -68,38 +70,44 @@ Suppose we pick a suggestion like "Show me passengers who survived". Since this 
 
 ![](/images/quickstart-filter.png){fig-alt="Screenshot of the querychat's app with the titanic dataset filtered to passengers who survived." class="lightbox shadow rounded mb-3"}
 
-Querychat can also handle more general questions about the data that require calculations and aggregations. For example, we can ask "What is the average age of passengers who survived?". In this case, querychat will generate/execute the SQL query to perform the relevant calculation, and return the result in the chat:
+querychat can also handle more general questions about the data that require calculations and aggregations. For example, we can ask "What is the average age of passengers who survived?". The LLM will generate the SQL query to perform the calculation, querychat will execute it, and return the result in the chat:
 
 ![](/images/quickstart-summary.png){fig-alt="Screenshot of the querychat's app with a summary statistic inlined in the chat." class="lightbox shadow rounded mb-3"}
 
-As you'll learn later in [Build an app](build.qmd), you can also access the SQL query and filtered/sorted data frame programmatically for use elsewhere in your app. This makes it rather seemless to have natural language interaction with your data alongside other visualizations and analyses.
+## Custom apps
 
-Before we build though, let's take a moment to better understand how querychat works under the hood, and whether it's right for you.
+querychat is designed to be highly extensible -- it provides programmatic access to the chat interface, the filtered/sorted data frame, SQL queries, and more.
+This makes it easy to build custom web apps that leverage natural language interaction with your data.
+For example, [here](https://github.com/posit-conf-2025/llm/blob/main/_solutions/25_querychat/25_querychat_02-end-app.R)'s a bespoke app for exploring Airbnb listings in Ashville, NC:
 
+![](/images/airbnb.png){fig-alt="A custom app for exploring Airbnb listings, powered by querychat." class="lightbox shadow rounded mb-3"}
+
+To learn more, see [Build an app](build.qmd) for a step-by-step guide.
 
 ## How it works
 
-Querychat leverages LLMs incredible capability to translate natural language into SQL queries. Frontier models are shockingly good at this task, but even the best models still need to know the overall data structure to perform well. For this reason, querychat supplies a [system prompt](context.qmd) with the schema of the data (i.e., column names, types, ranges, etc), but never the raw data itself.
+querychat uses LLMs to translate natural language into SQL queries. Models of all sizes, from small ones you can run locally to large frontier models from major AI providers, are remarkably effective at this task. But even the best models need to understand your data's overall structure to perform well.
 
-When the LLM generates a SQL query, querychat executes it against a SQL database (DuckDB[^duckdb] by default) to get results in a **safe**, **reliable**, and **verifiable** manner. In short, this execution is **safe** since only `SELECT` statements are allowed, **reliable** since the database engine handles all calculations, and **verifiable** since the user can always see the SQL query that was run. This makes querychat a trustworthy tool for data exploration, as every action taken by the LLM is transparent and independently reproducible.
+To address this, querychat includes schema metadata -- column names, types, ranges, categorical values -- in the LLM's [system prompt](context.qmd). Importantly, querychat **does not** send raw data to the LLM; it shares only enough structural information for the model to generate accurate queries. When the LLM produces a query, querychat executes it in a SQL database (DuckDB[^duckdb], by default) to obtain precise results.
 
+This design makes querychat reliable, safe, and reproducible:
+
+- **Reliable**: query results come from a real database, not LLM-generated summaries -- so outputs are precise, verifiable, and less vulnerable to hallucination[^hallucination].
+- **Safe**: querychat's tools are read-only by design, avoiding destructive actions on your data.[^permissions]
+- **Reproducible**: generated SQL can be exported and re-run in other environments, so your analysis isn't locked into a single tool.
 
 ::: callout-important
-### Data privacy
+**Data privacy**
 
-See the [Provide context](context.qmd) and [Tools](tools.qmd) articles to learn more about what information is provided to the LLM and what it's capable of doing with code execution.
-::::
+See the [Provide context](context.qmd) and [Tools](tools.qmd)  articles for more details on exactly what information is provided to the LLM and how customize it.
+:::
 
-[^duckdb]: Duckdb is extremely fast and has a surprising number of [statistical functions](https://duckdb.org/docs/stable/sql/functions/aggregates.html#statistical-aggregates).
+[^duckdb]: DuckDB is extremely fast and has a surprising number of [statistical functions](https://duckdb.org/docs/stable/sql/functions/aggregates.html#statistical-aggregates).
 
-### Bespoke interfaces
+[^hallucination]: The [query tool](tools.qmd) gives query results to the model for context and interpretation. Thus, there is *some* potential that the model to mis-interpret those results. 
 
-While the quickstart app is a great way to get started, querychat is designed to be highly extensible.
-You can not only customize the underlying model and data source, but also build fully custom Shiny apps around the core chat functionality.
+[^permissions]: To fully guarantee no destructive actions on your production database, ensure querychat's database permissions are read-only.
 
-For a motivating example, consider the following ([sidebot](https://shiny.posit.co/py/docs/genai-inspiration.html#sidebot)) app that leverages querychat's tooling to create reactive summaries and visualizations based on the user's natural language queries:
-
-![](/images/sidebot.png){fig-alt="Screenshot of sidebot, a custom shiny app built with querychat." class="lightbox shadow rounded mb-3"}
 
 
 ## Next steps

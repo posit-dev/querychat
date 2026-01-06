@@ -71,13 +71,21 @@ local_sqlite_connection <- function(
   list(conn = conn, path = temp_db)
 }
 
+# Skip test if no DataFrameSource engine is available
+skip_if_no_dataframe_engine <- function() {
+  if (!rlang::is_installed("duckdb") && !rlang::is_installed("RSQLite")) {
+    skip("Neither duckdb nor RSQLite is installed")
+  }
+}
+
 # Create a DataFrameSource with automatic cleanup
 local_data_frame_source <- function(
   data,
   table_name = "test_table",
+  engine = "duckdb",
   env = parent.frame()
 ) {
-  df_source <- DataFrameSource$new(data, table_name)
+  df_source <- DataFrameSource$new(data, table_name, engine = engine)
   withr::defer(df_source$cleanup(), envir = env)
   df_source
 }
@@ -91,6 +99,61 @@ local_querychat <- function(
   qc <- QueryChat$new(data_source, table_name, ...)
   withr::defer(qc$cleanup(), envir = env)
   qc
+}
+
+# Create a TblSqlSource with DuckDB and automatic cleanup
+local_tbl_sql_source <- function(
+  data = new_test_df(),
+  table_name = "test_table",
+  tbl_transform = identity,
+  env = parent.frame()
+) {
+  skip_if_not_installed("duckdb")
+  skip_if_not_installed("dbplyr")
+  skip_if_not_installed("dplyr")
+
+  conn <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
+  withr::defer(DBI::dbDisconnect(conn, shutdown = TRUE), envir = env)
+
+  DBI::dbWriteTable(conn, table_name, data, overwrite = TRUE)
+  tbl <- dplyr::tbl(conn, table_name)
+  tbl <- tbl_transform(tbl)
+
+  TblSqlSource$new(tbl, table_name)
+}
+
+# Create a DuckDB connection with multiple tables for JOIN tests
+local_duckdb_multi_table <- function(
+  env = parent.frame()
+) {
+  skip_if_not_installed("duckdb")
+
+  conn <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
+  withr::defer(DBI::dbDisconnect(conn, shutdown = TRUE), envir = env)
+
+  # Table A with id and name
+  DBI::dbWriteTable(
+    conn,
+    "table_a",
+    data.frame(
+      id = 1:3,
+      name = c("Alice", "Bob", "Carol"),
+      stringsAsFactors = FALSE
+    )
+  )
+
+  # Table B with id and value
+  DBI::dbWriteTable(
+    conn,
+    "table_b",
+    data.frame(
+      id = 1:3,
+      value = c(100, 200, 300),
+      stringsAsFactors = FALSE
+    )
+  )
+
+  conn
 }
 
 mock_ellmer_chat_client <- function(

@@ -1,4 +1,6 @@
 test_that("tool_update_dashboard() checks inputs", {
+  skip_if_no_dataframe_engine()
+
   expect_snapshot(error = TRUE, tool_update_dashboard("foo"))
 
   df_source <- local_data_frame_source(new_test_df())
@@ -88,6 +90,8 @@ describe("querychat_tool_details_option()", {
 })
 
 describe("querychat_tool_result()", {
+  skip_if_no_dataframe_engine()
+
   it("returns successful result for valid query action", {
     df_source <- local_data_frame_source(new_test_df())
 
@@ -283,6 +287,8 @@ describe("querychat_tool_result()", {
 })
 
 describe("tool_query()", {
+  skip_if_no_dataframe_engine()
+
   it("returns an ellmer tool object", {
     df_source <- local_data_frame_source(new_test_df())
     tool <- tool_query(df_source)
@@ -312,6 +318,8 @@ describe("tool_query()", {
 })
 
 describe("tool_update_dashboard()", {
+  skip_if_no_dataframe_engine()
+
   it("returns an ellmer tool object", {
     df_source <- local_data_frame_source(new_test_df())
 
@@ -370,6 +378,8 @@ describe("tool_reset_dashboard()", {
 })
 
 describe("tool_update_dashboard_impl()", {
+  skip_if_no_dataframe_engine()
+
   it("returns a function", {
     df_source <- local_data_frame_source(new_test_df())
     current_query <- shiny::reactiveVal("SELECT * FROM test_table")

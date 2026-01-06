@@ -17,7 +17,17 @@ The repository contains separate packages for R and Python:
 ```
 /
 ├── pkg-r/                  # R package implementation
-│   ├── R/                  # R source files
+│   ├── R/                  # R source files (R6 classes and utilities)
+│   │   ├── QueryChat.R             # Main QueryChat R6 class
+│   │   ├── DataSource.R            # Abstract DataSource base class
+│   │   ├── DataFrameSource.R       # DataSource for data.frames
+│   │   ├── DBISource.R             # DataSource for DBI connections
+│   │   ├── TblSqlSource.R          # DataSource for dbplyr tbl_sql
+│   │   ├── QueryChatSystemPrompt.R # System prompt management (internal)
+│   │   ├── querychat_module.R      # Shiny module functions (internal)
+│   │   ├── querychat_tools.R       # Tool definitions for LLM
+│   │   ├── deprecated.R            # Deprecated functional API
+│   │   └── utils-*.R               # Utility functions
 │   ├── inst/               # Installed files
 │   │   ├── examples-shiny/ # Shiny example applications
 │   │   ├── htmldep/        # HTML dependencies
@@ -106,25 +116,59 @@ make py-docs-preview
 
 ### Core Components
 
+Both R and Python implementations use an object-oriented architecture:
+
 1. **Data Sources**: Abstractions for data frames and database connections that provide schema information and execute SQL queries
-   - R: `querychat_data_source()` in `pkg-r/R/data_source.R`
+   - R: R6 class hierarchy in `pkg-r/R/`
+     - `DataSource` - Abstract base class defining the interface (`DataSource.R`)
+     - `DataFrameSource` - For data.frame objects (`DataFrameSource.R`)
+     - `DBISource` - For DBI database connections (`DBISource.R`)
+     - `TblSqlSource` - For dbplyr tbl_sql objects (`TblSqlSource.R`)
    - Python: `DataSource` classes in `pkg-py/src/querychat/datasource.py`
 
 2. **LLM Client**: Integration with LLM providers (OpenAI, Anthropic, etc.) through:
    - R: ellmer package
    - Python: chatlas package
 
-3. **Query Chat Interface**: UI components and server logic for the chat experience:
-   - R: `querychat_sidebar()`, `querychat_ui()`, and `querychat_server()` in `pkg-r/R/querychat.R`
+3. **Query Chat Interface**: Main orchestration class that manages the chat experience:
+   - R: `QueryChat` R6 class in `pkg-r/R/QueryChat.R`
+     - Provides methods: `$new()`, `$app()`, `$sidebar()`, `$ui()`, `$server()`, `$df()`, `$sql()`, etc.
+     - Internal Shiny module functions: `mod_ui()` and `mod_server()` in `pkg-r/R/querychat_module.R`
    - Python: `QueryChat` class in `pkg-py/src/querychat/querychat.py`
 
-4. **Prompt Engineering**: System prompts and tool definitions that guide the LLM:
+4. **System Prompt Management**:
+   - R: `QueryChatSystemPrompt` R6 class in `pkg-r/R/QueryChatSystemPrompt.R`
+     - Handles loading and rendering of prompt templates with Mustache
+     - Manages data descriptions and extra instructions
+   - Python: Similar logic in `QueryChat` class
+
+5. **Prompt Engineering**: System prompts and tool definitions that guide the LLM:
    - R: `pkg-r/inst/prompts/`
      - Main prompt (`prompt.md`)
      - Tool descriptions (`tool-query.md`, `tool-reset-dashboard.md`, `tool-update-dashboard.md`)
    - Python: `pkg-py/src/querychat/prompts/`
      - Main prompt (`prompt.md`)
      - Tool descriptions (`tool-query.md`, `tool-reset-dashboard.md`, `tool-update-dashboard.md`)
+
+### R Package Architecture
+
+The R package uses R6 classes for object-oriented design:
+
+- **QueryChat**: Main user-facing class that orchestrates the entire query chat experience
+  - Takes data sources as input
+  - Provides methods for UI generation (`$sidebar()`, `$ui()`, `$app()`)
+  - Manages server logic and reactive values (`$server()`)
+  - Exposes reactive accessors (`$df()`, `$sql()`, `$title()`)
+
+- **DataSource hierarchy**: Abstract interface for different data backends
+  - All implementations provide: `get_schema()`, `execute_query()`, `test_query()`, `get_data()`
+  - Allows QueryChat to work with data.frames, DBI connections, and dbplyr objects uniformly
+
+- **QueryChatSystemPrompt**: Internal class for prompt template management
+  - Loads templates from files or strings
+  - Renders prompts with tool configurations using Mustache
+
+The package has deprecated the old functional API (`querychat_init()`, `querychat_server()`, etc.) in favor of the R6 class approach. See `pkg-r/R/deprecated.R` for migration guidance.
 
 ### Data Flow
 

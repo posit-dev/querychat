@@ -1,5 +1,11 @@
 # querychat (development version)
 
+* The update tool now requires that the SQL query returns all columns from the original data source, ensuring that the dashboard can display the complete data frame after filtering or sorting. If the query does not return all columns, an informative error message will be provided. (#180)
+
+* Obvious SQL keywords that lead to data modification (e.g., `INSERT`, `UPDATE`, `DELETE`, `DROP`, etc.) are now prohibited in queries run via the query tool or update tool, to prevent accidental data changes. If such keywords are detected, an informative error message will be provided. (#180)
+
+* `querychat()` and `QueryChat$new()` now use either `{duckdb}` or `{SQLite}` for the in-memory database backend for data frames, depending on which package is installed. If both are installed, `{duckdb}` will be preferred. You can explicitly choose the `engine` in `DataFrameSource$new()` or set `querychat.DataFrameSource.engine` option to choose a global default. (#178)
+
 * `QueryChat$sidebar()`, `QueryChat$ui()`, and `QueryChat$server()` now support an optional `id` parameter to enable use within Shiny modules. When used in a module UI function, pass `id = ns("your_id")` where `ns` is the namespacing function from `shiny::NS()`. In the corresponding module server function, pass the unwrapped ID to `QueryChat$server(id = "your_id")`. This enables multiple independent QueryChat instances from the same QueryChat object. (#172)
 
 * `QueryChat$client()` can now create standalone querychat-enabled chat clients with configurable tools and callbacks, enabling use outside of Shiny applications. (#168)

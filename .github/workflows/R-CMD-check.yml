@@ -31,3 +31,4 @@ jobs:
     uses: rstudio/shiny-workflows/.github/workflows/R-CMD-check.yaml@v1
     with:
       working-directory: ./pkg-r
+      check-depends-only: false

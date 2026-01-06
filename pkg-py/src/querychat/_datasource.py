@@ -9,9 +9,14 @@ from sqlalchemy import inspect, text
 from sqlalchemy.sql import sqltypes
 
 from ._df_compat import duckdb_result_to_nw, read_sql
+from ._utils import check_query
 
 if TYPE_CHECKING:
     from sqlalchemy.engine import Connection, Engine
+
+
+class MissingColumnsError(ValueError):
+    """Raised when a query result is missing required columns."""
 
 
 class DataSource(ABC):
@@ -71,6 +76,34 @@ class DataSource(ABC):
         ...
 
     @abstractmethod
+    def test_query(
+        self, query: str, *, require_all_columns: bool = False
+    ) -> nw.DataFrame:
+        """
+        Test SQL query by fetching only one row.
+
+        Parameters
+        ----------
+        query
+            SQL query to test
+        require_all_columns
+            If True, validates that result includes all original table columns.
+            Additional computed columns are allowed.
+
+        Returns
+        -------
+        :
+            Query results as a narwhals DataFrame with at most one row
+
+        Raises
+        ------
+        MissingColumnsError
+            If require_all_columns is True and result is missing required columns
+
+        """
+        ...
+
+    @abstractmethod
     def get_data(self) -> nw.DataFrame:
         """
         Return the unfiltered data as a DataFrame.
@@ -115,10 +148,28 @@ class DataFrameSource(DataSource):
             Name of the table in SQL queries
 
         """
-        self._conn = duckdb.connect(database=":memory:")
         self._df = nw.from_native(df) if not isinstance(df, nw.DataFrame) else df
         self.table_name = table_name
+
+        self._conn = duckdb.connect(database=":memory:")
         self._conn.register(table_name, self._df.to_native())
+        self._conn.execute("""
+-- extensions: lock down supply chain + auto behaviors
+SET allow_community_extensions = false;
+SET allow_unsigned_extensions = false;
+SET autoinstall_known_extensions = false;
+SET autoload_known_extensions = false;
+
+-- external I/O: block file/database/network access from SQL
+SET enable_external_access = false;
+SET disabled_filesystems = 'LocalFileSystem';
+
+-- freeze configuration so user SQL can't relax anything
+SET lock_configuration = true;
+        """)
+
+        # Store original column names for validation
+        self._colnames = list(self._df.columns)
 
     def get_db_type(self) -> str:
         """
@@ -200,8 +251,59 @@ class DataFrameSource(DataSource):
         :
             Query results as narwhals DataFrame
 
+        Raises
+        ------
+        UnsafeQueryError
+            If the query starts with a disallowed SQL operation
+
         """
+        check_query(query)
         return duckdb_result_to_nw(self._conn.execute(query))
+
+    def test_query(
+        self, query: str, *, require_all_columns: bool = False
+    ) -> nw.DataFrame:
+        """
+        Test query by fetching only one row.
+
+        Parameters
+        ----------
+        query
+            SQL query to test
+        require_all_columns
+            If True, validates that result includes all original table columns
+
+        Returns
+        -------
+        :
+            Query results with at most one row
+
+        Raises
+        ------
+        UnsafeQueryError
+            If the query starts with a disallowed SQL operation
+        MissingColumnsError
+            If require_all_columns is True and result is missing required columns
+
+        """
+        check_query(query)
+        result = duckdb_result_to_nw(self._conn.execute(f"{query} LIMIT 1"))
+
+        if require_all_columns:
+            result_columns = set(result.columns)
+            original_columns_set = set(self._colnames)
+            missing_columns = original_columns_set - result_columns
+
+            if missing_columns:
+                missing_list = ", ".join(f"'{col}'" for col in sorted(missing_columns))
+                original_list = ", ".join(f"'{col}'" for col in self._colnames)
+                raise MissingColumnsError(
+                    f"Query result missing required columns: {missing_list}. "
+                    f"The query must return all original table columns. "
+                    f"Original columns: {original_list}"
+                )
+
+        return result
 
     def get_data(self) -> nw.DataFrame:
         """
@@ -256,6 +358,10 @@ class SQLAlchemySource(DataSource):
         inspector = inspect(self._engine)
         if not inspector.has_table(table_name):
             raise ValueError(f"Table '{table_name}' not found in database")
+
+        # Store original column names for validation
+        columns_info = inspector.get_columns(table_name)
+        self._colnames = [col["name"] for col in columns_info]
 
     def get_db_type(self) -> str:
         """
@@ -417,9 +523,69 @@ class SQLAlchemySource(DataSource):
         :
             Query results as narwhals DataFrame
 
+        Raises
+        ------
+        UnsafeQueryError
+            If the query starts with a disallowed SQL operation
+
         """
+        check_query(query)
         with self._get_connection() as conn:
             return read_sql(text(query), conn)
+
+    def test_query(
+        self, query: str, *, require_all_columns: bool = False
+    ) -> nw.DataFrame:
+        """
+        Test query by fetching only one row.
+
+        Parameters
+        ----------
+        query
+            SQL query to test
+        require_all_columns
+            If True, validates that result includes all original table columns
+
+        Returns
+        -------
+        :
+            Query results with at most one row
+
+        Raises
+        ------
+        UnsafeQueryError
+            If the query starts with a disallowed SQL operation
+        MissingColumnsError
+            If require_all_columns is True and result is missing required columns
+
+        """
+        check_query(query)
+        with self._get_connection() as conn:
+            # Use read_sql with limit to get at most one row
+            limit_query = f"SELECT * FROM ({query}) AS subquery LIMIT 1"
+            try:
+                result = read_sql(text(limit_query), conn)
+            except Exception:
+                # If LIMIT syntax doesn't work, fall back to regular read and take first row
+                result = read_sql(text(query), conn).head(1)
+
+            if require_all_columns:
+                result_columns = set(result.columns)
+                original_columns_set = set(self._colnames)
+                missing_columns = original_columns_set - result_columns
+
+                if missing_columns:
+                    missing_list = ", ".join(
+                        f"'{col}'" for col in sorted(missing_columns)
+                    )
+                    original_list = ", ".join(f"'{col}'" for col in self._colnames)
+                    raise MissingColumnsError(
+                        f"Query result missing required columns: {missing_list}. "
+                        f"The query must return all original table columns. "
+                        f"Original columns: {original_list}"
+                    )
+
+            return result
 
     def get_data(self) -> nw.DataFrame:
         """

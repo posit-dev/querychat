@@ -174,7 +174,7 @@ querychat_tool_result <- function(
     switch(
       action,
       update = {
-        data_source$test_query(query)
+        data_source$test_query(query, require_all_columns = TRUE)
         NULL
       },
       query = data_source$execute_query(query),

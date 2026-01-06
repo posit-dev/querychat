@@ -1,11 +1,85 @@
 from __future__ import annotations
 
 import os
+import re
 import warnings
 from contextlib import contextmanager
 from typing import TYPE_CHECKING, Literal, Optional
 
 import narwhals.stable.v1 as nw
+
+
+class UnsafeQueryError(ValueError):
+    """Raised when a query contains an unsafe/write operation."""
+
+
+def check_query(query: str) -> None:
+    """
+    Check if a SQL query appears to be a non-read-only (write) operation.
+
+    Raises UnsafeQueryError if the query starts with a dangerous keyword.
+
+    Two categories of keywords are checked:
+
+    - Always blocked: DELETE, TRUNCATE, CREATE, DROP, ALTER, GRANT, REVOKE,
+      EXEC, EXECUTE, CALL
+    - Blocked unless QUERYCHAT_ENABLE_UPDATE_QUERIES=true: INSERT, UPDATE,
+      MERGE, REPLACE, UPSERT
+
+    Parameters
+    ----------
+    query
+        The SQL query string to check
+
+    Raises
+    ------
+    UnsafeQueryError
+        If the query starts with a disallowed keyword
+
+    """
+    # Normalize: newlines/tabs -> space, collapse multiple spaces, trim, uppercase
+    normalized = re.sub(r"[\r\n\t]+", " ", query)
+    normalized = re.sub(r" +", " ", normalized)
+    normalized = normalized.strip().upper()
+
+    # Always blocked - destructive/schema/admin operations
+    always_blocked = [
+        "DELETE",
+        "TRUNCATE",
+        "CREATE",
+        "DROP",
+        "ALTER",
+        "GRANT",
+        "REVOKE",
+        "EXEC",
+        "EXECUTE",
+        "CALL",
+    ]
+
+    # Blocked unless escape hatch enabled - data modification
+    update_keywords = ["INSERT", "UPDATE", "MERGE", "REPLACE", "UPSERT"]
+
+    # Check always-blocked keywords first
+    always_pattern = r"^(" + "|".join(always_blocked) + r")\b"
+    match = re.match(always_pattern, normalized)
+    if match:
+        raise UnsafeQueryError(
+            f"Query appears to contain a disallowed operation: {match.group(1)}. "
+            "Only SELECT queries are allowed."
+        )
+
+    # Check update keywords (can be enabled via envvar)
+    enable_updates = os.environ.get("QUERYCHAT_ENABLE_UPDATE_QUERIES", "").lower()
+    if enable_updates not in ("true", "1", "yes"):
+        update_pattern = r"^(" + "|".join(update_keywords) + r")\b"
+        match = re.match(update_pattern, normalized)
+        if match:
+            raise UnsafeQueryError(
+                f"Query appears to contain an update operation: {match.group(1)}. "
+                "Only SELECT queries are allowed. "
+                "Set QUERYCHAT_ENABLE_UPDATE_QUERIES=true to allow update queries."
+            )
+
 
 if TYPE_CHECKING:
     from narwhals.stable.v1.typing import IntoFrame

@@ -14,8 +14,8 @@ Description: Adds an LLM-powered chatbot to your 'shiny' app, that can
     against your data, and return the result as a reactive data frame. Use
     it to drive reactive calculations, visualizations, downloads, and more.
 License: MIT + file LICENSE
-URL: https://posit-dev.github.io/querychat/pkg-r,
-    https://posit-dev.github.io/querychat,
+URL: https://posit-dev.github.io/querychat//pkg-r,
+    https://posit-dev.github.io/querychat/,
     https://github.com/posit-dev/querychat
 BugReports: https://github.com/posit-dev/querychat/issues
 Depends:

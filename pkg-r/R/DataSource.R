@@ -68,9 +68,10 @@ DataSource <- R6::R6Class(
     #' Test a SQL query by fetching only one row
     #'
     #' @param query SQL query string to test
-    #' @param require_all_columns If TRUE, validates that the result includes
-    #'   all original table columns (default: FALSE)
-    #' @return A data frame containing one row of results (or empty if no matches)
+    #' @param require_all_columns If `TRUE`, validates that the result includes
+    #'   all original table columns (default: `FALSE`)
+    #' @return A data frame containing one row of results (or empty if no
+    #'   matches)
     test_query = function(query, require_all_columns = FALSE) {
       cli::cli_abort(
         "{.fn test_query} must be implemented by subclass",

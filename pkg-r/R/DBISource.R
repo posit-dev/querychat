@@ -129,8 +129,8 @@ DBISource <- R6::R6Class(
     #' Test a SQL query by fetching only one row
     #'
     #' @param query SQL query string
-    #' @param require_all_columns If TRUE, validates that the result includes
-    #'   all original table columns (default: FALSE)
+    #' @param require_all_columns If `TRUE`, validates that the result includes
+    #'   all original table columns (default: `FALSE`)
     #' @return A data frame with one row of results
     test_query = function(query, require_all_columns = FALSE) {
       check_string(query)

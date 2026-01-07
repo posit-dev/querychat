@@ -541,3 +541,121 @@ describe("check_query() blocks dangerous operations", {
     expect_no_error(check_query("SELECT * FROM delete_logs"))
   })
 })
+
+test_that("subclasses of DataSource implement its methods", {
+  # Get all exported objects from the package namespace
+  ns <- asNamespace("querychat")
+  exported_names <- getNamespaceExports(ns)
+
+  # Helper function to check if an R6 class inherits from DataSource
+  inherits_from_datasource <- function(r6_class) {
+    if (is.null(r6_class) || !R6::is.R6Class(r6_class)) {
+      return(FALSE)
+    }
+    if (r6_class$classname == "DataSource") {
+      return(TRUE)
+    }
+    # Check parent class recursively using get_inherit()
+    tryCatch(
+      {
+        parent <- r6_class$get_inherit()
+        if (!is.null(parent)) {
+          return(inherits_from_datasource(parent))
+        }
+      },
+      error = function(e) {
+        # No parent class
+      }
+    )
+    return(FALSE)
+  }
+
+  # Find all R6 classes that inherit from DataSource
+  datasource_subclasses <- list()
+  for (name in exported_names) {
+    obj <- get(name, envir = ns)
+    if (R6::is.R6Class(obj) && obj$classname != "DataSource") {
+      if (inherits_from_datasource(obj)) {
+        datasource_subclasses[[name]] <- obj
+      }
+    }
+  }
+
+  # Ensure we found some subclasses
+  skip_if(
+    length(datasource_subclasses) == 0,
+    "querychat doesn't include any DataSource subclasses?"
+  )
+
+  # Get the base DataSource methods and their formal arguments
+  base_methods <- lapply(DataSource$public_methods, formals)
+
+  # Helper to get all methods (including inherited) for a class
+  get_all_methods <- function(r6_class) {
+    all_methods <- list()
+    current_class <- r6_class
+
+    while (!is.null(current_class) && R6::is.R6Class(current_class)) {
+      # Add methods from current class
+      for (method_name in names(current_class$public_methods)) {
+        if (!method_name %in% names(all_methods)) {
+          all_methods[[method_name]] <- current_class$public_methods[[
+            method_name
+          ]]
+        }
+      }
+
+      # Move to parent class
+      tryCatch(
+        {
+          current_class <- current_class$get_inherit()
+        },
+        error = function(e) {
+          current_class <- NULL
+        }
+      )
+    }
+
+    all_methods
+  }
+
+  # Check each subclass
+  for (class_name in names(datasource_subclasses)) {
+    subclass <- datasource_subclasses[[class_name]]
+
+    # Get all methods including inherited ones
+    all_methods <- get_all_methods(subclass)
+
+    for (method_name in names(base_methods)) {
+      # Check that the method exists (including inherited methods)
+      expect(
+        method_name %in% names(all_methods),
+        cli::format_inline(
+          "{.cls {class_name}} must implement required `DataSource` method {.code {method_name}()}."
+        )
+      )
+
+      if (method_name %in% names(all_methods)) {
+        # Get the method's formal arguments
+        subclass_formals <- formals(all_methods[[method_name]])
+        base_formals <- base_methods[[method_name]]
+
+        # Get argument names (excluding ...)
+        base_args <- names(base_formals)
+        subclass_args <- names(subclass_formals)
+
+        # Check that all base arguments are present in subclass
+        # (subclass can have additional arguments)
+        missing_args <- setdiff(base_args, subclass_args)
+
+        expect(
+          length(missing_args) == 0,
+          cli::format_inline(
+            "{.code {class_name}${method_name}()} does not implement all arguments from {.code DataSource${method_name}()}. ",
+            "\nMissing: {.and {.code {missing_args}}}"
+          )
+        )
+      }
+    }
+  }
+})

@@ -137,13 +137,16 @@ A data frame containing query results
 \subsection{Method \code{test_query()}}{
 Test a SQL query by fetching only one row
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{TblSqlSource$test_query(query)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{TblSqlSource$test_query(query, require_all_columns = FALSE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{query}}{SQL query string to test}
+
+\item{\code{require_all_columns}}{If \code{TRUE}, validates that the result includes
+all original table columns (default: \code{FALSE})}
 }
 \if{html}{\out{</div>}}
 }

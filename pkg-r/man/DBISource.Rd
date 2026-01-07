@@ -140,8 +140,8 @@ Test a SQL query by fetching only one row
 \describe{
 \item{\code{query}}{SQL query string}
 
-\item{\code{require_all_columns}}{If TRUE, validates that the result includes
-all original table columns (default: FALSE)}
+\item{\code{require_all_columns}}{If \code{TRUE}, validates that the result includes
+all original table columns (default: \code{FALSE})}
 }
 \if{html}{\out{</div>}}
 }

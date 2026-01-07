@@ -127,9 +127,14 @@ TblSqlSource <- R6::R6Class(
     #' Test a SQL query by fetching only one row
     #'
     #' @param query SQL query string to test
+    #' @param require_all_columns If `TRUE`, validates that the result includes
+    #'   all original table columns (default: `FALSE`)
     #' @return A data frame containing one row of results (or empty if no matches)
-    test_query = function(query) {
-      super$test_query(self$prep_query(query))
+    test_query = function(query, require_all_columns = FALSE) {
+      super$test_query(
+        query = self$prep_query(query),
+        require_all_columns = require_all_columns
+      )
     },
 
     #' @description

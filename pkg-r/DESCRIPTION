@@ -12,7 +12,8 @@ Authors@R: c(
 Description: Adds an LLM-powered chatbot to your 'shiny' app, that can
     turn your users' natural language questions into SQL queries that run
     against your data, and return the result as a reactive data frame. Use
-    it to drive reactive calculations, visualizations, downloads, and more.
+    it to drive reactive calculations, visualizations, downloads, and
+    more.
 License: MIT + file LICENSE
 URL: https://posit-dev.github.io/querychat//pkg-r,
     https://posit-dev.github.io/querychat/,

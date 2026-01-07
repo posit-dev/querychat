@@ -63,7 +63,7 @@ app = qc.app()
 
 :::
 
-If you're [building an app](build.qmd), note you can read the queried data frame reactively using the `df()` method, which returns a `pandas.DataFrame` by default. 
+If you're [building an app](build.qmd), note you can read the queried data frame reactively using the `df()` method, which returns a `narwhals.DataFrame`. Call `.to_native()` on the result to get the underlying pandas or polars DataFrame. 
 
 ## Databases
 

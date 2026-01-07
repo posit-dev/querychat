@@ -220,7 +220,7 @@ with ui.layout_columns():
 
         @render_plotly
         def survival_plot():
-            d = qc.df()
+            d = qc.df().to_native()  # Convert for pandas groupby()
             summary = d.groupby('pclass')['survived'].mean().reset_index()
             return px.bar(summary, x='pclass', y='survived')
 ```

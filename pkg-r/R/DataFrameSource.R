@@ -12,7 +12,7 @@
 #'
 #' By default, DataFrameSource uses the first available engine from duckdb
 #' (checked first) or RSQLite. You can explicitly set the `engine` parameter to
-#' choose between "duckdb" or "sqlite", or set the global option
+#' choose between `"duckdb"` or `"sqlite"`, or set the global option
 #' `querychat.DataFrameSource.engine` to choose the default engine for all
 #' DataFrameSource instances. At least one of these packages must be installed.
 #'

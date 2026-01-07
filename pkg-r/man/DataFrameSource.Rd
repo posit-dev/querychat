@@ -15,7 +15,7 @@ methods.
 
 By default, DataFrameSource uses the first available engine from duckdb
 (checked first) or RSQLite. You can explicitly set the \code{engine} parameter to
-choose between "duckdb" or "sqlite", or set the global option
+choose between \code{"duckdb"} or \code{"sqlite"}, or set the global option
 \code{querychat.DataFrameSource.engine} to choose the default engine for all
 DataFrameSource instances. At least one of these packages must be installed.
 }

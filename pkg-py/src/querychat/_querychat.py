@@ -143,7 +143,7 @@ class QueryChatBase:
                 self.id,
                 data_source=self._data_source,
                 greeting=self.greeting,
-                client=self.client(),
+                client=self.client,
                 enable_bookmarking=enable_bookmarking,
             )
 
@@ -809,7 +809,7 @@ class QueryChatExpress(QueryChatBase):
             self.id,
             data_source=self._data_source,
             greeting=self.greeting,
-            client=self.client(),
+            client=self.client,
             enable_bookmarking=enable,
         )
 

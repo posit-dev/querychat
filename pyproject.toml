@@ -28,7 +28,8 @@ dependencies = [
     "narwhals",
     "chevron",
     "sqlalchemy>=2.0.0", # Using 2.0+ for improved type hints and API
-    "shinychat>=0.2.8"
+    "shinychat>=0.2.8",
+    "great-tables>=0.16.0",
 ]
 classifiers = [
     "Programming Language :: Python",

@@ -532,7 +532,7 @@ Custom Shiny chat UIs
 <span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb11-23"><a href="#cb11-23" aria-hidden="true" tabindex="-1"></a>        <span class="at">@render_plotly</span></span>
 <span id="cb11-24"><a href="#cb11-24" aria-hidden="true" tabindex="-1"></a>        <span class="kw">def</span> survival_plot():</span>
-<span id="cb11-25"><a href="#cb11-25" aria-hidden="true" tabindex="-1"></a>            d <span class="op">=</span> qc.df()</span>
+<span id="cb11-25"><a href="#cb11-25" aria-hidden="true" tabindex="-1"></a>            d <span class="op">=</span> qc.df().to_native()  <span class="co"># Convert for pandas groupby()</span></span>
 <span id="cb11-26"><a href="#cb11-26" aria-hidden="true" tabindex="-1"></a>            summary <span class="op">=</span> d.groupby(<span class="st">'pclass'</span>)[<span class="st">'survived'</span>].mean().reset_index()</span>
 <span id="cb11-27"><a href="#cb11-27" aria-hidden="true" tabindex="-1"></a>            <span class="cf">return</span> px.bar(summary, x<span class="op">=</span><span class="st">'pclass'</span>, y<span class="op">=</span><span class="st">'survived'</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Now when a user filters the data through natural language (e.g., “filter to only children”), both the table and the chart update automatically.</p>

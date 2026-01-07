@@ -322,7 +322,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 </div>
-<p>If you’re <a href="./build.html">building an app</a>, note you can read the queried data frame reactively using the <code>df()</code> method, which returns a <code>pandas.DataFrame</code> by default.</p>
+<p>If you’re <a href="./build.html">building an app</a>, note you can read the queried data frame reactively using the <code>df()</code> method, which returns a <code>narwhals.DataFrame</code>. Call <code>.to_native()</code> on the result to get the underlying pandas or polars DataFrame.</p>
 </section>
 <section id="databases" class="level2">
 <h2 class="anchored" data-anchor-id="databases">Databases</h2>

@@ -127,12 +127,13 @@ ul.task-list li input[type="checkbox"] {
   <ul class="collapse">
   <li><a href="#unreleased" id="toc-unreleased" class="nav-link" data-scroll-target="#unreleased">[UNRELEASED]</a>
   <ul class="collapse">
+  <li><a href="#breaking-changes" id="toc-breaking-changes" class="nav-link" data-scroll-target="#breaking-changes">Breaking Changes</a></li>
   <li><a href="#new-features" id="toc-new-features" class="nav-link" data-scroll-target="#new-features">New features</a></li>
   <li><a href="#improvements" id="toc-improvements" class="nav-link" data-scroll-target="#improvements">Improvements</a></li>
   </ul></li>
   <li><a href="#section" id="toc-section" class="nav-link" data-scroll-target="#section">[0.3.0] - 2025-12-10</a>
   <ul class="collapse">
-  <li><a href="#breaking-changes" id="toc-breaking-changes" class="nav-link" data-scroll-target="#breaking-changes">Breaking Changes</a></li>
+  <li><a href="#breaking-changes-1" id="toc-breaking-changes-1" class="nav-link" data-scroll-target="#breaking-changes-1">Breaking Changes</a></li>
   <li><a href="#new-features-1" id="toc-new-features-1" class="nav-link" data-scroll-target="#new-features-1">New features</a></li>
   <li><a href="#improvements-1" id="toc-improvements-1" class="nav-link" data-scroll-target="#improvements-1">Improvements</a></li>
   </ul></li>
@@ -156,6 +157,16 @@ ul.task-list li input[type="checkbox"] {
 <p>The format is based on <a href="https://keepachangelog.com/en/1.1.0/">Keep a Changelog</a>, and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
 <section id="unreleased" class="level2">
 <h2 class="anchored" data-anchor-id="unreleased">[UNRELEASED]</h2>
+<section id="breaking-changes" class="level3">
+<h3 class="anchored" data-anchor-id="breaking-changes">Breaking Changes</h3>
+<ul>
+<li>Methods like <code>execute_query()</code>, <code>get_data()</code>, and <code>df()</code> now return a <code>narwhals.DataFrame</code> instead of a <code>pandas.DataFrame</code>. This allows querychat to drop its <code>pandas</code> dependency, and for you to use any <code>narwhals</code>-compatible dataframe of your choosing.
+<ul>
+<li>If this breaks existing code, note you can call <code>.to_native()</code> on the new dataframe value to get your <code>pandas</code> dataframe back.</li>
+<li>Note that <code>polars</code> or <code>pandas</code> will be needed to realize a <code>sqlalchemy</code> connection query as a dataframe. Install with <code>pip install querychat[pandas]</code> or <code>pip install querychat[polars]</code></li>
+</ul></li>
+</ul>
+</section>
 <section id="new-features" class="level3">
 <h3 class="anchored" data-anchor-id="new-features">New features</h3>
 <ul>
@@ -175,8 +186,8 @@ ul.task-list li input[type="checkbox"] {
 </section>
 <section id="section" class="level2">
 <h2 class="anchored" data-anchor-id="section">[0.3.0] - 2025-12-10</h2>
-<section id="breaking-changes" class="level3">
-<h3 class="anchored" data-anchor-id="breaking-changes">Breaking Changes</h3>
+<section id="breaking-changes-1" class="level3">
+<h3 class="anchored" data-anchor-id="breaking-changes-1">Breaking Changes</h3>
 <ul>
 <li><p>The entire functional API (i.e., <code>init()</code>, <code>sidebar()</code>, <code>server()</code>, etc) has been hard deprecated in favor of a simpler OOP-based API. Namely, the new <code>QueryChat()</code> class is now the main entry point (instead of <code>init()</code>) and has methods to replace old functions (e.g., <code>.sidebar()</code>, <code>.server()</code>, etc). (#101)</p></li>
 <li><p>The <code>.sql()</code> method now returns <code>None</code> instead of <code>""</code> (empty string) when no query has been set, aligning with the behavior of <code>.title()</code> for consistency. Most code using the <code>or</code> operator or <code>req()</code> for falsy checks will continue working without changes. Code that explicitly checks <code>sql() == ""</code> should be updated to use falsy checks (<code>if not sql()</code>) or explicit null checks (<code>if sql() is None</code>). (#146)</p></li>

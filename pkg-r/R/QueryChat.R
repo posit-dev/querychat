@@ -47,7 +47,9 @@
 #' @examplesIf rlang::is_installed("duckdb") || rlang::is_installed("RSQLite")
 #' # Basic usage with a data frame
 #' qc <- QueryChat$new(mtcars)
+#' \dontrun{
 #' app <- qc$app()
+#' }
 #'
 #' # With a custom greeting
 #' greeting <- "Welcome! Ask me about the mtcars dataset."
@@ -78,7 +80,7 @@
 #' con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
 #'
 #' # 2. (For this demo) Create a table in the database
-#' dbWriteTable(con, "mtcars", mtcars)
+#' DBI::dbWriteTable(con, "mtcars", mtcars)
 #'
 #' # 3. Pass the connection and table name to `QueryChat`
 #' qc <- QueryChat$new(con, "mtcars")
@@ -693,9 +695,8 @@ QueryChat <- R6::R6Class(
 #' )
 #'
 #' # Chat with a database table (table_name required)
-#' library(DBI)
-#' con <- dbConnect(RSQLite::SQLite(), ":memory:")
-#' dbWriteTable(con, "mtcars", mtcars)
+#' con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
+#' DBI::dbWriteTable(con, "mtcars", mtcars)
 #' querychat_app(con, "mtcars")
 #'
 #' # Create QueryChat class object

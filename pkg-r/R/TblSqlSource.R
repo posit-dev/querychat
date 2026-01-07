@@ -4,7 +4,7 @@
 #' A DataSource implementation for lazy SQL tibbles connected to databases via
 #' [dbplyr::tbl_sql()] or [dplyr::sql()].
 #'
-#' @examplesIf rlang::is_interactive() && rlang::is_installed("dbplyr") && rlang::is_installed("dplyr") && rlang::is_installed("duckdb")
+#' @examplesIf rlang::is_installed("dbplyr") && rlang::is_installed("dplyr") && rlang::is_installed("duckdb")
 #' con <- DBI::dbConnect(duckdb::duckdb())
 #' DBI::dbWriteTable(con, "mtcars", mtcars)
 #'

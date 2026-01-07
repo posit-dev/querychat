@@ -54,7 +54,9 @@ shinyApp(ui, server)
 \dontshow{if (rlang::is_installed("duckdb") || rlang::is_installed("RSQLite")) withAutoprint(\{ # examplesIf}
 # Basic usage with a data frame
 qc <- QueryChat$new(mtcars)
+\dontrun{
 app <- qc$app()
+}
 
 # With a custom greeting
 greeting <- "Welcome! Ask me about the mtcars dataset."
@@ -85,7 +87,7 @@ qc <- QueryChat$new(
 con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
 
 # 2. (For this demo) Create a table in the database
-dbWriteTable(con, "mtcars", mtcars)
+DBI::dbWriteTable(con, "mtcars", mtcars)
 
 # 3. Pass the connection and table name to `QueryChat`
 qc <- QueryChat$new(con, "mtcars")

@@ -8,7 +8,7 @@ A DataSource implementation for lazy SQL tibbles connected to databases via
 \code{\link[dbplyr:tbl_sql]{dbplyr::tbl_sql()}} or \code{\link[dplyr:sql]{dplyr::sql()}}.
 }
 \examples{
-\dontshow{if (rlang::is_interactive() && rlang::is_installed("dbplyr") && rlang::is_installed("dplyr") && rlang::is_installed("duckdb")) withAutoprint(\{ # examplesIf}
+\dontshow{if (rlang::is_installed("dbplyr") && rlang::is_installed("dplyr") && rlang::is_installed("duckdb")) withAutoprint(\{ # examplesIf}
 con <- DBI::dbConnect(duckdb::duckdb())
 DBI::dbWriteTable(con, "mtcars", mtcars)
 

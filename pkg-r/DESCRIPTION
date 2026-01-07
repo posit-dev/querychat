@@ -32,7 +32,7 @@ Imports:
     rlang (>= 1.1.0),
     S7,
     shiny,
-    shinychat (>= 0.2.0.9000),
+    shinychat (>= 0.3.0),
     utils,
     whisker
 Suggests:
@@ -50,8 +50,6 @@ Suggests:
     withr
 VignetteBuilder:
     knitr
-Remotes:
-    posit-dev/shinychat/pkg-r
 Config/testthat/edition: 3
 Config/testthat/parallel: true
 Encoding: UTF-8

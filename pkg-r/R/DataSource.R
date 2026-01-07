@@ -13,7 +13,7 @@
 #'   public = list(
 #'     initialize = function(table_name) {
 #'       self$table_name <- table_name
-#'     },
+#'     }
 #'     # Implement abstract methods here...
 #'   )
 #' )

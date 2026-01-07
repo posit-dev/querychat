@@ -3,6 +3,7 @@
 <!-- badges: start -->
 [![R-CMD-check](https://github.com/posit-dev/querychat/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/posit-dev/querychat/actions/workflows/R-CMD-check.yaml)
 [![CRAN status](https://www.r-pkg.org/badges/version/querychat)](https://CRAN.R-project.org/package=querychat)
+[![querychat status badge](https://posit-dev.r-universe.dev/querychat/badges/version)](https://posit-dev.r-universe.dev/querychat)
 <!-- badges: end -->
 
 querychat facilitates safe and reliable natural language exploration of tabular data, powered by SQL and large language models (LLMs). For users, it offers an intuitive web application where they can quickly ask questions of their data and receive verifiable data-driven answers. As a developer, you can access the chat UI component, generated SQL queries, and filtered data to build custom applications that integrate natural language querying into your data workflows.
@@ -81,7 +82,7 @@ See the [Provide context](articles/context.html) and [Tools](articles/tools.html
 
 [^duckdb]: DuckDB is extremely fast and has a surprising number of [statistical functions](https://duckdb.org/docs/stable/sql/functions/aggregates.html#statistical-aggregates).
 
-[^hallucination]: The [query tool](articles/tools.html) gives query results to the model for context and interpretation. Thus, there is *some* potential that the model to mis-interpret those results. 
+[^hallucination]: The [query tool](articles/tools.html) gives query results to the model for context and interpretation. Thus, there is *some* potential that the model to mis-interpret those results.
 
 [^permissions]: To fully guarantee no destructive actions on your production database, ensure querychat's database permissions are read-only.
 

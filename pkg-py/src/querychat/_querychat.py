@@ -79,6 +79,7 @@ class QueryChatBase:
         client = as_querychat_client(client)
         self._client = copy.deepcopy(client)
         self._client.set_turns([])
+        self._client.system_prompt = self._system_prompt.render(self.tools)
 
         # Storage for console client
         self._client_console = None
@@ -142,7 +143,7 @@ class QueryChatBase:
                 self.id,
                 data_source=self._data_source,
                 greeting=self.greeting,
-                client=self._client,
+                client=self.client(),
                 enable_bookmarking=enable_bookmarking,
             )
 
@@ -719,6 +720,19 @@ class QueryChatExpress(QueryChatBase):
         If `client` is not provided, querychat consults the
         `QUERYCHAT_CLIENT` environment variable. If that is not set, it
         defaults to `"openai"`.
+    tools
+        Which querychat tools to include in the chat client by default. Can be:
+        - A single tool string: `"update"` or `"query"`
+        - A tuple of tools: `("update", "query")`
+        - `None` or `()` to disable all tools
+
+        Default is `("update", "query")` (both tools enabled).
+
+        Set to `"update"` to prevent the LLM from accessing data values, only
+        allowing dashboard filtering without answering questions.
+
+        The tools can be overridden per-client by passing a different `tools`
+        parameter to the `.client()` method.
     data_description
         Description of the data in plain text or Markdown. If a pathlib.Path
         object is passed, querychat will read the contents of the path into a
@@ -751,6 +765,7 @@ class QueryChatExpress(QueryChatBase):
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -771,6 +786,7 @@ class QueryChatExpress(QueryChatBase):
             id=id,
             greeting=greeting,
             client=client,
+            tools=tools,
             data_description=data_description,
             categorical_threshold=categorical_threshold,
             extra_instructions=extra_instructions,
@@ -793,7 +809,7 @@ class QueryChatExpress(QueryChatBase):
             self.id,
             data_source=self._data_source,
             greeting=self.greeting,
-            client=self._client,
+            client=self.client(),
             enable_bookmarking=enable,
         )
 

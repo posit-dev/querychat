@@ -79,6 +79,7 @@ class QueryChatBase:
         client = as_querychat_client(client)
         self._client = copy.deepcopy(client)
         self._client.set_turns([])
+        self._client.system_prompt = self._system_prompt.render(self.tools)
 
         # Storage for console client
         self._client_console = None
@@ -142,7 +143,7 @@ class QueryChatBase:
                 self.id,
                 data_source=self._data_source,
                 greeting=self.greeting,
-                client=self._client,
+                client=self.client(),
                 enable_bookmarking=enable_bookmarking,
             )
 
@@ -793,7 +794,7 @@ class QueryChatExpress(QueryChatBase):
             self.id,
             data_source=self._data_source,
             greeting=self.greeting,
-            client=self._client,
+            client=self.client(),
             enable_bookmarking=enable,
         )
 

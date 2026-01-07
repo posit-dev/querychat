@@ -29,11 +29,6 @@ dplyr::collect(result)
 # Finally, clean up when done with the database (closes the DB connection)
 mtcars_source$cleanup()
 \dontshow{\}) # examplesIf}
-\dontshow{if (rlang::is_interactive() && rlang::is_installed("dbplyr") && rlang::is_installed("dplyr") && rlang::is_installed("RSQLite")) withAutoprint(\{ # examplesIf}
-con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
-DBI::dbWriteTable(con, "mtcars", mtcars)
-source <- TblSqlSource$new(dplyr::tbl(con, "mtcars"))
-\dontshow{\}) # examplesIf}
 }
 \section{Super classes}{
 \code{\link[querychat:DataSource]{querychat::DataSource}} -> \code{\link[querychat:DBISource]{querychat::DBISource}} -> \code{TblSqlSource}

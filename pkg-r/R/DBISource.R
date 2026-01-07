@@ -1,13 +1,10 @@
 #' DBI Source
 #'
-#' @description
 #' A DataSource implementation for DBI database connections (SQLite, PostgreSQL,
 #' MySQL, etc.). This class wraps a DBI connection and provides SQL query
 #' execution against a single table in the database.
 #'
-#' @export
-#' @examples
-#' \dontrun{
+#' @examplesIf rlang::is_installed("RSQLite")
 #' # Connect to a database
 #' con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
 #' DBI::dbWriteTable(con, "mtcars", mtcars)
@@ -23,7 +20,9 @@
 #'
 #' # Note: cleanup() will disconnect the connection
 #' # If you want to keep the connection open, don't call cleanup()
-#' }
+#' db_source$cleanup()
+#'
+#' @export
 DBISource <- R6::R6Class(
   "DBISource",
   inherit = DataSource,
@@ -37,13 +36,8 @@ DBISource <- R6::R6Class(
     #' @param conn A DBI connection object
     #' @param table_name Name of the table in the database. Can be a character
     #'   string or a [DBI::Id()] object for tables in catalogs/schemas
+    #'
     #' @return A new DBISource object
-    #' @examples
-    #' \dontrun{
-    #' con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
-    #' DBI::dbWriteTable(con, "iris", iris)
-    #' source <- DBISource$new(con, "iris")
-    #' }
     initialize = function(conn, table_name) {
       if (!inherits(conn, "DBIConnection")) {
         cli::cli_abort(

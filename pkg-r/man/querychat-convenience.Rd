@@ -110,7 +110,7 @@ Convenience functions for wrapping \link{QueryChat} creation (i.e., \code{queryc
 and app launching (i.e., \code{querychat_app()}).
 }
 \examples{
-\dontrun{
+\dontshow{if (rlang::is_interactive() && rlang::is_installed("RSQLite")) withAutoprint(\{ # examplesIf}
 # Quick start - chat with mtcars dataset in one line
 querychat_app(mtcars)
 
@@ -128,10 +128,9 @@ dbWriteTable(con, "mtcars", mtcars)
 querychat_app(con, "mtcars")
 
 # Create QueryChat class object
-qc <- querychat(mtcars)
+qc <- querychat(mtcars, greeting = "Welcome to the mtcars explorer!")
 
 # Run the app later
 qc$app()
-
-}
+\dontshow{\}) # examplesIf}
 }

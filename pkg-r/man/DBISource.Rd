@@ -4,12 +4,17 @@
 \alias{DBISource}
 \title{DBI Source}
 \description{
+DBI Source
+
+DBI Source
+}
+\details{
 A DataSource implementation for DBI database connections (SQLite, PostgreSQL,
 MySQL, etc.). This class wraps a DBI connection and provides SQL query
 execution against a single table in the database.
 }
 \examples{
-\dontrun{
+\dontshow{if (rlang::is_installed("RSQLite")) withAutoprint(\{ # examplesIf}
 # Connect to a database
 con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
 DBI::dbWriteTable(con, "mtcars", mtcars)
@@ -25,17 +30,8 @@ result <- db_source$execute_query("SELECT * FROM mtcars WHERE mpg > 25")
 
 # Note: cleanup() will disconnect the connection
 # If you want to keep the connection open, don't call cleanup()
-}
-
-## ------------------------------------------------
-## Method `DBISource$new`
-## ------------------------------------------------
-
-\dontrun{
-con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
-DBI::dbWriteTable(con, "iris", iris)
-source <- DBISource$new(con, "iris")
-}
+db_source$cleanup()
+\dontshow{\}) # examplesIf}
 }
 \section{Super class}{
 \code{\link[querychat:DataSource]{querychat::DataSource}} -> \code{DBISource}
@@ -75,18 +71,6 @@ string or a \code{\link[DBI:Id]{DBI::Id()}} object for tables in catalogs/schema
 \subsection{Returns}{
 A new DBISource object
 }
-\subsection{Examples}{
-\if{html}{\out{<div class="r example copy">}}
-\preformatted{\dontrun{
-con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
-DBI::dbWriteTable(con, "iris", iris)
-source <- DBISource$new(con, "iris")
-}
-}
-\if{html}{\out{</div>}}
-
-}
-
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-DBISource-get_db_type"></a>}}

@@ -73,7 +73,7 @@ This provides a list of available examples. To run a specific example, like
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://posit-dev.github.io/querychat//pkg-r}
+  \item \url{https://posit-dev.github.io/querychat/pkg-r}
   \item \url{https://posit-dev.github.io/querychat/}
   \item \url{https://github.com/posit-dev/querychat}
   \item Report bugs at \url{https://github.com/posit-dev/querychat/issues}

@@ -6,6 +6,18 @@
 #' instead, use one of its concrete implementations like [DataFrameSource] or
 #' [DBISource].
 #'
+#' @examples
+#' MyDataSource <- R6::R6Class(
+#'   "MyDataSource",
+#'   inherit = DataSource,
+#'   public = list(
+#'     initialize = function(table_name) {
+#'       self$table_name <- table_name
+#'     },
+#'     # Implement abstract methods here...
+#'   )
+#' )
+#'
 #' @export
 DataSource <- R6::R6Class(
   "DataSource",
@@ -92,11 +104,6 @@ DataSource <- R6::R6Class(
 
 # Helper Functions -------------------------------------------------------------
 
-#' Check if object is a DataSource
-#'
-#' @param x Object to check
-#' @return TRUE if x is a DataSource, FALSE otherwise
-#' @keywords internal
 is_data_source <- function(x) {
   inherits(x, "DataSource")
 }

@@ -9,6 +9,19 @@ sources must implement. This class should not be instantiated directly;
 instead, use one of its concrete implementations like \link{DataFrameSource} or
 \link{DBISource}.
 }
+\examples{
+MyDataSource <- R6::R6Class(
+  "MyDataSource",
+  inherit = DataSource,
+  public = list(
+    initialize = function(table_name) {
+      self$table_name <- table_name
+    },
+    # Implement abstract methods here...
+  )
+)
+
+}
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
 \describe{

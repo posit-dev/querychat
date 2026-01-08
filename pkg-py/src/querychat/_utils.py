@@ -7,6 +7,7 @@ from contextlib import contextmanager
 from typing import TYPE_CHECKING, Literal, Optional
 
 import narwhals.stable.v1 as nw
+from great_tables import GT
 
 
 class UnsafeQueryError(ValueError):
@@ -223,11 +224,13 @@ def df_to_html(df: IntoFrame, maxrows: int = 5) -> str:
             "Must be able to convert `df` into a Narwhals DataFrame or LazyFrame",
         )
 
-    # Generate HTML table
-    table_html = df_short.to_pandas().to_html(
-        index=False,
-        classes="table table-striped",
-    )
+    # Convert to native DataFrame for great_tables
+    # great_tables works with pandas or polars DataFrames
+    native_df = df_short.to_native()
+
+    # Generate HTML table using great_tables
+    gt_tbl = GT(native_df)
+    table_html = gt_tbl.as_raw_html(make_page=False)
 
     # Add note about truncated rows if needed
     if len(df_short) != nrow_full:

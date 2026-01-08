@@ -21,7 +21,6 @@ maintainers = [
 ]
 dependencies = [
     "duckdb",
-    "pandas",
     "shiny>=1.5.1",
     "shinychat>=0.2.8",
     "htmltools",
@@ -29,6 +28,7 @@ dependencies = [
     "narwhals",
     "chevron",
     "sqlalchemy>=2.0.0", # Using 2.0+ for improved type hints and API
+    "great-tables>=0.16.0",
 ]
 classifiers = [
     "Programming Language :: Python",
@@ -38,6 +38,11 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
 ]
+
+[project.optional-dependencies]
+# For SQLAlchemySource and sample data, one of polars or pandas is required
+pandas = ["pandas"]
+polars = ["polars"]
 
 [project.urls]
 Homepage = "https://github.com/posit-dev/querychat" # TODO update when we have docs

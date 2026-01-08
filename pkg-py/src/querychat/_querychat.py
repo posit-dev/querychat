@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Literal, Optional, overload
 
 import chatlas
 import chevron
+import narwhals.stable.v1 as nw
 import sqlalchemy
 from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 from shiny.express._stub_session import ExpressStubSession
@@ -29,8 +30,7 @@ from .tools import (
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    import pandas as pd
-    from narwhals.stable.v1.typing import IntoFrame
+    from narwhals.typing import IntoFrame
 
 TOOL_GROUPS = Literal["update", "query"]
 
@@ -79,6 +79,7 @@ class QueryChatBase:
         client = as_querychat_client(client)
         self._client = copy.deepcopy(client)
         self._client.set_turns([])
+        self._client.system_prompt = self._system_prompt.render(self.tools)
 
         # Storage for console client
         self._client_console = None
@@ -142,7 +143,7 @@ class QueryChatBase:
                 self.id,
                 data_source=self._data_source,
                 greeting=self.greeting,
-                client=self._client,
+                client=self.client,
                 enable_bookmarking=enable_bookmarking,
             )
 
@@ -719,6 +720,19 @@ class QueryChatExpress(QueryChatBase):
         If `client` is not provided, querychat consults the
         `QUERYCHAT_CLIENT` environment variable. If that is not set, it
         defaults to `"openai"`.
+    tools
+        Which querychat tools to include in the chat client by default. Can be:
+        - A single tool string: `"update"` or `"query"`
+        - A tuple of tools: `("update", "query")`
+        - `None` or `()` to disable all tools
+
+        Default is `("update", "query")` (both tools enabled).
+
+        Set to `"update"` to prevent the LLM from accessing data values, only
+        allowing dashboard filtering without answering questions.
+
+        The tools can be overridden per-client by passing a different `tools`
+        parameter to the `.client()` method.
     data_description
         Description of the data in plain text or Markdown. If a pathlib.Path
         object is passed, querychat will read the contents of the path into a
@@ -751,6 +765,7 @@ class QueryChatExpress(QueryChatBase):
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -771,6 +786,7 @@ class QueryChatExpress(QueryChatBase):
             id=id,
             greeting=greeting,
             client=client,
+            tools=tools,
             data_description=data_description,
             categorical_threshold=categorical_threshold,
             extra_instructions=extra_instructions,
@@ -793,18 +809,18 @@ class QueryChatExpress(QueryChatBase):
             self.id,
             data_source=self._data_source,
             greeting=self.greeting,
-            client=self._client,
+            client=self.client,
             enable_bookmarking=enable,
         )
 
-    def df(self) -> pd.DataFrame:
+    def df(self) -> nw.DataFrame:
         """
         Reactively read the current filtered data frame that is in effect.
 
         Returns
         -------
         :
-            The current filtered data frame as a pandas DataFrame. If no query
+            The current filtered data frame as a narwhals DataFrame. If no query
             has been set, this will return the unfiltered data frame from the
             data source.
 
@@ -883,7 +899,16 @@ def normalize_data_source(
         return data_source
     if isinstance(data_source, sqlalchemy.Engine):
         return SQLAlchemySource(data_source, table_name)
-    return DataFrameSource(data_source, table_name)
+    src = nw.from_native(data_source, pass_through=True)
+    if isinstance(src, nw.DataFrame):
+        return DataFrameSource(src, table_name)
+    if isinstance(src, nw.LazyFrame):
+        raise NotImplementedError("LazyFrame data sources are not yet supported (they will be soon).")
+    raise TypeError(
+        f"Unsupported data source type: {type(data_source)}."
+        "If you believe this type should be supported, please open an issue at "
+        "https://github.com/posit-dev/querychat/issues"
+    )
 
 
 def as_querychat_client(client: str | chatlas.Chat | None) -> chatlas.Chat:

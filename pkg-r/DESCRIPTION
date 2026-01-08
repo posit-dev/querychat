@@ -1,6 +1,6 @@
 Package: querychat
 Title: Filter and Query Data Frames in 'shiny' Using an LLM Chat Interface
-Version: 0.1.0.9000
+Version: 0.2.0
 Authors@R: c(
     person("Garrick", "Aden-Buie", , "garrick@posit.co", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-7111-0077")),
@@ -11,11 +11,12 @@ Authors@R: c(
   )
 Description: Adds an LLM-powered chatbot to your 'shiny' app, that can
     turn your users' natural language questions into SQL queries that run
-    against your data, and return the result as a reactive dataframe. Use
-    it to drive reactive calculations, visualizations, downloads, etc.
+    against your data, and return the result as a reactive data frame. Use
+    it to drive reactive calculations, visualizations, downloads, and
+    more.
 License: MIT + file LICENSE
-URL: https://posit-dev.github.io/querychat/pkg-r,
-    https://posit-dev.github.io/querychat,
+URL: https://posit-dev.github.io/querychat/r/,
+    https://posit-dev.github.io/querychat/,
     https://github.com/posit-dev/querychat
 BugReports: https://github.com/posit-dev/querychat/issues
 Depends:
@@ -32,7 +33,7 @@ Imports:
     rlang (>= 1.1.0),
     S7,
     shiny,
-    shinychat (>= 0.2.0.9000),
+    shinychat (>= 0.3.0),
     utils,
     whisker
 Suggests:
@@ -50,8 +51,6 @@ Suggests:
     withr
 VignetteBuilder:
     knitr
-Remotes:
-    posit-dev/shinychat/pkg-r
 Config/testthat/edition: 3
 Config/testthat/parallel: true
 Encoding: UTF-8

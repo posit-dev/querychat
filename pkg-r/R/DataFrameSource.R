@@ -12,13 +12,11 @@
 #'
 #' By default, DataFrameSource uses the first available engine from duckdb
 #' (checked first) or RSQLite. You can explicitly set the `engine` parameter to
-#' choose between "duckdb" or "sqlite", or set the global option
+#' choose between `"duckdb"` or `"sqlite"`, or set the global option
 #' `querychat.DataFrameSource.engine` to choose the default engine for all
 #' DataFrameSource instances. At least one of these packages must be installed.
 #'
-#' @export
-#' @examples
-#' \dontrun{
+#' @examplesIf rlang::is_installed("duckdb") || rlang::is_installed("RSQLite")
 #' # Create a data frame source (uses first available: duckdb or sqlite)
 #' df_source <- DataFrameSource$new(mtcars, "mtcars")
 #'
@@ -34,7 +32,8 @@
 #' # Clean up when done
 #' df_source$cleanup()
 #' df_sqlite$cleanup()
-#' }
+#'
+#' @export
 DataFrameSource <- R6::R6Class(
   "DataFrameSource",
   inherit = DBISource,
@@ -53,11 +52,8 @@ DataFrameSource <- R6::R6Class(
     #'   global option `querychat.DataFrameSource.engine` to specify the default
     #'   engine for all instances. If NULL (default), uses the first available
     #'   engine from duckdb or RSQLite (in that order).
+    #'
     #' @return A new DataFrameSource object
-    #' @examples
-    #' \dontrun{
-    #' source <- DataFrameSource$new(iris, "iris")
-    #' }
     initialize = function(
       df,
       table_name,

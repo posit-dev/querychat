@@ -9,6 +9,19 @@ sources must implement. This class should not be instantiated directly;
 instead, use one of its concrete implementations like \link{DataFrameSource} or
 \link{DBISource}.
 }
+\examples{
+MyDataSource <- R6::R6Class(
+  "MyDataSource",
+  inherit = DataSource,
+  public = list(
+    initialize = function(table_name) {
+      self$table_name <- table_name
+    }
+    # Implement abstract methods here...
+  )
+)
+
+}
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
 \describe{
@@ -96,13 +109,14 @@ Test a SQL query by fetching only one row
 \describe{
 \item{\code{query}}{SQL query string to test}
 
-\item{\code{require_all_columns}}{If TRUE, validates that the result includes
-all original table columns (default: FALSE)}
+\item{\code{require_all_columns}}{If \code{TRUE}, validates that the result includes
+all original table columns (default: \code{FALSE})}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-A data frame containing one row of results (or empty if no matches)
+A data frame containing one row of results (or empty if no
+matches)
 }
 }
 \if{html}{\out{<hr>}}

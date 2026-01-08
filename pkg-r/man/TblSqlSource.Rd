@@ -8,7 +8,7 @@ A DataSource implementation for lazy SQL tibbles connected to databases via
 \code{\link[dbplyr:tbl_sql]{dbplyr::tbl_sql()}} or \code{\link[dplyr:sql]{dplyr::sql()}}.
 }
 \examples{
-\dontshow{if (rlang::is_interactive() && rlang::is_installed("dbplyr") && rlang::is_installed("dplyr") && rlang::is_installed("duckdb")) withAutoprint(\{ # examplesIf}
+\dontshow{if (rlang::is_installed("dbplyr") && rlang::is_installed("dplyr") && rlang::is_installed("duckdb")) withAutoprint(\{ # examplesIf}
 con <- DBI::dbConnect(duckdb::duckdb())
 DBI::dbWriteTable(con, "mtcars", mtcars)
 
@@ -28,11 +28,6 @@ dplyr::collect(result)
 
 # Finally, clean up when done with the database (closes the DB connection)
 mtcars_source$cleanup()
-\dontshow{\}) # examplesIf}
-\dontshow{if (rlang::is_interactive() && rlang::is_installed("dbplyr") && rlang::is_installed("dplyr") && rlang::is_installed("RSQLite")) withAutoprint(\{ # examplesIf}
-con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
-DBI::dbWriteTable(con, "mtcars", mtcars)
-source <- TblSqlSource$new(dplyr::tbl(con, "mtcars"))
 \dontshow{\}) # examplesIf}
 }
 \section{Super classes}{
@@ -142,13 +137,16 @@ A data frame containing query results
 \subsection{Method \code{test_query()}}{
 Test a SQL query by fetching only one row
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{TblSqlSource$test_query(query)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{TblSqlSource$test_query(query, require_all_columns = FALSE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{query}}{SQL query string to test}
+
+\item{\code{require_all_columns}}{If \code{TRUE}, validates that the result includes
+all original table columns (default: \code{FALSE})}
 }
 \if{html}{\out{</div>}}
 }

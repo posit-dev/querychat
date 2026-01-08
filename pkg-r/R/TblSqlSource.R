@@ -4,7 +4,7 @@
 #' A DataSource implementation for lazy SQL tibbles connected to databases via
 #' [dbplyr::tbl_sql()] or [dplyr::sql()].
 #'
-#' @examplesIf rlang::is_interactive() && rlang::is_installed("dbplyr") && rlang::is_installed("dplyr") && rlang::is_installed("duckdb")
+#' @examplesIf rlang::is_installed("dbplyr") && rlang::is_installed("dplyr") && rlang::is_installed("duckdb")
 #' con <- DBI::dbConnect(duckdb::duckdb())
 #' DBI::dbWriteTable(con, "mtcars", mtcars)
 #'
@@ -43,11 +43,8 @@ TblSqlSource <- R6::R6Class(
     #' @param tbl A [dbplyr::tbl_sql()] (or SQL tibble via [dplyr::tbl()]).
     #' @param table_name Name of the table in the database. Can be a character
     #'   string, or will be inferred from the `tbl` argument, if possible.
+    #'
     #' @return A new TblSqlSource object
-    #' @examplesIf rlang::is_interactive() && rlang::is_installed("dbplyr") && rlang::is_installed("dplyr") && rlang::is_installed("RSQLite")
-    #' con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
-    #' DBI::dbWriteTable(con, "mtcars", mtcars)
-    #' source <- TblSqlSource$new(dplyr::tbl(con, "mtcars"))
     initialize = function(tbl, table_name = missing_arg()) {
       check_installed("dbplyr")
       check_installed("dplyr")
@@ -130,9 +127,14 @@ TblSqlSource <- R6::R6Class(
     #' Test a SQL query by fetching only one row
     #'
     #' @param query SQL query string to test
+    #' @param require_all_columns If `TRUE`, validates that the result includes
+    #'   all original table columns (default: `FALSE`)
     #' @return A data frame containing one row of results (or empty if no matches)
-    test_query = function(query) {
-      super$test_query(self$prep_query(query))
+    test_query = function(query, require_all_columns = FALSE) {
+      super$test_query(
+        query = self$prep_query(query),
+        require_all_columns = require_all_columns
+      )
     },
 
     #' @description

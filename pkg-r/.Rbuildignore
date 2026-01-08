@@ -1,3 +1,4 @@
 ^pkgdown$
 ^LICENSE\.md$
 ^\.covrignore$
+^cran-comments\.md$

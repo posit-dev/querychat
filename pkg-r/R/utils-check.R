@@ -27,7 +27,6 @@ check_data_source <- function(
 #' @param call Calling environment for error messages
 #'
 #' @return Invisibly returns `NULL` if validation passes. Otherwise throws an error.
-#' @keywords internal
 #' @noRd
 check_sql_table_name <- function(
   x,

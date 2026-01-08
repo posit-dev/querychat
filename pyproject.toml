@@ -22,13 +22,12 @@ maintainers = [
 dependencies = [
     "duckdb",
     "shiny>=1.5.1",
-    "shinywidgets",
+    "shinychat>=0.2.8",
     "htmltools",
     "chatlas>=0.13.2",
     "narwhals",
     "chevron",
     "sqlalchemy>=2.0.0", # Using 2.0+ for improved type hints and API
-    "shinychat>=0.2.8",
     "great-tables>=0.16.0",
 ]
 classifiers = [

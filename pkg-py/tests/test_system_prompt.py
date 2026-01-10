@@ -52,7 +52,7 @@ class TestQueryChatSystemPromptInit:
         assert prompt.data_description is None
         assert prompt.extra_instructions is None
         assert prompt.schema is not None
-        assert prompt.categorical_threshold == 10  # noqa: PLR2004
+        assert prompt.categorical_threshold == 10
 
     def test_init_with_path_template(self, sample_data_source):
         """Test initialization with Path template."""
@@ -142,7 +142,7 @@ class TestQueryChatSystemPromptInit:
             categorical_threshold=15,
         )
 
-        assert prompt.categorical_threshold == 15  # noqa: PLR2004
+        assert prompt.categorical_threshold == 15
 
 
 class TestQueryChatSystemPromptRender:

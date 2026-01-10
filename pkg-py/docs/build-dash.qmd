@@ -1,0 +1,341 @@
+---
+title: Dash
+lightbox: true
+---
+
+[Dash](https://dash.plotly.com/) is ideal for building production-ready analytical applications. This guide shows you how to integrate querychat into your Dash applications.
+
+![](/images/dash-app.png){fig-alt="Screenshot of querychat running in a Dash app." class="lightbox shadow rounded mb-3"}
+
+## Installation
+
+Install querychat with Dash support:
+```bash
+pip install "querychat[dash]"
+```
+
+## Quick start
+
+The simplest way to get started is with `.app()`, which creates a complete Dash application:
+
+```{.python filename="dash-app.py"}
+from querychat.dash import QueryChat
+from querychat.data import titanic
+
+qc = QueryChat(titanic(), "titanic")
+app = qc.app()
+
+if __name__ == "__main__":
+    app.run(debug=True)
+```
+
+Run with:
+```bash
+python dash-app.py
+```
+
+## State management
+
+Dash uses callbacks and `dcc.Store` for state management. querychat provides:
+
+- **`.store_id`** - The ID of the `dcc.Store` component holding query state
+- **`.ui()`** - Returns the chat UI component
+- **`.init_app(app)`** - Registers callbacks on your Dash app
+
+The state dictionary (accessed via `Input(qc.store_id, "data")`) contains:
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `sql` | str \| None | Current SQL query |
+| `title` | str \| None | Short description of current filter |
+| `error` | str \| None | Error message if query failed |
+| `chat_history` | list | Conversation history |
+
+::: {.callout-tip}
+Use the convenience methods `.df(state)`, `.sql(state)`, and `.title(state)` to access state values cleanly in your callbacks.
+:::
+
+## Custom layouts
+
+For custom layouts, use `.ui()` and `.init_app()`:
+
+```{.python filename="dash-custom.py"}
+import dash_bootstrap_components as dbc
+from dash import Dash, Input, Output, dcc, html
+from dash.dash_table import DataTable
+
+from querychat.dash import QueryChat
+from querychat.data import titanic
+from querychat.types import AppStateDict
+
+qc = QueryChat(titanic(), "titanic")
+
+app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+
+app.layout = dbc.Container([
+    dbc.Row([
+        # Left column: Chat
+        dbc.Col(qc.ui(), width=4),
+
+        # Right column: Data display
+        dbc.Col([
+            html.H3(id="data-title"),
+            DataTable(id="data-table", page_size=10),
+            html.Pre(id="sql-display"),
+        ], width=8),
+    ])
+], fluid=True)
+
+# Register querychat's internal callbacks
+qc.init_app(app)
+
+# Add your own callbacks using qc.store_id
+@app.callback(
+    [Output("data-title", "children"),
+     Output("data-table", "data"),
+     Output("data-table", "columns"),
+     Output("sql-display", "children")],
+    Input(qc.store_id, "data")
+)
+def update_display(state: AppStateDict):
+    df = qc.df(state).to_pandas()
+    sql = qc.sql(state) or f"SELECT * FROM {qc.data_source.table_name}"
+    title = qc.title(state) or "All Data"
+
+    columns = [{"name": c, "id": c} for c in df.columns]
+    return title, df.to_dict("records"), columns, sql
+
+if __name__ == "__main__":
+    app.run(debug=True)
+```
+
+![](/images/dash-custom-app.png){fig-alt="Screenshot of custom Dash layout." class="lightbox shadow rounded mb-3"}
+
+## Data views
+
+Add Plotly visualizations that respond to query changes:
+
+```{.python filename="dash-viz.py"}
+import dash_bootstrap_components as dbc
+import plotly.express as px
+from dash import Dash, Input, Output, dcc, html
+
+from querychat.dash import QueryChat
+from querychat.data import titanic
+from querychat.types import AppStateDict
+
+qc = QueryChat(titanic(), "titanic")
+
+app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+
+app.layout = dbc.Container([
+    dbc.Row([
+        dbc.Col(qc.ui(), width=4),
+        dbc.Col([
+            dcc.Graph(id="age-histogram"),
+            dcc.Graph(id="class-survival"),
+        ], width=8),
+    ])
+], fluid=True)
+
+qc.init_app(app)
+
+@app.callback(
+    [Output("age-histogram", "figure"),
+     Output("class-survival", "figure")],
+    Input(qc.store_id, "data")
+)
+def update_charts(state: AppStateDict):
+    df = qc.df(state).to_pandas()
+
+    fig1 = px.histogram(df, x="age", color="survived",
+                        title="Age Distribution")
+    fig2 = px.bar(df.groupby("pclass")["survived"].mean().reset_index(),
+                  x="pclass", y="survived", title="Survival by Class")
+
+    return fig1, fig2
+
+if __name__ == "__main__":
+    app.run(debug=True)
+```
+
+![](/images/dash-viz.png){fig-alt="Screenshot of Dash data views example." class="lightbox shadow rounded mb-3"}
+
+## Reset functionality
+
+Add a reset button using Dash callbacks:
+
+```{.python filename="dash-reset.py"}
+import dash_bootstrap_components as dbc
+from dash import Dash, Input, Output, State, callback_context, html
+from dash.dash_table import DataTable
+
+from querychat.dash import QueryChat
+from querychat.data import titanic
+from querychat.types import AppStateDict
+
+qc = QueryChat(titanic(), "titanic")
+
+app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+
+app.layout = dbc.Container([
+    dbc.Row([
+        dbc.Col([
+            qc.ui(),
+            dbc.Button("Reset Filters", id="reset-btn", class_name="mt-2 w-100"),
+        ], width=4),
+        dbc.Col([
+            DataTable(id="data-table", page_size=10),
+        ], width=8),
+    ])
+], fluid=True)
+
+qc.init_app(app)
+
+@app.callback(
+    [Output("data-table", "data"),
+     Output("data-table", "columns")],
+    [Input(qc.store_id, "data"),
+     Input("reset-btn", "n_clicks")],
+)
+def update_table(state: AppStateDict, reset_clicks):
+    ctx = callback_context
+    triggered = ctx.triggered[0]["prop_id"] if ctx.triggered else ""
+
+    if "reset-btn" in triggered:
+        df = qc.data_source.get_data().to_pandas()
+    else:
+        df = qc.df(state).to_pandas()
+
+    columns = [{"name": c, "id": c} for c in df.columns]
+    return df.to_dict("records"), columns
+
+if __name__ == "__main__":
+    app.run(debug=True)
+```
+
+![](/images/dash-reset.png){fig-alt="Screenshot of Dash reset functionality example." class="lightbox shadow rounded mb-3"}
+
+## Complete example
+
+Here's a full example with metrics, data table, and visualizations:
+
+```{.python filename="dash-complete.py"}
+import dash_bootstrap_components as dbc
+import plotly.express as px
+from dash import Dash, Input, Output, dcc, html
+from dash.dash_table import DataTable
+
+from querychat.dash import QueryChat
+from querychat.data import titanic
+from querychat.types import AppStateDict
+
+qc = QueryChat(titanic(), "titanic")
+
+app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+
+app.layout = dbc.Container([
+    html.H1("Titanic Dataset Explorer", className="my-3"),
+
+    dbc.Row([
+        # Left: Chat
+        dbc.Col(qc.ui(), width=4),
+
+        # Right: Dashboard
+        dbc.Col([
+            # Title
+            html.H3(id="data-title", className="mb-3"),
+
+            # Metrics
+            dbc.Row([
+                dbc.Col(dbc.Card([
+                    dbc.CardHeader("Passengers"),
+                    dbc.CardBody(html.H4(id="metric-passengers")),
+                ])),
+                dbc.Col(dbc.Card([
+                    dbc.CardHeader("Survivors"),
+                    dbc.CardBody(html.H4(id="metric-survivors")),
+                ])),
+                dbc.Col(dbc.Card([
+                    dbc.CardHeader("Survival Rate"),
+                    dbc.CardBody(html.H4(id="metric-rate")),
+                ])),
+            ], className="mb-3"),
+
+            # Tabs
+            dbc.Tabs([
+                dbc.Tab([
+                    DataTable(
+                        id="data-table",
+                        page_size=10,
+                        style_table={"overflowX": "auto"},
+                    )
+                ], label="Data"),
+                dbc.Tab([
+                    dcc.Graph(id="age-chart"),
+                ], label="Charts"),
+                dbc.Tab([
+                    html.Pre(id="sql-display", className="bg-light p-3"),
+                ], label="SQL"),
+            ]),
+        ], width=8),
+    ])
+], fluid=True)
+
+qc.init_app(app)
+
+@app.callback(
+    [Output("data-title", "children"),
+     Output("metric-passengers", "children"),
+     Output("metric-survivors", "children"),
+     Output("metric-rate", "children"),
+     Output("data-table", "data"),
+     Output("data-table", "columns"),
+     Output("age-chart", "figure"),
+     Output("sql-display", "children")],
+    Input(qc.store_id, "data")
+)
+def update_all(state: AppStateDict):
+    df = qc.df(state).to_pandas()
+    sql = qc.sql(state) or f"SELECT * FROM {qc.data_source.table_name}"
+    title = qc.title(state) or "All Data"
+
+    # Metrics
+    n_passengers = len(df)
+    n_survivors = int(df["survived"].sum())
+    survival_rate = f"{df['survived'].mean():.1%}"
+
+    # Table
+    columns = [{"name": c, "id": c} for c in df.columns]
+
+    # Chart
+    fig = px.histogram(df, x="age", color="survived",
+                       title="Age Distribution by Survival")
+
+    return (
+        title,
+        n_passengers, n_survivors, survival_rate,
+        df.to_dict("records"), columns,
+        fig, sql
+    )
+
+if __name__ == "__main__":
+    app.run(debug=True)
+```
+
+![](/images/dash-complete.png){fig-alt="Screenshot of complete Dash app with querychat." class="lightbox shadow rounded mb-3"}
+
+## Deployment
+
+Dash apps can be deployed to various platforms:
+
+- **[Posit Connect](https://posit.co/products/enterprise/connect/)** - Enterprise deployment
+- **[Heroku](https://devcenter.heroku.com/articles/getting-started-with-python)** - Cloud platform
+- **[AWS/GCP/Azure](https://dash.plotly.com/deployment)** - Cloud providers
+
+Remember to set your API keys as environment variables in your deployment environment.
+
+## See also
+
+- [Greet users](greet.qmd) - Create welcoming onboarding experiences
+- [Provide context](context.qmd) - Help the LLM understand your data better

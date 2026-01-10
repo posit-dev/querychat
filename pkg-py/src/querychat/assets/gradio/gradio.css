@@ -1,0 +1,76 @@
+/**
+* Hack to make sidebar chat fill height and have sticky input
+**/
+
+.querychat-chatbot {
+  flex: 1 1 auto;
+  height: auto !important;
+}
+
+.querychat-chatbot .sidebar-content {
+  padding-bottom: 6rem;
+}
+
+.querychat-chat-input {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  padding: 1rem;
+  padding-bottom: 2rem;
+  background: var(--block-background-fill, #fff);
+}
+
+
+/**
+* CSS tweaks for gr.themes.Soft() - improves readability and contrast
+**/
+
+/* Improve chat message readability */
+.message-wrap {
+  font-size: 15px !important;
+  line-height: 1.6 !important;
+}
+
+/* Better contrast for chat text */
+.message-wrap .markdown-text {
+  color: #1a1a1a !important;
+}
+
+/* Make bullet points more visible */
+.message-wrap ul,
+.message-wrap ol {
+  margin-left: 1.5em;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+.message-wrap li {
+  margin-bottom: 0.3em;
+}
+
+/* Improve code block contrast in chat */
+.message-wrap pre,
+.message-wrap code {
+  background-color: #1e1e1e !important;
+  color: #d4d4d4 !important;
+  border: none !important;
+}
+
+/* Inline code styling */
+.message-wrap code {
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+  font-size: 0.9em !important;
+}
+
+/* Code block styling */
+.message-wrap pre {
+  padding: 12px !important;
+  border-radius: 6px !important;
+  overflow-x: auto !important;
+}
+
+.message-wrap pre code {
+  padding: 0 !important;
+  background: transparent !important;
+}

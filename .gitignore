@@ -264,4 +264,10 @@ renv.lock
 # Claude
 .claude/settings.local.json
 
+# Planning documents (local only)
+docs/plans/
+
+# Playwright MCP
+.playwright-mcp/
+
 /.luarc.json

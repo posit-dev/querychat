@@ -1,0 +1,217 @@
+---
+title: Streamlit
+lightbox: true
+---
+
+[Streamlit](https://streamlit.io/) provides a simple, script-based approach to building data apps. This guide shows you how to integrate querychat into your Streamlit applications.
+
+![](/images/streamlit-app.png){fig-alt="Screenshot of querychat running in a Streamlit app." class="lightbox shadow rounded mb-3"}
+
+## Installation
+
+Install querychat with Streamlit support:
+```bash
+pip install "querychat[streamlit]"
+```
+
+## Quick start
+
+The simplest way to get started is with `.app()`, which creates a complete app with sidebar chat and main content area:
+
+```{.python filename="streamlit-app.py"}
+from querychat.streamlit import QueryChat
+from querychat.data import titanic
+
+qc = QueryChat(titanic(), "titanic")
+qc.app()
+```
+
+Run with:
+```bash
+streamlit run streamlit-app.py
+```
+
+## State access
+
+querychat provides three methods to access the current query state:
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `.df()` | DataFrame | Current filtered/sorted data |
+| `.sql()` | str \| None | Current SQL query |
+| `.title()` | str \| None | Short description of current filter |
+
+These read directly from Streamlit's session state and update automatically when users interact with the chat.
+
+```python
+import streamlit as st
+from querychat.streamlit import QueryChat
+from querychat.data import titanic
+
+qc = QueryChat(titanic(), "titanic")
+qc.sidebar()
+
+# Access current state
+df = qc.df()           # Filtered DataFrame
+sql = qc.sql()         # SQL query string
+title = qc.title()     # Filter description
+
+st.header(title or "All Data")
+st.dataframe(df)
+```
+
+## Custom layouts
+
+For more control over your app's layout, use `.sidebar()` or `.ui()`:
+
+- **`.sidebar()`** - Renders chat in Streamlit's sidebar
+- **`.ui()`** - Renders just the chat component (place anywhere)
+
+### Sidebar layout
+
+```{.python filename="streamlit-sidebar.py"}
+import streamlit as st
+from querychat.streamlit import QueryChat
+from querychat.data import titanic
+
+st.set_page_config(layout="wide")
+
+qc = QueryChat(titanic(), "titanic")
+qc.sidebar()  # Chat appears in sidebar
+
+# Main content area
+st.header(qc.title() or "Titanic Dataset")
+
+col1, col2 = st.columns(2)
+with col1:
+    st.subheader("Data")
+    st.dataframe(qc.df())
+
+with col2:
+    st.subheader("SQL Query")
+    st.code(qc.sql() or "SELECT * FROM titanic", language="sql")
+```
+
+![](/images/streamlit-sidebar.png){fig-alt="Screenshot of Streamlit sidebar layout." class="lightbox shadow rounded mb-3"}
+
+### Custom placement
+
+Use `.ui()` to place the chat anywhere in your layout:
+
+```{.python filename="streamlit-custom.py"}
+import streamlit as st
+from querychat.streamlit import QueryChat
+from querychat.data import titanic
+
+qc = QueryChat(titanic(), "titanic")
+
+col1, col2 = st.columns([1, 2])
+
+with col1:
+    st.header("Chat")
+    qc.ui()  # Chat in left column
+
+with col2:
+    st.header(qc.title() or "Data View")
+    st.dataframe(qc.df())
+```
+
+![](/images/streamlit-custom.png){fig-alt="Screenshot of Streamlit custom placement layout." class="lightbox shadow rounded mb-3"}
+
+## Data views
+
+Since `.df()` returns a standard DataFrame, you can use it with any Streamlit visualization:
+
+```python
+import streamlit as st
+import plotly.express as px
+from querychat.streamlit import QueryChat
+from querychat.data import titanic
+
+qc = QueryChat(titanic(), "titanic")
+qc.sidebar()
+
+st.header(qc.title() or "Titanic Explorer")
+
+# Data table
+st.dataframe(qc.df())
+
+# Visualization
+df = qc.df().to_pandas()  # Convert for plotly
+fig = px.histogram(df, x="age", color="survived", title="Age Distribution")
+st.plotly_chart(fig)
+```
+
+When users filter data through the chat (e.g., "show only survivors"), both the table and chart update automatically on the next Streamlit rerun.
+
+## Reset functionality
+
+Add a reset button to clear filters:
+
+```python
+import streamlit as st
+from querychat.streamlit import QueryChat
+from querychat.data import titanic
+
+qc = QueryChat(titanic(), "titanic")
+
+with st.sidebar:
+    qc.ui()
+    if st.button("Reset Filters"):
+        qc.reset()
+        st.rerun()
+
+st.dataframe(qc.df())
+```
+
+## Complete example
+
+Here's a full example combining all the concepts:
+
+```{.python filename="streamlit-complete.py"}
+import streamlit as st
+import plotly.express as px
+from querychat.streamlit import QueryChat
+from querychat.data import titanic
+
+st.set_page_config(page_title="Titanic Explorer", layout="wide")
+
+qc = QueryChat(titanic(), "titanic")
+
+# Sidebar with chat and reset
+with st.sidebar:
+    qc.ui()
+    st.divider()
+    if st.button("Reset Filters", use_container_width=True):
+        qc.reset()
+        st.rerun()
+
+# Main content
+st.header(qc.title() or "Titanic Dataset")
+
+# Metrics row
+df = qc.df().to_pandas()
+col1, col2, col3 = st.columns(3)
+col1.metric("Passengers", len(df))
+col2.metric("Survivors", df["survived"].sum())
+col3.metric("Survival Rate", f"{df['survived'].mean():.1%}")
+
+# Data and visualization
+tab1, tab2 = st.tabs(["Data", "Charts"])
+
+with tab1:
+    st.dataframe(df, use_container_width=True)
+    st.caption(f"```sql\n{qc.sql() or 'SELECT * FROM titanic'}\n```")
+
+with tab2:
+    fig = px.histogram(df, x="age", color="survived",
+                       title="Age Distribution by Survival")
+    st.plotly_chart(fig, use_container_width=True)
+```
+
+![](/images/streamlit-complete.png){fig-alt="Screenshot of complete Streamlit app with querychat." class="lightbox shadow rounded mb-3"}
+
+## See also
+
+- [Greet users](greet.qmd) - Create welcoming onboarding experiences
+- [Provide context](context.qmd) - Help the LLM understand your data better

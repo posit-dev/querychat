@@ -20,6 +20,22 @@ Install the latest stable release [from PyPI](https://pypi.org/project/querychat
 pip install querychat
 ```
 
+### Web Framework Extras
+
+querychat supports Gradio, Dash, and Streamlit. Install with the extras you need:
+
+```bash
+pip install "querychat[gradio]"
+pip install "querychat[dash]"
+pip install "querychat[streamlit]"
+```
+
+Or install directly from GitHub:
+
+```bash
+pip install "querychat[gradio] @ git+https://github.com/posit-dev/querychat"
+```
+
 ## Quick start
 
 The main entry point is the [`QueryChat` class](https://posit-dev.github.io/querychat/py/reference/QueryChat.html). It requires a [data source](https://posit-dev.github.io/querychat/py/data-sources.html) (e.g., pandas, polars, etc) and a name for the data.

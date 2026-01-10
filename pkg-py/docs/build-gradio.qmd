@@ -1,0 +1,273 @@
+---
+title: Gradio
+lightbox: true
+---
+
+[Gradio](https://gradio.app/) makes it easy to build and share web apps, especially for ML demos. This guide shows you how to integrate querychat into your Gradio applications.
+
+![](/images/gradio-app.png){fig-alt="Screenshot of querychat running in a Gradio app." class="lightbox shadow rounded mb-3"}
+
+## Installation
+
+Install querychat with Gradio support:
+```bash
+pip install "querychat[gradio]"
+```
+
+## Quick start
+
+The simplest way to get started is with `.app()`, which creates a complete interface:
+
+```{.python filename="gradio-app.py"}
+from querychat.gradio import QueryChat
+from querychat.data import titanic
+
+qc = QueryChat(titanic(), "titanic")
+app = qc.app()
+app.launch()
+```
+
+Run with:
+```bash
+python gradio-app.py
+```
+
+## State management
+
+Gradio uses a state-based architecture. The `.ui()` method returns a tuple of `(chat_column, state)`:
+
+- **`chat_column`** - The chat UI component (a `gr.Column`)
+- **`state`** - A `gr.State` containing the current query state as a dictionary
+
+The state dictionary contains:
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `sql` | str \| None | Current SQL query |
+| `title` | str \| None | Short description of current filter |
+| `error` | str \| None | Error message if query failed |
+| `chat_history` | list | Conversation history |
+
+::: {.callout-tip}
+Use the convenience methods `.df(state)`, `.sql(state)`, and `.title(state)` to access state values cleanly in your callbacks.
+:::
+
+## Custom layouts
+
+Use `.ui()` with `gr.Blocks` for custom layouts:
+
+```{.python filename="gradio-custom.py"}
+import gradio as gr
+
+from querychat.gradio import QueryChat
+from querychat.data import titanic
+from querychat.types import AppStateDict
+
+qc = QueryChat(titanic(), "titanic")
+
+with gr.Blocks() as app:
+    gr.Markdown("# Titanic Explorer")
+
+    with gr.Row():
+        # Chat column (returned by .ui())
+        chat_ui, state = qc.ui()
+
+        # Custom right column
+        with gr.Column():
+            title_display = gr.Markdown("## All Data")
+            data_table = gr.Dataframe(label="Data")
+            sql_display = gr.Code(language="sql", label="SQL Query")
+
+    # Update displays when state changes
+    def update_display(state_dict: AppStateDict):
+        df = qc.df(state_dict).to_pandas()
+        sql = qc.sql(state_dict)
+        title = qc.title(state_dict) or "All Data"
+
+        return (
+            f"## {title}",
+            df,
+            sql or f"SELECT * FROM {qc.data_source.table_name}"
+        )
+
+    state.change(
+        fn=update_display,
+        inputs=[state],
+        outputs=[title_display, data_table, sql_display],
+    )
+
+qc.launch(app)
+```
+
+![](/images/gradio-custom-app.png){fig-alt="Screenshot of custom Gradio layout." class="lightbox shadow rounded mb-3"}
+
+## Data views
+
+Add visualizations that respond to query changes:
+
+```{.python filename="gradio-viz.py"}
+import gradio as gr
+import plotly.express as px
+
+from querychat.gradio import QueryChat
+from querychat.data import titanic
+from querychat.types import AppStateDict
+
+qc = QueryChat(titanic(), "titanic")
+
+with gr.Blocks() as app:
+    with gr.Row():
+        chat_ui, state = qc.ui()
+
+        with gr.Column():
+            data_table = gr.Dataframe(label="Data")
+            plot = gr.Plot(label="Age Distribution")
+
+    def update_views(state_dict: AppStateDict):
+        df = qc.df(state_dict).to_pandas()
+
+        fig = px.histogram(df, x="age", color="survived",
+                          title="Age Distribution by Survival")
+        return df, fig
+
+    state.change(
+        fn=update_views,
+        inputs=[state],
+        outputs=[data_table, plot],
+    )
+
+qc.launch(app)
+```
+
+![](/images/gradio-viz.png){fig-alt="Screenshot of Gradio data views example." class="lightbox shadow rounded mb-3"}
+
+## Reset functionality
+
+Add a reset button using Gradio's event system:
+
+```{.python filename="gradio-reset.py"}
+import gradio as gr
+
+from querychat.gradio import QueryChat
+from querychat.data import titanic
+from querychat.types import AppStateDict
+
+qc = QueryChat(titanic(), "titanic")
+
+with gr.Blocks() as app:
+    with gr.Row():
+        chat_ui, state = qc.ui()
+
+        with gr.Column():
+            reset_btn = gr.Button("Reset Filters")
+            data_table = gr.Dataframe(label="Data")
+
+    def get_data(state_dict: AppStateDict):
+        return qc.df(state_dict).to_pandas()
+
+    def reset_data():
+        return qc.data_source.get_data().to_pandas()
+
+    state.change(fn=get_data, inputs=[state], outputs=[data_table])
+    reset_btn.click(fn=reset_data, outputs=[data_table])
+
+qc.launch(app)
+```
+
+![](/images/gradio-reset.png){fig-alt="Screenshot of Gradio reset functionality example." class="lightbox shadow rounded mb-3"}
+
+## Complete example
+
+Here's a full example with multiple views and controls:
+
+```{.python filename="gradio-complete.py"}
+import gradio as gr
+import plotly.express as px
+
+from querychat.gradio import QueryChat
+from querychat.data import titanic
+from querychat.types import AppStateDict
+
+qc = QueryChat(titanic(), "titanic")
+
+with gr.Blocks(title="Titanic Explorer") as app:
+    gr.Markdown("# Titanic Dataset Explorer")
+
+    with gr.Row():
+        # Left: Chat interface
+        chat_ui, state = qc.ui()
+
+        # Right: Data views
+        with gr.Column(scale=2):
+            with gr.Row():
+                title_display = gr.Markdown("## All Data")
+
+            with gr.Row():
+                passengers_box = gr.Textbox(label="Passengers", interactive=False)
+                survivors_box = gr.Textbox(label="Survivors", interactive=False)
+                rate_box = gr.Textbox(label="Survival Rate", interactive=False)
+
+            with gr.Tabs():
+                with gr.Tab("Data"):
+                    data_table = gr.Dataframe()
+
+                with gr.Tab("Visualization"):
+                    plot = gr.Plot()
+
+                with gr.Tab("SQL"):
+                    sql_display = gr.Code(language="sql")
+
+    def update_all(state_dict: AppStateDict):
+        df = qc.df(state_dict).to_pandas()
+        sql = qc.sql(state_dict)
+        title = qc.title(state_dict) or "All Data"
+
+        # Metrics
+        n_passengers = str(len(df))
+        n_survivors = str(int(df["survived"].sum()))
+        survival_rate = f"{df['survived'].mean():.1%}"
+
+        # Visualization
+        fig = px.histogram(df, x="age", color="survived",
+                          title="Age Distribution by Survival")
+
+        # SQL
+        sql_text = sql or f"SELECT * FROM {qc.data_source.table_name}"
+
+        return (
+            f"## {title}",
+            n_passengers, n_survivors, survival_rate,
+            df, fig, sql_text
+        )
+
+    state.change(
+        fn=update_all,
+        inputs=[state],
+        outputs=[
+            title_display,
+            passengers_box, survivors_box, rate_box,
+            data_table, plot, sql_display
+        ],
+    )
+
+qc.launch(app)
+```
+
+![](/images/gradio-complete.png){fig-alt="Screenshot of complete Gradio app with querychat." class="lightbox shadow rounded mb-3"}
+
+## Sharing on Hugging Face
+
+Gradio apps can be easily shared on [Hugging Face Spaces](https://huggingface.co/spaces):
+
+1. Create a new Space with Gradio SDK
+2. Add your `app.py` and `requirements.txt`
+3. Include your API key as a Space secret
+
+```{.txt filename="requirements.txt"}
+querychat[gradio]
+```
+
+## See also
+
+- [Greet users](greet.qmd) - Create welcoming onboarding experiences
+- [Provide context](context.qmd) - Help the LLM understand your data better

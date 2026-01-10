@@ -7,7 +7,6 @@ from contextlib import contextmanager
 from typing import TYPE_CHECKING, Literal, Optional
 
 import narwhals.stable.v1 as nw
-from great_tables import GT
 
 
 class UnsafeQueryError(ValueError):
@@ -199,7 +198,7 @@ def querychat_tool_starts_open(action: Literal["update", "query", "reset"]) -> b
 
 def df_to_html(df: IntoFrame, maxrows: int = 5) -> str:
     """
-    Convert a DataFrame to an HTML table for display in chat.
+    Convert a DataFrame to a Bootstrap-styled HTML table for display in chat.
 
     Parameters
     ----------
@@ -224,19 +223,27 @@ def df_to_html(df: IntoFrame, maxrows: int = 5) -> str:
             "Must be able to convert `df` into a Narwhals DataFrame or LazyFrame",
         )
 
-    # Convert to native DataFrame for great_tables
-    # great_tables works with pandas or polars DataFrames
-    native_df = df_short.to_native()
+    # Build simple Bootstrap-styled HTML table
+    columns = df_short.columns
+    rows = df_short.rows()
 
-    # Generate HTML table using great_tables
-    gt_tbl = GT(native_df)
-    table_html = gt_tbl.as_raw_html(make_page=False)
+    # Table header
+    header_cells = "".join(f"<th>{col}</th>" for col in columns)
+    header = f"<thead><tr>{header_cells}</tr></thead>"
+
+    # Table body
+    body_rows = []
+    for row in rows:
+        cells = "".join(f"<td>{val}</td>" for val in row)
+        body_rows.append(f"<tr>{cells}</tr>")
+    body = f"<tbody>{''.join(body_rows)}</tbody>"
+
+    # Use Bootstrap table classes
+    table_html = f'<table class="table table-sm table-striped">{header}{body}</table>'
 
     # Add note about truncated rows if needed
     if len(df_short) != nrow_full:
-        rows_notice = (
-            f"\n\n(Showing only the first {maxrows} rows out of {nrow_full}.)\n"
-        )
+        rows_notice = f"\n\n*(Showing {maxrows} of {nrow_full} rows)*\n"
     else:
         rows_notice = ""
 

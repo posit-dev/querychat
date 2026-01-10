@@ -1,3 +1,3 @@
-from .._querychat import QueryChatExpress as QueryChat
+from .._shiny import QueryChatExpress as QueryChat
 
 __all__ = ["QueryChat"]

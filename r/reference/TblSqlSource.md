@@ -250,11 +250,11 @@ dplyr::count(result, cyl, gear)
 #> # Database: DuckDB 1.4.3 [unknown@Linux 6.11.0-1018-azure:R 4.5.2/:memory:]
 #>     cyl  gear     n
 #>   <dbl> <dbl> <dbl>
-#> 1     6     5     1
-#> 2     8     5     2
-#> 3     6     4     4
-#> 4     8     3    12
-#> 5     6     3     2
+#> 1     6     3     2
+#> 2     6     5     1
+#> 3     8     5     2
+#> 4     6     4     4
+#> 5     8     3    12
 
 # Or collect the entire data frame into local memory
 dplyr::collect(result)

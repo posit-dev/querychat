@@ -16,7 +16,7 @@
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/posit-dev/querychat/blob/main/DESCRIPTION)
+[`DESCRIPTION`](https://github.com/posit-dev/querychat/blob/r/v0.2.0/DESCRIPTION)
 
 Aden-Buie G, Cheng J, Sievert C (2026). *querychat: Filter and Query
 Data Frames in 'shiny' Using an LLM Chat Interface*. R package version

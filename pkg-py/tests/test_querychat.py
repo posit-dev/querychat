@@ -47,7 +47,7 @@ def test_querychat_init(sample_df):
     )
 
     assert len(result) == 1
-    assert result.iloc[0]["name"] == "Bob"
+    assert result.item(0, "name") == "Bob"
 
 
 def test_querychat_custom_id(sample_df):
@@ -60,3 +60,30 @@ def test_querychat_custom_id(sample_df):
     )
 
     assert qc.id == "custom_id"
+
+
+def test_querychat_client_has_system_prompt(sample_df):
+    """
+    Test that the client returned by .client() has a system prompt set.
+
+    Regression test for issue #187: the system prompt was missing because
+    _client.system_prompt wasn't being set during initialization.
+    """
+    qc = QueryChat(
+        data_source=sample_df,
+        table_name="test_table",
+        greeting="Hello!",
+    )
+
+    # The client() method should return a chat with the system prompt set
+    client = qc.client()
+    assert client.system_prompt is not None
+    assert len(client.system_prompt) > 0
+
+    # The system_prompt should contain the table name since it includes schema info
+    assert "test_table" in client.system_prompt
+
+    # The internal _client should also have the system prompt set
+    # (needed for methods like generate_greeting() that use _client directly)
+    assert qc._client.system_prompt is not None
+    assert "test_table" in qc._client.system_prompt

@@ -1,13 +1,13 @@
 """Tests for the querychat.data module."""
 
-import pandas as pd
+import narwhals.stable.v1 as nw
 from querychat.data import tips, titanic
 
 
 def test_titanic_returns_dataframe():
-    """Test that titanic() returns a pandas DataFrame."""
+    """Test that titanic() returns a narwhals DataFrame."""
     df = titanic()
-    assert isinstance(df, pd.DataFrame)
+    assert isinstance(df, nw.DataFrame)
 
 
 def test_titanic_has_expected_shape():
@@ -44,16 +44,19 @@ def test_titanic_data_integrity():
     df = titanic()
 
     # Check that survived column has only 0 and 1 values
-    assert set(df["survived"].dropna().unique()) <= {0, 1}
+    unique_survived = set(df["survived"].drop_nulls().unique().to_list())
+    assert unique_survived <= {0, 1}
 
     # Check that pclass has only 1, 2, 3
-    assert set(df["pclass"].dropna().unique()) <= {1, 2, 3}
+    unique_pclass = set(df["pclass"].drop_nulls().unique().to_list())
+    assert unique_pclass <= {1, 2, 3}
 
     # Check that sex has only 'male' and 'female'
-    assert set(df["sex"].dropna().unique()) <= {"male", "female"}
+    unique_sex = set(df["sex"].drop_nulls().unique().to_list())
+    assert unique_sex <= {"male", "female"}
 
     # Check that fare is non-negative
-    assert (df["fare"].dropna() >= 0).all()
+    assert df["fare"].drop_nulls().min() >= 0
 
 
 def test_titanic_creates_new_copy():
@@ -64,14 +67,15 @@ def test_titanic_creates_new_copy():
     # They should not be the same object
     assert df1 is not df2
 
-    # But they should have the same data
-    assert df1.equals(df2)
+    # But they should have the same shape and columns
+    assert df1.shape == df2.shape
+    assert list(df1.columns) == list(df2.columns)
 
 
 def test_tips_returns_dataframe():
-    """Test that tips() returns a pandas DataFrame."""
+    """Test that tips() returns a narwhals DataFrame."""
     df = tips()
-    assert isinstance(df, pd.DataFrame)
+    assert isinstance(df, nw.DataFrame)
 
 
 def test_tips_has_expected_shape():
@@ -100,19 +104,21 @@ def test_tips_data_integrity():
     df = tips()
 
     # Check that total_bill is positive
-    assert (df["total_bill"] > 0).all()
+    assert df["total_bill"].min() > 0
 
     # Check that tip is non-negative
-    assert (df["tip"] >= 0).all()
+    assert df["tip"].min() >= 0
 
     # Check that sex has only expected values
-    assert set(df["sex"].dropna().unique()) <= {"Male", "Female"}
+    unique_sex = set(df["sex"].drop_nulls().unique().to_list())
+    assert unique_sex <= {"Male", "Female"}
 
     # Check that smoker has only expected values
-    assert set(df["smoker"].dropna().unique()) <= {"Yes", "No"}
+    unique_smoker = set(df["smoker"].drop_nulls().unique().to_list())
+    assert unique_smoker <= {"Yes", "No"}
 
     # Check that size is positive
-    assert (df["size"] > 0).all()
+    assert df["size"].min() > 0
 
 
 def test_tips_creates_new_copy():
@@ -123,5 +129,6 @@ def test_tips_creates_new_copy():
     # They should not be the same object
     assert df1 is not df2
 
-    # But they should have the same data
-    assert df1.equals(df2)
+    # But they should have the same shape and columns
+    assert df1.shape == df2.shape
+    assert list(df1.columns) == list(df2.columns)

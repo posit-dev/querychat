@@ -15,12 +15,12 @@ methods.
 
 By default, DataFrameSource uses the first available engine from duckdb
 (checked first) or RSQLite. You can explicitly set the \code{engine} parameter to
-choose between "duckdb" or "sqlite", or set the global option
+choose between \code{"duckdb"} or \code{"sqlite"}, or set the global option
 \code{querychat.DataFrameSource.engine} to choose the default engine for all
 DataFrameSource instances. At least one of these packages must be installed.
 }
 \examples{
-\dontrun{
+\dontshow{if (rlang::is_installed("duckdb") || rlang::is_installed("RSQLite")) withAutoprint(\{ # examplesIf}
 # Create a data frame source (uses first available: duckdb or sqlite)
 df_source <- DataFrameSource$new(mtcars, "mtcars")
 
@@ -36,15 +36,7 @@ df_sqlite <- DataFrameSource$new(mtcars, "mtcars", engine = "sqlite")
 # Clean up when done
 df_source$cleanup()
 df_sqlite$cleanup()
-}
-
-## ------------------------------------------------
-## Method `DataFrameSource$new`
-## ------------------------------------------------
-
-\dontrun{
-source <- DataFrameSource$new(iris, "iris")
-}
+\dontshow{\}) # examplesIf}
 }
 \section{Super classes}{
 \code{\link[querychat:DataSource]{querychat::DataSource}} -> \code{\link[querychat:DBISource]{querychat::DBISource}} -> \code{DataFrameSource}
@@ -100,16 +92,6 @@ engine from duckdb or RSQLite (in that order).}
 \subsection{Returns}{
 A new DataFrameSource object
 }
-\subsection{Examples}{
-\if{html}{\out{<div class="r example copy">}}
-\preformatted{\dontrun{
-source <- DataFrameSource$new(iris, "iris")
-}
-}
-\if{html}{\out{</div>}}
-
-}
-
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-DataFrameSource-clone"></a>}}

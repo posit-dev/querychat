@@ -3,11 +3,13 @@
 #' These functions have been replaced by the new `QueryChat` R6 class API.
 #' Please update your code to use the new class-based approach.
 #'
+#' @return Please see the updated function details for return values.
+#'
 #' @name deprecated
 #' @keywords internal
 NULL
 
-#' @rdname deprecated
+#' @describeIn deprecated was replaced with the `$new()` method of [QueryChat].
 #' @export
 querychat_init <- function(...) {
   lifecycle::deprecate_stop(
@@ -36,7 +38,8 @@ querychat_init <- function(...) {
   )
 }
 
-#' @rdname deprecated
+#' @describeIn deprecated was replaced with the `$sidebar()` method of
+#'   [QueryChat].
 #' @export
 querychat_sidebar <- function(...) {
   lifecycle::deprecate_stop(
@@ -56,7 +59,7 @@ querychat_sidebar <- function(...) {
   )
 }
 
-#' @rdname deprecated
+#' @describeIn deprecated was replaced with the `$ui()` method of [QueryChat].
 #' @export
 querychat_ui <- function(...) {
   lifecycle::deprecate_stop(
@@ -76,7 +79,8 @@ querychat_ui <- function(...) {
   )
 }
 
-#' @rdname deprecated
+#' @describeIn deprecated was replaced with the `$server()` method of
+#'   [QueryChat].
 #' @export
 querychat_server <- function(...) {
   lifecycle::deprecate_stop(
@@ -98,7 +102,8 @@ querychat_server <- function(...) {
   )
 }
 
-#' @rdname deprecated
+#' @describeIn deprecated was replaced with the `$generate_greeting()` method of
+#'   [QueryChat].
 #' @export
 querychat_greeting <- function(...) {
   lifecycle::deprecate_stop(
@@ -118,7 +123,7 @@ querychat_greeting <- function(...) {
   )
 }
 
-#' @rdname deprecated
+#' @describeIn deprecated was replaced with the `$new()` method of [QueryChat].
 #' @export
 querychat_data_source <- function(...) {
   lifecycle::deprecate_stop(

@@ -7,15 +7,17 @@
 #' them against a data source (data frame or database), and various ways of
 #' accessing/displaying the results.
 #'
-#'
-#' @details
 #' The `QueryChat` class takes your data (a data frame or database connection)
 #' as input and provides methods to:
-#' - Generate a chat UI for natural language queries (e.g., `$app()`, `$sidebar()`)
-#' - Initialize server logic that returns session-specific reactive values (via `$server()`)
-#' - Access reactive data, SQL queries, and titles through the returned server values
 #'
-#' @section Usage:
+#' - Generate a chat UI for natural language queries (e.g., `$app()`,
+#'   `$sidebar()`)
+#' - Initialize server logic that returns session-specific reactive values (via
+#'   `$server()`)
+#' - Access reactive data, SQL queries, and titles through the returned server
+#'   values
+#'
+#' @section Usage in Shiny Apps:
 #' ```r
 #' library(querychat)
 #'
@@ -42,12 +44,12 @@
 #' shinyApp(ui, server)
 #' ```
 #'
-#' @export
-#' @examples
-#' \dontrun{
+#' @examplesIf rlang::is_installed("duckdb") || rlang::is_installed("RSQLite")
 #' # Basic usage with a data frame
 #' qc <- QueryChat$new(mtcars)
+#' \dontrun{
 #' app <- qc$app()
+#' }
 #'
 #' # With a custom greeting
 #' greeting <- "Welcome! Ask me about the mtcars dataset."
@@ -56,12 +58,34 @@
 #' # With a specific LLM provider
 #' qc <- QueryChat$new(mtcars, client = "anthropic/claude-sonnet-4-5")
 #'
-#' # Generate a greeting for reuse
+#' # Generate a greeting for reuse (requires internet/API access)
+#' \dontrun{
 #' qc <- QueryChat$new(mtcars)
 #' greeting <- qc$generate_greeting(echo = "text")
 #' # Save greeting for next time
 #' writeLines(greeting, "mtcars_greeting.md")
 #' }
+#'
+#' # Or specify greeting and additional options at initialization
+#' qc <- QueryChat$new(
+#'   mtcars,
+#'   greeting = "Welcome to the mtcars explorer!",
+#'   client = "openai/gpt-4o",
+#'   data_description = "Motor Trend car road tests dataset"
+#' )
+#'
+#' @examplesIf rlang::is_installed("RSQLite")
+#' # Create a QueryChat object from a database connection
+#' # 1. Set up the database connection
+#' con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
+#'
+#' # 2. (For this demo) Create a table in the database
+#' DBI::dbWriteTable(con, "mtcars", mtcars)
+#'
+#' # 3. Pass the connection and table name to `QueryChat`
+#' qc <- QueryChat$new(con, "mtcars")
+#'
+#' @export
 QueryChat <- R6::R6Class(
   "QueryChat",
   private = list(
@@ -84,20 +108,20 @@ QueryChat <- R6::R6Class(
     #'
     #' @param data_source Either a data.frame or a database connection (e.g., DBI
     #'   connection).
-    #' @param table_name A string specifying the table name to use in SQL queries.
-    #'   If `data_source` is a data.frame, this is the name to refer to it by in
-    #'   queries (typically the variable name). If not provided, will be inferred
-    #'   from the variable name for data.frame inputs. For database connections,
-    #'   this parameter is required.
+    #' @param table_name A string specifying the table name to use in SQL
+    #'   queries. If `data_source` is a data.frame, this is the name to refer to
+    #'   it by in queries (typically the variable name). If not provided, will
+    #'   be inferred from the variable name for data.frame inputs. For database
+    #'   connections, this parameter is required.
     #' @param ... Additional arguments (currently unused).
     #' @param id Optional module ID for the QueryChat instance. If not provided,
     #'   will be auto-generated from `table_name`. The ID is used to namespace
     #'   the Shiny module.
     #' @param greeting Optional initial message to display to users. Can be a
     #'   character string (in Markdown format) or a file path. If not provided,
-    #'   a greeting will be generated at the start of each conversation using the
-    #'   LLM, which adds latency and cost. Use `$generate_greeting()` to create
-    #'   a greeting to save and reuse.
+    #'   a greeting will be generated at the start of each conversation using
+    #'   the LLM, which adds latency and cost. Use `$generate_greeting()` to
+    #'   create a greeting to save and reuse.
     #' @param client Optional chat client. Can be:
     #'   - An [ellmer::Chat] object
     #'   - A string to pass to [ellmer::chat()] (e.g., `"openai/gpt-4o"`)
@@ -113,39 +137,20 @@ QueryChat <- R6::R6Class(
     #' @param data_description Optional description of the data in plain text or
     #'   Markdown. Can be a string or a file path. This provides context to the
     #'   LLM about what the data represents.
-    #' @param categorical_threshold For text columns, the maximum number of unique
-    #'   values to consider as a categorical variable. Default is 20.
+    #' @param categorical_threshold For text columns, the maximum number of
+    #'   unique values to consider as a categorical variable. Default is 20.
     #' @param extra_instructions Optional additional instructions for the chat
     #'   model in plain text or Markdown. Can be a string or a file path.
     #' @param prompt_template Optional path to or string of a custom prompt
     #'   template file. If not provided, the default querychat template will be
-    #'   used. See the package prompts directory for the default template format.
+    #'   used. See the package prompts directory for the default template
+    #'   format.
     #' @param cleanup Whether or not to automatically run `$cleanup()` when the
     #'   Shiny session/app stops. By default, cleanup only occurs if `QueryChat`
     #'   gets created within a Shiny session. Set to `TRUE` to always clean up,
     #'   or `FALSE` to never clean up automatically.
     #'
     #' @return A new `QueryChat` object.
-    #'
-    #' @examples
-    #' \dontrun{
-    #' # Basic usage
-    #' qc <- QueryChat$new(mtcars)
-    #'
-    #' # With options
-    #' qc <- QueryChat$new(
-    #'   mtcars,
-    #'   greeting = "Welcome to the mtcars explorer!",
-    #'   client = "openai/gpt-4o",
-    #'   data_description = "Motor Trend car road tests dataset"
-    #' )
-    #'
-    #' # With database
-    #' library(DBI)
-    #' con <- dbConnect(RSQLite::SQLite(), ":memory:")
-    #' dbWriteTable(con, "mtcars", mtcars)
-    #' qc <- QueryChat$new(con, "mtcars")
-    #' }
     initialize = function(
       data_source,
       table_name = missing_arg(),
@@ -297,10 +302,17 @@ QueryChat <- R6::R6Class(
     #' @description
     #' Create and run a Shiny gadget for chatting with data
     #'
-    #' Runs a Shiny gadget (designed for interactive use) that provides
-    #' a complete interface for chatting with your data using natural language.
-    #' If you're looking to deploy this app or run it through some other means,
-    #' see `$app_obj()`.
+    #' Runs a Shiny gadget (designed for interactive use) that provides a
+    #' complete interface for chatting with your data using natural language. If
+    #' you're looking to deploy this app or run it through some other means, see
+    #' `$app_obj()`.
+    #'
+    #' ```r
+    #' library(querychat)
+    #'
+    #' qc <- QueryChat$new(mtcars)
+    #' qc$app()
+    #' ```
     #'
     #' @param ... Arguments passed to `$app_obj()`.
     #' @param bookmark_store The bookmarking storage method. Passed to
@@ -312,15 +324,6 @@ QueryChat <- R6::R6Class(
     #'  - `sql`: The final SQL query string
     #'  - `title`: The final title
     #'  - `client`: The session-specific chat client instance
-    #'
-    #' @examples
-    #' \dontrun{
-    #' library(querychat)
-    #'
-    #' qc <- QueryChat$new(mtcars)
-    #' qc$app()
-    #' }
-    #'
     app = function(..., bookmark_store = "url") {
       app <- self$app_obj(..., bookmark_store = bookmark_store)
       vals <- tryCatch(shiny::runGadget(app), interrupt = function(cnd) NULL)
@@ -336,22 +339,20 @@ QueryChat <- R6::R6Class(
     #' - A card displaying the filtered data table
     #' - A reset button to clear the query
     #'
+    #' ```r
+    #' library(querychat)
+    #'
+    #' qc <- QueryChat$new(mtcars)
+    #' app <- qc$app_obj()
+    #' shiny::runApp(app)
+    #' ```
+    #'
     #' @param ... Additional arguments (currently unused).
     #' @param bookmark_store The bookmarking storage method. Passed to
     #'  [shiny::enableBookmarking()]. If `"url"` or `"server"`, the chat state
     #'  (including current query) will be bookmarked. Default is `"url"`.
     #'
     #' @return A Shiny app object that can be run with `shiny::runApp()`.
-    #'
-    #' @examples
-    #' \dontrun{
-    #' library(querychat)
-    #'
-    #' qc <- QueryChat$new(mtcars)
-    #' app <- qc$app_obj()
-    #' shiny::runApp(app)
-    #' }
-    #'
     app_obj = function(..., bookmark_store = "url") {
       check_installed("DT")
       check_installed("bsicons")
@@ -476,28 +477,29 @@ QueryChat <- R6::R6Class(
     #' Create a sidebar containing the querychat UI.
     #'
     #' This method generates a [bslib::sidebar()] component containing the chat
-    #' interface, suitable for use with [bslib::page_sidebar()] or similar layouts.
+    #' interface, suitable for use with [bslib::page_sidebar()] or similar
+    #' layouts.
     #'
-    #' @param ... Additional arguments passed to [bslib::sidebar()].
-    #' @param width Width of the sidebar in pixels. Default is 400.
-    #' @param height Height of the sidebar. Default is "100%".
-    #' @param fillable Whether the sidebar should be fillable. Default is `TRUE`.
-    #' @param id Optional ID for the QueryChat instance. If not provided,
-    #'   will use the ID provided at initialization. If using `$sidebar()` in
-    #'   a Shiny module, you'll need to provide `id = ns("your_id")` where `ns`
-    #'   is the namespacing function from [shiny::NS()].
-    #'
-    #' @return A [bslib::sidebar()] UI component.
-    #'
-    #' @examples
-    #' \dontrun{
+    #' ```r
     #' qc <- QueryChat$new(mtcars)
     #'
     #' ui <- page_sidebar(
     #'   qc$sidebar(),
     #'   # Main content here
     #' )
-    #' }
+    #' ```
+    #'
+    #' @param ... Additional arguments passed to [bslib::sidebar()].
+    #' @param width Width of the sidebar in pixels. Default is 400.
+    #' @param height Height of the sidebar. Default is "100%".
+    #' @param fillable Whether the sidebar should be fillable. Default is
+    #'   `TRUE`.
+    #' @param id Optional ID for the QueryChat instance. If not provided, will
+    #'   use the ID provided at initialization. If using `$sidebar()` in a Shiny
+    #'   module, you'll need to provide `id = ns("your_id")` where `ns` is the
+    #'   namespacing function from [shiny::NS()].
+    #'
+    #' @return A [bslib::sidebar()] UI component.
     sidebar = function(
       ...,
       width = 400,
@@ -521,6 +523,14 @@ QueryChat <- R6::R6Class(
     #' This method generates the chat UI component. Typically you'll use
     #' `$sidebar()` instead, which wraps this in a sidebar layout.
     #'
+    #' ```r
+    #' qc <- QueryChat$new(mtcars)
+    #'
+    #' ui <- fluidPage(
+    #'   qc$ui()
+    #' )
+    #' ```
+    #'
     #' @param ... Additional arguments passed to [shinychat::chat_ui()].
     #' @param id Optional ID for the QueryChat instance. If not provided,
     #'   will use the ID provided at initialization. If using `$ui()` in a Shiny
@@ -528,15 +538,6 @@ QueryChat <- R6::R6Class(
     #'   namespacing function from [shiny::NS()].
     #'
     #' @return A UI component containing the chat interface.
-    #'
-    #' @examples
-    #' \dontrun{
-    #' qc <- QueryChat$new(mtcars)
-    #'
-    #' ui <- fluidPage(
-    #'   qc$ui()
-    #' )
-    #' }
     ui = function(..., id = NULL) {
       check_string(id, allow_null = TRUE, allow_empty = FALSE)
 
@@ -554,9 +555,21 @@ QueryChat <- R6::R6Class(
     #' @description
     #' Initialize the querychat server logic.
     #'
-    #' This method must be called within a Shiny server function. It sets up
-    #' the reactive logic for the chat interface and returns session-specific
+    #' This method must be called within a Shiny server function. It sets up the
+    #' reactive logic for the chat interface and returns session-specific
     #' reactive values.
+    #'
+    #' ```r
+    #' qc <- QueryChat$new(mtcars)
+    #'
+    #' server <- function(input, output, session) {
+    #'   qc_vals <- qc$server(enable_bookmarking = TRUE)
+    #'
+    #'   output$data <- renderDataTable(qc_vals$df())
+    #'   output$query <- renderText(qc_vals$sql())
+    #'   output$title <- renderText(qc_vals$title() %||% "No Query")
+    #' }
+    #' ```
     #'
     #' @param enable_bookmarking Whether to enable bookmarking for the chat
     #'   state. Default is `FALSE`. When enabled, the chat state (including
@@ -579,18 +592,6 @@ QueryChat <- R6::R6Class(
     #'   - `title`: Reactive value for the current title
     #'   - `client`: The session-specific chat client instance
     #'
-    #' @examples
-    #' \dontrun{
-    #' qc <- QueryChat$new(mtcars)
-    #'
-    #' server <- function(input, output, session) {
-    #'   qc_vals <- qc$server(enable_bookmarking = TRUE)
-    #'
-    #'   output$data <- renderDataTable(qc_vals$df())
-    #'   output$query <- renderText(qc_vals$sql())
-    #'   output$title <- renderText(qc_vals$title() %||% "No Query")
-    #' }
-    #' }
     server = function(
       enable_bookmarking = FALSE,
       ...,
@@ -623,13 +624,7 @@ QueryChat <- R6::R6Class(
     #' development, but also might add unnecessary latency and cost. Use this
     #' method to generate a greeting once and save it for reuse.
     #'
-    #' @param echo Whether to print the greeting to the console. Options are
-    #'   `"none"` (default, no output) or `"output"` (print to console).
-    #'
-    #' @return The greeting string in Markdown format.
-    #'
-    #' @examples
-    #' \dontrun{
+    #' ```r
     #' # Create QueryChat object
     #' qc <- QueryChat$new(mtcars)
     #'
@@ -639,7 +634,12 @@ QueryChat <- R6::R6Class(
     #'
     #' # Later, use the saved greeting
     #' qc2 <- QueryChat$new(mtcars, greeting = "mtcars_greeting.md")
-    #' }
+    #' ```
+    #'
+    #' @param echo Whether to print the greeting to the console. Options are
+    #'   `"none"` (default, no output) or `"output"` (print to console).
+    #'
+    #' @return The greeting string in Markdown format.
     generate_greeting = function(echo = c("none", "output")) {
       chat <- self$client()
       chat$set_turns(list())
@@ -651,11 +651,11 @@ QueryChat <- R6::R6Class(
     #' Clean up resources associated with the data source.
     #'
     #' This method releases any resources (e.g., database connections)
-    #' associated with the data source. Call this when you are done using
-    #' the QueryChat object to avoid resource leaks.
+    #' associated with the data source. Call this when you are done using the
+    #' QueryChat object to avoid resource leaks.
     #'
-    #' Note: If `auto_cleanup` was set to `TRUE` in the constructor,
-    #'  this will be called automatically when the Shiny app stops.
+    #' Note: If `auto_cleanup` was set to `TRUE` in the constructor, this will
+    #' be called automatically when the Shiny app stops.
     #'
     #' @return Invisibly returns `NULL`. Resources are cleaned up internally.
     cleanup = function() {
@@ -682,6 +682,28 @@ QueryChat <- R6::R6Class(
 #'
 #' Convenience functions for wrapping [QueryChat] creation (i.e., `querychat()`)
 #' and app launching (i.e., `querychat_app()`).
+#'
+#' @examplesIf rlang::is_interactive() && rlang::is_installed("RSQLite")
+#' # Quick start - chat with mtcars dataset in one line
+#' querychat_app(mtcars)
+#'
+#' # Add options
+#' querychat_app(
+#'   mtcars,
+#'   greeting = "Welcome to the mtcars explorer!",
+#'   client = "openai/gpt-4o"
+#' )
+#'
+#' # Chat with a database table (table_name required)
+#' con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
+#' DBI::dbWriteTable(con, "mtcars", mtcars)
+#' querychat_app(con, "mtcars")
+#'
+#' # Create QueryChat class object
+#' qc <- querychat(mtcars, greeting = "Welcome to the mtcars explorer!")
+#'
+#' # Run the app later
+#' qc$app()
 #'
 #' @param data_source Either a data.frame or a database connection (e.g., DBI
 #'   connection).
@@ -732,33 +754,7 @@ QueryChat <- R6::R6Class(
 #' @return A `QueryChat` object. See [QueryChat] for available methods.
 #'
 #' @rdname querychat-convenience
-#'
 #' @export
-#' @examples
-#' \dontrun{
-#' # Quick start - chat with mtcars dataset in one line
-#' querychat_app(mtcars)
-#'
-#' # Add options
-#' querychat_app(
-#'   mtcars,
-#'   greeting = "Welcome to the mtcars explorer!",
-#'   client = "openai/gpt-4o"
-#' )
-#'
-#' # Chat with a database table (table_name required)
-#' library(DBI)
-#' con <- dbConnect(RSQLite::SQLite(), ":memory:")
-#' dbWriteTable(con, "mtcars", mtcars)
-#' querychat_app(con, "mtcars")
-#'
-#' # Create QueryChat class object
-#' qc <- querychat(mtcars)
-#'
-#' # Run the app later
-#' qc$app()
-#'
-#' }
 querychat <- function(
   data_source,
   table_name = missing_arg(),

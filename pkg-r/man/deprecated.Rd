@@ -22,8 +22,29 @@ querychat_greeting(...)
 
 querychat_data_source(...)
 }
+\value{
+Please see the updated function details for return values.
+}
 \description{
 These functions have been replaced by the new \code{QueryChat} R6 class API.
 Please update your code to use the new class-based approach.
 }
+\section{Functions}{
+\itemize{
+\item \code{querychat_init()}: was replaced with the \verb{$new()} method of \link{QueryChat}.
+
+\item \code{querychat_sidebar()}: was replaced with the \verb{$sidebar()} method of
+\link{QueryChat}.
+
+\item \code{querychat_ui()}: was replaced with the \verb{$ui()} method of \link{QueryChat}.
+
+\item \code{querychat_server()}: was replaced with the \verb{$server()} method of
+\link{QueryChat}.
+
+\item \code{querychat_greeting()}: was replaced with the \verb{$generate_greeting()} method of
+\link{QueryChat}.
+
+\item \code{querychat_data_source()}: was replaced with the \verb{$new()} method of \link{QueryChat}.
+
+}}
 \keyword{internal}

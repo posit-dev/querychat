@@ -27,11 +27,11 @@ pak::pak("posit-dev/querychat/pkg-r")
 
 The quickest way to start chatting with your data is via
 [`querychat_app()`](https://posit-dev.github.io/querychat/reference/querychat-convenience.md),
-which provides a fully polished Shiny app. It requires a [data
-source](https://posit-dev.github.io/querychat/articles/data-sources.md)
+which provides a fully polished Shiny app. It requires a data [data
+source](https://posit-dev.github.io/querychat/r/articles/data-sources.html)
 (e.g., data.frame, database connection, etc.) and optionally other
 parameters (e.g. the LLM `client`
-[model](https://posit-dev.github.io/querychat/articles/models.md)).
+[model](https://posit-dev.github.io/querychat/r/articles/models.html)).
 
 ``` r
 library(querychat)
@@ -80,7 +80,7 @@ a bespoke app for exploring Airbnb listings in Ashville, NC:
 querychat.](reference/figures/airbnb.png)
 
 To learn more, see [Build an
-app](https://posit-dev.github.io/querychat/articles/build.md) for a
+app](https://posit-dev.github.io/querychat/r/articles/build.html) for a
 step-by-step guide.
 
 ## How it works
@@ -93,7 +93,7 @@ overall structure to perform well.
 
 To address this, querychat includes schema metadata – column names,
 types, ranges, categorical values – in the LLM’s [system
-prompt](https://posit-dev.github.io/querychat/articles/context.md).
+prompt](https://posit-dev.github.io/querychat/r/articles/context.html).
 Importantly, querychat **does not** send raw data to the LLM; it shares
 only enough structural information for the model to generate accurate
 queries. When the LLM produces a query, querychat executes it in a SQL
@@ -112,8 +112,8 @@ This design makes querychat reliable, safe, and reproducible:
 **Data privacy**
 
 See the [Provide
-context](https://posit-dev.github.io/querychat/articles/context.md) and
-[Tools](https://posit-dev.github.io/querychat/articles/tools.md)
+context](https://posit-dev.github.io/querychat/r/articles/context.html)
+and [Tools](https://posit-dev.github.io/querychat/r/articles/tools.html)
 articles for more details on exactly what information is provided to the
 LLM and how customize it.
 
@@ -121,21 +121,21 @@ LLM and how customize it.
 
 From here, you might want to learn more about:
 
-- [Models](https://posit-dev.github.io/querychat/articles/models.md):
+- [Models](https://posit-dev.github.io/querychat/r/articles/models.html):
   customize the LLM behind querychat.
 - [Data
-  sources](https://posit-dev.github.io/querychat/articles/data-sources.md):
+  sources](https://posit-dev.github.io/querychat/r/articles/data-sources.html):
   different data sources you can use with querychat.
 - [Provide
-  context](https://posit-dev.github.io/querychat/articles/context.md):
+  context](https://posit-dev.github.io/querychat/r/articles/context.html):
   provide the LLM with the context it needs to work well.
 - [Build an
-  app](https://posit-dev.github.io/querychat/articles/build.md): design
-  a custom Shiny app around querychat.
+  app](https://posit-dev.github.io/querychat/r/articles/build.html):
+  design a custom Shiny app around querychat.
 - [Greet
-  users](https://posit-dev.github.io/querychat/articles/greet.md):
+  users](https://posit-dev.github.io/querychat/r/articles/greet.html):
   create welcoming onboarding experiences.
-- [Tools](https://posit-dev.github.io/querychat/articles/tools.md):
+- [Tools](https://posit-dev.github.io/querychat/r/articles/tools.html):
   understand what querychat can do under the hood.
 
 ------------------------------------------------------------------------
@@ -143,7 +143,7 @@ From here, you might want to learn more about:
 1.  By default, querychat uses OpenAI to power the chat experience. So,
     for this example to work, you’ll need [an OpenAI API
     key](https://platform.openai.com/). See the
-    [Models](https://posit-dev.github.io/querychat/articles/models.md)
+    [Models](https://posit-dev.github.io/querychat/r/articles/models.html)
     article for details on how to set up credentials for other model
     providers.
 
@@ -151,10 +151,10 @@ From here, you might want to learn more about:
     functions](https://duckdb.org/docs/stable/sql/functions/aggregates.html#statistical-aggregates).
 
 3.  The [query
-    tool](https://posit-dev.github.io/querychat/articles/tools.md) gives
-    query results to the model for context and interpretation. Thus,
-    there is *some* potential that the model to mis-interpret those
-    results.
+    tool](https://posit-dev.github.io/querychat/r/articles/tools.html)
+    gives query results to the model for context and interpretation.
+    Thus, there is *some* potential that the model to mis-interpret
+    those results.
 
 4.  To fully guarantee no destructive actions on your production
     database, ensure querychat’s database permissions are read-only.

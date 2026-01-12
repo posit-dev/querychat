@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">querychat</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -47,7 +47,7 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="development version" id="querychat-development-version">querychat (development version)<a class="anchor" aria-label="anchor" href="#querychat-development-version"></a></h2>
+<h2 class="pkg-version" data-toc-text="0.2.0" id="querychat-020">querychat 0.2.0<a class="anchor" aria-label="anchor" href="#querychat-020"></a></h2>
 <ul><li><p>The update tool now requires that the SQL query returns all columns from the original data source, ensuring that the dashboard can display the complete data frame after filtering or sorting. If the query does not return all columns, an informative error message will be provided. (<a href="https://github.com/posit-dev/querychat/issues/180" class="external-link">#180</a>)</p></li>
 <li><p>Obvious SQL keywords that lead to data modification (e.g., <code>INSERT</code>, <code>UPDATE</code>, <code>DELETE</code>, <code>DROP</code>, etc.) are now prohibited in queries run via the query tool or update tool, to prevent accidental data changes. If such keywords are detected, an informative error message will be provided. (<a href="https://github.com/posit-dev/querychat/issues/180" class="external-link">#180</a>)</p></li>
 <li><p><code><a href="../reference/querychat-convenience.html">querychat()</a></code> and <code>QueryChat$new()</code> now use either <a href="https://r.duckdb.org/" class="external-link">duckdb</a> or <code>{SQLite}</code> for the in-memory database backend for data frames, depending on which package is installed. If both are installed, <a href="https://r.duckdb.org/" class="external-link">duckdb</a> will be preferred. You can explicitly choose the <code>engine</code> in <code>DataFrameSource$new()</code> or set <code>querychat.DataFrameSource.engine</code> option to choose a global default. (<a href="https://github.com/posit-dev/querychat/issues/178" class="external-link">#178</a>)</p></li>

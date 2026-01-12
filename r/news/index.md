@@ -1,6 +1,6 @@
 # Changelog
 
-## querychat (development version)
+## querychat 0.2.0
 
 - The update tool now requires that the SQL query returns all columns
   from the original data source, ensuring that the dashboard can display

@@ -72,9 +72,9 @@ like '01-hello-app', use:
 
 Useful links:
 
-- <https://posit-dev.github.io/querychat/pkg-r>
+- <https://posit-dev.github.io/querychat/r/>
 
-- <https://posit-dev.github.io/querychat>
+- <https://posit-dev.github.io/querychat/>
 
 - <https://github.com/posit-dev/querychat>
 

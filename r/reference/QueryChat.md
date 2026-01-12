@@ -6,8 +6,6 @@ large language models (LLMs) to translate user questions into SQL
 queries, execute them against a data source (data frame or database),
 and various ways of accessing/displaying the results.
 
-## Details
-
 The `QueryChat` class takes your data (a data frame or database
 connection) as input and provides methods to:
 
@@ -20,7 +18,7 @@ connection) as input and provides methods to:
 - Access reactive data, SQL queries, and titles through the returned
   server values
 
-## Usage
+## Usage in Shiny Apps
 
     library(querychat)
 
@@ -98,7 +96,7 @@ connection) as input and provides methods to:
 
 ------------------------------------------------------------------------
 
-### Method [`new()`](https://rdrr.io/r/methods/new.html)
+### Method `new()`
 
 Create a new QueryChat object.
 
@@ -208,27 +206,6 @@ Create a new QueryChat object.
 
 A new `QueryChat` object.
 
-#### Examples
-
-    \dontrun{
-    # Basic usage
-    qc <- QueryChat$new(mtcars)
-
-    # With options
-    qc <- QueryChat$new(
-      mtcars,
-      greeting = "Welcome to the mtcars explorer!",
-      client = "openai/gpt-4o",
-      data_description = "Motor Trend car road tests dataset"
-    )
-
-    # With database
-    library(DBI)
-    con <- dbConnect(RSQLite::SQLite(), ":memory:")
-    dbWriteTable(con, "mtcars", mtcars)
-    qc <- QueryChat$new(con, "mtcars")
-    }
-
 ------------------------------------------------------------------------
 
 ### Method `client()`
@@ -303,6 +280,11 @@ complete interface for chatting with your data using natural language.
 If you're looking to deploy this app or run it through some other means,
 see `$app_obj()`.
 
+    library(querychat)
+
+    qc <- QueryChat$new(mtcars)
+    qc$app()
+
 #### Usage
 
     QueryChat$app(..., bookmark_store = "url")
@@ -332,15 +314,6 @@ Invisibly returns a list of session-specific values:
 
 - `client`: The session-specific chat client instance
 
-#### Examples
-
-    \dontrun{
-    library(querychat)
-
-    qc <- QueryChat$new(mtcars)
-    qc$app()
-    }
-
 ------------------------------------------------------------------------
 
 ### Method `app_obj()`
@@ -356,6 +329,12 @@ Creates a Shiny app designed for chatting with data, with:
 - A card displaying the filtered data table
 
 - A reset button to clear the query
+
+    library(querychat)
+
+    qc <- QueryChat$new(mtcars)
+    app <- qc$app_obj()
+    shiny::runApp(app)
 
 #### Usage
 
@@ -379,16 +358,6 @@ Creates a Shiny app designed for chatting with data, with:
 A Shiny app object that can be run with
 [`shiny::runApp()`](https://rdrr.io/pkg/shiny/man/runApp.html).
 
-#### Examples
-
-    \dontrun{
-    library(querychat)
-
-    qc <- QueryChat$new(mtcars)
-    app <- qc$app_obj()
-    shiny::runApp(app)
-    }
-
 ------------------------------------------------------------------------
 
 ### Method `sidebar()`
@@ -400,6 +369,13 @@ This method generates a
 component containing the chat interface, suitable for use with
 [`bslib::page_sidebar()`](https://rstudio.github.io/bslib/reference/page_sidebar.html)
 or similar layouts.
+
+    qc <- QueryChat$new(mtcars)
+
+    ui <- page_sidebar(
+      qc$sidebar(),
+      # Main content here
+    )
 
 #### Usage
 
@@ -444,17 +420,6 @@ A
 [`bslib::sidebar()`](https://rstudio.github.io/bslib/reference/sidebar.html)
 UI component.
 
-#### Examples
-
-    \dontrun{
-    qc <- QueryChat$new(mtcars)
-
-    ui <- page_sidebar(
-      qc$sidebar(),
-      # Main content here
-    )
-    }
-
 ------------------------------------------------------------------------
 
 ### Method `ui()`
@@ -463,6 +428,12 @@ Create the UI for the querychat chat interface.
 
 This method generates the chat UI component. Typically you'll use
 `$sidebar()` instead, which wraps this in a sidebar layout.
+
+    qc <- QueryChat$new(mtcars)
+
+    ui <- fluidPage(
+      qc$ui()
+    )
 
 #### Usage
 
@@ -487,16 +458,6 @@ This method generates the chat UI component. Typically you'll use
 
 A UI component containing the chat interface.
 
-#### Examples
-
-    \dontrun{
-    qc <- QueryChat$new(mtcars)
-
-    ui <- fluidPage(
-      qc$ui()
-    )
-    }
-
 ------------------------------------------------------------------------
 
 ### Method `server()`
@@ -506,6 +467,16 @@ Initialize the querychat server logic.
 This method must be called within a Shiny server function. It sets up
 the reactive logic for the chat interface and returns session-specific
 reactive values.
+
+    qc <- QueryChat$new(mtcars)
+
+    server <- function(input, output, session) {
+      qc_vals <- qc$server(enable_bookmarking = TRUE)
+
+      output$data <- renderDataTable(qc_vals$df())
+      output$query <- renderText(qc_vals$sql())
+      output$title <- renderText(qc_vals$title() %||% "No Query")
+    }
 
 #### Usage
 
@@ -557,20 +528,6 @@ with the following elements:
 
 - `client`: The session-specific chat client instance
 
-#### Examples
-
-    \dontrun{
-    qc <- QueryChat$new(mtcars)
-
-    server <- function(input, output, session) {
-      qc_vals <- qc$server(enable_bookmarking = TRUE)
-
-      output$data <- renderDataTable(qc_vals$df())
-      output$query <- renderText(qc_vals$sql())
-      output$title <- renderText(qc_vals$title() %||% "No Query")
-    }
-    }
-
 ------------------------------------------------------------------------
 
 ### Method `generate_greeting()`
@@ -581,6 +538,16 @@ By default, `QueryChat$new()` generates a greeting at the start of every
 new conversation, which is convenient for getting started and
 development, but also might add unnecessary latency and cost. Use this
 method to generate a greeting once and save it for reuse.
+
+    # Create QueryChat object
+    qc <- QueryChat$new(mtcars)
+
+    # Generate a greeting and save it
+    greeting <- qc$generate_greeting()
+    writeLines(greeting, "mtcars_greeting.md")
+
+    # Later, use the saved greeting
+    qc2 <- QueryChat$new(mtcars, greeting = "mtcars_greeting.md")
 
 #### Usage
 
@@ -596,20 +563,6 @@ method to generate a greeting once and save it for reuse.
 #### Returns
 
 The greeting string in Markdown format.
-
-#### Examples
-
-    \dontrun{
-    # Create QueryChat object
-    qc <- QueryChat$new(mtcars)
-
-    # Generate a greeting and save it
-    greeting <- qc$generate_greeting()
-    writeLines(greeting, "mtcars_greeting.md")
-
-    # Later, use the saved greeting
-    qc2 <- QueryChat$new(mtcars, greeting = "mtcars_greeting.md")
-    }
 
 ------------------------------------------------------------------------
 
@@ -651,127 +604,44 @@ The objects of this class are cloneable with this method.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
 # Basic usage with a data frame
 qc <- QueryChat$new(mtcars)
+#> Using model = "gpt-4.1".
+if (FALSE) { # \dontrun{
 app <- qc$app()
+} # }
 
 # With a custom greeting
 greeting <- "Welcome! Ask me about the mtcars dataset."
 qc <- QueryChat$new(mtcars, greeting = greeting)
+#> Using model = "gpt-4.1".
 
 # With a specific LLM provider
 qc <- QueryChat$new(mtcars, client = "anthropic/claude-sonnet-4-5")
 
-# Generate a greeting for reuse
+# Generate a greeting for reuse (requires internet/API access)
+if (FALSE) { # \dontrun{
 qc <- QueryChat$new(mtcars)
 greeting <- qc$generate_greeting(echo = "text")
 # Save greeting for next time
 writeLines(greeting, "mtcars_greeting.md")
 } # }
 
-## ------------------------------------------------
-## Method `QueryChat$new`
-## ------------------------------------------------
-
-if (FALSE) { # \dontrun{
-# Basic usage
-qc <- QueryChat$new(mtcars)
-
-# With options
+# Or specify greeting and additional options at initialization
 qc <- QueryChat$new(
   mtcars,
   greeting = "Welcome to the mtcars explorer!",
   client = "openai/gpt-4o",
   data_description = "Motor Trend car road tests dataset"
 )
+# Create a QueryChat object from a database connection
+# 1. Set up the database connection
+con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
 
-# With database
-library(DBI)
-con <- dbConnect(RSQLite::SQLite(), ":memory:")
-dbWriteTable(con, "mtcars", mtcars)
+# 2. (For this demo) Create a table in the database
+DBI::dbWriteTable(con, "mtcars", mtcars)
+
+# 3. Pass the connection and table name to `QueryChat`
 qc <- QueryChat$new(con, "mtcars")
-} # }
-
-## ------------------------------------------------
-## Method `QueryChat$app`
-## ------------------------------------------------
-
-if (FALSE) { # \dontrun{
-library(querychat)
-
-qc <- QueryChat$new(mtcars)
-qc$app()
-} # }
-
-
-## ------------------------------------------------
-## Method `QueryChat$app_obj`
-## ------------------------------------------------
-
-if (FALSE) { # \dontrun{
-library(querychat)
-
-qc <- QueryChat$new(mtcars)
-app <- qc$app_obj()
-shiny::runApp(app)
-} # }
-
-
-## ------------------------------------------------
-## Method `QueryChat$sidebar`
-## ------------------------------------------------
-
-if (FALSE) { # \dontrun{
-qc <- QueryChat$new(mtcars)
-
-ui <- page_sidebar(
-  qc$sidebar(),
-  # Main content here
-)
-} # }
-
-## ------------------------------------------------
-## Method `QueryChat$ui`
-## ------------------------------------------------
-
-if (FALSE) { # \dontrun{
-qc <- QueryChat$new(mtcars)
-
-ui <- fluidPage(
-  qc$ui()
-)
-} # }
-
-## ------------------------------------------------
-## Method `QueryChat$server`
-## ------------------------------------------------
-
-if (FALSE) { # \dontrun{
-qc <- QueryChat$new(mtcars)
-
-server <- function(input, output, session) {
-  qc_vals <- qc$server(enable_bookmarking = TRUE)
-
-  output$data <- renderDataTable(qc_vals$df())
-  output$query <- renderText(qc_vals$sql())
-  output$title <- renderText(qc_vals$title() %||% "No Query")
-}
-} # }
-
-## ------------------------------------------------
-## Method `QueryChat$generate_greeting`
-## ------------------------------------------------
-
-if (FALSE) { # \dontrun{
-# Create QueryChat object
-qc <- QueryChat$new(mtcars)
-
-# Generate a greeting and save it
-greeting <- qc$generate_greeting()
-writeLines(greeting, "mtcars_greeting.md")
-
-# Later, use the saved greeting
-qc2 <- QueryChat$new(mtcars, greeting = "mtcars_greeting.md")
-} # }
+#> Using model = "gpt-4.1".
 ```

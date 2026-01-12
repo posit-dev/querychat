@@ -1,5 +1,11 @@
 # DBI Source
 
+DBI Source
+
+DBI Source
+
+## Details
+
 A DataSource implementation for DBI database connections (SQLite,
 PostgreSQL, MySQL, etc.). This class wraps a DBI connection and provides
 SQL query execution against a single table in the database.
@@ -54,14 +60,6 @@ Create a new DBISource
 #### Returns
 
 A new DBISource object
-
-#### Examples
-
-    \dontrun{
-    con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
-    DBI::dbWriteTable(con, "iris", iris)
-    source <- DBISource$new(con, "iris")
-    }
 
 ------------------------------------------------------------------------
 
@@ -136,8 +134,8 @@ Test a SQL query by fetching only one row
 
 - `require_all_columns`:
 
-  If TRUE, validates that the result includes all original table columns
-  (default: FALSE)
+  If `TRUE`, validates that the result includes all original table
+  columns (default: `FALSE`)
 
 #### Returns
 
@@ -190,7 +188,6 @@ The objects of this class are cloneable with this method.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
 # Connect to a database
 con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
 DBI::dbWriteTable(con, "mtcars", mtcars)
@@ -200,21 +197,12 @@ db_source <- DBISource$new(con, "mtcars")
 
 # Get database type
 db_source$get_db_type()  # Returns "SQLite"
+#> [1] "SQLite"
 
 # Execute a query
 result <- db_source$execute_query("SELECT * FROM mtcars WHERE mpg > 25")
 
 # Note: cleanup() will disconnect the connection
 # If you want to keep the connection open, don't call cleanup()
-} # }
-
-## ------------------------------------------------
-## Method `DBISource$new`
-## ------------------------------------------------
-
-if (FALSE) { # \dontrun{
-con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
-DBI::dbWriteTable(con, "iris", iris)
-source <- DBISource$new(con, "iris")
-} # }
+db_source$cleanup()
 ```

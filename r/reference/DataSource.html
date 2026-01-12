@@ -13,7 +13,7 @@ DBISource."><meta property="og:image" content="https://posit-dev.github.io/query
 
     <a class="navbar-brand me-2" href="../index.html">querychat</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -149,15 +149,16 @@ column to be considered categorical</p></dd>
 
 
 <dt><code>require_all_columns</code></dt>
-<dd><p>If TRUE, validates that the result includes
-all original table columns (default: FALSE)</p></dd>
+<dd><p>If <code>TRUE</code>, validates that the result includes
+all original table columns (default: <code>FALSE</code>)</p></dd>
 
 
 </dl><p></p></div>
 </div>
 <div class="section">
 <h4 id="returns-3">Returns<a class="anchor" aria-label="anchor" href="#returns-3"></a></h4>
-<p>A data frame containing one row of results (or empty if no matches)</p>
+<p>A data frame containing one row of results (or empty if no
+matches)</p>
 </div>
 
 </div><p></p><hr><a id="method-DataSource-get_data"></a><div class="section">
@@ -204,6 +205,21 @@ all original table columns (default: FALSE)</p></dd>
 
     </div>
 
+    <div class="section level2">
+    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">MyDataSource</span> <span class="op">&lt;-</span> <span class="fu">R6</span><span class="fu">::</span><span class="kw"><a href="https://r6.r-lib.org/reference/R6Class.html" class="external-link">R6Class</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="st">"MyDataSource"</span>,</span></span>
+<span class="r-in"><span>  inherit <span class="op">=</span> <span class="va">DataSource</span>,</span></span>
+<span class="r-in"><span>  public <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>    initialize <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">table_name</span><span class="op">)</span> <span class="op">{</span></span></span>
+<span class="r-in"><span>      <span class="va">self</span><span class="op">$</span><span class="va">table_name</span> <span class="op">&lt;-</span> <span class="va">table_name</span></span></span>
+<span class="r-in"><span>    <span class="op">}</span></span></span>
+<span class="r-in"><span>    <span class="co"># Implement abstract methods here...</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+</code></pre></div>
+    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 

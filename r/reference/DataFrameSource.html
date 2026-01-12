@@ -9,7 +9,7 @@ for SQL query execution."><meta property="og:image" content="https://posit-dev.g
 
     <a class="navbar-brand me-2" href="../index.html">querychat</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -63,7 +63,7 @@ database table. See <a href="DBISource.html">DBISource</a> for the full descript
 methods.</p>
 <p>By default, DataFrameSource uses the first available engine from duckdb
 (checked first) or RSQLite. You can explicitly set the <code>engine</code> parameter to
-choose between "duckdb" or "sqlite", or set the global option
+choose between <code>"duckdb"</code> or <code>"sqlite"</code>, or set the global option
 <code>querychat.DataFrameSource.engine</code> to choose the default engine for all
 DataFrameSource instances. At least one of these packages must be installed.</p>
     </div>
@@ -121,14 +121,6 @@ engine from duckdb or RSQLite (in that order).</p></dd>
 <h4 id="returns">Returns<a class="anchor" aria-label="anchor" href="#returns"></a></h4>
 <p>A new DataFrameSource object</p>
 </div>
-<div class="section">
-<h4 id="examples">Examples<a class="anchor" aria-label="anchor" href="#examples"></a></h4>
-<p></p><div class="r example copy"><div class="sourceCode"><pre><code>\dontrun{
-source &lt;- DataFrameSource$new(iris, "iris")
-}
-</code></pre></div><p></p></div>
-</div>
-
 
 </div><p></p><hr><a id="method-DataFrameSource-clone"></a><div class="section">
 <h3 id="method-clone-">Method <code>clone()</code><a class="anchor" aria-label="anchor" href="#method-clone-"></a></h3>
@@ -152,12 +144,12 @@ source &lt;- DataFrameSource$new(iris, "iris")
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
-<span class="r-in"><span><span class="co"># Create a data frame source (uses first available: duckdb or sqlite)</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Create a data frame source (uses first available: duckdb or sqlite)</span></span></span>
 <span class="r-in"><span><span class="va">df_source</span> <span class="op">&lt;-</span> <span class="va">DataFrameSource</span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">mtcars</span>, <span class="st">"mtcars"</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Get database type</span></span></span>
 <span class="r-in"><span><span class="va">df_source</span><span class="op">$</span><span class="fu">get_db_type</span><span class="op">(</span><span class="op">)</span>  <span class="co"># Returns "DuckDB" or "SQLite"</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "DuckDB"</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Execute a query</span></span></span>
 <span class="r-in"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="va">df_source</span><span class="op">$</span><span class="fu">execute_query</span><span class="op">(</span><span class="st">"SELECT * FROM mtcars WHERE mpg &gt; 25"</span><span class="op">)</span></span></span>
@@ -168,15 +160,6 @@ source &lt;- DataFrameSource$new(iris, "iris")
 <span class="r-in"><span><span class="co"># Clean up when done</span></span></span>
 <span class="r-in"><span><span class="va">df_source</span><span class="op">$</span><span class="fu">cleanup</span><span class="op">(</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">df_sqlite</span><span class="op">$</span><span class="fu">cleanup</span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co">## ------------------------------------------------</span></span></span>
-<span class="r-in"><span><span class="co">## Method `DataFrameSource$new`</span></span></span>
-<span class="r-in"><span><span class="co">## ------------------------------------------------</span></span></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
-<span class="r-in"><span><span class="va">source</span> <span class="op">&lt;-</span> <span class="va">DataFrameSource</span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">iris</span>, <span class="st">"iris"</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

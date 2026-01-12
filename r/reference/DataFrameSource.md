@@ -13,7 +13,7 @@ for the full description of available methods.
 
 By default, DataFrameSource uses the first available engine from duckdb
 (checked first) or RSQLite. You can explicitly set the `engine`
-parameter to choose between "duckdb" or "sqlite", or set the global
+parameter to choose between `"duckdb"` or `"sqlite"`, or set the global
 option `querychat.DataFrameSource.engine` to choose the default engine
 for all DataFrameSource instances. At least one of these packages must
 be installed.
@@ -78,12 +78,6 @@ Create a new DataFrameSource
 
 A new DataFrameSource object
 
-#### Examples
-
-    \dontrun{
-    source <- DataFrameSource$new(iris, "iris")
-    }
-
 ------------------------------------------------------------------------
 
 ### Method `clone()`
@@ -103,12 +97,12 @@ The objects of this class are cloneable with this method.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
 # Create a data frame source (uses first available: duckdb or sqlite)
 df_source <- DataFrameSource$new(mtcars, "mtcars")
 
 # Get database type
 df_source$get_db_type()  # Returns "DuckDB" or "SQLite"
+#> [1] "DuckDB"
 
 # Execute a query
 result <- df_source$execute_query("SELECT * FROM mtcars WHERE mpg > 25")
@@ -119,13 +113,4 @@ df_sqlite <- DataFrameSource$new(mtcars, "mtcars", engine = "sqlite")
 # Clean up when done
 df_source$cleanup()
 df_sqlite$cleanup()
-} # }
-
-## ------------------------------------------------
-## Method `DataFrameSource$new`
-## ------------------------------------------------
-
-if (FALSE) { # \dontrun{
-source <- DataFrameSource$new(iris, "iris")
-} # }
 ```

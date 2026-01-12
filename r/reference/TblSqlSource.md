@@ -42,7 +42,7 @@ or [`dplyr::sql()`](https://dplyr.tidyverse.org/reference/sql.html).
 
 ------------------------------------------------------------------------
 
-### Method [`new()`](https://rdrr.io/r/methods/new.html)
+### Method `new()`
 
 Create a new TblSqlSource
 
@@ -131,13 +131,18 @@ Test a SQL query by fetching only one row
 
 #### Usage
 
-    TblSqlSource$test_query(query)
+    TblSqlSource$test_query(query, require_all_columns = FALSE)
 
 #### Arguments
 
 - `query`:
 
   SQL query string to test
+
+- `require_all_columns`:
+
+  If `TRUE`, validates that the result includes all original table
+  columns (default: `FALSE`)
 
 #### Returns
 
@@ -212,30 +217,62 @@ The objects of this class are cloneable with this method.
 ## Examples
 
 ``` r
-if (FALSE) { # rlang::is_interactive() && rlang::is_installed("dbplyr") && rlang::is_installed("dplyr") && rlang::is_installed("duckdb")
 con <- DBI::dbConnect(duckdb::duckdb())
 DBI::dbWriteTable(con, "mtcars", mtcars)
 
 mtcars_source <- TblSqlSource$new(dplyr::tbl(con, "mtcars"))
 mtcars_source$get_db_type()  # "DuckDB"
+#> [1] "DuckDB"
 
 result <- mtcars_source$execute_query("SELECT * FROM mtcars WHERE cyl > 4")
 
 # Note, the result is not the *full* data frame, but a lazy SQL tibble
 result
+#> # Source:   SQL [?? x 11]
+#> # Database: DuckDB 1.4.3 [unknown@Linux 6.11.0-1018-azure:R 4.5.2/:memory:]
+#>      mpg   cyl  disp    hp  drat    wt  qsec    vs    am  gear  carb
+#>    <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl>
+#>  1  21       6  160    110  3.9   2.62  16.5     0     1     4     4
+#>  2  21       6  160    110  3.9   2.88  17.0     0     1     4     4
+#>  3  21.4     6  258    110  3.08  3.22  19.4     1     0     3     1
+#>  4  18.7     8  360    175  3.15  3.44  17.0     0     0     3     2
+#>  5  18.1     6  225    105  2.76  3.46  20.2     1     0     3     1
+#>  6  14.3     8  360    245  3.21  3.57  15.8     0     0     3     4
+#>  7  19.2     6  168.   123  3.92  3.44  18.3     1     0     4     4
+#>  8  17.8     6  168.   123  3.92  3.44  18.9     1     0     4     4
+#>  9  16.4     8  276.   180  3.07  4.07  17.4     0     0     3     3
+#> 10  17.3     8  276.   180  3.07  3.73  17.6     0     0     3     3
+#> # ℹ more rows
 
 # You can chain this result into a dplyr pipeline
 dplyr::count(result, cyl, gear)
+#> # Source:   SQL [?? x 3]
+#> # Database: DuckDB 1.4.3 [unknown@Linux 6.11.0-1018-azure:R 4.5.2/:memory:]
+#>     cyl  gear     n
+#>   <dbl> <dbl> <dbl>
+#> 1     6     5     1
+#> 2     8     5     2
+#> 3     6     4     4
+#> 4     8     3    12
+#> 5     6     3     2
 
 # Or collect the entire data frame into local memory
 dplyr::collect(result)
+#> # A tibble: 21 × 11
+#>      mpg   cyl  disp    hp  drat    wt  qsec    vs    am  gear  carb
+#>    <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl>
+#>  1  21       6  160    110  3.9   2.62  16.5     0     1     4     4
+#>  2  21       6  160    110  3.9   2.88  17.0     0     1     4     4
+#>  3  21.4     6  258    110  3.08  3.22  19.4     1     0     3     1
+#>  4  18.7     8  360    175  3.15  3.44  17.0     0     0     3     2
+#>  5  18.1     6  225    105  2.76  3.46  20.2     1     0     3     1
+#>  6  14.3     8  360    245  3.21  3.57  15.8     0     0     3     4
+#>  7  19.2     6  168.   123  3.92  3.44  18.3     1     0     4     4
+#>  8  17.8     6  168.   123  3.92  3.44  18.9     1     0     4     4
+#>  9  16.4     8  276.   180  3.07  4.07  17.4     0     0     3     3
+#> 10  17.3     8  276.   180  3.07  3.73  17.6     0     0     3     3
+#> # ℹ 11 more rows
 
 # Finally, clean up when done with the database (closes the DB connection)
 mtcars_source$cleanup()
-}
-if (FALSE) { # rlang::is_interactive() && rlang::is_installed("dbplyr") && rlang::is_installed("dplyr") && rlang::is_installed("RSQLite")
-con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
-DBI::dbWriteTable(con, "mtcars", mtcars)
-source <- TblSqlSource$new(dplyr::tbl(con, "mtcars"))
-}
 ```

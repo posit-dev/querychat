@@ -19,8 +19,8 @@
 <link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Filter and Query Data Frames in shiny Using an LLM Chat Interface">
-<meta name="description" content="Adds an LLM-powered chatbot to your shiny app, that can turn your users' natural language questions into SQL queries that run against your data, and return the result as a reactive dataframe. Use it to drive reactive calculations, visualizations, downloads, etc.">
-<meta property="og:description" content="Adds an LLM-powered chatbot to your shiny app, that can turn your users' natural language questions into SQL queries that run against your data, and return the result as a reactive dataframe. Use it to drive reactive calculations, visualizations, downloads, etc.">
+<meta name="description" content="Adds an LLM-powered chatbot to your shiny app, that can turn your users' natural language questions into SQL queries that run against your data, and return the result as a reactive data frame. Use it to drive reactive calculations, visualizations, downloads, and more.">
+<meta property="og:description" content="Adds an LLM-powered chatbot to your shiny app, that can turn your users' natural language questions into SQL queries that run against your data, and return the result as a reactive data frame. Use it to drive reactive calculations, visualizations, downloads, and more.">
 <meta property="og:image" content="https://posit-dev.github.io/querychat/logo.png">
 </head>
 <body>
@@ -31,7 +31,7 @@
 
     <a class="navbar-brand me-2" href="index.html">querychat</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -97,13 +97,13 @@
 <div class="section level2">
 <h2 id="quick-start">Quick start<a class="anchor" aria-label="anchor" href="#quick-start"></a>
 </h2>
-<p>The quickest way to start chatting with your data is via <code><a href="reference/querychat-convenience.html">querychat_app()</a></code>, which provides a fully polished Shiny app. It requires a <a href="articles/data-sources.html">data source</a> (e.g., data.frame, database connection, etc.) and optionally other parameters (e.g. the LLM <code>client</code> <a href="articles/models.html">model</a>).</p>
+<p>The quickest way to start chatting with your data is via <code><a href="reference/querychat-convenience.html">querychat_app()</a></code>, which provides a fully polished Shiny app. It requires a data <a href="https://posit-dev.github.io/querychat/r/articles/data-sources.html">data source</a> (e.g., data.frame, database connection, etc.) and optionally other parameters (e.g. the LLM <code>client</code> <a href="https://posit-dev.github.io/querychat/r/articles/models.html">model</a>).</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://posit-dev.github.io/querychat/pkg-r">querychat</a></span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://posit-dev.github.io/querychat/r/">querychat</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://allisonhorst.github.io/palmerpenguins/" class="external-link">palmerpenguins</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="reference/querychat-convenience.html">querychat_app</a></span><span class="op">(</span><span class="va">penguins</span>, client <span class="op">=</span> <span class="st">"openai/gpt-4.1"</span><span class="op">)</span></span></code></pre></div>
-<p>Once running (which requires an API key<a class="footnote-ref" tabindex="0" data-bs-toggle="popover" data-bs-content='&lt;p&gt;By default, querychat uses OpenAI to power the chat experience. So, for this example to work, you’ll need &lt;a href="https://platform.openai.com/" class="external-link"&gt;an OpenAI API key&lt;/a&gt;. See the &lt;a href="articles/models.html"&gt;Models&lt;/a&gt; article for details on how to set up credentials for other model providers.&lt;/p&gt;'><sup>1</sup></a>), you’ll notice 3 main views:</p>
+<p>Once running (which requires an API key<a class="footnote-ref" tabindex="0" data-bs-toggle="popover" data-bs-content='&lt;p&gt;By default, querychat uses OpenAI to power the chat experience. So, for this example to work, you’ll need &lt;a href="https://platform.openai.com/" class="external-link"&gt;an OpenAI API key&lt;/a&gt;. See the &lt;a href="https://posit-dev.github.io/querychat/r/articles/models.html"&gt;Models&lt;/a&gt; article for details on how to set up credentials for other model providers.&lt;/p&gt;'><sup>1</sup></a>), you’ll notice 3 main views:</p>
 <ol style="list-style-type: decimal">
 <li>A sidebar chat with suggestions on where to start exploring.</li>
 <li>A data table that updates to reflect filtering and sorting queries.</li>
@@ -120,17 +120,17 @@
 </h2>
 <p>querychat is designed to be highly extensible – it provides programmatic access to the chat interface, the filtered/sorted data frame, SQL queries, and more. This makes it easy to build custom web apps that leverage natural language interaction with your data. For example, <a href="https://github.com/posit-conf-2025/llm/blob/main/_solutions/25_querychat/25_querychat_02-end-app.R" class="external-link">here</a>’s a bespoke app for exploring Airbnb listings in Ashville, NC:</p>
 <p><img src="reference/figures/airbnb.png" class="shadow rounded mb-3" alt="A custom app for exploring Airbnb listings, powered by querychat."></p>
-<p>To learn more, see <a href="articles/build.html">Build an app</a> for a step-by-step guide.</p>
+<p>To learn more, see <a href="https://posit-dev.github.io/querychat/r/articles/build.html">Build an app</a> for a step-by-step guide.</p>
 </div>
 <div class="section level2">
 <h2 id="how-it-works">How it works<a class="anchor" aria-label="anchor" href="#how-it-works"></a>
 </h2>
 <p>querychat uses LLMs to translate natural language into SQL queries. Models of all sizes, from small ones you can run locally to large frontier models from major AI providers, are remarkably effective at this task. But even the best models need to understand your data’s overall structure to perform well.</p>
-<p>To address this, querychat includes schema metadata – column names, types, ranges, categorical values – in the LLM’s <a href="articles/context.html">system prompt</a>. Importantly, querychat <strong>does not</strong> send raw data to the LLM; it shares only enough structural information for the model to generate accurate queries. When the LLM produces a query, querychat executes it in a SQL database (DuckDB<a class="footnote-ref" tabindex="0" data-bs-toggle="popover" data-bs-content='&lt;p&gt;DuckDB is extremely fast and has a surprising number of &lt;a href="https://duckdb.org/docs/stable/sql/functions/aggregates.html#statistical-aggregates" class="external-link"&gt;statistical functions&lt;/a&gt;.&lt;/p&gt;'><sup>2</sup></a>, by default) to obtain precise results.</p>
+<p>To address this, querychat includes schema metadata – column names, types, ranges, categorical values – in the LLM’s <a href="https://posit-dev.github.io/querychat/r/articles/context.html">system prompt</a>. Importantly, querychat <strong>does not</strong> send raw data to the LLM; it shares only enough structural information for the model to generate accurate queries. When the LLM produces a query, querychat executes it in a SQL database (DuckDB<a class="footnote-ref" tabindex="0" data-bs-toggle="popover" data-bs-content='&lt;p&gt;DuckDB is extremely fast and has a surprising number of &lt;a href="https://duckdb.org/docs/stable/sql/functions/aggregates.html#statistical-aggregates" class="external-link"&gt;statistical functions&lt;/a&gt;.&lt;/p&gt;'><sup>2</sup></a>, by default) to obtain precise results.</p>
 <p>This design makes querychat reliable, safe, and reproducible:</p>
 <ul>
 <li>
-<strong>Reliable</strong>: query results come from a real database, not LLM-generated summaries – so outputs are precise, verifiable, and less vulnerable to hallucination<a class="footnote-ref" tabindex="0" data-bs-toggle="popover" data-bs-content='&lt;p&gt;The &lt;a href="articles/tools.html"&gt;query tool&lt;/a&gt; gives query results to the model for context and interpretation. Thus, there is &lt;em&gt;some&lt;/em&gt; potential that the model to mis-interpret those results.&lt;/p&gt;'><sup>3</sup></a>.</li>
+<strong>Reliable</strong>: query results come from a real database, not LLM-generated summaries – so outputs are precise, verifiable, and less vulnerable to hallucination<a class="footnote-ref" tabindex="0" data-bs-toggle="popover" data-bs-content='&lt;p&gt;The &lt;a href="https://posit-dev.github.io/querychat/r/articles/tools.html"&gt;query tool&lt;/a&gt; gives query results to the model for context and interpretation. Thus, there is &lt;em&gt;some&lt;/em&gt; potential that the model to mis-interpret those results.&lt;/p&gt;'><sup>3</sup></a>.</li>
 <li>
 <strong>Safe</strong>: querychat’s tools are read-only by design, avoiding destructive actions on your data.<a class="footnote-ref" tabindex="0" data-bs-toggle="popover" data-bs-content="&lt;p&gt;To fully guarantee no destructive actions on your production database, ensure querychat’s database permissions are read-only.&lt;/p&gt;"><sup>4</sup></a>
 </li>
@@ -139,7 +139,7 @@
 </ul>
 <div class="alert alert-warning">
 <p><strong>Data privacy</strong></p>
-<p>See the <a href="articles/context.html">Provide context</a> and <a href="articles/tools.html">Tools</a> articles for more details on exactly what information is provided to the LLM and how customize it.</p>
+<p>See the <a href="https://posit-dev.github.io/querychat/r/articles/context.html">Provide context</a> and <a href="https://posit-dev.github.io/querychat/r/articles/tools.html">Tools</a> articles for more details on exactly what information is provided to the LLM and how customize it.</p>
 </div>
 </div>
 <div class="section level2">
@@ -148,17 +148,17 @@
 <p>From here, you might want to learn more about:</p>
 <ul>
 <li>
-<a href="articles/models.html">Models</a>: customize the LLM behind querychat.</li>
+<a href="https://posit-dev.github.io/querychat/r/articles/models.html">Models</a>: customize the LLM behind querychat.</li>
 <li>
-<a href="articles/data-sources.html">Data sources</a>: different data sources you can use with querychat.</li>
+<a href="https://posit-dev.github.io/querychat/r/articles/data-sources.html">Data sources</a>: different data sources you can use with querychat.</li>
 <li>
-<a href="articles/context.html">Provide context</a>: provide the LLM with the context it needs to work well.</li>
+<a href="https://posit-dev.github.io/querychat/r/articles/context.html">Provide context</a>: provide the LLM with the context it needs to work well.</li>
 <li>
-<a href="articles/build.html">Build an app</a>: design a custom Shiny app around querychat.</li>
+<a href="https://posit-dev.github.io/querychat/r/articles/build.html">Build an app</a>: design a custom Shiny app around querychat.</li>
 <li>
-<a href="articles/greet.html">Greet users</a>: create welcoming onboarding experiences.</li>
+<a href="https://posit-dev.github.io/querychat/r/articles/greet.html">Greet users</a>: create welcoming onboarding experiences.</li>
 <li>
-<a href="articles/tools.html">Tools</a>: understand what querychat can do under the hood.</li>
+<a href="https://posit-dev.github.io/querychat/r/articles/tools.html">Tools</a>: understand what querychat can do under the hood.</li>
 </ul>
 </div>
 </div>
@@ -202,13 +202,7 @@
 </ul>
 </div>
 
-<div class="dev-status">
-<h2 data-toc-skip>Dev status</h2>
-<ul class="list-unstyled">
-<li><a href="https://github.com/posit-dev/querychat/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/posit-dev/querychat/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a></li>
-<li><a href="https://CRAN.R-project.org/package=querychat" class="external-link"><img src="https://www.r-pkg.org/badges/version/querychat" alt="CRAN status"></a></li>
-</ul>
-</div>
+
 
   </aside>
 </div>

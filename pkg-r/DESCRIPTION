@@ -10,9 +10,9 @@ Authors@R: c(
     person("Posit Software, PBC", role = c("cph", "fnd"))
   )
 Description: Adds an LLM-powered chatbot to your 'shiny' app, that can
-    turn your users' natural language questions into 'SQL' queries that run
-    against your data, and return the result as a reactive data frame. Use
-    it to drive reactive calculations, visualizations, downloads, and
+    turn your users' natural language questions into 'SQL' queries that
+    run against your data, and return the result as a reactive data frame.
+    Use it to drive reactive calculations, visualizations, downloads, and
     more.
 License: MIT + file LICENSE
 URL: https://posit-dev.github.io/querychat/r/,

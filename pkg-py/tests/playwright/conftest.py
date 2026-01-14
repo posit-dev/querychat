@@ -1,24 +1,4 @@
-"""
-Pytest configuration and fixtures for querychat example tests.
-
-Uses:
-- pytest-playwright for browser automation
-- shinychat.playwright.ChatController for chat interactions
-
-Most apps run in-process using threads, except Streamlit which uses subprocess.
-All tests require OPENAI_API_KEY to be set.
-
-Test Isolation Strategy:
-------------------------
-Server fixtures use module scope for efficiency (avoid restarting servers for each test).
-Test isolation is achieved through:
-1. Playwright's default function-scoped `page` fixture (fresh browser page per test)
-2. Each test's setup navigates to the app URL, triggering a fresh session
-3. Apps use session-based state, so each browser session has independent state
-
-This means the same server instance handles multiple tests, but each test gets
-a clean slate from the browser/session perspective.
-"""
+"""Pytest fixtures for querychat Playwright E2E tests."""
 
 from __future__ import annotations
 
@@ -44,16 +24,11 @@ REPO_ROOT = Path(__file__).parent.parent.parent.parent
 EXAMPLES_DIR = REPO_ROOT / "pkg-py" / "examples"
 
 
-
-
 if TYPE_CHECKING:
     from collections.abc import Generator
 
     from playwright.sync_api import Page
     from shinychat.playwright import ChatController as ChatControllerType
-
-
-# ==================== App lifecycle helpers ====================
 
 
 def _find_free_port() -> int:
@@ -104,13 +79,13 @@ def _wait_for_app_ready(
             time.sleep(poll_interval)
 
     raise TimeoutError(
-        f"App at {url} did not become ready within {timeout}s. "
-        f"Last error: {last_error}"
+        f"App at {url} did not become ready within {timeout}s. Last error: {last_error}"
     )
 
 
 def _start_server_with_retry(
     start_fn_factory,
+    cleanup_fn,
     timeout: float = 45.0,
     max_attempts: int = 3,
 ):
@@ -121,6 +96,8 @@ def _start_server_with_retry(
         start_fn_factory: Function that returns (url, start_fn) tuple.
             Called fresh on each attempt to get a new port.
             start_fn should return (cleanup_resource, server) tuple.
+        cleanup_fn: Function that takes (cleanup_resource, server) and cleans up
+            resources on failure. Called when server startup fails to prevent leaks.
         timeout: Timeout for waiting for server to be ready
         max_attempts: Maximum number of startup attempts
 
@@ -130,6 +107,7 @@ def _start_server_with_retry(
     """
     last_error = None
     for attempt in range(max_attempts):
+        result = None
         try:
             url, start_fn = start_fn_factory()
             result = start_fn()
@@ -137,6 +115,16 @@ def _start_server_with_retry(
             return url, *result
         except Exception as e:
             last_error = e
+            # Clean up resources from failed attempt to prevent leaks
+            if result is not None:
+                try:
+                    cleanup_fn(*result)
+                except Exception as cleanup_error:
+                    logger.warning(
+                        "Cleanup after failed attempt %d raised: %s",
+                        attempt + 1,
+                        cleanup_error,
+                    )
             logger.warning(
                 "Server startup attempt %d/%d failed: %s",
                 attempt + 1,
@@ -160,9 +148,6 @@ def _create_chat_controller(page: Page, table_name: str) -> ChatControllerType:
     # module_id = "querychat_{table_name}" (from QueryChat)
     # chat_id = "chat" (from CHAT_ID constant in _shiny_module.py)
     return ChatController(page, f"querychat_{table_name}-chat")
-
-
-# ==================== Shiny threaded helpers ====================
 
 
 def _load_shiny_app(app_path: str) -> Any:
@@ -221,23 +206,6 @@ def _stop_shiny_server(server: Any) -> None:
     server.should_exit = True
 
 
-# ==================== App Fixtures ====================
-#
-# Note on fixture organization: Each app has its own fixture rather than using
-# parameterization because:
-# 1. Different frameworks (Shiny, Streamlit, Gradio, Dash) require different
-#    server startup/shutdown logic
-# 2. Test files are organized by framework, so explicit fixtures make dependencies clear
-# 3. The factory pattern ensures proper port allocation on retries
-#
-# The fixtures follow a consistent structure:
-# - Define a start_factory that gets a fresh port on each attempt
-# - Use _start_server_with_retry for reliability
-# - Yield the URL and clean up the server on teardown
-
-# ==================== 01-hello-app fixtures ====================
-
-
 @pytest.fixture(scope="module")
 def app_01_hello() -> Generator[str, None, None]:
     """Start the 01-hello-app.py Shiny server for testing."""
@@ -248,7 +216,12 @@ def app_01_hello() -> Generator[str, None, None]:
         url = f"http://localhost:{port}"
         return url, lambda: _start_shiny_app_threaded(app_path, port)
 
-    url, _thread, server = _start_server_with_retry(start_factory, timeout=30.0)
+    def shiny_cleanup(_thread, server):
+        _stop_shiny_server(server)
+
+    url, _thread, server = _start_server_with_retry(
+        start_factory, shiny_cleanup, timeout=30.0
+    )
     try:
         yield url
     finally:
@@ -261,9 +234,6 @@ def chat_01_hello(page: Page) -> ChatControllerType:
     return _create_chat_controller(page, "titanic")
 
 
-# ==================== 02-prompt-app fixtures ====================
-
-
 @pytest.fixture(scope="module")
 def app_02_prompt() -> Generator[str, None, None]:
     """Start the 02-prompt-app.py Shiny server for testing."""
@@ -274,7 +244,12 @@ def app_02_prompt() -> Generator[str, None, None]:
         url = f"http://localhost:{port}"
         return url, lambda: _start_shiny_app_threaded(app_path, port)
 
-    url, _thread, server = _start_server_with_retry(start_factory, timeout=30.0)
+    def shiny_cleanup(_thread, server):
+        _stop_shiny_server(server)
+
+    url, _thread, server = _start_server_with_retry(
+        start_factory, shiny_cleanup, timeout=30.0
+    )
     try:
         yield url
     finally:
@@ -287,9 +262,6 @@ def chat_02_prompt(page: Page) -> ChatControllerType:
     return _create_chat_controller(page, "titanic")
 
 
-# ==================== 03-sidebar-express-app fixtures ====================
-
-
 @pytest.fixture(scope="module")
 def app_03_express() -> Generator[str, None, None]:
     """Start the 03-sidebar-express-app.py Shiny server for testing."""
@@ -300,7 +272,12 @@ def app_03_express() -> Generator[str, None, None]:
         url = f"http://localhost:{port}"
         return url, lambda: _start_shiny_app_threaded(app_path, port)
 
-    url, _thread, server = _start_server_with_retry(start_factory, timeout=30.0)
+    def shiny_cleanup(_thread, server):
+        _stop_shiny_server(server)
+
+    url, _thread, server = _start_server_with_retry(
+        start_factory, shiny_cleanup, timeout=30.0
+    )
     try:
         yield url
     finally:
@@ -313,9 +290,6 @@ def chat_03_express(page: Page) -> ChatControllerType:
     return _create_chat_controller(page, "titanic")
 
 
-# ==================== 03-sidebar-core-app fixtures ====================
-
-
 @pytest.fixture(scope="module")
 def app_03_core() -> Generator[str, None, None]:
     """Start the 03-sidebar-core-app.py Shiny server for testing."""
@@ -326,7 +300,12 @@ def app_03_core() -> Generator[str, None, None]:
         url = f"http://localhost:{port}"
         return url, lambda: _start_shiny_app_threaded(app_path, port)
 
-    url, _thread, server = _start_server_with_retry(start_factory, timeout=30.0)
+    def shiny_cleanup(_thread, server):
+        _stop_shiny_server(server)
+
+    url, _thread, server = _start_server_with_retry(
+        start_factory, shiny_cleanup, timeout=30.0
+    )
     try:
         yield url
     finally:
@@ -339,9 +318,6 @@ def chat_03_core(page: Page) -> ChatControllerType:
     return _create_chat_controller(page, "titanic")
 
 
-# ==================== Streamlit subprocess helpers ====================
-
-
 def _start_streamlit_app_subprocess(
     app_path: str, port: int
 ) -> tuple[subprocess.Popen, None]:
@@ -349,6 +325,7 @@ def _start_streamlit_app_subprocess(
     Start a Streamlit app in a subprocess.
 
     Uses subprocess to run Streamlit which works reliably in CI.
+    Output is redirected to DEVNULL to avoid pipe buffer deadlocks.
     """
     import sys
 
@@ -366,8 +343,8 @@ def _start_streamlit_app_subprocess(
             "--browser.gatherUsageStats",
             "false",
         ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
     )
     return process, None
 
@@ -382,9 +359,6 @@ def _stop_streamlit_server(process: subprocess.Popen) -> None:
             process.kill()
 
 
-# ==================== 04-streamlit-app fixtures ====================
-
-
 @pytest.fixture(scope="module")
 def app_04_streamlit() -> Generator[str, None, None]:
     """Start the 04-streamlit-app.py Streamlit server for testing."""
@@ -395,14 +369,16 @@ def app_04_streamlit() -> Generator[str, None, None]:
         url = f"http://localhost:{port}"
         return url, lambda: _start_streamlit_app_subprocess(app_path, port)
 
-    url, process, _ = _start_server_with_retry(start_factory, timeout=45.0)
+    def streamlit_cleanup(process, _):
+        _stop_streamlit_server(process)
+
+    url, process, _ = _start_server_with_retry(
+        start_factory, streamlit_cleanup, timeout=45.0
+    )
     try:
         yield url
     finally:
         _stop_streamlit_server(process)
-
-
-# ==================== 09-streamlit-custom-app fixtures ====================
 
 
 @pytest.fixture(scope="module")
@@ -415,14 +391,16 @@ def app_09_streamlit_custom() -> Generator[str, None, None]:
         url = f"http://localhost:{port}"
         return url, lambda: _start_streamlit_app_subprocess(app_path, port)
 
-    url, process, _ = _start_server_with_retry(start_factory, timeout=45.0)
+    def streamlit_cleanup(process, _):
+        _stop_streamlit_server(process)
+
+    url, process, _ = _start_server_with_retry(
+        start_factory, streamlit_cleanup, timeout=45.0
+    )
     try:
         yield url
     finally:
         _stop_streamlit_server(process)
-
-
-# ==================== Gradio threaded helpers ====================
 
 
 def _load_gradio_app(app_path: str) -> Any:
@@ -485,9 +463,6 @@ def _stop_gradio_server(app: Any) -> None:
         app.close()
 
 
-# ==================== 05-gradio-app fixtures ====================
-
-
 @pytest.fixture(scope="module")
 def app_05_gradio() -> Generator[str, None, None]:
     """Start the 05-gradio-app.py Gradio server for testing."""
@@ -498,14 +473,16 @@ def app_05_gradio() -> Generator[str, None, None]:
         url = f"http://localhost:{port}"
         return url, lambda: _start_gradio_app_threaded(app_path, port)
 
-    url, _, server = _start_server_with_retry(start_factory, timeout=45.0)
+    def gradio_cleanup(_, server):
+        _stop_gradio_server(server)
+
+    url, _, server = _start_server_with_retry(
+        start_factory, gradio_cleanup, timeout=45.0
+    )
     try:
         yield url
     finally:
         _stop_gradio_server(server)
-
-
-# ==================== 07-gradio-custom-app fixtures ====================
 
 
 @pytest.fixture(scope="module")
@@ -518,14 +495,16 @@ def app_07_gradio_custom() -> Generator[str, None, None]:
         url = f"http://localhost:{port}"
         return url, lambda: _start_gradio_app_threaded(app_path, port)
 
-    url, _, server = _start_server_with_retry(start_factory, timeout=45.0)
+    def gradio_cleanup(_, server):
+        _stop_gradio_server(server)
+
+    url, _, server = _start_server_with_retry(
+        start_factory, gradio_cleanup, timeout=45.0
+    )
     try:
         yield url
     finally:
         _stop_gradio_server(server)
-
-
-# ==================== Dash threaded helpers ====================
 
 
 def _load_dash_app(app_path: str) -> Any:
@@ -583,9 +562,6 @@ def _stop_dash_server(server: Any) -> None:
     server.shutdown()
 
 
-# ==================== 06-dash-app fixtures ====================
-
-
 @pytest.fixture(scope="module")
 def app_06_dash() -> Generator[str, None, None]:
     """Start the 06-dash-app.py Dash server for testing."""
@@ -596,14 +572,16 @@ def app_06_dash() -> Generator[str, None, None]:
         url = f"http://localhost:{port}"
         return url, lambda: _start_dash_app_threaded(app_path, port)
 
-    url, _thread, server = _start_server_with_retry(start_factory, timeout=45.0)
+    def dash_cleanup(_thread, server):
+        _stop_dash_server(server)
+
+    url, _thread, server = _start_server_with_retry(
+        start_factory, dash_cleanup, timeout=45.0
+    )
     try:
         yield url
     finally:
         _stop_dash_server(server)
-
-
-# ==================== 08-dash-custom-app fixtures ====================
 
 
 @pytest.fixture(scope="module")
@@ -616,7 +594,12 @@ def app_08_dash_custom() -> Generator[str, None, None]:
         url = f"http://localhost:{port}"
         return url, lambda: _start_dash_app_threaded(app_path, port)
 
-    url, _thread, server = _start_server_with_retry(start_factory, timeout=45.0)
+    def dash_cleanup(_thread, server):
+        _stop_dash_server(server)
+
+    url, _thread, server = _start_server_with_retry(
+        start_factory, dash_cleanup, timeout=45.0
+    )
     try:
         yield url
     finally:

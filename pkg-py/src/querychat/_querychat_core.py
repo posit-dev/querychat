@@ -30,11 +30,6 @@ if TYPE_CHECKING:
     from ._datasource import DataSource
 
 
-# -----------------------------------------------------------------------------
-# Type definitions
-# -----------------------------------------------------------------------------
-
-
 ClientFactory = Callable[
     [Callable[[UpdateDashboardData], None], Callable[[], None]],
     Chat,
@@ -56,11 +51,6 @@ class DisplayMessage(TypedDict):
 
     role: str
     content: str
-
-
-# -----------------------------------------------------------------------------
-# Mixin for state dict accessors
-# -----------------------------------------------------------------------------
 
 
 class StateDictAccessorMixin:
@@ -145,11 +135,6 @@ class StateDictAccessorMixin:
         return state
 
 
-# -----------------------------------------------------------------------------
-# Content formatting
-# -----------------------------------------------------------------------------
-
-
 def format_chunk(chunk: Union[str, Content]) -> str:
     """Extract displayable text from a chat chunk."""
     if isinstance(chunk, ContentToolRequest):
@@ -195,11 +180,6 @@ def format_query_error(e: Exception) -> str:
             f"Query failed: {error_str}\n\n"
             "Try a different question or click Reset to start over."
         )
-
-
-# -----------------------------------------------------------------------------
-# AppState class
-# -----------------------------------------------------------------------------
 
 
 @dataclass
@@ -306,11 +286,6 @@ class AppState:
         self.client.set_turns(turns)
 
 
-# -----------------------------------------------------------------------------
-# Factory functions
-# -----------------------------------------------------------------------------
-
-
 def create_app_state(
     data_source: DataSource,
     client_factory: ClientFactory,
@@ -335,11 +310,6 @@ def create_app_state(
     )
     state_holder["state"] = state
     return state
-
-
-# -----------------------------------------------------------------------------
-# Streaming functions
-# -----------------------------------------------------------------------------
 
 
 def stream_response(client: Chat, prompt: str) -> Iterator[str]:

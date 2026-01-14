@@ -58,25 +58,7 @@ def card_ui(
     class_name: str = "",
     body_class_name: str = "",
 ) -> Component:
-    """
-    Create a Bootstrap card with optional header and action button.
-
-    Parameters
-    ----------
-    body
-        The card body content.
-    title
-        Static title text for the header.
-    title_id
-        Element ID for a dynamic title (mutually exclusive with title).
-    action_button
-        Optional button to display on the right side of the header.
-    class_name
-        CSS class(es) for the card.
-    body_class_name
-        CSS class(es) for the card body.
-
-    """
+    """Create a Bootstrap card with optional header and action button."""
     import dash_bootstrap_components as dbc
 
     from dash import html
@@ -109,15 +91,7 @@ def card_ui(
 
 
 def chat_container_ui(ids: IDs) -> list[Component]:
-    """
-    Create the chat UI container (messages + input).
-
-    Parameters
-    ----------
-    ids
-        Element IDs for the component.
-
-    """
+    """Create the chat UI container (messages + input)."""
     import dash_bootstrap_components as dbc
 
     from dash import html
@@ -184,23 +158,14 @@ def chat_messages_ui(state: AppState) -> list[Component]:
 
 
 def prepare_content_for_markdown(content: str) -> str:
-    """
-    Prepare content for rendering in dcc.Markdown.
-
-    This includes converting suggestion spans and other necessary transformations.
-    """
+    """Prepare content for rendering in dcc.Markdown."""
     content = convert_suggestion_spans(content)
     content = convert_filter_button(content)
     return content
 
 
 def convert_suggestion_spans(content: str) -> str:
-    """
-    Convert <span class="suggestion"> to styled <p> tags for dcc.Markdown.
-
-    dcc.Markdown with dangerously_allow_html=True preserves attributes on block-level
-    elements (div, p) but strips them from inline elements (span).
-    """
+    """Convert suggestion spans to styled <p> tags for dcc.Markdown."""
     style = "color: #0066cc; cursor: pointer; text-decoration: underline; display: inline; margin: 0;"
     content = re.sub(
         r'<span\s+class="suggestion',
@@ -212,15 +177,7 @@ def convert_suggestion_spans(content: str) -> str:
 
 
 def convert_filter_button(content: str) -> str:
-    """
-    Convert <button> to <div> tags for dcc.Markdown.
-
-    This is primarily to hide the 'Apply Filter' button that querychat adds to
-    the filter tool display.
-
-    If we didn't do this, Dash's Markdown component would strip out the button
-    entirely, making it impossible to identify via CSS selectors.
-    """
+    """Convert <button> to <div> tags for dcc.Markdown."""
     content = re.sub(r"<button", "<div", content)
     content = re.sub(r"</button>", "</div>", content)
     return content

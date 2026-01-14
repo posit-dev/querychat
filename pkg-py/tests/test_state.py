@@ -1,4 +1,4 @@
-"""Tests for _querychat_core.py - AppState and message processing."""
+"""Tests for AppState and message processing."""
 
 import os
 from typing import Any
@@ -17,7 +17,6 @@ from querychat._querychat_core import (
 
 @pytest.fixture(autouse=True)
 def set_dummy_api_key():
-    """Set a dummy OpenAI API key for testing."""
     old_api_key = os.environ.get("OPENAI_API_KEY")
     os.environ["OPENAI_API_KEY"] = "sk-dummy-api-key-for-testing"
     yield
@@ -29,7 +28,6 @@ def set_dummy_api_key():
 
 @pytest.fixture
 def sample_df():
-    """Create a sample narwhals DataFrame for testing."""
     pdf = pd.DataFrame(
         {
             "id": [1, 2, 3],
@@ -42,20 +40,16 @@ def sample_df():
 
 @pytest.fixture
 def data_source(sample_df):
-    """Create a DataFrameSource for testing."""
     return DataFrameSource(sample_df, "test_table")
 
 
 @pytest.fixture
 def mock_client():
-    """Create a mock Chat client."""
     return MagicMock()
 
 
-# Tests for AppState
 class TestAppState:
     def test_initial_state(self, data_source, mock_client):
-        """Test initial AppState values."""
         state = AppState(data_source=data_source, client=mock_client)
         assert state.data_source is data_source
         assert state.client is mock_client
@@ -64,21 +58,18 @@ class TestAppState:
         assert state.title is None
 
     def test_with_greeting(self, data_source, mock_client):
-        """Test AppState with custom greeting."""
         state = AppState(
             data_source=data_source, client=mock_client, greeting="Welcome!"
         )
         assert state.greeting == "Welcome!"
 
     def test_update_dashboard(self, data_source, mock_client):
-        """Test update_dashboard sets sql and title."""
         state = AppState(data_source=data_source, client=mock_client)
         state.update_dashboard({"query": "SELECT * FROM test_table", "title": "All Data"})
         assert state.sql == "SELECT * FROM test_table"
         assert state.title == "All Data"
 
     def test_reset_dashboard(self, data_source, mock_client):
-        """Test reset_dashboard clears sql and title."""
         state = AppState(data_source=data_source, client=mock_client)
         state.sql = "SELECT * FROM test_table"
         state.title = "Test"
@@ -87,14 +78,11 @@ class TestAppState:
         assert state.title is None
 
     def test_get_current_data_without_sql(self, data_source, mock_client, sample_df):
-        """Test get_current_data returns default data when no SQL."""
         state = AppState(data_source=data_source, client=mock_client)
         result = state.get_current_data()
-        # Compare as pandas since narwhals equality is tricky
         pd.testing.assert_frame_equal(result.to_pandas(), sample_df.to_pandas())
 
     def test_get_current_data_with_valid_sql(self, data_source, mock_client):
-        """Test get_current_data executes SQL query."""
         state = AppState(data_source=data_source, client=mock_client)
         state.sql = "SELECT * FROM test_table WHERE age > 25"
         result = state.get_current_data()
@@ -104,21 +92,17 @@ class TestAppState:
     def test_get_current_data_with_invalid_sql_resets(
         self, data_source, mock_client, sample_df
     ):
-        """Test get_current_data resets state on query failure."""
         state = AppState(data_source=data_source, client=mock_client)
         state.sql = "INVALID SQL QUERY"
         state.title = "Will be cleared"
         result = state.get_current_data()
-        # Should return default data and clear sql/title
         pd.testing.assert_frame_equal(result.to_pandas(), sample_df.to_pandas())
         assert state.sql is None
         assert state.title is None
-        # Error should be captured
         assert state.error is not None
         assert "Query syntax error:" in state.error
 
     def test_error_cleared_on_successful_query(self, data_source, mock_client):
-        """Test that error is cleared when query succeeds."""
         state = AppState(data_source=data_source, client=mock_client)
         state.error = "Previous error"
         state.sql = "SELECT * FROM test_table WHERE age > 25"
@@ -127,35 +111,29 @@ class TestAppState:
         assert state.error is None
 
     def test_error_cleared_on_update_dashboard(self, data_source, mock_client):
-        """Test that error is cleared when dashboard is updated."""
         state = AppState(data_source=data_source, client=mock_client)
         state.error = "Previous error"
         state.update_dashboard({"query": "SELECT * FROM test_table", "title": "Test"})
         assert state.error is None
 
     def test_error_cleared_on_reset_dashboard(self, data_source, mock_client):
-        """Test that error is cleared when dashboard is reset."""
         state = AppState(data_source=data_source, client=mock_client)
         state.error = "Previous error"
         state.reset_dashboard()
         assert state.error is None
 
     def test_get_display_sql_without_sql(self, data_source, mock_client):
-        """Test get_display_sql returns default SELECT when no SQL."""
         state = AppState(data_source=data_source, client=mock_client)
         assert state.get_display_sql() == "SELECT * FROM test_table"
 
     def test_get_display_sql_with_sql(self, data_source, mock_client):
-        """Test get_display_sql returns current SQL."""
         state = AppState(data_source=data_source, client=mock_client)
         state.sql = "SELECT name FROM test_table"
         assert state.get_display_sql() == "SELECT name FROM test_table"
 
 
-# Tests for create_app_state
 class TestCreateAppState:
     def test_creates_state_with_callbacks(self, data_source):
-        """Test that create_app_state wires up callbacks correctly."""
         callback_data: dict[str, Any] = {}
 
         def client_factory(update_callback, reset_callback):
@@ -179,10 +157,8 @@ class TestCreateAppState:
         assert state.title is None
 
 
-# Tests for stream_response
 class TestStreamResponse:
     def test_stream_response_yields_strings(self):
-        """Test that stream_response yields text strings."""
         mock_client = MagicMock()
         mock_client.stream.return_value = iter(["Hello", " world"])
 
@@ -196,7 +172,6 @@ class TestStreamResponse:
         )
 
     def test_stream_response_empty_stream(self):
-        """Test that stream_response handles empty streams."""
         mock_client = MagicMock()
         mock_client.stream.return_value = iter([])
 
@@ -206,7 +181,6 @@ class TestStreamResponse:
         mock_client.stream.assert_called_once()
 
     def test_stream_response_single_chunk(self):
-        """Test that stream_response handles single chunk."""
         mock_client = MagicMock()
         mock_client.stream.return_value = iter(["Single response"])
 
@@ -216,7 +190,6 @@ class TestStreamResponse:
         assert chunks[0] == "Single response"
 
     def test_stream_response_propagates_exception(self):
-        """Test that stream_response propagates exceptions from client.stream()."""
         mock_client = MagicMock()
         mock_client.stream.side_effect = RuntimeError("API error")
 
@@ -224,7 +197,6 @@ class TestStreamResponse:
             list(stream_response(mock_client, "Test prompt"))
 
     def test_stream_response_handles_generator_exception(self):
-        """Test that exceptions during iteration are propagated."""
         mock_client = MagicMock()
 
         def failing_generator():
@@ -237,16 +209,13 @@ class TestStreamResponse:
             list(stream_response(mock_client, "Test prompt"))
 
 
-# Tests for get_display_messages
 class TestGetDisplayMessages:
     def test_empty_turns(self, data_source, mock_client):
-        """Empty turns returns empty list."""
         mock_client.get_turns.return_value = []
         state = AppState(data_source=data_source, client=mock_client)
         assert state.get_display_messages() == []
 
     def test_user_message(self, data_source, mock_client):
-        """User turn extracts text content."""
         from chatlas import Turn
 
         user_turn = Turn(role="user", contents="Hello world")
@@ -257,7 +226,6 @@ class TestGetDisplayMessages:
         assert messages[0] == {"role": "user", "content": "Hello world"}
 
     def test_assistant_message(self, data_source, mock_client):
-        """Assistant turn extracts text content."""
         from chatlas import Turn
 
         assistant_turn = Turn(role="assistant", contents="Hi there!")
@@ -268,7 +236,6 @@ class TestGetDisplayMessages:
         assert messages[0] == {"role": "assistant", "content": "Hi there!"}
 
     def test_multiple_messages(self, data_source, mock_client):
-        """Multiple turns return in order."""
         from chatlas import Turn
 
         turns = [
@@ -283,10 +250,8 @@ class TestGetDisplayMessages:
         assert messages[1] == {"role": "assistant", "content": "Answer"}
 
 
-# Tests for TypedDicts
 class TestTypedDicts:
     def test_app_state_dict_structure(self):
-        """AppStateDict has correct structure."""
         from querychat._querychat_core import AppStateDict
 
         state: AppStateDict = {
@@ -301,10 +266,8 @@ class TestTypedDicts:
         assert len(state["turns"]) == 1
 
 
-# Tests for AppState serialization with turns
 class TestAppStateSerialization:
     def test_to_dict_includes_turns(self, data_source, mock_client):
-        """to_dict() serializes turns from client."""
         from chatlas import Turn
 
         user_turn = Turn(role="user", contents="Hello")
@@ -323,11 +286,9 @@ class TestAppStateSerialization:
         assert len(result["turns"]) == 2
         assert result["turns"][0]["role"] == "user"
         assert result["turns"][1]["role"] == "assistant"
-        # Should NOT have chat_history key
         assert "chat_history" not in result
 
     def test_to_dict_empty_turns(self, data_source, mock_client):
-        """to_dict() handles empty turns."""
         mock_client.get_turns.return_value = []
         state = AppState(data_source=data_source, client=mock_client)
         result = state.to_dict()
@@ -336,7 +297,6 @@ class TestAppStateSerialization:
 
 class TestAppStateDeserialization:
     def test_update_from_dict_restores_turns(self, data_source, mock_client):
-        """update_from_dict() restores turns to client."""
         state = AppState(data_source=data_source, client=mock_client)
 
         state.update_from_dict({
@@ -351,7 +311,6 @@ class TestAppStateDeserialization:
 
         assert state.sql == "SELECT name FROM test"
         assert state.title == "Names Only"
-        # Verify set_turns was called with Turn objects
         mock_client.set_turns.assert_called_once()
         turns_arg = mock_client.set_turns.call_args[0][0]
         assert len(turns_arg) == 2
@@ -359,8 +318,6 @@ class TestAppStateDeserialization:
         assert turns_arg[1].role == "assistant"
 
     def test_update_from_dict_empty_turns(self, data_source, mock_client):
-        """update_from_dict() handles empty turns."""
         state = AppState(data_source=data_source, client=mock_client)
         state.update_from_dict({"sql": None, "title": None, "error": None, "turns": []})
-        # Should call set_turns with empty list
         mock_client.set_turns.assert_called_with([])

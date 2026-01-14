@@ -49,6 +49,7 @@ class QueryChatBase:
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        cleanup: Optional[bool] = None,
     ):
         self._data_source = normalize_data_source(data_source, table_name)
 
@@ -74,6 +75,11 @@ class QueryChatBase:
             extra_instructions=extra_instructions,
             categorical_threshold=categorical_threshold,
         )
+
+        # By default, only close the connection automatically if we're in a Shiny app session
+        if cleanup is None:
+            cleanup = get_current_session() is not None
+        self._cleanup = cleanup
 
         # Fork and empty chat now so the per-session forks are fast
         client = as_querychat_client(client)
@@ -566,6 +572,10 @@ class QueryChat(QueryChatBase):
           `data_source.get_schema()`
         - `{{data_description}}`: The optional data description provided
         - `{{extra_instructions}}`: Any additional instructions provided
+    cleanup
+        Whether or not to automatically run `data_source.cleanup()` when the
+        Shiny session/app stops. By default, cleanup only occurs if the
+        `QueryChat` instance is created within a Shiny session.
 
     """
 
@@ -648,6 +658,7 @@ class QueryChat(QueryChatBase):
             greeting=self.greeting,
             client=self.client,
             enable_bookmarking=enable_bookmarking,
+            cleanup=self._cleanup,
         )
 
 
@@ -754,6 +765,10 @@ class QueryChatExpress(QueryChatBase):
           `data_source.get_schema()`
         - `{{data_description}}`: The optional data description provided
         - `{{extra_instructions}}`: Any additional instructions provided
+    cleanup
+        Whether or not to automatically run `data_source.cleanup()` when the
+        Shiny session/app stops. By default, cleanup only occurs if the
+        `QueryChat` instance is created within a Shiny session.
 
     """
 
@@ -771,6 +786,7 @@ class QueryChatExpress(QueryChatBase):
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
         enable_bookmarking: Literal["auto", True, False] = "auto",
+        cleanup: Optional[bool] = None,
     ):
         # Sanity check: Express should always have a (stub/real) session
         session = get_current_session()
@@ -805,12 +821,20 @@ class QueryChatExpress(QueryChatBase):
         else:
             enable = enable_bookmarking
 
+        if isinstance(session, ExpressStubSession):
+            cleanup = False
+        elif cleanup is None:
+            cleanup = True
+
+        self._cleanup = cleanup
+
         self._vals = mod_server(
             self.id,
             data_source=self._data_source,
             greeting=self.greeting,
             client=self.client,
             enable_bookmarking=enable,
+            cleanup=cleanup,
         )
 
     def df(self) -> nw.DataFrame:

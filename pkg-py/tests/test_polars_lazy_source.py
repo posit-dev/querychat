@@ -172,14 +172,16 @@ class TestPolarsLazySourceGetSchema:
 class TestPolarsLazySourceTestQuery:
     """Tests for PolarsLazySource.test_query method."""
 
-    def test_test_query_returns_lazyframe(self, polars_lazy_df):
-        """Test that test_query returns a LazyFrame."""
+    def test_test_query_returns_dataframe(self, polars_lazy_df):
+        """Test that test_query returns a collected DataFrame (not LazyFrame)."""
         from querychat._datasource import PolarsLazySource  # noqa: PLC0415
 
         nw_lf = nw.from_native(polars_lazy_df)
         source = PolarsLazySource(nw_lf, "employees")
         result = source.test_query("SELECT * FROM employees")
-        assert isinstance(result, nw.LazyFrame)
+        # test_query collects to catch runtime errors, so returns DataFrame
+        assert isinstance(result, nw.DataFrame)
+        assert len(result) <= 1
 
     def test_test_query_require_all_columns_passes(self, polars_lazy_df):
         """Test that test_query passes when all columns present."""
@@ -191,7 +193,7 @@ class TestPolarsLazySourceTestQuery:
         result = source.test_query(
             "SELECT * FROM employees", require_all_columns=True
         )
-        assert isinstance(result, nw.LazyFrame)
+        assert isinstance(result, nw.DataFrame)
 
     def test_test_query_require_all_columns_fails(self, polars_lazy_df):
         """Test that test_query raises when columns missing."""
@@ -207,3 +209,17 @@ class TestPolarsLazySourceTestQuery:
             source.test_query(
                 "SELECT name, age FROM employees", require_all_columns=True
             )
+
+    def test_test_query_catches_runtime_errors(self):
+        """Test that test_query catches runtime errors by actually executing."""
+        from querychat._datasource import PolarsLazySource  # noqa: PLC0415
+
+        # Create LazyFrame with string column that can't be cast to integer
+        lf = pl.LazyFrame({"a": [1, 2, 3], "b": ["x", "y", "z"]})
+        nw_lf = nw.from_native(lf)
+        source = PolarsLazySource(nw_lf, "test_table")
+
+        # This query fails at runtime when trying to cast strings to integers
+        # test_query should catch this because it actually executes (collects) the query
+        with pytest.raises(pl.exceptions.InvalidOperationError):
+            source.test_query("SELECT CAST(b AS INTEGER) FROM test_table")

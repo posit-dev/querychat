@@ -766,9 +766,9 @@ class PolarsLazySource(DataSource):
 
     def test_query(
         self, query: str, *, require_all_columns: bool = False
-    ) -> nw.LazyFrame:
+    ) -> nw.DataFrame:
         """
-        Test SQL query validity.
+        Test SQL query validity by executing and collecting one row.
 
         Parameters
         ----------
@@ -780,7 +780,7 @@ class PolarsLazySource(DataSource):
         Returns
         -------
         :
-            Query results as a narwhals LazyFrame
+            Query results as a narwhals DataFrame with at most one row
 
         """
         check_query(query)
@@ -788,8 +788,11 @@ class PolarsLazySource(DataSource):
         test_sql = f"SELECT * FROM ({query}) AS subquery LIMIT 1"
         result_lf = self._ctx.execute(test_sql)
 
+        # Actually collect to catch runtime errors (e.g., division by zero)
+        result = nw.from_native(result_lf.collect())
+
         if require_all_columns:
-            result_columns = set(result_lf.collect_schema().keys())
+            result_columns = set(result.columns)
             missing = set(self._colnames) - result_columns
             if missing:
                 missing_list = ", ".join(f"'{c}'" for c in sorted(missing))
@@ -800,7 +803,7 @@ class PolarsLazySource(DataSource):
                     f"Original columns: {original_list}"
                 )
 
-        return nw.from_native(result_lf)
+        return result
 
     def get_data(self) -> nw.LazyFrame:
         """

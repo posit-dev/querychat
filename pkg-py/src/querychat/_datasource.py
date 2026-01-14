@@ -12,6 +12,7 @@ from ._df_compat import duckdb_result_to_nw, read_sql
 from ._utils import check_query
 
 if TYPE_CHECKING:
+    import ibis
     from sqlalchemy.engine import Connection, Engine
 
 # Type alias for DataFrame or LazyFrame return types
@@ -839,3 +840,131 @@ class PolarsLazySource(DataSource):
             return "TIME"
         else:
             return "TEXT"
+
+
+class IbisSource(DataSource):
+    """
+    A DataSource implementation for Ibis Tables.
+
+    Keeps queries lazy - results from execute_query() are Ibis Tables
+    that can be chained with additional operations before collecting.
+    """
+
+    _table: ibis.Table
+    _backend: ibis.BaseBackend
+    table_name: str
+
+    def __init__(self, table: ibis.Table, table_name: str):
+        """
+        Initialize with an Ibis Table.
+
+        Parameters
+        ----------
+        table
+            An Ibis Table object
+        table_name
+            Name of the table in SQL queries
+
+        """
+        self._table = table
+        self.table_name = table_name
+        self._backend = table.get_backend()
+        self._colnames = list(table.schema().names)  # pyright: ignore[reportArgumentType]
+
+    def get_db_type(self) -> str:
+        """
+        Get the database type.
+
+        Returns
+        -------
+        :
+            The backend name (e.g., "duckdb", "postgres")
+
+        """
+        return self._backend.name
+
+    def get_schema(self, *, categorical_threshold: int) -> str:
+        """
+        Generate schema information from Ibis Table.
+
+        Parameters
+        ----------
+        categorical_threshold
+            Maximum number of unique values for a text column to be considered
+            categorical
+
+        Returns
+        -------
+        :
+            String describing the schema
+
+        """
+        raise NotImplementedError("get_schema() not yet implemented for IbisSource")
+
+    def execute_query(self, query: str) -> ibis.Table:  # pyright: ignore[reportIncompatibleMethodOverride]
+        """
+        Execute SQL query and return results as an Ibis Table (lazy).
+
+        Parameters
+        ----------
+        query
+            SQL query to execute
+
+        Returns
+        -------
+        :
+            Query results as an Ibis Table
+
+        Raises
+        ------
+        UnsafeQueryError
+            If the query starts with a disallowed SQL operation
+
+        """
+        check_query(query)
+        return self._backend.sql(query)  # pyright: ignore[reportAttributeAccessIssue]
+
+    def test_query(  # pyright: ignore[reportIncompatibleMethodOverride]
+        self, query: str, *, require_all_columns: bool = False
+    ) -> ibis.Table:
+        """
+        Test SQL query validity.
+
+        Parameters
+        ----------
+        query
+            SQL query to test
+        require_all_columns
+            If True, validates that result includes all original table columns
+
+        Returns
+        -------
+        :
+            Query results as an Ibis Table
+
+        """
+        raise NotImplementedError("test_query() not yet implemented for IbisSource")
+
+    def get_data(self) -> ibis.Table:  # pyright: ignore[reportIncompatibleMethodOverride]
+        """
+        Return the unfiltered data as an Ibis Table.
+
+        Returns
+        -------
+        :
+            The original Ibis Table
+
+        """
+        return self._table
+
+    def cleanup(self) -> None:
+        """
+        Clean up resources (no-op for Ibis).
+
+        Ibis manages connection lifecycle internally.
+
+        Returns
+        -------
+        None
+
+        """

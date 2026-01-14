@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### New features
+
+* Added support for Gradio, Dash, and Streamlit web frameworks in addition to Shiny. Import from the new submodules:
+  * `from querychat.gradio import QueryChat`
+  * `from querychat.dash import QueryChat`
+  * `from querychat.streamlit import QueryChat`
+
+Each framework's `QueryChat` provides `.app()` for quick standalone apps and `.ui()` for custom layouts. Install framework dependencies with pip extras: `pip install querychat[gradio]`, `pip install querychat[dash]`, or `pip install querychat[streamlit]`.
+
+## [0.4.0] - 2026-01-14
+
 ### Breaking Changes
 
 * Methods like `execute_query()`, `get_data()`, and `df()` now return a `narwhals.DataFrame` instead of a `pandas.DataFrame`. This allows querychat to drop its `pandas` dependency, and for you to use any `narwhals`-compatible dataframe of your choosing.
@@ -15,20 +26,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
-* Added support for Gradio, Dash, and Streamlit web frameworks in addition to Shiny. Import from the new submodules:
-  * `from querychat.gradio import QueryChat`
-  * `from querychat.dash import QueryChat`
-  * `from querychat.streamlit import QueryChat`
-
-  Each framework's `QueryChat` provides `.app()` for quick standalone apps and `.ui()` for custom layouts. Install framework dependencies with pip extras: `pip install querychat[gradio]`, `pip install querychat[dash]`, or `pip install querychat[streamlit]`.
-
-* `QueryChat.sidebar()`, `QueryChat.ui()`, and `QueryChat.server()` now support an optional `id` parameter to create multiple chat instances from a single `QueryChat` object. (#172)
+* `QueryChat.console()` was added to launch interactive console-based chat sessions with your data source, with persistent conversation state across invocations. (#168)
 
 * `QueryChat.client()` can now create standalone querychat-enabled chat clients with configurable tools and callbacks, enabling use outside of Shiny applications. (#168)
 
-* `QueryChat.console()` was added to launch interactive console-based chat sessions with your data source, with persistent conversation state across invocations. (#168)
-
 * The tools used in a `QueryChat` chatbot are now configurable. Use the new `tools` parameter of `QueryChat()` to select either or both `"query"` or `"update"` tools. Choose `tools=["update"]` if you only want QueryChat to be able to update the dashboard (useful when you want to be 100% certain that the LLM will not see _any_ raw data). (#168)
+
+* `QueryChat.sidebar()`, `QueryChat.ui()`, and `QueryChat.server()` now support an optional `id` parameter to create multiple chat instances from a single `QueryChat` object. (#172)
 
 ### Improvements
 

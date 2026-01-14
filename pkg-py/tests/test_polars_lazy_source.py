@@ -1,18 +1,8 @@
 """Tests for the PolarsLazySource class."""
 
 import narwhals.stable.v1 as nw
+import polars as pl
 import pytest
-
-# Check if polars is available
-try:
-    import polars as pl
-
-    HAS_POLARS = True
-except ImportError:
-    HAS_POLARS = False
-    pl = None  # type: ignore[assignment]
-
-pytestmark = pytest.mark.skipif(not HAS_POLARS, reason="polars not installed")
 
 
 @pytest.fixture

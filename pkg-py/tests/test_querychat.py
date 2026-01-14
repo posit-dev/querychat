@@ -2,8 +2,10 @@ import os
 
 import narwhals.stable.v1 as nw
 import pandas as pd
+import polars as pl
 import pytest
 from querychat import QueryChat
+from querychat._datasource import PolarsLazySource
 
 
 @pytest.fixture(autouse=True)
@@ -90,21 +92,8 @@ def test_querychat_client_has_system_prompt(sample_df):
     assert "test_table" in qc._client.system_prompt
 
 
-# Check if polars is available
-try:
-    import polars as pl
-
-    HAS_POLARS = True
-except ImportError:
-    HAS_POLARS = False
-    pl = None  # type: ignore[assignment]
-
-
-@pytest.mark.skipif(not HAS_POLARS, reason="polars not installed")
 def test_querychat_with_polars_lazyframe():
     """Test that QueryChat accepts a Polars LazyFrame."""
-    from querychat._datasource import PolarsLazySource  # noqa: PLC0415
-
     lf = pl.LazyFrame(
         {
             "id": [1, 2, 3],

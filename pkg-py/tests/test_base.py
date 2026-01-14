@@ -87,6 +87,35 @@ class TestNormalizeDataSource:
         assert result is existing
         assert result.table_name == "original_table"
 
+    def test_with_empty_dataframe(self):
+        """Test normalization with an empty DataFrame."""
+        empty_pdf = pd.DataFrame({"col1": [], "col2": []})
+        empty_df = nw.from_native(empty_pdf)
+        result = normalize_data_source(empty_df, "empty_table")
+        assert isinstance(result, DataFrameSource)
+        assert result.table_name == "empty_table"
+        # Should still be able to get schema
+        schema = result.get_schema(categorical_threshold=10)
+        assert "col1" in schema
+        assert "col2" in schema
+
+    def test_with_special_column_names(self):
+        """Test DataFrame with special characters in column names."""
+        pdf = pd.DataFrame(
+            {
+                "column with spaces": [1, 2],
+                "column-with-dashes": [3, 4],
+                "column.with.dots": [5, 6],
+            }
+        )
+        df = nw.from_native(pdf)
+        result = normalize_data_source(df, "special_cols")
+        assert isinstance(result, DataFrameSource)
+        schema = result.get_schema(categorical_threshold=10)
+        assert "column with spaces" in schema
+        assert "column-with-dashes" in schema
+        assert "column.with.dots" in schema
+
 
 # Tests for normalize_client
 class TestNormalizeClient:
@@ -111,6 +140,11 @@ class TestNormalizeClient:
         monkeypatch.setenv("QUERYCHAT_CLIENT", "openai")
         result = normalize_client(None)
         assert isinstance(result, chatlas.Chat)
+
+    def test_with_invalid_provider_raises(self):
+        """Test that invalid provider string raises an error."""
+        with pytest.raises(ValueError, match="Unknown provider"):
+            normalize_client("not_a_real_provider_xyz123")
 
 
 # Tests for normalize_tools

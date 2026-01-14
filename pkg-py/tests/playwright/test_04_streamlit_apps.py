@@ -105,7 +105,7 @@ class Test04StreamlitBasic:
         # SQL should update to include WHERE clause with survived = 1
         code = self.page.locator('[data-testid="stCode"]').first
         expect(code).to_contain_text(
-            re.compile(r"WHERE.*survived.*=.*1|TRUE", re.IGNORECASE), timeout=60000
+            re.compile(r"WHERE.*survived.*=.*(1|TRUE)", re.IGNORECASE), timeout=60000
         )
 
     # ==================== Query Processing Tests ====================

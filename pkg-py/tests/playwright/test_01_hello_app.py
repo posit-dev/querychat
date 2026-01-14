@@ -97,7 +97,7 @@ class Test01HelloApp:
         # SQL should filter by survived = 1 (or TRUE)
         sql_code = self.page.locator("pre code").first
         expect(sql_code).to_contain_text(
-            re.compile(r"WHERE.*survived.*=.*1|TRUE", re.IGNORECASE), timeout=60000
+            re.compile(r"WHERE.*survived.*=.*(1|TRUE)", re.IGNORECASE), timeout=60000
         )
 
     # ==================== Query Processing Tests ====================
@@ -110,7 +110,7 @@ class Test01HelloApp:
         # SQL should filter by survived = 1 (or TRUE)
         sql_code = self.page.locator("pre code").first
         expect(sql_code).to_contain_text(
-            re.compile(r"WHERE.*survived.*=.*1|TRUE", re.IGNORECASE), timeout=60000
+            re.compile(r"WHERE.*survived.*=.*(1|TRUE)", re.IGNORECASE), timeout=60000
         )
 
     def test_aggregation_query(self) -> None:

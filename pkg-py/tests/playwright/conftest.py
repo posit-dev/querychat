@@ -7,6 +7,17 @@ Uses:
 
 Most apps run in-process using threads, except Streamlit which uses subprocess.
 All tests require OPENAI_API_KEY to be set.
+
+Test Isolation Strategy:
+------------------------
+Server fixtures use module scope for efficiency (avoid restarting servers for each test).
+Test isolation is achieved through:
+1. Playwright's default function-scoped `page` fixture (fresh browser page per test)
+2. Each test's setup navigates to the app URL, triggering a fresh session
+3. Apps use session-based state, so each browser session has independent state
+
+This means the same server instance handles multiple tests, but each test gets
+a clean slate from the browser/session perspective.
 """
 
 from __future__ import annotations
@@ -46,8 +57,17 @@ if TYPE_CHECKING:
 
 
 def _find_free_port() -> int:
-    """Find an available port by binding to port 0 and letting the OS assign one."""
+    """
+    Find an available port by binding to port 0 and letting the OS assign one.
+
+    Note: There is an inherent TOCTOU (time-of-check to time-of-use) race condition
+    here - the port is released before the server binds to it. Another process could
+    grab the port in between. This is mitigated by:
+    1. Using SO_REUSEADDR to allow quick reuse of the port
+    2. The _start_server_with_retry() wrapper which retries with a new port on failure
+    """
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.bind(("127.0.0.1", 0))
         s.listen(1)
         port = s.getsockname()[1]
@@ -90,8 +110,7 @@ def _wait_for_app_ready(
 
 
 def _start_server_with_retry(
-    start_fn,
-    wait_url: str,
+    start_fn_factory,
     timeout: float = 45.0,
     max_attempts: int = 3,
 ):
@@ -99,21 +118,23 @@ def _start_server_with_retry(
     Start a server with retry logic for reliability.
 
     Args:
-        start_fn: Function that returns (cleanup_resource, server) tuple
-        wait_url: URL to poll for readiness
+        start_fn_factory: Function that returns (url, start_fn) tuple.
+            Called fresh on each attempt to get a new port.
+            start_fn should return (cleanup_resource, server) tuple.
         timeout: Timeout for waiting for server to be ready
         max_attempts: Maximum number of startup attempts
 
     Returns:
-        Tuple of (cleanup_resource, server) from start_fn
+        Tuple of (url, cleanup_resource, server)
 
     """
     last_error = None
     for attempt in range(max_attempts):
         try:
+            url, start_fn = start_fn_factory()
             result = start_fn()
-            _wait_for_app_ready(wait_url, timeout=timeout)
-            return result
+            _wait_for_app_ready(url, timeout=timeout)
+            return url, *result
         except Exception as e:
             last_error = e
             logger.warning(
@@ -145,7 +166,24 @@ def _create_chat_controller(page: Page, table_name: str) -> ChatControllerType:
 
 
 def _load_shiny_app(app_path: str) -> Any:
-    """Load a Shiny app from file (handles both regular and Express apps)."""
+    """
+    Load a Shiny app from a Python file.
+
+    Handles both Shiny Core apps (with explicit `app = App(...)`) and Shiny Express
+    apps (which use decorators and don't have an explicit app object).
+
+    Args:
+        app_path: Absolute or relative path to the Shiny app Python file.
+
+    Returns:
+        The loaded Shiny App object ready to be served.
+
+    Note:
+        Uses unique module names based on the file path to avoid Python's module
+        caching, which could cause issues when loading multiple apps in the same
+        test session.
+
+    """
     from shiny.express._is_express import is_express_app
     from shiny.express._run import wrap_express_app
 
@@ -161,8 +199,8 @@ def _load_shiny_app(app_path: str) -> Any:
         # Use unique module name based on path to avoid caching issues
         module_name = f"shiny_app_{path.stem}_{id(path)}"
         spec = importlib.util.spec_from_file_location(module_name, str(path))
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
+        module = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
+        spec.loader.exec_module(module)  # type: ignore[union-attr]
         return module.app
 
 
@@ -183,20 +221,34 @@ def _stop_shiny_server(server: Any) -> None:
     server.should_exit = True
 
 
+# ==================== App Fixtures ====================
+#
+# Note on fixture organization: Each app has its own fixture rather than using
+# parameterization because:
+# 1. Different frameworks (Shiny, Streamlit, Gradio, Dash) require different
+#    server startup/shutdown logic
+# 2. Test files are organized by framework, so explicit fixtures make dependencies clear
+# 3. The factory pattern ensures proper port allocation on retries
+#
+# The fixtures follow a consistent structure:
+# - Define a start_factory that gets a fresh port on each attempt
+# - Use _start_server_with_retry for reliability
+# - Yield the URL and clean up the server on teardown
+
 # ==================== 01-hello-app fixtures ====================
 
 
 @pytest.fixture(scope="module")
 def app_01_hello() -> Generator[str, None, None]:
-    """Start the 01-hello-app.py Shiny server for testing ."""
+    """Start the 01-hello-app.py Shiny server for testing."""
     app_path = str(EXAMPLES_DIR / "01-hello-app.py")
-    port = _find_free_port()
-    url = f"http://localhost:{port}"
 
-    def start():
-        return _start_shiny_app_threaded(app_path, port)
+    def start_factory():
+        port = _find_free_port()
+        url = f"http://localhost:{port}"
+        return url, lambda: _start_shiny_app_threaded(app_path, port)
 
-    _thread, server = _start_server_with_retry(start, url, timeout=30.0)
+    url, _thread, server = _start_server_with_retry(start_factory, timeout=30.0)
     try:
         yield url
     finally:
@@ -216,13 +268,13 @@ def chat_01_hello(page: Page) -> ChatControllerType:
 def app_02_prompt() -> Generator[str, None, None]:
     """Start the 02-prompt-app.py Shiny server for testing."""
     app_path = str(EXAMPLES_DIR / "02-prompt-app.py")
-    port = _find_free_port()
-    url = f"http://localhost:{port}"
 
-    def start():
-        return _start_shiny_app_threaded(app_path, port)
+    def start_factory():
+        port = _find_free_port()
+        url = f"http://localhost:{port}"
+        return url, lambda: _start_shiny_app_threaded(app_path, port)
 
-    _thread, server = _start_server_with_retry(start, url, timeout=30.0)
+    url, _thread, server = _start_server_with_retry(start_factory, timeout=30.0)
     try:
         yield url
     finally:
@@ -240,15 +292,15 @@ def chat_02_prompt(page: Page) -> ChatControllerType:
 
 @pytest.fixture(scope="module")
 def app_03_express() -> Generator[str, None, None]:
-    """Start the 03-sidebar-express-app.py Shiny server for testing ."""
+    """Start the 03-sidebar-express-app.py Shiny server for testing."""
     app_path = str(EXAMPLES_DIR / "03-sidebar-express-app.py")
-    port = _find_free_port()
-    url = f"http://localhost:{port}"
 
-    def start():
-        return _start_shiny_app_threaded(app_path, port)
+    def start_factory():
+        port = _find_free_port()
+        url = f"http://localhost:{port}"
+        return url, lambda: _start_shiny_app_threaded(app_path, port)
 
-    _thread, server = _start_server_with_retry(start, url, timeout=30.0)
+    url, _thread, server = _start_server_with_retry(start_factory, timeout=30.0)
     try:
         yield url
     finally:
@@ -266,15 +318,15 @@ def chat_03_express(page: Page) -> ChatControllerType:
 
 @pytest.fixture(scope="module")
 def app_03_core() -> Generator[str, None, None]:
-    """Start the 03-sidebar-core-app.py Shiny server for testing ."""
+    """Start the 03-sidebar-core-app.py Shiny server for testing."""
     app_path = str(EXAMPLES_DIR / "03-sidebar-core-app.py")
-    port = _find_free_port()
-    url = f"http://localhost:{port}"
 
-    def start():
-        return _start_shiny_app_threaded(app_path, port)
+    def start_factory():
+        port = _find_free_port()
+        url = f"http://localhost:{port}"
+        return url, lambda: _start_shiny_app_threaded(app_path, port)
 
-    _thread, server = _start_server_with_retry(start, url, timeout=30.0)
+    url, _thread, server = _start_server_with_retry(start_factory, timeout=30.0)
     try:
         yield url
     finally:
@@ -337,13 +389,13 @@ def _stop_streamlit_server(process: subprocess.Popen) -> None:
 def app_04_streamlit() -> Generator[str, None, None]:
     """Start the 04-streamlit-app.py Streamlit server for testing."""
     app_path = str(EXAMPLES_DIR / "04-streamlit-app.py")
-    port = _find_free_port()
-    url = f"http://localhost:{port}"
 
-    def start():
-        return _start_streamlit_app_subprocess(app_path, port)
+    def start_factory():
+        port = _find_free_port()
+        url = f"http://localhost:{port}"
+        return url, lambda: _start_streamlit_app_subprocess(app_path, port)
 
-    process, _ = _start_server_with_retry(start, url, timeout=45.0)
+    url, process, _ = _start_server_with_retry(start_factory, timeout=45.0)
     try:
         yield url
     finally:
@@ -357,13 +409,13 @@ def app_04_streamlit() -> Generator[str, None, None]:
 def app_09_streamlit_custom() -> Generator[str, None, None]:
     """Start the 09-streamlit-custom-app.py Streamlit server for testing."""
     app_path = str(EXAMPLES_DIR / "09-streamlit-custom-app.py")
-    port = _find_free_port()
-    url = f"http://localhost:{port}"
 
-    def start():
-        return _start_streamlit_app_subprocess(app_path, port)
+    def start_factory():
+        port = _find_free_port()
+        url = f"http://localhost:{port}"
+        return url, lambda: _start_streamlit_app_subprocess(app_path, port)
 
-    process, _ = _start_server_with_retry(start, url, timeout=45.0)
+    url, process, _ = _start_server_with_retry(start_factory, timeout=45.0)
     try:
         yield url
     finally:
@@ -374,13 +426,32 @@ def app_09_streamlit_custom() -> Generator[str, None, None]:
 
 
 def _load_gradio_app(app_path: str) -> Any:
-    """Load a Gradio app from file."""
+    """
+    Load a Gradio app from a Python file.
+
+    Handles two common patterns for Gradio apps:
+    1. Simple apps: `app = qc.app()` at module level
+    2. Custom apps: `app` is a `gr.Blocks` instance directly
+
+    Args:
+        app_path: Absolute or relative path to the Gradio app Python file.
+
+    Returns:
+        The loaded Gradio Blocks object ready to be launched.
+
+    Raises:
+        ValueError: If neither `app` nor `qc` attributes are found in the module.
+
+    Note:
+        Uses unique module names to avoid Python's module caching issues.
+
+    """
     path = Path(app_path).resolve()
     # Use unique module name based on path to avoid caching issues
     module_name = f"gradio_app_{path.stem}_{id(path)}"
     spec = importlib.util.spec_from_file_location(module_name, str(path))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    module = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
+    spec.loader.exec_module(module)  # type: ignore[union-attr]
 
     # Handle both patterns:
     # - 05-gradio-app.py: app = qc.app() at module level
@@ -419,15 +490,15 @@ def _stop_gradio_server(app: Any) -> None:
 
 @pytest.fixture(scope="module")
 def app_05_gradio() -> Generator[str, None, None]:
-    """Start the 05-gradio-app.py Gradio server for testing ."""
+    """Start the 05-gradio-app.py Gradio server for testing."""
     app_path = str(EXAMPLES_DIR / "05-gradio-app.py")
-    port = _find_free_port()
-    url = f"http://localhost:{port}"
 
-    def start():
-        return _start_gradio_app_threaded(app_path, port)
+    def start_factory():
+        port = _find_free_port()
+        url = f"http://localhost:{port}"
+        return url, lambda: _start_gradio_app_threaded(app_path, port)
 
-    _, server = _start_server_with_retry(start, url, timeout=45.0)
+    url, _, server = _start_server_with_retry(start_factory, timeout=45.0)
     try:
         yield url
     finally:
@@ -439,15 +510,15 @@ def app_05_gradio() -> Generator[str, None, None]:
 
 @pytest.fixture(scope="module")
 def app_07_gradio_custom() -> Generator[str, None, None]:
-    """Start the 07-gradio-custom-app.py Gradio server for testing ."""
+    """Start the 07-gradio-custom-app.py Gradio server for testing."""
     app_path = str(EXAMPLES_DIR / "07-gradio-custom-app.py")
-    port = _find_free_port()
-    url = f"http://localhost:{port}"
 
-    def start():
-        return _start_gradio_app_threaded(app_path, port)
+    def start_factory():
+        port = _find_free_port()
+        url = f"http://localhost:{port}"
+        return url, lambda: _start_gradio_app_threaded(app_path, port)
 
-    _, server = _start_server_with_retry(start, url, timeout=45.0)
+    url, _, server = _start_server_with_retry(start_factory, timeout=45.0)
     try:
         yield url
     finally:
@@ -458,13 +529,32 @@ def app_07_gradio_custom() -> Generator[str, None, None]:
 
 
 def _load_dash_app(app_path: str) -> Any:
-    """Load a Dash app from file."""
+    """
+    Load a Dash app from a Python file.
+
+    Handles two common patterns for Dash apps:
+    1. Simple apps: `app = qc.app()` at module level
+    2. Custom apps: `app` is a `dash.Dash` instance directly
+
+    Args:
+        app_path: Absolute or relative path to the Dash app Python file.
+
+    Returns:
+        The loaded Dash application object ready to be served.
+
+    Raises:
+        ValueError: If neither `app` nor `qc` attributes are found in the module.
+
+    Note:
+        Uses unique module names to avoid Python's module caching issues.
+
+    """
     path = Path(app_path).resolve()
     # Use unique module name based on path to avoid caching issues
     module_name = f"dash_app_{path.stem}_{id(path)}"
     spec = importlib.util.spec_from_file_location(module_name, str(path))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    module = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
+    spec.loader.exec_module(module)  # type: ignore[union-attr]
 
     # Handle both patterns:
     # - 06-dash-app.py: app = qc.app() at module level
@@ -498,15 +588,15 @@ def _stop_dash_server(server: Any) -> None:
 
 @pytest.fixture(scope="module")
 def app_06_dash() -> Generator[str, None, None]:
-    """Start the 06-dash-app.py Dash server for testing ."""
+    """Start the 06-dash-app.py Dash server for testing."""
     app_path = str(EXAMPLES_DIR / "06-dash-app.py")
-    port = _find_free_port()
-    url = f"http://localhost:{port}"
 
-    def start():
-        return _start_dash_app_threaded(app_path, port)
+    def start_factory():
+        port = _find_free_port()
+        url = f"http://localhost:{port}"
+        return url, lambda: _start_dash_app_threaded(app_path, port)
 
-    _thread, server = _start_server_with_retry(start, url, timeout=45.0)
+    url, _thread, server = _start_server_with_retry(start_factory, timeout=45.0)
     try:
         yield url
     finally:
@@ -518,15 +608,15 @@ def app_06_dash() -> Generator[str, None, None]:
 
 @pytest.fixture(scope="module")
 def app_08_dash_custom() -> Generator[str, None, None]:
-    """Start the 08-dash-custom-app.py Dash server for testing ."""
+    """Start the 08-dash-custom-app.py Dash server for testing."""
     app_path = str(EXAMPLES_DIR / "08-dash-custom-app.py")
-    port = _find_free_port()
-    url = f"http://localhost:{port}"
 
-    def start():
-        return _start_dash_app_threaded(app_path, port)
+    def start_factory():
+        port = _find_free_port()
+        url = f"http://localhost:{port}"
+        return url, lambda: _start_dash_app_threaded(app_path, port)
 
-    _thread, server = _start_server_with_retry(start, url, timeout=45.0)
+    url, _thread, server = _start_server_with_retry(start_factory, timeout=45.0)
     try:
         yield url
     finally:

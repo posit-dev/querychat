@@ -112,7 +112,7 @@ class Test05GradioBasic:
         # SQL should filter by survived = 1
         code = self.page.locator("code").first
         expect(code).to_contain_text(
-            re.compile(r"WHERE.*survived.*=.*1|TRUE", re.IGNORECASE), timeout=60000
+            re.compile(r"WHERE.*survived.*=.*(1|TRUE)", re.IGNORECASE), timeout=60000
         )
 
     def test_filter_first_class(self) -> None:

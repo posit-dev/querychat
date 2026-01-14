@@ -12,6 +12,16 @@ make py-e2e-setup
 make py-e2e-tests
 ```
 
+## Flaky Test Handling
+
+E2E tests that depend on LLM responses can be inherently flaky due to:
+- API rate limits
+- Variable response times
+- Non-deterministic LLM outputs
+
+Tests are configured to automatically retry failed tests up to 2 times with a 5-second
+delay between retries (via pytest-rerunfailures). This is configured in the Makefile.
+
 ## What Tests Cover
 
 - App loads correctly

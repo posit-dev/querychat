@@ -195,6 +195,47 @@ class TestStreamResponse:
             "Test prompt", echo="none", content="all"
         )
 
+    def test_stream_response_empty_stream(self):
+        """Test that stream_response handles empty streams."""
+        mock_client = MagicMock()
+        mock_client.stream.return_value = iter([])
+
+        chunks = list(stream_response(mock_client, "Test prompt"))
+
+        assert len(chunks) == 0
+        mock_client.stream.assert_called_once()
+
+    def test_stream_response_single_chunk(self):
+        """Test that stream_response handles single chunk."""
+        mock_client = MagicMock()
+        mock_client.stream.return_value = iter(["Single response"])
+
+        chunks = list(stream_response(mock_client, "Test prompt"))
+
+        assert len(chunks) == 1
+        assert chunks[0] == "Single response"
+
+    def test_stream_response_propagates_exception(self):
+        """Test that stream_response propagates exceptions from client.stream()."""
+        mock_client = MagicMock()
+        mock_client.stream.side_effect = RuntimeError("API error")
+
+        with pytest.raises(RuntimeError, match="API error"):
+            list(stream_response(mock_client, "Test prompt"))
+
+    def test_stream_response_handles_generator_exception(self):
+        """Test that exceptions during iteration are propagated."""
+        mock_client = MagicMock()
+
+        def failing_generator():
+            yield "First chunk"
+            raise ConnectionError("Stream interrupted")
+
+        mock_client.stream.return_value = failing_generator()
+
+        with pytest.raises(ConnectionError, match="Stream interrupted"):
+            list(stream_response(mock_client, "Test prompt"))
+
 
 # Tests for get_display_messages
 class TestGetDisplayMessages:

@@ -14,7 +14,7 @@ SQL_FEMALE_FILTER = re.compile(r"WHERE.*sex.*=.*['\"]?female['\"]?", re.IGNORECA
 SQL_MALE_FILTER = re.compile(r"WHERE.*sex.*=.*['\"]?male['\"]?", re.IGNORECASE)
 
 # Filter by survived
-SQL_SURVIVED_FILTER = re.compile(r"WHERE.*survived.*=.*1|TRUE", re.IGNORECASE)
+SQL_SURVIVED_FILTER = re.compile(r"WHERE.*survived.*=.*(1|TRUE)", re.IGNORECASE)
 
 # Filter by class
 SQL_FIRST_CLASS_FILTER = re.compile(
@@ -23,20 +23,22 @@ SQL_FIRST_CLASS_FILTER = re.compile(
 
 # ==================== Chat response patterns ====================
 
-# Survival-related responses
-RESPONSE_SURVIVAL = re.compile(r"survived|survival|\d+", re.IGNORECASE)
+# Survival-related responses - must mention survival context with a number
+RESPONSE_SURVIVAL = re.compile(r"(surviv\w*.*\d+|\d+.*surviv\w*)", re.IGNORECASE)
 
-# Age-related responses (including average)
-RESPONSE_AGE = re.compile(r"average|age|\d+\.?\d*", re.IGNORECASE)
+# Age-related responses - must mention age context with a number
+RESPONSE_AGE = re.compile(r"(age.*\d+\.?\d*|\d+\.?\d*.*age|average.*\d+)", re.IGNORECASE)
 
-# Fare-related responses (including average)
-RESPONSE_FARE = re.compile(r"average|fare|\d+\.?\d*", re.IGNORECASE)
+# Fare-related responses - must mention fare context with a number
+RESPONSE_FARE = re.compile(r"(fare.*\d+\.?\d*|\d+\.?\d*.*fare|average.*\d+)", re.IGNORECASE)
 
-# Class-related responses
-RESPONSE_CLASS = re.compile(r"class|count|first|second|third|\d+", re.IGNORECASE)
-RESPONSE_FIRST_CLASS = re.compile(r"(first|class|passenger)", re.IGNORECASE)
-RESPONSE_FILTER = re.compile(r"first|class|filter", re.IGNORECASE)
-RESPONSE_MALE_FILTER = re.compile(r"male|filter|showing", re.IGNORECASE)
+# Class-related responses - must mention class context
+RESPONSE_CLASS = re.compile(
+    r"(class.*\d+|\d+.*(first|second|third)|count.*class)", re.IGNORECASE
+)
+RESPONSE_FIRST_CLASS = re.compile(r"first.class|class.1|first.class.passenger", re.IGNORECASE)
+RESPONSE_FILTER = re.compile(r"filter|showing|display|first.class", re.IGNORECASE)
+RESPONSE_MALE_FILTER = re.compile(r"male.passenger|filter.*male|showing.*male", re.IGNORECASE)
 
 # ==================== Greeting/suggestion patterns ====================
 

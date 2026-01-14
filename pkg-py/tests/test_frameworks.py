@@ -149,6 +149,33 @@ class TestDashQueryChat:
         component = qc.ui()
         assert isinstance(component, html.Div)
 
+    def test_ui_contains_expected_children(self, sample_df):
+        """Test that .ui() returns component with expected structure."""
+        from querychat.dash import QueryChat
+
+        qc = QueryChat(sample_df, "tips")
+        component = qc.ui()
+        # The UI should contain child components (chat input, display areas, etc.)
+        assert hasattr(component, "children")
+        assert component.children is not None
+
+    def test_custom_greeting(self, sample_df):
+        """Test that custom greeting is stored correctly."""
+        from querychat.dash import QueryChat
+
+        qc = QueryChat(sample_df, "tips", greeting="Welcome to tips data!")
+        assert qc.greeting == "Welcome to tips data!"
+
+    def test_custom_tools(self, sample_df):
+        """Test that custom tools configuration works."""
+        from querychat.dash import QueryChat
+
+        qc = QueryChat(sample_df, "tips", tools="query")
+        assert qc.tools == ("query",)
+
+        qc_none = QueryChat(sample_df, "tips", tools=None)
+        assert qc_none.tools is None
+
 
 class TestStreamlitQueryChat:
     """Tests for Streamlit QueryChat."""
@@ -166,6 +193,51 @@ class TestStreamlitQueryChat:
         qc = QueryChat(sample_df, "tips")
         assert qc is not None
         assert qc.data_source is not None
+
+    def test_system_prompt_generated(self, sample_df):
+        """Test that system prompt is generated with table info."""
+        from querychat.streamlit import QueryChat
+
+        qc = QueryChat(sample_df, "tips")
+        prompt = qc.system_prompt
+        assert isinstance(prompt, str)
+        assert "tips" in prompt
+        # Should mention some column names from tips dataset
+        assert "total_bill" in prompt or "tip" in prompt
+
+    def test_custom_greeting(self, sample_df):
+        """Test that custom greeting is stored correctly."""
+        from querychat.streamlit import QueryChat
+
+        qc = QueryChat(sample_df, "tips", greeting="Hello tips explorer!")
+        assert qc.greeting == "Hello tips explorer!"
+
+    def test_custom_tools(self, sample_df):
+        """Test that custom tools configuration works."""
+        from querychat.streamlit import QueryChat
+
+        qc = QueryChat(sample_df, "tips", tools="query")
+        assert qc.tools == ("query",)
+
+        qc_none = QueryChat(sample_df, "tips", tools=None)
+        assert qc_none.tools is None
+
+    def test_client_method_exists(self, sample_df):
+        """Test that client() method exists and is callable."""
+        from querychat.streamlit import QueryChat
+
+        qc = QueryChat(sample_df, "tips")
+        assert hasattr(qc, "client")
+        assert callable(qc.client)
+
+    def test_data_source_accessible(self, sample_df):
+        """Test that data_source property provides access to underlying data."""
+        from querychat.streamlit import QueryChat
+
+        qc = QueryChat(sample_df, "tips")
+        ds = qc.data_source
+        assert ds is not None
+        assert ds.table_name == "tips"
 
     # Note: Streamlit's .app(), .sidebar(), .ui() methods require
     # a running Streamlit context and cannot be easily unit tested

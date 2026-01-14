@@ -982,11 +982,11 @@ class IbisSource(DataSource):
         check_query(query)
         return self._backend.sql(query)  # pyright: ignore[reportAttributeAccessIssue]
 
-    def test_query(  # pyright: ignore[reportIncompatibleMethodOverride]
+    def test_query(
         self, query: str, *, require_all_columns: bool = False
-    ) -> ibis.Table:
+    ) -> nw.DataFrame:
         """
-        Test SQL query validity.
+        Test SQL query validity by executing and collecting one row.
 
         Parameters
         ----------
@@ -998,10 +998,35 @@ class IbisSource(DataSource):
         Returns
         -------
         :
-            Query results as an Ibis Table
+            Query results as a narwhals DataFrame with at most one row
+
+        Raises
+        ------
+        UnsafeQueryError
+            If the query starts with a disallowed SQL operation
+        MissingColumnsError
+            If require_all_columns is True and result is missing required columns
 
         """
-        raise NotImplementedError("test_query() not yet implemented for IbisSource")
+        check_query(query)
+
+        test_sql = f"SELECT * FROM ({query}) AS subquery LIMIT 1"
+        result_df = self._backend.sql(test_sql).execute()  # pyright: ignore[reportAttributeAccessIssue]
+        result = nw.from_native(result_df)
+
+        if require_all_columns:
+            result_columns = set(result.columns)
+            missing = set(self._colnames) - result_columns
+            if missing:
+                missing_list = ", ".join(f"'{c}'" for c in sorted(missing))
+                original_list = ", ".join(f"'{c}'" for c in self._colnames)
+                raise MissingColumnsError(
+                    f"Query result missing required columns: {missing_list}. "
+                    f"The query must return all original table columns. "
+                    f"Original columns: {original_list}"
+                )
+
+        return result
 
     def get_data(self) -> ibis.Table:  # pyright: ignore[reportIncompatibleMethodOverride]
         """

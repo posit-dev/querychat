@@ -126,7 +126,19 @@ py-check-tox:  ## [py] Run python 3.9 - 3.12 checks with tox
 py-check-tests:  ## [py] Run python tests
 	@echo ""
 	@echo "🧪 Running tests with pytest"
-	uv run pytest
+	uv run pytest pkg-py/tests --ignore=pkg-py/tests/playwright
+
+.PHONY: py-e2e-setup
+py-e2e-setup:  ## [py] Install Playwright browsers for e2e tests
+	@echo ""
+	@echo "🎭 Installing Playwright browsers"
+	uv run playwright install chromium
+
+.PHONY: py-e2e-tests
+py-e2e-tests:  ## [py] Run Playwright e2e tests
+	@echo ""
+	@echo "🧪 Running Playwright e2e tests"
+	uv run pytest pkg-py/tests/playwright -v
 
 .PHONY: py-check-types
 py-check-types:  ## [py] Run python type checks

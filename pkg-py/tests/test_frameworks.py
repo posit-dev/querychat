@@ -1,7 +1,21 @@
 """Smoke tests for framework-specific QueryChat implementations."""
 
+import os
+
 import pytest
 from querychat.data import tips
+
+
+@pytest.fixture(autouse=True)
+def set_dummy_api_key():
+    """Set a dummy API key for tests that don't actually call the API."""
+    old_api_key = os.environ.get("OPENAI_API_KEY")
+    os.environ["OPENAI_API_KEY"] = "sk-dummy-api-key-for-testing"
+    yield
+    if old_api_key is not None:
+        os.environ["OPENAI_API_KEY"] = old_api_key
+    else:
+        del os.environ["OPENAI_API_KEY"]
 
 
 @pytest.fixture

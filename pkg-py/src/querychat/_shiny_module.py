@@ -11,7 +11,7 @@ import shinychat
 
 from shiny import module, reactive, ui
 
-from ._querychat_core import GREETING_PROMPT, warn_if_large_dataframe
+from ._querychat_core import GREETING_PROMPT
 from .tools import tool_query, tool_reset_dashboard, tool_update_dashboard
 
 if TYPE_CHECKING:
@@ -130,7 +130,6 @@ def mod_server(
     def filtered_df():
         query = sql.get()
         df = data_source.get_data() if not query else data_source.execute_query(query)
-        warn_if_large_dataframe(len(df), data_source.table_name)
         return df
 
     # Chat UI logic

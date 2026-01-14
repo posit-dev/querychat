@@ -13,7 +13,6 @@ from ._querychat_core import (
     StateDictAccessorMixin,
     create_app_state,
     stream_response,
-    warn_if_large_dataframe,
 )
 from ._ui_assets import GRADIO_CSS, GRADIO_SUGGESTION_JS, SUGGESTION_CSS
 
@@ -295,7 +294,6 @@ class QueryChat(QueryChatBase, StateDictAccessorMixin):
                 )
 
                 df = self.df(state_dict)
-                warn_if_large_dataframe(len(df), self._data_source.table_name)
 
                 data_info_parts = []
                 if error:

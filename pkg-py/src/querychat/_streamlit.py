@@ -10,7 +10,6 @@ from ._querychat_core import (
     AppState,
     create_app_state,
     stream_response,
-    warn_if_large_dataframe,
 )
 from ._ui_assets import STREAMLIT_SUGGESTION_JS, SUGGESTION_CSS
 
@@ -236,7 +235,6 @@ class QueryChat(QueryChatBase):
 
         st.subheader("Data view")
         df = state.get_current_data()
-        warn_if_large_dataframe(len(df), self._data_source.table_name)
         if state.error:
             st.error(state.error)
         st.dataframe(df, use_container_width=True, height=400, hide_index=True)

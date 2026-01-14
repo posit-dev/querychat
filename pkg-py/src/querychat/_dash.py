@@ -15,7 +15,6 @@ from ._querychat_core import (
     StateDictAccessorMixin,
     create_app_state,
     stream_response_async,
-    warn_if_large_dataframe,
 )
 from ._ui_assets import DASH_CSS, DASH_SUGGESTION_JS, SUGGESTION_CSS
 
@@ -375,7 +374,6 @@ def register_app_callbacks(
         sql_code = f"```sql\n{state.get_display_sql()}\n```"
 
         df = state.get_current_data()
-        warn_if_large_dataframe(len(df), table_name)
 
         display_df = df.to_pandas()
         table_data = display_df.to_dict("records")

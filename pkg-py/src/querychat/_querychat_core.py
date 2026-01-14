@@ -4,7 +4,6 @@ from __future__ import annotations
 
 __all__ = [
     "GREETING_PROMPT",
-    "LARGE_DATA_ROW_THRESHOLD",
     "AppState",
     "AppStateDict",
     "ClientFactory",
@@ -12,7 +11,6 @@ __all__ = [
     "create_app_state",
     "stream_response",
     "stream_response_async",
-    "warn_if_large_dataframe",
 ]
 
 from collections.abc import Callable
@@ -23,10 +21,6 @@ from chatlas import Chat, ContentToolRequest, ContentToolResult
 from chatlas.types import Content
 
 from .tools import UpdateDashboardData
-
-# Shared constants
-LARGE_DATA_ROW_THRESHOLD = 10_000
-"""Row count threshold for warning about large dataframes."""
 
 GREETING_PROMPT: str = (
     "Please give me a friendly greeting. "
@@ -339,37 +333,3 @@ async def stream_response_async(client: Chat, prompt: str) -> AsyncIterator[str]
     stream = await client.stream_async(prompt, echo="none", content="all")
     async for chunk in stream:
         yield format_chunk(chunk)
-
-
-# Track which table names have already warned to avoid spamming
-_warned_tables: set[str] = set()
-
-
-def warn_if_large_dataframe(
-    row_count: int,
-    table_name: str,
-    threshold: int = LARGE_DATA_ROW_THRESHOLD,
-) -> None:
-    """
-    Warn once if a dataframe exceeds the row threshold.
-
-    Parameters
-    ----------
-    row_count
-        Number of rows in the dataframe.
-    table_name
-        Name of the table (used to avoid duplicate warnings).
-    threshold
-        Row count threshold for warning. Defaults to LARGE_DATA_ROW_THRESHOLD.
-
-    """
-    import warnings
-
-    if row_count > threshold and table_name not in _warned_tables:
-        _warned_tables.add(table_name)
-        warnings.warn(
-            f"Displaying {row_count:,} rows from '{table_name}'. "
-            f"Large datasets (>{threshold:,} rows) may cause slow rendering. "
-            "Consider filtering the data or using pagination.",
-            stacklevel=3,
-        )

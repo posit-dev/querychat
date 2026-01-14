@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 __all__ = [
+    "GREETING_PROMPT",
+    "LARGE_DATA_ROW_THRESHOLD",
     "AppState",
     "AppStateDict",
     "ClientFactory",
@@ -10,6 +12,7 @@ __all__ = [
     "create_app_state",
     "stream_response",
     "stream_response_async",
+    "warn_if_large_dataframe",
 ]
 
 from collections.abc import Callable
@@ -19,8 +22,17 @@ from typing import TYPE_CHECKING, Optional, TypedDict, Union
 from chatlas import Chat, ContentToolRequest, ContentToolResult
 from chatlas.types import Content
 
-from ._shiny_module import GREETING_PROMPT
 from .tools import UpdateDashboardData
+
+# Shared constants
+LARGE_DATA_ROW_THRESHOLD = 10_000
+"""Row count threshold for warning about large dataframes."""
+
+GREETING_PROMPT: str = (
+    "Please give me a friendly greeting. "
+    "Include a few sample prompts in a two-level bulleted list."
+)
+"""Prompt used to generate the initial greeting message."""
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Iterator
@@ -295,12 +307,16 @@ def create_app_state(
     state_holder: dict[str, AppState | None] = {"state": None}
 
     def update_callback(data: UpdateDashboardData) -> None:
-        if state_holder["state"]:
-            state_holder["state"].update_dashboard(data)
+        state = state_holder["state"]
+        if state is None:
+            raise RuntimeError("Callback invoked before state initialization")
+        state.update_dashboard(data)
 
     def reset_callback() -> None:
-        if state_holder["state"]:
-            state_holder["state"].reset_dashboard()
+        state = state_holder["state"]
+        if state is None:
+            raise RuntimeError("Callback invoked before state initialization")
+        state.reset_dashboard()
 
     client = client_factory(update_callback, reset_callback)
     state = AppState(
@@ -323,3 +339,37 @@ async def stream_response_async(client: Chat, prompt: str) -> AsyncIterator[str]
     stream = await client.stream_async(prompt, echo="none", content="all")
     async for chunk in stream:
         yield format_chunk(chunk)
+
+
+# Track which table names have already warned to avoid spamming
+_warned_tables: set[str] = set()
+
+
+def warn_if_large_dataframe(
+    row_count: int,
+    table_name: str,
+    threshold: int = LARGE_DATA_ROW_THRESHOLD,
+) -> None:
+    """
+    Warn once if a dataframe exceeds the row threshold.
+
+    Parameters
+    ----------
+    row_count
+        Number of rows in the dataframe.
+    table_name
+        Name of the table (used to avoid duplicate warnings).
+    threshold
+        Row count threshold for warning. Defaults to LARGE_DATA_ROW_THRESHOLD.
+
+    """
+    import warnings
+
+    if row_count > threshold and table_name not in _warned_tables:
+        _warned_tables.add(table_name)
+        warnings.warn(
+            f"Displaying {row_count:,} rows from '{table_name}'. "
+            f"Large datasets (>{threshold:,} rows) may cause slow rendering. "
+            "Consider filtering the data or using pagination.",
+            stacklevel=3,
+        )

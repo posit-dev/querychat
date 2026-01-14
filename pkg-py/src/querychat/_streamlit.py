@@ -5,8 +5,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Optional
 
 from ._querychat_base import TOOL_GROUPS, QueryChatBase
-from ._querychat_core import AppState, create_app_state, stream_response
-from ._shiny_module import GREETING_PROMPT
+from ._querychat_core import (
+    GREETING_PROMPT,
+    AppState,
+    create_app_state,
+    stream_response,
+    warn_if_large_dataframe,
+)
 from ._ui_assets import STREAMLIT_SUGGESTION_JS, SUGGESTION_CSS
 
 if TYPE_CHECKING:
@@ -231,6 +236,7 @@ class QueryChat(QueryChatBase):
 
         st.subheader("Data view")
         df = state.get_current_data()
+        warn_if_large_dataframe(len(df), self._data_source.table_name)
         if state.error:
             st.error(state.error)
         st.dataframe(df, use_container_width=True, height=400, hide_index=True)

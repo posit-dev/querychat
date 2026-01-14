@@ -8,16 +8,14 @@ from gradio.context import Context
 
 from ._querychat_base import TOOL_GROUPS, QueryChatBase
 from ._querychat_core import (
-    AppState,
+    GREETING_PROMPT,
     AppStateDict,
     StateDictAccessorMixin,
     create_app_state,
     stream_response,
+    warn_if_large_dataframe,
 )
-from ._shiny_module import GREETING_PROMPT
 from ._ui_assets import GRADIO_CSS, GRADIO_SUGGESTION_JS, SUGGESTION_CSS
-
-DEFAULT_MAX_DISPLAY_ROWS = 100
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -92,7 +90,6 @@ class QueryChat(QueryChatBase, StateDictAccessorMixin):
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
-        max_display_rows: int = DEFAULT_MAX_DISPLAY_ROWS,
     ):
         super().__init__(
             data_source,
@@ -105,7 +102,6 @@ class QueryChat(QueryChatBase, StateDictAccessorMixin):
             extra_instructions=extra_instructions,
             prompt_template=prompt_template,
         )
-        self._max_display_rows = max_display_rows
 
     @property
     def css(self) -> str:
@@ -299,20 +295,17 @@ class QueryChat(QueryChatBase, StateDictAccessorMixin):
                 )
 
                 df = self.df(state_dict)
+                warn_if_large_dataframe(len(df), self._data_source.table_name)
+
                 data_info_parts = []
                 if error:
                     data_info_parts.append(f"⚠️ {error}")
                 data_info_parts.append(
                     f"*Data has {df.shape[0]} rows and {df.shape[1]} columns.*"
                 )
-                if len(df) > self._max_display_rows:
-                    data_info_parts.append(
-                        f"(showing first {self._max_display_rows} rows)"
-                    )
                 data_info_text = " ".join(data_info_parts)
-                display_df = df.head(self._max_display_rows).to_native()
 
-                return sql_title_text, sql_code, display_df, data_info_text
+                return sql_title_text, sql_code, df.to_native(), data_info_text
 
             def reset_query(state_dict: AppStateDict):
                 """Reset state to show full dataset."""
@@ -341,30 +334,6 @@ class QueryChat(QueryChatBase, StateDictAccessorMixin):
             f"<script>{GRADIO_SUGGESTION_JS}</script>",
             theme=Soft(),
         )
-
-
-def state_to_ui(
-    state: AppState,
-    max_display_rows: int = DEFAULT_MAX_DISPLAY_ROWS,
-) -> tuple:
-    """Convert AppState to UI component values."""
-    chat_messages = state.get_display_messages()
-
-    sql_title_text = f"### {state.title or 'SQL Query'}"
-    sql_code = state.get_display_sql()
-
-    df = state.get_current_data()
-    data_info_parts = []
-    if state.error:
-        data_info_parts.append(f"⚠️ {state.error}")
-    data_info_parts.append(f"*Data has {df.shape[0]} rows and {df.shape[1]} columns.*")
-    if len(df) > max_display_rows:
-        data_info_parts.append(f"(showing first {max_display_rows} rows)")
-    data_info_text = " ".join(data_info_parts)
-
-    display_df = df.head(max_display_rows).to_native()
-
-    return (chat_messages, sql_title_text, sql_code, display_df, data_info_text)
 
 
 class GradioBlocksWrapper:

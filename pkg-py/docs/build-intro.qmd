@@ -41,3 +41,22 @@ querychat supports four Python web frameworks. Choose based on your needs:
 | **[Streamlit](https://streamlit.io/)** | Quick prototypes, simple apps, script-based development | [Build with Streamlit](build-streamlit.qmd) |
 | **[Gradio](https://gradio.app/)** | ML demos, easy sharing, Hugging Face Spaces | [Build with Gradio](build-gradio.qmd) |
 | **[Dash](https://dash.plotly.com/)** | Production enterprise apps, complex callbacks | [Build with Dash](build-dash.qmd) |
+
+## API differences
+
+While querychat provides a consistent interface across frameworks, each implementation follows its framework's idioms for state management. The key difference is how you access query state:
+
+| Framework | State access | Example |
+|-----------|--------------|---------|
+| **Shiny** | Reactive callables | `qc.df()()`, `qc.sql()()`, `qc.title()()` |
+| **Streamlit** | Direct methods (session state) | `qc.df()`, `qc.sql()`, `qc.title()` |
+| **Gradio** | Methods with state dict | `qc.df(state)`, `qc.sql(state)`, `qc.title(state)` |
+| **Dash** | Methods with state dict | `qc.df(state)`, `qc.sql(state)`, `qc.title(state)` |
+
+**Why the difference?**
+
+- **Shiny** uses reactive programming where values are wrapped in reactive containers. You call `.df()` to get the reactive, then call it again (or use it in a reactive context) to get the value.
+- **Streamlit** manages state internally via `st.session_state`, so methods can access it directly without arguments.
+- **Gradio** and **Dash** use callback-based architectures where state is passed explicitly to callback functions, so you pass the state dict to accessors.
+
+Each approach matches how developers typically work in that framework, making querychat feel native regardless of which framework you choose.

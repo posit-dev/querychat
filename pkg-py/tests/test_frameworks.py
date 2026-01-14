@@ -52,25 +52,6 @@ class TestGradioQueryChat:
             result = qc.ui()
         assert isinstance(result, gr.State)
 
-    def test_state_to_ui_returns_native_dataframe(self, sample_df):
-        import narwhals.stable.v1 as nw
-        from querychat._gradio import state_to_ui
-        from querychat._querychat_core import create_app_state
-        from querychat.gradio import QueryChat
-
-        qc = QueryChat(sample_df, "tips")
-
-        def client_factory(update_cb, reset_cb):
-            return qc.client(update_dashboard=update_cb, reset_dashboard=reset_cb)
-
-        state = create_app_state(qc._data_source, client_factory, qc.greeting)
-        result = state_to_ui(state)
-
-        df = result[3]
-
-        assert not isinstance(df, nw.DataFrame), (
-            "Expected native DataFrame (pandas/polars), got narwhals DataFrame"
-        )
 
 
 class TestDashQueryChat:

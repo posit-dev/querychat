@@ -9,13 +9,14 @@ from chatlas import Turn
 from ._dash_ui import IDs, card_ui, chat_container_ui, chat_messages_ui
 from ._querychat_base import TOOL_GROUPS, QueryChatBase
 from ._querychat_core import (
+    GREETING_PROMPT,
     AppState,
     AppStateDict,
     StateDictAccessorMixin,
     create_app_state,
     stream_response_async,
+    warn_if_large_dataframe,
 )
-from ._shiny_module import GREETING_PROMPT
 from ._ui_assets import DASH_CSS, DASH_SUGGESTION_JS, SUGGESTION_CSS
 
 if TYPE_CHECKING:
@@ -28,8 +29,6 @@ if TYPE_CHECKING:
 
     import dash
     from dash import html
-
-DEFAULT_MAX_DISPLAY_ROWS = 100
 
 
 class QueryChat(QueryChatBase, StateDictAccessorMixin):
@@ -99,7 +98,6 @@ class QueryChat(QueryChatBase, StateDictAccessorMixin):
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | PathType] = None,
         prompt_template: Optional[str | PathType] = None,
-        max_display_rows: int = DEFAULT_MAX_DISPLAY_ROWS,
         storage_type: Literal["memory", "session", "local"] = "memory",
     ):
         super().__init__(
@@ -113,7 +111,6 @@ class QueryChat(QueryChatBase, StateDictAccessorMixin):
             extra_instructions=extra_instructions,
             prompt_template=prompt_template,
         )
-        self._max_display_rows = max_display_rows
         self._storage_type: Literal["memory", "session", "local"] = storage_type
         self._ids = IDs.from_table_name(self._data_source.table_name)
         self._initialized_apps: set[int] = set()
@@ -154,7 +151,7 @@ class QueryChat(QueryChatBase, StateDictAccessorMixin):
         register_app_callbacks(
             app,
             self._ids,
-            self._max_display_rows,
+            self._data_source.table_name,
             self._deserialize_state,
         )
 
@@ -341,7 +338,7 @@ def app_layout(ids: IDs, table_name: str, chat_ui):
 def register_app_callbacks(
     app: dash.Dash,
     ids: IDs,
-    max_display_rows: int,
+    table_name: str,
     deserialize_state: Callable[[AppStateDict], AppState],
 ) -> None:
     """Register callbacks for SQL display, data table, and export."""
@@ -378,7 +375,9 @@ def register_app_callbacks(
         sql_code = f"```sql\n{state.get_display_sql()}\n```"
 
         df = state.get_current_data()
-        display_df = df.head(max_display_rows).to_pandas()
+        warn_if_large_dataframe(len(df), table_name)
+
+        display_df = df.to_pandas()
         table_data = display_df.to_dict("records")
         table_columns = [{"field": col} for col in display_df.columns]
 
@@ -388,8 +387,6 @@ def register_app_callbacks(
         data_info_parts.append(
             f"Data has {df.shape[0]} rows and {df.shape[1]} columns."
         )
-        if len(df) > max_display_rows:
-            data_info_parts.append(f"(showing first {max_display_rows} rows)")
         data_info = " ".join(data_info_parts)
 
         return (

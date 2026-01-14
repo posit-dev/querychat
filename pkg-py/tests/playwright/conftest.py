@@ -407,9 +407,8 @@ def _load_gradio_app(app_path: str) -> Any:
     """
     Load a Gradio app from a Python file.
 
-    Handles two common patterns for Gradio apps:
-    1. Simple apps: `app = qc.app()` at module level
-    2. Custom apps: `app` is a `gr.Blocks` instance directly
+    The module must define an `app` variable containing the Gradio Blocks object.
+    This can be created via `app = qc.app()` or `with gr.Blocks() as app:`.
 
     Args:
         app_path: Absolute or relative path to the Gradio app Python file.
@@ -418,10 +417,7 @@ def _load_gradio_app(app_path: str) -> Any:
         The loaded Gradio Blocks object ready to be launched.
 
     Raises:
-        ValueError: If neither `app` nor `qc` attributes are found in the module.
-
-    Note:
-        Uses unique module names to avoid Python's module caching issues.
+        ValueError: If no `app` attribute is found in the module.
 
     """
     path = Path(app_path).resolve()
@@ -431,15 +427,13 @@ def _load_gradio_app(app_path: str) -> Any:
     module = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
     spec.loader.exec_module(module)  # type: ignore[union-attr]
 
-    # Handle both patterns:
-    # - 05-gradio-app.py: app = qc.app() at module level
-    # - 07-gradio-custom-app.py: app is gr.Blocks directly
     if hasattr(module, "app"):
         return module.app
-    elif hasattr(module, "qc"):
-        return module.qc.app()
-    else:
-        raise ValueError(f"Cannot find Gradio app in {app_path}")
+
+    raise ValueError(
+        f"Cannot find Gradio app in {app_path}. "
+        "The module must define an `app` variable containing the Gradio Blocks object."
+    )
 
 
 def _start_gradio_app_threaded(app_path: str, port: int) -> tuple[None, Any]:
@@ -511,9 +505,8 @@ def _load_dash_app(app_path: str) -> Any:
     """
     Load a Dash app from a Python file.
 
-    Handles two common patterns for Dash apps:
-    1. Simple apps: `app = qc.app()` at module level
-    2. Custom apps: `app` is a `dash.Dash` instance directly
+    The module must define an `app` variable containing the Dash application.
+    This can be created via `app = qc.app()` or `app = dash.Dash(...)`.
 
     Args:
         app_path: Absolute or relative path to the Dash app Python file.
@@ -522,10 +515,7 @@ def _load_dash_app(app_path: str) -> Any:
         The loaded Dash application object ready to be served.
 
     Raises:
-        ValueError: If neither `app` nor `qc` attributes are found in the module.
-
-    Note:
-        Uses unique module names to avoid Python's module caching issues.
+        ValueError: If no `app` attribute is found in the module.
 
     """
     path = Path(app_path).resolve()
@@ -535,15 +525,13 @@ def _load_dash_app(app_path: str) -> Any:
     module = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
     spec.loader.exec_module(module)  # type: ignore[union-attr]
 
-    # Handle both patterns:
-    # - 06-dash-app.py: app = qc.app() at module level
-    # - 08-dash-custom-app.py: app is dash.Dash directly
     if hasattr(module, "app"):
         return module.app
-    elif hasattr(module, "qc"):
-        return module.qc.app()
-    else:
-        raise ValueError(f"Cannot find Dash app in {app_path}")
+
+    raise ValueError(
+        f"Cannot find Dash app in {app_path}. "
+        "The module must define an `app` variable containing the Dash application."
+    )
 
 
 def _start_dash_app_threaded(app_path: str, port: int) -> tuple[threading.Thread, Any]:

@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, TypedDict
 
 import chevron
+import narwhals.stable.v1 as nw
 from chatlas import ContentToolResult, Tool
 from shinychat.types import ToolResultDisplay
 
@@ -218,9 +219,14 @@ def _query_impl(data_source: DataSource) -> Callable[[str, str], ContentToolResu
 
         try:
             result_df = data_source.execute_query(query)
-            value = result_df.rows(named=True)
+            # Collect LazyFrames before calling .rows()
+            if isinstance(result_df, nw.LazyFrame):
+                result_df_collected = result_df.collect()
+            else:
+                result_df_collected = result_df
+            value = result_df_collected.rows(named=True)
 
-            # Format table results
+            # Format table results (df_to_html handles both DataFrame and LazyFrame)
             tbl_html = df_to_html(result_df, maxrows=5)
             markdown += "\n\n" + str(tbl_html)
 

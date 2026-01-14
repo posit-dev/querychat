@@ -1,4 +1,4 @@
-from .._datasource import (  # noqa: A005
+from .._datasource import (
     DataFrameSource,
     DataSource,
     MissingColumnsError,

@@ -85,6 +85,8 @@ def check_query(query: str) -> None:
 if TYPE_CHECKING:
     from narwhals.stable.v1.typing import IntoFrame
 
+    from ._datasource import AnyFrame
+
 
 class MISSING_TYPE:  # noqa: N801
     """
@@ -197,7 +199,7 @@ def querychat_tool_starts_open(action: Literal["update", "query", "reset"]) -> b
         return action != "reset"
 
 
-def df_to_html(df: IntoFrame, maxrows: int = 5) -> str:
+def df_to_html(df: IntoFrame | AnyFrame, maxrows: int = 5) -> str:
     """
     Convert a DataFrame to an HTML table for display in chat.
 

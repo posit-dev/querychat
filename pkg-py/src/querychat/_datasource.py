@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
 
 import duckdb
 import narwhals.stable.v1 as nw
@@ -13,6 +13,9 @@ from ._utils import check_query
 
 if TYPE_CHECKING:
     from sqlalchemy.engine import Connection, Engine
+
+# Type alias for DataFrame or LazyFrame return types
+AnyFrame = Union[nw.DataFrame, nw.LazyFrame]
 
 
 class MissingColumnsError(ValueError):
@@ -58,7 +61,7 @@ class DataSource(ABC):
         ...
 
     @abstractmethod
-    def execute_query(self, query: str) -> nw.DataFrame:
+    def execute_query(self, query: str) -> AnyFrame:
         """
         Execute SQL query and return results as DataFrame.
 
@@ -78,7 +81,7 @@ class DataSource(ABC):
     @abstractmethod
     def test_query(
         self, query: str, *, require_all_columns: bool = False
-    ) -> nw.DataFrame:
+    ) -> AnyFrame:
         """
         Test SQL query by fetching only one row.
 
@@ -104,7 +107,7 @@ class DataSource(ABC):
         ...
 
     @abstractmethod
-    def get_data(self) -> nw.DataFrame:
+    def get_data(self) -> AnyFrame:
         """
         Return the unfiltered data as a DataFrame.
 
@@ -635,3 +638,199 @@ class SQLAlchemySource(DataSource):
         """
         if self._engine:
             self._engine.dispose()
+
+
+class PolarsLazySource(DataSource):
+    """
+    A DataSource implementation for Polars LazyFrames.
+
+    Keeps data lazy throughout the query pipeline. Results from execute_query()
+    are LazyFrames that can be chained with additional operations before
+    collecting.
+    """
+
+    _lf: nw.LazyFrame
+    table_name: str
+
+    def __init__(self, lf: nw.LazyFrame, table_name: str):
+        """
+        Initialize with a narwhals LazyFrame wrapping a Polars LazyFrame.
+
+        Parameters
+        ----------
+        lf
+            A narwhals LazyFrame (wrapping a Polars LazyFrame)
+        table_name
+            Name of the table in SQL queries
+
+        """
+        import polars as pl  # noqa: PLC0415
+
+        self._lf = lf
+        self.table_name = table_name
+
+        # Get native Polars LazyFrame for SQLContext
+        native_lf = lf.to_native()
+        if not isinstance(native_lf, pl.LazyFrame):
+            raise TypeError(
+                f"Expected Polars LazyFrame, got {type(native_lf).__name__}"
+            )
+
+        self._ctx = pl.SQLContext({table_name: native_lf})
+
+        # Cache schema (no data collection needed)
+        self._schema = native_lf.collect_schema()
+        self._colnames = list(self._schema.keys())
+
+    def get_db_type(self) -> str:
+        """Get the database type."""
+        return "Polars"
+
+    def get_schema(self, *, categorical_threshold: int) -> str:
+        """Generate schema information from LazyFrame using lazy aggregates."""
+        import polars as pl  # noqa: PLC0415
+
+        schema_lines = [f"Table: {self.table_name}", "Columns:"]
+
+        numeric_cols = []
+        text_cols = []
+        date_cols = []
+
+        # Classify columns by type (no collection needed)
+        for col_name, dtype in self._schema.items():
+            if dtype.is_numeric():
+                numeric_cols.append(col_name)
+            elif dtype in (pl.String, pl.Utf8):
+                text_cols.append(col_name)
+            elif dtype in (pl.Date, pl.Datetime):
+                date_cols.append(col_name)
+
+        # Single scan: all numeric min/max + date min/max + all text n_unique
+        agg_exprs = []
+        for col in numeric_cols + date_cols:
+            agg_exprs.append(pl.col(col).min().alias(f"{col}__min"))
+            agg_exprs.append(pl.col(col).max().alias(f"{col}__max"))
+        agg_exprs.extend(
+            pl.col(col).n_unique().alias(f"{col}__nunique") for col in text_cols
+        )
+
+        stats: dict = {}
+        native_lf = self._lf.to_native()
+        if agg_exprs:
+            stats = native_lf.select(agg_exprs).collect().row(0, named=True)
+
+        # Collect unique values for text cols below threshold
+        categorical_values: dict[str, list] = {}
+        for col in text_cols:
+            nunique = stats.get(f"{col}__nunique", 0)
+            if nunique and nunique <= categorical_threshold:
+                values = native_lf.select(pl.col(col).unique()).collect()[col].to_list()
+                categorical_values[col] = [v for v in values if v is not None]
+
+        # Build schema string
+        for col_name, dtype in self._schema.items():
+            sql_type = self._polars_dtype_to_sql(dtype)
+            column_info = [f"- {col_name} ({sql_type})"]
+
+            if col_name in numeric_cols or col_name in date_cols:
+                min_val = stats.get(f"{col_name}__min")
+                max_val = stats.get(f"{col_name}__max")
+                if min_val is not None or max_val is not None:
+                    column_info.append(f"  Range: {min_val} to {max_val}")
+            elif col_name in categorical_values:
+                cats = ", ".join(f"'{v}'" for v in categorical_values[col_name])
+                column_info.append(f"  Categorical values: {cats}")
+
+            schema_lines.extend(column_info)
+
+        return "\n".join(schema_lines)
+
+    def execute_query(self, query: str) -> nw.LazyFrame:
+        """
+        Execute SQL query and return results as LazyFrame.
+
+        Parameters
+        ----------
+        query
+            SQL query to execute
+
+        Returns
+        -------
+        :
+            Query results as a narwhals LazyFrame
+
+        """
+        check_query(query)
+        result = self._ctx.execute(query)
+        return nw.from_native(result)
+
+    def test_query(
+        self, query: str, *, require_all_columns: bool = False
+    ) -> nw.LazyFrame:
+        """
+        Test SQL query validity.
+
+        Parameters
+        ----------
+        query
+            SQL query to test
+        require_all_columns
+            If True, validates that result includes all original table columns
+
+        Returns
+        -------
+        :
+            Query results as a narwhals LazyFrame
+
+        """
+        check_query(query)
+
+        test_sql = f"SELECT * FROM ({query}) AS subquery LIMIT 1"
+        result_lf = self._ctx.execute(test_sql)
+
+        if require_all_columns:
+            result_columns = set(result_lf.collect_schema().keys())
+            missing = set(self._colnames) - result_columns
+            if missing:
+                missing_list = ", ".join(f"'{c}'" for c in sorted(missing))
+                original_list = ", ".join(f"'{c}'" for c in self._colnames)
+                raise MissingColumnsError(
+                    f"Query result missing required columns: {missing_list}. "
+                    f"The query must return all original table columns. "
+                    f"Original columns: {original_list}"
+                )
+
+        return nw.from_native(result_lf)
+
+    def get_data(self) -> nw.LazyFrame:
+        """
+        Return the unfiltered data as a LazyFrame.
+
+        Returns
+        -------
+        :
+            The original LazyFrame
+
+        """
+        return self._lf
+
+    def cleanup(self) -> None:
+        """Clean up resources (no-op for Polars)."""
+
+    @staticmethod
+    def _polars_dtype_to_sql(dtype) -> str:
+        """Convert Polars dtype to SQL type name."""
+        import polars as pl  # noqa: PLC0415
+
+        if dtype.is_integer():
+            return "INTEGER"
+        elif dtype.is_float():
+            return "FLOAT"
+        elif dtype == pl.Boolean:
+            return "BOOLEAN"
+        elif dtype == pl.Date:
+            return "DATE"
+        elif dtype in (pl.Datetime, pl.Time):
+            return "TIMESTAMP"
+        else:
+            return "TEXT"

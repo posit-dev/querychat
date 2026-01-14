@@ -15,7 +15,13 @@ from shiny.express._stub_session import ExpressStubSession
 from shiny.session import get_current_session
 from shinychat import output_markdown_stream
 
-from ._datasource import DataFrameSource, DataSource, SQLAlchemySource
+from ._datasource import (
+    AnyFrame,
+    DataFrameSource,
+    DataSource,
+    PolarsLazySource,
+    SQLAlchemySource,
+)
 from ._icons import bs_icon
 from ._querychat_module import GREETING_PROMPT, ServerValues, mod_server, mod_ui
 from ._system_prompt import QueryChatSystemPrompt
@@ -168,7 +174,11 @@ class QueryChatBase:
 
             @render.data_frame
             def dt():
-                return vals.df()
+                df = vals.df()
+                # Collect if lazy
+                if isinstance(df, nw.LazyFrame):
+                    df = df.collect()
+                return df
 
             @render.ui
             def sql_output():
@@ -813,16 +823,16 @@ class QueryChatExpress(QueryChatBase):
             enable_bookmarking=enable,
         )
 
-    def df(self) -> nw.DataFrame:
+    def df(self) -> AnyFrame:
         """
         Reactively read the current filtered data frame that is in effect.
 
         Returns
         -------
         :
-            The current filtered data frame as a narwhals DataFrame. If no query
-            has been set, this will return the unfiltered data frame from the
-            data source.
+            The current filtered data frame as a narwhals DataFrame or LazyFrame.
+            If the data source is lazy, returns a LazyFrame. If no query has been
+            set, this will return the unfiltered data from the data source.
 
         """
         return self._vals.df()
@@ -899,13 +909,28 @@ def normalize_data_source(
         return data_source
     if isinstance(data_source, sqlalchemy.Engine):
         return SQLAlchemySource(data_source, table_name)
+
     src = nw.from_native(data_source, pass_through=True)
+
+    if isinstance(src, nw.LazyFrame):
+        native = src.to_native()
+        try:
+            import polars as pl  # noqa: PLC0415
+
+            if isinstance(native, pl.LazyFrame):
+                return PolarsLazySource(src, table_name)
+        except ImportError:
+            pass
+        raise TypeError(
+            f"Unsupported LazyFrame backend: {type(native).__module__}. "
+            "Currently only Polars LazyFrames are supported."
+        )
+
     if isinstance(src, nw.DataFrame):
         return DataFrameSource(src, table_name)
-    if isinstance(src, nw.LazyFrame):
-        raise NotImplementedError("LazyFrame data sources are not yet supported (they will be soon).")
+
     raise TypeError(
-        f"Unsupported data source type: {type(data_source)}."
+        f"Unsupported data source type: {type(data_source)}. "
         "If you believe this type should be supported, please open an issue at "
         "https://github.com/posit-dev/querychat/issues"
     )

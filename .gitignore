@@ -3,6 +3,7 @@ animation.screenflow/
 README_files/
 README.html
 .DS_Store
+test-results/
 python-package/examples/titanic.db
 .quarto
 *.db

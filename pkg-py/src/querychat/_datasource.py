@@ -15,8 +15,10 @@ if TYPE_CHECKING:
     import ibis
     from sqlalchemy.engine import Connection, Engine
 
-# Type alias for DataFrame or LazyFrame return types
-AnyFrame = Union[nw.DataFrame, nw.LazyFrame]
+    # Type alias for DataFrame, LazyFrame, or Ibis Table return types
+    AnyFrame = Union[nw.DataFrame, nw.LazyFrame, "ibis.Table"]
+else:
+    AnyFrame = Union[nw.DataFrame, nw.LazyFrame]
 
 
 class MissingColumnsError(ValueError):

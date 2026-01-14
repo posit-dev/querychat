@@ -178,6 +178,8 @@ class QueryChatBase:
                 # Collect if lazy
                 if isinstance(df, nw.LazyFrame):
                     df = df.collect()
+                elif hasattr(df, "to_pandas"):  # Ibis Table
+                    df = nw.from_native(df.to_pandas())
                 return df
 
             @render.ui
@@ -925,6 +927,17 @@ def normalize_data_source(
             f"Unsupported LazyFrame backend: {type(native).__module__}. "
             "Currently only Polars LazyFrames are supported."
         )
+
+    # Check for Ibis Table (before DataFrame check since Ibis Tables are not narwhals-native)
+    try:
+        import ibis  # noqa: PLC0415
+
+        if isinstance(data_source, ibis.Table):
+            from ._datasource import IbisSource  # noqa: PLC0415
+
+            return IbisSource(data_source, table_name)
+    except ImportError:
+        pass
 
     if isinstance(src, nw.DataFrame):
         return DataFrameSource(src, table_name)

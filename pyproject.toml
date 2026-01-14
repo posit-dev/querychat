@@ -65,7 +65,7 @@ include = ["pkg-py/src/querychat", "pkg-py/LICENSE", "pkg-py/README.md"]
 
 [dependency-groups]
 dev = ["ruff>=0.6.5", "pyright>=1.1.401", "tox-uv>=1.11.4", "pytest>=8.4.0"]
-docs = ["quartodoc>=0.11.1", "nbformat", "nbclient"]
+docs = ["quartodoc>=0.11.1", "nbformat", "nbclient", "ipykernel"]
 examples = [
     "openai",
     "palmerpenguins>=0.1.4",
@@ -77,7 +77,7 @@ dash = ["dash-ag-grid>=31.0", "dash[async]>=3.1", "dash-bootstrap-components>=2.
 test = [
     "pytest>=8.0.0",
     "pytest-playwright>=0.5.0",
-    "pytest-recording>=0.13.0",
+    "pytest-xdist>=3.5.0",
     "playwright>=1.40.0",
 ]
 

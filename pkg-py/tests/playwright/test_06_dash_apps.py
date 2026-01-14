@@ -32,8 +32,14 @@ class Test06DashBasic:
     def setup(self, page: Page, app_06_dash: str) -> None:
         """Navigate to the app before each test."""
         page.goto(app_06_dash)
-        # Wait for Dash app to load
+        # Wait for Dash app to fully load (chat history and data table)
         page.wait_for_selector("#querychat-titanic-chat-history", timeout=30000)
+        # AG Grid data table loads asynchronously - wait for it
+        page.wait_for_selector("#querychat-titanic-data-table .ag-body-viewport", timeout=30000)
+        # Wait for SQL display to be populated by callback
+        expect(page.locator("#querychat-titanic-sql-display")).to_contain_text(
+            "SELECT", timeout=30000
+        )
         self.page = page
 
     # ==================== Initial Load Tests ====================
@@ -65,7 +71,8 @@ class Test06DashBasic:
 
     def test_data_table_visible(self) -> None:
         """Data table is visible."""
-        data_table = self.page.locator("#querychat-titanic-data-table table")
+        # AG Grid uses custom DOM structure, not standard <table>
+        data_table = self.page.locator("#querychat-titanic-data-table .ag-body-viewport")
         expect(data_table).to_be_visible()
 
     def test_suggestion_links_present(self) -> None:
@@ -84,7 +91,6 @@ class Test06DashBasic:
         chat_input.fill("test query")
         expect(chat_input).to_have_value("test query")
 
-    @pytest.mark.vcr(record_mode="once")
     def test_submit_query_via_button(self) -> None:
         """Submit query via send button."""
         chat_input = self.page.locator("#querychat-titanic-chat-input")
@@ -100,7 +106,6 @@ class Test06DashBasic:
             timeout=60000,
         )
 
-    @pytest.mark.vcr(record_mode="once")
     def test_submit_query_via_enter(self) -> None:
         """Submit query via Enter key."""
         chat_input = self.page.locator("#querychat-titanic-chat-input")
@@ -116,7 +121,6 @@ class Test06DashBasic:
 
     # ==================== Query Processing Tests ====================
 
-    @pytest.mark.vcr(record_mode="once")
     def test_filter_first_class(self) -> None:
         """Filter for first class passengers."""
         chat_input = self.page.locator("#querychat-titanic-chat-input")
@@ -132,7 +136,6 @@ class Test06DashBasic:
             timeout=60000,
         )
 
-    @pytest.mark.vcr(record_mode="once")
     def test_analytical_query_in_chat(self) -> None:
         """Analytical query shows result in chat."""
         chat_input = self.page.locator("#querychat-titanic-chat-input")
@@ -147,7 +150,6 @@ class Test06DashBasic:
             re.compile(r"survived|survival|\d+", re.IGNORECASE), timeout=60000
         )
 
-    @pytest.mark.vcr(record_mode="once")
     def test_filter_male_passengers(self) -> None:
         """Filter for male passengers."""
         chat_input = self.page.locator("#querychat-titanic-chat-input")
@@ -232,7 +234,6 @@ class Test08DashCustom:
 
     # ==================== Query Tests ====================
 
-    @pytest.mark.vcr(record_mode="once")
     def test_filter_query_updates_sql(self) -> None:
         """Filter query updates SQL display."""
         chat_input = self.page.locator("#querychat-titanic-chat-input")
@@ -248,7 +249,6 @@ class Test08DashCustom:
             timeout=60000,
         )
 
-    @pytest.mark.vcr(record_mode="once")
     def test_filter_query_updates_title(self) -> None:
         """Filter query updates the header title."""
         # Initial title
@@ -264,7 +264,6 @@ class Test08DashCustom:
         # Title should update
         expect(title).not_to_have_text("Full Dataset", timeout=60000)
 
-    @pytest.mark.vcr(record_mode="once")
     def test_filter_query_updates_row_count(self) -> None:
         """Filter query updates row count."""
         chat_input = self.page.locator("#querychat-titanic-chat-input")

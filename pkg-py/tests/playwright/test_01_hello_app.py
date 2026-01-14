@@ -2,8 +2,7 @@
 Playwright tests for 01-hello-app.py - Basic QueryChat example.
 
 This tests the simplest querychat example with the Titanic dataset.
-Uses shinychat.playwright.ChatController for chat interactions
-and pytest-recording for LLM response recording/replay.
+Uses shinychat.playwright.ChatController for chat interactions.
 """
 
 from __future__ import annotations
@@ -78,7 +77,6 @@ class Test01HelloApp:
         self.chat.set_user_input("test query")
         self.chat.expect_user_input("test query")
 
-    @pytest.mark.vcr(record_mode="once")
     def test_submit_via_send_button(self) -> None:
         """CHAT-02: Submit query via send button."""
         self.chat.set_user_input("Show only female passengers")
@@ -91,7 +89,6 @@ class Test01HelloApp:
             timeout=60000,
         )
 
-    @pytest.mark.vcr(record_mode="once")
     def test_submit_via_click_survivors(self) -> None:
         """CHAT-03: Submit another query via click button."""
         self.chat.set_user_input("Show survivors only")
@@ -105,7 +102,6 @@ class Test01HelloApp:
 
     # ==================== Query Processing Tests ====================
 
-    @pytest.mark.vcr(record_mode="once")
     def test_filter_query(self) -> None:
         """QUERY-01: Filter query updates SQL and data."""
         self.chat.set_user_input("Show passengers who survived")
@@ -117,7 +113,6 @@ class Test01HelloApp:
             re.compile(r"WHERE.*survived.*=.*1|TRUE", re.IGNORECASE), timeout=60000
         )
 
-    @pytest.mark.vcr(record_mode="once")
     def test_aggregation_query(self) -> None:
         """QUERY-02: Aggregation query result appears in chat."""
         self.chat.set_user_input("What is the average age of passengers?")
@@ -129,7 +124,6 @@ class Test01HelloApp:
             re.compile(r"average|age|\d+\.?\d*", re.IGNORECASE), timeout=60000
         )
 
-    @pytest.mark.vcr(record_mode="once")
     def test_group_by_query(self) -> None:
         """QUERY-03: Group by query result appears in chat."""
         self.chat.set_user_input("Count passengers by class")
@@ -142,7 +136,6 @@ class Test01HelloApp:
             timeout=60000,
         )
 
-    @pytest.mark.vcr(record_mode="once")
     def test_latest_message_after_query(self) -> None:
         """CHAT-05: Response appears in chat after query."""
         self.chat.set_user_input("Show first class passengers")
@@ -172,7 +165,6 @@ class Test01HelloApp:
         expect(self.page.locator("th:has-text('pclass')")).to_be_visible()
         expect(self.page.locator("th:has-text('sex')")).to_be_visible()
 
-    @pytest.mark.vcr(record_mode="once")
     def test_table_updates_on_query(self) -> None:
         """DATA-04: Table updates after filter query."""
         # Get initial row count text
@@ -195,7 +187,6 @@ class Test01HelloApp:
 
     # ==================== SQL Panel Tests ====================
 
-    @pytest.mark.vcr(record_mode="once")
     def test_sql_updates_on_query(self) -> None:
         """SQL-03: SQL panel updates after query."""
         self.chat.set_user_input("Show male passengers only")

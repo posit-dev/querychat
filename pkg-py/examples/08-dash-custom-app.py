@@ -9,6 +9,7 @@ Requires: pip install dash dash-bootstrap-components (or uv sync --group dash)
 """
 
 import os
+from pathlib import Path
 
 import dash
 import dash_bootstrap_components as dbc
@@ -18,7 +19,9 @@ from querychat.dash import QueryChat
 from querychat.data import titanic
 from querychat.types import AppStateDict
 
-qc = QueryChat(titanic(), "titanic")
+greeting = Path(__file__).parent / "greeting.md"
+
+qc = QueryChat(titanic(), "titanic", greeting=greeting)
 
 app = dash.Dash(
     __name__,

@@ -7,6 +7,7 @@ Streamlit apps use different DOM structure than Shiny:
 - Chat messages: [data-testid="stChatMessage"]
 - DataFrame: [data-testid="stDataFrame"]
 - Code blocks: [data-testid="stCode"]
+
 """
 
 from __future__ import annotations
@@ -32,6 +33,8 @@ class Test04StreamlitBasic:
         page.wait_for_selector('[data-testid="stApp"]', timeout=30000)
         # Wait for chat message (greeting) to appear
         page.wait_for_selector('[data-testid="stChatMessage"]', timeout=30000)
+        # Wait for DataFrame to be rendered
+        page.wait_for_selector('[data-testid="stDataFrame"]', timeout=30000)
         self.page = page
 
     # ==================== Initial Load Tests ====================
@@ -76,7 +79,6 @@ class Test04StreamlitBasic:
         chat_input.fill("test query")
         expect(chat_input).to_have_value("test query")
 
-    @pytest.mark.vcr(record_mode="once")
     def test_submit_query_via_button(self) -> None:
         """Submit query via send button updates SQL."""
         chat_input = self.page.locator('[data-testid="stChatInputTextArea"]')
@@ -93,7 +95,6 @@ class Test04StreamlitBasic:
             timeout=60000,
         )
 
-    @pytest.mark.vcr(record_mode="once")
     def test_submit_query_via_enter(self) -> None:
         """Submit query via Enter key updates SQL."""
         chat_input = self.page.locator('[data-testid="stChatInputTextArea"]')
@@ -109,7 +110,6 @@ class Test04StreamlitBasic:
 
     # ==================== Query Processing Tests ====================
 
-    @pytest.mark.vcr(record_mode="once")
     def test_filter_query_updates_sql(self) -> None:
         """Filter query updates SQL panel."""
         chat_input = self.page.locator('[data-testid="stChatInputTextArea"]')
@@ -125,7 +125,6 @@ class Test04StreamlitBasic:
             timeout=60000,
         )
 
-    @pytest.mark.vcr(record_mode="once")
     def test_analytical_query_in_chat(self) -> None:
         """Analytical query shows result in chat."""
         chat_input = self.page.locator('[data-testid="stChatInputTextArea"]')
@@ -145,7 +144,6 @@ class Test04StreamlitBasic:
             re.compile(r"survived|survival|\d+", re.IGNORECASE), timeout=60000
         )
 
-    @pytest.mark.vcr(record_mode="once")
     def test_response_appears_in_chat(self) -> None:
         """Response appears in chat after query."""
         chat_input = self.page.locator('[data-testid="stChatInputTextArea"]')
@@ -223,7 +221,6 @@ class Test09StreamlitCustom:
 
     # ==================== Query Tests ====================
 
-    @pytest.mark.vcr(record_mode="once")
     def test_filter_query_updates_sql(self) -> None:
         """Filter query updates SQL code block."""
         chat_input = self.page.locator('[data-testid="stChatInputTextArea"]')
@@ -240,7 +237,6 @@ class Test09StreamlitCustom:
             timeout=60000,
         )
 
-    @pytest.mark.vcr(record_mode="once")
     def test_filter_query_updates_title(self) -> None:
         """Filter query updates the header title."""
         # Initial header should be "Full Dataset"
@@ -256,7 +252,6 @@ class Test09StreamlitCustom:
         # Header should update to reflect the filter
         expect(h2).not_to_have_text("Full Dataset", timeout=60000)
 
-    @pytest.mark.vcr(record_mode="once")
     def test_filter_query_updates_metrics(self) -> None:
         """Filter query updates the row count metric."""
         metrics = self.page.locator('[data-testid="stMetricValue"]')
@@ -272,7 +267,6 @@ class Test09StreamlitCustom:
         # Row count should decrease (fewer than 891)
         expect(metrics.first).not_to_have_text("891", timeout=60000)
 
-    @pytest.mark.vcr(record_mode="once")
     def test_analytical_query_in_chat(self) -> None:
         """Analytical query shows result in chat."""
         sidebar = self.page.locator('[data-testid="stSidebar"]')

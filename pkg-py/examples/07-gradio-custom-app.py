@@ -7,13 +7,17 @@ Run with: python 07-gradio-custom-app.py
 Requires: pip install gradio (or uv sync --group gradio)
 """
 
+from pathlib import Path
+
 import gradio as gr
 
 from querychat.data import titanic
 from querychat.gradio import QueryChat
 from querychat.types import AppStateDict
 
-qc = QueryChat(titanic(), "titanic")
+greeting = Path(__file__).parent / "greeting.md"
+
+qc = QueryChat(titanic(), "titanic", greeting=greeting)
 
 with gr.Blocks(title="Titanic Explorer") as app:
     gr.Markdown("# Titanic Data Explorer")
@@ -65,4 +69,5 @@ with gr.Blocks(title="Titanic Explorer") as app:
     )
 
 # Pass qc.css and qc.head to enable clickable suggestions
-app.launch(css=qc.css, head=qc.head)
+if __name__ == "__main__":
+    app.launch(css=qc.css, head=qc.head)

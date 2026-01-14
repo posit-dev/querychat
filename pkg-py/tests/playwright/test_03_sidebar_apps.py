@@ -71,7 +71,6 @@ class Test03SidebarExpress:
 
     # ==================== Query Tests ====================
 
-    @pytest.mark.vcr(record_mode="once")
     def test_filter_query_updates_title(self) -> None:
         """Filter query updates the card header title."""
         # Verify initial title
@@ -84,7 +83,6 @@ class Test03SidebarExpress:
         # Title should update to reflect the filter
         expect(self.card_header).not_to_have_text("Titanic Dataset", timeout=60000)
 
-    @pytest.mark.vcr(record_mode="once")
     def test_filter_query_updates_table(self) -> None:
         """Filter query updates the data table."""
         # Submit a filter query
@@ -100,7 +98,6 @@ class Test03SidebarExpress:
         table = self.page.locator("table")
         expect(table).to_be_visible()
 
-    @pytest.mark.vcr(record_mode="once")
     def test_analytical_query_in_chat(self) -> None:
         """Analytical query shows result in chat."""
         self.chat.set_user_input("How many passengers survived?")
@@ -159,7 +156,6 @@ class Test03SidebarCore:
 
     # ==================== Query Tests ====================
 
-    @pytest.mark.vcr(record_mode="once")
     def test_filter_query_updates_title(self) -> None:
         """Filter query updates the card header title."""
         # Verify initial title
@@ -172,7 +168,6 @@ class Test03SidebarCore:
         # Title should update to reflect the filter
         expect(self.card_header).not_to_have_text("Titanic Dataset", timeout=60000)
 
-    @pytest.mark.vcr(record_mode="once")
     def test_filter_query_updates_table(self) -> None:
         """Filter query updates the data table."""
         # Submit a filter query
@@ -188,7 +183,6 @@ class Test03SidebarCore:
         table = self.page.locator("table")
         expect(table).to_be_visible()
 
-    @pytest.mark.vcr(record_mode="once")
     def test_analytical_query_in_chat(self) -> None:
         """Analytical query shows result in chat."""
         self.chat.set_user_input("What is the average fare?")

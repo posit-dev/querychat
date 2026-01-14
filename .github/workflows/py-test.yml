@@ -25,13 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        config:
-          - { python-version: "3.10", test_google: false, test_azure: false }
-          - { python-version: "3.11", test_google: false, test_azure: false }
-          - { python-version: "3.12", test_google: true, test_azure: true }
-          - { python-version: "3.13", test_google: false, test_azure: false }
-          - { python-version: "3.14", test_google: false, test_azure: false }
-      fail-fast: false
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
 
     steps:
       - uses: actions/checkout@v4
@@ -39,11 +33,11 @@ jobs:
       - name: 🚀 Install uv
         uses: astral-sh/setup-uv@v3
 
-      - name: 🐍 Set up Python ${{ matrix.config.python-version }}
-        run: uv python install ${{matrix.config.python-version }}
+      - name: 🐍 Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{matrix.python-version }}
 
       - name: 📦 Install the project
-        run: uv sync --python ${{matrix.config.python-version }} --all-extras --all-groups
+        run: uv sync --python ${{matrix.python-version }} --all-extras --all-groups
 
       - name: 🧪 Check tests
         run: make py-check-tests

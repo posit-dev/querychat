@@ -78,7 +78,6 @@ class Test05GradioBasic:
         chat_input.fill("test query")
         expect(chat_input).to_have_value("test query")
 
-    @pytest.mark.vcr(record_mode="once")
     def test_submit_query_via_enter(self) -> None:
         """Submit query via Enter key."""
         chat_input = self.page.locator("textarea").first
@@ -91,7 +90,6 @@ class Test05GradioBasic:
 
     # ==================== Query Processing Tests ====================
 
-    @pytest.mark.vcr(record_mode="once")
     def test_filter_query_updates_sql(self) -> None:
         """Filter query shows SQL in response."""
         chat_input = self.page.locator("textarea").first
@@ -105,7 +103,6 @@ class Test05GradioBasic:
             timeout=60000,
         )
 
-    @pytest.mark.vcr(record_mode="once")
     def test_filter_survivors(self) -> None:
         """Filter for survivors updates SQL."""
         chat_input = self.page.locator("textarea").first
@@ -118,7 +115,6 @@ class Test05GradioBasic:
             re.compile(r"WHERE.*survived.*=.*1|TRUE", re.IGNORECASE), timeout=60000
         )
 
-    @pytest.mark.vcr(record_mode="once")
     def test_filter_first_class(self) -> None:
         """Filter for first class passengers."""
         chat_input = self.page.locator("textarea").first
@@ -132,7 +128,6 @@ class Test05GradioBasic:
             timeout=60000,
         )
 
-    @pytest.mark.vcr(record_mode="once")
     def test_analytical_query_in_chat(self) -> None:
         """Analytical query shows result in chat."""
         chat_input = self.page.locator("textarea").first
@@ -149,7 +144,6 @@ class Test05GradioBasic:
             re.compile(r"survived|survival|\d+", re.IGNORECASE), timeout=60000
         )
 
-    @pytest.mark.vcr(record_mode="once")
     def test_filter_male_passengers(self) -> None:
         """Filter for male passengers updates SQL."""
         chat_input = self.page.locator("textarea").first
@@ -180,6 +174,8 @@ class Test07GradioCustom:
         page.wait_for_selector("gradio-app", timeout=30000)
         # Wait for load callback to populate SQL and data
         page.wait_for_selector(".cm-content", timeout=30000)
+        # Wait for data table to be populated (indicates load callback completed)
+        page.wait_for_selector("table tbody tr", timeout=30000)
         self.page = page
 
     # ==================== Initial Load Tests ====================
@@ -211,19 +207,19 @@ class Test07GradioCustom:
 
     def test_row_count_displayed(self) -> None:
         """Row count is displayed."""
-        # Row count is in a textbox (readonly) with value "891"
-        # Find the label "Rows" and check the associated input
-        rows_label = self.page.get_by_text("Rows", exact=True)
+        # Row count is in a textbox labeled "Rows"
+        rows_label = self.page.get_by_label("Rows")
         expect(rows_label).to_be_visible()
-        # The value 891 should be visible somewhere on the page
-        expect(self.page.locator("text=891")).to_be_visible()
+        # Value should be 891 (with optional comma formatting)
+        expect(rows_label).to_have_value(re.compile(r"891"))
 
     def test_column_count_displayed(self) -> None:
         """Column count is displayed."""
-        cols_label = self.page.get_by_text("Columns", exact=True)
+        # Column count is in a textbox labeled "Columns"
+        cols_label = self.page.get_by_label("Columns")
         expect(cols_label).to_be_visible()
         # Titanic has 15 columns
-        expect(self.page.locator("text=15")).to_be_visible()
+        expect(cols_label).to_have_value("15")
 
     def test_query_title_displayed(self) -> None:
         """Query title shows 'Full Dataset' initially."""
@@ -232,7 +228,6 @@ class Test07GradioCustom:
 
     # ==================== Query Tests ====================
 
-    @pytest.mark.vcr(record_mode="once")
     def test_filter_query_updates_sql(self) -> None:
         """Filter query updates SQL code block."""
         chat_input = self.page.locator("textarea").first
@@ -246,7 +241,6 @@ class Test07GradioCustom:
             timeout=60000,
         )
 
-    @pytest.mark.vcr(record_mode="once")
     def test_filter_query_updates_title(self) -> None:
         """Filter query updates the header title."""
         # Initial header should be "Full Dataset"

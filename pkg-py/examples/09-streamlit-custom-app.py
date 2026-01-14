@@ -7,10 +7,14 @@ Run with: streamlit run 09-streamlit-custom-app.py
 Requires: pip install streamlit (or uv sync --group streamlit)
 """
 
+from pathlib import Path
+
 from querychat.data import titanic
 from querychat.streamlit import QueryChat
 
 import streamlit as st
+
+greeting = Path(__file__).parent / "greeting.md"
 
 st.set_page_config(
     page_title="Titanic Explorer",
@@ -18,7 +22,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-qc = QueryChat(titanic(), "titanic")
+qc = QueryChat(titanic(), "titanic", greeting=greeting)
 qc.sidebar()
 
 st.title("Titanic Data Explorer")

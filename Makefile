@@ -135,10 +135,10 @@ py-e2e-setup:  ## [py] Install Playwright browsers for e2e tests
 	uv run playwright install chromium
 
 .PHONY: py-e2e-tests
-py-e2e-tests:  ## [py] Run Playwright e2e tests
+py-e2e-tests:  ## [py] Run Playwright e2e tests (requires OPENAI_API_KEY)
 	@echo ""
 	@echo "🧪 Running Playwright e2e tests"
-	uv run pytest pkg-py/tests/playwright -v
+	uv run pytest pkg-py/tests/playwright -v -n auto
 
 .PHONY: py-check-types
 py-check-types:  ## [py] Run python type checks
@@ -229,7 +229,7 @@ py-update-dist: ## [py] Update shinychat web assets
 
 .PHONY: help
 help:  ## Show help messages for make targets
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; { \
+	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; { \
 		printf "\033[32m%-18s\033[0m", $$1; \
 		if ($$2 ~ /^\[docs\]/) { \
 			printf "\033[37m[docs]\033[0m%s\n", substr($$2, 7); \

@@ -131,6 +131,9 @@ class QueryChat(QueryChatBase):
 
         state = self._get_state()
 
+        # Initialize greeting BEFORE rendering messages so it appears on first render
+        needs_greeting_stream = not state.initialize_greeting_if_preset()
+
         chat_container = st.container(height="stretch")
 
         with chat_container:
@@ -138,7 +141,7 @@ class QueryChat(QueryChatBase):
                 with st.chat_message(msg["role"]):
                     st.markdown(msg["content"], unsafe_allow_html=True)
 
-            if not state.initialize_greeting_if_preset():
+            if needs_greeting_stream:
                 greeting = ""
                 with st.chat_message("assistant"):
                     placeholder = st.empty()

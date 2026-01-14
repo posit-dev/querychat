@@ -43,6 +43,10 @@ classifiers = [
 # For SQLAlchemySource and sample data, one of polars or pandas is required
 pandas = ["pandas"]
 polars = ["polars"]
+# Web framework extras
+streamlit = ["streamlit>=1.30"]
+gradio = ["gradio>=6.0"]
+dash = ["dash-ag-grid>=31.0", "dash[async]>=3.1", "dash-bootstrap-components>=2.0", "pandas"]
 
 [project.urls]
 Homepage = "https://github.com/posit-dev/querychat" # TODO update when we have docs
@@ -66,6 +70,15 @@ examples = [
     "openai",
     "palmerpenguins>=0.1.4",
     "seaborn",
+]
+streamlit = ["streamlit>=1.30"]
+gradio = ["gradio>=6.0"]
+dash = ["dash-ag-grid>=31.0", "dash[async]>=3.1", "dash-bootstrap-components>=2.0", "pandas"]
+test = [
+    "pytest>=8.0.0",
+    "pytest-playwright>=0.5.0",
+    "pytest-recording>=0.13.0",
+    "playwright>=1.40.0",
 ]
 
 [tool.ruff]
@@ -118,6 +131,7 @@ extend-ignore = [
     "E501",    # Line too long
     "ISC001",  # single-line-implicit-string-concatenation
     "ISC002",  # multi-line-implicit-string-concatenation
+    "PLC0415", # Imports inside functions (intentional lazy loading for optional deps)
     "PLR0913", # Too many arguments in function definition
     "PLR0915", # Too many statements in function
     "RET504",  # Unnecessary assignment to `{name}` before `return` statement
@@ -186,7 +200,13 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 # disable S101 (flagging asserts) for tests
 [tool.ruff.lint.per-file-ignores]
-"pkg-py/tests/*.py" = ["S101"]
+"pkg-py/tests/*.py" = ["S101", "PLR2004"]  # Allow assert and magic numbers in tests
+"pkg-py/tests/playwright/*.py" = ["S101", "PLR2004", "S310", "S603", "S607", "PERF203"]  # Test fixtures launch subprocesses
+"pkg-py/examples/tests/*.py" = ["S101", "PLR2004"]  # Allow assert and magic numbers in tests
+"pkg-py/src/querychat/_dash.py" = ["E402"]  # Backwards-compat aliases at end of file
+"pkg-py/src/querychat/_gradio.py" = ["E402"]  # Backwards-compat aliases at end of file
+"pkg-py/src/querychat/_streamlit.py" = ["E402"]  # Backwards-compat aliases at end of file
+"pkg-py/src/querychat/types/__init__.py" = ["A005"]  # Deliberately shadows stdlib types module
 
 [tool.ruff.format]
 quote-style = "double"

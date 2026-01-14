@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Union
 
 import chatlas
 import shinychat
+
 from shiny import module, reactive, ui
 
 from .tools import tool_query, tool_reset_dashboard, tool_update_dashboard
@@ -16,8 +17,9 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     import narwhals.stable.v1 as nw
-    from shiny import Inputs, Outputs, Session
     from shiny.bookmark import BookmarkState, RestoreState
+
+    from shiny import Inputs, Outputs, Session
 
     from ._datasource import DataSource
     from .types import UpdateDashboardData

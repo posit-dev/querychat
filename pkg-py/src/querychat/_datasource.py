@@ -818,7 +818,7 @@ class PolarsLazySource(DataSource):
         """Clean up resources (no-op for Polars)."""
 
     @staticmethod
-    def _polars_dtype_to_sql(dtype) -> str:
+    def _polars_dtype_to_sql(dtype) -> str:  # noqa: PLR0911
         """Convert Polars dtype to SQL type name."""
         import polars as pl  # noqa: PLC0415
 
@@ -830,7 +830,9 @@ class PolarsLazySource(DataSource):
             return "BOOLEAN"
         elif dtype == pl.Date:
             return "DATE"
-        elif dtype in (pl.Datetime, pl.Time):
+        elif dtype == pl.Datetime:
             return "TIMESTAMP"
+        elif dtype == pl.Time:
+            return "TIME"
         else:
             return "TEXT"

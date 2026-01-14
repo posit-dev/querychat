@@ -1,0 +1,44 @@
+name: Test - Python E2E (Playwright)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main", "rc-*"]
+    paths:
+      - 'pkg-py/**'
+      - 'pyproject.toml'
+      - '.github/workflows/py-e2e-test.yml'
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - 'pkg-py/**'
+      - 'pyproject.toml'
+      - '.github/workflows/py-e2e-test.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  e2e-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Set up Python 3.12
+        run: uv python install 3.12
+
+      - name: Install the project
+        run: uv sync --python 3.12 --all-extras --all-groups
+
+      - name: Install Playwright browsers
+        run: make py-e2e-setup
+
+      - name: Run E2E tests
+        run: make py-e2e-tests
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}

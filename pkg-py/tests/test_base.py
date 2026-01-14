@@ -128,7 +128,7 @@ class TestNormalizeClient:
         assert isinstance(result, chatlas.Chat)
 
     def test_with_invalid_provider_raises(self):
-        with pytest.raises(ValueError, match="Unknown provider"):
+        with pytest.raises(ValueError, match="is not a known chatlas provider"):
             normalize_client("not_a_real_provider_xyz123")
 
 

@@ -10,3 +10,5 @@ CHANGELOG.md
 _sidebar-python.yml
 api/
 reference/
+
+**/*.quarto_ipynb

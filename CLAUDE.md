@@ -190,3 +190,7 @@ The package has deprecated the old functional API (`querychat_init()`, `querycha
 7. Always pay attention to your working directory when running commands, especially when working in a sub-package.
 8. When planning, talk through all function and argument names, file names and locations.
 9. Additional, context-specific instructions can be found in `.claude/`.
+
+### Python Naming Conventions
+
+- **Do not use `_` prefixes for names inside private modules.** Files like `_state.py`, `_streamlit.py`, etc. are already private (indicated by the `_` prefix on the filename). Functions and classes defined inside these modules should use regular names without a leading underscore. For example, use `format_query_error` not `_format_query_error` inside `_state.py`.

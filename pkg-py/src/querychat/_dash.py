@@ -8,7 +8,7 @@ import narwhals.stable.v1 as nw
 from chatlas import Turn
 
 from ._dash_ui import IDs, card_ui, chat_container_ui, chat_messages_ui
-from ._datasource import DataFrameT, IntoDataFrameT
+from ._datasource import DataFrameT, IntoDataFrameT, IntoLazyFrameT
 from ._querychat_base import TOOL_GROUPS, QueryChatBase
 from ._querychat_core import (
     GREETING_PROMPT,
@@ -25,9 +25,8 @@ if TYPE_CHECKING:
     from pathlib import Path as PathType
 
     import chatlas
-    import polars as pl
     import sqlalchemy
-    from narwhals.stable.v1.typing import IntoDataFrame
+    from narwhals.stable.v1.typing import IntoDataFrame, IntoLazyFrame
 
     import dash
     from dash import html
@@ -90,8 +89,8 @@ class QueryChat(QueryChatBase[DataFrameT], StateDictAccessorMixin[DataFrameT]):
 
     @overload
     def __init__(
-        self: QueryChat[pl.LazyFrame],
-        data_source: pl.LazyFrame,
+        self: QueryChat[IntoLazyFrameT],
+        data_source: IntoLazyFrameT,
         table_name: str,
         *,
         greeting: Optional[str | PathType] = None,
@@ -138,7 +137,7 @@ class QueryChat(QueryChatBase[DataFrameT], StateDictAccessorMixin[DataFrameT]):
 
     def __init__(
         self,
-        data_source: IntoDataFrame | pl.LazyFrame | sqlalchemy.Engine,
+        data_source: IntoDataFrame | IntoLazyFrame | sqlalchemy.Engine,
         table_name: str,
         *,
         greeting: Optional[str | PathType] = None,

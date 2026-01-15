@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Optional, overload
 import narwhals.stable.v1 as nw
 from gradio.context import Context
 
-from ._datasource import DataFrameT, IntoDataFrameT
+from ._datasource import DataFrameT, IntoDataFrameT, IntoLazyFrameT
 from ._querychat_base import TOOL_GROUPS, QueryChatBase
 from ._querychat_core import (
     GREETING_PROMPT,
@@ -22,9 +22,8 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     import chatlas
-    import polars as pl
     import sqlalchemy
-    from narwhals.stable.v1.typing import IntoDataFrame
+    from narwhals.stable.v1.typing import IntoDataFrame, IntoLazyFrame
 
     import gradio as gr
 
@@ -82,8 +81,8 @@ class QueryChat(QueryChatBase[DataFrameT], StateDictAccessorMixin[DataFrameT]):
 
     @overload
     def __init__(
-        self: QueryChat[pl.LazyFrame],
-        data_source: pl.LazyFrame,
+        self: QueryChat[IntoLazyFrameT],
+        data_source: IntoLazyFrameT,
         table_name: str,
         *,
         greeting: Optional[str | Path] = None,
@@ -127,7 +126,7 @@ class QueryChat(QueryChatBase[DataFrameT], StateDictAccessorMixin[DataFrameT]):
 
     def __init__(
         self,
-        data_source: IntoDataFrame | pl.LazyFrame | sqlalchemy.Engine,
+        data_source: IntoDataFrame | IntoLazyFrame | sqlalchemy.Engine,
         table_name: str,
         *,
         greeting: Optional[str | Path] = None,

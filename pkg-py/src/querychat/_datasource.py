@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
     import pyarrow as pa
-    from narwhals.stable.v1.typing import IntoDataFrame
+    from narwhals.stable.v1.typing import IntoDataFrame, IntoLazyFrame
     from sqlalchemy.engine import Connection, Engine
 
 # TypeVar for DataSource - the type returned by execute_query/get_data/test_query
@@ -30,13 +30,14 @@ DataSourceT = TypeVar("DataSourceT")
 DataOrLazyFrame = Union[nw.DataFrame, nw.LazyFrame]
 
 # TypeVar for generic QueryChat classes - captures the specific DataFrame type passed in.
-# Uses IntoDataFrame bound to work with any narwhals-compatible DataFrame library.
-# pl.LazyFrame is handled separately via overloads since it's not an IntoDataFrame.
+# Uses IntoDataFrame/IntoLazyFrame bounds to work with any narwhals-compatible library.
 if TYPE_CHECKING:
     IntoDataFrameT = TypeVar("IntoDataFrameT", bound="IntoDataFrame")
+    IntoLazyFrameT = TypeVar("IntoLazyFrameT", bound="IntoLazyFrame")
     DataFrameT = TypeVar("DataFrameT")  # Unconstrained, bound by overloads
 else:
     IntoDataFrameT = TypeVar("IntoDataFrameT")
+    IntoLazyFrameT = TypeVar("IntoLazyFrameT")
     DataFrameT = TypeVar("DataFrameT")
 
 

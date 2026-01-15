@@ -17,6 +17,7 @@ from ._datasource import (
     DataFrameT,
     DataSource,
     IntoDataFrameT,
+    IntoLazyFrameT,
     PolarsLazySource,
     SQLAlchemySource,
 )
@@ -33,7 +34,6 @@ from .tools import (
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    import polars as pl
     from narwhals.stable.v1.typing import IntoFrame
 
 TOOL_GROUPS = Literal["update", "query"]
@@ -54,8 +54,8 @@ class QueryChatBase(Generic[DataFrameT]):
 
     @overload
     def __init__(
-        self: QueryChatBase[pl.LazyFrame],
-        data_source: pl.LazyFrame,
+        self: QueryChatBase[IntoLazyFrameT],
+        data_source: IntoLazyFrameT,
         table_name: str,
         *,
         greeting: Optional[str | Path] = None,

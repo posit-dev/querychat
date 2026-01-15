@@ -9,7 +9,7 @@ from shinychat import output_markdown_stream
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 
-from ._datasource import DataFrameT, IntoDataFrameT
+from ._datasource import DataFrameT, IntoDataFrameT, IntoLazyFrameT
 from ._icons import bs_icon
 from ._querychat_base import TOOL_GROUPS, QueryChatBase
 from ._shiny_module import ServerValues, mod_server, mod_ui
@@ -18,9 +18,8 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     import chatlas
-    import polars as pl
     import sqlalchemy
-    from narwhals.stable.v1.typing import IntoDataFrame
+    from narwhals.stable.v1.typing import IntoDataFrame, IntoLazyFrame
 
 
 class QueryChat(QueryChatBase[DataFrameT]):
@@ -132,8 +131,8 @@ class QueryChat(QueryChatBase[DataFrameT]):
 
     @overload
     def __init__(
-        self: QueryChat[pl.LazyFrame],
-        data_source: pl.LazyFrame,
+        self: QueryChat[IntoLazyFrameT],
+        data_source: IntoLazyFrameT,
         table_name: str,
         *,
         id: Optional[str] = None,
@@ -180,7 +179,7 @@ class QueryChat(QueryChatBase[DataFrameT]):
 
     def __init__(
         self,
-        data_source: IntoDataFrame | pl.LazyFrame | sqlalchemy.Engine,
+        data_source: IntoDataFrame | IntoLazyFrame | sqlalchemy.Engine,
         table_name: str,
         *,
         id: Optional[str] = None,
@@ -546,8 +545,8 @@ class QueryChatExpress(QueryChatBase[DataFrameT]):
 
     @overload
     def __init__(
-        self: QueryChatExpress[pl.LazyFrame],
-        data_source: pl.LazyFrame,
+        self: QueryChatExpress[IntoLazyFrameT],
+        data_source: IntoLazyFrameT,
         table_name: str,
         *,
         id: Optional[str] = None,
@@ -594,7 +593,7 @@ class QueryChatExpress(QueryChatBase[DataFrameT]):
 
     def __init__(
         self,
-        data_source: IntoDataFrame | pl.LazyFrame | sqlalchemy.Engine,
+        data_source: IntoDataFrame | IntoLazyFrame | sqlalchemy.Engine,
         table_name: str,
         *,
         id: Optional[str] = None,

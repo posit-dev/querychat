@@ -233,12 +233,11 @@ def _query_impl(data_source: DataSource) -> Callable[[str, str], ContentToolResu
 
         try:
             result_df = data_source.execute_query(query)
-            # Collect LazyFrames before calling .rows()
             if isinstance(result_df, nw.LazyFrame):
                 result_df = result_df.collect()
             value = result_df.rows(named=True)
 
-            # Format table results (df_to_html handles both DataFrame and LazyFrame)
+            # Format table results
             tbl_html = df_to_html(result_df, maxrows=5)
             markdown += "\n\n" + str(tbl_html)
 

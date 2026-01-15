@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Union
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any, Literal, Union
 
 import duckdb
 import narwhals.stable.v1 as nw
@@ -21,6 +22,18 @@ LazyOrDataFrame = Union[nw.DataFrame, nw.LazyFrame]
 
 class MissingColumnsError(ValueError):
     """Raised when a query result is missing required columns."""
+
+
+@dataclass
+class ColumnMeta:
+    """Metadata for a single column in a schema."""
+
+    name: str
+    sql_type: str
+    kind: Literal["numeric", "text", "date", "other"]
+    min_val: Any = None
+    max_val: Any = None
+    categories: list[str] = field(default_factory=list)
 
 
 class DataSource(ABC):
@@ -685,60 +698,14 @@ class PolarsLazySource(DataSource):
 
     def get_schema(self, *, categorical_threshold: int) -> str:
         """Generate schema information from LazyFrame using lazy aggregates."""
-        import polars as pl  # noqa: PLC0415
+        # Build column metadata (classification happens here)
+        columns = [
+            self._make_column_meta(name, dtype) for name, dtype in self._schema.items()
+        ]
 
-        schema_lines = [f"Table: {self.table_name}", "Columns:"]
-
-        # Classify columns by type (no collection needed)
-        numeric_cols = []
-        text_cols = []
-        date_cols = []
-        for col_name, dtype in self._schema.items():
-            if dtype.is_numeric():
-                numeric_cols.append(col_name)
-            elif dtype in (pl.String, pl.Utf8):
-                text_cols.append(col_name)
-            elif dtype in (pl.Date, pl.Datetime):
-                date_cols.append(col_name)
-
-        # Collect expressions used to compute statistics
-        agg_exprs: list[pl.Expr] = []
-        for col in numeric_cols + date_cols:
-            agg_exprs.append(pl.col(col).min().alias(f"{col}__min"))
-            agg_exprs.append(pl.col(col).max().alias(f"{col}__max"))
-        agg_exprs.extend(
-            pl.col(col).n_unique().alias(f"{col}__nunique") for col in text_cols
-        )
-
-        # Collect statistics in a single scan
-        stats: dict = {}
-        if agg_exprs:
-            stats_df = self._lf.select(agg_exprs).collect()
-            if stats_df.height > 0:
-                stats = stats_df.row(0, named=True)
-
-        # Batch collect unique values for categorical columns (single scan)
-        categorical_values = self._get_categorical_values(
-            self._lf, text_cols, stats, categorical_threshold
-        )
-
-        # Build schema string
-        for col_name, dtype in self._schema.items():
-            sql_type = self._polars_dtype_to_sql(dtype)
-            column_info = [f"- {col_name} ({sql_type})"]
-
-            if col_name in numeric_cols or col_name in date_cols:
-                min_val = stats.get(f"{col_name}__min")
-                max_val = stats.get(f"{col_name}__max")
-                if min_val is not None or max_val is not None:
-                    column_info.append(f"  Range: {min_val} to {max_val}")
-            elif col_name in categorical_values:
-                cats = ", ".join(f"'{v}'" for v in categorical_values[col_name])
-                column_info.append(f"  Categorical values: {cats}")
-
-            schema_lines.extend(column_info)
-
-        return "\n".join(schema_lines)
+        # Add stats to the metadata and format schema string
+        self._add_column_stats(columns, self._lf, categorical_threshold)
+        return self._format_schema(self.table_name, columns)
 
     def execute_query(self, query: str) -> nw.LazyFrame:
         """
@@ -816,55 +783,99 @@ class PolarsLazySource(DataSource):
         """Clean up resources (no-op for Polars)."""
 
     @staticmethod
-    def _get_categorical_values(
-        lf: pl.LazyFrame,
-        text_cols: list[str],
-        stats: dict,
-        categorical_threshold: int,
-    ) -> dict[str, list]:
-        """
-        Collect unique values for text columns below the categorical threshold.
-
-        Uses a single scan to collect all categorical values at once, rather than
-        one scan per column.
-        """
+    def _make_column_meta(name: str, dtype: pl.DataType) -> ColumnMeta:
         import polars as pl  # noqa: PLC0415
 
-        # Find columns that qualify as categorical
+        if dtype.is_numeric():
+            kind = "numeric"
+            sql_type = "INTEGER" if dtype.is_integer() else "FLOAT"
+        elif dtype in (pl.String, pl.Utf8):
+            kind = "text"
+            sql_type = "TEXT"
+        elif dtype == pl.Date:
+            kind = "date"
+            sql_type = "DATE"
+        elif dtype == pl.Datetime:
+            kind = "date"
+            sql_type = "TIMESTAMP"
+        elif dtype == pl.Boolean:
+            kind = "other"
+            sql_type = "BOOLEAN"
+        elif dtype == pl.Time:
+            kind = "other"
+            sql_type = "TIME"
+        else:
+            kind = "other"
+            sql_type = "TEXT"
+
+        return ColumnMeta(name=name, sql_type=sql_type, kind=kind)
+
+    @staticmethod
+    def _add_column_stats(
+        columns: list[ColumnMeta],
+        lf: pl.LazyFrame,
+        categorical_threshold: int,
+    ) -> None:
+        import polars as pl  # noqa: PLC0415
+
+        # Build aggregation expressions based on column kinds
+        agg_exprs: list[pl.Expr] = []
+        for col in columns:
+            if col.kind in ("numeric", "date"):
+                agg_exprs.append(pl.col(col.name).min().alias(f"{col.name}__min"))
+                agg_exprs.append(pl.col(col.name).max().alias(f"{col.name}__max"))
+            elif col.kind == "text":
+                agg_exprs.append(
+                    pl.col(col.name).n_unique().alias(f"{col.name}__nunique")
+                )
+
+        if not agg_exprs:
+            return
+
+        # First scan: collect all aggregate statistics
+        stats = lf.select(agg_exprs).collect().row(0, named=True)
+
+        # Add min/max for numeric/date columns
+        for col in columns:
+            if col.kind in ("numeric", "date"):
+                col.min_val = stats.get(f"{col.name}__min")
+                col.max_val = stats.get(f"{col.name}__max")
+
+        # Find text columns that qualify as categorical
         categorical_cols = [
             col
-            for col in text_cols
-            if (nunique := stats.get(f"{col}__nunique"))
+            for col in columns
+            if col.kind == "text"
+            and (nunique := stats.get(f"{col.name}__nunique"))
             and nunique <= categorical_threshold
         ]
 
         if not categorical_cols:
-            return {}
+            return
 
-        # Batch collect: use implode() to get all unique values per column in one scan
+        # Second scan: batch collect unique values for all categorical columns
         unique_exprs = [
-            pl.col(col).drop_nulls().unique().implode().alias(col)
+            pl.col(col.name).drop_nulls().unique().implode().alias(col.name)
             for col in categorical_cols
         ]
-        unique_df = lf.select(unique_exprs).collect()
+        unique_row = lf.select(unique_exprs).collect().row(0, named=True)
 
-        return {col: unique_df[col][0] for col in categorical_cols}
+        for col in categorical_cols:
+            col.categories = unique_row[col.name]
 
     @staticmethod
-    def _polars_dtype_to_sql(dtype: pl.DataType) -> str:  # noqa: PLR0911
-        import polars as pl  # noqa: PLC0415
+    def _format_schema(table_name: str, columns: list[ColumnMeta]) -> str:
+        """Format column metadata into schema string."""
+        lines = [f"Table: {table_name}", "Columns:"]
 
-        if dtype.is_integer():
-            return "INTEGER"
-        elif dtype.is_float():
-            return "FLOAT"
-        elif dtype == pl.Boolean:
-            return "BOOLEAN"
-        elif dtype == pl.Date:
-            return "DATE"
-        elif dtype == pl.Datetime:
-            return "TIMESTAMP"
-        elif dtype == pl.Time:
-            return "TIME"
-        else:
-            return "TEXT"
+        for col in columns:
+            lines.append(f"- {col.name} ({col.sql_type})")
+
+            if col.kind in ("numeric", "date"):
+                if col.min_val is not None or col.max_val is not None:
+                    lines.append(f"  Range: {col.min_val} to {col.max_val}")
+            elif col.categories:
+                cats = ", ".join(f"'{v}'" for v in col.categories)
+                lines.append(f"  Categorical values: {cats}")
+
+        return "\n".join(lines)

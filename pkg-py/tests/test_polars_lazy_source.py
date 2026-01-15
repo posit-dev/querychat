@@ -113,8 +113,8 @@ class TestPolarsLazySourceGetData:
         source = PolarsLazySource(nw_lf, "employees")
         result = source.get_data()
 
-        # Should be the same object
-        assert result is nw_lf
+        # The underlying native Polars LazyFrame should be the same
+        assert result.to_native() is polars_lazy_df
 
 
 class TestPolarsLazySourceGetSchema:

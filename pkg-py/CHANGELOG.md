@@ -7,7 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+### New features
 
+* Added support for Gradio, Dash, and Streamlit web frameworks in addition to Shiny. Import from the new submodules:
+  * `from querychat.gradio import QueryChat`
+  * `from querychat.dash import QueryChat`
+  * `from querychat.streamlit import QueryChat`
+
+Each framework's `QueryChat` provides `.app()` for quick standalone apps and `.ui()` for custom layouts. Install framework dependencies with pip extras: `pip install querychat[gradio]`, `pip install querychat[dash]`, or `pip install querychat[streamlit]`.
 
 ## [0.4.0] - 2026-01-14
 

@@ -34,11 +34,10 @@ pip install querychat
 
 ## Quick start
 
-The main entry point is the [`QueryChat` class](reference/QueryChat.qmd). It requires a [data source](data-sources.qmd) (e.g., pandas, polars, etc) and a name for the data. It also accepts optional parameters to customize the behavior, such as the `client` [model](models.qmd).
-The quickest way to start chatting is to call the `.app()` method, which returns a Shiny app object.
+The main entry point is the `QueryChat` class. It requires a [data source](data-sources.qmd) (e.g., pandas, polars, etc) and a name for the data. It also accepts optional parameters to customize the behavior, such as the `client` [model](models.qmd).
+The quickest way to start chatting is to call the `.app()` method, which by default returns a [Shiny](https://shiny.posit.co/py/) app:
 
-
-```{.python filename="titanic-app.py"}
+```{.python filename="app.py"}
 from querychat import QueryChat
 from querychat.data import titanic
 
@@ -46,14 +45,16 @@ qc = QueryChat(titanic(), "titanic")
 app = qc.app()
 ```
 
-With an API key set[^api-key], you can run that code in a Python console and then call `app.run()` to jump into a chat. Or you can save the code to `titanic-app.py` and [run the app](https://shiny.posit.co/py/get-started/create-run.html#run-your-shiny-application) from a terminal (or Positron, or [VS Code](https://marketplace.visualstudio.com/items?itemName=Posit.shiny)):
+::: {.callout-tip}
+### Prefer Streamlit, Gradio, or Dash?
+
+querychat supports multiple [web frameworks](#web-frameworks)—just change the import.
+:::
+
+With an API key set[^api-key], save the code to `app.py` and run it:
 
 ```bash
-# Optionally, change the default model:
-export QUERYCHAT_CLIENT="anthropic/claude-sonnet-4-5"
-# And provide appropriate credentials for your chosen model provider
-export ANTHROPIC_API_KEY="your_api_key_here"
-shiny run --reload titanic-app.py
+shiny run --reload app.py
 ```
 
 [^api-key]: By default, querychat uses OpenAI to power the chat experience. So, for this example to work, you'll need [an OpenAI API key](https://platform.openai.com/). See the [Models](models.qmd) page for details on how to set up credentials for other model providers.
@@ -74,7 +75,51 @@ querychat can also handle more general questions about the data that require cal
 
 ![](/images/quickstart-summary.png){fig-alt="Screenshot of the querychat's app with a summary statistic inlined in the chat." class="lightbox shadow rounded mb-3"}
 
-## Custom apps
+## Web frameworks
+
+While the examples above use [Shiny](https://shiny.posit.co/py/), querychat also supports [Streamlit](https://streamlit.io/), [Gradio](https://gradio.app/), and [Dash](https://dash.plotly.com/). Each framework has its own `QueryChat` class under the relevant sub-module, but the methods and properties are mostly consistent across all of them.
+
+::: {.panel-tabset}
+
+### Streamlit
+
+```{.python}
+from querychat.streamlit import QueryChat
+from querychat.data import titanic
+
+qc = QueryChat(titanic(), "titanic")
+qc.app()
+```
+
+### Gradio
+
+```{.python}
+from querychat.gradio import QueryChat
+from querychat.data import titanic
+
+qc = QueryChat(titanic(), "titanic")
+qc.app().launch()
+```
+
+### Dash
+
+```{.python}
+from querychat.dash import QueryChat
+from querychat.data import titanic
+
+qc = QueryChat(titanic(), "titanic")
+qc.app().run()
+```
+
+:::
+
+Install the framework you need with optional dependencies:
+
+```bash
+pip install "querychat[streamlit]"  # or [gradio] or [dash]
+```
+
+## Build custom apps
 
 querychat is designed to be highly extensible -- it provides programmatic access to the chat interface, the filtered/sorted data frame, SQL queries, and more.
 This makes it easy to build custom web apps that leverage natural language interaction with your data.
@@ -82,7 +127,7 @@ For example, [here](https://github.com/posit-conf-2025/llm/blob/main/_solutions/
 
 ![](/images/airbnb.png){fig-alt="A custom app for exploring Airbnb listings, powered by querychat." class="lightbox shadow rounded mb-3"}
 
-To learn more, see [Build an app](build.qmd) for a step-by-step guide.
+To learn more, see the build guides for your framework: [Shiny](build.qmd), [Streamlit](build-streamlit.qmd), [Gradio](build-gradio.qmd), or [Dash](build-dash.qmd).
 
 ## How it works
 
@@ -117,4 +162,4 @@ From here, you might want to learn more about:
 - [Models](models.qmd): customize the LLM behind querychat.
 - [Data sources](data-sources.qmd): different data sources you can use with querychat.
 - [Provide context](context.qmd): provide the LLM with the context it needs to work well.
-- [Build an app](build.qmd): design a custom Shiny app around querychat.
+- Build an app: [Shiny](build.qmd) | [Streamlit](build-streamlit.qmd) | [Gradio](build-gradio.qmd) | [Dash](build-dash.qmd)

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING, Any, Protocol, TypedDict, runtime_checkable
 
 import chevron
 from chatlas import ContentToolResult, Tool
@@ -14,6 +14,20 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from ._datasource import DataSource
+
+
+@runtime_checkable
+class ReactiveString(Protocol):
+    """Protocol for a reactive string value."""
+
+    def set(self, value: str) -> Any: ...
+
+
+@runtime_checkable
+class ReactiveStringOrNone(Protocol):
+    """Protocol for a reactive string (or None) value."""
+
+    def set(self, value: str | None) -> Any: ...
 
 
 class UpdateDashboardData(TypedDict):

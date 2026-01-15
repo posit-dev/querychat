@@ -1,9 +1,13 @@
+from pathlib import Path
+
 from shiny.express import render, ui
 from querychat.express import QueryChat
 from querychat.data import titanic
 
+greeting = Path(__file__).parent / "greeting.md"
+
 # 1. Provide data source to QueryChat
-qc = QueryChat(titanic(), "titanic")
+qc = QueryChat(titanic(), "titanic", greeting=greeting)
 
 # 2. Add sidebar chat control
 qc.sidebar()

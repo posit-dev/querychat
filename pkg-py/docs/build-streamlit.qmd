@@ -1,0 +1,163 @@
+---
+title: Streamlit
+lightbox: true
+---
+
+[Streamlit](https://streamlit.io/) is a web framework for interactive data/ML applications. It provides a simple scripting model that's great for quickly assembling simple apps. 
+
+In this guide, you'll learn how to build Streamlit apps with querychat to enable rich data exploration experiences where [data views](#data-views) update based on natural language filters.
+
+![](/images/streamlit-complete.png){fig-alt="Screenshot of querychat running in a custom Streamlit app." class="lightbox shadow rounded mb-3"}
+
+
+## Initialize `QueryChat`
+
+First, install querychat with Streamlit support:
+
+```bash
+pip install "querychat[streamlit]"
+```
+
+Then import the Streamlit-specific `QueryChat` class:
+
+```{.python}
+from querychat.streamlit import QueryChat
+```
+
+And initialize it with your [data source](data-sources.qmd):
+
+```{.python}
+from querychat.data import titanic
+
+qc = QueryChat(titanic(), "titanic")
+```
+
+::: {.callout-note collapse="true"}
+
+## Quick start with `.app()`
+
+Remember, the simplest way to get started is with `.app()`, which gives a "pre-baked" Streamlit app:
+
+```{.python filename="streamlit-app.py"}
+from querychat.streamlit import QueryChat
+from querychat.data import titanic
+
+qc = QueryChat(titanic(), "titanic")
+qc.app()
+```
+
+Run with:
+
+```bash
+streamlit run streamlit-app.py
+```
+
+:::
+
+## Relevant methods
+
+After initializing `QueryChat`, use `.sidebar()` or `.ui()` to place the chat interface in your app. As users interact with the chat, `.df()`, `.sql()`, and `.title()` automatically update to reflect the current query.
+
+| Method | Description |
+|--------|-------------|
+| `.sidebar()` | Place the chat interface in Streamlit's sidebar |
+| `.ui()` | Returns just the chat component for custom placement |
+| `.df()` | Current filtered/sorted DataFrame |
+| `.sql()` | Current SQL query (str \| None) |
+| `.title()` | Short description of current filter (str \| None) |
+
+
+## Basic sidebar
+
+The most common pattern places chat in the sidebar with your custom filtered views in the main area:
+
+```python
+import streamlit as st
+from querychat.streamlit import QueryChat
+from querychat.data import titanic
+
+qc = QueryChat(titanic(), "titanic")
+qc.sidebar()
+
+st.header(qc.title() or "Titanic Explorer")
+st.dataframe(qc.df())
+```
+
+## Custom chat UI
+
+Use `.ui()` to place the chat anywhere in your layout. Here we use it to place custom content in the sidebar alongside the chat (like a [reset button](#resetting-filters)):
+
+```python
+import streamlit as st
+from querychat.streamlit import QueryChat
+from querychat.data import titanic
+
+qc = QueryChat(titanic(), "titanic")
+
+with st.sidebar:
+    qc.ui()
+    st.divider()
+    if st.button("Reset Filters"):
+        qc.reset()
+
+st.dataframe(qc.df())
+```
+
+## Data views
+
+The real power of querychat comes from connecting it to visualizations. Here's an example showing both filtered data and a chart:
+
+```{python}
+# | eval: false
+{{< include _examples/streamlit-sidebar.py >}}
+```
+
+When users filter data through the chat (e.g., "show only survivors"), both views update automatically.
+
+![](/images/streamlit-sidebar.png){fig-alt="Screenshot of a querychat Streamlit app with sidebar chat and data views." class="lightbox shadow rounded mb-3"}
+
+A more complete example adds metrics:
+
+```{python}
+# | eval: false
+# | code-fold: true
+# | code-summary: "streamlit-complete.py"
+{{< include _examples/streamlit-complete.py >}}
+```
+
+![](/images/streamlit-complete.png){fig-alt="Screenshot of a querychat app showing metrics and multiple plots." class="lightbox shadow rounded mb-3"}
+
+
+### Resetting filters
+
+Add a reset button to clear filters and show all data:
+
+```python
+if st.button("Reset Filters"):
+    qc.reset()  # Automatically triggers st.rerun()
+```
+
+::: {.callout-tip}
+Users can also ask the LLM to "reset" or "show all data" to clear filters through the chat interface.
+:::
+
+### Advanced patterns
+
+#### Programmatic updates
+
+You can update the query state programmatically using `.sql()` and `.title()` as setters. This is useful for adding preset filter buttons or linking filters to other UI controls.
+
+#### Multiple datasets
+
+To explore multiple datasets, use separate `QueryChat` instances (i.e., separate chat interfaces).
+
+::: {.callout-note}
+### Multiple tables in one chat?
+
+In some cases, you might be able to "pre-join" datasets into a single table and use one `QueryChat` instance to explore them together. In the future, we may support multiple filtered tables in one chat interface, but this is not currently available. Please upvote [the relevant issue](https://github.com/posit-dev/querychat/issues/6) if this is a feature you'd like to see!
+:::
+
+## See also
+
+- [Greet users](greet.qmd) - Create welcoming onboarding experiences
+- [Provide context](context.qmd) - Help the LLM understand your data better

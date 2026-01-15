@@ -1,0 +1,161 @@
+---
+title: Gradio
+lightbox: true
+---
+
+[Gradio](https://gradio.app/) is a web framework for building interactive data/ML applications. It provides a event-based programming model that's great for quickly assembling simple UIs. 
+
+In this guide, you'll learn how to build Gradio apps with querychat to enable rich data exploration experiences where [data views](#data-views) update based on natural language filters.
+
+![](/images/gradio-complete.png){fig-alt="Screenshot of querychat running in a custom Gradio app." class="lightbox shadow rounded mb-3"}
+
+## Initialize `QueryChat`
+
+First, install querychat with Gradio support:
+
+```bash
+pip install "querychat[gradio]"
+```
+
+Then import the Gradio-specific `QueryChat` class:
+
+```{.python}
+from querychat.gradio import QueryChat
+```
+
+And initialize it with your [data source](data-sources.qmd):
+
+```{.python}
+from querychat.data import titanic
+
+qc = QueryChat(titanic(), "titanic")
+```
+
+::: {.callout-note collapse="true"}
+
+## Quick start with `.app()`
+
+Remember, the simplest way to get started is with `.app()`, which gives a "pre-baked" Gradio app:
+
+```{.python filename="gradio-app.py"}
+from querychat.gradio import QueryChat
+from querychat.data import titanic
+
+qc = QueryChat(titanic(), "titanic")
+app = qc.app()
+app.launch()
+```
+
+Run with:
+
+```bash
+python gradio-app.py
+```
+:::
+
+## Relevant methods
+
+After initializing `QueryChat`, use `.ui()` to place the chat interface in your `gr.Blocks` layout. It creates the chat components and returns a `gr.State` that updates as users interact with the chat. Use `.df(state)`, `.sql(state)`, and `.title(state)` in your callbacks to access the current query values.
+
+| Method | Description |
+|--------|-------------|
+| `.ui()` | Creates chat UI and returns `gr.State` for wiring to callbacks |
+| `.df(state)` | Current filtered/sorted DataFrame |
+| `.sql(state)` | Current SQL query (str \| None) |
+| `.title(state)` | Short description of current filter (str \| None) |
+
+::: {.callout-note}
+#### Why `css=qc.css, head=qc.head`?
+
+The `qc.css` and `qc.head` properties provide the CSS and JavaScript needed for clickable suggestions in chat messages. Always include these when building custom layouts with `.ui()`.
+:::
+
+## Basic layout
+
+The most common pattern places chat alongside your custom filtered views:
+
+```python
+import gradio as gr
+from querychat.gradio import QueryChat
+from querychat.data import titanic
+from querychat.types import AppStateDict
+
+qc = QueryChat(titanic(), "titanic")
+
+with gr.Blocks() as app:
+    with gr.Row():
+        with gr.Column():
+            state = qc.ui()
+
+        with gr.Column():
+            data_table = gr.Dataframe(label="Data")
+
+    def update_table(state_dict: AppStateDict):
+        return qc.df(state_dict).to_pandas()
+
+    state.change(fn=update_table, inputs=[state], outputs=[data_table])
+
+app.launch(css=qc.css, head=qc.head)
+```
+
+## Data views
+
+The real power of querychat comes from connecting it to visualizations. Here's an example showing two charts that respond to query changes:
+
+```{python}
+# | eval: false
+{{< include _examples/gradio-viz.py >}}
+```
+
+When users filter data through the chat (e.g., "show only survivors"), both charts update automatically.
+
+![](/images/gradio-viz.png){fig-alt="Screenshot of Gradio data views example." class="lightbox shadow rounded mb-3"}
+
+A more complete example adds metrics:
+
+```{python}
+# | eval: false
+# | code-fold: true
+# | code-summary: "gradio-complete.py"
+{{< include _examples/gradio-complete.py >}}
+```
+
+![](/images/gradio-complete.png){fig-alt="Screenshot of complete Gradio app with querychat." class="lightbox shadow rounded mb-3"}
+
+### Resetting filters
+
+Add a reset button to show all data by fetching the original data from `qc.data_source.get_data()`:
+
+```python
+reset_btn = gr.Button("Reset")
+
+def reset_data():
+    return qc.data_source.get_data().to_pandas()
+
+reset_btn.click(fn=reset_data, outputs=[data_table])
+```
+
+::: {.callout-tip}
+This resets the data display only. Users can also ask the LLM to "reset" or "show all data" to clear filters through the chat interface.
+:::
+
+### Advanced patterns
+
+#### Programmatic updates
+
+You can update the display programmatically by creating event handlers that modify your output components directly.
+
+#### Multiple datasets
+
+To explore multiple datasets, use separate `QueryChat` instances (i.e., separate chat interfaces).
+
+::: {.callout-note}
+### Multiple tables in one chat?
+
+In some cases, you might be able to "pre-join" datasets into a single table and use one `QueryChat` instance to explore them together. In the future, we may support multiple filtered tables in one chat interface, but this is not currently available. Please upvote [the relevant issue](https://github.com/posit-dev/querychat/issues/6) if this is a feature you'd like to see!
+:::
+
+## See also
+
+- [Greet users](greet.qmd) - Create welcoming onboarding experiences
+- [Provide context](context.qmd) - Help the LLM understand your data better

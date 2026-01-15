@@ -13,4 +13,4 @@ qc = QueryChat(
     data_description=data_desc,
 )
 
-qc.app()
+app = qc.app()

@@ -1,0 +1,62 @@
+---
+title: Intro
+---
+
+While the `.app()` method is a great [quick start](index.qmd#quick-start) for exploring data, building custom apps with querychat unlocks the full power of integrating natural language data exploration with custom visualizations, layouts, and interactivity.
+
+querychat is a particularly good fit for apps that have:
+
+1. **A single data source** (or a set of related tables that can be joined)
+2. **Multiple filters** that let users slice and explore the data in different ways
+3. **Several visualizations and outputs** that all depend on the same filtered data
+
+In these apps, querychat can replace or augment your filtering UI by allowing users to describe what they want to see in natural language. Instead of building complex filter controls, users can simply ask questions like "show me customers from California who spent over $1000 last quarter" and querychat will generate the appropriate SQL query.
+
+This is especially valuable when:
+
+- Your data has many columns and building a UI for all possible filters would be overwhelming
+- Users want to explore ad-hoc combinations of filters that you didn't anticipate
+- You want to make data exploration more accessible to users who aren't comfortable with traditional filtering UIs
+
+If you have an existing app with a data frame that flows through multiple outputs, querychat can be a natural addition to provide an alternative way to filter that data.
+
+## General pattern
+
+Regardless of framework, building a custom querychat app follows the same pattern:
+
+1. **Initialize** a `QueryChat` instance with your data
+2. **Place** the chat UI in your layout (`.sidebar()` or `.ui()`)
+3. **Access** query state (`.df()`, `.sql()`, `.title()`) to build reactive outputs
+4. **Connect** visualizations and tables to the filtered data
+
+Each framework has its own way of handling reactivity and state updates, but the core querychat API is largely consistent across all of them.
+
+## Choosing a framework
+
+querychat supports four Python web frameworks. Choose based on your needs:
+
+| Framework | Best for | Guide |
+|-----------|----------|-------|
+| **[Shiny](https://shiny.posit.co/py/)** | Complex reactive apps, fine-grained control, Posit Connect deployment | [Build with Shiny](build.qmd) |
+| **[Streamlit](https://streamlit.io/)** | Quick prototypes, simple apps, script-based development | [Build with Streamlit](build-streamlit.qmd) |
+| **[Gradio](https://gradio.app/)** | ML demos, easy sharing, Hugging Face Spaces | [Build with Gradio](build-gradio.qmd) |
+| **[Dash](https://dash.plotly.com/)** | Production enterprise apps, complex callbacks | [Build with Dash](build-dash.qmd) |
+
+## API differences
+
+While querychat provides a consistent interface across frameworks, each implementation follows its framework's idioms for state management. The key difference is how you access query state:
+
+| Framework | State access | Example |
+|-----------|--------------|---------|
+| **Shiny** | Reactive callables | `qc.df()()`, `qc.sql()()`, `qc.title()()` |
+| **Streamlit** | Direct methods (session state) | `qc.df()`, `qc.sql()`, `qc.title()` |
+| **Gradio** | Methods with state dict | `qc.df(state)`, `qc.sql(state)`, `qc.title(state)` |
+| **Dash** | Methods with state dict | `qc.df(state)`, `qc.sql(state)`, `qc.title(state)` |
+
+**Why the difference?**
+
+- **Shiny** uses reactive programming where values are wrapped in reactive containers. You call `.df()` to get the reactive, then call it again (or use it in a reactive context) to get the value.
+- **Streamlit** manages state internally via `st.session_state`, so methods can access it directly without arguments.
+- **Gradio** and **Dash** use callback-based architectures where state is passed explicitly to callback functions, so you pass the state dict to accessors.
+
+Each approach matches how developers typically work in that framework, making querychat feel native regardless of which framework you choose.

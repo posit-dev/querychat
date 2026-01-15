@@ -16,7 +16,7 @@ SUGGESTION_CSS = _read_asset("shared", "suggestion.css")
 DASH_CSS = _read_asset("dash", "dash.css")
 GRADIO_CSS = _read_asset("gradio", "gradio.css")
 
-# Framework-specific JS for handling suggestion clicks
-DASH_SUGGESTION_JS = _read_asset("dash", "dash_suggestion.js")
-GRADIO_SUGGESTION_JS = _read_asset("gradio", "gradio_suggestion.js")
-STREAMLIT_SUGGESTION_JS = _read_asset("streamlit", "streamlit_suggestion.js")
+# Framework-specific JS
+DASH_JS = _read_asset("dash", "dash.js")
+GRADIO_JS = _read_asset("gradio", "gradio.js")
+STREAMLIT_JS = _read_asset("streamlit", "streamlit.js")

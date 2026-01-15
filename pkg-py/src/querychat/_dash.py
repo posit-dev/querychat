@@ -16,7 +16,7 @@ from ._querychat_core import (
     create_app_state,
     stream_response_async,
 )
-from ._ui_assets import DASH_CSS, DASH_SUGGESTION_JS, SUGGESTION_CSS
+from ._ui_assets import DASH_CSS, DASH_JS, SUGGESTION_CSS
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -238,7 +238,7 @@ class QueryChat(QueryChatBase, StateDictAccessorMixin):
         # Inject querychat CSS and JS into the app's index_string
         css = DASH_CSS + "\n" + SUGGESTION_CSS
         css_tag = f"<style>{css}</style>"
-        js_tag = f"<script>{DASH_SUGGESTION_JS}</script>"
+        js_tag = f"<script>{DASH_JS}</script>"
         assets = f"{css_tag}\n        {js_tag}"
 
         app.index_string = app.index_string.replace(

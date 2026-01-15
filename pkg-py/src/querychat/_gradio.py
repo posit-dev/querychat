@@ -14,7 +14,7 @@ from ._querychat_core import (
     create_app_state,
     stream_response,
 )
-from ._ui_assets import GRADIO_CSS, GRADIO_SUGGESTION_JS, SUGGESTION_CSS
+from ._ui_assets import GRADIO_CSS, GRADIO_JS, SUGGESTION_CSS
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -120,7 +120,7 @@ class QueryChat(QueryChatBase, StateDictAccessorMixin):
         Use this when building custom layouts with `.ui()` to enable
         suggestion click handling. Pass to `.launch(head=qc.head)`.
         """
-        return f"<script>{GRADIO_SUGGESTION_JS}</script>"
+        return f"<script>{GRADIO_JS}</script>"
 
     def ui(self) -> gr.State:
         """
@@ -329,7 +329,7 @@ class QueryChat(QueryChatBase, StateDictAccessorMixin):
         return GradioBlocksWrapper(
             blocks_app,
             combined_css,
-            f"<script>{GRADIO_SUGGESTION_JS}</script>",
+            f"<script>{GRADIO_JS}</script>",
             theme=Soft(),
         )
 

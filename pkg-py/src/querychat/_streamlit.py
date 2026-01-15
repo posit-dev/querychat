@@ -11,7 +11,7 @@ from ._querychat_core import (
     create_app_state,
     stream_response,
 )
-from ._ui_assets import STREAMLIT_SUGGESTION_JS, SUGGESTION_CSS
+from ._ui_assets import STREAMLIT_JS, SUGGESTION_CSS
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -131,7 +131,7 @@ class QueryChat(QueryChatBase):
         if assets_key not in st.session_state:
             st.session_state[assets_key] = True
             st.html(f"<style>{SUGGESTION_CSS}</style>")
-            components.html(f"<script>{STREAMLIT_SUGGESTION_JS}</script>", height=0)
+            components.html(f"<script>{STREAMLIT_JS}</script>", height=0)
 
         state = self._get_state()
 

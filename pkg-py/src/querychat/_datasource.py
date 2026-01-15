@@ -22,7 +22,6 @@ if TYPE_CHECKING:
     from narwhals.stable.v1.typing import IntoDataFrame
     from sqlalchemy.engine import Connection, Engine
 
-# Type alias for DataFrame or LazyFrame return types
 DataOrLazyFrame = Union[nw.DataFrame, nw.LazyFrame]
 
 # TypeVar for generic QueryChat classes - captures the specific DataFrame type passed in.
@@ -179,7 +178,7 @@ class DataFrameSource(DataSource):
     """A DataSource implementation that wraps a DataFrame using DuckDB."""
 
     _df: nw.DataFrame
-    _backend: str  # "polars" or "pandas"
+    _df_lib: str  # "polars" or "pandas"
 
     def __init__(self, df: nw.DataFrame, table_name: str):
         """
@@ -198,7 +197,7 @@ class DataFrameSource(DataSource):
 
         # Track the native backend for returning results in the same format
         native_namespace = nw.get_native_namespace(df)
-        self._backend = native_namespace.__name__  # "polars" or "pandas"
+        self._df_lib = native_namespace.__name__  # "polars" or "pandas"
 
         self._conn = duckdb.connect(database=":memory:")
         self._conn.register(table_name, self._df.to_native())
@@ -308,7 +307,7 @@ SET lock_configuration = true;
         """
         check_query(query)
         result = self._conn.execute(query)
-        if self._backend == "polars":
+        if self._df_lib == "polars":
             return duckdb_result_to_polars(result)
         else:
             return duckdb_result_to_pandas(result)

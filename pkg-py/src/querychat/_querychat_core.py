@@ -15,7 +15,7 @@ __all__ = [
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Optional, TypedDict, Union
+from typing import TYPE_CHECKING, Generic, Optional, TypedDict, TypeVar, Union
 
 from chatlas import Chat, ContentToolRequest, ContentToolResult
 from chatlas.types import Content
@@ -32,6 +32,9 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Iterator
 
     from ._datasource import DataOrLazyFrame, DataSource
+
+# TypeVar for StateDictAccessorMixin - the DataFrame type returned by df()
+_DataFrameT = TypeVar("_DataFrameT")
 
 
 ClientFactory = Callable[
@@ -57,10 +60,10 @@ class DisplayMessage(TypedDict):
     content: str
 
 
-class StateDictAccessorMixin:
+class StateDictAccessorMixin(Generic[_DataFrameT]):
     """Mixin providing df/sql/title accessors for frameworks using serialized state dicts."""
 
-    _data_source: DataSource
+    _data_source: DataSource[_DataFrameT]
 
     def _client_factory(
         self,
@@ -70,7 +73,7 @@ class StateDictAccessorMixin:
         """Create a chat client with dashboard callbacks."""
         return self.client(update_dashboard=update_cb, reset_dashboard=reset_cb)  # type: ignore[attr-defined]
 
-    def df(self, state: AppStateDict | None) -> DataOrLazyFrame:
+    def df(self, state: AppStateDict | None) -> _DataFrameT:
         """
         Get the current DataFrame from state.
 

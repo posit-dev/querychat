@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from dash import html
 
 
-class QueryChat(QueryChatBase[DataFrameT], StateDictAccessorMixin):
+class QueryChat(QueryChatBase[DataFrameT], StateDictAccessorMixin[DataFrameT]):
     """
     QueryChat for Dash applications.
 
@@ -150,7 +150,7 @@ class QueryChat(QueryChatBase[DataFrameT], StateDictAccessorMixin):
         prompt_template: Optional[str | PathType] = None,
         storage_type: Literal["memory", "session", "local"] = "memory",
     ):
-        super().__init__(  # type: ignore[misc]
+        super().__init__(
             data_source,
             table_name,
             greeting=greeting,
@@ -164,24 +164,6 @@ class QueryChat(QueryChatBase[DataFrameT], StateDictAccessorMixin):
         self._storage_type: Literal["memory", "session", "local"] = storage_type
         self._ids = IDs.from_table_name(self._data_source.table_name)
         self._initialized_apps: set[int] = set()
-
-    def df(self, state: AppStateDict | None) -> DataFrameT:  # type: ignore[override]
-        """
-        Get the current DataFrame from state.
-
-        Parameters
-        ----------
-        state
-            The state dictionary from a framework callback.
-
-        Returns
-        -------
-        :
-            The filtered data if a SQL query is active, otherwise the full dataset.
-            Returns a LazyFrame if the data source is lazy.
-
-        """
-        return super().df(state)  # type: ignore[return-value]
 
     @property
     def store_id(self) -> str:

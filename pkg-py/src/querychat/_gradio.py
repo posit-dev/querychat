@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     import gradio as gr
 
 
-class QueryChat(QueryChatBase[DataFrameT], StateDictAccessorMixin):
+class QueryChat(QueryChatBase[DataFrameT], StateDictAccessorMixin[DataFrameT]):
     """
     QueryChat for Gradio applications.
 
@@ -138,7 +138,7 @@ class QueryChat(QueryChatBase[DataFrameT], StateDictAccessorMixin):
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
     ):
-        super().__init__(  # type: ignore[misc]
+        super().__init__(
             data_source,
             table_name,
             greeting=greeting,
@@ -149,24 +149,6 @@ class QueryChat(QueryChatBase[DataFrameT], StateDictAccessorMixin):
             extra_instructions=extra_instructions,
             prompt_template=prompt_template,
         )
-
-    def df(self, state: AppStateDict | None) -> DataFrameT:  # type: ignore[override]
-        """
-        Get the current DataFrame from state.
-
-        Parameters
-        ----------
-        state
-            The state dictionary from a framework callback.
-
-        Returns
-        -------
-        :
-            The filtered data if a SQL query is active, otherwise the full dataset.
-            Returns a LazyFrame if the data source is lazy.
-
-        """
-        return super().df(state)  # type: ignore[return-value]
 
     @property
     def css(self) -> str:

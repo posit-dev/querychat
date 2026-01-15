@@ -716,15 +716,19 @@ class PolarsLazySource(DataSource):
 
         stats: dict = {}
         native_lf = self._lf.to_native()
-        if agg_exprs:
-            stats = native_lf.select(agg_exprs).collect().row(0, named=True)
+        if agg_exprs and (stats_df := native_lf.select(agg_exprs).collect()).height > 0:
+            stats = stats_df.row(0, named=True)
 
         # Collect unique values for text cols below threshold
         categorical_values: dict[str, list] = {}
         for col in text_cols:
             nunique = stats.get(f"{col}__nunique", 0)
             if nunique and nunique <= categorical_threshold:
-                values = native_lf.select(pl.col(col).unique()).collect()[col].to_list()
+                values = (
+                    native_lf.select(pl.col(col).unique().head(categorical_threshold))
+                    .collect()[col]
+                    .to_list()
+                )
                 categorical_values[col] = [v for v in values if v is not None]
 
         # Build schema string

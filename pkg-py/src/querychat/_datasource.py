@@ -81,7 +81,7 @@ class DataSource(ABC):
     @abstractmethod
     def test_query(
         self, query: str, *, require_all_columns: bool = False
-    ) -> AnyFrame:
+    ) -> nw.DataFrame:
         """
         Test SQL query by fetching only one row.
 

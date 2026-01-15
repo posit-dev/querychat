@@ -953,65 +953,90 @@ class IbisSource(DataSource):
             String describing the schema
 
         """
-        schema_lines = [f"Table: {self.table_name}", "Columns:"]
-
         schema = self._table.schema()
-        numeric_cols: list[str] = []
-        text_cols: list[str] = []
-        date_cols: list[str] = []
 
-        # Classify columns by type
-        for col_name in schema.names:  # pyright: ignore[reportGeneralTypeIssues]
-            dtype = schema[col_name]
-            if dtype.is_numeric():
-                numeric_cols.append(col_name)
-            elif dtype.is_string():
-                text_cols.append(col_name)
-            elif dtype.is_date() or dtype.is_timestamp():
-                date_cols.append(col_name)
+        # Build column metadata (classification happens here)
+        columns = [
+            self._make_column_meta(name, schema[name])
+            for name in schema.names  # pyright: ignore[reportGeneralTypeIssues]
+        ]
 
-        # Build single aggregate query for efficiency
+        # Add stats to the metadata and format schema string
+        self._add_column_stats(columns, self._table, categorical_threshold)
+        return PolarsLazySource._format_schema(self.table_name, columns)
+
+    @staticmethod
+    def _make_column_meta(name: str, dtype) -> ColumnMeta:
+        """Create ColumnMeta from an ibis dtype."""
+        if dtype.is_numeric():
+            kind: Literal["numeric", "text", "date", "other"] = "numeric"
+            sql_type = "INTEGER" if dtype.is_integer() else "FLOAT"
+        elif dtype.is_string():
+            kind = "text"
+            sql_type = "TEXT"
+        elif dtype.is_date():
+            kind = "date"
+            sql_type = "DATE"
+        elif dtype.is_timestamp():
+            kind = "date"
+            sql_type = "TIMESTAMP"
+        elif dtype.is_boolean():
+            kind = "other"
+            sql_type = "BOOLEAN"
+        elif dtype.is_time():
+            kind = "other"
+            sql_type = "TIME"
+        else:
+            kind = "other"
+            sql_type = "TEXT"
+
+        return ColumnMeta(name=name, sql_type=sql_type, kind=kind)
+
+    @staticmethod
+    def _add_column_stats(
+        columns: list[ColumnMeta],
+        table: ibis.Table,  # pyright: ignore[reportInvalidTypeForm]
+        categorical_threshold: int,
+    ) -> None:
+        """Add min/max/categories to column metadata using ibis aggregates."""
+        # Build aggregation expressions based on column kinds
         agg_exprs = []
-        for col in numeric_cols + date_cols:
-            agg_exprs.append(self._table[col].min().name(f"{col}__min"))
-            agg_exprs.append(self._table[col].max().name(f"{col}__max"))
-        agg_exprs.extend(
-            self._table[col].nunique().name(f"{col}__nunique") for col in text_cols
-        )
+        for col in columns:
+            if col.kind in ("numeric", "date"):
+                agg_exprs.append(table[col.name].min().name(f"{col.name}__min"))
+                agg_exprs.append(table[col.name].max().name(f"{col.name}__max"))
+            elif col.kind == "text":
+                agg_exprs.append(table[col.name].nunique().name(f"{col.name}__nunique"))
 
-        stats: dict = {}
-        if agg_exprs:
-            stats_row = self._table.aggregate(agg_exprs).execute()
-            stats = stats_row.iloc[0].to_dict()
+        if not agg_exprs:
+            return
 
-        # Get categorical values for text columns below threshold
-        categorical_values: dict[str, list] = {}
-        for col in text_cols:
-            nunique = stats.get(f"{col}__nunique", 0)
-            if nunique and nunique <= categorical_threshold:
-                values = (
-                    self._table.select(col).distinct().execute()[col].tolist()
-                )
-                categorical_values[col] = [v for v in values if v is not None]
+        # Single scan: collect all aggregate statistics
+        stats_row = table.aggregate(agg_exprs).execute()
+        stats = stats_row.iloc[0].to_dict()
 
-        # Build schema string
-        for col_name in schema.names:  # pyright: ignore[reportGeneralTypeIssues]
-            dtype = schema[col_name]
-            sql_type = self._ibis_dtype_to_sql(dtype)
-            column_info = [f"- {col_name} ({sql_type})"]
+        # Add min/max for numeric/date columns
+        for col in columns:
+            if col.kind in ("numeric", "date"):
+                col.min_val = stats.get(f"{col.name}__min")
+                col.max_val = stats.get(f"{col.name}__max")
 
-            if col_name in numeric_cols or col_name in date_cols:
-                min_val = stats.get(f"{col_name}__min")
-                max_val = stats.get(f"{col_name}__max")
-                if min_val is not None or max_val is not None:
-                    column_info.append(f"  Range: {min_val} to {max_val}")
-            elif col_name in categorical_values:
-                cats = ", ".join(f"'{v}'" for v in categorical_values[col_name])
-                column_info.append(f"  Categorical values: {cats}")
+        # Find text columns that qualify as categorical
+        categorical_cols = [
+            col
+            for col in columns
+            if col.kind == "text"
+            and (nunique := stats.get(f"{col.name}__nunique"))
+            and nunique <= categorical_threshold
+        ]
 
-            schema_lines.extend(column_info)
+        if not categorical_cols:
+            return
 
-        return "\n".join(schema_lines)
+        # Second scan: get unique values for categorical columns
+        for col in categorical_cols:
+            values = table.select(col.name).distinct().execute()[col.name].tolist()
+            col.categories = [v for v in values if v is not None]
 
     def execute_query(self, query: str) -> ibis.Table:  # pyright: ignore[reportIncompatibleMethodOverride]
         """
@@ -1105,26 +1130,3 @@ class IbisSource(DataSource):
         None
 
         """
-
-    @staticmethod
-    def _ibis_dtype_to_sql(dtype) -> str:  # noqa: PLR0911
-        """Convert Ibis dtype to SQL type name."""
-        if dtype.is_integer():
-            return "INTEGER"
-        elif dtype.is_floating():
-            return "FLOAT"
-        elif dtype.is_numeric():
-            # Catch other numeric types like decimal
-            return "NUMERIC"
-        elif dtype.is_boolean():
-            return "BOOLEAN"
-        elif dtype.is_date():
-            return "DATE"
-        elif dtype.is_timestamp():
-            return "TIMESTAMP"
-        elif dtype.is_time():
-            return "TIME"
-        elif dtype.is_string():
-            return "TEXT"
-        else:
-            return str(dtype).upper()

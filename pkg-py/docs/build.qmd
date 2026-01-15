@@ -1,35 +1,78 @@
 ---
-title: Build an app
+title: Shiny
+lightbox: true
 ---
 
-While the [`.app()` method](reference/querychat.qmd#querychat.querychat.app) provides a quick way to start exploring data, building bespoke Shiny apps with querychat unlocks the full power of integrating natural language data exploration with custom visualizations, layouts, and interactivity. This guide shows you how to integrate querychat into your own Shiny applications and leverage its reactive data outputs to create rich, interactive dashboards.
+[Shiny](https://shiny.posit.co/py/) is a web framework for building interactive data applications. It provides a reactive programming model that's a natural fit for querychat. 
 
-querychat is a particularly good fit for Shiny apps that have:
+In this guide, you'll learn how to build Shiny apps with querychat to enable rich data exploration experiences where [data views](#data-views) update based on natural language filters.
 
-1. **A single data source** (or a set of related tables that can be joined)
-2. **Multiple filters** that let users slice and explore the data in different ways
-3. **Several visualizations and outputs** that all depend on the same filtered data
+![](/images/rich-data-views.png){fig-alt="Screenshot of querychat running in a custom Shiny app." class="lightbox shadow rounded mb-3"}
 
-In these apps, querychat can replace or augment your filtering UI by allowing users to describe what they want to see in natural language. Instead of building complex filter controls, users can simply ask questions like "show me customers from California who spent over $1000 last quarter" and querychat will generate the appropriate SQL query.
+## Initialize `QueryChat`
 
-This is especially valuable when:
+The "main" `QueryChat` class is available directly from the top-level module, and it designed to work with Shiny (Core):
 
-- Your data has many columns and building a UI for all possible filters would be overwhelming
-- Users want to explore ad-hoc combinations of filters that you didn't anticipate
-- You want to make data exploration more accessible to users who aren't comfortable with traditional filtering UIs
+```{.python}
+from querychat import QueryChat
+```
 
-If you have an existing app with a reactive data frame that flows through multiple outputs, querychat can be a natural addition to provide an alternative way to filter that data.
+For Shiny Express, import from `querychat.express` instead (similar to how you import from `shiny.express`):
+
+```{.python}
+from querychat.express import QueryChat
+```
+
+Once imported, initialize it with your [data source](data-sources.qmd):
+
+```{.python}
+from querychat.data import titanic
+
+qc = QueryChat(titanic(), "titanic")
+```
+
+::: {.callout-note collapse="true"}
+
+## Quick start with `.app()`
+
+Remember, the simplest way to get started is with `.app()`, which gives a "pre-baked" Shiny app:
+
+```{.python filename="shiny-app.py"}
+from querychat import QueryChat
+from querychat.data import titanic
+
+qc = QueryChat(titanic(), "titanic")
+app = qc.app()
+```
+
+Run with:
+
+```bash
+shiny run shiny-app.py
+```
+:::
+
+## Relevant methods
+
+After initializing `QueryChat`, use `.sidebar()` or `.ui()` to place the chat interface in your app. As users interact with the chat, `.df()`, `.sql()`, and `.title()` automatically update to reflect the current query. Any Shiny outputs that depend on these reactive values will re-render automatically.
+
+| Method | Description |
+|--------|-------------|
+| `.sidebar()` | Place the chat interface in a sidebar |
+| `.ui()` | Returns just the chat component for custom placement |
+| `.df()` | Current filtered/sorted DataFrame |
+| `.sql()` | Current SQL query (str \| None) |
+| `.title()` | Short description of current filter (str \| None) |
 
 
-## Starter template
 
-Integrating querychat into a Shiny app requires just three steps:
+::: callout-note
+Shiny has two modes: **Express** (simple, script-based) and **Core** (explicit UI/server separation). With Core, call `qc.server()` in your server function and access reactives via the returned object (e.g., `qc_vals.df()`). With Express, access them directly on the `QueryChat` instance (e.g., `qc.df()`).
+:::
 
-1. Initialize a `querychat()` instance with your data
-2. Add the UI component (either `.sidebar()` or `.ui()`)
-3. Use reactive values like `.df()`, `.sql()`, and `.title()` to build outputs that respond to user queries
+## Basic sidebar
 
-Here's a starter template demonstrating these steps:
+The most common pattern places chat in the sidebar with your custom filtered views in the main area:
 
 ::: {.panel-tabset group="shiny-mode"}
 
@@ -45,114 +88,18 @@ Here's a starter template demonstrating these steps:
 {{< include /../examples/03-sidebar-core-app.py >}}
 ```
 
-
 :::
 
-::: callout-note
-With Core, you'll need to call the `qc.server()` method within your server function to set up querychat's reactive behavior, and capture its return value to access reactive data. This is not necessary with Express, which handles it automatically and exposes reactive values directly on the `querychat` instance.
-:::
+## Custom chat UI
 
-## Reactives
-
-There are three main reactive values provided by querychat for use in your app:
-
-### Filtered data {#filtered-data}
-
-The `.df()` method returns the current filtered and/or sorted data frame. This updates whenever the user prompts a filtering or sorting operation through the chat interface (see [Data updating](tools.qmd#data-updating) for details).
-
+Use `.ui()` to place the chat anywhere in your layout. Here we use it simply to place custom content in the sidebar alongside the chat (like a [reset button](#resetting-filters)):
 
 ::: {.panel-tabset group="shiny-mode"}
 
 #### Express
 
 ```python
-@render.data_frame
-def table():
-    return qc.df()  # Returns filtered/sorted data
-```
-
-#### Core
-
-```python
-qc_vals = qc.server()
-
-@render.data_frame
-def table():
-    return qc_vals.df()  # Returns filtered/sorted data
-```
-
-:::
-
-You can use `.df()` to power any output in your app - visualizations, summary statistics, data tables, and more. When a user asks to "show only survivors" or "sort by age", `.df()` automatically updates, and any outputs that depend on it will re-render.
-
-### SQL query {#sql-query}
-
-The `.sql()` method returns the current SQL query as a string. This is useful for displaying the query to users for transparency and reproducibility:
-
-::: {.panel-tabset group="shiny-mode"}
-
-#### Express
-
-```python
-@render.text
-def current_query():
-    return qc.sql() or "SELECT * FROM my_data"
-```
-
-#### Core
-
-```python
-qc_vals = qc.server()
-
-@render.text
-def current_query():
-    return qc_vals.sql() or "SELECT * FROM my_data"
-```
-
-:::
-
-You can also use `.sql()` as a setter to programmatically update the query (see [Programmatic filtering](#programmatic-filtering) below).
-
-### Title {#title}
-
-The `.title()` method returns a short description of the current filter, provided by the LLM when it generates a query. For example, if a user asks to "show first-class survivors", the title might be "First-class survivors".
-
-::: {.panel-tabset group="shiny-mode"}
-
-##### Express
-
-```python
-@render.text
-def card_title():
-    return qc.title() or "All Data"
-```
-
-#### Core
-
-```python
-qc_vals = qc.server()
-
-@render.text
-def card_title():
-    return qc_vals.title() or "All Data"
-```
-
-:::
-
-Returns `None` when no filter is active. You can also use `.title()` as a setter to update the title programmatically.
-
-## Custom UI
-
-In the starter template above, we used the `.sidebar()` method for a simple sidebar layout. In some cases, you might want to place the chat UI somewhere else in your app layout, or just more fully customize what goes in the sidebar. The `.ui()` method is designed for this -- it returns the chat component without additional layout wrappers.
-
-For example here is how to place the chat in a sidebar with some additional controls:
-
-::: {.panel-tabset group="shiny-mode"}
-
-#### Express
-
-```python
-from shiny.express import ui, reactive
+from shiny.express import ui
 from querychat.express import QueryChat
 
 qc = QueryChat(data, "my_data")
@@ -166,7 +113,7 @@ with ui.sidebar():
 #### Core
 
 ```python
-from shiny import ui, reactive
+from shiny import ui
 from querychat import QueryChat
 
 qc = QueryChat(data, "my_data")
@@ -184,7 +131,7 @@ app_ui = ui.page_sidebar(
 :::
 
 ::: callout-tip
-### Custom Shiny chat UIs
+#### Custom Shiny chat UIs
 
 Learn more about customizing Shiny chat UIs in the [Shiny Chat documentation](https://shiny.posit.co/py/docs/genai-chatbots.html#layout).
 :::
@@ -192,8 +139,7 @@ Learn more about customizing Shiny chat UIs in the [Shiny Chat documentation](ht
 
 ## Data views
 
-Thanks to Shiny's support for [Jupyter Widgets](https://shiny.posit.co/py/docs/jupyter-widgets.html) like [Plotly](https://shiny.posit.co/py/components/outputs/plot-plotly/), it's straightforward to create rich data views that depend on querychat data. Here's an example of an app showing both the filtered data and a bar chart depending on that same data:
-
+The real power of querychat comes from connecting it to visualizations. Here's an example showing both filtered data and a chart:
 
 ```python
 import plotly.express as px
@@ -225,23 +171,25 @@ with ui.layout_columns():
             return px.bar(summary, x='pclass', y='survived')
 ```
 
-Now when a user filters the data through natural language (e.g., "filter to only children"), both the table and the chart update automatically.
+When users filter data through the chat (e.g., "show only children"), both charts update automatically.
 
 ![](/images/plotly-data-view.png){fig-alt="Screenshot of a querychat app showing both a data table and a bar chart of survival by class." class="lightbox shadow rounded mb-3"}
 
-A more useful, but slightly more involved example like the one below might incorporate other [Shiny components](https://shiny.posit.co/py/components/) like value boxes to summarize key statistics about the filtered data.
+A more complete example adds metrics, tabs, and multiple views:
 
-```{.python filename="titanic-dashboard.py" code-fold="true" code-summary="Show app code"}
+```{python}
+# | eval: false
+# | code-fold: true
+# | code-summary: "titanic-dashboard.py"
 {{< include _examples/titanic-dashboard.py >}}
 ```
-
 
 ![](/images/rich-data-views.png){fig-alt="Screenshot of a querychat app showing value boxes, a data table, and multiple plots." class="lightbox shadow rounded mb-3"}
 
 
-## Programmatic updates
+### Resetting filters
 
-querychat's reactive state can be updated programmatically. For example, you might want to add a "Reset Filters" button that clears any active filters and returns the data table to its original state. You can do this by setting both the SQL query and title to their default values. This way you don't have to rely on both the user and LLM to send the right prompt.
+Add a reset button to clear filters and show all data:
 
 ::: {.panel-tabset group="shiny-mode"}
 
@@ -273,31 +221,38 @@ def _():
 
 :::
 
-This is equivalent to the user asking the LLM to "reset" or "show all data".
-
-## Multiple tables
-
-Currently, you have two options for exploring multiple tables in querychat:
-
-1. Join the tables into a single table before passing to querychat
-2. Use multiple querychat instances in the same app
-
-The first option makes it possible to chat with multiple tables inside a single chat interface, whereas the second option requires a separate chat interface for each table.
-
-::: {.callout-note}
-### Multiple filtered tables
-
-We plan to support multiple filtered tables in a future release -- if you're interested in this feature, please upvote [the relevant issue](https://github.com/posit-dev/querychat/issues/6)
+::: {.callout-tip}
+Users can also ask the LLM to "reset" or "show all data" to clear filters through the chat interface.
 :::
 
-Here's an example of the second approach, using two separate querychat instances to explore both the `titanic` and `penguins` datasets within the same app:
+### Advanced patterns
 
-```{.python filename="multiple-datasets.py" code-fold="true" code-summary="Show app code"}
+#### Programmatic updates
+
+You can update the query state programmatically using `.sql()` and `.title()` as setters. This is useful for adding preset filter buttons or linking filters to other UI controls.
+
+#### Multiple datasets
+
+To explore multiple datasets, use separate `QueryChat` instances (i.e., separate chat interfaces).
+
+::: {.callout-note}
+### Multiple tables in one chat?
+
+In some cases, you might be able to "pre-join" datasets into a single table and use one `QueryChat` instance to explore them together. In the future, we may support multiple filtered tables in one chat interface, but this is not currently available. Please upvote [the relevant issue](https://github.com/posit-dev/querychat/issues/6) if this is a feature you'd like to see!
+:::
+
+```{python}
+# | eval: false
+# | code-fold: true
+# | code-summary: "multiple-datasets.py"
 {{< include _examples/multiple-datasets.py >}}
 ```
 
 ![](/images/multiple-datasets.png){fig-alt="Screenshot of a querychat app with two datasets: titanic and penguins." class="lightbox shadow rounded mb-3"}
 
+::: {.callout-note}
+Each dataset gets its own chat interface and maintains separate state.
+:::
 
 ## See also
 

@@ -51,7 +51,7 @@ with ui.layout_columns():
 
         @render_plotly
         def survival_by_class():
-            df = qc.df()
+            df = qc.df().to_pandas()
             summary = df.groupby("pclass")["survived"].mean().reset_index()
             return px.bar(
                 summary,

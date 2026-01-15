@@ -1,0 +1,199 @@
+/* ===========================================
+   Base styles (for both .app() and .ui())
+   =========================================== */
+
+/* Chat history container - base styles only */
+.querychat-chat-history {
+  overflow-y: auto;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background-color: #fafafa;
+  border-radius: 8px;
+}
+
+/* SQL display area */
+.querychat-sql-display {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 0.9rem;
+}
+
+/* Remove double background on SQL code block */
+.querychat-sql-display pre {
+  background-color: transparent;
+  margin: 0;
+  padding: 0;
+}
+
+.querychat-sql-display code {
+  background-color: transparent;
+}
+
+/* Chat message base styles */
+.querychat-message {
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  max-width: 85%;
+  word-wrap: break-word;
+}
+
+/* User message styling - right-aligned bubble */
+.querychat-message-user {
+  background-color: #007bff;
+  color: white;
+  margin-left: auto;
+  border-bottom-right-radius: 4px;
+}
+
+.querychat-message-user strong {
+  display: none;  /* Hide "User:" label for cleaner look */
+}
+
+.querychat-message-user p {
+  margin: 0;
+  color: white;
+}
+
+/* Assistant message styling - left-aligned bubble */
+.querychat-message-assistant {
+  background-color: #e9ecef;
+  color: #212529;
+  margin-right: auto;
+  border-bottom-left-radius: 4px;
+}
+
+.querychat-message-assistant strong {
+  display: none;  /* Hide "Assistant:" label for cleaner look */
+}
+
+.querychat-message-assistant p {
+  margin: 0 0 0.5rem 0;
+}
+
+.querychat-message-assistant p:last-child {
+  margin-bottom: 0;
+}
+
+/* Markdown content styling within messages */
+.querychat-message-assistant ul,
+.querychat-message-assistant ol {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+}
+
+.querychat-message-assistant li {
+  margin-bottom: 0.25rem;
+}
+
+.querychat-message-assistant code {
+  background-color: rgba(0, 0, 0, 0.1);
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+/* Code blocks in assistant messages */
+.querychat-message-assistant pre {
+  background-color: #2d2d2d;
+  color: #f8f8f2;
+  padding: 0.75rem;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 0.5rem 0;
+}
+
+.querychat-message-assistant pre code {
+  background-color: transparent;
+  padding: 0;
+  color: inherit;
+}
+
+/* Tables in assistant messages */
+.querychat-message-assistant table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.5rem 0;
+  font-size: 0.85rem;
+}
+
+.querychat-message-assistant th,
+.querychat-message-assistant td {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #dee2e6;
+  text-align: left;
+}
+
+.querychat-message-assistant th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+}
+
+.querychat-message-assistant tbody tr:nth-child(even) {
+  background-color: #f8f9fa;
+}
+
+/* Iframe for styled content (gt tables) */
+.querychat-message-assistant iframe {
+  background: white;
+  border-radius: 4px;
+}
+
+/* ===========================================
+   .app() layout styles - viewport-filling flex
+   Only applied when inside .querychat-app-layout
+   =========================================== */
+
+/* Chat history grows to fill available space in app layout */
+.querychat-app-layout .querychat-chat-history {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+/* Data table wrapper in app layout */
+.querychat-app-layout .querychat-data-table-wrapper {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* Flex container fixes for viewport fitting in app layout */
+.querychat-app-layout .card-body.d-flex.flex-column {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.querychat-app-layout .card.h-100.d-flex.flex-column {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.querychat-app-layout .card.h-100.d-flex.flex-column > .card-body {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.querychat-app-layout .card.h-100 > .card-body.d-flex.flex-column {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+/* Handle .ui() wrapper div inside card body */
+.querychat-app-layout .card-body.d-flex.flex-column > div {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0 1rem 1rem 1rem;
+}
+
+/* ===========================================
+   AG Grid styling overrides
+   =========================================== */
+
+/* Subtle borders */
+.ag-theme-balham {
+  --ag-border-color: #e0e0e0;
+  --ag-row-border-color: #f0f0f0;
+  --ag-header-background-color: #fafafa;
+}

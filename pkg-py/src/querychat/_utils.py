@@ -198,7 +198,7 @@ def querychat_tool_starts_open(action: Literal["update", "query", "reset"]) -> b
 
 def df_to_html(df: LazyOrDataFrame, maxrows: int = 5) -> str:
     """
-    Convert a DataFrame to an HTML table for display in chat.
+    Convert a DataFrame to a Bootstrap-styled HTML table for display in chat.
 
     Parameters
     ----------

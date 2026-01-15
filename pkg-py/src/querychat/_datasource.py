@@ -688,7 +688,7 @@ class PolarsLazySource(DataSource):
             Name of the table in SQL queries
 
         """
-        import polars as pl  # noqa: PLC0415
+        import polars as pl
 
         self.table_name = table_name
 
@@ -795,7 +795,7 @@ class PolarsLazySource(DataSource):
 
     @staticmethod
     def _make_column_meta(name: str, dtype: pl.DataType) -> ColumnMeta:
-        import polars as pl  # noqa: PLC0415
+        import polars as pl
 
         if dtype.is_numeric():
             kind = "numeric"
@@ -827,7 +827,7 @@ class PolarsLazySource(DataSource):
         lf: pl.LazyFrame,
         categorical_threshold: int,
     ) -> None:
-        import polars as pl  # noqa: PLC0415
+        import polars as pl
 
         # Build aggregation expressions based on column kinds
         agg_exprs: list[pl.Expr] = []

@@ -7,7 +7,7 @@ import chevron
 
 if TYPE_CHECKING:
     from ._datasource import DataSource
-    from ._querychat import TOOL_GROUPS
+    from ._querychat_base import TOOL_GROUPS
 
 
 class QueryChatSystemPrompt:

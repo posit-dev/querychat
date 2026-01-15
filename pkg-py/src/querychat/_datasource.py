@@ -14,12 +14,14 @@ from ._df_compat import (
     duckdb_result_to_polars,
     read_sql_pandas,
     read_sql_polars,
+    read_sql_pyarrow,
 )
 from ._utils import check_query
 
 if TYPE_CHECKING:
     import pandas as pd
     import polars as pl
+    import pyarrow as pa
     from narwhals.stable.v1.typing import IntoDataFrame
     from sqlalchemy.engine import Connection, Engine
 
@@ -408,7 +410,8 @@ class SQLAlchemySource(DataSource[DataFrameT]):
     ---------------
     DataFrameT
         The DataFrame type returned by queries. Determined by `return_type`:
-        `pl.DataFrame` when "polars" (default), `pd.DataFrame` when "pandas".
+        `pl.DataFrame` when "polars" (default), `pd.DataFrame` when "pandas",
+        `pa.Table` when "pyarrow".
     """
 
     @overload
@@ -429,12 +432,21 @@ class SQLAlchemySource(DataSource[DataFrameT]):
         return_type: Literal["pandas"],
     ) -> None: ...
 
+    @overload
+    def __init__(
+        self: SQLAlchemySource[pa.Table],
+        engine: Engine,
+        table_name: str,
+        *,
+        return_type: Literal["pyarrow"],
+    ) -> None: ...
+
     def __init__(
         self,
         engine: Engine,
         table_name: str,
         *,
-        return_type: Literal["polars", "pandas"] = "polars",
+        return_type: Literal["polars", "pandas", "pyarrow"] = "polars",
     ):
         """
         Initialize with a SQLAlchemy engine.
@@ -446,8 +458,8 @@ class SQLAlchemySource(DataSource[DataFrameT]):
         table_name
             Name of the table to query
         return_type
-            The type of DataFrame to return from queries. Either "polars" (default)
-            or "pandas".
+            The type of DataFrame to return from queries: "polars" (default),
+            "pandas", or "pyarrow".
 
         """
         self._engine = engine
@@ -611,6 +623,8 @@ class SQLAlchemySource(DataSource[DataFrameT]):
         """Read SQL using the configured return type."""
         if self._return_type == "polars":
             return read_sql_polars(query, conn)
+        elif self._return_type == "pyarrow":
+            return read_sql_pyarrow(query, conn)
         else:
             return read_sql_pandas(query, conn)
 

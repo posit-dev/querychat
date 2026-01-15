@@ -50,6 +50,13 @@ def read_sql_pandas(query: TextClause, conn: Connection):
     return pd.read_sql_query(query, conn)
 
 
+def read_sql_pyarrow(query: TextClause, conn: Connection):
+    """Read SQL query and return native pyarrow Table."""
+    import polars as pl
+
+    return pl.read_database(query, connection=conn).to_arrow()
+
+
 def duckdb_result_to_nw(
     result: duckdb.DuckDBPyRelation | duckdb.DuckDBPyConnection,
 ) -> nw.DataFrame:

@@ -9,6 +9,18 @@ from typing import TYPE_CHECKING, Literal, Optional
 import narwhals.stable.v1 as nw
 from great_tables import GT
 
+if TYPE_CHECKING:
+    from ._datasource import LazyOrDataFrame
+
+
+class MISSING_TYPE:  # noqa: N801
+    """
+    A singleton representing a missing value.
+    """
+
+
+MISSING = MISSING_TYPE()
+
 
 class UnsafeQueryError(ValueError):
     """Raised when a query contains an unsafe/write operation."""
@@ -80,21 +92,6 @@ def check_query(query: str) -> None:
                 "Only SELECT queries are allowed. "
                 "Set QUERYCHAT_ENABLE_UPDATE_QUERIES=true to allow update queries."
             )
-
-
-if TYPE_CHECKING:
-    from narwhals.stable.v1.typing import IntoFrame
-
-    from ._datasource import AnyFrame
-
-
-class MISSING_TYPE:  # noqa: N801
-    """
-    A singleton representing a missing value.
-    """
-
-
-MISSING = MISSING_TYPE()
 
 
 @contextmanager
@@ -199,7 +196,7 @@ def querychat_tool_starts_open(action: Literal["update", "query", "reset"]) -> b
         return action != "reset"
 
 
-def df_to_html(df: IntoFrame | AnyFrame, maxrows: int = 5) -> str:
+def df_to_html(df: LazyOrDataFrame, maxrows: int = 5) -> str:
     """
     Convert a DataFrame to an HTML table for display in chat.
 
@@ -216,30 +213,18 @@ def df_to_html(df: IntoFrame | AnyFrame, maxrows: int = 5) -> str:
         HTML string representation of the table
 
     """
-    ndf = nw.from_native(df)
+    if isinstance(df, nw.DataFrame):
+        df = df.lazy()
 
-    if isinstance(ndf, (nw.LazyFrame, nw.DataFrame)):
-        df_short = ndf.lazy().head(maxrows).collect()
-        nrow_full = ndf.lazy().select(nw.len()).collect().item()
-    else:
-        raise TypeError(
-            "Must be able to convert `df` into a Narwhals DataFrame or LazyFrame",
-        )
-
-    # Convert to native DataFrame for great_tables
-    # great_tables works with pandas or polars DataFrames
-    native_df = df_short.to_native()
-
-    # Generate HTML table using great_tables
-    gt_tbl = GT(native_df)
+    df_short = df.head(maxrows).collect()
+    gt_tbl = GT(df_short.to_native())
     table_html = gt_tbl.as_raw_html(make_page=False)
 
     # Add note about truncated rows if needed
-    if len(df_short) != nrow_full:
-        rows_notice = (
+    nrow_full = df.select(nw.len()).collect().item()
+    if nrow_full > maxrows:
+        table_html += (
             f"\n\n(Showing only the first {maxrows} rows out of {nrow_full}.)\n"
         )
-    else:
-        rows_notice = ""
 
-    return table_html + rows_notice
+    return table_html

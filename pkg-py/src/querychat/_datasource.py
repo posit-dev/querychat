@@ -12,10 +12,11 @@ from ._df_compat import duckdb_result_to_nw, read_sql
 from ._utils import check_query
 
 if TYPE_CHECKING:
+    import polars as pl
     from sqlalchemy.engine import Connection, Engine
 
 # Type alias for DataFrame or LazyFrame return types
-AnyFrame = Union[nw.DataFrame, nw.LazyFrame]
+LazyOrDataFrame = Union[nw.DataFrame, nw.LazyFrame]
 
 
 class MissingColumnsError(ValueError):
@@ -61,7 +62,7 @@ class DataSource(ABC):
         ...
 
     @abstractmethod
-    def execute_query(self, query: str) -> AnyFrame:
+    def execute_query(self, query: str) -> LazyOrDataFrame:
         """
         Execute SQL query and return results as DataFrame.
 
@@ -107,7 +108,7 @@ class DataSource(ABC):
         ...
 
     @abstractmethod
-    def get_data(self) -> AnyFrame:
+    def get_data(self) -> LazyOrDataFrame:
         """
         Return the unfiltered data as a DataFrame.
 
@@ -151,7 +152,7 @@ class DataFrameSource(DataSource):
             Name of the table in SQL queries
 
         """
-        self._df = nw.from_native(df) if not isinstance(df, nw.DataFrame) else df
+        self._df = df
         self.table_name = table_name
 
         self._conn = duckdb.connect(database=":memory:")
@@ -649,7 +650,6 @@ class PolarsLazySource(DataSource):
     collecting.
     """
 
-    _lf: nw.LazyFrame
     table_name: str
 
     def __init__(self, lf: nw.LazyFrame, table_name: str):
@@ -666,20 +666,17 @@ class PolarsLazySource(DataSource):
         """
         import polars as pl  # noqa: PLC0415
 
-        self._lf = lf
         self.table_name = table_name
 
         # Get native Polars LazyFrame for SQLContext
-        native_lf = lf.to_native()
-        if not isinstance(native_lf, pl.LazyFrame):
-            raise TypeError(
-                f"Expected Polars LazyFrame, got {type(native_lf).__name__}"
-            )
+        self._lf: pl.LazyFrame = lf.to_native()
+        if not isinstance(self._lf, pl.LazyFrame):
+            raise TypeError(f"Expected Polars LazyFrame, got {type(self._lf).__name__}")
 
-        self._ctx = pl.SQLContext({table_name: native_lf})
+        self._ctx = pl.SQLContext({table_name: self._lf})
 
         # Cache schema (no data collection needed)
-        self._schema = native_lf.collect_schema()
+        self._schema = self._lf.collect_schema()
         self._colnames = list(self._schema.keys())
 
     def get_db_type(self) -> str:
@@ -692,11 +689,10 @@ class PolarsLazySource(DataSource):
 
         schema_lines = [f"Table: {self.table_name}", "Columns:"]
 
+        # Classify columns by type (no collection needed)
         numeric_cols = []
         text_cols = []
         date_cols = []
-
-        # Classify columns by type (no collection needed)
         for col_name, dtype in self._schema.items():
             if dtype.is_numeric():
                 numeric_cols.append(col_name)
@@ -705,8 +701,8 @@ class PolarsLazySource(DataSource):
             elif dtype in (pl.Date, pl.Datetime):
                 date_cols.append(col_name)
 
-        # Single scan: all numeric min/max + date min/max + all text n_unique
-        agg_exprs = []
+        # Collect expressions used to compute statistics
+        agg_exprs: list[pl.Expr] = []
         for col in numeric_cols + date_cols:
             agg_exprs.append(pl.col(col).min().alias(f"{col}__min"))
             agg_exprs.append(pl.col(col).max().alias(f"{col}__max"))
@@ -714,22 +710,17 @@ class PolarsLazySource(DataSource):
             pl.col(col).n_unique().alias(f"{col}__nunique") for col in text_cols
         )
 
+        # Collect statistics in a single scan
         stats: dict = {}
-        native_lf = self._lf.to_native()
-        if agg_exprs and (stats_df := native_lf.select(agg_exprs).collect()).height > 0:
-            stats = stats_df.row(0, named=True)
+        if agg_exprs:
+            stats_df = self._lf.select(agg_exprs).collect()
+            if stats_df.height > 0:
+                stats = stats_df.row(0, named=True)
 
-        # Collect unique values for text cols below threshold
-        categorical_values: dict[str, list] = {}
-        for col in text_cols:
-            nunique = stats.get(f"{col}__nunique", 0)
-            if nunique and nunique <= categorical_threshold:
-                values = (
-                    native_lf.select(pl.col(col).unique().head(categorical_threshold))
-                    .collect()[col]
-                    .to_list()
-                )
-                categorical_values[col] = [v for v in values if v is not None]
+        # Batch collect unique values for categorical columns (single scan)
+        categorical_values = self._get_categorical_values(
+            self._lf, text_cols, stats, categorical_threshold
+        )
 
         # Build schema string
         for col_name, dtype in self._schema.items():
@@ -790,10 +781,10 @@ class PolarsLazySource(DataSource):
         check_query(query)
 
         test_sql = f"SELECT * FROM ({query}) AS subquery LIMIT 1"
-        result_lf = self._ctx.execute(test_sql)
+        lf = self._ctx.execute(test_sql)
 
         # Actually collect to catch runtime errors (e.g., division by zero)
-        result = nw.from_native(result_lf.collect())
+        result = nw.from_native(lf.collect())
 
         if require_all_columns:
             result_columns = set(result.columns)
@@ -819,14 +810,48 @@ class PolarsLazySource(DataSource):
             The original LazyFrame
 
         """
-        return self._lf
+        return nw.from_native(self._lf)
 
     def cleanup(self) -> None:
         """Clean up resources (no-op for Polars)."""
 
     @staticmethod
-    def _polars_dtype_to_sql(dtype) -> str:  # noqa: PLR0911
-        """Convert Polars dtype to SQL type name."""
+    def _get_categorical_values(
+        lf: pl.LazyFrame,
+        text_cols: list[str],
+        stats: dict,
+        categorical_threshold: int,
+    ) -> dict[str, list]:
+        """
+        Collect unique values for text columns below the categorical threshold.
+
+        Uses a single scan to collect all categorical values at once, rather than
+        one scan per column.
+        """
+        import polars as pl  # noqa: PLC0415
+
+        # Find columns that qualify as categorical
+        categorical_cols = [
+            col
+            for col in text_cols
+            if (nunique := stats.get(f"{col}__nunique"))
+            and nunique <= categorical_threshold
+        ]
+
+        if not categorical_cols:
+            return {}
+
+        # Batch collect: use implode() to get all unique values per column in one scan
+        unique_exprs = [
+            pl.col(col).drop_nulls().unique().implode().alias(col)
+            for col in categorical_cols
+        ]
+        unique_df = lf.select(unique_exprs).collect()
+
+        return {col: unique_df[col][0] for col in categorical_cols}
+
+    @staticmethod
+    def _polars_dtype_to_sql(dtype: pl.DataType) -> str:  # noqa: PLR0911
         import polars as pl  # noqa: PLC0415
 
         if dtype.is_integer():

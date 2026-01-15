@@ -57,30 +57,6 @@ def read_sql_pyarrow(query: TextClause, conn: Connection):
     return pl.read_database(query, connection=conn).to_arrow()
 
 
-def duckdb_result_to_nw(
-    result: duckdb.DuckDBPyRelation | duckdb.DuckDBPyConnection,
-) -> nw.DataFrame:
-    # Check for polars first without consuming the result
-    try:
-        import polars  # noqa: F401, ICN001  # pyright: ignore[reportMissingImports]
-
-        return nw.from_native(result.pl())
-    except ImportError:
-        pass
-    except Exception:  # noqa: S110
-        # Other polars errors (e.g., missing pyarrow) - fall through to pandas
-        pass
-
-    try:
-        import pandas  # noqa: F401, ICN001  # pyright: ignore[reportMissingImports]
-
-        return nw.from_native(result.df())
-    except ImportError:
-        pass
-
-    raise ImportError(f"DataFrameSource requires 'polars' or 'pandas'. {_INSTALL_MSG}")
-
-
 def duckdb_result_to_polars(
     result: duckdb.DuckDBPyRelation | duckdb.DuckDBPyConnection,
 ):

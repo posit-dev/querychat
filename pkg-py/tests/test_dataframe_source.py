@@ -40,11 +40,6 @@ def narwhals_df(pandas_df):
 class TestDataFrameSourceInit:
     """Tests for DataFrameSource initialization."""
 
-    def test_init_with_pandas_dataframe(self, pandas_df):
-        """Test that DataFrameSource accepts a pandas DataFrame."""
-        source = DataFrameSource(pandas_df, "test_table")
-        assert source.table_name == "test_table"
-
     def test_init_with_narwhals_dataframe(self, narwhals_df):
         """Test that DataFrameSource accepts a narwhals DataFrame."""
         source = DataFrameSource(narwhals_df, "test_table")
@@ -66,23 +61,23 @@ class TestDataFrameSourceInit:
 class TestDataFrameSourceExecuteQuery:
     """Tests for DataFrameSource.execute_query method."""
 
-    def test_execute_query_returns_narwhals_dataframe(self, pandas_df):
+    def test_execute_query_returns_narwhals_dataframe(self, narwhals_df):
         """Test that execute_query returns a narwhals DataFrame."""
-        source = DataFrameSource(pandas_df, "employees")
+        source = DataFrameSource(narwhals_df, "employees")
         result = source.execute_query("SELECT * FROM employees")
         assert isinstance(result, nw.DataFrame)
 
-    def test_execute_query_select_all(self, pandas_df):
+    def test_execute_query_select_all(self, narwhals_df):
         """Test SELECT * query."""
-        source = DataFrameSource(pandas_df, "employees")
+        source = DataFrameSource(narwhals_df, "employees")
         result = source.execute_query("SELECT * FROM employees")
 
         assert result.shape == (5, 5)
         assert set(result.columns) == {"id", "name", "age", "salary", "department"}
 
-    def test_execute_query_with_filter(self, pandas_df):
+    def test_execute_query_with_filter(self, narwhals_df):
         """Test query with WHERE clause."""
-        source = DataFrameSource(pandas_df, "employees")
+        source = DataFrameSource(narwhals_df, "employees")
         result = source.execute_query(
             "SELECT * FROM employees WHERE department = 'Engineering'"
         )
@@ -91,9 +86,9 @@ class TestDataFrameSourceExecuteQuery:
         departments = result["department"].unique().to_list()
         assert departments == ["Engineering"]
 
-    def test_execute_query_with_aggregation(self, pandas_df):
+    def test_execute_query_with_aggregation(self, narwhals_df):
         """Test query with aggregation."""
-        source = DataFrameSource(pandas_df, "employees")
+        source = DataFrameSource(narwhals_df, "employees")
         result = source.execute_query(
             "SELECT department, AVG(salary) as avg_salary FROM employees GROUP BY department"
         )
@@ -102,17 +97,17 @@ class TestDataFrameSourceExecuteQuery:
         assert "department" in result.columns
         assert "avg_salary" in result.columns
 
-    def test_execute_query_select_columns(self, pandas_df):
+    def test_execute_query_select_columns(self, narwhals_df):
         """Test selecting specific columns."""
-        source = DataFrameSource(pandas_df, "employees")
+        source = DataFrameSource(narwhals_df, "employees")
         result = source.execute_query("SELECT name, age FROM employees")
 
         assert result.shape == (5, 2)
         assert list(result.columns) == ["name", "age"]
 
-    def test_execute_query_order_by(self, pandas_df):
+    def test_execute_query_order_by(self, narwhals_df):
         """Test query with ORDER BY clause."""
-        source = DataFrameSource(pandas_df, "employees")
+        source = DataFrameSource(narwhals_df, "employees")
         result = source.execute_query(
             "SELECT name, age FROM employees ORDER BY age DESC"
         )
@@ -120,9 +115,9 @@ class TestDataFrameSourceExecuteQuery:
         ages = result["age"].to_list()
         assert ages == sorted(ages, reverse=True)
 
-    def test_execute_query_empty_result(self, pandas_df):
+    def test_execute_query_empty_result(self, narwhals_df):
         """Test query that returns no rows."""
-        source = DataFrameSource(pandas_df, "employees")
+        source = DataFrameSource(narwhals_df, "employees")
         result = source.execute_query(
             "SELECT * FROM employees WHERE age > 100"
         )
@@ -134,27 +129,27 @@ class TestDataFrameSourceExecuteQuery:
 class TestDataFrameSourceGetData:
     """Tests for DataFrameSource.get_data method."""
 
-    def test_get_data_returns_narwhals_dataframe(self, pandas_df):
+    def test_get_data_returns_narwhals_dataframe(self, narwhals_df):
         """Test that get_data returns a narwhals DataFrame."""
-        source = DataFrameSource(pandas_df, "employees")
+        source = DataFrameSource(narwhals_df, "employees")
         result = source.get_data()
         assert isinstance(result, nw.DataFrame)
 
-    def test_get_data_returns_full_dataset(self, pandas_df):
+    def test_get_data_returns_full_dataset(self, narwhals_df):
         """Test that get_data returns all rows."""
-        source = DataFrameSource(pandas_df, "employees")
+        source = DataFrameSource(narwhals_df, "employees")
         result = source.get_data()
 
-        assert result.shape == pandas_df.shape
-        assert set(result.columns) == set(pandas_df.columns)
+        assert result.shape == narwhals_df.shape
+        assert set(result.columns) == set(narwhals_df.columns)
 
-    def test_get_data_preserves_data(self, pandas_df):
+    def test_get_data_preserves_data(self, narwhals_df):
         """Test that get_data preserves data values."""
-        source = DataFrameSource(pandas_df, "employees")
+        source = DataFrameSource(narwhals_df, "employees")
         result = source.get_data()
 
         # Check that the data matches
-        original_names = sorted(pandas_df["name"].tolist())
+        original_names = sorted(narwhals_df["name"].to_list())
         result_names = sorted(result["name"].to_list())
         assert original_names == result_names
 
@@ -162,25 +157,25 @@ class TestDataFrameSourceGetData:
 class TestDataFrameSourceGetSchema:
     """Tests for DataFrameSource.get_schema method."""
 
-    def test_get_schema_includes_table_name(self, pandas_df):
+    def test_get_schema_includes_table_name(self, narwhals_df):
         """Test that schema includes table name."""
-        source = DataFrameSource(pandas_df, "employees")
+        source = DataFrameSource(narwhals_df, "employees")
         schema = source.get_schema(categorical_threshold=10)
 
         assert "Table: employees" in schema
         assert "Columns:" in schema
 
-    def test_get_schema_includes_all_columns(self, pandas_df):
+    def test_get_schema_includes_all_columns(self, narwhals_df):
         """Test that schema includes all columns."""
-        source = DataFrameSource(pandas_df, "employees")
+        source = DataFrameSource(narwhals_df, "employees")
         schema = source.get_schema(categorical_threshold=10)
 
-        for col in pandas_df.columns:
+        for col in narwhals_df.columns:
             assert f"- {col} (" in schema
 
-    def test_get_schema_numeric_ranges(self, pandas_df):
+    def test_get_schema_numeric_ranges(self, narwhals_df):
         """Test that numeric columns include range information."""
-        source = DataFrameSource(pandas_df, "employees")
+        source = DataFrameSource(narwhals_df, "employees")
         schema = source.get_schema(categorical_threshold=10)
 
         # Age should have range
@@ -188,9 +183,9 @@ class TestDataFrameSourceGetSchema:
         # Salary should have range
         assert "Range: 50000.0 to 70000.0" in schema
 
-    def test_get_schema_categorical_values(self, pandas_df):
+    def test_get_schema_categorical_values(self, narwhals_df):
         """Test that categorical columns show unique values."""
-        source = DataFrameSource(pandas_df, "employees")
+        source = DataFrameSource(narwhals_df, "employees")
         schema = source.get_schema(categorical_threshold=10)
 
         # Department has only 2 unique values, should be categorical
@@ -198,9 +193,9 @@ class TestDataFrameSourceGetSchema:
         assert "'Engineering'" in schema
         assert "'Sales'" in schema
 
-    def test_get_schema_respects_threshold(self, pandas_df):
+    def test_get_schema_respects_threshold(self, narwhals_df):
         """Test that categorical_threshold is respected."""
-        source = DataFrameSource(pandas_df, "employees")
+        source = DataFrameSource(narwhals_df, "employees")
 
         # With threshold 1, no columns should be categorical
         schema_low = source.get_schema(categorical_threshold=1)
@@ -218,18 +213,18 @@ class TestDataFrameSourceGetSchema:
 class TestDataFrameSourceDbType:
     """Tests for DataFrameSource.get_db_type method."""
 
-    def test_get_db_type_returns_duckdb(self, pandas_df):
+    def test_get_db_type_returns_duckdb(self, narwhals_df):
         """Test that get_db_type returns 'DuckDB'."""
-        source = DataFrameSource(pandas_df, "employees")
+        source = DataFrameSource(narwhals_df, "employees")
         assert source.get_db_type() == "DuckDB"
 
 
 class TestDataFrameSourceCleanup:
     """Tests for DataFrameSource.cleanup method."""
 
-    def test_cleanup_closes_connection(self, pandas_df):
+    def test_cleanup_closes_connection(self, narwhals_df):
         """Test that cleanup closes the DuckDB connection."""
-        source = DataFrameSource(pandas_df, "employees")
+        source = DataFrameSource(narwhals_df, "employees")
 
         # Should work before cleanup
         result = source.execute_query("SELECT * FROM employees LIMIT 1")

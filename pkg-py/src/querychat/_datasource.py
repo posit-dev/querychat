@@ -171,7 +171,7 @@ class DataFrameSource(DataSource):
         Parameters
         ----------
         df
-            The DataFrame to wrap (pandas, polars, or any narwhals-compatible frame)
+            A narwhals DataFrame
         table_name
             Name of the table in SQL queries
 

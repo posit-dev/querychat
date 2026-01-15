@@ -3,6 +3,7 @@
 import tempfile
 from pathlib import Path
 
+import narwhals.stable.v1 as nw
 import pandas as pd
 import pytest
 from querychat._datasource import DataFrameSource
@@ -12,12 +13,14 @@ from querychat._system_prompt import QueryChatSystemPrompt
 @pytest.fixture
 def sample_data_source():
     """Create a sample DataFrameSource for testing."""
-    df = pd.DataFrame(
-        {
-            "id": [1, 2, 3],
-            "name": ["Alice", "Bob", "Charlie"],
-            "age": [25, 30, 35],
-        }
+    df = nw.from_native(
+        pd.DataFrame(
+            {
+                "id": [1, 2, 3],
+                "name": ["Alice", "Bob", "Charlie"],
+                "age": [25, 30, 35],
+            }
+        )
     )
     return DataFrameSource(df, "test_table")
 

@@ -31,7 +31,7 @@ GREETING_PROMPT: str = (
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Iterator
 
-    from ._datasource import DataSource, LazyOrDataFrame
+    from ._datasource import DataOrLazyFrame, DataSource
 
 
 ClientFactory = Callable[
@@ -70,7 +70,7 @@ class StateDictAccessorMixin:
         """Create a chat client with dashboard callbacks."""
         return self.client(update_dashboard=update_cb, reset_dashboard=reset_cb)  # type: ignore[attr-defined]
 
-    def df(self, state: AppStateDict | None) -> LazyOrDataFrame:
+    def df(self, state: AppStateDict | None) -> DataOrLazyFrame:
         """
         Get the current DataFrame from state.
 
@@ -209,7 +209,7 @@ class AppState:
         self.title = None
         self.error = None
 
-    def get_current_data(self) -> LazyOrDataFrame:
+    def get_current_data(self) -> DataOrLazyFrame:
         """Get current data, falling back to default if query fails."""
         if self.sql:
             try:

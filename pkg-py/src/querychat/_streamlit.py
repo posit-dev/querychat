@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     import sqlalchemy
     from narwhals.stable.v1.typing import IntoFrame
 
-    from ._datasource import LazyOrDataFrame
+    from ._datasource import DataOrLazyFrame
 
 
 class QueryChat(QueryChatBase):
@@ -182,7 +182,7 @@ class QueryChat(QueryChatBase):
 
             st.rerun()
 
-    def df(self) -> LazyOrDataFrame:
+    def df(self) -> DataOrLazyFrame:
         """Get the current filtered data frame (or LazyFrame if data source is lazy)."""
         return self._get_state().get_current_data()
 

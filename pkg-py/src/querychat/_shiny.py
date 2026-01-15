@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     import sqlalchemy
     from narwhals.stable.v1.typing import IntoFrame
 
-    from ._datasource import LazyOrDataFrame
+    from ._datasource import DataOrLazyFrame
 
 
 class QueryChat(QueryChatBase):
@@ -611,7 +611,7 @@ class QueryChatExpress(QueryChatBase):
         """
         return mod_ui(id or self.id, **kwargs)
 
-    def df(self) -> LazyOrDataFrame:
+    def df(self) -> DataOrLazyFrame:
         """
         Reactively read the current filtered data frame that is in effect.
 

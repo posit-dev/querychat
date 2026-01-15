@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
     from shiny import Inputs, Outputs, Session
 
-    from ._datasource import DataSource, LazyOrDataFrame
+    from ._datasource import DataOrLazyFrame, DataSource
     from .types import UpdateDashboardData
 
 ReactiveString = reactive.Value[str]
@@ -81,7 +81,7 @@ class ServerValues:
 
     """
 
-    df: Callable[[], LazyOrDataFrame]
+    df: Callable[[], DataOrLazyFrame]
     sql: ReactiveStringOrNone
     title: ReactiveStringOrNone
     client: chatlas.Chat

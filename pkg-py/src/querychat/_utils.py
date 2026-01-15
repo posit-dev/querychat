@@ -10,7 +10,7 @@ import narwhals.stable.v1 as nw
 from great_tables import GT
 
 if TYPE_CHECKING:
-    from ._datasource import LazyOrDataFrame
+    from ._datasource import DataOrLazyFrame
 
 
 class MISSING_TYPE:  # noqa: N801
@@ -196,7 +196,7 @@ def querychat_tool_starts_open(action: Literal["update", "query", "reset"]) -> b
         return action != "reset"
 
 
-def df_to_html(df: LazyOrDataFrame, maxrows: int = 5) -> str:
+def df_to_html(df: DataOrLazyFrame, maxrows: int = 5) -> str:
     """
     Convert a DataFrame to a Bootstrap-styled HTML table for display in chat.
 

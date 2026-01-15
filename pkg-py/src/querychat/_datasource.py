@@ -16,8 +16,7 @@ if TYPE_CHECKING:
     import polars as pl
     from sqlalchemy.engine import Connection, Engine
 
-# Type alias for DataFrame or LazyFrame return types
-LazyOrDataFrame = Union[nw.DataFrame, nw.LazyFrame]
+DataOrLazyFrame = Union[nw.DataFrame, nw.LazyFrame]
 
 
 class MissingColumnsError(ValueError):
@@ -86,7 +85,7 @@ class DataSource(ABC):
         ...
 
     @abstractmethod
-    def execute_query(self, query: str) -> LazyOrDataFrame:
+    def execute_query(self, query: str) -> DataOrLazyFrame:
         """
         Execute SQL query and return results as DataFrame.
 
@@ -132,7 +131,7 @@ class DataSource(ABC):
         ...
 
     @abstractmethod
-    def get_data(self) -> LazyOrDataFrame:
+    def get_data(self) -> DataOrLazyFrame:
         """
         Return the unfiltered data as a DataFrame.
 

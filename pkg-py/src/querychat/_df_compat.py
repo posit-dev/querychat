@@ -36,6 +36,20 @@ def read_sql(query: TextClause, conn: Connection) -> nw.DataFrame:
     raise ImportError(f"SQLAlchemySource requires 'polars' or 'pandas'. {_INSTALL_MSG}")
 
 
+def read_sql_polars(query: TextClause, conn: Connection):
+    """Read SQL query and return native polars DataFrame."""
+    import polars as pl
+
+    return pl.read_database(query, connection=conn)
+
+
+def read_sql_pandas(query: TextClause, conn: Connection):
+    """Read SQL query and return native pandas DataFrame."""
+    import pandas as pd
+
+    return pd.read_sql_query(query, conn)
+
+
 def duckdb_result_to_nw(
     result: duckdb.DuckDBPyRelation | duckdb.DuckDBPyConnection,
 ) -> nw.DataFrame:

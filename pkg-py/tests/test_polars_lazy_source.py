@@ -172,16 +172,15 @@ class TestPolarsLazySourceGetSchema:
 class TestPolarsLazySourceTestQuery:
     """Tests for PolarsLazySource.test_query method."""
 
-    def test_test_query_returns_dataframe(self, polars_lazy_df):
-        """Test that test_query returns a collected DataFrame (not LazyFrame)."""
+    def test_test_query_returns_lazyframe(self, polars_lazy_df):
+        """Test that test_query returns a LazyFrame (validates but stays lazy)."""
         from querychat._datasource import PolarsLazySource
 
         nw_lf = nw.from_native(polars_lazy_df)
         source = PolarsLazySource(nw_lf, "employees")
         result = source.test_query("SELECT * FROM employees")
-        # test_query collects to catch runtime errors, so returns DataFrame
-        assert isinstance(result, nw.DataFrame)
-        assert len(result) <= 1
+        # test_query validates by collecting internally, but returns LazyFrame
+        assert isinstance(result, pl.LazyFrame)
 
     def test_test_query_require_all_columns_passes(self, polars_lazy_df):
         """Test that test_query passes when all columns present."""
@@ -193,7 +192,7 @@ class TestPolarsLazySourceTestQuery:
         result = source.test_query(
             "SELECT * FROM employees", require_all_columns=True
         )
-        assert isinstance(result, nw.DataFrame)
+        assert isinstance(result, pl.LazyFrame)
 
     def test_test_query_require_all_columns_fails(self, polars_lazy_df):
         """Test that test_query raises when columns missing."""

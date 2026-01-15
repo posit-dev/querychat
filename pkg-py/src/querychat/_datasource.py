@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Literal, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar, Union
 
 import duckdb
 import narwhals.stable.v1 as nw
@@ -10,18 +10,23 @@ from sqlalchemy import inspect, text
 from sqlalchemy.sql import sqltypes
 
 from ._df_compat import (
-    duckdb_result_to_nw,
     duckdb_result_to_pandas,
     duckdb_result_to_polars,
-    read_sql,
+    read_sql_pandas,
+    read_sql_polars,
 )
 from ._utils import check_query
 
 if TYPE_CHECKING:
+    import pandas as pd
     import polars as pl
     from narwhals.stable.v1.typing import IntoDataFrame
     from sqlalchemy.engine import Connection, Engine
 
+# TypeVar for DataSource - the type returned by execute_query/get_data/test_query
+DataSourceT = TypeVar("DataSourceT")
+
+# Legacy alias for backwards compatibility
 DataOrLazyFrame = Union[nw.DataFrame, nw.LazyFrame]
 
 # TypeVar for generic QueryChat classes - captures the specific DataFrame type passed in.
@@ -62,9 +67,14 @@ class ColumnMeta:
     """Unique values for text columns below the categorical threshold."""
 
 
-class DataSource(ABC):
+class DataSource(ABC, Generic[DataSourceT]):
     """
     An abstract class defining the interface for data sources used by QueryChat.
+
+    Type Parameters
+    ---------------
+    DataSourceT
+        The type returned by execute_query, test_query, and get_data methods.
 
     Attributes
     ----------
@@ -101,9 +111,9 @@ class DataSource(ABC):
         ...
 
     @abstractmethod
-    def execute_query(self, query: str) -> DataOrLazyFrame:
+    def execute_query(self, query: str) -> DataSourceT:
         """
-        Execute SQL query and return results as DataFrame.
+        Execute SQL query and return results.
 
         Parameters
         ----------
@@ -113,7 +123,7 @@ class DataSource(ABC):
         Returns
         -------
         :
-            Query results as a narwhals DataFrame
+            Query results
 
         """
         ...
@@ -121,7 +131,7 @@ class DataSource(ABC):
     @abstractmethod
     def test_query(
         self, query: str, *, require_all_columns: bool = False
-    ) -> nw.DataFrame:
+    ) -> DataSourceT:
         """
         Test SQL query by fetching only one row.
 
@@ -136,7 +146,7 @@ class DataSource(ABC):
         Returns
         -------
         :
-            Query results as a narwhals DataFrame with at most one row
+            Query results with at most one row
 
         Raises
         ------
@@ -147,14 +157,14 @@ class DataSource(ABC):
         ...
 
     @abstractmethod
-    def get_data(self) -> DataOrLazyFrame:
+    def get_data(self) -> DataSourceT:
         """
-        Return the unfiltered data as a DataFrame.
+        Return the unfiltered data.
 
         Returns
         -------
         :
-            The complete dataset as a narwhals DataFrame
+            The complete dataset
 
         """
         ...
@@ -174,7 +184,7 @@ class DataSource(ABC):
         """
 
 
-class DataFrameSource(DataSource):
+class DataFrameSource(DataSource[IntoDataFrameT]):
     """A DataSource implementation that wraps a DataFrame using DuckDB."""
 
     _df: nw.DataFrame
@@ -283,7 +293,7 @@ SET lock_configuration = true;
 
         return "\n".join(schema)
 
-    def execute_query(self, query: str):  # type: ignore[override]
+    def execute_query(self, query: str) -> IntoDataFrameT:
         """
         Execute query using DuckDB.
 
@@ -314,7 +324,7 @@ SET lock_configuration = true;
 
     def test_query(
         self, query: str, *, require_all_columns: bool = False
-    ) -> nw.DataFrame:
+    ) -> IntoDataFrameT:
         """
         Test query by fetching only one row.
 
@@ -339,10 +349,14 @@ SET lock_configuration = true;
 
         """
         check_query(query)
-        result = duckdb_result_to_nw(self._conn.execute(f"{query} LIMIT 1"))
+        result = self._conn.execute(f"{query} LIMIT 1")
+        if self._df_lib == "polars":
+            native_result = duckdb_result_to_polars(result)
+        else:
+            native_result = duckdb_result_to_pandas(result)
 
         if require_all_columns:
-            result_columns = set(result.columns)
+            result_columns = set(native_result.columns)
             original_columns_set = set(self._colnames)
             missing_columns = original_columns_set - result_columns
 
@@ -355,9 +369,9 @@ SET lock_configuration = true;
                     f"Original columns: {original_list}"
                 )
 
-        return result
+        return native_result
 
-    def get_data(self):
+    def get_data(self) -> IntoDataFrameT:
         """
         Return the unfiltered data as a DataFrame.
 
@@ -382,7 +396,7 @@ SET lock_configuration = true;
             self._conn.close()
 
 
-class SQLAlchemySource(DataSource):
+class SQLAlchemySource(DataSource["pl.DataFrame | pd.DataFrame"]):
     """
     A DataSource implementation that supports multiple SQL databases via
     SQLAlchemy.
@@ -391,7 +405,13 @@ class SQLAlchemySource(DataSource):
     and Databricks.
     """
 
-    def __init__(self, engine: Engine, table_name: str):
+    def __init__(
+        self,
+        engine: Engine,
+        table_name: str,
+        *,
+        return_type: Literal["polars", "pandas"] = "polars",
+    ):
         """
         Initialize with a SQLAlchemy engine.
 
@@ -401,10 +421,14 @@ class SQLAlchemySource(DataSource):
             SQLAlchemy engine
         table_name
             Name of the table to query
+        return_type
+            The type of DataFrame to return from queries. Either "polars" (default)
+            or "pandas".
 
         """
         self._engine = engine
         self.table_name = table_name
+        self._return_type = return_type
 
         # Validate table exists
         inspector = inspect(self._engine)
@@ -559,11 +583,16 @@ class SQLAlchemySource(DataSource):
 
         return "\n".join(schema)
 
-    def execute_query(self, query: str) -> nw.DataFrame:
+    def _read_sql(self, query, conn):
+        """Read SQL using the configured return type."""
+        if self._return_type == "polars":
+            return read_sql_polars(query, conn)
+        else:
+            return read_sql_pandas(query, conn)
+
+    def execute_query(self, query: str) -> pl.DataFrame | pd.DataFrame:
         """
         Execute SQL query and return results as DataFrame.
-
-        Uses polars if available, otherwise falls back to pandas.
 
         Parameters
         ----------
@@ -573,7 +602,7 @@ class SQLAlchemySource(DataSource):
         Returns
         -------
         :
-            Query results as narwhals DataFrame
+            Query results as native DataFrame (polars or pandas based on return_type)
 
         Raises
         ------
@@ -583,11 +612,11 @@ class SQLAlchemySource(DataSource):
         """
         check_query(query)
         with self._get_connection() as conn:
-            return read_sql(text(query), conn)
+            return self._read_sql(text(query), conn)
 
     def test_query(
         self, query: str, *, require_all_columns: bool = False
-    ) -> nw.DataFrame:
+    ) -> pl.DataFrame | pd.DataFrame:
         """
         Test query by fetching only one row.
 
@@ -616,10 +645,10 @@ class SQLAlchemySource(DataSource):
             # Use read_sql with limit to get at most one row
             limit_query = f"SELECT * FROM ({query}) AS subquery LIMIT 1"
             try:
-                result = read_sql(text(limit_query), conn)
+                result = self._read_sql(text(limit_query), conn)
             except Exception:
                 # If LIMIT syntax doesn't work, fall back to regular read and take first row
-                result = read_sql(text(query), conn).head(1)
+                result = self._read_sql(text(query), conn).head(1)
 
             if require_all_columns:
                 result_columns = set(result.columns)
@@ -639,14 +668,14 @@ class SQLAlchemySource(DataSource):
 
             return result
 
-    def get_data(self) -> nw.DataFrame:
+    def get_data(self) -> pl.DataFrame | pd.DataFrame:
         """
         Return the unfiltered data as a DataFrame.
 
         Returns
         -------
         :
-            The complete dataset as a narwhals DataFrame
+            The complete dataset as native DataFrame (polars or pandas based on return_type)
 
         """
         return self.execute_query(f"SELECT * FROM {self.table_name}")
@@ -689,7 +718,7 @@ class SQLAlchemySource(DataSource):
             self._engine.dispose()
 
 
-class PolarsLazySource(DataSource):
+class PolarsLazySource(DataSource["pl.LazyFrame"]):
     """
     A DataSource implementation for Polars LazyFrames.
 
@@ -742,7 +771,7 @@ class PolarsLazySource(DataSource):
         self._add_column_stats(columns, self._lf, categorical_threshold)
         return self._format_schema(self.table_name, columns)
 
-    def execute_query(self, query: str):  # type: ignore[override]
+    def execute_query(self, query: str) -> pl.LazyFrame:
         """
         Execute SQL query and return results as LazyFrame.
 
@@ -762,9 +791,9 @@ class PolarsLazySource(DataSource):
 
     def test_query(
         self, query: str, *, require_all_columns: bool = False
-    ) -> nw.DataFrame:
+    ) -> pl.LazyFrame:
         """
-        Test SQL query validity by executing and collecting one row.
+        Test SQL query validity by executing and validating.
 
         Parameters
         ----------
@@ -776,19 +805,19 @@ class PolarsLazySource(DataSource):
         Returns
         -------
         :
-            Query results as a narwhals DataFrame with at most one row
+            Query results as a Polars LazyFrame
 
         """
         check_query(query)
 
-        test_sql = f"SELECT * FROM ({query}) AS subquery LIMIT 1"
-        lf = self._ctx.execute(test_sql)
+        lf = self._ctx.execute(query)
 
-        # Actually collect to catch runtime errors (e.g., division by zero)
-        result = nw.from_native(lf.collect())
+        # Collect one row to catch runtime errors (e.g., division by zero)
+        test_lf = self._ctx.execute(f"SELECT * FROM ({query}) AS subquery LIMIT 1")
+        collected = test_lf.collect()
 
         if require_all_columns:
-            result_columns = set(result.columns)
+            result_columns = set(collected.columns)
             missing = set(self._colnames) - result_columns
             if missing:
                 missing_list = ", ".join(f"'{c}'" for c in sorted(missing))
@@ -799,9 +828,10 @@ class PolarsLazySource(DataSource):
                     f"Original columns: {original_list}"
                 )
 
-        return result
+        # Return the original LazyFrame (not the collected test result)
+        return lf
 
-    def get_data(self):  # type: ignore[override]
+    def get_data(self) -> pl.LazyFrame:
         """
         Return the unfiltered data as a LazyFrame.
 

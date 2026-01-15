@@ -115,5 +115,5 @@ def test_df_to_html_with_truncation(sample_dataframe):
     html_output = df_to_html(result_df, maxrows=3)
 
     # Should show truncation message
-    assert "Showing only the first 3 rows out of 5" in html_output
+    assert "Showing 3 of 5 rows" in html_output
     assert "<table" in html_output

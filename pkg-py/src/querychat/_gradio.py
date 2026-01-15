@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Optional
 
+import narwhals.stable.v1 as nw
 from gradio.context import Context
 
 from ._querychat_base import TOOL_GROUPS, QueryChatBase
@@ -294,6 +295,28 @@ class QueryChat(QueryChatBase, StateDictAccessorMixin):
                 )
 
                 df = self.df(state_dict)
+                # Handle ibis tables specially
+                try:
+                    import ibis
+
+                    if isinstance(df, ibis.Table):
+                        # Execute ibis table to get pandas DataFrame
+                        native_df = df.execute()
+                        nrow, ncol = native_df.shape
+                        data_info_parts = []
+                        if error:
+                            data_info_parts.append(f"⚠️ {error}")
+                        data_info_parts.append(
+                            f"*Data has {nrow} rows and {ncol} columns.*"
+                        )
+                        data_info_text = " ".join(data_info_parts)
+                        return sql_title_text, sql_code, native_df, data_info_text
+                except ImportError:
+                    pass
+
+                # Collect if lazy before accessing .shape
+                if isinstance(df, nw.LazyFrame):
+                    df = df.collect()
 
                 data_info_parts = []
                 if error:

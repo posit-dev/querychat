@@ -20,6 +20,8 @@ if TYPE_CHECKING:
     import sqlalchemy
     from narwhals.stable.v1.typing import IntoFrame
 
+    from ._datasource import AnyFrame
+
 
 class QueryChat(QueryChatBase):
     """
@@ -609,16 +611,18 @@ class QueryChatExpress(QueryChatBase):
         """
         return mod_ui(id or self.id, **kwargs)
 
-    def df(self) -> nw.DataFrame:
+    def df(self) -> AnyFrame:
         """
         Reactively read the current filtered data frame that is in effect.
 
         Returns
         -------
         :
-            The current filtered data frame as a narwhals DataFrame or LazyFrame.
-            If the data source is lazy, returns a LazyFrame. If no query has been
-            set, this will return the unfiltered data from the data source.
+            The current filtered data frame as a narwhals DataFrame, LazyFrame,
+            or Ibis Table. If the data source is lazy, returns a LazyFrame.
+            If the data source is an Ibis Table, returns an Ibis Table.
+            If no query has been set, this will return the unfiltered data
+            from the data source.
 
         """
         return self._vals.df()

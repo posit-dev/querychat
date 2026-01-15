@@ -203,7 +203,8 @@ class TestIbisSourceTestQuery:
 
             # This query fails at runtime when trying to cast strings to integers
             # test_query should catch this because it actually executes the query
-            with pytest.raises(Exception):  # DuckDB raises various exceptions for invalid casts
+            # DuckDB raises ConversionException which inherits from Exception
+            with pytest.raises(Exception, match=r"[Cc]onversion|[Cc]ast"):
                 source.test_query("SELECT CAST(b AS INTEGER) FROM test_table")
         finally:
             conn.disconnect()

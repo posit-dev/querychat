@@ -213,6 +213,25 @@ def df_to_html(df: AnyFrame, maxrows: int = 5) -> str:
         HTML string representation of the table
 
     """
+    # Handle Ibis tables specially
+    try:
+        import ibis
+
+        if isinstance(df, ibis.Table):
+            df_short = df.limit(maxrows).execute()
+            gt_tbl = GT(df_short)
+            table_html = gt_tbl.as_raw_html(make_page=False)
+
+            # Get total row count for truncation message
+            nrow_full = df.count().execute()
+            if nrow_full > maxrows:
+                table_html += f"\n\n*(Showing {maxrows} of {nrow_full} rows)*\n"
+
+            return table_html
+    except ImportError:
+        pass
+
+    # Handle narwhals DataFrames and LazyFrames
     if isinstance(df, nw.DataFrame):
         df = df.lazy()
 
@@ -223,8 +242,6 @@ def df_to_html(df: AnyFrame, maxrows: int = 5) -> str:
     # Add note about truncated rows if needed
     nrow_full = df.select(nw.len()).collect().item()
     if nrow_full > maxrows:
-        table_html += (
-            f"\n\n(Showing only the first {maxrows} rows out of {nrow_full}.)\n"
-        )
+        table_html += f"\n\n*(Showing {maxrows} of {nrow_full} rows)*\n"
 
     return table_html

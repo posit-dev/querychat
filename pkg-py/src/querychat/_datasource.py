@@ -22,6 +22,8 @@ if TYPE_CHECKING:
 else:
     AnyFrame = Union[nw.DataFrame, nw.LazyFrame]
 
+DataOrLazyFrame = Union[nw.DataFrame, nw.LazyFrame]
+
 
 class MissingColumnsError(ValueError):
     """Raised when a query result is missing required columns."""

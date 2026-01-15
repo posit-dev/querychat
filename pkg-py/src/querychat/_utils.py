@@ -223,8 +223,6 @@ def df_to_html(df: LazyOrDataFrame, maxrows: int = 5) -> str:
     # Add note about truncated rows if needed
     nrow_full = df.select(nw.len()).collect().item()
     if nrow_full > maxrows:
-        table_html += (
-            f"\n\n(Showing only the first {maxrows} rows out of {nrow_full}.)\n"
-        )
+        table_html += f"\n\n*(Showing {maxrows} of {nrow_full} rows)*\n"
 
     return table_html

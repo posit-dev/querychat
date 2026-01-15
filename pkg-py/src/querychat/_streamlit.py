@@ -17,9 +17,10 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     import chatlas
-    import narwhals.stable.v1 as nw
     import sqlalchemy
     from narwhals.stable.v1.typing import IntoFrame
+
+    from ._datasource import LazyOrDataFrame
 
 
 class QueryChat(QueryChatBase):
@@ -181,8 +182,8 @@ class QueryChat(QueryChatBase):
 
             st.rerun()
 
-    def df(self) -> nw.DataFrame:
-        """Get the current filtered data frame."""
+    def df(self) -> LazyOrDataFrame:
+        """Get the current filtered data frame (or LazyFrame if data source is lazy)."""
         return self._get_state().get_current_data()
 
     def sql(self) -> str | None:

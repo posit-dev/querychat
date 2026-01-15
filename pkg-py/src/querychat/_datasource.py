@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar, Union, overload
 
 import duckdb
 import narwhals.stable.v1 as nw
@@ -396,14 +396,38 @@ SET lock_configuration = true;
             self._conn.close()
 
 
-class SQLAlchemySource(DataSource["pl.DataFrame | pd.DataFrame"]):
+class SQLAlchemySource(DataSource[DataFrameT]):
     """
     A DataSource implementation that supports multiple SQL databases via
     SQLAlchemy.
 
     Supports various databases including PostgreSQL, MySQL, SQLite, Snowflake,
     and Databricks.
+
+    Type Parameters
+    ---------------
+    DataFrameT
+        The DataFrame type returned by queries. Determined by `return_type`:
+        `pl.DataFrame` when "polars" (default), `pd.DataFrame` when "pandas".
     """
+
+    @overload
+    def __init__(
+        self: SQLAlchemySource[pl.DataFrame],
+        engine: Engine,
+        table_name: str,
+        *,
+        return_type: Literal["polars"] = ...,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: SQLAlchemySource[pd.DataFrame],
+        engine: Engine,
+        table_name: str,
+        *,
+        return_type: Literal["pandas"],
+    ) -> None: ...
 
     def __init__(
         self,
@@ -590,7 +614,7 @@ class SQLAlchemySource(DataSource["pl.DataFrame | pd.DataFrame"]):
         else:
             return read_sql_pandas(query, conn)
 
-    def execute_query(self, query: str) -> pl.DataFrame | pd.DataFrame:
+    def execute_query(self, query: str) -> DataFrameT:
         """
         Execute SQL query and return results as DataFrame.
 
@@ -616,7 +640,7 @@ class SQLAlchemySource(DataSource["pl.DataFrame | pd.DataFrame"]):
 
     def test_query(
         self, query: str, *, require_all_columns: bool = False
-    ) -> pl.DataFrame | pd.DataFrame:
+    ) -> DataFrameT:
         """
         Test query by fetching only one row.
 
@@ -668,7 +692,7 @@ class SQLAlchemySource(DataSource["pl.DataFrame | pd.DataFrame"]):
 
             return result
 
-    def get_data(self) -> pl.DataFrame | pd.DataFrame:
+    def get_data(self) -> DataFrameT:
         """
         Return the unfiltered data as a DataFrame.
 

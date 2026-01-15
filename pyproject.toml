@@ -64,7 +64,7 @@ packages = ["pkg-py/src/querychat"]
 include = ["pkg-py/src/querychat", "pkg-py/LICENSE", "pkg-py/README.md"]
 
 [dependency-groups]
-dev = ["ruff>=0.6.5", "pyright>=1.1.401", "tox-uv>=1.11.4", "pytest>=8.4.0"]
+dev = ["ruff>=0.6.5", "pyright>=1.1.401", "tox-uv>=1.11.4", "pytest>=8.4.0", "polars>=1.0.0"]
 docs = ["quartodoc>=0.11.1", "nbformat", "nbclient", "ipykernel"]
 examples = [
     "openai",

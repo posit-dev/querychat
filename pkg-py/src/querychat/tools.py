@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol, TypedDict, runtime_checkable
 
 import chevron
+import narwhals.stable.v1 as nw
 from chatlas import ContentToolResult, Tool
 from shinychat.types import ToolResultDisplay
 
@@ -232,6 +233,8 @@ def _query_impl(data_source: DataSource) -> Callable[[str, str], ContentToolResu
 
         try:
             result_df = data_source.execute_query(query)
+            if isinstance(result_df, nw.LazyFrame):
+                result_df = result_df.collect()
             value = result_df.rows(named=True)
 
             # Format table results

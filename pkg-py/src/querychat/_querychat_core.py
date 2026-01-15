@@ -31,9 +31,7 @@ GREETING_PROMPT: str = (
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Iterator
 
-    import narwhals.stable.v1 as nw
-
-    from ._datasource import DataSource
+    from ._datasource import DataOrLazyFrame, DataSource
 
 
 ClientFactory = Callable[
@@ -72,7 +70,7 @@ class StateDictAccessorMixin:
         """Create a chat client with dashboard callbacks."""
         return self.client(update_dashboard=update_cb, reset_dashboard=reset_cb)  # type: ignore[attr-defined]
 
-    def df(self, state: AppStateDict | None) -> nw.DataFrame:
+    def df(self, state: AppStateDict | None) -> DataOrLazyFrame:
         """
         Get the current DataFrame from state.
 
@@ -85,6 +83,7 @@ class StateDictAccessorMixin:
         -------
         :
             The filtered data if a SQL query is active, otherwise the full dataset.
+            Returns a LazyFrame if the data source is lazy.
 
         """
         sql = state.get("sql") if state else None
@@ -210,7 +209,7 @@ class AppState:
         self.title = None
         self.error = None
 
-    def get_current_data(self) -> nw.DataFrame:
+    def get_current_data(self) -> DataOrLazyFrame:
         """Get current data, falling back to default if query fails."""
         if self.sql:
             try:

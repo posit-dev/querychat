@@ -1,8 +1,11 @@
 import os
 
+import narwhals.stable.v1 as nw
 import pandas as pd
+import polars as pl
 import pytest
 from querychat import QueryChat
+from querychat._datasource import PolarsLazySource
 
 
 @pytest.fixture(autouse=True)
@@ -87,3 +90,32 @@ def test_querychat_client_has_system_prompt(sample_df):
     # (needed for methods like generate_greeting() that use _client directly)
     assert qc._client.system_prompt is not None
     assert "test_table" in qc._client.system_prompt
+
+
+def test_querychat_with_polars_lazyframe():
+    """Test that QueryChat accepts a Polars LazyFrame."""
+    lf = pl.LazyFrame(
+        {
+            "id": [1, 2, 3],
+            "name": ["Alice", "Bob", "Charlie"],
+            "age": [25, 30, 35],
+        }
+    )
+
+    qc = QueryChat(
+        data_source=lf,
+        table_name="test_table",
+        greeting="Hello!",
+    )
+
+    # Should have created a PolarsLazySource
+    assert isinstance(qc.data_source, PolarsLazySource)
+
+    # Query should return a LazyFrame
+    result = qc.data_source.execute_query("SELECT * FROM test_table WHERE id = 2")
+    assert isinstance(result, nw.LazyFrame)
+
+    # Collect to verify
+    collected = result.collect()
+    assert len(collected) == 1
+    assert collected.item(0, "name") == "Bob"

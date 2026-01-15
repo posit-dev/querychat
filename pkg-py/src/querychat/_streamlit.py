@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Optional
 
+import narwhals.stable.v1 as nw
+
 from ._querychat_base import TOOL_GROUPS, QueryChatBase
 from ._querychat_core import (
     GREETING_PROMPT,
@@ -17,9 +19,10 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     import chatlas
-    import narwhals.stable.v1 as nw
     import sqlalchemy
     from narwhals.stable.v1.typing import IntoFrame
+
+    from ._datasource import DataOrLazyFrame
 
 
 class QueryChat(QueryChatBase):
@@ -181,8 +184,8 @@ class QueryChat(QueryChatBase):
 
             st.rerun()
 
-    def df(self) -> nw.DataFrame:
-        """Get the current filtered data frame."""
+    def df(self) -> DataOrLazyFrame:
+        """Get the current filtered data frame (or LazyFrame if data source is lazy)."""
         return self._get_state().get_current_data()
 
     def sql(self) -> str | None:
@@ -235,6 +238,9 @@ class QueryChat(QueryChatBase):
 
         st.subheader("Data view")
         df = state.get_current_data()
+        # Collect if lazy before accessing .shape or displaying
+        if isinstance(df, nw.LazyFrame):
+            df = df.collect()
         if state.error:
             st.error(state.error)
         st.dataframe(df, use_container_width=True, height=400, hide_index=True)

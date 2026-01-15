@@ -3,11 +3,12 @@ title: Data Sources
 lightbox: true
 ---
 
-`querychat` supports several different data sources, including: 
+`querychat` supports several different data sources, including:
 
 1. Any [narwhals-compatible](https://narwhals-dev.github.io/narwhals/) data frame.
-2. Any [SQLAlchemy](https://www.sqlalchemy.org/) database.
-3. A custom [DataSource](reference/types.DataSource.qmd) interface/protocol.
+2. Polars LazyFrames for efficient handling of large datasets.
+3. Any [SQLAlchemy](https://www.sqlalchemy.org/) database.
+4. A custom [DataSource](reference/types.DataSource.qmd) interface/protocol.
 
 The sections below describe how to use each type of data source with `querychat`.
 
@@ -63,7 +64,68 @@ app = qc.app()
 
 :::
 
-If you're [building an app](build.qmd), note you can read the queried data frame reactively using the `df()` method, which returns a `narwhals.DataFrame`. Call `.to_native()` on the result to get the underlying pandas or polars DataFrame. 
+If you're [building an app](build.qmd), note you can read the queried data frame reactively using the `df()` method, which returns a `narwhals.DataFrame` (or `narwhals.LazyFrame` for lazy sources). Call `.to_native()` on the result to get the underlying pandas or polars DataFrame.
+
+## Polars LazyFrames {#lazy-frames}
+
+For large datasets, you can use [Polars LazyFrames](https://docs.pola.rs/user-guide/lazy/using/) to keep data on disk until it's actually needed. This is particularly useful when:
+
+- Your dataset is too large to fit comfortably in memory
+- You only need filtered or aggregated subsets of the data
+- You want faster startup times for your application
+
+With lazy evaluation, data stays on disk and queries are optimized by Polars before execution. Only the final results are loaded into memory.
+
+```{.python filename="lazy-app.py"}
+import polars as pl
+from querychat import QueryChat
+
+# Scan a large parquet file (doesn't load data yet!)
+lf = pl.scan_parquet("large_dataset.parquet")
+
+# Pass the LazyFrame directly to QueryChat
+qc = QueryChat(lf, "sales")
+app = qc.app()
+```
+
+::: {.callout-tip}
+### Why use lazy evaluation?
+
+The lazy approach can be significantly faster for large datasets because:
+
+- **Deferred loading**: Data stays on disk until actually needed, so startup is nearly instant
+- **Query optimization**: Polars optimizes the query plan before execution, potentially skipping unnecessary columns and rows
+- **Reduced memory**: Only the filtered/aggregated results are loaded into memory, not the entire dataset
+
+This is especially beneficial when users typically query small subsets of a large dataset.
+:::
+
+You can create LazyFrames from various sources:
+
+```python
+# From parquet (most efficient)
+lf = pl.scan_parquet("data.parquet")
+
+# From CSV
+lf = pl.scan_csv("data.csv")
+
+# From multiple files
+lf = pl.scan_parquet("data/*.parquet")
+
+# From an existing DataFrame
+df = pl.read_csv("data.csv")
+lf = df.lazy()
+```
+
+When using a LazyFrame source, the `df()` method returns a `narwhals.LazyFrame`. Call `.collect()` to materialize the results when needed:
+
+```python
+# Get the lazy result
+result_lazy = qc.df()
+
+# Materialize when ready
+result_df = result_lazy.collect()
+```
 
 ## Databases
 

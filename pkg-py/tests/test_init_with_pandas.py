@@ -65,7 +65,7 @@ def test_init_with_narwhals_dataframe():
 
 
 def test_init_with_narwhals_lazyframe_raises():
-    """Test that QueryChat() raises TypeError for LazyFrames."""
+    """Test that QueryChat() raises TypeError for non-Polars LazyFrames."""
     pdf = pd.DataFrame(
         {
             "id": [1, 2, 3],
@@ -75,7 +75,8 @@ def test_init_with_narwhals_lazyframe_raises():
     )
     nw_lazy = nw.from_native(pdf).lazy()
 
-    with pytest.raises(NotImplementedError, match="LazyFrame"):
+    # Non-Polars LazyFrames (e.g., pandas-backed) are not supported
+    with pytest.raises(TypeError, match="Unsupported LazyFrame backend"):
         QueryChat(
             data_source=nw_lazy,
             table_name="test_table",

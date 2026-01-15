@@ -12,7 +12,12 @@ import chatlas
 import narwhals.stable.v1 as nw
 import sqlalchemy
 
-from ._datasource import DataFrameSource, DataSource, SQLAlchemySource
+from ._datasource import (
+    DataFrameSource,
+    DataSource,
+    PolarsLazySource,
+    SQLAlchemySource,
+)
 from ._shiny_module import GREETING_PROMPT
 from ._system_prompt import QueryChatSystemPrompt
 from ._utils import MISSING, MISSING_TYPE
@@ -174,13 +179,28 @@ def normalize_data_source(
         return data_source
     if isinstance(data_source, sqlalchemy.Engine):
         return SQLAlchemySource(data_source, table_name)
+
     src = nw.from_native(data_source, pass_through=True)
+
     if isinstance(src, nw.DataFrame):
         return DataFrameSource(src, table_name)
+
     if isinstance(src, nw.LazyFrame):
-        raise NotImplementedError(
-            "LazyFrame data sources are not yet supported (they will be soon)."
+        native = src.to_native()
+        try:
+            import polars as pl
+
+            if isinstance(native, pl.LazyFrame):
+                return PolarsLazySource(src, table_name)
+        except ImportError:
+            pass
+        raise TypeError(
+            f"Unsupported LazyFrame backend: {type(native).__name__} from {type(native).__module__}. "
+            "Currently only Polars LazyFrames are supported. "
+            "If you believe this type should be supported, please open an issue at "
+            "https://github.com/posit-dev/querychat/issues"
         )
+
     raise TypeError(
         f"Unsupported data source type: {type(data_source)}. "
         "If you believe this type should be supported, please open an issue at "

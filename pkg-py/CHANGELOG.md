@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
+* Added `PolarsLazySource` to support Polars LazyFrames as data sources. Data stays lazy until the render boundary, enabling efficient handling of large datasets. Pass a `polars.LazyFrame` directly to `QueryChat()` and queries will be executed lazily via Polars' SQLContext.
+
 * Added support for Gradio, Dash, and Streamlit web frameworks in addition to Shiny. Import from the new submodules:
   * `from querychat.gradio import QueryChat`
   * `from querychat.dash import QueryChat`

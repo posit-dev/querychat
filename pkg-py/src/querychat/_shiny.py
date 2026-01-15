@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal, Optional, overload
 
+import narwhals.stable.v1 as nw
 from shiny.express._stub_session import ExpressStubSession
 from shiny.session import get_current_session
 from shinychat import output_markdown_stream
@@ -16,9 +17,10 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     import chatlas
-    import narwhals.stable.v1 as nw
     import sqlalchemy
     from narwhals.stable.v1.typing import IntoFrame
+
+    from ._datasource import DataOrLazyFrame
 
 
 class QueryChat(QueryChatBase):
@@ -239,7 +241,11 @@ class QueryChat(QueryChatBase):
 
             @render.data_frame
             def dt():
-                return vals.df()
+                df = vals.df()
+                # Collect if lazy
+                if isinstance(df, nw.LazyFrame):
+                    df = df.collect()
+                return df
 
             @render.ui
             def sql_output():
@@ -605,16 +611,16 @@ class QueryChatExpress(QueryChatBase):
         """
         return mod_ui(id or self.id, **kwargs)
 
-    def df(self) -> nw.DataFrame:
+    def df(self) -> DataOrLazyFrame:
         """
         Reactively read the current filtered data frame that is in effect.
 
         Returns
         -------
         :
-            The current filtered data frame as a narwhals DataFrame. If no query
-            has been set, this will return the unfiltered data frame from the
-            data source.
+            The current filtered data frame as a narwhals DataFrame or LazyFrame.
+            If the data source is lazy, returns a LazyFrame. If no query has been
+            set, this will return the unfiltered data from the data source.
 
         """
         return self._vals.df()

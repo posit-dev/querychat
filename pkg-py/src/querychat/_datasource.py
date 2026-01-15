@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any, Literal, Union
 
 import duckdb
 import narwhals.stable.v1 as nw
@@ -12,11 +13,37 @@ from ._df_compat import duckdb_result_to_nw, read_sql
 from ._utils import check_query
 
 if TYPE_CHECKING:
+    import polars as pl
     from sqlalchemy.engine import Connection, Engine
+
+DataOrLazyFrame = Union[nw.DataFrame, nw.LazyFrame]
 
 
 class MissingColumnsError(ValueError):
     """Raised when a query result is missing required columns."""
+
+
+@dataclass
+class ColumnMeta:
+    """Metadata for a single column in a schema."""
+
+    name: str
+    """Column name."""
+
+    sql_type: str
+    """SQL type name (e.g., 'INTEGER', 'TEXT', 'DATE')."""
+
+    kind: Literal["numeric", "text", "date", "other"]
+    """Column category for determining what stats to collect."""
+
+    min_val: Any = None
+    """Minimum value for numeric/date columns."""
+
+    max_val: Any = None
+    """Maximum value for numeric/date columns."""
+
+    categories: list[str] = field(default_factory=list)
+    """Unique values for text columns below the categorical threshold."""
 
 
 class DataSource(ABC):
@@ -58,7 +85,7 @@ class DataSource(ABC):
         ...
 
     @abstractmethod
-    def execute_query(self, query: str) -> nw.DataFrame:
+    def execute_query(self, query: str) -> DataOrLazyFrame:
         """
         Execute SQL query and return results as DataFrame.
 
@@ -104,7 +131,7 @@ class DataSource(ABC):
         ...
 
     @abstractmethod
-    def get_data(self) -> nw.DataFrame:
+    def get_data(self) -> DataOrLazyFrame:
         """
         Return the unfiltered data as a DataFrame.
 
@@ -143,12 +170,12 @@ class DataFrameSource(DataSource):
         Parameters
         ----------
         df
-            The DataFrame to wrap (pandas, polars, or any narwhals-compatible frame)
+            A narwhals DataFrame
         table_name
             Name of the table in SQL queries
 
         """
-        self._df = nw.from_native(df) if not isinstance(df, nw.DataFrame) else df
+        self._df = df
         self.table_name = table_name
 
         self._conn = duckdb.connect(database=":memory:")
@@ -635,3 +662,229 @@ class SQLAlchemySource(DataSource):
         """
         if self._engine:
             self._engine.dispose()
+
+
+class PolarsLazySource(DataSource):
+    """
+    A DataSource implementation for Polars LazyFrames.
+
+    Keeps data lazy throughout the query pipeline. Results from execute_query()
+    are LazyFrames that can be chained with additional operations before
+    collecting.
+    """
+
+    table_name: str
+
+    def __init__(self, lf: nw.LazyFrame, table_name: str):
+        """
+        Initialize with a narwhals LazyFrame wrapping a Polars LazyFrame.
+
+        Parameters
+        ----------
+        lf
+            A narwhals LazyFrame (wrapping a Polars LazyFrame)
+        table_name
+            Name of the table in SQL queries
+
+        """
+        import polars as pl
+
+        self.table_name = table_name
+
+        # Get native Polars LazyFrame for SQLContext
+        self._lf: pl.LazyFrame = lf.to_native()
+        if not isinstance(self._lf, pl.LazyFrame):
+            raise TypeError(f"Expected Polars LazyFrame, got {type(self._lf).__name__}")
+
+        self._ctx = pl.SQLContext({table_name: self._lf})
+
+        # Cache schema (no data collection needed)
+        self._schema = self._lf.collect_schema()
+        self._colnames = list(self._schema.keys())
+
+    def get_db_type(self) -> str:
+        """Get the database type."""
+        return "Polars"
+
+    def get_schema(self, *, categorical_threshold: int) -> str:
+        """Generate schema information from LazyFrame using lazy aggregates."""
+        # Build column metadata (classification happens here)
+        columns = [
+            self._make_column_meta(name, dtype) for name, dtype in self._schema.items()
+        ]
+
+        # Add stats to the metadata and format schema string
+        self._add_column_stats(columns, self._lf, categorical_threshold)
+        return self._format_schema(self.table_name, columns)
+
+    def execute_query(self, query: str) -> nw.LazyFrame:
+        """
+        Execute SQL query and return results as LazyFrame.
+
+        Parameters
+        ----------
+        query
+            SQL query to execute
+
+        Returns
+        -------
+        :
+            Query results as a narwhals LazyFrame
+
+        """
+        check_query(query)
+        result = self._ctx.execute(query)
+        return nw.from_native(result)
+
+    def test_query(
+        self, query: str, *, require_all_columns: bool = False
+    ) -> nw.DataFrame:
+        """
+        Test SQL query validity by executing and collecting one row.
+
+        Parameters
+        ----------
+        query
+            SQL query to test
+        require_all_columns
+            If True, validates that result includes all original table columns
+
+        Returns
+        -------
+        :
+            Query results as a narwhals DataFrame with at most one row
+
+        """
+        check_query(query)
+
+        test_sql = f"SELECT * FROM ({query}) AS subquery LIMIT 1"
+        lf = self._ctx.execute(test_sql)
+
+        # Actually collect to catch runtime errors (e.g., division by zero)
+        result = nw.from_native(lf.collect())
+
+        if require_all_columns:
+            result_columns = set(result.columns)
+            missing = set(self._colnames) - result_columns
+            if missing:
+                missing_list = ", ".join(f"'{c}'" for c in sorted(missing))
+                original_list = ", ".join(f"'{c}'" for c in self._colnames)
+                raise MissingColumnsError(
+                    f"Query result missing required columns: {missing_list}. "
+                    f"The query must return all original table columns. "
+                    f"Original columns: {original_list}"
+                )
+
+        return result
+
+    def get_data(self) -> nw.LazyFrame:
+        """
+        Return the unfiltered data as a LazyFrame.
+
+        Returns
+        -------
+        :
+            The original LazyFrame
+
+        """
+        return nw.from_native(self._lf)
+
+    def cleanup(self) -> None:
+        """Clean up resources (no-op for Polars)."""
+
+    @staticmethod
+    def _make_column_meta(name: str, dtype: pl.DataType) -> ColumnMeta:
+        import polars as pl
+
+        if dtype.is_numeric():
+            kind = "numeric"
+            sql_type = "INTEGER" if dtype.is_integer() else "FLOAT"
+        elif dtype == pl.String:
+            kind = "text"
+            sql_type = "TEXT"
+        elif dtype == pl.Date:
+            kind = "date"
+            sql_type = "DATE"
+        elif dtype == pl.Datetime:
+            kind = "date"
+            sql_type = "TIMESTAMP"
+        elif dtype == pl.Boolean:
+            kind = "other"
+            sql_type = "BOOLEAN"
+        elif dtype == pl.Time:
+            kind = "other"
+            sql_type = "TIME"
+        else:
+            kind = "other"
+            sql_type = "TEXT"
+
+        return ColumnMeta(name=name, sql_type=sql_type, kind=kind)
+
+    @staticmethod
+    def _add_column_stats(
+        columns: list[ColumnMeta],
+        lf: pl.LazyFrame,
+        categorical_threshold: int,
+    ) -> None:
+        import polars as pl
+
+        # Build aggregation expressions based on column kinds
+        agg_exprs: list[pl.Expr] = []
+        for col in columns:
+            if col.kind in ("numeric", "date"):
+                agg_exprs.append(pl.col(col.name).min().alias(f"{col.name}__min"))
+                agg_exprs.append(pl.col(col.name).max().alias(f"{col.name}__max"))
+            elif col.kind == "text":
+                agg_exprs.append(
+                    pl.col(col.name).n_unique().alias(f"{col.name}__nunique")
+                )
+
+        if not agg_exprs:
+            return
+
+        # First scan: collect all aggregate statistics
+        stats = lf.select(agg_exprs).collect().row(0, named=True)
+
+        # Add min/max for numeric/date columns
+        for col in columns:
+            if col.kind in ("numeric", "date"):
+                col.min_val = stats.get(f"{col.name}__min")
+                col.max_val = stats.get(f"{col.name}__max")
+
+        # Find text columns that qualify as categorical
+        categorical_cols = [
+            col
+            for col in columns
+            if col.kind == "text"
+            and (nunique := stats.get(f"{col.name}__nunique"))
+            and nunique <= categorical_threshold
+        ]
+
+        if not categorical_cols:
+            return
+
+        # Second scan: batch collect unique values for all categorical columns
+        unique_exprs = [
+            pl.col(col.name).drop_nulls().unique().implode().alias(col.name)
+            for col in categorical_cols
+        ]
+        unique_row = lf.select(unique_exprs).collect().row(0, named=True)
+
+        for col in categorical_cols:
+            col.categories = unique_row[col.name]
+
+    @staticmethod
+    def _format_schema(table_name: str, columns: list[ColumnMeta]) -> str:
+        """Format column metadata into schema string."""
+        lines = [f"Table: {table_name}", "Columns:"]
+
+        for col in columns:
+            lines.append(f"- {col.name} ({col.sql_type})")
+
+            if col.kind in ("numeric", "date"):
+                lines.append(f"  Range: {col.min_val} to {col.max_val}")
+            elif col.categories:
+                cats = ", ".join(f"'{v}'" for v in col.categories)
+                lines.append(f"  Categorical values: {cats}")
+
+        return "\n".join(lines)

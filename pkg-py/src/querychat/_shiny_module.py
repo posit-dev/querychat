@@ -17,12 +17,11 @@ from .tools import tool_query, tool_reset_dashboard, tool_update_dashboard
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    import narwhals.stable.v1 as nw
     from shiny.bookmark import BookmarkState, RestoreState
 
     from shiny import Inputs, Outputs, Session
 
-    from ._datasource import DataSource
+    from ._datasource import DataOrLazyFrame, DataSource
     from .types import UpdateDashboardData
 
 ReactiveString = reactive.Value[str]
@@ -62,9 +61,10 @@ class ServerValues:
     Attributes
     ----------
     df
-        A reactive Calc that returns the current filtered data frame. If no SQL
-        query has been set, this returns the unfiltered data from the data source.
-        Call it like `.df()` to reactively read the current data frame.
+        A reactive Calc that returns the current filtered data frame or lazy frame.
+        If the data source is lazy, returns a LazyFrame. If no SQL query has been
+        set, this returns the unfiltered data from the data source.
+        Call it like `.df()` to reactively read the current data.
     sql
         A reactive Value containing the current SQL query string. Access the value
         by calling `.sql()`, or set it with `.sql.set("SELECT ...")`.
@@ -81,7 +81,7 @@ class ServerValues:
 
     """
 
-    df: Callable[[], nw.DataFrame]
+    df: Callable[[], DataOrLazyFrame]
     sql: ReactiveStringOrNone
     title: ReactiveStringOrNone
     client: chatlas.Chat

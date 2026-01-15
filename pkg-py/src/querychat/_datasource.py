@@ -883,8 +883,7 @@ class PolarsLazySource(DataSource):
             lines.append(f"- {col.name} ({col.sql_type})")
 
             if col.kind in ("numeric", "date"):
-                if col.min_val is not None or col.max_val is not None:
-                    lines.append(f"  Range: {col.min_val} to {col.max_val}")
+                lines.append(f"  Range: {col.min_val} to {col.max_val}")
             elif col.categories:
                 cats = ", ".join(f"'{v}'" for v in col.categories)
                 lines.append(f"  Categorical values: {cats}")

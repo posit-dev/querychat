@@ -259,26 +259,25 @@ class TestDataFrameSourceWithPolars:
         )
 
     def test_execute_query_with_polars(self, polars_df):
-        """Test execute_query with polars source."""
+        """Test execute_query with polars source returns native polars DataFrame."""
         source = DataFrameSource(polars_df, "test_data")
         result = source.execute_query("SELECT * FROM test_data")
 
-        assert isinstance(result, nw.DataFrame)
+        assert isinstance(result, pl.DataFrame)
         assert result.shape == (3, 3)
 
     def test_get_data_with_polars(self, polars_df):
-        """Test get_data with polars source."""
+        """Test get_data with polars source returns native polars DataFrame."""
         source = DataFrameSource(polars_df, "test_data")
         result = source.get_data()
 
-        assert isinstance(result, nw.DataFrame)
+        assert isinstance(result, pl.DataFrame)
         assert result.shape == polars_df.shape
 
     def test_polars_result_backend(self, polars_df):
-        """Test that results use polars backend when input is polars."""
+        """Test that results are native polars DataFrames when input is polars."""
         source = DataFrameSource(polars_df, "test_data")
         result = source.execute_query("SELECT * FROM test_data")
 
-        # When polars is available, the result should use polars backend
-        native = result.to_native()
-        assert isinstance(native, pl.DataFrame)
+        # Results should be native polars DataFrames
+        assert isinstance(result, pl.DataFrame)

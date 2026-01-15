@@ -63,10 +63,8 @@ class DataSource(ABC, Generic[DataSourceT]):
     """
     An abstract class defining the interface for data sources used by QueryChat.
 
-    Type Parameters
-    ---------------
-    DataSourceT
-        The type returned by execute_query, test_query, and get_data methods.
+    This class is generic over `DataSourceT`, which is the type returned by
+    execute_query, test_query, and get_data methods.
 
     Attributes
     ----------

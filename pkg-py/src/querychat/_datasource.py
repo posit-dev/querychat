@@ -2,24 +2,18 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar
 
 import duckdb
 import narwhals.stable.v1 as nw
 from sqlalchemy import inspect, text
 from sqlalchemy.sql import sqltypes
 
-from ._df_compat import (
-    read_sql_pandas,
-    read_sql_polars,
-    read_sql_pyarrow,
-)
+from ._df_compat import read_sql
 from ._utils import check_query
 
 if TYPE_CHECKING:
-    import pandas as pd
     import polars as pl
-    import pyarrow as pa
     from narwhals.stable.v1.typing import IntoDataFrame, IntoLazyFrame
     from sqlalchemy.engine import Connection, Engine
 
@@ -402,55 +396,19 @@ SET lock_configuration = true;
             self._conn.close()
 
 
-class SQLAlchemySource(DataSource[DataFrameT]):
+class SQLAlchemySource(DataSource[nw.DataFrame]):
     """
     A DataSource implementation that supports multiple SQL databases via
     SQLAlchemy.
 
     Supports various databases including PostgreSQL, MySQL, SQLite, Snowflake,
     and Databricks.
-
-    Type Parameters
-    ---------------
-    DataFrameT
-        The DataFrame type returned by queries. Determined by `return_type`:
-        `pl.DataFrame` when "polars" (default), `pd.DataFrame` when "pandas",
-        `pa.Table` when "pyarrow".
     """
-
-    @overload
-    def __init__(
-        self: SQLAlchemySource[pl.DataFrame],
-        engine: Engine,
-        table_name: str,
-        *,
-        return_type: Literal["polars"] = ...,
-    ) -> None: ...
-
-    @overload
-    def __init__(
-        self: SQLAlchemySource[pd.DataFrame],
-        engine: Engine,
-        table_name: str,
-        *,
-        return_type: Literal["pandas"],
-    ) -> None: ...
-
-    @overload
-    def __init__(
-        self: SQLAlchemySource[pa.Table],
-        engine: Engine,
-        table_name: str,
-        *,
-        return_type: Literal["pyarrow"],
-    ) -> None: ...
 
     def __init__(
         self,
         engine: Engine,
         table_name: str,
-        *,
-        return_type: Literal["polars", "pandas", "pyarrow"] = "polars",
     ):
         """
         Initialize with a SQLAlchemy engine.
@@ -461,14 +419,10 @@ class SQLAlchemySource(DataSource[DataFrameT]):
             SQLAlchemy engine
         table_name
             Name of the table to query
-        return_type
-            The type of DataFrame to return from queries: "polars" (default),
-            "pandas", or "pyarrow".
 
         """
         self._engine = engine
         self.table_name = table_name
-        self._return_type = return_type
 
         # Validate table exists
         inspector = inspect(self._engine)
@@ -623,16 +577,7 @@ class SQLAlchemySource(DataSource[DataFrameT]):
 
         return "\n".join(schema)
 
-    def _read_sql(self, query, conn):
-        """Read SQL using the configured return type."""
-        if self._return_type == "polars":
-            return read_sql_polars(query, conn)
-        elif self._return_type == "pyarrow":
-            return read_sql_pyarrow(query, conn)
-        else:
-            return read_sql_pandas(query, conn)
-
-    def execute_query(self, query: str) -> DataFrameT:
+    def execute_query(self, query: str) -> nw.DataFrame:
         """
         Execute SQL query and return results as DataFrame.
 
@@ -644,7 +589,7 @@ class SQLAlchemySource(DataSource[DataFrameT]):
         Returns
         -------
         :
-            Query results as native DataFrame (polars or pandas based on return_type)
+            Query results as narwhals DataFrame
 
         Raises
         ------
@@ -654,11 +599,11 @@ class SQLAlchemySource(DataSource[DataFrameT]):
         """
         check_query(query)
         with self._get_connection() as conn:
-            return self._read_sql(text(query), conn)
+            return read_sql(text(query), conn)
 
     def test_query(
         self, query: str, *, require_all_columns: bool = False
-    ) -> DataFrameT:
+    ) -> nw.DataFrame:
         """
         Test query by fetching only one row.
 
@@ -687,10 +632,10 @@ class SQLAlchemySource(DataSource[DataFrameT]):
             # Use read_sql with limit to get at most one row
             limit_query = f"SELECT * FROM ({query}) AS subquery LIMIT 1"
             try:
-                result = self._read_sql(text(limit_query), conn)
+                result = read_sql(text(limit_query), conn)
             except Exception:
                 # If LIMIT syntax doesn't work, fall back to regular read and take first row
-                result = self._read_sql(text(query), conn).head(1)
+                result = read_sql(text(query), conn).head(1)
 
             if require_all_columns:
                 result_columns = set(result.columns)
@@ -710,14 +655,14 @@ class SQLAlchemySource(DataSource[DataFrameT]):
 
             return result
 
-    def get_data(self) -> DataFrameT:
+    def get_data(self) -> nw.DataFrame:
         """
         Return the unfiltered data as a DataFrame.
 
         Returns
         -------
         :
-            The complete dataset as native DataFrame (polars or pandas based on return_type)
+            The complete dataset as narwhals DataFrame
 
         """
         return self.execute_query(f"SELECT * FROM {self.table_name}")

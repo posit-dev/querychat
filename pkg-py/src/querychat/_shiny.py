@@ -191,7 +191,7 @@ class QueryChat(QueryChatBase[DataFrameT]):
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
     ):
-        super().__init__(
+        super().__init__(  # type: ignore[reportAttributeAccessIssue]
             data_source,
             table_name,
             greeting=greeting,
@@ -613,7 +613,7 @@ class QueryChatExpress(QueryChatBase[DataFrameT]):
                 "Is express.QueryChat() being called outside of a Shiny Express app?",
             )
 
-        super().__init__(
+        super().__init__(  # type: ignore[reportAttributeAccessIssue]
             data_source,
             table_name,
             greeting=greeting,

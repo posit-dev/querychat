@@ -149,7 +149,7 @@ class QueryChat(QueryChatBase[DataFrameT], StateDictAccessorMixin[DataFrameT]):
         prompt_template: Optional[str | PathType] = None,
         storage_type: Literal["memory", "session", "local"] = "memory",
     ):
-        super().__init__(
+        super().__init__(  # type: ignore[reportAttributeAccessIssue]
             data_source,
             table_name,
             greeting=greeting,

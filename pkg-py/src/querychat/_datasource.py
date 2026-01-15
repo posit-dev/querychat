@@ -312,11 +312,11 @@ SET lock_configuration = true;
     def _convert_result(self, result: duckdb.DuckDBPyConnection) -> IntoDataFrameT:
         """Convert DuckDB result to the appropriate native DataFrame type."""
         if self._df_lib == "polars":
-            return result.pl()
+            return result.pl()  # type: ignore[return-value]
         elif self._df_lib == "pandas":
-            return result.df()
+            return result.df()  # type: ignore[return-value]
         elif self._df_lib == "pyarrow":
-            return result.arrow()
+            return result.fetch_arrow_table()  # type: ignore[return-value]
         else:
             raise ValueError(
                 f"Unsupported DataFrame backend: '{self._df_lib}'. "
@@ -354,7 +354,7 @@ SET lock_configuration = true;
         native_result = self._convert_result(result)
 
         if require_all_columns:
-            result_columns = set(native_result.columns)
+            result_columns = set(native_result.columns)  # type: ignore[union-attr]
             original_columns_set = set(self._colnames)
             missing_columns = original_columns_set - result_columns
 

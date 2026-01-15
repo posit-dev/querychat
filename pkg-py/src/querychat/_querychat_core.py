@@ -30,8 +30,9 @@ GREETING_PROMPT: str = (
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Iterator
+    from typing import Any
 
-    from ._datasource import DataOrLazyFrame, DataSource
+    from ._datasource import DataSource
 
 # TypeVar for StateDictAccessorMixin - the DataFrame type returned by df()
 _DataFrameT = TypeVar("_DataFrameT")
@@ -212,7 +213,7 @@ class AppState:
         self.title = None
         self.error = None
 
-    def get_current_data(self) -> DataOrLazyFrame:
+    def get_current_data(self) -> Any:
         """Get current data, falling back to default if query fails."""
         if self.sql:
             try:

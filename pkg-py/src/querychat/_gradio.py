@@ -137,7 +137,7 @@ class QueryChat(QueryChatBase[DataFrameT], StateDictAccessorMixin[DataFrameT]):
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
     ):
-        super().__init__(
+        super().__init__(  # type: ignore[reportAttributeAccessIssue]
             data_source,
             table_name,
             greeting=greeting,
@@ -349,11 +349,11 @@ class QueryChat(QueryChatBase[DataFrameT], StateDictAccessorMixin[DataFrameT]):
                 if error:
                     data_info_parts.append(f"⚠️ {error}")
                 data_info_parts.append(
-                    f"*Data has {df.shape[0]} rows and {df.shape[1]} columns.*"
+                    f"*Data has {df.shape[0]} rows and {df.shape[1]} columns.*"  # type: ignore[union-attr]
                 )
                 data_info_text = " ".join(data_info_parts)
 
-                return sql_title_text, sql_code, df.to_native(), data_info_text
+                return sql_title_text, sql_code, df.to_native(), data_info_text  # type: ignore[union-attr]
 
             def reset_query(state_dict: AppStateDict):
                 """Reset state to show full dataset."""

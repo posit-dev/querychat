@@ -90,17 +90,15 @@ app = qc.app()
 ```
 
 ::: {.callout-tip}
-### Performance comparison
+### Why use lazy evaluation?
 
-With a 10 million row dataset:
+The lazy approach can be significantly faster for large datasets because:
 
-| Operation | Eager (DataFrame) | Lazy (LazyFrame) | Speedup |
-|-----------|-------------------|------------------|---------|
-| Load time | 0.5s | 0.0001s | ~5000x |
-| QueryChat init | 2.5s | 0.3s | ~8x |
-| Query execution | 1.2s | 0.02s | ~60x |
+- **Deferred loading**: Data stays on disk until actually needed, so startup is nearly instant
+- **Query optimization**: Polars optimizes the query plan before execution, potentially skipping unnecessary columns and rows
+- **Reduced memory**: Only the filtered/aggregated results are loaded into memory, not the entire dataset
 
-The lazy approach is dramatically faster because it only reads the data needed for each query, and Polars can optimize the query plan.
+This is especially beneficial when users typically query small subsets of a large dataset.
 :::
 
 You can create LazyFrames from various sources:

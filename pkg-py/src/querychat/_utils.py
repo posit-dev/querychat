@@ -7,6 +7,19 @@ from contextlib import contextmanager
 from typing import TYPE_CHECKING, Literal, Optional
 
 import narwhals.stable.v1 as nw
+from great_tables import GT
+
+if TYPE_CHECKING:
+    from ._datasource import AnyFrame
+
+
+class MISSING_TYPE:  # noqa: N801
+    """
+    A singleton representing a missing value.
+    """
+
+
+MISSING = MISSING_TYPE()
 
 
 class UnsafeQueryError(ValueError):
@@ -79,21 +92,6 @@ def check_query(query: str) -> None:
                 "Only SELECT queries are allowed. "
                 "Set QUERYCHAT_ENABLE_UPDATE_QUERIES=true to allow update queries."
             )
-
-
-if TYPE_CHECKING:
-    from narwhals.stable.v1.typing import IntoFrame
-
-    from ._datasource import AnyFrame
-
-
-class MISSING_TYPE:  # noqa: N801
-    """
-    A singleton representing a missing value.
-    """
-
-
-MISSING = MISSING_TYPE()
 
 
 @contextmanager
@@ -198,7 +196,7 @@ def querychat_tool_starts_open(action: Literal["update", "query", "reset"]) -> b
         return action != "reset"
 
 
-def df_to_html(df: IntoFrame | AnyFrame, maxrows: int = 5) -> str:
+def df_to_html(df: AnyFrame, maxrows: int = 5) -> str:
     """
     Convert a DataFrame to a Bootstrap-styled HTML table for display in chat.
 
@@ -215,38 +213,18 @@ def df_to_html(df: IntoFrame | AnyFrame, maxrows: int = 5) -> str:
         HTML string representation of the table
 
     """
-    ndf = nw.from_native(df)
+    if isinstance(df, nw.DataFrame):
+        df = df.lazy()
 
-    if isinstance(ndf, (nw.LazyFrame, nw.DataFrame)):
-        df_short = ndf.lazy().head(maxrows).collect()
-        nrow_full = ndf.lazy().select(nw.len()).collect().item()
-    else:
-        raise TypeError(
-            "Must be able to convert `df` into a Narwhals DataFrame or LazyFrame",
-        )
-
-    # Build simple Bootstrap-styled HTML table
-    columns = df_short.columns
-    rows = df_short.rows()
-
-    # Table header
-    header_cells = "".join(f"<th>{col}</th>" for col in columns)
-    header = f"<thead><tr>{header_cells}</tr></thead>"
-
-    # Table body
-    body_rows = []
-    for row in rows:
-        cells = "".join(f"<td>{val}</td>" for val in row)
-        body_rows.append(f"<tr>{cells}</tr>")
-    body = f"<tbody>{''.join(body_rows)}</tbody>"
-
-    # Use Bootstrap table classes
-    table_html = f'<table class="table table-sm table-striped">{header}{body}</table>'
+    df_short = df.head(maxrows).collect()
+    gt_tbl = GT(df_short.to_native())
+    table_html = gt_tbl.as_raw_html(make_page=False)
 
     # Add note about truncated rows if needed
-    if len(df_short) != nrow_full:
-        rows_notice = f"\n\n*(Showing {maxrows} of {nrow_full} rows)*\n"
-    else:
-        rows_notice = ""
+    nrow_full = df.select(nw.len()).collect().item()
+    if nrow_full > maxrows:
+        table_html += (
+            f"\n\n(Showing only the first {maxrows} rows out of {nrow_full}.)\n"
+        )
 
-    return table_html + rows_notice
+    return table_html

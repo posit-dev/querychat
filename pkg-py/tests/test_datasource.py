@@ -2,6 +2,7 @@ import sqlite3
 import tempfile
 from pathlib import Path
 
+import narwhals.stable.v1 as nw
 import pandas as pd
 import pytest
 from querychat._datasource import DataFrameSource, SQLAlchemySource
@@ -339,12 +340,14 @@ def test_test_query_empty_result(test_db_engine):
 def test_test_query_dataframe_source():
     """Test that test_query works with DataFrameSource."""
     # Create test DataFrame
-    test_df = pd.DataFrame(
-        {
-            "id": [1, 2, 3, 4, 5],
-            "name": ["a", "b", "c", "d", "e"],
-            "value": [10, 20, 30, 40, 50],
-        }
+    test_df = nw.from_native(
+        pd.DataFrame(
+            {
+                "id": [1, 2, 3, 4, 5],
+                "name": ["a", "b", "c", "d", "e"],
+                "value": [10, 20, 30, 40, 50],
+            }
+        )
     )
 
     source = DataFrameSource(test_df, "test_table")
@@ -468,12 +471,14 @@ def test_check_query_escape_hatch_does_not_enable_always_blocked(monkeypatch):
 
 def test_check_query_integrated_into_execute_query():
     """Test that check_query is integrated into execute_query()."""
-    test_df = pd.DataFrame(
-        {
-            "id": [1, 2, 3],
-            "name": ["a", "b", "c"],
-            "value": [10, 20, 30],
-        }
+    test_df = nw.from_native(
+        pd.DataFrame(
+            {
+                "id": [1, 2, 3],
+                "name": ["a", "b", "c"],
+                "value": [10, 20, 30],
+            }
+        )
     )
 
     source = DataFrameSource(test_df, "test_table")

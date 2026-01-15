@@ -2,6 +2,7 @@ import sqlite3
 import tempfile
 from pathlib import Path
 
+import narwhals.stable.v1 as nw
 import pandas as pd
 import pytest
 from querychat._datasource import DataFrameSource, SQLAlchemySource
@@ -11,14 +12,16 @@ from sqlalchemy import create_engine
 
 @pytest.fixture
 def sample_dataframe():
-    """Create a sample pandas DataFrame for testing."""
-    return pd.DataFrame(
-        {
-            "id": [1, 2, 3, 4, 5],
-            "name": ["Alice", "Bob", "Charlie", "Diana", "Eve"],
-            "age": [25, 30, 35, 28, 32],
-            "salary": [50000, 60000, 70000, 55000, 65000],
-        },
+    """Create a sample narwhals DataFrame for testing."""
+    return nw.from_native(
+        pd.DataFrame(
+            {
+                "id": [1, 2, 3, 4, 5],
+                "name": ["Alice", "Bob", "Charlie", "Diana", "Eve"],
+                "age": [25, 30, 35, 28, 32],
+                "salary": [50000, 60000, 70000, 55000, 65000],
+            },
+        )
     )
 
 
@@ -112,5 +115,5 @@ def test_df_to_html_with_truncation(sample_dataframe):
     html_output = df_to_html(result_df, maxrows=3)
 
     # Should show truncation message
-    assert "Showing 3 of 5 rows" in html_output
+    assert "Showing only the first 3 rows out of 5" in html_output
     assert "<table" in html_output

@@ -28,14 +28,14 @@ class TestIbisSourceInit:
 
     def test_init_accepts_ibis_table(self, ibis_table):
         """Test that IbisSource accepts an ibis.Table."""
-        from querychat._datasource import IbisSource  # noqa: PLC0415
+        from querychat._datasource import IbisSource
 
         source = IbisSource(ibis_table, "employees")
         assert source.table_name == "employees"
 
     def test_get_db_type_returns_backend_name(self, ibis_table):
         """Test that get_db_type returns 'duckdb'."""
-        from querychat._datasource import IbisSource  # noqa: PLC0415
+        from querychat._datasource import IbisSource
 
         source = IbisSource(ibis_table, "employees")
         assert source.get_db_type() == "duckdb"
@@ -46,7 +46,7 @@ class TestIbisSourceExecuteQuery:
 
     def test_execute_query_returns_ibis_table(self, ibis_table):
         """Test that execute_query returns an ibis.Table."""
-        from querychat._datasource import IbisSource  # noqa: PLC0415
+        from querychat._datasource import IbisSource
 
         source = IbisSource(ibis_table, "employees")
         result = source.execute_query("SELECT * FROM employees")
@@ -54,7 +54,7 @@ class TestIbisSourceExecuteQuery:
 
     def test_execute_query_select_all(self, ibis_table):
         """Test SELECT * query."""
-        from querychat._datasource import IbisSource  # noqa: PLC0415
+        from querychat._datasource import IbisSource
 
         source = IbisSource(ibis_table, "employees")
         result = source.execute_query("SELECT * FROM employees")
@@ -66,7 +66,7 @@ class TestIbisSourceExecuteQuery:
 
     def test_execute_query_with_filter(self, ibis_table):
         """Test query with WHERE clause."""
-        from querychat._datasource import IbisSource  # noqa: PLC0415
+        from querychat._datasource import IbisSource
 
         source = IbisSource(ibis_table, "employees")
         result = source.execute_query(
@@ -78,7 +78,7 @@ class TestIbisSourceExecuteQuery:
 
     def test_execute_query_with_aggregation(self, ibis_table):
         """Test query with aggregation."""
-        from querychat._datasource import IbisSource  # noqa: PLC0415
+        from querychat._datasource import IbisSource
 
         source = IbisSource(ibis_table, "employees")
         result = source.execute_query(
@@ -96,7 +96,7 @@ class TestIbisSourceGetData:
 
     def test_get_data_returns_original_table(self, ibis_table):
         """Test that get_data returns the original Ibis Table."""
-        from querychat._datasource import IbisSource  # noqa: PLC0415
+        from querychat._datasource import IbisSource
 
         source = IbisSource(ibis_table, "employees")
         result = source.get_data()
@@ -110,7 +110,7 @@ class TestIbisSourceGetSchema:
 
     def test_get_schema_includes_table_name(self, ibis_table):
         """Test that schema includes table name."""
-        from querychat._datasource import IbisSource  # noqa: PLC0415
+        from querychat._datasource import IbisSource
 
         source = IbisSource(ibis_table, "employees")
         schema = source.get_schema(categorical_threshold=10)
@@ -120,7 +120,7 @@ class TestIbisSourceGetSchema:
 
     def test_get_schema_includes_all_columns(self, ibis_table):
         """Test that schema includes all columns."""
-        from querychat._datasource import IbisSource  # noqa: PLC0415
+        from querychat._datasource import IbisSource
 
         source = IbisSource(ibis_table, "employees")
         schema = source.get_schema(categorical_threshold=10)
@@ -130,7 +130,7 @@ class TestIbisSourceGetSchema:
 
     def test_get_schema_numeric_ranges(self, ibis_table):
         """Test that numeric columns include range information."""
-        from querychat._datasource import IbisSource  # noqa: PLC0415
+        from querychat._datasource import IbisSource
 
         source = IbisSource(ibis_table, "employees")
         schema = source.get_schema(categorical_threshold=10)
@@ -143,7 +143,7 @@ class TestIbisSourceGetSchema:
 
     def test_get_schema_categorical_values(self, ibis_table):
         """Test that categorical columns show unique values."""
-        from querychat._datasource import IbisSource  # noqa: PLC0415
+        from querychat._datasource import IbisSource
 
         source = IbisSource(ibis_table, "employees")
         schema = source.get_schema(categorical_threshold=10)
@@ -159,7 +159,7 @@ class TestIbisSourceTestQuery:
 
     def test_test_query_returns_dataframe(self, ibis_table):
         """Test that test_query returns a collected DataFrame (not ibis.Table)."""
-        from querychat._datasource import IbisSource  # noqa: PLC0415
+        from querychat._datasource import IbisSource
 
         source = IbisSource(ibis_table, "employees")
         result = source.test_query("SELECT * FROM employees")
@@ -169,7 +169,7 @@ class TestIbisSourceTestQuery:
 
     def test_test_query_require_all_columns_passes(self, ibis_table):
         """Test that test_query passes when all columns present."""
-        from querychat._datasource import IbisSource  # noqa: PLC0415
+        from querychat._datasource import IbisSource
 
         source = IbisSource(ibis_table, "employees")
         # Should not raise
@@ -178,7 +178,7 @@ class TestIbisSourceTestQuery:
 
     def test_test_query_require_all_columns_fails(self, ibis_table):
         """Test that test_query raises when columns missing."""
-        from querychat._datasource import (  # noqa: PLC0415
+        from querychat._datasource import (
             IbisSource,
             MissingColumnsError,
         )
@@ -192,7 +192,7 @@ class TestIbisSourceTestQuery:
 
     def test_test_query_catches_runtime_errors(self):
         """Test that test_query catches runtime errors by actually executing."""
-        from querychat._datasource import IbisSource  # noqa: PLC0415
+        from querychat._datasource import IbisSource
 
         # Create table with string column that can't be cast to integer
         conn = ibis.duckdb.connect()

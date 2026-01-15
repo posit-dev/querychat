@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "querychat"
-version = "0.3.0.9000"
+version = "0.4.0.9000"
 description = "Chat with your data using natural language"
 readme = "pkg-py/README.md"
 requires-python = ">=3.10"
@@ -44,6 +44,10 @@ classifiers = [
 pandas = ["pandas"]
 polars = ["polars"]
 ibis = ["ibis-framework>=9.0.0", "pandas"]  # pandas needed for render boundary
+# Web framework extras
+streamlit = ["streamlit>=1.30"]
+gradio = ["gradio>=6.0"]
+dash = ["dash-ag-grid>=31.0", "dash[async]>=3.1", "dash-bootstrap-components>=2.0", "pandas"]
 
 [project.urls]
 Homepage = "https://github.com/posit-dev/querychat" # TODO update when we have docs
@@ -62,11 +66,21 @@ include = ["pkg-py/src/querychat", "pkg-py/LICENSE", "pkg-py/README.md"]
 
 [dependency-groups]
 dev = ["ruff>=0.6.5", "pyright>=1.1.401", "tox-uv>=1.11.4", "pytest>=8.4.0", "polars>=1.0.0", "ibis-framework[duckdb]>=9.0.0"]
-docs = ["quartodoc>=0.11.1"]
+docs = ["quartodoc>=0.11.1", "nbformat", "nbclient", "ipykernel"]
 examples = [
     "openai",
     "palmerpenguins>=0.1.4",
     "seaborn",
+]
+streamlit = ["streamlit>=1.30"]
+gradio = ["gradio>=6.0"]
+dash = ["dash-ag-grid>=31.0", "dash[async]>=3.1", "dash-bootstrap-components>=2.0", "pandas"]
+test = [
+    "pytest>=8.0.0",
+    "pytest-playwright>=0.5.0",
+    "pytest-xdist>=3.5.0",
+    "pytest-rerunfailures>=14.0",
+    "playwright>=1.40.0",
 ]
 
 [tool.ruff]
@@ -119,6 +133,7 @@ extend-ignore = [
     "E501",    # Line too long
     "ISC001",  # single-line-implicit-string-concatenation
     "ISC002",  # multi-line-implicit-string-concatenation
+    "PLC0415", # Imports inside functions (intentional lazy loading for optional deps)
     "PLR0913", # Too many arguments in function definition
     "PLR0915", # Too many statements in function
     "RET504",  # Unnecessary assignment to `{name}` before `return` statement
@@ -187,7 +202,13 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 # disable S101 (flagging asserts) for tests
 [tool.ruff.lint.per-file-ignores]
-"pkg-py/tests/*.py" = ["S101"]
+"pkg-py/tests/*.py" = ["S101", "PLR2004"]  # Allow assert and magic numbers in tests
+"pkg-py/tests/playwright/*.py" = ["S101", "PLR2004", "S310", "S603", "S607", "PERF203"]  # Test fixtures launch subprocesses
+"pkg-py/examples/tests/*.py" = ["S101", "PLR2004"]  # Allow assert and magic numbers in tests
+"pkg-py/src/querychat/_dash.py" = ["E402"]  # Backwards-compat aliases at end of file
+"pkg-py/src/querychat/_gradio.py" = ["E402"]  # Backwards-compat aliases at end of file
+"pkg-py/src/querychat/_streamlit.py" = ["E402"]  # Backwards-compat aliases at end of file
+"pkg-py/src/querychat/types/__init__.py" = ["A005"]  # Deliberately shadows stdlib types module
 
 [tool.ruff.format]
 quote-style = "double"

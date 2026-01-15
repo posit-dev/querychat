@@ -45,12 +45,20 @@ website:
       align: left
       contents:
         - index.qmd
-        - section: "Overview"
+        - section: "Get started"
           contents:
             - models.qmd
             - data-sources.qmd
             - context.qmd
+        - section: "Build custom apps"
+          contents:
+            - build-intro.qmd
             - build.qmd
+            - build-streamlit.qmd
+            - build-gradio.qmd
+            - build-dash.qmd
+        - section: "Optimize"
+          contents:
             - greet.qmd
             - tools.qmd
 

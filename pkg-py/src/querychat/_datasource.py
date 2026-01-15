@@ -667,7 +667,7 @@ class PolarsLazySource(DataSource):
             Name of the table in SQL queries
 
         """
-        import polars as pl  # noqa: PLC0415
+        import polars as pl
 
         self._lf = lf
         self.table_name = table_name
@@ -691,7 +691,7 @@ class PolarsLazySource(DataSource):
 
     def get_schema(self, *, categorical_threshold: int) -> str:
         """Generate schema information from LazyFrame using lazy aggregates."""
-        import polars as pl  # noqa: PLC0415
+        import polars as pl
 
         schema_lines = [f"Table: {self.table_name}", "Columns:"]
 
@@ -826,7 +826,7 @@ class PolarsLazySource(DataSource):
     @staticmethod
     def _polars_dtype_to_sql(dtype) -> str:  # noqa: PLR0911
         """Convert Polars dtype to SQL type name."""
-        import polars as pl  # noqa: PLC0415
+        import polars as pl
 
         if dtype.is_integer():
             return "INTEGER"

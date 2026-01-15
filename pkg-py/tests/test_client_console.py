@@ -185,7 +185,7 @@ class TestConsoleMethod:
         assert first_client is second_client
 
         # Should have been called twice (once per console() call)
-        assert mock_console.call_count == 2  # noqa: PLR2004
+        assert mock_console.call_count == 2
 
     def test_console_new_creates_fresh_client(self, sample_df):
         """Test that console(new=True) creates a fresh client."""

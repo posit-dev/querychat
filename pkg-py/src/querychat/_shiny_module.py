@@ -8,15 +8,18 @@ from typing import TYPE_CHECKING, Union
 
 import chatlas
 import shinychat
+
 from shiny import module, reactive, ui
 
+from ._querychat_core import GREETING_PROMPT
 from .tools import tool_query, tool_reset_dashboard, tool_update_dashboard
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from shiny import Inputs, Outputs, Session
     from shiny.bookmark import BookmarkState, RestoreState
+
+    from shiny import Inputs, Outputs, Session
 
     from ._datasource import AnyFrame, DataSource
     from .types import UpdateDashboardData
@@ -126,10 +129,8 @@ def mod_server(
     @reactive.calc
     def filtered_df():
         query = sql.get()
-        if not query:
-            return data_source.get_data()
-        else:
-            return data_source.execute_query(query)
+        df = data_source.get_data() if not query else data_source.execute_query(query)
+        return df
 
     # Chat UI logic
     chat_ui = shinychat.Chat(CHAT_ID)
@@ -198,9 +199,6 @@ def mod_server(
                 has_greeted.set(vals["querychat_has_greeted"])
 
     return ServerValues(df=filtered_df, sql=sql, title=title, client=chat)
-
-
-GREETING_PROMPT: str = "Please give me a friendly greeting. Include a few sample prompts in a two-level bulleted list."
 
 
 class GreetWarning(Warning):

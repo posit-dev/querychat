@@ -24,7 +24,7 @@ class TestPolarsLazySourceInit:
 
     def test_init_accepts_narwhals_lazyframe(self, polars_lazy_df):
         """Test that PolarsLazySource accepts a narwhals LazyFrame."""
-        from querychat._datasource import PolarsLazySource  # noqa: PLC0415
+        from querychat._datasource import PolarsLazySource
 
         nw_lf = nw.from_native(polars_lazy_df)
         source = PolarsLazySource(nw_lf, "test_table")
@@ -32,7 +32,7 @@ class TestPolarsLazySourceInit:
 
     def test_get_db_type_returns_polars(self, polars_lazy_df):
         """Test that get_db_type returns 'Polars'."""
-        from querychat._datasource import PolarsLazySource  # noqa: PLC0415
+        from querychat._datasource import PolarsLazySource
 
         nw_lf = nw.from_native(polars_lazy_df)
         source = PolarsLazySource(nw_lf, "employees")
@@ -44,7 +44,7 @@ class TestPolarsLazySourceExecuteQuery:
 
     def test_execute_query_returns_narwhals_lazyframe(self, polars_lazy_df):
         """Test that execute_query returns a narwhals LazyFrame."""
-        from querychat._datasource import PolarsLazySource  # noqa: PLC0415
+        from querychat._datasource import PolarsLazySource
 
         nw_lf = nw.from_native(polars_lazy_df)
         source = PolarsLazySource(nw_lf, "employees")
@@ -53,7 +53,7 @@ class TestPolarsLazySourceExecuteQuery:
 
     def test_execute_query_select_all(self, polars_lazy_df):
         """Test SELECT * query."""
-        from querychat._datasource import PolarsLazySource  # noqa: PLC0415
+        from querychat._datasource import PolarsLazySource
 
         nw_lf = nw.from_native(polars_lazy_df)
         source = PolarsLazySource(nw_lf, "employees")
@@ -66,7 +66,7 @@ class TestPolarsLazySourceExecuteQuery:
 
     def test_execute_query_with_filter(self, polars_lazy_df):
         """Test query with WHERE clause."""
-        from querychat._datasource import PolarsLazySource  # noqa: PLC0415
+        from querychat._datasource import PolarsLazySource
 
         nw_lf = nw.from_native(polars_lazy_df)
         source = PolarsLazySource(nw_lf, "employees")
@@ -79,7 +79,7 @@ class TestPolarsLazySourceExecuteQuery:
 
     def test_execute_query_with_aggregation(self, polars_lazy_df):
         """Test query with aggregation."""
-        from querychat._datasource import PolarsLazySource  # noqa: PLC0415
+        from querychat._datasource import PolarsLazySource
 
         nw_lf = nw.from_native(polars_lazy_df)
         source = PolarsLazySource(nw_lf, "employees")
@@ -98,7 +98,7 @@ class TestPolarsLazySourceGetData:
 
     def test_get_data_returns_narwhals_lazyframe(self, polars_lazy_df):
         """Test that get_data returns a narwhals LazyFrame."""
-        from querychat._datasource import PolarsLazySource  # noqa: PLC0415
+        from querychat._datasource import PolarsLazySource
 
         nw_lf = nw.from_native(polars_lazy_df)
         source = PolarsLazySource(nw_lf, "employees")
@@ -107,7 +107,7 @@ class TestPolarsLazySourceGetData:
 
     def test_get_data_returns_original_lazyframe(self, polars_lazy_df):
         """Test that get_data returns the original LazyFrame."""
-        from querychat._datasource import PolarsLazySource  # noqa: PLC0415
+        from querychat._datasource import PolarsLazySource
 
         nw_lf = nw.from_native(polars_lazy_df)
         source = PolarsLazySource(nw_lf, "employees")
@@ -122,7 +122,7 @@ class TestPolarsLazySourceGetSchema:
 
     def test_get_schema_includes_table_name(self, polars_lazy_df):
         """Test that schema includes table name."""
-        from querychat._datasource import PolarsLazySource  # noqa: PLC0415
+        from querychat._datasource import PolarsLazySource
 
         nw_lf = nw.from_native(polars_lazy_df)
         source = PolarsLazySource(nw_lf, "employees")
@@ -133,7 +133,7 @@ class TestPolarsLazySourceGetSchema:
 
     def test_get_schema_includes_all_columns(self, polars_lazy_df):
         """Test that schema includes all columns."""
-        from querychat._datasource import PolarsLazySource  # noqa: PLC0415
+        from querychat._datasource import PolarsLazySource
 
         nw_lf = nw.from_native(polars_lazy_df)
         source = PolarsLazySource(nw_lf, "employees")
@@ -144,7 +144,7 @@ class TestPolarsLazySourceGetSchema:
 
     def test_get_schema_numeric_ranges(self, polars_lazy_df):
         """Test that numeric columns include range information."""
-        from querychat._datasource import PolarsLazySource  # noqa: PLC0415
+        from querychat._datasource import PolarsLazySource
 
         nw_lf = nw.from_native(polars_lazy_df)
         source = PolarsLazySource(nw_lf, "employees")
@@ -157,7 +157,7 @@ class TestPolarsLazySourceGetSchema:
 
     def test_get_schema_categorical_values(self, polars_lazy_df):
         """Test that categorical columns show unique values."""
-        from querychat._datasource import PolarsLazySource  # noqa: PLC0415
+        from querychat._datasource import PolarsLazySource
 
         nw_lf = nw.from_native(polars_lazy_df)
         source = PolarsLazySource(nw_lf, "employees")
@@ -174,7 +174,7 @@ class TestPolarsLazySourceTestQuery:
 
     def test_test_query_returns_dataframe(self, polars_lazy_df):
         """Test that test_query returns a collected DataFrame (not LazyFrame)."""
-        from querychat._datasource import PolarsLazySource  # noqa: PLC0415
+        from querychat._datasource import PolarsLazySource
 
         nw_lf = nw.from_native(polars_lazy_df)
         source = PolarsLazySource(nw_lf, "employees")
@@ -185,7 +185,7 @@ class TestPolarsLazySourceTestQuery:
 
     def test_test_query_require_all_columns_passes(self, polars_lazy_df):
         """Test that test_query passes when all columns present."""
-        from querychat._datasource import PolarsLazySource  # noqa: PLC0415
+        from querychat._datasource import PolarsLazySource
 
         nw_lf = nw.from_native(polars_lazy_df)
         source = PolarsLazySource(nw_lf, "employees")
@@ -197,7 +197,7 @@ class TestPolarsLazySourceTestQuery:
 
     def test_test_query_require_all_columns_fails(self, polars_lazy_df):
         """Test that test_query raises when columns missing."""
-        from querychat._datasource import (  # noqa: PLC0415
+        from querychat._datasource import (
             MissingColumnsError,
             PolarsLazySource,
         )
@@ -212,7 +212,7 @@ class TestPolarsLazySourceTestQuery:
 
     def test_test_query_catches_runtime_errors(self):
         """Test that test_query catches runtime errors by actually executing."""
-        from querychat._datasource import PolarsLazySource  # noqa: PLC0415
+        from querychat._datasource import PolarsLazySource
 
         # Create LazyFrame with string column that can't be cast to integer
         lf = pl.LazyFrame({"a": [1, 2, 3], "b": ["x", "y", "z"]})

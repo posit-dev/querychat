@@ -577,9 +577,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-1">Returns</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 3%">
-<col style="width: 31%">
-<col style="width: 65%">
+<col style="width: 2%">
+<col style="width: 21%">
+<col style="width: 75%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -591,8 +591,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td></td>
-<td><code>nw</code>.<code>DataFrame</code></td>
-<td>The current filtered data frame as a narwhals DataFrame. If no query has been set, this will return the unfiltered data frame from the data source.</td>
+<td><code>DataOrLazyFrame</code></td>
+<td>The current filtered data frame as a narwhals DataFrame or LazyFrame. If the data source is lazy, returns a LazyFrame. If no query has been set, this will return the unfiltered data from the data source.</td>
 </tr>
 </tbody>
 </table>

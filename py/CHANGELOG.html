@@ -164,7 +164,8 @@ ul.task-list li input[type="checkbox"] {
 <section id="new-features" class="level3">
 <h3 class="anchored" data-anchor-id="new-features">New features</h3>
 <ul>
-<li>Added support for Gradio, Dash, and Streamlit web frameworks in addition to Shiny. Import from the new submodules:
+<li><p>Added <code>PolarsLazySource</code> to support Polars LazyFrames as data sources. Data stays lazy until the render boundary, enabling efficient handling of large datasets. Pass a <code>polars.LazyFrame</code> directly to <code>QueryChat()</code> and queries will be executed lazily via Polars’ SQLContext.</p></li>
+<li><p>Added support for Gradio, Dash, and Streamlit web frameworks in addition to Shiny. Import from the new submodules:</p>
 <ul>
 <li><code>from querychat.gradio import QueryChat</code></li>
 <li><code>from querychat.dash import QueryChat</code></li>

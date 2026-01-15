@@ -192,7 +192,7 @@ class QueryChat(QueryChatBase[DataFrameT]):
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
     ):
-        super().__init__(  # type: ignore[misc]
+        super().__init__(
             data_source,
             table_name,
             greeting=greeting,
@@ -442,7 +442,7 @@ class QueryChat(QueryChatBase[DataFrameT]):
                 ".server() must be called within an active Shiny session (i.e., within the server function). "
             )
 
-        return mod_server(  # type: ignore[return-value]
+        return mod_server(
             id or self.id,
             data_source=self._data_source,
             greeting=self.greeting,
@@ -614,7 +614,7 @@ class QueryChatExpress(QueryChatBase[DataFrameT]):
                 "Is express.QueryChat() being called outside of a Shiny Express app?",
             )
 
-        super().__init__(  # type: ignore[misc]
+        super().__init__(
             data_source,
             table_name,
             greeting=greeting,
@@ -719,7 +719,7 @@ class QueryChatExpress(QueryChatBase[DataFrameT]):
             set, this will return the unfiltered data from the data source.
 
         """
-        return self._vals.df()  # type: ignore[return-value]
+        return self._vals.df()
 
     @overload
     def sql(self, query: None = None) -> str | None: ...

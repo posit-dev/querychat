@@ -4,7 +4,7 @@ import copy
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Generic, Union
+from typing import TYPE_CHECKING, Generic, TypeVar, Union
 
 import chatlas
 import shinychat
@@ -24,6 +24,9 @@ if TYPE_CHECKING:
 
     from ._datasource import DataSource
     from .types import UpdateDashboardData
+
+# TypeVar for mod_server return type
+_T = TypeVar("_T")
 
 ReactiveString = reactive.Value[str]
 """A reactive string value."""
@@ -94,11 +97,11 @@ def mod_server(
     output: Outputs,
     session: Session,
     *,
-    data_source: DataSource,
+    data_source: DataSource[_T],
     greeting: str | None,
     client: chatlas.Chat | Callable,
     enable_bookmarking: bool,
-):
+) -> ServerValues[_T]:
     # Reactive values to store state
     sql = ReactiveStringOrNone(None)
     title = ReactiveStringOrNone(None)
@@ -199,7 +202,7 @@ def mod_server(
             if "querychat_has_greeted" in vals:
                 has_greeted.set(vals["querychat_has_greeted"])
 
-    return ServerValues(df=filtered_df, sql=sql, title=title, client=chat)  # type: ignore[arg-type]
+    return ServerValues(df=filtered_df, sql=sql, title=title, client=chat)
 
 
 class GreetWarning(Warning):

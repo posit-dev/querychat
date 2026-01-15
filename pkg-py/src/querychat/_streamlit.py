@@ -115,7 +115,7 @@ class QueryChat(QueryChatBase[DataFrameT]):
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
     ):
-        super().__init__(  # type: ignore[misc]
+        super().__init__(
             data_source,
             table_name,
             greeting=greeting,

@@ -60,6 +60,20 @@ def duckdb_result_to_nw(
     raise ImportError(f"DataFrameSource requires 'polars' or 'pandas'. {_INSTALL_MSG}")
 
 
+def duckdb_result_to_polars(
+    result: duckdb.DuckDBPyRelation | duckdb.DuckDBPyConnection,
+):
+    """Convert DuckDB result to native polars DataFrame."""
+    return result.pl()
+
+
+def duckdb_result_to_pandas(
+    result: duckdb.DuckDBPyRelation | duckdb.DuckDBPyConnection,
+):
+    """Convert DuckDB result to native pandas DataFrame."""
+    return result.df()
+
+
 def read_csv(path: str) -> nw.DataFrame:
     try:
         import polars as pl  # pyright: ignore[reportMissingImports]

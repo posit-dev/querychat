@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, overload
 
 import narwhals.stable.v1 as nw
 from gradio.context import Context
 
+from ._datasource import DataFrameT, IntoDataFrameT
 from ._querychat_base import TOOL_GROUPS, QueryChatBase
 from ._querychat_core import (
     GREETING_PROMPT,
@@ -21,13 +22,14 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     import chatlas
+    import polars as pl
     import sqlalchemy
-    from narwhals.stable.v1.typing import IntoFrame
+    from narwhals.stable.v1.typing import IntoDataFrame
 
     import gradio as gr
 
 
-class QueryChat(QueryChatBase, StateDictAccessorMixin):
+class QueryChat(QueryChatBase[DataFrameT], StateDictAccessorMixin):
     """
     QueryChat for Gradio applications.
 
@@ -78,9 +80,54 @@ class QueryChat(QueryChatBase, StateDictAccessorMixin):
 
     """
 
+    @overload
+    def __init__(
+        self: QueryChat[pl.LazyFrame],
+        data_source: pl.LazyFrame,
+        table_name: str,
+        *,
+        greeting: Optional[str | Path] = None,
+        client: Optional[str | chatlas.Chat] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        data_description: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        extra_instructions: Optional[str | Path] = None,
+        prompt_template: Optional[str | Path] = None,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: QueryChat[IntoDataFrameT],
+        data_source: IntoDataFrameT,
+        table_name: str,
+        *,
+        greeting: Optional[str | Path] = None,
+        client: Optional[str | chatlas.Chat] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        data_description: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        extra_instructions: Optional[str | Path] = None,
+        prompt_template: Optional[str | Path] = None,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: QueryChat[nw.DataFrame],
+        data_source: sqlalchemy.Engine,
+        table_name: str,
+        *,
+        greeting: Optional[str | Path] = None,
+        client: Optional[str | chatlas.Chat] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        data_description: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        extra_instructions: Optional[str | Path] = None,
+        prompt_template: Optional[str | Path] = None,
+    ) -> None: ...
+
     def __init__(
         self,
-        data_source: IntoFrame | sqlalchemy.Engine,
+        data_source: IntoDataFrame | pl.LazyFrame | sqlalchemy.Engine,
         table_name: str,
         *,
         greeting: Optional[str | Path] = None,
@@ -91,7 +138,7 @@ class QueryChat(QueryChatBase, StateDictAccessorMixin):
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
     ):
-        super().__init__(
+        super().__init__(  # type: ignore[misc]
             data_source,
             table_name,
             greeting=greeting,
@@ -102,6 +149,24 @@ class QueryChat(QueryChatBase, StateDictAccessorMixin):
             extra_instructions=extra_instructions,
             prompt_template=prompt_template,
         )
+
+    def df(self, state: AppStateDict | None) -> DataFrameT:  # type: ignore[override]
+        """
+        Get the current DataFrame from state.
+
+        Parameters
+        ----------
+        state
+            The state dictionary from a framework callback.
+
+        Returns
+        -------
+        :
+            The filtered data if a SQL query is active, otherwise the full dataset.
+            Returns a LazyFrame if the data source is lazy.
+
+        """
+        return super().df(state)  # type: ignore[return-value]
 
     @property
     def css(self) -> str:

@@ -4,13 +4,14 @@ import copy
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Generic, Union
 
 import chatlas
 import shinychat
 
 from shiny import module, reactive, ui
 
+from ._datasource import DataFrameT
 from ._querychat_core import GREETING_PROMPT
 from .tools import tool_query, tool_reset_dashboard, tool_update_dashboard
 
@@ -21,7 +22,7 @@ if TYPE_CHECKING:
 
     from shiny import Inputs, Outputs, Session
 
-    from ._datasource import DataOrLazyFrame, DataSource
+    from ._datasource import DataSource
     from .types import UpdateDashboardData
 
 ReactiveString = reactive.Value[str]
@@ -50,7 +51,7 @@ def mod_ui(**kwargs):
 
 
 @dataclass
-class ServerValues:
+class ServerValues(Generic[DataFrameT]):
     """
     Session-specific reactive values and client returned by QueryChat.server().
 
@@ -81,7 +82,7 @@ class ServerValues:
 
     """
 
-    df: Callable[[], DataOrLazyFrame]
+    df: Callable[[], DataFrameT]
     sql: ReactiveStringOrNone
     title: ReactiveStringOrNone
     client: chatlas.Chat
@@ -198,7 +199,7 @@ def mod_server(
             if "querychat_has_greeted" in vals:
                 has_greeted.set(vals["querychat_has_greeted"])
 
-    return ServerValues(df=filtered_df, sql=sql, title=title, client=chat)
+    return ServerValues(df=filtered_df, sql=sql, title=title, client=chat)  # type: ignore[arg-type]
 
 
 class GreetWarning(Warning):

@@ -61,11 +61,12 @@ class TestDataFrameSourceInit:
 class TestDataFrameSourceExecuteQuery:
     """Tests for DataFrameSource.execute_query method."""
 
-    def test_execute_query_returns_narwhals_dataframe(self, narwhals_df):
-        """Test that execute_query returns a narwhals DataFrame."""
+    def test_execute_query_returns_native_dataframe(self, narwhals_df):
+        """Test that execute_query returns a native DataFrame (same as input)."""
         source = DataFrameSource(narwhals_df, "employees")
         result = source.execute_query("SELECT * FROM employees")
-        assert isinstance(result, nw.DataFrame)
+        # Since narwhals_df is created from pandas, result should be pandas
+        assert isinstance(result, pd.DataFrame)
 
     def test_execute_query_select_all(self, narwhals_df):
         """Test SELECT * query."""
@@ -83,7 +84,7 @@ class TestDataFrameSourceExecuteQuery:
         )
 
         assert result.shape == (3, 5)
-        departments = result["department"].unique().to_list()
+        departments = result["department"].unique().tolist()
         assert departments == ["Engineering"]
 
     def test_execute_query_with_aggregation(self, narwhals_df):
@@ -112,7 +113,7 @@ class TestDataFrameSourceExecuteQuery:
             "SELECT name, age FROM employees ORDER BY age DESC"
         )
 
-        ages = result["age"].to_list()
+        ages = result["age"].tolist()
         assert ages == sorted(ages, reverse=True)
 
     def test_execute_query_empty_result(self, narwhals_df):
@@ -122,18 +123,20 @@ class TestDataFrameSourceExecuteQuery:
             "SELECT * FROM employees WHERE age > 100"
         )
 
-        assert isinstance(result, nw.DataFrame)
+        # Result is native pandas DataFrame (same as input backend)
+        assert isinstance(result, pd.DataFrame)
         assert result.shape == (0, 5)
 
 
 class TestDataFrameSourceGetData:
     """Tests for DataFrameSource.get_data method."""
 
-    def test_get_data_returns_narwhals_dataframe(self, narwhals_df):
-        """Test that get_data returns a narwhals DataFrame."""
+    def test_get_data_returns_native_dataframe(self, narwhals_df):
+        """Test that get_data returns a native DataFrame (same as input)."""
         source = DataFrameSource(narwhals_df, "employees")
         result = source.get_data()
-        assert isinstance(result, nw.DataFrame)
+        # Since narwhals_df is created from pandas, result should be pandas
+        assert isinstance(result, pd.DataFrame)
 
     def test_get_data_returns_full_dataset(self, narwhals_df):
         """Test that get_data returns all rows."""
@@ -150,7 +153,7 @@ class TestDataFrameSourceGetData:
 
         # Check that the data matches
         original_names = sorted(narwhals_df["name"].to_list())
-        result_names = sorted(result["name"].to_list())
+        result_names = sorted(result["name"].tolist())
         assert original_names == result_names
 
 

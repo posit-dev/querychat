@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, Optional, cast
+from typing import TYPE_CHECKING, Literal, Optional, cast, overload
 
 import narwhals.stable.v1 as nw
 from chatlas import Turn
 
 from ._dash_ui import IDs, card_ui, chat_container_ui, chat_messages_ui
+from ._datasource import DataFrameT, IntoDataFrameT
 from ._querychat_base import TOOL_GROUPS, QueryChatBase
 from ._querychat_core import (
     GREETING_PROMPT,
@@ -24,14 +25,15 @@ if TYPE_CHECKING:
     from pathlib import Path as PathType
 
     import chatlas
+    import polars as pl
     import sqlalchemy
-    from narwhals.stable.v1.typing import IntoFrame
+    from narwhals.stable.v1.typing import IntoDataFrame
 
     import dash
     from dash import html
 
 
-class QueryChat(QueryChatBase, StateDictAccessorMixin):
+class QueryChat(QueryChatBase[DataFrameT], StateDictAccessorMixin):
     """
     QueryChat for Dash applications.
 
@@ -86,9 +88,57 @@ class QueryChat(QueryChatBase, StateDictAccessorMixin):
 
     """
 
+    @overload
+    def __init__(
+        self: QueryChat[pl.LazyFrame],
+        data_source: pl.LazyFrame,
+        table_name: str,
+        *,
+        greeting: Optional[str | PathType] = None,
+        client: Optional[str | chatlas.Chat] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        data_description: Optional[str | PathType] = None,
+        categorical_threshold: int = 20,
+        extra_instructions: Optional[str | PathType] = None,
+        prompt_template: Optional[str | PathType] = None,
+        storage_type: Literal["memory", "session", "local"] = "memory",
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: QueryChat[IntoDataFrameT],
+        data_source: IntoDataFrameT,
+        table_name: str,
+        *,
+        greeting: Optional[str | PathType] = None,
+        client: Optional[str | chatlas.Chat] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        data_description: Optional[str | PathType] = None,
+        categorical_threshold: int = 20,
+        extra_instructions: Optional[str | PathType] = None,
+        prompt_template: Optional[str | PathType] = None,
+        storage_type: Literal["memory", "session", "local"] = "memory",
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: QueryChat[nw.DataFrame],
+        data_source: sqlalchemy.Engine,
+        table_name: str,
+        *,
+        greeting: Optional[str | PathType] = None,
+        client: Optional[str | chatlas.Chat] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        data_description: Optional[str | PathType] = None,
+        categorical_threshold: int = 20,
+        extra_instructions: Optional[str | PathType] = None,
+        prompt_template: Optional[str | PathType] = None,
+        storage_type: Literal["memory", "session", "local"] = "memory",
+    ) -> None: ...
+
     def __init__(
         self,
-        data_source: IntoFrame | sqlalchemy.Engine,
+        data_source: IntoDataFrame | pl.LazyFrame | sqlalchemy.Engine,
         table_name: str,
         *,
         greeting: Optional[str | PathType] = None,
@@ -100,7 +150,7 @@ class QueryChat(QueryChatBase, StateDictAccessorMixin):
         prompt_template: Optional[str | PathType] = None,
         storage_type: Literal["memory", "session", "local"] = "memory",
     ):
-        super().__init__(
+        super().__init__(  # type: ignore[misc]
             data_source,
             table_name,
             greeting=greeting,
@@ -114,6 +164,24 @@ class QueryChat(QueryChatBase, StateDictAccessorMixin):
         self._storage_type: Literal["memory", "session", "local"] = storage_type
         self._ids = IDs.from_table_name(self._data_source.table_name)
         self._initialized_apps: set[int] = set()
+
+    def df(self, state: AppStateDict | None) -> DataFrameT:  # type: ignore[override]
+        """
+        Get the current DataFrame from state.
+
+        Parameters
+        ----------
+        state
+            The state dictionary from a framework callback.
+
+        Returns
+        -------
+        :
+            The filtered data if a SQL query is active, otherwise the full dataset.
+            Returns a LazyFrame if the data source is lazy.
+
+        """
+        return super().df(state)  # type: ignore[return-value]
 
     @property
     def store_id(self) -> str:

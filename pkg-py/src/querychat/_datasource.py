@@ -2,21 +2,38 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Literal, Union
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, Union
 
 import duckdb
 import narwhals.stable.v1 as nw
 from sqlalchemy import inspect, text
 from sqlalchemy.sql import sqltypes
 
-from ._df_compat import duckdb_result_to_nw, read_sql
+from ._df_compat import (
+    duckdb_result_to_nw,
+    duckdb_result_to_pandas,
+    duckdb_result_to_polars,
+    read_sql,
+)
 from ._utils import check_query
 
 if TYPE_CHECKING:
     import polars as pl
+    from narwhals.stable.v1.typing import IntoDataFrame
     from sqlalchemy.engine import Connection, Engine
 
+# Type alias for DataFrame or LazyFrame return types
 DataOrLazyFrame = Union[nw.DataFrame, nw.LazyFrame]
+
+# TypeVar for generic QueryChat classes - captures the specific DataFrame type passed in.
+# Uses IntoDataFrame bound to work with any narwhals-compatible DataFrame library.
+# pl.LazyFrame is handled separately via overloads since it's not an IntoDataFrame.
+if TYPE_CHECKING:
+    IntoDataFrameT = TypeVar("IntoDataFrameT", bound="IntoDataFrame")
+    DataFrameT = TypeVar("DataFrameT")  # Unconstrained, bound by overloads
+else:
+    IntoDataFrameT = TypeVar("IntoDataFrameT")
+    DataFrameT = TypeVar("DataFrameT")
 
 
 class MissingColumnsError(ValueError):
@@ -162,6 +179,7 @@ class DataFrameSource(DataSource):
     """A DataSource implementation that wraps a DataFrame using DuckDB."""
 
     _df: nw.DataFrame
+    _backend: str  # "polars" or "pandas"
 
     def __init__(self, df: nw.DataFrame, table_name: str):
         """
@@ -177,6 +195,10 @@ class DataFrameSource(DataSource):
         """
         self._df = df
         self.table_name = table_name
+
+        # Track the native backend for returning results in the same format
+        native_namespace = nw.get_native_namespace(df)
+        self._backend = native_namespace.__name__  # "polars" or "pandas"
 
         self._conn = duckdb.connect(database=":memory:")
         self._conn.register(table_name, self._df.to_native())
@@ -262,11 +284,11 @@ SET lock_configuration = true;
 
         return "\n".join(schema)
 
-    def execute_query(self, query: str) -> nw.DataFrame:
+    def execute_query(self, query: str):  # type: ignore[override]
         """
         Execute query using DuckDB.
 
-        Uses polars if available, otherwise falls back to pandas.
+        Returns results in the same format as the input DataFrame (polars or pandas).
 
         Parameters
         ----------
@@ -276,7 +298,7 @@ SET lock_configuration = true;
         Returns
         -------
         :
-            Query results as narwhals DataFrame
+            Query results as native DataFrame (polars or pandas, matching input)
 
         Raises
         ------
@@ -285,7 +307,11 @@ SET lock_configuration = true;
 
         """
         check_query(query)
-        return duckdb_result_to_nw(self._conn.execute(query))
+        result = self._conn.execute(query)
+        if self._backend == "polars":
+            return duckdb_result_to_polars(result)
+        else:
+            return duckdb_result_to_pandas(result)
 
     def test_query(
         self, query: str, *, require_all_columns: bool = False
@@ -332,17 +358,17 @@ SET lock_configuration = true;
 
         return result
 
-    def get_data(self) -> nw.DataFrame:
+    def get_data(self):
         """
         Return the unfiltered data as a DataFrame.
 
         Returns
         -------
         :
-            The complete dataset as a narwhals DataFrame
+            The complete dataset as native DataFrame (polars or pandas, matching input)
 
         """
-        return self._df
+        return self._df.to_native()
 
     def cleanup(self) -> None:
         """
@@ -717,7 +743,7 @@ class PolarsLazySource(DataSource):
         self._add_column_stats(columns, self._lf, categorical_threshold)
         return self._format_schema(self.table_name, columns)
 
-    def execute_query(self, query: str) -> nw.LazyFrame:
+    def execute_query(self, query: str):  # type: ignore[override]
         """
         Execute SQL query and return results as LazyFrame.
 
@@ -729,12 +755,11 @@ class PolarsLazySource(DataSource):
         Returns
         -------
         :
-            Query results as a narwhals LazyFrame
+            Query results as a native Polars LazyFrame
 
         """
         check_query(query)
-        result = self._ctx.execute(query)
-        return nw.from_native(result)
+        return self._ctx.execute(query)
 
     def test_query(
         self, query: str, *, require_all_columns: bool = False
@@ -777,17 +802,17 @@ class PolarsLazySource(DataSource):
 
         return result
 
-    def get_data(self) -> nw.LazyFrame:
+    def get_data(self):  # type: ignore[override]
         """
         Return the unfiltered data as a LazyFrame.
 
         Returns
         -------
         :
-            The original LazyFrame
+            The original native Polars LazyFrame
 
         """
-        return nw.from_native(self._lf)
+        return self._lf
 
     def cleanup(self) -> None:
         """Clean up resources (no-op for Polars)."""

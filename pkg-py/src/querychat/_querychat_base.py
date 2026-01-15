@@ -6,7 +6,7 @@ import copy
 import os
 import re
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, Optional
+from typing import TYPE_CHECKING, Generic, Literal, Optional, overload
 
 import chatlas
 import narwhals.stable.v1 as nw
@@ -14,7 +14,9 @@ import sqlalchemy
 
 from ._datasource import (
     DataFrameSource,
+    DataFrameT,
     DataSource,
+    IntoDataFrameT,
     PolarsLazySource,
     SQLAlchemySource,
 )
@@ -31,12 +33,13 @@ from .tools import (
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    import polars as pl
     from narwhals.stable.v1.typing import IntoFrame
 
 TOOL_GROUPS = Literal["update", "query"]
 
 
-class QueryChatBase:
+class QueryChatBase(Generic[DataFrameT]):
     """
     Base class for all QueryChat implementations.
 
@@ -48,6 +51,51 @@ class QueryChatBase:
 
     Framework-specific subclasses add their own UI methods.
     """
+
+    @overload
+    def __init__(
+        self: QueryChatBase[pl.LazyFrame],
+        data_source: pl.LazyFrame,
+        table_name: str,
+        *,
+        greeting: Optional[str | Path] = None,
+        client: Optional[str | chatlas.Chat] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        data_description: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        extra_instructions: Optional[str | Path] = None,
+        prompt_template: Optional[str | Path] = None,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: QueryChatBase[IntoDataFrameT],
+        data_source: IntoDataFrameT,
+        table_name: str,
+        *,
+        greeting: Optional[str | Path] = None,
+        client: Optional[str | chatlas.Chat] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        data_description: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        extra_instructions: Optional[str | Path] = None,
+        prompt_template: Optional[str | Path] = None,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: QueryChatBase[nw.DataFrame],
+        data_source: sqlalchemy.Engine,
+        table_name: str,
+        *,
+        greeting: Optional[str | Path] = None,
+        client: Optional[str | chatlas.Chat] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        data_description: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        extra_instructions: Optional[str | Path] = None,
+        prompt_template: Optional[str | Path] = None,
+    ) -> None: ...
 
     def __init__(
         self,

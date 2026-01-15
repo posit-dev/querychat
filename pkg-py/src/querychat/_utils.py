@@ -4,13 +4,10 @@ import os
 import re
 import warnings
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Literal, Optional
+from typing import Literal, Optional
 
 import narwhals.stable.v1 as nw
 from great_tables import GT
-
-if TYPE_CHECKING:
-    from ._datasource import DataOrLazyFrame
 
 
 class MISSING_TYPE:  # noqa: N801
@@ -196,14 +193,14 @@ def querychat_tool_starts_open(action: Literal["update", "query", "reset"]) -> b
         return action != "reset"
 
 
-def df_to_html(df: DataOrLazyFrame, maxrows: int = 5) -> str:
+def df_to_html(df, maxrows: int = 5) -> str:
     """
     Convert a DataFrame to a Bootstrap-styled HTML table for display in chat.
 
     Parameters
     ----------
-    df : IntoFrame
-        The DataFrame to convert
+    df
+        The DataFrame to convert (narwhals or native polars/pandas)
     maxrows : int, default=5
         Maximum number of rows to display
 
@@ -213,6 +210,10 @@ def df_to_html(df: DataOrLazyFrame, maxrows: int = 5) -> str:
         HTML string representation of the table
 
     """
+    # Convert native DataFrames to narwhals for uniform handling
+    if not isinstance(df, (nw.DataFrame, nw.LazyFrame)):
+        df = nw.from_native(df)
+
     if isinstance(df, nw.DataFrame):
         df = df.lazy()
 

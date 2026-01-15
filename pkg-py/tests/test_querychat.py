@@ -1,6 +1,5 @@
 import os
 
-import narwhals.stable.v1 as nw
 import pandas as pd
 import polars as pl
 import pytest
@@ -50,7 +49,8 @@ def test_querychat_init(sample_df):
     )
 
     assert len(result) == 1
-    assert result.item(0, "name") == "Bob"
+    # Result is now native pandas DataFrame
+    assert result.iloc[0]["name"] == "Bob"
 
 
 def test_querychat_custom_id(sample_df):
@@ -111,9 +111,9 @@ def test_querychat_with_polars_lazyframe():
     # Should have created a PolarsLazySource
     assert isinstance(qc.data_source, PolarsLazySource)
 
-    # Query should return a LazyFrame
+    # Query should return a native polars LazyFrame
     result = qc.data_source.execute_query("SELECT * FROM test_table WHERE id = 2")
-    assert isinstance(result, nw.LazyFrame)
+    assert isinstance(result, pl.LazyFrame)
 
     # Collect to verify
     collected = result.collect()

@@ -47,14 +47,14 @@ class TestDataFrameSourceInit:
 
     @pytest.mark.skipif(not HAS_POLARS_WITH_PYARROW, reason="polars or pyarrow not installed")
     def test_init_with_polars_dataframe(self):
-        """Test that DataFrameSource accepts a polars DataFrame."""
+        """Test that DataFrameSource accepts a narwhals-wrapped polars DataFrame."""
         polars_df = pl.DataFrame(
             {
                 "id": [1, 2, 3],
                 "name": ["Alice", "Bob", "Charlie"],
             }
         )
-        source = DataFrameSource(polars_df, "test_table")
+        source = DataFrameSource(nw.from_native(polars_df), "test_table")
         assert source.table_name == "test_table"
 
 
@@ -244,13 +244,15 @@ class TestDataFrameSourceWithPolars:
 
     @pytest.fixture
     def polars_df(self):
-        """Create a sample polars DataFrame."""
-        return pl.DataFrame(
-            {
-                "id": [1, 2, 3],
-                "name": ["Alice", "Bob", "Charlie"],
-                "value": [10.5, 20.5, 30.5],
-            }
+        """Create a sample narwhals-wrapped polars DataFrame."""
+        return nw.from_native(
+            pl.DataFrame(
+                {
+                    "id": [1, 2, 3],
+                    "name": ["Alice", "Bob", "Charlie"],
+                    "value": [10.5, 20.5, 30.5],
+                }
+            )
         )
 
     def test_execute_query_with_polars(self, polars_df):

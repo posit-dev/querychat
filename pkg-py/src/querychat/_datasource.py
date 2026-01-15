@@ -29,11 +29,22 @@ class ColumnMeta:
     """Metadata for a single column in a schema."""
 
     name: str
+    """Column name."""
+
     sql_type: str
+    """SQL type name (e.g., 'INTEGER', 'TEXT', 'DATE')."""
+
     kind: Literal["numeric", "text", "date", "other"]
+    """Column category for determining what stats to collect."""
+
     min_val: Any = None
+    """Minimum value for numeric/date columns."""
+
     max_val: Any = None
+    """Maximum value for numeric/date columns."""
+
     categories: list[str] = field(default_factory=list)
+    """Unique values for text columns below the categorical threshold."""
 
 
 class DataSource(ABC):
@@ -789,7 +800,7 @@ class PolarsLazySource(DataSource):
         if dtype.is_numeric():
             kind = "numeric"
             sql_type = "INTEGER" if dtype.is_integer() else "FLOAT"
-        elif dtype in (pl.String, pl.Utf8):
+        elif dtype == pl.String:
             kind = "text"
             sql_type = "TEXT"
         elif dtype == pl.Date:

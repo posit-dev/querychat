@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Optional
 
+import narwhals.stable.v1 as nw
 from gradio.context import Context
 
 from ._querychat_base import TOOL_GROUPS, QueryChatBase
@@ -294,6 +295,9 @@ class QueryChat(QueryChatBase, StateDictAccessorMixin):
                 )
 
                 df = self.df(state_dict)
+                # Collect if lazy before accessing .shape
+                if isinstance(df, nw.LazyFrame):
+                    df = df.collect()
 
                 data_info_parts = []
                 if error:

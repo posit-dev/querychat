@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>Provide context – querychat</title>
+<title>Streamlit – querychat</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -65,8 +65,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="site_libs/quarto-search/fuse.min.js"></script>
 <script src="site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="./">
-<link href="./build-intro.html" rel="next">
-<link href="./data-sources.html" rel="prev">
+<link href="./build-gradio.html" rel="next">
+<link href="./build.html" rel="prev">
 <script src="site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
 <script src="site_libs/quarto-html/popper.min.js"></script>
@@ -77,6 +77,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
 <link href="site_libs/bootstrap/bootstrap-c715e12d8a4b8600eb9e859b05fb0291.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script src="site_libs/quarto-contrib/glightbox/glightbox.min.js"></script>
+<link href="site_libs/quarto-contrib/glightbox/glightbox.min.css" rel="stylesheet">
+<link href="site_libs/quarto-contrib/glightbox/lightbox.css" rel="stylesheet">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -106,12 +109,20 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 }</script>
 
 
-<meta property="og:title" content="Provide context – querychat">
+<meta property="og:title" content="Streamlit – querychat">
 <meta property="og:description" content="Explore data using natural language">
+<meta property="og:image" content="https://posit-dev.github.io/querychat/py/images/streamlit-complete.png">
 <meta property="og:site_name" content="querychat">
-<meta name="twitter:title" content="Provide context – querychat">
+<meta property="og:image:alt" content="Screenshot of querychat running in a custom Streamlit app.">
+<meta property="og:image:height" content="900">
+<meta property="og:image:width" content="1400">
+<meta name="twitter:title" content="Streamlit – querychat">
 <meta name="twitter:description" content="Explore data using natural language">
-<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://posit-dev.github.io/querychat/py/images/streamlit-complete.png">
+<meta name="twitter:image:alt" content="Screenshot of querychat running in a custom Streamlit app.">
+<meta name="twitter:image-height" content="900">
+<meta name="twitter:image-width" content="1400">
+<meta name="twitter:card" content="summary_large_image">
 </head>
 
 <body class="nav-sidebar floating nav-fixed quarto-light">
@@ -155,7 +166,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./models.html">Get started</a></li><li class="breadcrumb-item"><a href="./context.html">Provide context</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./build-intro.html">Build custom apps</a></li><li class="breadcrumb-item"><a href="./build-streamlit.html">Streamlit</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -196,7 +207,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="./context.html" class="sidebar-item-text sidebar-link active">
+  <a href="./context.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Provide context</span></a>
   </div>
 </li>
@@ -225,7 +236,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="./build-streamlit.html" class="sidebar-item-text sidebar-link">
+  <a href="./build-streamlit.html" class="sidebar-item-text sidebar-link active">
  <span class="menu-text">Streamlit</span></a>
   </div>
 </li>
@@ -276,19 +287,25 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#default-prompt" id="toc-default-prompt" class="nav-link active" data-scroll-target="#default-prompt">Default prompt</a></li>
-  <li><a href="#data-description" id="toc-data-description" class="nav-link" data-scroll-target="#data-description">Data description</a></li>
-  <li><a href="#extra-instructions" id="toc-extra-instructions" class="nav-link" data-scroll-target="#extra-instructions">Additional instructions</a></li>
-  <li><a href="#custom-template" id="toc-custom-template" class="nav-link" data-scroll-target="#custom-template">Custom template</a></li>
+  <li><a href="#initialize-querychat" id="toc-initialize-querychat" class="nav-link active" data-scroll-target="#initialize-querychat">Initialize <code>QueryChat</code></a></li>
+  <li><a href="#relevant-methods" id="toc-relevant-methods" class="nav-link" data-scroll-target="#relevant-methods">Relevant methods</a></li>
+  <li><a href="#basic-sidebar" id="toc-basic-sidebar" class="nav-link" data-scroll-target="#basic-sidebar">Basic sidebar</a></li>
+  <li><a href="#custom-chat-ui" id="toc-custom-chat-ui" class="nav-link" data-scroll-target="#custom-chat-ui">Custom chat UI</a></li>
+  <li><a href="#data-views" id="toc-data-views" class="nav-link" data-scroll-target="#data-views">Data views</a>
+  <ul class="collapse">
+  <li><a href="#resetting-filters" id="toc-resetting-filters" class="nav-link" data-scroll-target="#resetting-filters">Resetting filters</a></li>
+  <li><a href="#advanced-patterns" id="toc-advanced-patterns" class="nav-link" data-scroll-target="#advanced-patterns">Advanced patterns</a></li>
+  </ul></li>
+  <li><a href="#see-also" id="toc-see-also" class="nav-link" data-scroll-target="#see-also">See also</a></li>
   </ul>
-<div class="toc-actions"><ul><li><a href="https://github.com/posit-dev/querychat/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li><li><a href="https://github.com/posit-dev/querychat/edit/main/pkg-py/docs/context.qmd" class="toc-action"><i class="bi empty"></i>Edit this page</a></li></ul></div></nav>
+<div class="toc-actions"><ul><li><a href="https://github.com/posit-dev/querychat/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li><li><a href="https://github.com/posit-dev/querychat/edit/main/pkg-py/docs/build-streamlit.qmd" class="toc-action"><i class="bi empty"></i>Edit this page</a></li></ul></div></nav>
     </div>
 <!-- main -->
 <main class="content" id="quarto-document-content">
 
-<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./models.html">Get started</a></li><li class="breadcrumb-item"><a href="./context.html">Provide context</a></li></ol></nav>
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./build-intro.html">Build custom apps</a></li><li class="breadcrumb-item"><a href="./build-streamlit.html">Streamlit</a></li></ol></nav>
 <div class="quarto-title">
-<h1 class="title">Provide context</h1>
+<h1 class="title">Streamlit</h1>
 </div>
 
 
@@ -305,114 +322,240 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<p>querychat automatically gathers information about your table to help the LLM write accurate SQL queries. This includes column names and types, numerical ranges, and categorical value examples.<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a></p>
-<p>Importantly, we are <strong>not</strong> sending your raw data to the LLM and asking it to do complicated math. The LLM only needs to understand the structure and schema of your data in order to write SQL queries.</p>
-<p>You can get even better results by customizing the system prompt in three ways:</p>
-<ol type="1">
-<li>Add a <a href="#data-description">data description</a> to provide more context about what the data represents</li>
-<li>Add <a href="#extra-instructions">custom instructions</a> to guide the LLM’s behavior</li>
-<li>Use a fully <a href="#custom-template">custom prompt template</a> if you want complete control (useful if you want to be certain the model cannot see any literal values from your data)</li>
-</ol>
-<section id="default-prompt" class="level2">
-<h2 class="anchored" data-anchor-id="default-prompt">Default prompt</h2>
-<p>For full visibility into the system prompt that querychat generates for the LLM, you can inspect the <code>system_prompt</code> property. This is useful for debugging and understanding exactly what context the LLM is using:</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat <span class="im">import</span> QueryChat</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat.data <span class="im">import</span> titanic</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(titanic(), <span class="st">"titanic"</span>)</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(qc.system_prompt)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>By default, the system prompt contains the following components:</p>
-<ol type="1">
-<li>The basic set of behaviors and guidelines the LLM must follow in order for querychat to work properly, including how to use <a href="./tools.html">tools</a> to execute queries and update the app.</li>
-<li>The SQL schema of the data frame you provided. This includes:
-<ul>
-<li>Column names</li>
-<li>Data types (integer, float, boolean, datetime, text)</li>
-<li>For text columns with less than 10 unique values, we assume they are categorical variables and include the list of values</li>
-<li>For integer and float columns, we include the range</li>
-</ul></li>
-<li>A <a href="#data-description">data description</a> (if provided via <code>data_description</code>)</li>
-<li><a href="#additional-instructions">Additional instructions</a> you want to use to guide querychat’s behavior (if provided via <code>extra_instructions</code>).</li>
-</ol>
-</section>
-<section id="data-description" class="level2">
-<h2 class="anchored" data-anchor-id="data-description">Data description</h2>
-<p>If your column names are descriptive, querychat may already work well without additional context. However, if your columns are named <code>x</code>, <code>V1</code>, <code>value</code>, etc., you should provide a data description. Use the <code>data_description</code> parameter for this:</p>
-<div class="code-with-filename">
-<div class="code-with-filename-file">
-<pre><strong>titanic-app.py</strong></pre>
-</div>
-<div class="sourceCode" id="cb2" data-filename="titanic-app.py"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat <span class="im">import</span> QueryChat</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(</span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    titanic,</span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">"titanic"</span>,</span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    data_description<span class="op">=</span>Path(<span class="st">"data_description.md"</span>)</span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>app <span class="op">=</span> qc.app()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<p>querychat doesn’t need this information in any particular format – just provide what a human would find helpful:</p>
-<div class="code-with-filename">
-<div class="code-with-filename-file">
-<pre><strong>data_description.md</strong></pre>
-</div>
-<div class="sourceCode" id="cb3" data-filename="data_description.md"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>This dataset contains information about Titanic passengers, collected for predicting survival.</span>
+<p><a href="https://streamlit.io/">Streamlit</a> is a web framework for interactive data/ML applications. It provides a simple scripting model that’s great for quickly assembling simple apps.</p>
+<p>In this guide, you’ll learn how to build Streamlit apps with querychat to enable rich data exploration experiences where <a href="#data-views">data views</a> update based on natural language filters.</p>
+<p><a href="./images/streamlit-complete.png" class="lightbox" data-gallery="quarto-lightbox-gallery-1"><img src="./images/streamlit-complete.png" class="shadow rounded mb-3 img-fluid" alt="Screenshot of querychat running in a custom Streamlit app."></a></p>
+<section id="initialize-querychat" class="level2">
+<h2 class="anchored" data-anchor-id="initialize-querychat">Initialize <code>QueryChat</code></h2>
+<p>First, install querychat with Streamlit support:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install <span class="st">"querychat[streamlit]"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Then import the Streamlit-specific <code>QueryChat</code> class:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat.streamlit <span class="im">import</span> QueryChat</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>And initialize it with your <a href="./data-sources.html">data source</a>:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat.data <span class="im">import</span> titanic</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>survived: Survival (0 = No, 1 = Yes)</span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>pclass: Ticket class (1 = 1st, 2 = 2nd, 3 = 3rd)</span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>sex: Sex of passenger</span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>age: Age in years</span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>sibsp: Number of siblings/spouses aboard</span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>parch: Number of parents/children aboard</span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>fare: Passenger fare</span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>embarked: Port of embarkation (C = Cherbourg, Q = Queenstown, S = Southampton)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(titanic(), <span class="st">"titanic"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-1-contents" aria-controls="callout-1" aria-expanded="false" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Quick start with <code>.app()</code>
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-1" class="callout-1-contents callout-collapse collapse">
+<div class="callout-body-container callout-body">
+<p>Remember, the simplest way to get started is with <code>.app()</code>, which gives a “pre-baked” Streamlit app:</p>
+<div class="code-with-filename">
+<div class="code-with-filename-file">
+<pre><strong>streamlit-app.py</strong></pre>
+</div>
+<div class="sourceCode" id="cb4" data-filename="streamlit-app.py"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat.streamlit <span class="im">import</span> QueryChat</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat.data <span class="im">import</span> titanic</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(titanic(), <span class="st">"titanic"</span>)</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>qc.app()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>Run with:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">streamlit</span> run streamlit-app.py</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</div>
 </div>
 </section>
-<section id="extra-instructions" class="level2">
-<h2 class="anchored" data-anchor-id="extra-instructions">Additional instructions</h2>
-<p>You can add custom instructions to guide the LLM’s behavior using the <code>extra_instructions</code> parameter:</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    titanic,</span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">"titanic"</span>,</span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    extra_instructions<span class="op">=</span>Path(<span class="st">"instructions.md"</span>)</span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>Or as a string:</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>instructions <span class="op">=</span> <span class="st">"""</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="st">- Use British spelling conventions</span></span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="st">- Stay on topic and only discuss the data dashboard</span></span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="st">- Refuse to answer unrelated questions</span></span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="st">"""</span></span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(titanic, <span class="st">"titanic"</span>, extra_instructions<span class="op">=</span>instructions)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="callout callout-style-default callout-warning callout-titled">
+<section id="relevant-methods" class="level2">
+<h2 class="anchored" data-anchor-id="relevant-methods">Relevant methods</h2>
+<p>After initializing <code>QueryChat</code>, use <code>.sidebar()</code> or <code>.ui()</code> to place the chat interface in your app. As users interact with the chat, <code>.df()</code>, <code>.sql()</code>, and <code>.title()</code> automatically update to reflect the current query.</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Method</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>.sidebar()</code></td>
+<td>Place the chat interface in Streamlit’s sidebar</td>
+</tr>
+<tr class="even">
+<td><code>.ui()</code></td>
+<td>Returns just the chat component for custom placement</td>
+</tr>
+<tr class="odd">
+<td><code>.df()</code></td>
+<td>Current filtered/sorted DataFrame</td>
+</tr>
+<tr class="even">
+<td><code>.sql()</code></td>
+<td>Current SQL query (str | None)</td>
+</tr>
+<tr class="odd">
+<td><code>.title()</code></td>
+<td>Short description of current filter (str | None)</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="basic-sidebar" class="level2">
+<h2 class="anchored" data-anchor-id="basic-sidebar">Basic sidebar</h2>
+<p>The most common pattern places chat in the sidebar with your custom filtered views in the main area:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> streamlit <span class="im">as</span> st</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat.streamlit <span class="im">import</span> QueryChat</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat.data <span class="im">import</span> titanic</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(titanic(), <span class="st">"titanic"</span>)</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>qc.sidebar()</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>st.header(qc.title() <span class="kw">or</span> <span class="st">"Titanic Explorer"</span>)</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>st.dataframe(qc.df())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="custom-chat-ui" class="level2">
+<h2 class="anchored" data-anchor-id="custom-chat-ui">Custom chat UI</h2>
+<p>Use <code>.ui()</code> to place the chat anywhere in your layout. Here we use it to place custom content in the sidebar alongside the chat (like a <a href="#resetting-filters">reset button</a>):</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> streamlit <span class="im">as</span> st</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat.streamlit <span class="im">import</span> QueryChat</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat.data <span class="im">import</span> titanic</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(titanic(), <span class="st">"titanic"</span>)</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> st.sidebar:</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>    qc.ui()</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>    st.divider()</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> st.button(<span class="st">"Reset Filters"</span>):</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>        qc.reset()</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>st.dataframe(qc.df())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="data-views" class="level2">
+<h2 class="anchored" data-anchor-id="data-views">Data views</h2>
+<p>The real power of querychat comes from connecting it to visualizations. Here’s an example showing both filtered data and a chart:</p>
+<div id="f0e110f8" class="cell" data-execution_count="1">
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> plotly.express <span class="im">as</span> px</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat.data <span class="im">import</span> titanic</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat.streamlit <span class="im">import</span> QueryChat</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> streamlit <span class="im">as</span> st</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(titanic(), <span class="st">"titanic"</span>)</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>qc.sidebar()</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>st.header(qc.title() <span class="kw">or</span> <span class="st">"Titanic Explorer"</span>)</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>st.dataframe(qc.df())</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> qc.df().to_pandas()</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>fig <span class="op">=</span> px.histogram(df, x<span class="op">=</span><span class="st">"age"</span>, color<span class="op">=</span><span class="st">"survived"</span>, title<span class="op">=</span><span class="st">"Age Distribution"</span>)</span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>st.plotly_chart(fig)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>When users filter data through the chat (e.g., “show only survivors”), both views update automatically.</p>
+<p><a href="./images/streamlit-sidebar.png" class="lightbox" data-gallery="quarto-lightbox-gallery-2"><img src="./images/streamlit-sidebar.png" class="shadow rounded mb-3 img-fluid" alt="Screenshot of a querychat Streamlit app with sidebar chat and data views."></a></p>
+<p>A more complete example adds metrics:</p>
+<div id="588983da" class="cell" data-execution_count="2">
+<details class="code-fold">
+<summary>streamlit-complete.py</summary>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> plotly.express <span class="im">as</span> px</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat.data <span class="im">import</span> titanic</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat.streamlit <span class="im">import</span> QueryChat</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> streamlit <span class="im">as</span> st</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>st.set_page_config(page_title<span class="op">=</span><span class="st">"Titanic Explorer"</span>, layout<span class="op">=</span><span class="st">"wide"</span>)</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(titanic(), <span class="st">"titanic"</span>)</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Sidebar with chat and reset</span></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> st.sidebar:</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>    qc.ui()</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>    st.divider()</span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> st.button(<span class="st">"Reset Filters"</span>, use_container_width<span class="op">=</span><span class="va">True</span>):</span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>        qc.reset()</span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a><span class="co"># Main content</span></span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a>st.header(qc.title() <span class="kw">or</span> <span class="st">"Titanic Dataset"</span>)</span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a><span class="co"># Metrics row</span></span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>df <span class="op">=</span> qc.df().to_pandas()</span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>col1, col2, col3 <span class="op">=</span> st.columns(<span class="dv">3</span>)</span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>col1.metric(<span class="st">"Passengers"</span>, <span class="bu">len</span>(df))</span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>col2.metric(<span class="st">"Survivors"</span>, df[<span class="st">"survived"</span>].<span class="bu">sum</span>())</span>
+<span id="cb9-26"><a href="#cb9-26" aria-hidden="true" tabindex="-1"></a>col3.metric(<span class="st">"Survival Rate"</span>, <span class="ss">f"</span><span class="sc">{</span>df[<span class="st">'survived'</span>]<span class="sc">.</span>mean()<span class="sc">:.1%}</span><span class="ss">"</span>)</span>
+<span id="cb9-27"><a href="#cb9-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-28"><a href="#cb9-28" aria-hidden="true" tabindex="-1"></a><span class="co"># Visualizations</span></span>
+<span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a>col1, col2 <span class="op">=</span> st.columns(<span class="dv">2</span>)</span>
+<span id="cb9-30"><a href="#cb9-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-31"><a href="#cb9-31" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> col1:</span>
+<span id="cb9-32"><a href="#cb9-32" aria-hidden="true" tabindex="-1"></a>    fig1 <span class="op">=</span> px.histogram(</span>
+<span id="cb9-33"><a href="#cb9-33" aria-hidden="true" tabindex="-1"></a>        df, x<span class="op">=</span><span class="st">"age"</span>, color<span class="op">=</span><span class="st">"survived"</span>, title<span class="op">=</span><span class="st">"Age Distribution by Survival"</span></span>
+<span id="cb9-34"><a href="#cb9-34" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb9-35"><a href="#cb9-35" aria-hidden="true" tabindex="-1"></a>    st.plotly_chart(fig1, use_container_width<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb9-36"><a href="#cb9-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-37"><a href="#cb9-37" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> col2:</span>
+<span id="cb9-38"><a href="#cb9-38" aria-hidden="true" tabindex="-1"></a>    fig2 <span class="op">=</span> px.bar(</span>
+<span id="cb9-39"><a href="#cb9-39" aria-hidden="true" tabindex="-1"></a>        df.groupby(<span class="st">"pclass"</span>)[<span class="st">"survived"</span>].mean().reset_index(),</span>
+<span id="cb9-40"><a href="#cb9-40" aria-hidden="true" tabindex="-1"></a>        x<span class="op">=</span><span class="st">"pclass"</span>,</span>
+<span id="cb9-41"><a href="#cb9-41" aria-hidden="true" tabindex="-1"></a>        y<span class="op">=</span><span class="st">"survived"</span>,</span>
+<span id="cb9-42"><a href="#cb9-42" aria-hidden="true" tabindex="-1"></a>        title<span class="op">=</span><span class="st">"Survival by Class"</span>,</span>
+<span id="cb9-43"><a href="#cb9-43" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb9-44"><a href="#cb9-44" aria-hidden="true" tabindex="-1"></a>    st.plotly_chart(fig2, use_container_width<span class="op">=</span><span class="va">True</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</details>
+</div>
+<p><a href="./images/streamlit-complete.png" class="lightbox" data-gallery="quarto-lightbox-gallery-3"><img src="./images/streamlit-complete.png" class="shadow rounded mb-3 img-fluid" alt="Screenshot of a querychat app showing metrics and multiple plots."></a></p>
+<section id="resetting-filters" class="level3">
+<h3 class="anchored" data-anchor-id="resetting-filters">Resetting filters</h3>
+<p>Add a reset button to clear filters and show all data:</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> st.button(<span class="st">"Reset Filters"</span>):</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    qc.reset()  <span class="co"># Automatically triggers st.rerun()</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="callout callout-style-default callout-tip callout-titled">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
 <i class="callout-icon"></i>
 </div>
 <div class="callout-title-container flex-fill">
-Warning
+Tip
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>LLMs may not always follow your instructions perfectly. Test extensively when changing instructions or models.</p>
+<p>Users can also ask the LLM to “reset” or “show all data” to clear filters through the chat interface.</p>
 </div>
 </div>
 </section>
-<section id="custom-template" class="level2">
-<h2 class="anchored" data-anchor-id="custom-template">Custom template</h2>
-<p>If you want more control over the system prompt, you can provide a custom prompt template using the <code>prompt_template</code> parameter. This is for more advanced users who want to fully customize the LLM’s behavior. See the <a href="reference/querychat.qmd#attributes">API reference</a> for details on the available template variables.</p>
+<section id="advanced-patterns" class="level3">
+<h3 class="anchored" data-anchor-id="advanced-patterns">Advanced patterns</h3>
+<section id="programmatic-updates" class="level4">
+<h4 class="anchored" data-anchor-id="programmatic-updates">Programmatic updates</h4>
+<p>You can update the query state programmatically using <code>.sql()</code> and <code>.title()</code> as setters. This is useful for adding preset filter buttons or linking filters to other UI controls.</p>
+</section>
+<section id="multiple-datasets" class="level4">
+<h4 class="anchored" data-anchor-id="multiple-datasets">Multiple datasets</h4>
+<p>To explore multiple datasets, use separate <code>QueryChat</code> instances (i.e., separate chat interfaces).</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Multiple tables in one chat?
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>In some cases, you might be able to “pre-join” datasets into a single table and use one <code>QueryChat</code> instance to explore them together. In the future, we may support multiple filtered tables in one chat interface, but this is not currently available. Please upvote <a href="https://github.com/posit-dev/querychat/issues/6">the relevant issue</a> if this is a feature you’d like to see!</p>
+</div>
+</div>
+</section>
+</section>
+</section>
+<section id="see-also" class="level2">
+<h2 class="anchored" data-anchor-id="see-also">See also</h2>
+<ul>
+<li><a href="./greet.html">Greet users</a> - Create welcoming onboarding experiences</li>
+<li><a href="./context.html">Provide context</a> - Help the LLM understand your data better</li>
+</ul>
 
 
 </section>
 
-
-<div id="quarto-appendix" class="default"><section id="footnotes" class="footnotes footnotes-end-of-document" role="doc-endnotes"><h2 class="anchored quarto-appendix-heading">Footnotes</h2>
-
-<ol>
-<li id="fn1"><p>All of this information is provided to the LLM as part of the <strong>system prompt</strong> – a string of text containing instructions and context for the LLM to consider when responding to user queries.<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-</ol>
-</section></div></main> <!-- /main -->
+</main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
     const icon = "";
@@ -814,13 +957,13 @@ Warning
   </script>
 <nav class="page-navigation">
   <div class="nav-page nav-page-previous">
-      <a href="./data-sources.html" class="pagination-link" aria-label="Data Sources">
-        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">Data Sources</span>
+      <a href="./build.html" class="pagination-link" aria-label="Shiny">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">Shiny</span>
       </a>          
   </div>
   <div class="nav-page nav-page-next">
-      <a href="./build-intro.html" class="pagination-link" aria-label="Intro">
-        <span class="nav-page-text">Intro</span> <i class="bi bi-arrow-right-short"></i>
+      <a href="./build-gradio.html" class="pagination-link" aria-label="Gradio">
+        <span class="nav-page-text">Gradio</span> <i class="bi bi-arrow-right-short"></i>
       </a>
   </div>
 </nav>
@@ -832,12 +975,44 @@ Warning
 </div>   
     <div class="nav-footer-center">
       &nbsp;
-    <div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/posit-dev/querychat/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li><li><a href="https://github.com/posit-dev/querychat/edit/main/pkg-py/docs/context.qmd" class="toc-action"><i class="bi empty"></i>Edit this page</a></li></ul></div></div>
+    <div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/posit-dev/querychat/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li><li><a href="https://github.com/posit-dev/querychat/edit/main/pkg-py/docs/build-streamlit.qmd" class="toc-action"><i class="bi empty"></i>Edit this page</a></li></ul></div></div>
     <div class="nav-footer-right">
       &nbsp;
     </div>
   </div>
 </footer>
+<script>var lightboxQuarto = GLightbox({"closeEffect":"zoom","descPosition":"bottom","loop":false,"openEffect":"zoom","selector":".lightbox"});
+(function() {
+  let previousOnload = window.onload;
+  window.onload = () => {
+    if (previousOnload) {
+      previousOnload();
+    }
+    lightboxQuarto.on('slide_before_load', (data) => {
+      const { slideIndex, slideNode, slideConfig, player, trigger } = data;
+      const href = trigger.getAttribute('href');
+      if (href !== null) {
+        const imgEl = window.document.querySelector(`a[href="${href}"] img`);
+        if (imgEl !== null) {
+          const srcAttr = imgEl.getAttribute("src");
+          if (srcAttr && srcAttr.startsWith("data:")) {
+            slideConfig.href = srcAttr;
+          }
+        }
+      } 
+    });
+  
+    lightboxQuarto.on('slide_after_load', (data) => {
+      const { slideIndex, slideNode, slideConfig, player, trigger } = data;
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(slideNode);
+      }
+    });
+  
+  };
+  
+})();
+          </script>
 
 
 

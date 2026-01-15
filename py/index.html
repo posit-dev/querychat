@@ -186,7 +186,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
             <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
- <span class="menu-text">Overview</span></a>
+ <span class="menu-text">Get started</span></a>
           <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
@@ -210,12 +210,58 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="menu-text">Provide context</span></a>
   </div>
 </li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Build custom apps</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./build-intro.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Intro</span></a>
+  </div>
+</li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./build.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Build an app</span></a>
+ <span class="menu-text">Shiny</span></a>
   </div>
 </li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./build-streamlit.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Streamlit</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./build-gradio.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Gradio</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./build-dash.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Dash</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text">Optimize</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
   <a href="./greet.html" class="sidebar-item-text sidebar-link">
@@ -242,7 +288,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <ul>
   <li><a href="#installation" id="toc-installation" class="nav-link active" data-scroll-target="#installation">Installation</a></li>
   <li><a href="#quick-start" id="toc-quick-start" class="nav-link" data-scroll-target="#quick-start">Quick start</a></li>
-  <li><a href="#custom-apps" id="toc-custom-apps" class="nav-link" data-scroll-target="#custom-apps">Custom apps</a></li>
+  <li><a href="#web-frameworks" id="toc-web-frameworks" class="nav-link" data-scroll-target="#web-frameworks">Web frameworks</a></li>
+  <li><a href="#build-custom-apps" id="toc-build-custom-apps" class="nav-link" data-scroll-target="#build-custom-apps">Build custom apps</a></li>
   <li><a href="#how-it-works" id="toc-how-it-works" class="nav-link" data-scroll-target="#how-it-works">How it works</a></li>
   <li><a href="#next-steps" id="toc-next-steps" class="nav-link" data-scroll-target="#next-steps">Next steps</a></li>
   </ul>
@@ -287,23 +334,32 @@ Explore data using natural language queries
 </section>
 <section id="quick-start" class="level2">
 <h2 class="anchored" data-anchor-id="quick-start">Quick start</h2>
-<p>The main entry point is the <a href="./reference/QueryChat.html"><code>QueryChat</code> class</a>. It requires a <a href="./data-sources.html">data source</a> (e.g., pandas, polars, etc) and a name for the data. It also accepts optional parameters to customize the behavior, such as the <code>client</code> <a href="./models.html">model</a>. The quickest way to start chatting is to call the <code>.app()</code> method, which returns a Shiny app object.</p>
+<p>The main entry point is the <code>QueryChat</code> class. It requires a <a href="./data-sources.html">data source</a> (e.g., pandas, polars, etc) and a name for the data. It also accepts optional parameters to customize the behavior, such as the <code>client</code> <a href="./models.html">model</a>. The quickest way to start chatting is to call the <code>.app()</code> method, which by default returns a <a href="https://shiny.posit.co/py/">Shiny</a> app:</p>
 <div class="code-with-filename">
 <div class="code-with-filename-file">
-<pre><strong>titanic-app.py</strong></pre>
+<pre><strong>app.py</strong></pre>
 </div>
-<div class="sourceCode" id="cb2" data-filename="titanic-app.py"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat <span class="im">import</span> QueryChat</span>
+<div class="sourceCode" id="cb2" data-filename="app.py"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat <span class="im">import</span> QueryChat</span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat.data <span class="im">import</span> titanic</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(titanic(), <span class="st">"titanic"</span>)</span>
 <span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>app <span class="op">=</span> qc.app()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<p>With an API key set<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a>, you can run that code in a Python console and then call <code>app.run()</code> to jump into a chat. Or you can save the code to <code>titanic-app.py</code> and <a href="https://shiny.posit.co/py/get-started/create-run.html#run-your-shiny-application">run the app</a> from a terminal (or Positron, or <a href="https://marketplace.visualstudio.com/items?itemName=Posit.shiny">VS Code</a>):</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Optionally, change the default model:</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">QUERYCHAT_CLIENT</span><span class="op">=</span><span class="st">"anthropic/claude-sonnet-4-5"</span></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co"># And provide appropriate credentials for your chosen model provider</span></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="bu">export</span> <span class="va">ANTHROPIC_API_KEY</span><span class="op">=</span><span class="st">"your_api_key_here"</span></span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="ex">shiny</span> run <span class="at">--reload</span> titanic-app.py</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Prefer Streamlit, Gradio, or Dash?
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>querychat supports multiple <a href="#web-frameworks">web frameworks</a>—just change the import.</p>
+</div>
+</div>
+<p>With an API key set<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a>, save the code to <code>app.py</code> and run it:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">shiny</span> run <span class="at">--reload</span> app.py</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Once running, you’ll notice 3 main views:</p>
 <ol type="1">
 <li>A sidebar chat with suggestions on where to start exploring.</li>
@@ -316,11 +372,43 @@ Explore data using natural language queries
 <p>querychat can also handle more general questions about the data that require calculations and aggregations. For example, we can ask “What is the average age of passengers who survived?”. The LLM will generate the SQL query to perform the calculation, querychat will execute it, and return the result in the chat:</p>
 <p><a href="./images/quickstart-summary.png" class="lightbox" data-gallery="quarto-lightbox-gallery-3"><img src="./images/quickstart-summary.png" class="shadow rounded mb-3 img-fluid" alt="Screenshot of the querychat's app with a summary statistic inlined in the chat."></a></p>
 </section>
-<section id="custom-apps" class="level2">
-<h2 class="anchored" data-anchor-id="custom-apps">Custom apps</h2>
+<section id="web-frameworks" class="level2">
+<h2 class="anchored" data-anchor-id="web-frameworks">Web frameworks</h2>
+<p>While the examples above use <a href="https://shiny.posit.co/py/">Shiny</a>, querychat also supports <a href="https://streamlit.io/">Streamlit</a>, <a href="https://gradio.app/">Gradio</a>, and <a href="https://dash.plotly.com/">Dash</a>. Each framework has its own <code>QueryChat</code> class under the relevant sub-module, but the methods and properties are mostly consistent across all of them.</p>
+<div class="tabset-margin-container"></div><div class="panel-tabset">
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-1-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-1" role="tab" aria-controls="tabset-1-1" aria-selected="true" aria-current="page">Streamlit</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-2" role="tab" aria-controls="tabset-1-2" aria-selected="false">Gradio</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-3-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-3" role="tab" aria-controls="tabset-1-3" aria-selected="false">Dash</a></li></ul>
+<div class="tab-content">
+<div id="tabset-1-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-1-1-tab">
+<div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat.streamlit <span class="im">import</span> QueryChat</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat.data <span class="im">import</span> titanic</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(titanic(), <span class="st">"titanic"</span>)</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>qc.app()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="tabset-1-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-1-2-tab">
+<div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat.gradio <span class="im">import</span> QueryChat</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat.data <span class="im">import</span> titanic</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(titanic(), <span class="st">"titanic"</span>)</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>qc.app().launch()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div id="tabset-1-3" class="tab-pane" role="tabpanel" aria-labelledby="tabset-1-3-tab">
+<div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat.dash <span class="im">import</span> QueryChat</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat.data <span class="im">import</span> titanic</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(titanic(), <span class="st">"titanic"</span>)</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>qc.app().run()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</div>
+</div>
+<p>Install the framework you need with optional dependencies:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install <span class="st">"querychat[streamlit]"</span>  <span class="co"># or [gradio] or [dash]</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="build-custom-apps" class="level2">
+<h2 class="anchored" data-anchor-id="build-custom-apps">Build custom apps</h2>
 <p>querychat is designed to be highly extensible – it provides programmatic access to the chat interface, the filtered/sorted data frame, SQL queries, and more. This makes it easy to build custom web apps that leverage natural language interaction with your data. For example, <a href="https://github.com/posit-conf-2025/llm/blob/main/_solutions/25_querychat/25_querychat_02-end-app.R">here</a>’s a bespoke app for exploring Airbnb listings in Ashville, NC:</p>
 <p><a href="./images/airbnb.png" class="lightbox" data-gallery="quarto-lightbox-gallery-4"><img src="./images/airbnb.png" class="shadow rounded mb-3 img-fluid" alt="A custom app for exploring Airbnb listings, powered by querychat."></a></p>
-<p>To learn more, see <a href="./build.html">Build an app</a> for a step-by-step guide.</p>
+<p>To learn more, see the build guides for your framework: <a href="./build.html">Shiny</a>, <a href="./build-streamlit.html">Streamlit</a>, <a href="./build-gradio.html">Gradio</a>, or <a href="./build-dash.html">Dash</a>.</p>
 </section>
 <section id="how-it-works" class="level2">
 <h2 class="anchored" data-anchor-id="how-it-works">How it works</h2>
@@ -354,7 +442,7 @@ Important
 <li><a href="./models.html">Models</a>: customize the LLM behind querychat.</li>
 <li><a href="./data-sources.html">Data sources</a>: different data sources you can use with querychat.</li>
 <li><a href="./context.html">Provide context</a>: provide the LLM with the context it needs to work well.</li>
-<li><a href="./build.html">Build an app</a>: design a custom Shiny app around querychat.</li>
+<li>Build an app: <a href="./build.html">Shiny</a> | <a href="./build-streamlit.html">Streamlit</a> | <a href="./build-gradio.html">Gradio</a> | <a href="./build-dash.html">Dash</a></li>
 </ul>
 
 

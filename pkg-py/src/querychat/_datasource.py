@@ -10,8 +10,6 @@ from sqlalchemy import inspect, text
 from sqlalchemy.sql import sqltypes
 
 from ._df_compat import (
-    duckdb_result_to_pandas,
-    duckdb_result_to_polars,
     read_sql_pandas,
     read_sql_polars,
     read_sql_pyarrow,
@@ -320,9 +318,9 @@ SET lock_configuration = true;
         check_query(query)
         result = self._conn.execute(query)
         if self._df_lib == "polars":
-            return duckdb_result_to_polars(result)
+            return result.pl()
         else:
-            return duckdb_result_to_pandas(result)
+            return result.df()
 
     def test_query(
         self, query: str, *, require_all_columns: bool = False
@@ -352,10 +350,7 @@ SET lock_configuration = true;
         """
         check_query(query)
         result = self._conn.execute(f"{query} LIMIT 1")
-        if self._df_lib == "polars":
-            native_result = duckdb_result_to_polars(result)
-        else:
-            native_result = duckdb_result_to_pandas(result)
+        native_result = result.pl() if self._df_lib == "polars" else result.df()
 
         if require_all_columns:
             result_columns = set(native_result.columns)

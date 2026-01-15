@@ -4,10 +4,9 @@ import gzip
 import tempfile
 from pathlib import Path
 
-import duckdb
 import narwhals.stable.v1 as nw
 import pytest
-from querychat._df_compat import duckdb_result_to_polars, read_csv
+from querychat._df_compat import read_csv
 
 # Check if polars and pyarrow are available (both needed for DuckDB + polars)
 try:
@@ -58,47 +57,6 @@ class TestReadCsv:
         result = read_csv(gzip_csv_file)
         names = result["name"].to_list()
         assert names == ["Alice", "Bob", "Charlie"]
-
-
-@pytest.mark.skipif(
-    not HAS_POLARS_WITH_PYARROW, reason="polars or pyarrow not installed"
-)
-class TestDuckdbResultToPolars:
-    """Tests for the duckdb_result_to_polars function."""
-
-    @pytest.fixture
-    def duckdb_conn(self):
-        """Create a DuckDB connection with test data."""
-        conn = duckdb.connect(":memory:")
-        conn.execute("CREATE TABLE test (id INTEGER, name VARCHAR, value DOUBLE)")
-        conn.execute("INSERT INTO test VALUES (1, 'Alice', 10.5)")
-        conn.execute("INSERT INTO test VALUES (2, 'Bob', 20.5)")
-        yield conn
-        conn.close()
-
-    def test_duckdb_result_returns_polars_dataframe(self, duckdb_conn):
-        """Test that duckdb_result_to_polars returns a polars DataFrame."""
-        result = duckdb_conn.execute("SELECT * FROM test")
-        df = duckdb_result_to_polars(result)
-        assert isinstance(df, pl.DataFrame)
-
-    def test_duckdb_result_has_correct_data(self, duckdb_conn):
-        """Test that duckdb_result_to_polars preserves data correctly."""
-        result = duckdb_conn.execute("SELECT * FROM test ORDER BY id")
-        df = duckdb_result_to_polars(result)
-
-        assert df.shape == (2, 3)
-        assert list(df.columns) == ["id", "name", "value"]
-        assert df["id"].to_list() == [1, 2]
-        assert df["name"].to_list() == ["Alice", "Bob"]
-
-    def test_duckdb_result_empty_query(self, duckdb_conn):
-        """Test handling of empty query results."""
-        result = duckdb_conn.execute("SELECT * FROM test WHERE id > 100")
-        df = duckdb_result_to_polars(result)
-
-        assert isinstance(df, pl.DataFrame)
-        assert df.shape == (0, 3)
 
 
 @pytest.mark.skipif(

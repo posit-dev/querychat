@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING
 import narwhals.stable.v1 as nw
 
 if TYPE_CHECKING:
-    import duckdb
     from sqlalchemy.engine import Connection
     from sqlalchemy.sql.elements import TextClause
 
@@ -55,20 +54,6 @@ def read_sql_pyarrow(query: TextClause, conn: Connection):
     import polars as pl
 
     return pl.read_database(query, connection=conn).to_arrow()
-
-
-def duckdb_result_to_polars(
-    result: duckdb.DuckDBPyRelation | duckdb.DuckDBPyConnection,
-):
-    """Convert DuckDB result to native polars DataFrame."""
-    return result.pl()
-
-
-def duckdb_result_to_pandas(
-    result: duckdb.DuckDBPyRelation | duckdb.DuckDBPyConnection,
-):
-    """Convert DuckDB result to native pandas DataFrame."""
-    return result.df()
 
 
 def read_csv(path: str) -> nw.DataFrame:

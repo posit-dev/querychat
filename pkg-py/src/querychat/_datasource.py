@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar, Union, overload
+from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar, overload
 
 import duckdb
 import narwhals.stable.v1 as nw
@@ -26,14 +26,11 @@ if TYPE_CHECKING:
 # TypeVar for DataSource - the type returned by execute_query/get_data/test_query
 DataSourceT = TypeVar("DataSourceT")
 
-# Legacy alias for backwards compatibility
-DataOrLazyFrame = Union[nw.DataFrame, nw.LazyFrame]
-
 # TypeVar for generic QueryChat classes - captures the specific DataFrame type passed in.
 # Uses IntoDataFrame/IntoLazyFrame bounds to work with any narwhals-compatible library.
 if TYPE_CHECKING:
-    IntoDataFrameT = TypeVar("IntoDataFrameT", bound="IntoDataFrame")
-    IntoLazyFrameT = TypeVar("IntoLazyFrameT", bound="IntoLazyFrame")
+    IntoDataFrameT = TypeVar("IntoDataFrameT", bound=IntoDataFrame)
+    IntoLazyFrameT = TypeVar("IntoLazyFrameT", bound=IntoLazyFrame)
     DataFrameT = TypeVar("DataFrameT")  # Unconstrained, bound by overloads
 else:
     IntoDataFrameT = TypeVar("IntoDataFrameT")
@@ -189,7 +186,7 @@ class DataFrameSource(DataSource[IntoDataFrameT]):
     """A DataSource implementation that wraps a DataFrame using DuckDB."""
 
     _df: nw.DataFrame
-    _df_lib: str  # "polars" or "pandas"
+    _df_lib: str
 
     def __init__(self, df: nw.DataFrame, table_name: str):
         """
@@ -208,7 +205,7 @@ class DataFrameSource(DataSource[IntoDataFrameT]):
 
         # Track the native backend for returning results in the same format
         native_namespace = nw.get_native_namespace(df)
-        self._df_lib = native_namespace.__name__  # "polars" or "pandas"
+        self._df_lib = native_namespace.__name__
 
         self._conn = duckdb.connect(database=":memory:")
         self._conn.register(table_name, self._df.to_native())
@@ -318,10 +315,21 @@ SET lock_configuration = true;
         """
         check_query(query)
         result = self._conn.execute(query)
+        return self._convert_result(result)
+
+    def _convert_result(self, result: duckdb.DuckDBPyConnection) -> IntoDataFrameT:
+        """Convert DuckDB result to the appropriate native DataFrame type."""
         if self._df_lib == "polars":
             return result.pl()
-        else:
+        elif self._df_lib == "pandas":
             return result.df()
+        elif self._df_lib == "pyarrow":
+            return result.arrow()
+        else:
+            raise ValueError(
+                f"Unsupported DataFrame backend: '{self._df_lib}'. "
+                "Supported backends are: polars, pandas, pyarrow"
+            )
 
     def test_query(
         self, query: str, *, require_all_columns: bool = False
@@ -351,7 +359,7 @@ SET lock_configuration = true;
         """
         check_query(query)
         result = self._conn.execute(f"{query} LIMIT 1")
-        native_result = result.pl() if self._df_lib == "polars" else result.df()
+        native_result = self._convert_result(result)
 
         if require_all_columns:
             result_columns = set(native_result.columns)

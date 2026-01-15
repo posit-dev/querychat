@@ -47,8 +47,8 @@ with gr.Blocks(title="Titanic Explorer") as app:
         sql = qc.sql(state_dict)
         title = qc.title(state_dict)
 
-        # Convert narwhals DataFrame to native (pandas) for Gradio compatibility
-        display_df = df.head(100).to_native()
+        # Get first 100 rows for display (df is already native polars/pandas)
+        display_df = df.head(100)
         return (
             f"### {title or 'Full Dataset'}",
             sql or "SELECT * FROM titanic",

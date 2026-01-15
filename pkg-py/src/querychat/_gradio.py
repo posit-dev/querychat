@@ -137,7 +137,7 @@ class QueryChat(QueryChatBase[DataFrameT], StateDictAccessorMixin[DataFrameT]):
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
     ):
-        super().__init__(  # type: ignore[reportAttributeAccessIssue]
+        super().__init__(
             data_source,
             table_name,
             greeting=greeting,
@@ -341,9 +341,6 @@ class QueryChat(QueryChatBase[DataFrameT], StateDictAccessorMixin[DataFrameT]):
                 )
 
                 df = self.df(state_dict)
-                # Collect if lazy before accessing .shape
-                if isinstance(df, nw.LazyFrame):
-                    df = df.collect()
 
                 data_info_parts = []
                 if error:
@@ -353,7 +350,8 @@ class QueryChat(QueryChatBase[DataFrameT], StateDictAccessorMixin[DataFrameT]):
                 )
                 data_info_text = " ".join(data_info_parts)
 
-                return sql_title_text, sql_code, df.to_native(), data_info_text  # type: ignore[union-attr]
+                # df is already a native DataFrame (polars, pandas, etc.)
+                return sql_title_text, sql_code, df, data_info_text
 
             def reset_query(state_dict: AppStateDict):
                 """Reset state to show full dataset."""

@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING, Any, Generic, Literal, cast
 
 import duckdb
 import narwhals.stable.v1 as nw
-from narwhals.dtypes import DType
 from narwhals.stable.v1.typing import IntoDataFrameT, IntoFrameT
 from sqlalchemy import inspect, text
 from sqlalchemy.sql import sqltypes
@@ -19,6 +18,7 @@ if TYPE_CHECKING:
     import polars as pl
     from ibis.backends.sql import SQLBackend
     from ibis.expr.datatypes import DataType as IbisDataType
+    from narwhals.dtypes import DType
     from sqlalchemy.engine import Connection, Engine
 
 
@@ -968,7 +968,9 @@ class IbisSource(DataSource["ibis.Table"]):
 
         colnames = self._schema.names
         if not isinstance(colnames, (tuple, list)):
-            raise TypeError("Expected schema names to be a tuple or list of strings")
+            raise TypeError(
+                f"Expected schema names to be a tuple or list, got {type(colnames).__name__}"
+            )
         self._colnames = list(colnames)
 
     def get_db_type(self) -> str:
@@ -1133,7 +1135,7 @@ class IbisSource(DataSource["ibis.Table"]):
         collected = result.limit(1).execute()
 
         if require_all_columns:
-            result_columns = set(collected.columns)
+            result_columns = set(as_narwhals(collected).columns)
             missing = set(self._colnames) - result_columns
             if missing:
                 missing_list = ", ".join(f"'{c}'" for c in sorted(missing))

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Optional, cast, overload
+from typing import TYPE_CHECKING, Optional, overload
 
 import narwhals.stable.v1 as nw
 from gradio.context import Context
@@ -17,6 +17,7 @@ from ._querychat_core import (
     stream_response,
 )
 from ._ui_assets import GRADIO_CSS, GRADIO_JS, SUGGESTION_CSS
+from ._utils import is_ibis_table
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -358,18 +359,8 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
 
                 df = self.df(state_dict)
 
-                # Check if result is an Ibis Table
-                is_ibis_table = False
-                try:
-                    import ibis
-
-                    is_ibis_table = isinstance(df, ibis.Table)
-                except ImportError:
-                    pass
-
-                if is_ibis_table:
-                    # Cast needed because type narrowing doesn't work with boolean flag
-                    native_df = cast("Any", df).execute()
+                if is_ibis_table(df):
+                    native_df = df.execute()
                     nrow, ncol = native_df.shape
                 else:
                     df = nw.from_native(df)

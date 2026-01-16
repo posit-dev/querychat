@@ -21,7 +21,7 @@ from ._datasource import (
 )
 from ._shiny_module import GREETING_PROMPT
 from ._system_prompt import QueryChatSystemPrompt
-from ._utils import MISSING, MISSING_TYPE
+from ._utils import MISSING, MISSING_TYPE, is_ibis_table
 from .tools import (
     UpdateDashboardData,
     tool_query,
@@ -182,15 +182,10 @@ def normalize_data_source(
         return SQLAlchemySource(data_source, table_name)
 
     # Check for Ibis Table before narwhals conversion (Ibis Tables are not narwhals-native)
-    try:
-        import ibis
+    if is_ibis_table(data_source):
+        from ._datasource import IbisSource
 
-        if isinstance(data_source, ibis.Table):
-            from ._datasource import IbisSource
-
-            return IbisSource(data_source, table_name)
-    except ImportError:
-        pass
+        return IbisSource(data_source, table_name)
 
     src = nw.from_native(data_source, pass_through=True)
 

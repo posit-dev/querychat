@@ -4,10 +4,41 @@ import os
 import re
 import warnings
 from contextlib import contextmanager
-from typing import Literal, Optional
+from typing import TYPE_CHECKING, Any, Literal, Optional
 
 import narwhals.stable.v1 as nw
 from great_tables import GT
+
+if TYPE_CHECKING:
+    from typing import TypeGuard
+
+    import ibis
+
+
+def is_ibis_table(obj: Any) -> TypeGuard[ibis.Table]:
+    """
+    Check if an object is an Ibis Table.
+
+    This is a TypeGuard that narrows the type to ibis.Table when True.
+    Returns False if ibis is not installed.
+
+    Parameters
+    ----------
+    obj
+        The object to check
+
+    Returns
+    -------
+    :
+        True if obj is an ibis.Table, False otherwise
+
+    """
+    try:
+        import ibis
+
+        return isinstance(obj, ibis.Table)
+    except ImportError:
+        return False
 
 
 class MISSING_TYPE:  # noqa: N801
@@ -210,21 +241,16 @@ def df_to_html(df, maxrows: int = 5) -> str:
         HTML string representation of the table
 
     """
-    try:
-        import ibis
+    if is_ibis_table(df):
+        df_short = df.limit(maxrows).execute()
+        gt_tbl = GT(df_short)
+        table_html = gt_tbl.as_raw_html(make_page=False)
 
-        if isinstance(df, ibis.Table):
-            df_short = df.limit(maxrows).execute()
-            gt_tbl = GT(df_short)
-            table_html = gt_tbl.as_raw_html(make_page=False)
+        nrow_full = df.count().execute()
+        if nrow_full > maxrows:
+            table_html += f"\n\n*(Showing {maxrows} of {nrow_full} rows)*\n"
 
-            nrow_full = df.count().execute()
-            if nrow_full > maxrows:
-                table_html += f"\n\n*(Showing {maxrows} of {nrow_full} rows)*\n"
-
-            return table_html
-    except ImportError:
-        pass
+        return table_html
 
     if not isinstance(df, (nw.DataFrame, nw.LazyFrame)):
         df = nw.from_native(df)

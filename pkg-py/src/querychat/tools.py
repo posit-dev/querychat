@@ -9,7 +9,7 @@ from chatlas import ContentToolResult, Tool
 from shinychat.types import ToolResultDisplay
 
 from ._icons import bs_icon
-from ._utils import df_to_html, querychat_tool_starts_open
+from ._utils import df_to_html, is_ibis_table, querychat_tool_starts_open
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -234,18 +234,9 @@ def _query_impl(data_source: DataSource) -> Callable[[str, str], ContentToolResu
         try:
             result_df = data_source.execute_query(query)
 
-            # Check if result is an Ibis Table
-            is_ibis_table = False
-            try:
-                import ibis
-
-                is_ibis_table = isinstance(result_df, ibis.Table)
-            except ImportError:
-                pass
-
-            if is_ibis_table:
+            if is_ibis_table(result_df):
                 # Convert ibis Table to pandas, then to list of dicts
-                # Cast needed because ibis lacks py.typed and pandas stubs are incomplete
+                # Cast needed because ibis lacks py.typed
                 pdf = cast("Any", result_df.execute())
                 value = pdf.to_dict("records")
             else:

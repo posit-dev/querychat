@@ -1,7 +1,9 @@
 from .._datasource import (
     DataFrameSource,
     DataSource,
+    IbisSource,
     MissingColumnsError,
+    PolarsLazySource,
     SQLAlchemySource,
 )
 from .._querychat_core import AppStateDict
@@ -13,7 +15,9 @@ __all__ = (
     "AppStateDict",
     "DataFrameSource",
     "DataSource",
+    "IbisSource",
     "MissingColumnsError",
+    "PolarsLazySource",
     "SQLAlchemySource",
     "ServerValues",
     "UnsafeQueryError",

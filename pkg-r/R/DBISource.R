@@ -68,10 +68,11 @@ DBISource <- R6::R6Class(
       self$table_name <- table_name
 
       # Store original column names for validation
+      # Use WHERE 1=0 instead of LIMIT 0 for SQL Server compatibility
       private$colnames <- colnames(DBI::dbGetQuery(
         conn,
         sprintf(
-          "SELECT * FROM %s LIMIT 0",
+          "SELECT * FROM %s WHERE 1=0",
           DBI::dbQuoteIdentifier(conn, table_name)
         )
       ))
@@ -205,12 +206,14 @@ get_schema_impl <- function(
   text_columns <- character(0)
 
   # Get sample of data to determine types
+  # Use dbFetch(n=1) instead of LIMIT 1 for SQL Server compatibility
   sample_query <- paste0(
     "SELECT * FROM ",
-    DBI::dbQuoteIdentifier(conn, table_name),
-    " LIMIT 1"
+    DBI::dbQuoteIdentifier(conn, table_name)
   )
-  sample_data <- DBI::dbGetQuery(conn, prep_query(sample_query))
+  rs <- DBI::dbSendQuery(conn, prep_query(sample_query))
+  sample_data <- DBI::dbFetch(rs, n = 1)
+  DBI::dbClearResult(rs)
 
   for (col in columns) {
     col_class <- class(sample_data[[col]])[1]

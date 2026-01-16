@@ -178,6 +178,7 @@ ul.task-list li input[type="checkbox"] {
 <li><code>QueryChat()</code> gains support for more data sources:
 <ul>
 <li><code>polars.LazyFrame</code>: queries execute lazily via <code>polars.SQLContext</code>. In this case, <code>.df()</code> et al.&nbsp;methods will return a <code>polars.LazyFrame</code>. (#191)</li>
+<li><code>ibis.Table</code>: queries execute lazily via the Ibis backend’s SQL interface (DuckDB, PostgreSQL, BigQuery, etc.). In this case, <code>.df()</code> et al.&nbsp;methods will return an <code>ibis.Table</code>. (#193)</li>
 <li><code>pyarrow.Table</code>: queries execute in-memory via <code>duckdb</code>. In this case, <code>.df()</code> et al.&nbsp;methods will return a <code>pyarrow.Table</code>. (#196)</li>
 </ul></li>
 </ul>

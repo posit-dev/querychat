@@ -369,7 +369,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td>data_source</td>
-<td><code>IntoFrame</code> | <code>sqlalchemy</code>.<code>Engine</code></td>
+<td><code>IntoFrame</code> | <code>sqlalchemy</code>.<code>Engine</code> | <code>ibis</code>.<code>Table</code></td>
 <td>Either a Narwhals-compatible data frame (e.g., Polars or Pandas) or a SQLAlchemy engine containing the table to query against.</td>
 <td><em>required</em></td>
 </tr>
@@ -578,8 +578,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <table class="caption-top table">
 <colgroup>
 <col style="width: 2%">
-<col style="width: 20%">
-<col style="width: 76%">
+<col style="width: 19%">
+<col style="width: 77%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -592,7 +592,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr class="odd">
 <td></td>
 <td><code>IntoFrameT</code></td>
-<td>The current filtered data frame as a narwhals DataFrame or LazyFrame. If the data source is lazy, returns a LazyFrame. If no query has been set, this will return the unfiltered data from the data source.</td>
+<td>The current filtered data frame, in the same format as the original data source (e.g., polars DataFrame, Polars LazyFrame, Ibis Table). If no query has been set, returns the unfiltered data from the data source.</td>
 </tr>
 </tbody>
 </table>

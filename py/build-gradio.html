@@ -439,7 +439,7 @@ Why <code>css=qc.css, head=qc.head</code>?
 <section id="data-views" class="level2">
 <h2 class="anchored" data-anchor-id="data-views">Data views</h2>
 <p>The real power of querychat comes from connecting it to visualizations. Here’s an example showing two charts that respond to query changes:</p>
-<div id="08a39d54" class="cell" data-execution_count="1">
+<div id="a8011320" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> plotly.express <span class="im">as</span> px</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat.data <span class="im">import</span> titanic</span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat.gradio <span class="im">import</span> QueryChat</span>
@@ -463,18 +463,20 @@ Why <code>css=qc.css, head=qc.head</code>?
 <span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a>        fig1 <span class="op">=</span> px.histogram(df, x<span class="op">=</span><span class="st">"age"</span>, color<span class="op">=</span><span class="st">"survived"</span>, title<span class="op">=</span><span class="st">"Age Distribution"</span>)</span>
 <span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>        fig2 <span class="op">=</span> px.bar(</span>
 <span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>            df.groupby(<span class="st">"pclass"</span>)[<span class="st">"survived"</span>].mean().reset_index(),</span>
-<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a>            x<span class="op">=</span><span class="st">"pclass"</span>, y<span class="op">=</span><span class="st">"survived"</span>, title<span class="op">=</span><span class="st">"Survival by Class"</span></span>
-<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a>        )</span>
-<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> fig1, fig2</span>
-<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-28"><a href="#cb7-28" aria-hidden="true" tabindex="-1"></a>    state.change(fn<span class="op">=</span>update_views, inputs<span class="op">=</span>[state], outputs<span class="op">=</span>[plot1, plot2])</span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a>            x<span class="op">=</span><span class="st">"pclass"</span>,</span>
+<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a>            y<span class="op">=</span><span class="st">"survived"</span>,</span>
+<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a>            title<span class="op">=</span><span class="st">"Survival by Class"</span>,</span>
+<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a>        )</span>
+<span id="cb7-28"><a href="#cb7-28" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> fig1, fig2</span>
 <span id="cb7-29"><a href="#cb7-29" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb7-30"><a href="#cb7-30" aria-hidden="true" tabindex="-1"></a>app.launch(css<span class="op">=</span>qc.css, head<span class="op">=</span>qc.head)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb7-30"><a href="#cb7-30" aria-hidden="true" tabindex="-1"></a>    state.change(fn<span class="op">=</span>update_views, inputs<span class="op">=</span>[state], outputs<span class="op">=</span>[plot1, plot2])</span>
+<span id="cb7-31"><a href="#cb7-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-32"><a href="#cb7-32" aria-hidden="true" tabindex="-1"></a>app.launch(css<span class="op">=</span>qc.css, head<span class="op">=</span>qc.head)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>When users filter data through the chat (e.g., “show only survivors”), both charts update automatically.</p>
 <p><a href="./images/gradio-viz.png" class="lightbox" data-gallery="quarto-lightbox-gallery-2"><img src="./images/gradio-viz.png" class="shadow rounded mb-3 img-fluid" alt="Screenshot of Gradio data views example."></a></p>
 <p>A more complete example adds metrics:</p>
-<div id="d28a26e1" class="cell" data-execution_count="2">
+<div id="980f03f7" class="cell" data-execution_count="2">
 <details class="code-fold">
 <summary>gradio-complete.py</summary>
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> plotly.express <span class="im">as</span> px</span>

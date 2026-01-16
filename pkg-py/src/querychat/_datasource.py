@@ -252,41 +252,53 @@ SET lock_configuration = true;
             String describing the schema
 
         """
-        schema = [f"Table: {self.table_name}", "Columns:"]
+        columns = [
+            self._make_column_meta(col, self._df[col].dtype)
+            for col in self._df.columns
+        ]
+        self._add_column_stats(columns, self._df, categorical_threshold)
+        return format_schema(self.table_name, columns)
 
-        for column in self._df.columns:
-            dtype = self._df[column].dtype
-            if dtype.is_integer():
-                sql_type = "INTEGER"
-            elif dtype.is_float():
-                sql_type = "FLOAT"
-            elif dtype == nw.Boolean:
-                sql_type = "BOOLEAN"
-            elif dtype == nw.Datetime:
-                sql_type = "TIME"
-            elif dtype == nw.Date:
-                sql_type = "DATE"
-            else:
-                sql_type = "TEXT"
+    @staticmethod
+    def _make_column_meta(name: str, dtype: Any) -> ColumnMeta:
+        """Create ColumnMeta from a narwhals dtype."""
+        kind: Literal["numeric", "text", "date", "other"]
+        if dtype.is_integer():
+            kind = "numeric"
+            sql_type = "INTEGER"
+        elif dtype.is_float():
+            kind = "numeric"
+            sql_type = "FLOAT"
+        elif dtype == nw.Boolean:
+            kind = "other"
+            sql_type = "BOOLEAN"
+        elif dtype == nw.Datetime:
+            kind = "date"
+            sql_type = "TIME"
+        elif dtype == nw.Date:
+            kind = "date"
+            sql_type = "DATE"
+        else:
+            kind = "text"
+            sql_type = "TEXT"
 
-            column_info = [f"- {column} ({sql_type})"]
+        return ColumnMeta(name=name, sql_type=sql_type, kind=kind)
 
-            if sql_type == "TEXT":
-                unique_values = self._df[column].drop_nulls().unique()
+    @staticmethod
+    def _add_column_stats(
+        columns: list[ColumnMeta],
+        df: nw.DataFrame,
+        categorical_threshold: int,
+    ) -> None:
+        """Add min/max/categories to column metadata."""
+        for col in columns:
+            if col.kind in ("numeric", "date"):
+                col.min_val = df[col.name].min()
+                col.max_val = df[col.name].max()
+            elif col.kind == "text":
+                unique_values = df[col.name].drop_nulls().unique()
                 if unique_values.len() <= categorical_threshold:
-                    categories = unique_values.to_list()
-                    categories_str = ", ".join([f"'{c}'" for c in categories])
-                    column_info.append(f"  Categorical values: {categories_str}")
-            elif sql_type in ["INTEGER", "FLOAT", "DATE", "TIME"]:
-                rng = self._df[column].min(), self._df[column].max()
-                if rng[0] is None and rng[1] is None:
-                    column_info.append("  Range: NULL to NULL")
-                else:
-                    column_info.append(f"  Range: {rng[0]} to {rng[1]}")
-
-            schema.extend(column_info)
-
-        return "\n".join(schema)
+                    col.categories = unique_values.to_list()
 
     def execute_query(self, query: str) -> IntoDataFrameT:
         """
@@ -1111,9 +1123,10 @@ class IbisSource(DataSource["ibis.Table"]):
         """
         check_query(query)
 
+        result = self._backend.sql(query)
+
         # Collect one row to validate and catch runtime errors
-        test_sql = f"SELECT * FROM ({query}) AS subquery LIMIT 1"
-        collected = self._backend.sql(test_sql).execute()
+        collected = result.limit(1).execute()
 
         if require_all_columns:
             result_columns = set(collected.columns)
@@ -1127,7 +1140,7 @@ class IbisSource(DataSource["ibis.Table"]):
                     f"Original columns: {original_list}"
                 )
 
-        return self._backend.sql(query)
+        return result
 
     def get_data(self) -> ibis.Table:
         return self._table

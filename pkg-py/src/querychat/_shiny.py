@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal, Optional, overload
 
-import narwhals.stable.v1 as nw
 from narwhals.stable.v1.typing import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
 from shiny.express._stub_session import ExpressStubSession
 from shiny.session import get_current_session
@@ -13,12 +12,14 @@ from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 from ._icons import bs_icon
 from ._querychat_base import TOOL_GROUPS, QueryChatBase
 from ._shiny_module import ServerValues, mod_server, mod_ui
+from ._utils import as_narwhals
 
 if TYPE_CHECKING:
     from pathlib import Path
 
     import chatlas
     import ibis
+    import narwhals.stable.v1 as nw
     import sqlalchemy
     from narwhals.stable.v1.typing import IntoFrame
 
@@ -305,11 +306,8 @@ class QueryChat(QueryChatBase[IntoFrameT]):
 
             @render.data_frame
             def dt():
-                df = vals.df()
-                # Collect if lazy
-                if isinstance(df, nw.LazyFrame):
-                    df = df.collect()
-                return df
+                # Collect lazy sources (LazyFrame, Ibis Table) to eager DataFrame
+                return as_narwhals(vals.df())
 
             @render.ui
             def sql_output():

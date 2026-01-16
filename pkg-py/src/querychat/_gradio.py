@@ -340,7 +340,6 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
                     else f"SELECT * FROM {self._data_source.table_name}"
                 )
 
-                # Wrap in narwhals for uniform DataFrame operations
                 df = nw.from_native(self.df(state_dict))
                 if isinstance(df, nw.LazyFrame):
                     df = df.collect()

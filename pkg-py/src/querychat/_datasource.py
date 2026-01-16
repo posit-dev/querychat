@@ -353,7 +353,6 @@ SET lock_configuration = true;
         native_result = self._convert_result(result)
 
         if require_all_columns:
-            # Use narwhals to access columns - works with polars, pandas, pyarrow
             wrapped = nw.from_native(native_result)
             result_columns = set(wrapped.columns)
             original_columns_set = set(self._colnames)

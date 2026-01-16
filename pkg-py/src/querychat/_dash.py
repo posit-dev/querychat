@@ -423,7 +423,6 @@ def register_app_callbacks(
         sql_title = state.title or "SQL Query"
         sql_code = f"```sql\n{state.get_display_sql()}\n```"
 
-        # Wrap in narwhals for uniform DataFrame operations
         df = nw.from_native(state.get_current_data())
         if isinstance(df, nw.LazyFrame):
             df = df.collect()
@@ -457,7 +456,6 @@ def register_app_callbacks(
     )
     def export_csv(n_clicks: int, state_data: AppStateDict):
         state = deserialize_state(state_data)
-        # Wrap in narwhals for uniform DataFrame operations
         df = nw.from_native(state.get_current_data())
         if isinstance(df, nw.LazyFrame):
             df = df.collect()

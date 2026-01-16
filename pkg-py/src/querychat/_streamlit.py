@@ -282,7 +282,6 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 st.rerun()
 
         st.subheader("Data view")
-        # Wrap in narwhals for uniform DataFrame operations
         df = nw.from_native(state.get_current_data())
         if isinstance(df, nw.LazyFrame):
             df = df.collect()

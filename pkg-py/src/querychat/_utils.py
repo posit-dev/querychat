@@ -210,7 +210,6 @@ def df_to_html(df, maxrows: int = 5) -> str:
         HTML string representation of the table
 
     """
-    # Convert native DataFrames to narwhals for uniform handling
     if not isinstance(df, (nw.DataFrame, nw.LazyFrame)):
         df = nw.from_native(df)
 

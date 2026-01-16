@@ -4,10 +4,11 @@ import copy
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Generic, Union
 
 import chatlas
 import shinychat
+from narwhals.stable.v1.typing import IntoFrameT
 
 from shiny import module, reactive, ui
 
@@ -21,7 +22,7 @@ if TYPE_CHECKING:
 
     from shiny import Inputs, Outputs, Session
 
-    from ._datasource import DataOrLazyFrame, DataSource
+    from ._datasource import DataSource
     from .types import UpdateDashboardData
 
 ReactiveString = reactive.Value[str]
@@ -50,7 +51,7 @@ def mod_ui(**kwargs):
 
 
 @dataclass
-class ServerValues:
+class ServerValues(Generic[IntoFrameT]):
     """
     Session-specific reactive values and client returned by QueryChat.server().
 
@@ -81,7 +82,7 @@ class ServerValues:
 
     """
 
-    df: Callable[[], DataOrLazyFrame]
+    df: Callable[[], IntoFrameT]
     sql: ReactiveStringOrNone
     title: ReactiveStringOrNone
     client: chatlas.Chat
@@ -93,11 +94,11 @@ def mod_server(
     output: Outputs,
     session: Session,
     *,
-    data_source: DataSource,
+    data_source: DataSource[IntoFrameT],
     greeting: str | None,
     client: chatlas.Chat | Callable,
     enable_bookmarking: bool,
-):
+) -> ServerValues[IntoFrameT]:
     # Reactive values to store state
     sql = ReactiveStringOrNone(None)
     title = ReactiveStringOrNone(None)

@@ -42,14 +42,14 @@ class TestPolarsLazySourceInit:
 class TestPolarsLazySourceExecuteQuery:
     """Tests for PolarsLazySource.execute_query method."""
 
-    def test_execute_query_returns_narwhals_lazyframe(self, polars_lazy_df):
-        """Test that execute_query returns a narwhals LazyFrame."""
+    def test_execute_query_returns_native_lazyframe(self, polars_lazy_df):
+        """Test that execute_query returns a native polars LazyFrame."""
         from querychat._datasource import PolarsLazySource
 
         nw_lf = nw.from_native(polars_lazy_df)
         source = PolarsLazySource(nw_lf, "employees")
         result = source.execute_query("SELECT * FROM employees")
-        assert isinstance(result, nw.LazyFrame)
+        assert isinstance(result, pl.LazyFrame)
 
     def test_execute_query_select_all(self, polars_lazy_df):
         """Test SELECT * query."""
@@ -96,14 +96,14 @@ class TestPolarsLazySourceExecuteQuery:
 class TestPolarsLazySourceGetData:
     """Tests for PolarsLazySource.get_data method."""
 
-    def test_get_data_returns_narwhals_lazyframe(self, polars_lazy_df):
-        """Test that get_data returns a narwhals LazyFrame."""
+    def test_get_data_returns_native_lazyframe(self, polars_lazy_df):
+        """Test that get_data returns a native polars LazyFrame."""
         from querychat._datasource import PolarsLazySource
 
         nw_lf = nw.from_native(polars_lazy_df)
         source = PolarsLazySource(nw_lf, "employees")
         result = source.get_data()
-        assert isinstance(result, nw.LazyFrame)
+        assert isinstance(result, pl.LazyFrame)
 
     def test_get_data_returns_original_lazyframe(self, polars_lazy_df):
         """Test that get_data returns the original LazyFrame."""
@@ -113,8 +113,8 @@ class TestPolarsLazySourceGetData:
         source = PolarsLazySource(nw_lf, "employees")
         result = source.get_data()
 
-        # The underlying native Polars LazyFrame should be the same
-        assert result.to_native() is polars_lazy_df
+        # Should return the original native Polars LazyFrame
+        assert result is polars_lazy_df
 
 
 class TestPolarsLazySourceGetSchema:
@@ -172,16 +172,15 @@ class TestPolarsLazySourceGetSchema:
 class TestPolarsLazySourceTestQuery:
     """Tests for PolarsLazySource.test_query method."""
 
-    def test_test_query_returns_dataframe(self, polars_lazy_df):
-        """Test that test_query returns a collected DataFrame (not LazyFrame)."""
+    def test_test_query_returns_lazyframe(self, polars_lazy_df):
+        """Test that test_query returns a LazyFrame (validates but stays lazy)."""
         from querychat._datasource import PolarsLazySource
 
         nw_lf = nw.from_native(polars_lazy_df)
         source = PolarsLazySource(nw_lf, "employees")
         result = source.test_query("SELECT * FROM employees")
-        # test_query collects to catch runtime errors, so returns DataFrame
-        assert isinstance(result, nw.DataFrame)
-        assert len(result) <= 1
+        # test_query validates by collecting internally, but returns LazyFrame
+        assert isinstance(result, pl.LazyFrame)
 
     def test_test_query_require_all_columns_passes(self, polars_lazy_df):
         """Test that test_query passes when all columns present."""
@@ -193,7 +192,7 @@ class TestPolarsLazySourceTestQuery:
         result = source.test_query(
             "SELECT * FROM employees", require_all_columns=True
         )
-        assert isinstance(result, nw.DataFrame)
+        assert isinstance(result, pl.LazyFrame)
 
     def test_test_query_require_all_columns_fails(self, polars_lazy_df):
         """Test that test_query raises when columns missing."""

@@ -4,20 +4,10 @@ import gzip
 import tempfile
 from pathlib import Path
 
-import duckdb
 import narwhals.stable.v1 as nw
+import polars as pl
 import pytest
-from querychat._df_compat import duckdb_result_to_nw, read_csv
-
-# Check if polars and pyarrow are available (both needed for DuckDB + polars)
-try:
-    import polars as pl
-    import pyarrow as pa  # noqa: F401
-
-    HAS_POLARS_WITH_PYARROW = True
-except ImportError:
-    HAS_POLARS_WITH_PYARROW = False
-    pl = None  # type: ignore[assignment]
+from querychat._df_compat import read_csv
 
 
 class TestReadCsv:
@@ -60,47 +50,6 @@ class TestReadCsv:
         assert names == ["Alice", "Bob", "Charlie"]
 
 
-class TestDuckdbResultToNw:
-    """Tests for the duckdb_result_to_nw function."""
-
-    @pytest.fixture
-    def duckdb_conn(self):
-        """Create a DuckDB connection with test data."""
-        conn = duckdb.connect(":memory:")
-        conn.execute("CREATE TABLE test (id INTEGER, name VARCHAR, value DOUBLE)")
-        conn.execute("INSERT INTO test VALUES (1, 'Alice', 10.5)")
-        conn.execute("INSERT INTO test VALUES (2, 'Bob', 20.5)")
-        yield conn
-        conn.close()
-
-    def test_duckdb_result_returns_narwhals_dataframe(self, duckdb_conn):
-        """Test that duckdb_result_to_nw returns a narwhals DataFrame."""
-        result = duckdb_conn.execute("SELECT * FROM test")
-        df = duckdb_result_to_nw(result)
-        assert isinstance(df, nw.DataFrame)
-
-    def test_duckdb_result_has_correct_data(self, duckdb_conn):
-        """Test that duckdb_result_to_nw preserves data correctly."""
-        result = duckdb_conn.execute("SELECT * FROM test ORDER BY id")
-        df = duckdb_result_to_nw(result)
-
-        assert df.shape == (2, 3)
-        assert list(df.columns) == ["id", "name", "value"]
-        assert df["id"].to_list() == [1, 2]
-        assert df["name"].to_list() == ["Alice", "Bob"]
-
-    def test_duckdb_result_empty_query(self, duckdb_conn):
-        """Test handling of empty query results."""
-        result = duckdb_conn.execute("SELECT * FROM test WHERE id > 100")
-        df = duckdb_result_to_nw(result)
-
-        assert isinstance(df, nw.DataFrame)
-        assert df.shape == (0, 3)
-
-
-@pytest.mark.skipif(
-    not HAS_POLARS_WITH_PYARROW, reason="polars or pyarrow not installed"
-)
 class TestPolarsBackend:
     """Tests that verify polars backend works correctly when available."""
 
@@ -117,18 +66,3 @@ class TestPolarsBackend:
             assert isinstance(native, pl.DataFrame)
         finally:
             Path(temp_path).unlink()
-
-    def test_duckdb_result_uses_polars_when_available(self):
-        """Test that duckdb_result_to_nw uses polars when available."""
-        conn = duckdb.connect(":memory:")
-        conn.execute("CREATE TABLE t (x INTEGER)")
-        conn.execute("INSERT INTO t VALUES (1)")
-
-        result = conn.execute("SELECT * FROM t")
-        df = duckdb_result_to_nw(result)
-
-        # The native frame should be polars when polars is available
-        native = df.to_native()
-        assert isinstance(native, pl.DataFrame)
-
-        conn.close()

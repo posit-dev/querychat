@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Literal, Optional, overload
 
 import narwhals.stable.v1 as nw
+from narwhals.stable.v1.typing import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
 from shiny.express._stub_session import ExpressStubSession
 from shiny.session import get_current_session
 from shinychat import output_markdown_stream
@@ -20,10 +21,8 @@ if TYPE_CHECKING:
     import sqlalchemy
     from narwhals.stable.v1.typing import IntoFrame
 
-    from ._datasource import DataOrLazyFrame
 
-
-class QueryChat(QueryChatBase):
+class QueryChat(QueryChatBase[IntoFrameT]):
     """
     Create a QueryChat instance for Shiny applications.
 
@@ -129,6 +128,54 @@ class QueryChat(QueryChatBase):
         - `{{extra_instructions}}`: Any additional instructions provided
 
     """
+
+    @overload
+    def __init__(
+        self: QueryChat[IntoLazyFrameT],
+        data_source: IntoLazyFrameT,
+        table_name: str,
+        *,
+        id: Optional[str] = None,
+        greeting: Optional[str | Path] = None,
+        client: Optional[str | chatlas.Chat] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        data_description: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        extra_instructions: Optional[str | Path] = None,
+        prompt_template: Optional[str | Path] = None,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: QueryChat[IntoDataFrameT],
+        data_source: IntoDataFrameT,
+        table_name: str,
+        *,
+        id: Optional[str] = None,
+        greeting: Optional[str | Path] = None,
+        client: Optional[str | chatlas.Chat] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        data_description: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        extra_instructions: Optional[str | Path] = None,
+        prompt_template: Optional[str | Path] = None,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: QueryChat[nw.DataFrame],
+        data_source: sqlalchemy.Engine,
+        table_name: str,
+        *,
+        id: Optional[str] = None,
+        greeting: Optional[str | Path] = None,
+        client: Optional[str | chatlas.Chat] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        data_description: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        extra_instructions: Optional[str | Path] = None,
+        prompt_template: Optional[str | Path] = None,
+    ) -> None: ...
 
     def __init__(
         self,
@@ -323,7 +370,7 @@ class QueryChat(QueryChatBase):
 
     def server(
         self, *, enable_bookmarking: bool = False, id: Optional[str] = None
-    ) -> ServerValues:
+    ) -> ServerValues[IntoFrameT]:
         """
         Initialize Shiny server logic.
 
@@ -403,7 +450,7 @@ class QueryChat(QueryChatBase):
         )
 
 
-class QueryChatExpress(QueryChatBase):
+class QueryChatExpress(QueryChatBase[IntoFrameT]):
     """
     Use QueryChat with Shiny Express.
 
@@ -495,6 +542,54 @@ class QueryChatExpress(QueryChatBase):
         - `{{extra_instructions}}`: Any additional instructions provided
 
     """
+
+    @overload
+    def __init__(
+        self: QueryChatExpress[IntoLazyFrameT],
+        data_source: IntoLazyFrameT,
+        table_name: str,
+        *,
+        id: Optional[str] = None,
+        greeting: Optional[str | Path] = None,
+        client: Optional[str | chatlas.Chat] = None,
+        data_description: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        extra_instructions: Optional[str | Path] = None,
+        prompt_template: Optional[str | Path] = None,
+        enable_bookmarking: Literal["auto", True, False] = "auto",
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: QueryChatExpress[IntoDataFrameT],
+        data_source: IntoDataFrameT,
+        table_name: str,
+        *,
+        id: Optional[str] = None,
+        greeting: Optional[str | Path] = None,
+        client: Optional[str | chatlas.Chat] = None,
+        data_description: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        extra_instructions: Optional[str | Path] = None,
+        prompt_template: Optional[str | Path] = None,
+        enable_bookmarking: Literal["auto", True, False] = "auto",
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: QueryChatExpress[nw.DataFrame],
+        data_source: sqlalchemy.Engine,
+        table_name: str,
+        *,
+        id: Optional[str] = None,
+        greeting: Optional[str | Path] = None,
+        client: Optional[str | chatlas.Chat] = None,
+        data_description: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        extra_instructions: Optional[str | Path] = None,
+        prompt_template: Optional[str | Path] = None,
+        enable_bookmarking: Literal["auto", True, False] = "auto",
+    ) -> None: ...
 
     def __init__(
         self,
@@ -611,7 +706,7 @@ class QueryChatExpress(QueryChatBase):
         """
         return mod_ui(id or self.id, **kwargs)
 
-    def df(self) -> DataOrLazyFrame:
+    def df(self) -> IntoFrameT:
         """
         Reactively read the current filtered data frame that is in effect.
 

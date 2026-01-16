@@ -2,21 +2,20 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Literal, Union
+from typing import TYPE_CHECKING, Any, Generic, Literal, cast
 
 import duckdb
 import narwhals.stable.v1 as nw
+from narwhals.stable.v1.typing import IntoDataFrameT, IntoFrameT
 from sqlalchemy import inspect, text
 from sqlalchemy.sql import sqltypes
 
-from ._df_compat import duckdb_result_to_nw, read_sql
+from ._df_compat import read_sql
 from ._utils import check_query
 
 if TYPE_CHECKING:
     import polars as pl
     from sqlalchemy.engine import Connection, Engine
-
-DataOrLazyFrame = Union[nw.DataFrame, nw.LazyFrame]
 
 
 class MissingColumnsError(ValueError):
@@ -46,9 +45,12 @@ class ColumnMeta:
     """Unique values for text columns below the categorical threshold."""
 
 
-class DataSource(ABC):
+class DataSource(ABC, Generic[IntoFrameT]):
     """
     An abstract class defining the interface for data sources used by QueryChat.
+
+    This class is generic over the DataFrame type returned by execute_query,
+    test_query, and get_data methods.
 
     Attributes
     ----------
@@ -85,9 +87,9 @@ class DataSource(ABC):
         ...
 
     @abstractmethod
-    def execute_query(self, query: str) -> DataOrLazyFrame:
+    def execute_query(self, query: str) -> IntoFrameT:
         """
-        Execute SQL query and return results as DataFrame.
+        Execute SQL query and return results.
 
         Parameters
         ----------
@@ -97,7 +99,7 @@ class DataSource(ABC):
         Returns
         -------
         :
-            Query results as a narwhals DataFrame
+            Query results
 
         """
         ...
@@ -105,7 +107,7 @@ class DataSource(ABC):
     @abstractmethod
     def test_query(
         self, query: str, *, require_all_columns: bool = False
-    ) -> nw.DataFrame:
+    ) -> IntoFrameT:
         """
         Test SQL query by fetching only one row.
 
@@ -120,7 +122,7 @@ class DataSource(ABC):
         Returns
         -------
         :
-            Query results as a narwhals DataFrame with at most one row
+            Query results with at most one row
 
         Raises
         ------
@@ -131,14 +133,14 @@ class DataSource(ABC):
         ...
 
     @abstractmethod
-    def get_data(self) -> DataOrLazyFrame:
+    def get_data(self) -> IntoFrameT:
         """
-        Return the unfiltered data as a DataFrame.
+        Return the unfiltered data.
 
         Returns
         -------
         :
-            The complete dataset as a narwhals DataFrame
+            The complete dataset
 
         """
         ...
@@ -158,10 +160,11 @@ class DataSource(ABC):
         """
 
 
-class DataFrameSource(DataSource):
+class DataFrameSource(DataSource[IntoDataFrameT]):
     """A DataSource implementation that wraps a DataFrame using DuckDB."""
 
     _df: nw.DataFrame
+    _df_lib: str
 
     def __init__(self, df: nw.DataFrame, table_name: str):
         """
@@ -177,6 +180,10 @@ class DataFrameSource(DataSource):
         """
         self._df = df
         self.table_name = table_name
+
+        # Track the native backend for returning results in the same format
+        native_namespace = nw.get_native_namespace(df)
+        self._df_lib = native_namespace.__name__
 
         self._conn = duckdb.connect(database=":memory:")
         self._conn.register(table_name, self._df.to_native())
@@ -262,11 +269,11 @@ SET lock_configuration = true;
 
         return "\n".join(schema)
 
-    def execute_query(self, query: str) -> nw.DataFrame:
+    def execute_query(self, query: str) -> IntoDataFrameT:
         """
         Execute query using DuckDB.
 
-        Uses polars if available, otherwise falls back to pandas.
+        Returns results in the same format as the input DataFrame (polars or pandas).
 
         Parameters
         ----------
@@ -276,7 +283,7 @@ SET lock_configuration = true;
         Returns
         -------
         :
-            Query results as narwhals DataFrame
+            Query results as native DataFrame (polars or pandas, matching input)
 
         Raises
         ------
@@ -285,11 +292,34 @@ SET lock_configuration = true;
 
         """
         check_query(query)
-        return duckdb_result_to_nw(self._conn.execute(query))
+        result = self._conn.execute(query)
+        return self._convert_result(result)
+
+    def _convert_result(self, result: duckdb.DuckDBPyConnection) -> IntoDataFrameT:
+        """
+        Convert DuckDB result to the appropriate native DataFrame type.
+
+        The returned type matches the input DataFrame's library (polars, pandas, or
+        pyarrow). The cast is safe because we detect the library at init time and
+        return results in the same format.
+        """
+        native_df: Any
+        if self._df_lib == "polars":
+            native_df = result.pl()
+        elif self._df_lib == "pandas":
+            native_df = result.df()
+        elif self._df_lib == "pyarrow":
+            native_df = result.fetch_arrow_table()
+        else:
+            raise ValueError(
+                f"Unsupported DataFrame backend: '{self._df_lib}'. "
+                "Supported backends are: polars, pandas, pyarrow"
+            )
+        return cast("IntoDataFrameT", native_df)
 
     def test_query(
         self, query: str, *, require_all_columns: bool = False
-    ) -> nw.DataFrame:
+    ) -> IntoDataFrameT:
         """
         Test query by fetching only one row.
 
@@ -314,10 +344,12 @@ SET lock_configuration = true;
 
         """
         check_query(query)
-        result = duckdb_result_to_nw(self._conn.execute(f"{query} LIMIT 1"))
+        result = self._conn.execute(f"{query} LIMIT 1")
+        native_result = self._convert_result(result)
 
         if require_all_columns:
-            result_columns = set(result.columns)
+            wrapped = nw.from_native(native_result)
+            result_columns = set(wrapped.columns)
             original_columns_set = set(self._colnames)
             missing_columns = original_columns_set - result_columns
 
@@ -330,19 +362,19 @@ SET lock_configuration = true;
                     f"Original columns: {original_list}"
                 )
 
-        return result
+        return native_result
 
-    def get_data(self) -> nw.DataFrame:
+    def get_data(self) -> IntoDataFrameT:
         """
         Return the unfiltered data as a DataFrame.
 
         Returns
         -------
         :
-            The complete dataset as a narwhals DataFrame
+            The complete dataset as native DataFrame (polars or pandas, matching input)
 
         """
-        return self._df
+        return self._df.to_native()
 
     def cleanup(self) -> None:
         """
@@ -357,7 +389,7 @@ SET lock_configuration = true;
             self._conn.close()
 
 
-class SQLAlchemySource(DataSource):
+class SQLAlchemySource(DataSource[nw.DataFrame]):
     """
     A DataSource implementation that supports multiple SQL databases via
     SQLAlchemy.
@@ -366,7 +398,11 @@ class SQLAlchemySource(DataSource):
     and Databricks.
     """
 
-    def __init__(self, engine: Engine, table_name: str):
+    def __init__(
+        self,
+        engine: Engine,
+        table_name: str,
+    ):
         """
         Initialize with a SQLAlchemy engine.
 
@@ -538,8 +574,6 @@ class SQLAlchemySource(DataSource):
         """
         Execute SQL query and return results as DataFrame.
 
-        Uses polars if available, otherwise falls back to pandas.
-
         Parameters
         ----------
         query
@@ -621,7 +655,7 @@ class SQLAlchemySource(DataSource):
         Returns
         -------
         :
-            The complete dataset as a narwhals DataFrame
+            The complete dataset as narwhals DataFrame
 
         """
         return self.execute_query(f"SELECT * FROM {self.table_name}")
@@ -664,7 +698,7 @@ class SQLAlchemySource(DataSource):
             self._engine.dispose()
 
 
-class PolarsLazySource(DataSource):
+class PolarsLazySource(DataSource["pl.LazyFrame"]):
     """
     A DataSource implementation for Polars LazyFrames.
 
@@ -717,7 +751,7 @@ class PolarsLazySource(DataSource):
         self._add_column_stats(columns, self._lf, categorical_threshold)
         return self._format_schema(self.table_name, columns)
 
-    def execute_query(self, query: str) -> nw.LazyFrame:
+    def execute_query(self, query: str) -> pl.LazyFrame:
         """
         Execute SQL query and return results as LazyFrame.
 
@@ -729,18 +763,17 @@ class PolarsLazySource(DataSource):
         Returns
         -------
         :
-            Query results as a narwhals LazyFrame
+            Query results as a native Polars LazyFrame
 
         """
         check_query(query)
-        result = self._ctx.execute(query)
-        return nw.from_native(result)
+        return self._ctx.execute(query)
 
     def test_query(
         self, query: str, *, require_all_columns: bool = False
-    ) -> nw.DataFrame:
+    ) -> pl.LazyFrame:
         """
-        Test SQL query validity by executing and collecting one row.
+        Test SQL query validity by executing and validating.
 
         Parameters
         ----------
@@ -752,19 +785,19 @@ class PolarsLazySource(DataSource):
         Returns
         -------
         :
-            Query results as a narwhals DataFrame with at most one row
+            Query results as a Polars LazyFrame
 
         """
         check_query(query)
 
-        test_sql = f"SELECT * FROM ({query}) AS subquery LIMIT 1"
-        lf = self._ctx.execute(test_sql)
+        lf = self._ctx.execute(query)
 
-        # Actually collect to catch runtime errors (e.g., division by zero)
-        result = nw.from_native(lf.collect())
+        # Collect one row to catch runtime errors (e.g., division by zero)
+        test_lf = self._ctx.execute(f"SELECT * FROM ({query}) AS subquery LIMIT 1")
+        collected = test_lf.collect()
 
         if require_all_columns:
-            result_columns = set(result.columns)
+            result_columns = set(collected.columns)
             missing = set(self._colnames) - result_columns
             if missing:
                 missing_list = ", ".join(f"'{c}'" for c in sorted(missing))
@@ -775,19 +808,20 @@ class PolarsLazySource(DataSource):
                     f"Original columns: {original_list}"
                 )
 
-        return result
+        # Return the original LazyFrame (not the collected test result)
+        return lf
 
-    def get_data(self) -> nw.LazyFrame:
+    def get_data(self) -> pl.LazyFrame:
         """
         Return the unfiltered data as a LazyFrame.
 
         Returns
         -------
         :
-            The original LazyFrame
+            The original native Polars LazyFrame
 
         """
-        return nw.from_native(self._lf)
+        return self._lf
 
     def cleanup(self) -> None:
         """Clean up resources (no-op for Polars)."""

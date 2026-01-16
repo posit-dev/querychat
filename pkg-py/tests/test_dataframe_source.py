@@ -3,18 +3,10 @@
 import duckdb
 import narwhals.stable.v1 as nw
 import pandas as pd
+import polars as pl
+import pyarrow as pa
 import pytest
 from querychat._datasource import DataFrameSource
-
-# Check if polars and pyarrow are available (both needed for DuckDB + polars)
-try:
-    import polars as pl
-    import pyarrow as pa  # noqa: F401
-
-    HAS_POLARS_WITH_PYARROW = True
-except ImportError:
-    HAS_POLARS_WITH_PYARROW = False
-    pl = None  # type: ignore[assignment]
 
 
 @pytest.fixture
@@ -45,7 +37,6 @@ class TestDataFrameSourceInit:
         source = DataFrameSource(narwhals_df, "test_table")
         assert source.table_name == "test_table"
 
-    @pytest.mark.skipif(not HAS_POLARS_WITH_PYARROW, reason="polars or pyarrow not installed")
     def test_init_with_polars_dataframe(self):
         """Test that DataFrameSource accepts a narwhals-wrapped polars DataFrame."""
         polars_df = pl.DataFrame(
@@ -61,11 +52,12 @@ class TestDataFrameSourceInit:
 class TestDataFrameSourceExecuteQuery:
     """Tests for DataFrameSource.execute_query method."""
 
-    def test_execute_query_returns_narwhals_dataframe(self, narwhals_df):
-        """Test that execute_query returns a narwhals DataFrame."""
+    def test_execute_query_returns_native_dataframe(self, narwhals_df):
+        """Test that execute_query returns a native DataFrame (same as input)."""
         source = DataFrameSource(narwhals_df, "employees")
         result = source.execute_query("SELECT * FROM employees")
-        assert isinstance(result, nw.DataFrame)
+        # Since narwhals_df is created from pandas, result should be pandas
+        assert isinstance(result, pd.DataFrame)
 
     def test_execute_query_select_all(self, narwhals_df):
         """Test SELECT * query."""
@@ -83,7 +75,7 @@ class TestDataFrameSourceExecuteQuery:
         )
 
         assert result.shape == (3, 5)
-        departments = result["department"].unique().to_list()
+        departments = result["department"].unique().tolist()
         assert departments == ["Engineering"]
 
     def test_execute_query_with_aggregation(self, narwhals_df):
@@ -112,7 +104,7 @@ class TestDataFrameSourceExecuteQuery:
             "SELECT name, age FROM employees ORDER BY age DESC"
         )
 
-        ages = result["age"].to_list()
+        ages = result["age"].tolist()
         assert ages == sorted(ages, reverse=True)
 
     def test_execute_query_empty_result(self, narwhals_df):
@@ -122,18 +114,20 @@ class TestDataFrameSourceExecuteQuery:
             "SELECT * FROM employees WHERE age > 100"
         )
 
-        assert isinstance(result, nw.DataFrame)
+        # Result is native pandas DataFrame (same as input backend)
+        assert isinstance(result, pd.DataFrame)
         assert result.shape == (0, 5)
 
 
 class TestDataFrameSourceGetData:
     """Tests for DataFrameSource.get_data method."""
 
-    def test_get_data_returns_narwhals_dataframe(self, narwhals_df):
-        """Test that get_data returns a narwhals DataFrame."""
+    def test_get_data_returns_native_dataframe(self, narwhals_df):
+        """Test that get_data returns a native DataFrame (same as input)."""
         source = DataFrameSource(narwhals_df, "employees")
         result = source.get_data()
-        assert isinstance(result, nw.DataFrame)
+        # Since narwhals_df is created from pandas, result should be pandas
+        assert isinstance(result, pd.DataFrame)
 
     def test_get_data_returns_full_dataset(self, narwhals_df):
         """Test that get_data returns all rows."""
@@ -150,7 +144,7 @@ class TestDataFrameSourceGetData:
 
         # Check that the data matches
         original_names = sorted(narwhals_df["name"].to_list())
-        result_names = sorted(result["name"].to_list())
+        result_names = sorted(result["name"].tolist())
         assert original_names == result_names
 
 
@@ -238,7 +232,6 @@ class TestDataFrameSourceCleanup:
             source.execute_query("SELECT * FROM employees")
 
 
-@pytest.mark.skipif(not HAS_POLARS_WITH_PYARROW, reason="polars or pyarrow not installed")
 class TestDataFrameSourceWithPolars:
     """Tests for DataFrameSource with polars DataFrames."""
 
@@ -256,26 +249,82 @@ class TestDataFrameSourceWithPolars:
         )
 
     def test_execute_query_with_polars(self, polars_df):
-        """Test execute_query with polars source."""
+        """Test execute_query with polars source returns native polars DataFrame."""
         source = DataFrameSource(polars_df, "test_data")
         result = source.execute_query("SELECT * FROM test_data")
 
-        assert isinstance(result, nw.DataFrame)
+        assert isinstance(result, pl.DataFrame)
         assert result.shape == (3, 3)
 
     def test_get_data_with_polars(self, polars_df):
-        """Test get_data with polars source."""
+        """Test get_data with polars source returns native polars DataFrame."""
         source = DataFrameSource(polars_df, "test_data")
         result = source.get_data()
 
-        assert isinstance(result, nw.DataFrame)
+        assert isinstance(result, pl.DataFrame)
         assert result.shape == polars_df.shape
 
     def test_polars_result_backend(self, polars_df):
-        """Test that results use polars backend when input is polars."""
+        """Test that results are native polars DataFrames when input is polars."""
         source = DataFrameSource(polars_df, "test_data")
         result = source.execute_query("SELECT * FROM test_data")
 
-        # When polars is available, the result should use polars backend
-        native = result.to_native()
-        assert isinstance(native, pl.DataFrame)
+        # Results should be native polars DataFrames
+        assert isinstance(result, pl.DataFrame)
+
+
+class TestDataFrameSourceWithPyArrow:
+    """Tests for DataFrameSource with pyarrow Tables."""
+
+    @pytest.fixture
+    def pyarrow_table(self):
+        """Create a sample narwhals-wrapped pyarrow Table."""
+        return nw.from_native(
+            pa.table(
+                {
+                    "id": [1, 2, 3],
+                    "name": ["Alice", "Bob", "Charlie"],
+                    "value": [10.5, 20.5, 30.5],
+                }
+            )
+        )
+
+    def test_init_with_pyarrow_table(self, pyarrow_table):
+        """Test that DataFrameSource accepts a narwhals-wrapped pyarrow Table."""
+        source = DataFrameSource(pyarrow_table, "test_data")
+        assert source.table_name == "test_data"
+
+    def test_execute_query_with_pyarrow(self, pyarrow_table):
+        """Test execute_query with pyarrow source returns native pyarrow Table."""
+        source = DataFrameSource(pyarrow_table, "test_data")
+        result = source.execute_query("SELECT * FROM test_data")
+
+        assert isinstance(result, pa.Table)
+        assert result.num_rows == 3
+        assert result.num_columns == 3
+
+    def test_execute_query_with_filter_pyarrow(self, pyarrow_table):
+        """Test query with WHERE clause returns pyarrow Table."""
+        source = DataFrameSource(pyarrow_table, "test_data")
+        result = source.execute_query(
+            "SELECT * FROM test_data WHERE name = 'Alice'"
+        )
+
+        assert isinstance(result, pa.Table)
+        assert result.num_rows == 1
+
+    def test_get_data_with_pyarrow(self, pyarrow_table):
+        """Test get_data with pyarrow source returns native pyarrow Table."""
+        source = DataFrameSource(pyarrow_table, "test_data")
+        result = source.get_data()
+
+        assert isinstance(result, pa.Table)
+        assert result.num_rows == pyarrow_table.shape[0]
+
+    def test_test_query_with_pyarrow(self, pyarrow_table):
+        """Test test_query with pyarrow source returns native pyarrow Table."""
+        source = DataFrameSource(pyarrow_table, "test_data")
+        result = source.test_query("SELECT * FROM test_data")
+
+        assert isinstance(result, pa.Table)
+        assert result.num_rows == 1

@@ -15,10 +15,11 @@ __all__ = [
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Optional, TypedDict, Union
+from typing import TYPE_CHECKING, Generic, Optional, TypedDict, Union
 
 from chatlas import Chat, ContentToolRequest, ContentToolResult
 from chatlas.types import Content
+from narwhals.stable.v1.typing import IntoFrameT
 
 from .tools import UpdateDashboardData
 
@@ -31,7 +32,9 @@ GREETING_PROMPT: str = (
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Iterator
 
-    from ._datasource import DataOrLazyFrame, DataSource
+    from narwhals.stable.v1.typing import IntoFrame
+
+    from ._datasource import DataSource
 
 
 ClientFactory = Callable[
@@ -57,10 +60,10 @@ class DisplayMessage(TypedDict):
     content: str
 
 
-class StateDictAccessorMixin:
+class StateDictAccessorMixin(Generic[IntoFrameT]):
     """Mixin providing df/sql/title accessors for frameworks using serialized state dicts."""
 
-    _data_source: DataSource
+    _data_source: DataSource[IntoFrameT]
 
     def _client_factory(
         self,
@@ -70,7 +73,7 @@ class StateDictAccessorMixin:
         """Create a chat client with dashboard callbacks."""
         return self.client(update_dashboard=update_cb, reset_dashboard=reset_cb)  # type: ignore[attr-defined]
 
-    def df(self, state: AppStateDict | None) -> DataOrLazyFrame:
+    def df(self, state: AppStateDict | None) -> IntoFrameT:
         """
         Get the current DataFrame from state.
 
@@ -209,7 +212,7 @@ class AppState:
         self.title = None
         self.error = None
 
-    def get_current_data(self) -> DataOrLazyFrame:
+    def get_current_data(self) -> IntoFrame:
         """Get current data, falling back to default if query fails."""
         if self.sql:
             try:

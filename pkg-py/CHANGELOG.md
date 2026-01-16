@@ -18,6 +18,7 @@ Each framework's `QueryChat` provides `.app()` for quick standalone apps and `.u
 
 * `QueryChat()` gains support for more data sources:
   * `polars.LazyFrame`: queries execute lazily via `polars.SQLContext`. In this case, `.df()` et al. methods will return a `polars.LazyFrame`. (#191)
+  * `ibis.Table`: queries execute lazily via the Ibis backend's SQL interface (DuckDB, PostgreSQL, BigQuery, etc.). In this case, `.df()` et al. methods will return an `ibis.Table`. (#193)
   * `pyarrow.Table`: queries execute in-memory via `duckdb`. In this case, `.df()` et al. methods will return a `pyarrow.Table`. (#196)
 
 ### Improvements

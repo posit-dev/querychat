@@ -8,15 +8,7 @@ import narwhals.stable.v1 as nw
 import pytest
 from querychat._df_compat import read_csv
 
-# Check if polars and pyarrow are available (both needed for DuckDB + polars)
-try:
-    import polars as pl
-    import pyarrow as pa  # noqa: F401
-
-    HAS_POLARS_WITH_PYARROW = True
-except ImportError:
-    HAS_POLARS_WITH_PYARROW = False
-    pl = None  # type: ignore[assignment]
+import polars as pl
 
 
 class TestReadCsv:
@@ -59,9 +51,6 @@ class TestReadCsv:
         assert names == ["Alice", "Bob", "Charlie"]
 
 
-@pytest.mark.skipif(
-    not HAS_POLARS_WITH_PYARROW, reason="polars or pyarrow not installed"
-)
 class TestPolarsBackend:
     """Tests that verify polars backend works correctly when available."""
 

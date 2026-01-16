@@ -6,15 +6,8 @@ import pandas as pd
 import pytest
 from querychat._datasource import DataFrameSource
 
-# Check if polars and pyarrow are available (both needed for DuckDB + polars)
-try:
-    import polars as pl
-    import pyarrow as pa  # noqa: F401
-
-    HAS_POLARS_WITH_PYARROW = True
-except ImportError:
-    HAS_POLARS_WITH_PYARROW = False
-    pl = None  # type: ignore[assignment]
+import polars as pl
+import pyarrow as pa
 
 
 @pytest.fixture
@@ -45,7 +38,6 @@ class TestDataFrameSourceInit:
         source = DataFrameSource(narwhals_df, "test_table")
         assert source.table_name == "test_table"
 
-    @pytest.mark.skipif(not HAS_POLARS_WITH_PYARROW, reason="polars or pyarrow not installed")
     def test_init_with_polars_dataframe(self):
         """Test that DataFrameSource accepts a narwhals-wrapped polars DataFrame."""
         polars_df = pl.DataFrame(
@@ -241,7 +233,6 @@ class TestDataFrameSourceCleanup:
             source.execute_query("SELECT * FROM employees")
 
 
-@pytest.mark.skipif(not HAS_POLARS_WITH_PYARROW, reason="polars or pyarrow not installed")
 class TestDataFrameSourceWithPolars:
     """Tests for DataFrameSource with polars DataFrames."""
 
@@ -281,3 +272,60 @@ class TestDataFrameSourceWithPolars:
 
         # Results should be native polars DataFrames
         assert isinstance(result, pl.DataFrame)
+
+
+class TestDataFrameSourceWithPyArrow:
+    """Tests for DataFrameSource with pyarrow Tables."""
+
+    @pytest.fixture
+    def pyarrow_table(self):
+        """Create a sample narwhals-wrapped pyarrow Table."""
+        return nw.from_native(
+            pa.table(
+                {
+                    "id": [1, 2, 3],
+                    "name": ["Alice", "Bob", "Charlie"],
+                    "value": [10.5, 20.5, 30.5],
+                }
+            )
+        )
+
+    def test_init_with_pyarrow_table(self, pyarrow_table):
+        """Test that DataFrameSource accepts a narwhals-wrapped pyarrow Table."""
+        source = DataFrameSource(pyarrow_table, "test_data")
+        assert source.table_name == "test_data"
+
+    def test_execute_query_with_pyarrow(self, pyarrow_table):
+        """Test execute_query with pyarrow source returns native pyarrow Table."""
+        source = DataFrameSource(pyarrow_table, "test_data")
+        result = source.execute_query("SELECT * FROM test_data")
+
+        assert isinstance(result, pa.Table)
+        assert result.num_rows == 3
+        assert result.num_columns == 3
+
+    def test_execute_query_with_filter_pyarrow(self, pyarrow_table):
+        """Test query with WHERE clause returns pyarrow Table."""
+        source = DataFrameSource(pyarrow_table, "test_data")
+        result = source.execute_query(
+            "SELECT * FROM test_data WHERE name = 'Alice'"
+        )
+
+        assert isinstance(result, pa.Table)
+        assert result.num_rows == 1
+
+    def test_get_data_with_pyarrow(self, pyarrow_table):
+        """Test get_data with pyarrow source returns native pyarrow Table."""
+        source = DataFrameSource(pyarrow_table, "test_data")
+        result = source.get_data()
+
+        assert isinstance(result, pa.Table)
+        assert result.num_rows == pyarrow_table.shape[0]
+
+    def test_test_query_with_pyarrow(self, pyarrow_table):
+        """Test test_query with pyarrow source returns native pyarrow Table."""
+        source = DataFrameSource(pyarrow_table, "test_data")
+        result = source.test_query("SELECT * FROM test_data")
+
+        assert isinstance(result, pa.Table)
+        assert result.num_rows == 1

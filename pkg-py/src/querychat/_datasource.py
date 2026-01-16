@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     import ibis
     import polars as pl
     from ibis.backends.sql import SQLBackend
+    from ibis.expr.datatypes import DataType as IbisDataType
     from sqlalchemy.engine import Connection, Engine
 
 
@@ -939,17 +940,24 @@ class IbisSource(DataSource["ibis.Table"]):
     table_name: str
 
     def __init__(self, table: ibis.Table, table_name: str):
+        from ibis.backends.sql import SQLBackend
+
         self._table = table
         self.table_name = table_name
         self._schema = table.schema()
-        self._colnames = list(cast("tuple[str, ...]", self._schema.names))
+
         backend = table.get_backend()
-        if not isinstance(backend, ibis.SQLBackend):
+        if not isinstance(backend, SQLBackend):
             raise TypeError(
                 f"Expected SQL backend, got {type(backend).__name__}. "
                 "IbisSource only supports SQL backends."
             )
         self._backend = backend
+
+        colnames = self._schema.names
+        if not isinstance(colnames, (tuple, list)):
+            raise TypeError("Expected schema names to be a tuple or list of strings")
+        self._colnames = list(colnames)
 
     def get_db_type(self) -> str:
         return self._backend.name
@@ -962,7 +970,7 @@ class IbisSource(DataSource["ibis.Table"]):
         return PolarsLazySource._format_schema(self.table_name, columns)
 
     @staticmethod
-    def _make_column_meta(name: str, dtype) -> ColumnMeta:
+    def _make_column_meta(name: str, dtype: IbisDataType) -> ColumnMeta:
         """Create ColumnMeta from an ibis dtype."""
         if dtype.is_numeric():
             kind: Literal["numeric", "text", "date", "other"] = "numeric"
@@ -1028,7 +1036,7 @@ class IbisSource(DataSource["ibis.Table"]):
         # Batch all categorical value queries into a single UNION query
         import ibis
 
-        subqueries = []
+        subqueries: list[ibis.Table] = []
         for col in categorical_cols:
             subq = (
                 table.select(

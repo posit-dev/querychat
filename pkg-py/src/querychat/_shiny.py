@@ -746,11 +746,10 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         Returns
         -------
         :
-            The current filtered data frame as a narwhals DataFrame, LazyFrame,
-            or Ibis Table. If the data source is lazy, returns a LazyFrame.
-            If the data source is an Ibis Table, returns an Ibis Table.
-            If no query has been set, this will return the unfiltered data
-            from the data source.
+            The current filtered data frame, in the same format as the original
+            data source (e.g., polars DataFrame, Polars LazyFrame, Ibis Table).
+            If no query has been set, returns the unfiltered data from the
+            data source.
 
         """
         return self._vals.df()

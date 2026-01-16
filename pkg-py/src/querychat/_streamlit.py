@@ -15,6 +15,7 @@ from ._querychat_core import (
     stream_response,
 )
 from ._ui_assets import STREAMLIT_JS, SUGGESTION_CSS
+from ._utils import as_narwhals
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -298,9 +299,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 st.rerun()
 
         st.subheader("Data view")
-        df = nw.from_native(state.get_current_data())
-        if isinstance(df, nw.LazyFrame):
-            df = df.collect()
+        df = as_narwhals(state.get_current_data())
         if state.error:
             st.error(state.error)
         st.dataframe(df.to_native(), use_container_width=True, height=400, hide_index=True)

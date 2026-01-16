@@ -303,7 +303,5 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             df = df.collect()
         if state.error:
             st.error(state.error)
-        st.dataframe(
-            df.to_native(), use_container_width=True, height=400, hide_index=True
-        )
+        st.dataframe(df.to_native(), use_container_width=True, height=400, hide_index=True)
         st.caption(f"Data has {df.shape[0]} rows and {df.shape[1]} columns.")

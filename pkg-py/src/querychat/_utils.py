@@ -4,7 +4,7 @@ import os
 import re
 import warnings
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Any, Literal, Optional, cast, overload
+from typing import TYPE_CHECKING, Any, Literal, Optional, overload
 
 import narwhals.stable.v1 as nw
 from great_tables import GT
@@ -208,23 +208,30 @@ def is_ibis_table(obj: Any) -> TypeGuard[ibis.Table]:
         return False
 
 
-@overload
-def as_narwhals(df: Any, *, lazy: Literal[False] = False) -> nw.DataFrame[Any]: ...
+def is_pandas_df(obj: Any) -> TypeGuard[pd.DataFrame]:
+    try:
+        import pandas as pd
+
+        return isinstance(obj, pd.DataFrame)
+    except ImportError:
+        return False
 
 
 @overload
-def as_narwhals(df: Any, *, lazy: Literal[True]) -> nw.LazyFrame[Any]: ...
+def as_narwhals(x: Any, *, lazy: Literal[False] = False) -> nw.DataFrame[Any]: ...
 
 
-def as_narwhals(
-    df: Any, *, lazy: bool = False
-) -> nw.DataFrame[Any] | nw.LazyFrame[Any]:
+@overload
+def as_narwhals(x: Any, *, lazy: Literal[True]) -> nw.LazyFrame[Any]: ...
+
+
+def as_narwhals(x: Any, *, lazy: bool = False) -> nw.DataFrame[Any] | nw.LazyFrame[Any]:
     """
     Convert any query result to a narwhals DataFrame or LazyFrame.
 
     Parameters
     ----------
-    df
+    x
         The data to convert (ibis.Table, polars LazyFrame/DataFrame, pandas DataFrame, etc.)
     lazy
         If False (default), collect to an eager DataFrame.
@@ -236,20 +243,21 @@ def as_narwhals(
         A narwhals DataFrame (if lazy=False) or LazyFrame (if lazy=True).
 
     """
-    if is_ibis_table(df):
-        # ibis.Table.execute() returns pandas DataFrame
-        df = nw.from_native(cast("pd.DataFrame", df.execute()), eager_only=True)
-    elif not isinstance(df, (nw.DataFrame, nw.LazyFrame)):
-        df = nw.from_native(df, eager_or_interchange_only=True)
+    if is_ibis_table(x):
+        x = x.execute()
+        if not is_pandas_df(x):
+            raise TypeError(
+                "ibis.Table.execute() did not return a pandas DataFrame. "
+                "Please report this issue at https://github.com/posit-dev/querychat/issues"
+            )
+
+    if not isinstance(x, (nw.DataFrame, nw.LazyFrame)):
+        x = nw.from_native(x)
 
     if lazy:
-        if isinstance(df, nw.DataFrame):
-            return df.lazy()
-        return df
+        return x.lazy() if isinstance(x, nw.DataFrame) else x
     else:
-        if isinstance(df, nw.LazyFrame):
-            return df.collect()
-        return df
+        return x.collect() if isinstance(x, nw.LazyFrame) else x
 
 
 def df_to_html(df, maxrows: int = 5) -> str:

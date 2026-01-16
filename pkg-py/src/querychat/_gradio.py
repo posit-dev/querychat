@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Optional, overload
 
-import narwhals.stable.v1 as nw
 from gradio.context import Context
 from narwhals.stable.v1.typing import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
+
+if TYPE_CHECKING:
+    import narwhals.stable.v1 as nw
 
 from ._querychat_base import TOOL_GROUPS, QueryChatBase
 from ._querychat_core import (
@@ -17,7 +19,7 @@ from ._querychat_core import (
     stream_response,
 )
 from ._ui_assets import GRADIO_CSS, GRADIO_JS, SUGGESTION_CSS
-from ._utils import is_ibis_table
+from ._utils import collect_to_pandas
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -358,16 +360,8 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
                 )
 
                 df = self.df(state_dict)
-
-                if is_ibis_table(df):
-                    native_df = df.execute()
-                    nrow, ncol = native_df.shape
-                else:
-                    df = nw.from_native(df)
-                    if isinstance(df, nw.LazyFrame):
-                        df = df.collect()
-                    nrow, ncol = df.shape
-                    native_df = df.to_native()
+                native_df = collect_to_pandas(df)
+                nrow, ncol = native_df.shape
 
                 data_info_parts = []
                 if error:

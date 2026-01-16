@@ -15,6 +15,7 @@ import sqlalchemy
 from ._datasource import (
     DataFrameSource,
     DataSource,
+    IbisSource,
     IntoFrameT,
     PolarsLazySource,
     SQLAlchemySource,
@@ -183,8 +184,6 @@ def normalize_data_source(
 
     # Check for Ibis Table before narwhals conversion (Ibis Tables are not narwhals-native)
     if is_ibis_table(data_source):
-        from ._datasource import IbisSource
-
         return IbisSource(data_source, table_name)
 
     src = nw.from_native(data_source, pass_through=True)

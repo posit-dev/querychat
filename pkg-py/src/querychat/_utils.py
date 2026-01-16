@@ -208,6 +208,20 @@ def querychat_tool_starts_open(action: Literal["update", "query", "reset"]) -> b
         return action != "reset"
 
 
+def collect_to_pandas(df: Any) -> Any:
+    """Collect any query result (ibis.Table, LazyFrame, DataFrame) to pandas."""
+    if is_ibis_table(df):
+        return df.execute()
+
+    if not isinstance(df, (nw.DataFrame, nw.LazyFrame)):
+        df = nw.from_native(df)
+
+    if isinstance(df, nw.LazyFrame):
+        df = df.collect()
+
+    return df.to_native()
+
+
 def df_to_html(df, maxrows: int = 5) -> str:
     """
     Convert a DataFrame to a Bootstrap-styled HTML table for display in chat.

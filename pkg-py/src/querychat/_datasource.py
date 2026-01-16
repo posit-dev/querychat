@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from ibis.backends.sql import SQLBackend
     from sqlalchemy.engine import Connection, Engine
 
+
 class MissingColumnsError(ValueError):
     """Raised when a query result is missing required columns."""
 
@@ -940,17 +941,22 @@ class IbisSource(DataSource["ibis.Table"]):
     def __init__(self, table: ibis.Table, table_name: str):
         self._table = table
         self.table_name = table_name
-        self._backend = cast("SQLBackend", table.get_backend())
         self._schema = table.schema()
         self._colnames = list(cast("tuple[str, ...]", self._schema.names))
+        backend = table.get_backend()
+        if not isinstance(backend, ibis.SQLBackend):
+            raise TypeError(
+                f"Expected SQL backend, got {type(backend).__name__}. "
+                "IbisSource only supports SQL backends."
+            )
+        self._backend = backend
 
     def get_db_type(self) -> str:
         return self._backend.name
 
     def get_schema(self, *, categorical_threshold: int) -> str:
         columns = [
-            self._make_column_meta(name, dtype)
-            for name, dtype in self._schema.items()
+            self._make_column_meta(name, dtype) for name, dtype in self._schema.items()
         ]
         self._add_column_stats(columns, self._table, categorical_threshold)
         return PolarsLazySource._format_schema(self.table_name, columns)

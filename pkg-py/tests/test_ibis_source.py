@@ -213,3 +213,20 @@ class TestIbisSourceTestQuery:
                 source.test_query("SELECT CAST(b AS INTEGER) FROM test_table")
         finally:
             conn.disconnect()
+
+
+class TestIbisSourceValidation:
+    """Tests for IbisSource validation and error handling."""
+
+    def test_rejects_non_sql_backend(self):
+        """Test that non-SQL backends raise TypeError."""
+        import polars as pl
+        from querychat._datasource import IbisSource
+
+        # ibis.polars is a non-SQL backend
+        df = pl.DataFrame({"x": [1, 2, 3], "y": ["a", "b", "c"]})
+        conn = ibis.polars.connect({"my_table": df})
+        table = conn.table("my_table")
+
+        with pytest.raises(TypeError, match="SQL backend"):
+            IbisSource(table, "my_table")

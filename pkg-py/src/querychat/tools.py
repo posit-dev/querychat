@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Protocol, TypedDict, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, TypedDict, cast, runtime_checkable
 
 import chevron
 import narwhals.stable.v1 as nw
@@ -239,15 +239,17 @@ def _query_impl(data_source: DataSource) -> Callable[[str, str], ContentToolResu
 
                 if isinstance(result_df, ibis.Table):
                     # Convert ibis Table to pandas, then to list of dicts
-                    value = result_df.execute().to_dict("records")
+                    # Cast needed because ibis lacks py.typed and pandas stubs are incomplete
+                    pdf = cast("Any", result_df.execute())
+                    value = pdf.to_dict("records")
                 else:
                     if isinstance(result_df, nw.LazyFrame):
                         result_df = result_df.collect()
-                    value = result_df.rows(named=True)
+                    value = cast("nw.DataFrame[Any]", result_df).rows(named=True)
             except ImportError:
                 if isinstance(result_df, nw.LazyFrame):
                     result_df = result_df.collect()
-                value = result_df.rows(named=True)
+                value = cast("nw.DataFrame[Any]", result_df).rows(named=True)
 
             # Format table results (df_to_html handles both DataFrame and LazyFrame)
             tbl_html = df_to_html(result_df, maxrows=5)

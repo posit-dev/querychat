@@ -16,6 +16,7 @@ from ._utils import check_query
 if TYPE_CHECKING:
     import ibis
     import polars as pl
+    from ibis.backends.sql import SQLBackend
     from sqlalchemy.engine import Connection, Engine
 
 class MissingColumnsError(ValueError):
@@ -933,7 +934,7 @@ class IbisSource(DataSource["ibis.Table"]):
     """
 
     _table: ibis.Table
-    _backend: ibis.BaseBackend
+    _backend: SQLBackend
     table_name: str
 
     def __init__(self, table: ibis.Table, table_name: str):
@@ -950,8 +951,8 @@ class IbisSource(DataSource["ibis.Table"]):
         """
         self._table = table
         self.table_name = table_name
-        self._backend = table.get_backend()
-        self._colnames = list(table.schema().names)  # pyright: ignore[reportArgumentType]
+        self._backend = cast("SQLBackend", table.get_backend())
+        self._colnames = list(cast("tuple[str, ...]", table.schema().names))
 
     def get_db_type(self) -> str:
         """
@@ -982,9 +983,10 @@ class IbisSource(DataSource["ibis.Table"]):
 
         """
         schema = self._table.schema()
+        col_names = cast("tuple[str, ...]", schema.names)
         columns = [
             self._make_column_meta(name, schema[name])
-            for name in schema.names  # pyright: ignore[reportGeneralTypeIssues]
+            for name in col_names
         ]
         self._add_column_stats(columns, self._table, categorical_threshold)
         return PolarsLazySource._format_schema(self.table_name, columns)
@@ -1019,7 +1021,7 @@ class IbisSource(DataSource["ibis.Table"]):
     @staticmethod
     def _add_column_stats(
         columns: list[ColumnMeta],
-        table: ibis.Table,  # pyright: ignore[reportInvalidTypeForm]
+        table: ibis.Table,
         categorical_threshold: int,
     ) -> None:
         """Add min/max/categories to column metadata using ibis aggregates."""
@@ -1057,7 +1059,7 @@ class IbisSource(DataSource["ibis.Table"]):
             values = table.select(col.name).distinct().execute()[col.name].tolist()
             col.categories = [v for v in values if v is not None]
 
-    def execute_query(self, query: str) -> ibis.Table:  # pyright: ignore[reportInvalidTypeForm]
+    def execute_query(self, query: str) -> ibis.Table:
         """
         Execute SQL query and return results as an Ibis Table (lazy).
 
@@ -1078,11 +1080,11 @@ class IbisSource(DataSource["ibis.Table"]):
 
         """
         check_query(query)
-        return self._backend.sql(query)  # pyright: ignore[reportAttributeAccessIssue]
+        return self._backend.sql(query)
 
     def test_query(
         self, query: str, *, require_all_columns: bool = False
-    ) -> ibis.Table:  # pyright: ignore[reportInvalidTypeForm]
+    ) -> ibis.Table:
         """
         Test SQL query validity by executing and validating.
 
@@ -1107,11 +1109,11 @@ class IbisSource(DataSource["ibis.Table"]):
 
         """
         check_query(query)
-        result_table = self._backend.sql(query)  # pyright: ignore[reportAttributeAccessIssue]
+        result_table = self._backend.sql(query)
 
         # Collect one row to validate and catch runtime errors
         test_sql = f"SELECT * FROM ({query}) AS subquery LIMIT 1"
-        collected = self._backend.sql(test_sql).execute()  # pyright: ignore[reportAttributeAccessIssue]
+        collected = self._backend.sql(test_sql).execute()
 
         if require_all_columns:
             result_columns = set(collected.columns)
@@ -1127,7 +1129,7 @@ class IbisSource(DataSource["ibis.Table"]):
 
         return result_table
 
-    def get_data(self) -> ibis.Table:  # pyright: ignore[reportInvalidTypeForm]
+    def get_data(self) -> ibis.Table:
         """
         Return the unfiltered data as an Ibis Table.
 

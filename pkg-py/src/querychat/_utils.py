@@ -15,15 +15,6 @@ if TYPE_CHECKING:
     import ibis
 
 
-def is_ibis_table(obj: Any) -> TypeGuard[ibis.Table]:
-    try:
-        import ibis
-
-        return isinstance(obj, ibis.Table)
-    except ImportError:
-        return False
-
-
 class MISSING_TYPE:  # noqa: N801
     """
     A singleton representing a missing value.
@@ -205,6 +196,15 @@ def querychat_tool_starts_open(action: Literal["update", "query", "reset"]) -> b
         return False
     else:  # setting == "default"
         return action != "reset"
+
+
+def is_ibis_table(obj: Any) -> TypeGuard[ibis.Table]:
+    try:
+        import ibis
+
+        return isinstance(obj, ibis.Table)
+    except ImportError:
+        return False
 
 
 def collect_to_narwhals(df: Any) -> nw.DataFrame[Any]:

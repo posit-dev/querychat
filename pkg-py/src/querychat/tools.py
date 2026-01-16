@@ -1,15 +1,14 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Protocol, TypedDict, cast, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, TypedDict, runtime_checkable
 
 import chevron
-import narwhals.stable.v1 as nw
 from chatlas import ContentToolResult, Tool
 from shinychat.types import ToolResultDisplay
 
 from ._icons import bs_icon
-from ._utils import df_to_html, is_ibis_table, querychat_tool_starts_open
+from ._utils import collect_to_narwhals, df_to_html, querychat_tool_starts_open
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -233,14 +232,8 @@ def _query_impl(data_source: DataSource) -> Callable[[str, str], ContentToolResu
 
         try:
             result_df = data_source.execute_query(query)
-
-            if is_ibis_table(result_df):
-                pdf = cast("Any", result_df.execute())  # ibis lacks py.typed
-                value = pdf.to_dict("records")
-            else:
-                if isinstance(result_df, nw.LazyFrame):
-                    result_df = result_df.collect()
-                value = cast("nw.DataFrame[Any]", result_df).rows(named=True)
+            nw_df = collect_to_narwhals(result_df)
+            value = nw_df.rows(named=True)
 
             tbl_html = df_to_html(result_df, maxrows=5)
             markdown += "\n\n" + str(tbl_html)

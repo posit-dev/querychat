@@ -357,12 +357,10 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
                 )
 
                 df = self.df(state_dict)
-                # Handle ibis tables specially
                 try:
                     import ibis
 
                     if isinstance(df, ibis.Table):
-                        # Execute ibis table to get pandas DataFrame
                         native_df = df.execute()
                         nrow, ncol = native_df.shape
                         data_info_parts = []
@@ -376,7 +374,6 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
                 except ImportError:
                     pass
 
-                # Handle narwhals DataFrames and LazyFrames
                 df = nw.from_native(df)
                 if isinstance(df, nw.LazyFrame):
                     df = df.collect()

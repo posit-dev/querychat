@@ -982,14 +982,10 @@ class IbisSource(DataSource["ibis.Table"]):
 
         """
         schema = self._table.schema()
-
-        # Build column metadata (classification happens here)
         columns = [
             self._make_column_meta(name, schema[name])
             for name in schema.names  # pyright: ignore[reportGeneralTypeIssues]
         ]
-
-        # Add stats to the metadata and format schema string
         self._add_column_stats(columns, self._table, categorical_threshold)
         return PolarsLazySource._format_schema(self.table_name, columns)
 
@@ -1027,7 +1023,6 @@ class IbisSource(DataSource["ibis.Table"]):
         categorical_threshold: int,
     ) -> None:
         """Add min/max/categories to column metadata using ibis aggregates."""
-        # Build aggregation expressions based on column kinds
         agg_exprs = []
         for col in columns:
             if col.kind in ("numeric", "date"):
@@ -1039,17 +1034,14 @@ class IbisSource(DataSource["ibis.Table"]):
         if not agg_exprs:
             return
 
-        # Single scan: collect all aggregate statistics
         stats_row = table.aggregate(agg_exprs).execute()
         stats = stats_row.iloc[0].to_dict()
 
-        # Add min/max for numeric/date columns
         for col in columns:
             if col.kind in ("numeric", "date"):
                 col.min_val = stats.get(f"{col.name}__min")
                 col.max_val = stats.get(f"{col.name}__max")
 
-        # Find text columns that qualify as categorical
         categorical_cols = [
             col
             for col in columns
@@ -1061,7 +1053,6 @@ class IbisSource(DataSource["ibis.Table"]):
         if not categorical_cols:
             return
 
-        # Second scan: get unique values for categorical columns
         for col in categorical_cols:
             values = table.select(col.name).distinct().execute()[col.name].tolist()
             col.categories = [v for v in values if v is not None]
@@ -1116,11 +1107,9 @@ class IbisSource(DataSource["ibis.Table"]):
 
         """
         check_query(query)
-
-        # Get the lazy result table
         result_table = self._backend.sql(query)  # pyright: ignore[reportAttributeAccessIssue]
 
-        # Collect one row to catch runtime errors (e.g., division by zero)
+        # Collect one row to validate and catch runtime errors
         test_sql = f"SELECT * FROM ({query}) AS subquery LIMIT 1"
         collected = self._backend.sql(test_sql).execute()  # pyright: ignore[reportAttributeAccessIssue]
 
@@ -1136,7 +1125,6 @@ class IbisSource(DataSource["ibis.Table"]):
                     f"Original columns: {original_list}"
                 )
 
-        # Return the original lazy table (not the collected test result)
         return result_table
 
     def get_data(self) -> ibis.Table:  # pyright: ignore[reportInvalidTypeForm]

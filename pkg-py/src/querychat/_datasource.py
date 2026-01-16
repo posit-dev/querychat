@@ -244,7 +244,7 @@ SET lock_configuration = true;
             elif dtype == nw.Boolean:
                 sql_type = "BOOLEAN"
             elif dtype == nw.Datetime:
-                sql_type = "TIME"
+                sql_type = "TIMESTAMP"
             elif dtype == nw.Date:
                 sql_type = "DATE"
             else:
@@ -258,7 +258,7 @@ SET lock_configuration = true;
                     categories = unique_values.to_list()
                     categories_str = ", ".join([f"'{c}'" for c in categories])
                     column_info.append(f"  Categorical values: {categories_str}")
-            elif sql_type in ["INTEGER", "FLOAT", "DATE", "TIME"]:
+            elif sql_type in ["INTEGER", "FLOAT", "DATE", "TIMESTAMP"]:
                 rng = self._df[column].min(), self._df[column].max()
                 if rng[0] is None and rng[1] is None:
                     column_info.append("  Range: NULL to NULL")

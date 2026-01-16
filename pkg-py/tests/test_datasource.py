@@ -503,3 +503,27 @@ def test_check_query_escape_hatch_accepts_various_values(monkeypatch):
     for value in ["true", "TRUE", "1", "yes", "YES"]:
         monkeypatch.setenv("QUERYCHAT_ENABLE_UPDATE_QUERIES", value)
         check_query("INSERT INTO table VALUES (1)")  # Should not raise
+
+
+def test_dataframe_source_datetime_type_mapping():
+    """Test that datetime columns are mapped to TIMESTAMP, not TIME."""
+    # Create DataFrame with datetime column
+    test_df = pd.DataFrame(
+        {
+            "id": [1, 2, 3],
+            "name": ["a", "b", "c"],
+            "created_at": pd.to_datetime(["2023-01-01 10:00:00", "2023-06-15 14:30:00", "2023-12-31 23:59:59"]),
+        }
+    )
+
+    source = DataFrameSource(test_df, "test_table")
+    schema = source.get_schema(categorical_threshold=5)
+
+    # Datetime columns should be TIMESTAMP, not TIME
+    assert "- created_at (TIMESTAMP)" in schema
+    assert "- created_at (TIME)" not in schema
+
+    # Should also show range for datetime columns
+    assert "Range:" in schema
+
+    source.cleanup()

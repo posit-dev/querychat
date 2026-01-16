@@ -245,11 +245,6 @@ def as_narwhals(x: Any, *, lazy: bool = False) -> nw.DataFrame[Any] | nw.LazyFra
     """
     if is_ibis_table(x):
         x = x.execute()
-        if not is_pandas_df(x):
-            raise TypeError(
-                "ibis.Table.execute() did not return a pandas DataFrame. "
-                "Please report this issue at https://github.com/posit-dev/querychat/issues"
-            )
 
     if not isinstance(x, (nw.DataFrame, nw.LazyFrame)):
         x = nw.from_native(x)

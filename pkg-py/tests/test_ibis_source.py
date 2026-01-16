@@ -1,7 +1,6 @@
 """Tests for the IbisSource class."""
 
 import ibis
-import narwhals.stable.v1 as nw
 import pytest
 
 
@@ -157,15 +156,14 @@ class TestIbisSourceGetSchema:
 class TestIbisSourceTestQuery:
     """Tests for IbisSource.test_query method."""
 
-    def test_test_query_returns_dataframe(self, ibis_table):
-        """Test that test_query returns a collected DataFrame (not ibis.Table)."""
+    def test_test_query_returns_ibis_table(self, ibis_table):
+        """Test that test_query returns an ibis.Table (lazy)."""
         from querychat._datasource import IbisSource
 
         source = IbisSource(ibis_table, "employees")
         result = source.test_query("SELECT * FROM employees")
-        # test_query collects to catch runtime errors, so returns nw.DataFrame
-        assert isinstance(result, nw.DataFrame)
-        assert len(result) <= 1
+        # test_query returns ibis.Table to match the generic DataSource pattern
+        assert isinstance(result, ibis.Table)
 
     def test_test_query_require_all_columns_passes(self, ibis_table):
         """Test that test_query passes when all columns present."""
@@ -174,7 +172,7 @@ class TestIbisSourceTestQuery:
         source = IbisSource(ibis_table, "employees")
         # Should not raise
         result = source.test_query("SELECT * FROM employees", require_all_columns=True)
-        assert isinstance(result, nw.DataFrame)
+        assert isinstance(result, ibis.Table)
 
     def test_test_query_require_all_columns_fails(self, ibis_table):
         """Test that test_query raises when columns missing."""

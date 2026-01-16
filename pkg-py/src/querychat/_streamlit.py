@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Optional, cast, overload
 
-import narwhals.stable.v1 as nw
 from narwhals.stable.v1.typing import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
 
 from ._querychat_base import TOOL_GROUPS, QueryChatBase
@@ -22,6 +21,7 @@ if TYPE_CHECKING:
 
     import chatlas
     import ibis
+    import narwhals.stable.v1 as nw
     import sqlalchemy
     from narwhals.stable.v1.typing import IntoFrame
 
@@ -246,7 +246,14 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             st.rerun()
 
     def df(self) -> IntoFrameT:
-        """Get the current filtered data frame (or LazyFrame if data source is lazy)."""
+        """
+        Get the current filtered data.
+
+        Returns the same type as the original data source: a DataFrame for
+        eager sources, a LazyFrame for Polars lazy sources, or an Ibis Table
+        for Ibis sources. Callers needing an eager DataFrame should collect
+        the result (e.g., via ``as_narwhals(qc.df())``).
+        """
         # Cast is safe because get_current_data() returns the same type as the data source
         return cast("IntoFrameT", self._get_state().get_current_data())
 

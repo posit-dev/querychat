@@ -11,7 +11,7 @@ from sqlalchemy import inspect, text
 from sqlalchemy.sql import sqltypes
 
 from ._df_compat import read_sql
-from ._utils import check_query
+from ._utils import as_narwhals, check_query
 
 if TYPE_CHECKING:
     import ibis
@@ -1027,10 +1027,10 @@ class IbisSource(DataSource["ibis.Table"]):
         if not agg_exprs:
             return
 
-        stats_row = table.aggregate(agg_exprs).execute()
-        if stats_row.empty:
+        stats_nw = as_narwhals(table.aggregate(agg_exprs).execute())
+        if stats_nw.shape[0] == 0:
             return
-        stats = stats_row.iloc[0].to_dict()
+        stats = dict(zip(stats_nw.columns, stats_nw.row(0), strict=True))
 
         for col in columns:
             if col.kind in ("numeric", "date"):
@@ -1067,9 +1067,13 @@ class IbisSource(DataSource["ibis.Table"]):
         for subq in subqueries[1:]:
             combined = combined.union(subq)
 
-        result = combined.execute()
+        result_nw = as_narwhals(combined.execute())
         for col in categorical_cols:
-            col_values = result[result["_col_name"] == col.name]["_value"].tolist()
+            col_values = (
+                result_nw.filter(nw.col("_col_name") == col.name)
+                .get_column("_value")
+                .to_list()
+            )
             col.categories = col_values
 
     def execute_query(self, query: str) -> ibis.Table:
@@ -1146,4 +1150,9 @@ class IbisSource(DataSource["ibis.Table"]):
         return self._table
 
     def cleanup(self) -> None:
-        """Clean up resources (no-op for Ibis; backend manages connections)."""
+        """
+        Clean up resources (no-op for Ibis).
+
+        The Ibis backend connection is owned by the caller and should be
+        closed by calling `backend.disconnect()` when appropriate.
+        """

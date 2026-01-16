@@ -14,8 +14,8 @@ import sqlalchemy
 
 from ._datasource import (
     DataFrameSource,
-    IntoFrameT,
     DataSource,
+    IntoFrameT,
     PolarsLazySource,
     SQLAlchemySource,
 )

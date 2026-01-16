@@ -9,7 +9,7 @@ from shinychat import output_markdown_stream
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 
-from ._datasource import IntoFrameT, IntoDataFrameT, IntoLazyFrameT
+from ._datasource import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
 from ._icons import bs_icon
 from ._querychat_base import TOOL_GROUPS, QueryChatBase
 from ._shiny_module import ServerValues, mod_server, mod_ui

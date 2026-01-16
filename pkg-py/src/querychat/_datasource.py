@@ -1,16 +1,23 @@
 from __future__ import annotations
 
+__all__ = [
+    "ColumnMeta",
+    "DataFrameSource",
+    "DataSource",
+    "IntoDataFrameT",
+    "IntoFrameT",
+    "IntoLazyFrameT",
+    "MissingColumnsError",
+    "PolarsLazySource",
+    "SQLAlchemySource",
+]
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Generic, Literal, cast
 
 import duckdb
 import narwhals.stable.v1 as nw
-from sqlalchemy import inspect, text
-from sqlalchemy.sql import sqltypes
-
-from ._df_compat import read_sql
-from ._utils import check_query
 
 # Re-export narwhals TypeVars for use across the package
 from narwhals.stable.v1.typing import (
@@ -18,6 +25,11 @@ from narwhals.stable.v1.typing import (
     IntoFrameT,
     IntoLazyFrameT,
 )
+from sqlalchemy import inspect, text
+from sqlalchemy.sql import sqltypes
+
+from ._df_compat import read_sql
+from ._utils import check_query
 
 if TYPE_CHECKING:
     import polars as pl
@@ -302,7 +314,8 @@ SET lock_configuration = true;
         return self._convert_result(result)
 
     def _convert_result(self, result: duckdb.DuckDBPyConnection) -> IntoDataFrameT:
-        """Convert DuckDB result to the appropriate native DataFrame type.
+        """
+        Convert DuckDB result to the appropriate native DataFrame type.
 
         The returned type matches the input DataFrame's library (polars, pandas, or
         pyarrow). The cast is safe because we detect the library at init time and
@@ -320,7 +333,7 @@ SET lock_configuration = true;
                 f"Unsupported DataFrame backend: '{self._df_lib}'. "
                 "Supported backends are: polars, pandas, pyarrow"
             )
-        return cast(IntoDataFrameT, native_df)
+        return cast("IntoDataFrameT", native_df)
 
     def test_query(
         self, query: str, *, require_all_columns: bool = False

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Optional, cast, overload
 
 import narwhals.stable.v1 as nw
 
-from ._datasource import IntoFrameT, IntoDataFrameT, IntoLazyFrameT
+from ._datasource import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
 from ._querychat_base import TOOL_GROUPS, QueryChatBase
 from ._querychat_core import (
     GREETING_PROMPT,
@@ -231,7 +231,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
     def df(self) -> IntoFrameT:
         """Get the current filtered data frame (or LazyFrame if data source is lazy)."""
         # Cast is safe because get_current_data() returns the same type as the data source
-        return cast(IntoFrameT, self._get_state().get_current_data())
+        return cast("IntoFrameT", self._get_state().get_current_data())
 
     def sql(self) -> str | None:
         """Get the current SQL query, or None if using default."""

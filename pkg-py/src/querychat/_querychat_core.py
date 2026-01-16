@@ -23,8 +23,6 @@ from chatlas.types import Content
 from ._datasource import IntoFrameT
 from .tools import UpdateDashboardData
 
-from narwhals.stable.v1.typing import IntoFrame
-
 GREETING_PROMPT: str = (
     "Please give me a friendly greeting. "
     "Include a few sample prompts in a two-level bulleted list."
@@ -33,7 +31,8 @@ GREETING_PROMPT: str = (
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Iterator
-    from typing import Any
+
+    from narwhals.stable.v1.typing import IntoFrame
 
     from ._datasource import DataSource
 

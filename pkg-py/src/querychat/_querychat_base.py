@@ -182,7 +182,6 @@ def normalize_data_source(
     if isinstance(data_source, sqlalchemy.Engine):
         return SQLAlchemySource(data_source, table_name)
 
-    # Check for Ibis Table before narwhals conversion (Ibis Tables are not narwhals-native)
     if is_ibis_table(data_source):
         return IbisSource(data_source, table_name)
 

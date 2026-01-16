@@ -48,7 +48,7 @@ class ColumnMeta:
     """Unique values for text columns below the categorical threshold."""
 
 
-def _format_schema(table_name: str, columns: list[ColumnMeta]) -> str:
+def format_schema(table_name: str, columns: list[ColumnMeta]) -> str:
     """Format column metadata into schema string."""
     lines = [f"Table: {table_name}", "Columns:"]
 
@@ -768,7 +768,7 @@ class PolarsLazySource(DataSource["pl.LazyFrame"]):
 
         # Add stats to the metadata and format schema string
         self._add_column_stats(columns, self._lf, categorical_threshold)
-        return _format_schema(self.table_name, columns)
+        return format_schema(self.table_name, columns)
 
     def execute_query(self, query: str) -> pl.LazyFrame:
         """
@@ -967,13 +967,14 @@ class IbisSource(DataSource["ibis.Table"]):
             self._make_column_meta(name, dtype) for name, dtype in self._schema.items()
         ]
         self._add_column_stats(columns, self._table, categorical_threshold)
-        return _format_schema(self.table_name, columns)
+        return format_schema(self.table_name, columns)
 
     @staticmethod
     def _make_column_meta(name: str, dtype: IbisDataType) -> ColumnMeta:
         """Create ColumnMeta from an ibis dtype."""
+        kind: Literal["numeric", "text", "date", "other"]
         if dtype.is_numeric():
-            kind: Literal["numeric", "text", "date", "other"] = "numeric"
+            kind = "numeric"
             sql_type = "INTEGER" if dtype.is_integer() else "FLOAT"
         elif dtype.is_string():
             kind = "text"
@@ -1131,4 +1132,4 @@ class IbisSource(DataSource["ibis.Table"]):
         return self._table
 
     def cleanup(self) -> None:
-        pass  # Ibis manages connection lifecycle internally
+        """Clean up resources (no-op for Ibis; backend manages connections)."""

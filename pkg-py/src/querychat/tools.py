@@ -108,6 +108,7 @@ def _update_dashboard_impl(
             markdown += f"\n\n> Error: {error}"
             return ContentToolResult(value=markdown, error=e)
 
+        # Return ContentToolResult with display metadata
         return ContentToolResult(
             value=value,
             extra={
@@ -176,6 +177,7 @@ def _reset_dashboard_impl(
             Reset Filter
         </button>"""
 
+        # Return ContentToolResult with display metadata
         return ContentToolResult(
             value="The dashboard has been reset to show all data.",
             extra={
@@ -248,6 +250,7 @@ def _query_impl(data_source: DataSource) -> Callable[[str, str], ContentToolResu
             markdown += f"\n\n> Error: {error}"
             return ContentToolResult(value=markdown, error=e)
 
+        # Return ContentToolResult with display metadata
         return ContentToolResult(
             value=value,
             extra={

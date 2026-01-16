@@ -16,7 +16,6 @@ if TYPE_CHECKING:
 
 
 def is_ibis_table(obj: Any) -> TypeGuard[ibis.Table]:
-    """TypeGuard for ibis.Table. Returns False if ibis is not installed."""
     try:
         import ibis
 
@@ -208,10 +207,11 @@ def querychat_tool_starts_open(action: Literal["update", "query", "reset"]) -> b
         return action != "reset"
 
 
-def collect_to_pandas(df: Any) -> Any:
-    """Collect any query result (ibis.Table, LazyFrame, DataFrame) to pandas."""
+def collect_to_narwhals(df: Any) -> nw.DataFrame[Any]:
+    """Collect any query result (ibis.Table, LazyFrame, DataFrame) to narwhals DataFrame."""
     if is_ibis_table(df):
-        return df.execute()
+        # ibis.Table.execute() returns pandas DataFrame
+        return nw.from_native(df.execute())
 
     if not isinstance(df, (nw.DataFrame, nw.LazyFrame)):
         df = nw.from_native(df)
@@ -219,7 +219,7 @@ def collect_to_pandas(df: Any) -> Any:
     if isinstance(df, nw.LazyFrame):
         df = df.collect()
 
-    return df.to_native()
+    return df
 
 
 def df_to_html(df, maxrows: int = 5) -> str:

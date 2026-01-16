@@ -19,7 +19,7 @@ from ._querychat_core import (
     stream_response,
 )
 from ._ui_assets import GRADIO_CSS, GRADIO_JS, SUGGESTION_CSS
-from ._utils import collect_to_pandas
+from ._utils import collect_to_narwhals
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -360,8 +360,9 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
                 )
 
                 df = self.df(state_dict)
-                native_df = collect_to_pandas(df)
-                nrow, ncol = native_df.shape
+                nw_df = collect_to_narwhals(df)
+                nrow, ncol = nw_df.shape
+                native_df = nw_df.to_native()
 
                 data_info_parts = []
                 if error:

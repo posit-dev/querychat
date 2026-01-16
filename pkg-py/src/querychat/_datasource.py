@@ -1030,6 +1030,7 @@ class IbisSource(DataSource["ibis.Table"]):
             return
 
         stats_nw = as_narwhals(table.aggregate(agg_exprs).execute())
+        # Some backends return empty results for aggregations on empty tables
         if stats_nw.shape[0] == 0:
             return
         stats = dict(zip(stats_nw.columns, stats_nw.row(0), strict=True))
@@ -1065,9 +1066,7 @@ class IbisSource(DataSource["ibis.Table"]):
             )
             subqueries.append(subq)
 
-        combined = subqueries[0]
-        for subq in subqueries[1:]:
-            combined = combined.union(subq)
+        combined = ibis.union(*subqueries)
 
         result_nw = as_narwhals(combined.execute())
         for col in categorical_cols:

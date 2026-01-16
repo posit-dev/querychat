@@ -6,9 +6,9 @@ from typing import TYPE_CHECKING, Literal, Optional, cast, overload
 
 import narwhals.stable.v1 as nw
 from chatlas import Turn
+from narwhals.stable.v1.typing import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
 
 from ._dash_ui import IDs, card_ui, chat_container_ui, chat_messages_ui
-from ._datasource import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
 from ._querychat_base import TOOL_GROUPS, QueryChatBase
 from ._querychat_core import (
     GREETING_PROMPT,

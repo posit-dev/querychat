@@ -4,9 +4,6 @@ __all__ = [
     "ColumnMeta",
     "DataFrameSource",
     "DataSource",
-    "IntoDataFrameT",
-    "IntoFrameT",
-    "IntoLazyFrameT",
     "MissingColumnsError",
     "PolarsLazySource",
     "SQLAlchemySource",
@@ -18,13 +15,7 @@ from typing import TYPE_CHECKING, Any, Generic, Literal, cast
 
 import duckdb
 import narwhals.stable.v1 as nw
-
-# Re-export narwhals TypeVars for use across the package
-from narwhals.stable.v1.typing import (
-    IntoDataFrameT,
-    IntoFrameT,
-    IntoLazyFrameT,
-)
+from narwhals.stable.v1.typing import IntoDataFrameT, IntoFrameT
 from sqlalchemy import inspect, text
 from sqlalchemy.sql import sqltypes
 

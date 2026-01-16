@@ -5,8 +5,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Optional, cast, overload
 
 import narwhals.stable.v1 as nw
+from narwhals.stable.v1.typing import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
 
-from ._datasource import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
 from ._querychat_base import TOOL_GROUPS, QueryChatBase
 from ._querychat_core import (
     GREETING_PROMPT,

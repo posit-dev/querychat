@@ -3,13 +3,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Literal, Optional, overload
 
 import narwhals.stable.v1 as nw
+from narwhals.stable.v1.typing import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
 from shiny.express._stub_session import ExpressStubSession
 from shiny.session import get_current_session
 from shinychat import output_markdown_stream
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 
-from ._datasource import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
 from ._icons import bs_icon
 from ._querychat_base import TOOL_GROUPS, QueryChatBase
 from ._shiny_module import ServerValues, mod_server, mod_ui

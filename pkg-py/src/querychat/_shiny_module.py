@@ -8,10 +8,10 @@ from typing import TYPE_CHECKING, Generic, Union
 
 import chatlas
 import shinychat
+from narwhals.stable.v1.typing import IntoFrameT
 
 from shiny import module, reactive, ui
 
-from ._datasource import IntoFrameT
 from ._querychat_core import GREETING_PROMPT
 from .tools import tool_query, tool_reset_dashboard, tool_update_dashboard
 

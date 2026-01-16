@@ -19,8 +19,8 @@ from typing import TYPE_CHECKING, Generic, Optional, TypedDict, Union
 
 from chatlas import Chat, ContentToolRequest, ContentToolResult
 from chatlas.types import Content
+from narwhals.stable.v1.typing import IntoFrameT
 
-from ._datasource import IntoFrameT
 from .tools import UpdateDashboardData
 
 GREETING_PROMPT: str = (

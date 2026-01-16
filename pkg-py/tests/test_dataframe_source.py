@@ -3,11 +3,10 @@
 import duckdb
 import narwhals.stable.v1 as nw
 import pandas as pd
-import pytest
-from querychat._datasource import DataFrameSource
-
 import polars as pl
 import pyarrow as pa
+import pytest
+from querychat._datasource import DataFrameSource
 
 
 @pytest.fixture

@@ -5,10 +5,9 @@ import tempfile
 from pathlib import Path
 
 import narwhals.stable.v1 as nw
+import polars as pl
 import pytest
 from querychat._df_compat import read_csv
-
-import polars as pl
 
 
 class TestReadCsv:

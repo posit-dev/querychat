@@ -239,28 +239,20 @@ def df_to_html(df, maxrows: int = 5) -> str:
         HTML string representation of the table
 
     """
+    # Get row count and limited data, handling ibis vs narwhals
     if is_ibis_table(df):
-        df_short = df.limit(maxrows).execute()
-        gt_tbl = GT(df_short)
-        table_html = gt_tbl.as_raw_html(make_page=False)
-
         nrow_full = df.count().execute()
-        if nrow_full > maxrows:
-            table_html += f"\n\n*(Showing {maxrows} of {nrow_full} rows)*\n"
+        df_short = df.limit(maxrows).execute()
+    else:
+        if not isinstance(df, (nw.DataFrame, nw.LazyFrame)):
+            df = nw.from_native(df)
+        if isinstance(df, nw.DataFrame):
+            df = df.lazy()
+        nrow_full = df.select(nw.len()).collect().item()
+        df_short = df.head(maxrows).collect().to_native()
 
-        return table_html
-
-    if not isinstance(df, (nw.DataFrame, nw.LazyFrame)):
-        df = nw.from_native(df)
-
-    if isinstance(df, nw.DataFrame):
-        df = df.lazy()
-
-    df_short = df.head(maxrows).collect()
-    gt_tbl = GT(df_short.to_native())
-    table_html = gt_tbl.as_raw_html(make_page=False)
-
-    nrow_full = df.select(nw.len()).collect().item()
+    # Generate HTML table
+    table_html = GT(df_short).as_raw_html(make_page=False)
     if nrow_full > maxrows:
         table_html += f"\n\n*(Showing {maxrows} of {nrow_full} rows)*\n"
 

@@ -371,7 +371,6 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h3 class="anchored" data-anchor-id="querychat.types.SQLAlchemySource.execute_query">execute_query</h3>
 <div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>types.SQLAlchemySource.execute_query(query)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Execute SQL query and return results as DataFrame.</p>
-<p>Uses polars if available, otherwise falls back to pandas.</p>
 <section id="parameters" class="level4 doc-section doc-section-parameters">
 <h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h4>
 <table class="caption-top table">
@@ -451,8 +450,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <table class="caption-top table">
 <colgroup>
 <col style="width: 6%">
-<col style="width: 57%">
-<col style="width: 36%">
+<col style="width: 58%">
+<col style="width: 35%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -465,7 +464,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr class="odd">
 <td></td>
 <td><code>nw</code>.<code>DataFrame</code></td>
-<td>The complete dataset as a narwhals DataFrame</td>
+<td>The complete dataset as narwhals DataFrame</td>
 </tr>
 </tbody>
 </table>

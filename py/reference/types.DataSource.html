@@ -307,6 +307,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h1>types.DataSource</h1>
 <div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>DataSource()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>An abstract class defining the interface for data sources used by QueryChat.</p>
+<p>This class is generic over the DataFrame type returned by execute_query, test_query, and get_data methods.</p>
 <section id="attributes" class="level2 doc-section doc-section-attributes">
 <h2 class="doc-section doc-section-attributes anchored" data-anchor-id="attributes">Attributes</h2>
 <table class="caption-top table">
@@ -342,11 +343,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tr>
 <tr class="even">
 <td><a href="#querychat.types.DataSource.execute_query">execute_query</a></td>
-<td>Execute SQL query and return results as DataFrame.</td>
+<td>Execute SQL query and return results.</td>
 </tr>
 <tr class="odd">
 <td><a href="#querychat.types.DataSource.get_data">get_data</a></td>
-<td>Return the unfiltered data as a DataFrame.</td>
+<td>Return the unfiltered data.</td>
 </tr>
 <tr class="even">
 <td><a href="#querychat.types.DataSource.get_db_type">get_db_type</a></td>
@@ -390,7 +391,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="querychat.types.DataSource.execute_query" class="level3">
 <h3 class="anchored" data-anchor-id="querychat.types.DataSource.execute_query">execute_query</h3>
 <div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>types.DataSource.execute_query(query)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>Execute SQL query and return results as DataFrame.</p>
+<p>Execute SQL query and return results.</p>
 <section id="parameters" class="level4 doc-section doc-section-parameters">
 <h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h4>
 <table class="caption-top table">
@@ -416,9 +417,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-1">Returns</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 7%">
-<col style="width: 56%">
-<col style="width: 36%">
+<col style="width: 10%">
+<col style="width: 70%">
+<col style="width: 19%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -430,8 +431,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td></td>
-<td><code>DataOrLazyFrame</code></td>
-<td>Query results as a narwhals DataFrame</td>
+<td><code>IntoFrameT</code></td>
+<td>Query results</td>
 </tr>
 </tbody>
 </table>
@@ -440,14 +441,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="querychat.types.DataSource.get_data" class="level3">
 <h3 class="anchored" data-anchor-id="querychat.types.DataSource.get_data">get_data</h3>
 <div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>types.DataSource.get_data()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>Return the unfiltered data as a DataFrame.</p>
+<p>Return the unfiltered data.</p>
 <section id="returns-2" class="level4 doc-section doc-section-returns">
 <h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-2">Returns</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 7%">
-<col style="width: 52%">
-<col style="width: 40%">
+<col style="width: 9%">
+<col style="width: 64%">
+<col style="width: 26%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -459,8 +460,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td></td>
-<td><code>DataOrLazyFrame</code></td>
-<td>The complete dataset as a narwhals DataFrame</td>
+<td><code>IntoFrameT</code></td>
+<td>The complete dataset</td>
 </tr>
 </tbody>
 </table>
@@ -551,9 +552,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns-4">Returns</h4>
 <table class="caption-top table">
 <colgroup>
-<col style="width: 5%">
-<col style="width: 51%">
-<col style="width: 42%">
+<col style="width: 8%">
+<col style="width: 55%">
+<col style="width: 36%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -565,8 +566,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td></td>
-<td><code>nw</code>.<code>DataFrame</code></td>
-<td>Query results as a narwhals DataFrame with at most one row</td>
+<td><code>IntoFrameT</code></td>
+<td>Query results with at most one row</td>
 </tr>
 </tbody>
 </table>

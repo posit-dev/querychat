@@ -128,18 +128,20 @@ ul.task-list li input[type="checkbox"] {
   <li><a href="#unreleased" id="toc-unreleased" class="nav-link" data-scroll-target="#unreleased">[UNRELEASED]</a>
   <ul class="collapse">
   <li><a href="#new-features" id="toc-new-features" class="nav-link" data-scroll-target="#new-features">New features</a></li>
+  <li><a href="#improvements" id="toc-improvements" class="nav-link" data-scroll-target="#improvements">Improvements</a></li>
+  <li><a href="#changes" id="toc-changes" class="nav-link" data-scroll-target="#changes">Changes</a></li>
   </ul></li>
   <li><a href="#section" id="toc-section" class="nav-link" data-scroll-target="#section">[0.4.0] - 2026-01-14</a>
   <ul class="collapse">
   <li><a href="#breaking-changes" id="toc-breaking-changes" class="nav-link" data-scroll-target="#breaking-changes">Breaking Changes</a></li>
   <li><a href="#new-features-1" id="toc-new-features-1" class="nav-link" data-scroll-target="#new-features-1">New features</a></li>
-  <li><a href="#improvements" id="toc-improvements" class="nav-link" data-scroll-target="#improvements">Improvements</a></li>
+  <li><a href="#improvements-1" id="toc-improvements-1" class="nav-link" data-scroll-target="#improvements-1">Improvements</a></li>
   </ul></li>
   <li><a href="#section-1" id="toc-section-1" class="nav-link" data-scroll-target="#section-1">[0.3.0] - 2025-12-10</a>
   <ul class="collapse">
   <li><a href="#breaking-changes-1" id="toc-breaking-changes-1" class="nav-link" data-scroll-target="#breaking-changes-1">Breaking Changes</a></li>
   <li><a href="#new-features-2" id="toc-new-features-2" class="nav-link" data-scroll-target="#new-features-2">New features</a></li>
-  <li><a href="#improvements-1" id="toc-improvements-1" class="nav-link" data-scroll-target="#improvements-1">Improvements</a></li>
+  <li><a href="#improvements-2" id="toc-improvements-2" class="nav-link" data-scroll-target="#improvements-2">Improvements</a></li>
   </ul></li>
   <li><a href="#section-2" id="toc-section-2" class="nav-link" data-scroll-target="#section-2">[0.2.2] - 2025-09-04</a></li>
   <li><a href="#section-3" id="toc-section-3" class="nav-link" data-scroll-target="#section-3">[0.2.1] - 2025-09-04</a></li>
@@ -164,15 +166,33 @@ ul.task-list li input[type="checkbox"] {
 <section id="new-features" class="level3">
 <h3 class="anchored" data-anchor-id="new-features">New features</h3>
 <ul>
-<li><p>Added <code>PolarsLazySource</code> to support Polars LazyFrames as data sources. Data stays lazy until the render boundary, enabling efficient handling of large datasets. Pass a <code>polars.LazyFrame</code> directly to <code>QueryChat()</code> and queries will be executed lazily via Polars’ SQLContext.</p></li>
-<li><p>Added support for Gradio, Dash, and Streamlit web frameworks in addition to Shiny. Import from the new submodules:</p>
+<li>Added support for Gradio, Dash, and Streamlit web frameworks in addition to Shiny. Import from the new submodules:
 <ul>
 <li><code>from querychat.gradio import QueryChat</code></li>
 <li><code>from querychat.dash import QueryChat</code></li>
 <li><code>from querychat.streamlit import QueryChat</code></li>
 </ul></li>
 </ul>
-<p>Each framework’s <code>QueryChat</code> provides <code>.app()</code> for quick standalone apps and <code>.ui()</code> for custom layouts. Install framework dependencies with pip extras: <code>pip install querychat[gradio]</code>, <code>pip install querychat[dash]</code>, or <code>pip install querychat[streamlit]</code>.</p>
+<p>Each framework’s <code>QueryChat</code> provides <code>.app()</code> for quick standalone apps and <code>.ui()</code> for custom layouts. Install framework dependencies with pip extras: <code>pip install querychat[gradio]</code>, <code>pip install querychat[dash]</code>, or <code>pip install querychat[streamlit]</code>. (#190)</p>
+<ul>
+<li><code>QueryChat()</code> gains support for more data sources:
+<ul>
+<li><code>polars.LazyFrame</code>: queries execute lazily via <code>polars.SQLContext</code>. In this case, <code>.df()</code> et al.&nbsp;methods will return a <code>polars.LazyFrame</code>. (#191)</li>
+<li><code>pyarrow.Table</code>: queries execute in-memory via <code>duckdb</code>. In this case, <code>.df()</code> et al.&nbsp;methods will return a <code>pyarrow.Table</code>. (#196)</li>
+</ul></li>
+</ul>
+</section>
+<section id="improvements" class="level3">
+<h3 class="anchored" data-anchor-id="improvements">Improvements</h3>
+<ul>
+<li>Improved typing support for return types on <code>.df()</code> et al.&nbsp;(#196)</li>
+</ul>
+</section>
+<section id="changes" class="level3">
+<h3 class="anchored" data-anchor-id="changes">Changes</h3>
+<ul>
+<li><code>DataFrameSource</code> methods now (once again) return the input DataFrame type (e.g., <code>pandas.DataFrame</code>) instead of <code>nw.DataFrame</code>. (#196)</li>
+</ul>
 </section>
 </section>
 <section id="section" class="level2">
@@ -196,8 +216,8 @@ ul.task-list li input[type="checkbox"] {
 <li><p><code>QueryChat.sidebar()</code>, <code>QueryChat.ui()</code>, and <code>QueryChat.server()</code> now support an optional <code>id</code> parameter to create multiple chat instances from a single <code>QueryChat</code> object. (#172)</p></li>
 </ul>
 </section>
-<section id="improvements" class="level3">
-<h3 class="anchored" data-anchor-id="improvements">Improvements</h3>
+<section id="improvements-1" class="level3">
+<h3 class="anchored" data-anchor-id="improvements-1">Improvements</h3>
 <ul>
 <li><p>The update tool now requires that the SQL query returns all columns from the original data source, ensuring that the dashboard can display the complete data frame after filtering or sorting. If the query does not return all columns, an informative error message will be provided. (#180)</p></li>
 <li><p>Obvious SQL keywords that lead to data modification (e.g., <code>INSERT</code>, <code>UPDATE</code>, <code>DELETE</code>, <code>DROP</code>, etc.) are now prohibited in queries run via the query tool or update tool, to prevent accidental data changes. If such keywords are detected, an informative error message will be provided. (#180)</p></li>
@@ -224,8 +244,8 @@ ul.task-list li input[type="checkbox"] {
 <li><p>Added <code>querychat_reset_dashboard()</code> tool for easily resetting the dashboard filters when asked by the user. (#81)</p></li>
 </ul>
 </section>
-<section id="improvements-1" class="level3">
-<h3 class="anchored" data-anchor-id="improvements-1">Improvements</h3>
+<section id="improvements-2" class="level3">
+<h3 class="anchored" data-anchor-id="improvements-2">Improvements</h3>
 <ul>
 <li><p>Added rich tool UI support using shinychat development version and chatlas &gt;= 0.11.1. (#67)</p></li>
 <li><p>querychat’s system prompt and tool descriptions were rewritten for clarity and future extensibility. (#90)</p></li>

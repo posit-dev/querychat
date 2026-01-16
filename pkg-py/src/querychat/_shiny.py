@@ -9,7 +9,7 @@ from shinychat import output_markdown_stream
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 
-from ._datasource import DataFrameT, IntoDataFrameT, IntoLazyFrameT
+from ._datasource import IntoFrameT, IntoDataFrameT, IntoLazyFrameT
 from ._icons import bs_icon
 from ._querychat_base import TOOL_GROUPS, QueryChatBase
 from ._shiny_module import ServerValues, mod_server, mod_ui
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from narwhals.stable.v1.typing import IntoDataFrame, IntoLazyFrame
 
 
-class QueryChat(QueryChatBase[DataFrameT]):
+class QueryChat(QueryChatBase[IntoFrameT]):
     """
     Create a QueryChat instance for Shiny applications.
 
@@ -191,7 +191,7 @@ class QueryChat(QueryChatBase[DataFrameT]):
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
     ):
-        super().__init__(  # type: ignore[reportAttributeAccessIssue]
+        super().__init__(
             data_source,
             table_name,
             greeting=greeting,
@@ -370,7 +370,7 @@ class QueryChat(QueryChatBase[DataFrameT]):
 
     def server(
         self, *, enable_bookmarking: bool = False, id: Optional[str] = None
-    ) -> ServerValues[DataFrameT]:
+    ) -> ServerValues[IntoFrameT]:
         """
         Initialize Shiny server logic.
 
@@ -450,7 +450,7 @@ class QueryChat(QueryChatBase[DataFrameT]):
         )
 
 
-class QueryChatExpress(QueryChatBase[DataFrameT]):
+class QueryChatExpress(QueryChatBase[IntoFrameT]):
     """
     Use QueryChat with Shiny Express.
 
@@ -613,7 +613,7 @@ class QueryChatExpress(QueryChatBase[DataFrameT]):
                 "Is express.QueryChat() being called outside of a Shiny Express app?",
             )
 
-        super().__init__(  # type: ignore[reportAttributeAccessIssue]
+        super().__init__(
             data_source,
             table_name,
             greeting=greeting,
@@ -706,7 +706,7 @@ class QueryChatExpress(QueryChatBase[DataFrameT]):
         """
         return mod_ui(id or self.id, **kwargs)
 
-    def df(self) -> DataFrameT:
+    def df(self) -> IntoFrameT:
         """
         Reactively read the current filtered data frame that is in effect.
 

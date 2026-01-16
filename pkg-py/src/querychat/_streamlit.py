@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, overload
+from typing import TYPE_CHECKING, Optional, cast, overload
 
 import narwhals.stable.v1 as nw
 
-from ._datasource import DataFrameT, IntoDataFrameT, IntoLazyFrameT
+from ._datasource import IntoFrameT, IntoDataFrameT, IntoLazyFrameT
 from ._querychat_base import TOOL_GROUPS, QueryChatBase
 from ._querychat_core import (
     GREETING_PROMPT,
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from narwhals.stable.v1.typing import IntoDataFrame, IntoLazyFrame
 
 
-class QueryChat(QueryChatBase[DataFrameT]):
+class QueryChat(QueryChatBase[IntoFrameT]):
     """
     QueryChat for Streamlit applications.
 
@@ -114,7 +114,7 @@ class QueryChat(QueryChatBase[DataFrameT]):
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
     ):
-        super().__init__(  # type: ignore[reportAttributeAccessIssue]
+        super().__init__(
             data_source,
             table_name,
             greeting=greeting,
@@ -228,9 +228,10 @@ class QueryChat(QueryChatBase[DataFrameT]):
 
             st.rerun()
 
-    def df(self) -> DataFrameT:
+    def df(self) -> IntoFrameT:
         """Get the current filtered data frame (or LazyFrame if data source is lazy)."""
-        return self._get_state().get_current_data()  # type: ignore[return-value]
+        # Cast is safe because get_current_data() returns the same type as the data source
+        return cast(IntoFrameT, self._get_state().get_current_data())
 
     def sql(self) -> str | None:
         """Get the current SQL query, or None if using default."""
@@ -281,11 +282,11 @@ class QueryChat(QueryChatBase[DataFrameT]):
                 st.rerun()
 
         st.subheader("Data view")
-        df = state.get_current_data()
-        # Collect if lazy before accessing .shape or displaying
+        # Wrap in narwhals for uniform DataFrame operations
+        df = nw.from_native(state.get_current_data())
         if isinstance(df, nw.LazyFrame):
             df = df.collect()
         if state.error:
             st.error(state.error)
-        st.dataframe(df, use_container_width=True, height=400, hide_index=True)
+        st.dataframe(df.to_native(), use_container_width=True, height=400, hide_index=True)
         st.caption(f"Data has {df.shape[0]} rows and {df.shape[1]} columns.")

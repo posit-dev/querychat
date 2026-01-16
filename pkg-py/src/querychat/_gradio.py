@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Optional, overload
 import narwhals.stable.v1 as nw
 from gradio.context import Context
 
-from ._datasource import DataFrameT, IntoDataFrameT, IntoLazyFrameT
+from ._datasource import IntoFrameT, IntoDataFrameT, IntoLazyFrameT
 from ._querychat_base import TOOL_GROUPS, QueryChatBase
 from ._querychat_core import (
     GREETING_PROMPT,
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     import gradio as gr
 
 
-class QueryChat(QueryChatBase[DataFrameT], StateDictAccessorMixin[DataFrameT]):
+class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
     """
     QueryChat for Gradio applications.
 
@@ -340,18 +340,20 @@ class QueryChat(QueryChatBase[DataFrameT], StateDictAccessorMixin[DataFrameT]):
                     else f"SELECT * FROM {self._data_source.table_name}"
                 )
 
-                df = self.df(state_dict)
+                # Wrap in narwhals for uniform DataFrame operations
+                df = nw.from_native(self.df(state_dict))
+                if isinstance(df, nw.LazyFrame):
+                    df = df.collect()
 
                 data_info_parts = []
                 if error:
                     data_info_parts.append(f"⚠️ {error}")
                 data_info_parts.append(
-                    f"*Data has {df.shape[0]} rows and {df.shape[1]} columns.*"  # type: ignore[union-attr]
+                    f"*Data has {df.shape[0]} rows and {df.shape[1]} columns.*"
                 )
                 data_info_text = " ".join(data_info_parts)
 
-                # df is already a native DataFrame (polars, pandas, etc.)
-                return sql_title_text, sql_code, df, data_info_text
+                return sql_title_text, sql_code, df.to_native(), data_info_text
 
             def reset_query(state_dict: AppStateDict):
                 """Reset state to show full dataset."""

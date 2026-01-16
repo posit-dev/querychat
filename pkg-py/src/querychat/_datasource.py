@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar, cast
 
 import duckdb
 import narwhals.stable.v1 as nw
@@ -12,24 +12,19 @@ from sqlalchemy.sql import sqltypes
 from ._df_compat import read_sql
 from ._utils import check_query
 
+# Re-export narwhals TypeVars for use across the package
+from narwhals.stable.v1.typing import (
+    IntoDataFrameT,
+    IntoFrameT,
+    IntoLazyFrameT,
+)
+
 if TYPE_CHECKING:
     import polars as pl
-    from narwhals.stable.v1.typing import IntoDataFrame, IntoLazyFrame
     from sqlalchemy.engine import Connection, Engine
 
 # TypeVar for DataSource - the type returned by execute_query/get_data/test_query
 DataSourceT = TypeVar("DataSourceT")
-
-# TypeVar for generic QueryChat classes - captures the specific DataFrame type passed in.
-# Uses IntoDataFrame/IntoLazyFrame bounds to work with any narwhals-compatible library.
-if TYPE_CHECKING:
-    IntoDataFrameT = TypeVar("IntoDataFrameT", bound=IntoDataFrame)
-    IntoLazyFrameT = TypeVar("IntoLazyFrameT", bound=IntoLazyFrame)
-    DataFrameT = TypeVar("DataFrameT")  # Unconstrained, bound by overloads
-else:
-    IntoDataFrameT = TypeVar("IntoDataFrameT")
-    IntoLazyFrameT = TypeVar("IntoLazyFrameT")
-    DataFrameT = TypeVar("DataFrameT")
 
 
 class MissingColumnsError(ValueError):
@@ -310,18 +305,25 @@ SET lock_configuration = true;
         return self._convert_result(result)
 
     def _convert_result(self, result: duckdb.DuckDBPyConnection) -> IntoDataFrameT:
-        """Convert DuckDB result to the appropriate native DataFrame type."""
+        """Convert DuckDB result to the appropriate native DataFrame type.
+
+        The returned type matches the input DataFrame's library (polars, pandas, or
+        pyarrow). The cast is safe because we detect the library at init time and
+        return results in the same format.
+        """
+        native_df: Any
         if self._df_lib == "polars":
-            return result.pl()  # type: ignore[return-value]
+            native_df = result.pl()
         elif self._df_lib == "pandas":
-            return result.df()  # type: ignore[return-value]
+            native_df = result.df()
         elif self._df_lib == "pyarrow":
-            return result.fetch_arrow_table()  # type: ignore[return-value]
+            native_df = result.fetch_arrow_table()
         else:
             raise ValueError(
                 f"Unsupported DataFrame backend: '{self._df_lib}'. "
                 "Supported backends are: polars, pandas, pyarrow"
             )
+        return cast(IntoDataFrameT, native_df)
 
     def test_query(
         self, query: str, *, require_all_columns: bool = False
@@ -354,7 +356,9 @@ SET lock_configuration = true;
         native_result = self._convert_result(result)
 
         if require_all_columns:
-            result_columns = set(native_result.columns)  # type: ignore[union-attr]
+            # Use narwhals to access columns - works with polars, pandas, pyarrow
+            wrapped = nw.from_native(native_result)
+            result_columns = set(wrapped.columns)
             original_columns_set = set(self._colnames)
             missing_columns = original_columns_set - result_columns
 

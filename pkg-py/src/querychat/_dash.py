@@ -8,7 +8,7 @@ import narwhals.stable.v1 as nw
 from chatlas import Turn
 
 from ._dash_ui import IDs, card_ui, chat_container_ui, chat_messages_ui
-from ._datasource import DataFrameT, IntoDataFrameT, IntoLazyFrameT
+from ._datasource import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
 from ._querychat_base import TOOL_GROUPS, QueryChatBase
 from ._querychat_core import (
     GREETING_PROMPT,
@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from dash import html
 
 
-class QueryChat(QueryChatBase[DataFrameT], StateDictAccessorMixin[DataFrameT]):
+class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
     """
     QueryChat for Dash applications.
 
@@ -149,7 +149,7 @@ class QueryChat(QueryChatBase[DataFrameT], StateDictAccessorMixin[DataFrameT]):
         prompt_template: Optional[str | PathType] = None,
         storage_type: Literal["memory", "session", "local"] = "memory",
     ):
-        super().__init__(  # type: ignore[reportAttributeAccessIssue]
+        super().__init__(
             data_source,
             table_name,
             greeting=greeting,
@@ -423,8 +423,8 @@ def register_app_callbacks(
         sql_title = state.title or "SQL Query"
         sql_code = f"```sql\n{state.get_display_sql()}\n```"
 
-        df = state.get_current_data()
-        # Collect if lazy before accessing .to_pandas() or .shape
+        # Wrap in narwhals for uniform DataFrame operations
+        df = nw.from_native(state.get_current_data())
         if isinstance(df, nw.LazyFrame):
             df = df.collect()
 
@@ -457,8 +457,8 @@ def register_app_callbacks(
     )
     def export_csv(n_clicks: int, state_data: AppStateDict):
         state = deserialize_state(state_data)
-        df = state.get_current_data()
-        # Collect if lazy before converting to pandas
+        # Wrap in narwhals for uniform DataFrame operations
+        df = nw.from_native(state.get_current_data())
         if isinstance(df, nw.LazyFrame):
             df = df.collect()
         return send_data_frame(df.to_pandas().to_csv, "querychat_data.csv", index=False)

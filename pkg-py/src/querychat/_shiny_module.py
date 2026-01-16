@@ -4,14 +4,14 @@ import copy
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Generic, TypeVar, Union
+from typing import TYPE_CHECKING, Generic, Union
 
 import chatlas
 import shinychat
 
 from shiny import module, reactive, ui
 
-from ._datasource import DataFrameT
+from ._datasource import IntoFrameT
 from ._querychat_core import GREETING_PROMPT
 from .tools import tool_query, tool_reset_dashboard, tool_update_dashboard
 
@@ -24,9 +24,6 @@ if TYPE_CHECKING:
 
     from ._datasource import DataSource
     from .types import UpdateDashboardData
-
-# TypeVar for mod_server return type
-_T = TypeVar("_T")
 
 ReactiveString = reactive.Value[str]
 """A reactive string value."""
@@ -54,7 +51,7 @@ def mod_ui(**kwargs):
 
 
 @dataclass
-class ServerValues(Generic[DataFrameT]):
+class ServerValues(Generic[IntoFrameT]):
     """
     Session-specific reactive values and client returned by QueryChat.server().
 
@@ -85,7 +82,7 @@ class ServerValues(Generic[DataFrameT]):
 
     """
 
-    df: Callable[[], DataFrameT]
+    df: Callable[[], IntoFrameT]
     sql: ReactiveStringOrNone
     title: ReactiveStringOrNone
     client: chatlas.Chat
@@ -97,11 +94,11 @@ def mod_server(
     output: Outputs,
     session: Session,
     *,
-    data_source: DataSource[_T],
+    data_source: DataSource[IntoFrameT],
     greeting: str | None,
     client: chatlas.Chat | Callable,
     enable_bookmarking: bool,
-) -> ServerValues[_T]:
+) -> ServerValues[IntoFrameT]:
     # Reactive values to store state
     sql = ReactiveStringOrNone(None)
     title = ReactiveStringOrNone(None)

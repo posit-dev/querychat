@@ -8,7 +8,7 @@ from chatlas import ContentToolResult, Tool
 from shinychat.types import ToolResultDisplay
 
 from ._icons import bs_icon
-from ._utils import collect_to_narwhals, df_to_html, querychat_tool_starts_open
+from ._utils import as_narwhals, df_to_html, querychat_tool_starts_open
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -232,7 +232,7 @@ def _query_impl(data_source: DataSource) -> Callable[[str, str], ContentToolResu
 
         try:
             result_df = data_source.execute_query(query)
-            nw_df = collect_to_narwhals(result_df)
+            nw_df = as_narwhals(result_df)
             value = nw_df.rows(named=True)
 
             tbl_html = df_to_html(result_df, maxrows=5)

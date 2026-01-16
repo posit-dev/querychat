@@ -4,7 +4,7 @@ import os
 import re
 import warnings
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Any, Literal, Optional
+from typing import TYPE_CHECKING, Any, Literal, Optional, cast, overload
 
 import narwhals.stable.v1 as nw
 from great_tables import GT
@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from typing import TypeGuard
 
     import ibis
+    import pandas as pd
 
 
 class MISSING_TYPE:  # noqa: N801
@@ -207,19 +208,48 @@ def is_ibis_table(obj: Any) -> TypeGuard[ibis.Table]:
         return False
 
 
-def collect_to_narwhals(df: Any) -> nw.DataFrame[Any]:
-    """Collect any query result (ibis.Table, LazyFrame, DataFrame) to narwhals DataFrame."""
+@overload
+def as_narwhals(df: Any, *, lazy: Literal[False] = False) -> nw.DataFrame[Any]: ...
+
+
+@overload
+def as_narwhals(df: Any, *, lazy: Literal[True]) -> nw.LazyFrame[Any]: ...
+
+
+def as_narwhals(
+    df: Any, *, lazy: bool = False
+) -> nw.DataFrame[Any] | nw.LazyFrame[Any]:
+    """
+    Convert any query result to a narwhals DataFrame or LazyFrame.
+
+    Parameters
+    ----------
+    df
+        The data to convert (ibis.Table, polars LazyFrame/DataFrame, pandas DataFrame, etc.)
+    lazy
+        If False (default), collect to an eager DataFrame.
+        If True, return a LazyFrame where possible.
+
+    Returns
+    -------
+    :
+        A narwhals DataFrame (if lazy=False) or LazyFrame (if lazy=True).
+
+    """
     if is_ibis_table(df):
         # ibis.Table.execute() returns pandas DataFrame
-        return nw.from_native(df.execute())
+        df = nw.from_native(cast("pd.DataFrame", df.execute()), eager_only=True)
+    elif not isinstance(df, (nw.DataFrame, nw.LazyFrame)):
+        df = nw.from_native(df, eager_or_interchange_only=True)
 
-    if not isinstance(df, (nw.DataFrame, nw.LazyFrame)):
-        df = nw.from_native(df)
-
-    if isinstance(df, nw.LazyFrame):
-        df = df.collect()
-
-    return df
+    if lazy:
+        if isinstance(df, nw.DataFrame):
+            return df.lazy()
+        return df
+    else:
+        if isinstance(df, nw.LazyFrame):
+            return df.collect()
+        return df
 
 
 def df_to_html(df, maxrows: int = 5) -> str:

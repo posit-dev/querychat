@@ -1016,6 +1016,8 @@ class IbisSource(DataSource["ibis.Table"]):
             return
 
         stats_row = table.aggregate(agg_exprs).execute()
+        if stats_row.empty:
+            return
         stats = stats_row.iloc[0].to_dict()
 
         for col in columns:
@@ -1108,7 +1110,6 @@ class IbisSource(DataSource["ibis.Table"]):
 
         """
         check_query(query)
-        result_table = self._backend.sql(query)
 
         # Collect one row to validate and catch runtime errors
         test_sql = f"SELECT * FROM ({query}) AS subquery LIMIT 1"
@@ -1126,7 +1127,7 @@ class IbisSource(DataSource["ibis.Table"]):
                     f"Original columns: {original_list}"
                 )
 
-        return result_table
+        return self._backend.sql(query)
 
     def get_data(self) -> ibis.Table:
         return self._table

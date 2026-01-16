@@ -43,7 +43,7 @@ classifiers = [
 # For SQLAlchemySource and sample data, one of polars or pandas is required
 pandas = ["pandas"]
 polars = ["polars"]
-ibis = ["ibis-framework>=9.0.0", "pandas"]  # pandas needed for render boundary
+ibis = ["ibis-framework>=9.0.0", "pandas"]  # pandas required for ibis .execute() to return DataFrames
 # Web framework extras
 streamlit = ["streamlit>=1.30"]
 gradio = ["gradio>=6.0"]

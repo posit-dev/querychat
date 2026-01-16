@@ -233,25 +233,27 @@ def _query_impl(data_source: DataSource) -> Callable[[str, str], ContentToolResu
 
         try:
             result_df = data_source.execute_query(query)
-            # Handle Ibis tables specially
+
+            # Check if result is an Ibis Table
+            is_ibis_table = False
             try:
                 import ibis
 
-                if isinstance(result_df, ibis.Table):
-                    # Convert ibis Table to pandas, then to list of dicts
-                    # Cast needed because ibis lacks py.typed and pandas stubs are incomplete
-                    pdf = cast("Any", result_df.execute())
-                    value = pdf.to_dict("records")
-                else:
-                    if isinstance(result_df, nw.LazyFrame):
-                        result_df = result_df.collect()
-                    value = cast("nw.DataFrame[Any]", result_df).rows(named=True)
+                is_ibis_table = isinstance(result_df, ibis.Table)
             except ImportError:
+                pass
+
+            if is_ibis_table:
+                # Convert ibis Table to pandas, then to list of dicts
+                # Cast needed because ibis lacks py.typed and pandas stubs are incomplete
+                pdf = cast("Any", result_df.execute())
+                value = pdf.to_dict("records")
+            else:
                 if isinstance(result_df, nw.LazyFrame):
                     result_df = result_df.collect()
                 value = cast("nw.DataFrame[Any]", result_df).rows(named=True)
 
-            # Format table results (df_to_html handles both DataFrame and LazyFrame)
+            # Format table results (df_to_html handles DataFrame, LazyFrame, and ibis.Table)
             tbl_html = df_to_html(result_df, maxrows=5)
             markdown += "\n\n" + str(tbl_html)
 

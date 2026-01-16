@@ -1055,9 +1055,29 @@ class IbisSource(DataSource["ibis.Table"]):
         if not categorical_cols:
             return
 
+        # Batch all categorical value queries into a single UNION query
+        import ibis
+
+        subqueries = []
         for col in categorical_cols:
-            values = table.select(col.name).distinct().execute()[col.name].tolist()
-            col.categories = [v for v in values if v is not None]
+            subq = (
+                table.select(
+                    ibis.literal(col.name).name("_col_name"),
+                    table[col.name].cast("string").name("_value"),
+                )
+                .filter(table[col.name].notnull())
+                .distinct()
+            )
+            subqueries.append(subq)
+
+        combined = subqueries[0]
+        for subq in subqueries[1:]:
+            combined = combined.union(subq)
+
+        result = combined.execute()
+        for col in categorical_cols:
+            col_values = result[result["_col_name"] == col.name]["_value"].tolist()
+            col.categories = col_values
 
     def execute_query(self, query: str) -> ibis.Table:
         """

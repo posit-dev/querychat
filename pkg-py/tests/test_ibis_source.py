@@ -1,7 +1,8 @@
 """Tests for the IbisSource class."""
 
-import ibis
 import pytest
+
+ibis = pytest.importorskip("ibis")
 
 
 @pytest.fixture
@@ -190,6 +191,7 @@ class TestIbisSourceTestQuery:
 
     def test_test_query_catches_runtime_errors(self):
         """Test that test_query catches runtime errors by actually executing."""
+        import duckdb
         from querychat._datasource import IbisSource
 
         # Create table with string column that can't be cast to integer
@@ -199,10 +201,9 @@ class TestIbisSourceTestQuery:
             table = conn.table("test_table")
             source = IbisSource(table, "test_table")
 
-            # This query fails at runtime when trying to cast strings to integers
-            # test_query should catch this because it actually executes the query
-            # DuckDB raises ConversionException which inherits from Exception
-            with pytest.raises(Exception, match=r"[Cc]onversion|[Cc]ast"):
+            # This query fails at runtime when trying to cast strings to integers.
+            # test_query should catch this because it actually executes the query.
+            with pytest.raises(duckdb.ConversionException):
                 source.test_query("SELECT CAST(b AS INTEGER) FROM test_table")
         finally:
             conn.disconnect()

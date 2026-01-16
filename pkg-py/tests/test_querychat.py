@@ -1,6 +1,5 @@
 import os
 
-import ibis
 import pandas as pd
 import polars as pl
 import pytest
@@ -124,6 +123,8 @@ def test_querychat_with_polars_lazyframe():
 
 def test_querychat_with_ibis_table():
     """Test that QueryChat accepts an Ibis Table."""
+    ibis = pytest.importorskip("ibis")
+
     conn = ibis.duckdb.connect()
     try:
         conn.create_table(

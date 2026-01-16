@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, overload
+from typing import TYPE_CHECKING, Any, Optional, cast, overload
 
 import narwhals.stable.v1 as nw
 from gradio.context import Context
@@ -357,36 +357,34 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
                 )
 
                 df = self.df(state_dict)
+
+                # Check if result is an Ibis Table
+                is_ibis_table = False
                 try:
                     import ibis
 
-                    if isinstance(df, ibis.Table):
-                        native_df = df.execute()
-                        nrow, ncol = native_df.shape
-                        data_info_parts = []
-                        if error:
-                            data_info_parts.append(f"⚠️ {error}")
-                        data_info_parts.append(
-                            f"*Data has {nrow} rows and {ncol} columns.*"
-                        )
-                        data_info_text = " ".join(data_info_parts)
-                        return sql_title_text, sql_code, native_df, data_info_text
+                    is_ibis_table = isinstance(df, ibis.Table)
                 except ImportError:
                     pass
 
-                df = nw.from_native(df)
-                if isinstance(df, nw.LazyFrame):
-                    df = df.collect()
+                if is_ibis_table:
+                    # Cast needed because type narrowing doesn't work with boolean flag
+                    native_df = cast("Any", df).execute()
+                    nrow, ncol = native_df.shape
+                else:
+                    df = nw.from_native(df)
+                    if isinstance(df, nw.LazyFrame):
+                        df = df.collect()
+                    nrow, ncol = df.shape
+                    native_df = df.to_native()
 
                 data_info_parts = []
                 if error:
                     data_info_parts.append(f"⚠️ {error}")
-                data_info_parts.append(
-                    f"*Data has {df.shape[0]} rows and {df.shape[1]} columns.*"
-                )
+                data_info_parts.append(f"*Data has {nrow} rows and {ncol} columns.*")
                 data_info_text = " ".join(data_info_parts)
 
-                return sql_title_text, sql_code, df.to_native(), data_info_text
+                return sql_title_text, sql_code, native_df, data_info_text
 
             def reset_query(state_dict: AppStateDict):
                 """Reset state to show full dataset."""

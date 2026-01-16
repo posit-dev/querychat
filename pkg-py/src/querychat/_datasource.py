@@ -938,46 +938,20 @@ class IbisSource(DataSource["ibis.Table"]):
     table_name: str
 
     def __init__(self, table: ibis.Table, table_name: str):
-        """
-        Initialize with an Ibis Table.
-
-        Parameters
-        ----------
-        table
-            An Ibis Table object
-        table_name
-            Name of the table in SQL queries
-
-        """
         self._table = table
         self.table_name = table_name
         self._backend = cast("SQLBackend", table.get_backend())
-
-        # Cache schema (no data collection needed)
         self._schema = table.schema()
         self._colnames = list(cast("tuple[str, ...]", self._schema.names))
 
     def get_db_type(self) -> str:
-        """
-        Get the database type.
-
-        Returns
-        -------
-        :
-            The backend name (e.g., "duckdb", "postgres")
-
-        """
         return self._backend.name
 
     def get_schema(self, *, categorical_threshold: int) -> str:
-        """Generate schema information from Ibis Table using lazy aggregates."""
-        # Build column metadata (classification happens here)
         columns = [
             self._make_column_meta(name, dtype)
             for name, dtype in self._schema.items()
         ]
-
-        # Add stats to the metadata and format schema string
         self._add_column_stats(columns, self._table, categorical_threshold)
         return PolarsLazySource._format_schema(self.table_name, columns)
 
@@ -1140,25 +1114,7 @@ class IbisSource(DataSource["ibis.Table"]):
         return result_table
 
     def get_data(self) -> ibis.Table:
-        """
-        Return the unfiltered data as an Ibis Table.
-
-        Returns
-        -------
-        :
-            The original Ibis Table
-
-        """
         return self._table
 
     def cleanup(self) -> None:
-        """
-        Clean up resources (no-op for Ibis).
-
-        Ibis manages connection lifecycle internally.
-
-        Returns
-        -------
-        None
-
-        """
+        pass  # Ibis manages connection lifecycle internally

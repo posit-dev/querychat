@@ -16,23 +16,7 @@ if TYPE_CHECKING:
 
 
 def is_ibis_table(obj: Any) -> TypeGuard[ibis.Table]:
-    """
-    Check if an object is an Ibis Table.
-
-    This is a TypeGuard that narrows the type to ibis.Table when True.
-    Returns False if ibis is not installed.
-
-    Parameters
-    ----------
-    obj
-        The object to check
-
-    Returns
-    -------
-    :
-        True if obj is an ibis.Table, False otherwise
-
-    """
+    """TypeGuard for ibis.Table. Returns False if ibis is not installed."""
     try:
         import ibis
 

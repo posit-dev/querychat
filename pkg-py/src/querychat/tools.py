@@ -108,7 +108,6 @@ def _update_dashboard_impl(
             markdown += f"\n\n> Error: {error}"
             return ContentToolResult(value=markdown, error=e)
 
-        # Return ContentToolResult with display metadata
         return ContentToolResult(
             value=value,
             extra={
@@ -177,7 +176,6 @@ def _reset_dashboard_impl(
             Reset Filter
         </button>"""
 
-        # Return ContentToolResult with display metadata
         return ContentToolResult(
             value="The dashboard has been reset to show all data.",
             extra={
@@ -235,16 +233,13 @@ def _query_impl(data_source: DataSource) -> Callable[[str, str], ContentToolResu
             result_df = data_source.execute_query(query)
 
             if is_ibis_table(result_df):
-                # Convert ibis Table to pandas, then to list of dicts
-                # Cast needed because ibis lacks py.typed
-                pdf = cast("Any", result_df.execute())
+                pdf = cast("Any", result_df.execute())  # ibis lacks py.typed
                 value = pdf.to_dict("records")
             else:
                 if isinstance(result_df, nw.LazyFrame):
                     result_df = result_df.collect()
                 value = cast("nw.DataFrame[Any]", result_df).rows(named=True)
 
-            # Format table results (df_to_html handles DataFrame, LazyFrame, and ibis.Table)
             tbl_html = df_to_html(result_df, maxrows=5)
             markdown += "\n\n" + str(tbl_html)
 
@@ -253,7 +248,6 @@ def _query_impl(data_source: DataSource) -> Callable[[str, str], ContentToolResu
             markdown += f"\n\n> Error: {error}"
             return ContentToolResult(value=markdown, error=e)
 
-        # Return ContentToolResult with display metadata
         return ContentToolResult(
             value=value,
             extra={

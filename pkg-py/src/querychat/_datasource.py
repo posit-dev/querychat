@@ -48,6 +48,22 @@ class ColumnMeta:
     """Unique values for text columns below the categorical threshold."""
 
 
+def _format_schema(table_name: str, columns: list[ColumnMeta]) -> str:
+    """Format column metadata into schema string."""
+    lines = [f"Table: {table_name}", "Columns:"]
+
+    for col in columns:
+        lines.append(f"- {col.name} ({col.sql_type})")
+
+        if col.kind in ("numeric", "date"):
+            lines.append(f"  Range: {col.min_val} to {col.max_val}")
+        elif col.categories:
+            cats = ", ".join(f"'{v}'" for v in col.categories)
+            lines.append(f"  Categorical values: {cats}")
+
+    return "\n".join(lines)
+
+
 class DataSource(ABC, Generic[IntoFrameT]):
     """
     An abstract class defining the interface for data sources used by QueryChat.
@@ -752,7 +768,7 @@ class PolarsLazySource(DataSource["pl.LazyFrame"]):
 
         # Add stats to the metadata and format schema string
         self._add_column_stats(columns, self._lf, categorical_threshold)
-        return self._format_schema(self.table_name, columns)
+        return _format_schema(self.table_name, columns)
 
     def execute_query(self, query: str) -> pl.LazyFrame:
         """
@@ -910,22 +926,6 @@ class PolarsLazySource(DataSource["pl.LazyFrame"]):
         for col in categorical_cols:
             col.categories = unique_row[col.name]
 
-    @staticmethod
-    def _format_schema(table_name: str, columns: list[ColumnMeta]) -> str:
-        """Format column metadata into schema string."""
-        lines = [f"Table: {table_name}", "Columns:"]
-
-        for col in columns:
-            lines.append(f"- {col.name} ({col.sql_type})")
-
-            if col.kind in ("numeric", "date"):
-                lines.append(f"  Range: {col.min_val} to {col.max_val}")
-            elif col.categories:
-                cats = ", ".join(f"'{v}'" for v in col.categories)
-                lines.append(f"  Categorical values: {cats}")
-
-        return "\n".join(lines)
-
 
 class IbisSource(DataSource["ibis.Table"]):
     """
@@ -967,7 +967,7 @@ class IbisSource(DataSource["ibis.Table"]):
             self._make_column_meta(name, dtype) for name, dtype in self._schema.items()
         ]
         self._add_column_stats(columns, self._table, categorical_threshold)
-        return PolarsLazySource._format_schema(self.table_name, columns)
+        return _format_schema(self.table_name, columns)
 
     @staticmethod
     def _make_column_meta(name: str, dtype: IbisDataType) -> ColumnMeta:

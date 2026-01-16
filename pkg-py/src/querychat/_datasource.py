@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Generic, Literal, cast
 
 import duckdb
 import narwhals.stable.v1 as nw
@@ -22,9 +22,6 @@ from narwhals.stable.v1.typing import (
 if TYPE_CHECKING:
     import polars as pl
     from sqlalchemy.engine import Connection, Engine
-
-# TypeVar for DataSource - the type returned by execute_query/get_data/test_query
-DataSourceT = TypeVar("DataSourceT")
 
 
 class MissingColumnsError(ValueError):
@@ -54,12 +51,12 @@ class ColumnMeta:
     """Unique values for text columns below the categorical threshold."""
 
 
-class DataSource(ABC, Generic[DataSourceT]):
+class DataSource(ABC, Generic[IntoFrameT]):
     """
     An abstract class defining the interface for data sources used by QueryChat.
 
-    This class is generic over `DataSourceT`, which is the type returned by
-    execute_query, test_query, and get_data methods.
+    This class is generic over the DataFrame type returned by execute_query,
+    test_query, and get_data methods.
 
     Attributes
     ----------
@@ -96,7 +93,7 @@ class DataSource(ABC, Generic[DataSourceT]):
         ...
 
     @abstractmethod
-    def execute_query(self, query: str) -> DataSourceT:
+    def execute_query(self, query: str) -> IntoFrameT:
         """
         Execute SQL query and return results.
 
@@ -116,7 +113,7 @@ class DataSource(ABC, Generic[DataSourceT]):
     @abstractmethod
     def test_query(
         self, query: str, *, require_all_columns: bool = False
-    ) -> DataSourceT:
+    ) -> IntoFrameT:
         """
         Test SQL query by fetching only one row.
 
@@ -142,7 +139,7 @@ class DataSource(ABC, Generic[DataSourceT]):
         ...
 
     @abstractmethod
-    def get_data(self) -> DataSourceT:
+    def get_data(self) -> IntoFrameT:
         """
         Return the unfiltered data.
 

@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
     import chatlas
     import sqlalchemy
-    from narwhals.stable.v1.typing import IntoDataFrame, IntoLazyFrame
+    from narwhals.stable.v1.typing import IntoFrame
 
     import dash
     from dash import html
@@ -137,7 +137,7 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
 
     def __init__(
         self,
-        data_source: IntoDataFrame | IntoLazyFrame | sqlalchemy.Engine,
+        data_source: IntoFrame | sqlalchemy.Engine,
         table_name: str,
         *,
         greeting: Optional[str | PathType] = None,

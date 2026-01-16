@@ -48,9 +48,6 @@ class QueryChatBase(Generic[IntoFrameT]):
     - Shared methods (client, console, generate_greeting, cleanup)
 
     Framework-specific subclasses add their own UI methods.
-
-    Note: Type-parameterized overloads are defined in subclasses, not here.
-    This allows subclasses to call super().__init__() without type errors.
     """
 
     def __init__(

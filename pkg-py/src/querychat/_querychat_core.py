@@ -23,6 +23,8 @@ from chatlas.types import Content
 from ._datasource import IntoFrameT
 from .tools import UpdateDashboardData
 
+from narwhals.stable.v1.typing import IntoFrame
+
 GREETING_PROMPT: str = (
     "Please give me a friendly greeting. "
     "Include a few sample prompts in a two-level bulleted list."
@@ -211,7 +213,7 @@ class AppState:
         self.title = None
         self.error = None
 
-    def get_current_data(self) -> Any:
+    def get_current_data(self) -> IntoFrame:
         """Get current data, falling back to default if query fails."""
         if self.sql:
             try:

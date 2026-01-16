@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, Generic, Literal, cast
 
 import duckdb
 import narwhals.stable.v1 as nw
+from narwhals.dtypes import DType
 from narwhals.stable.v1.typing import IntoDataFrameT, IntoFrameT
 from sqlalchemy import inspect, text
 from sqlalchemy.sql import sqltypes
@@ -253,14 +254,13 @@ SET lock_configuration = true;
 
         """
         columns = [
-            self._make_column_meta(col, self._df[col].dtype)
-            for col in self._df.columns
+            self._make_column_meta(col, self._df[col].dtype) for col in self._df.columns
         ]
         self._add_column_stats(columns, self._df, categorical_threshold)
         return format_schema(self.table_name, columns)
 
     @staticmethod
-    def _make_column_meta(name: str, dtype: Any) -> ColumnMeta:
+    def _make_column_meta(name: str, dtype: DType) -> ColumnMeta:
         """Create ColumnMeta from a narwhals dtype."""
         kind: Literal["numeric", "text", "date", "other"]
         if dtype.is_integer():

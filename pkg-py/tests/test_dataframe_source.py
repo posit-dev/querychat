@@ -18,7 +18,13 @@ def pandas_df():
             "name": ["Alice", "Bob", "Charlie", "Diana", "Eve"],
             "age": [25, 30, 35, 28, 32],
             "salary": [50000.0, 60000.0, 70000.0, 55000.0, 65000.0],
-            "department": ["Engineering", "Sales", "Engineering", "Sales", "Engineering"],
+            "department": [
+                "Engineering",
+                "Sales",
+                "Engineering",
+                "Sales",
+                "Engineering",
+            ],
         }
     )
 
@@ -110,9 +116,7 @@ class TestDataFrameSourceExecuteQuery:
     def test_execute_query_empty_result(self, narwhals_df):
         """Test query that returns no rows."""
         source = DataFrameSource(narwhals_df, "employees")
-        result = source.execute_query(
-            "SELECT * FROM employees WHERE age > 100"
-        )
+        result = source.execute_query("SELECT * FROM employees WHERE age > 100")
 
         # Result is native pandas DataFrame (same as input backend)
         assert isinstance(result, pd.DataFrame)
@@ -306,9 +310,7 @@ class TestDataFrameSourceWithPyArrow:
     def test_execute_query_with_filter_pyarrow(self, pyarrow_table):
         """Test query with WHERE clause returns pyarrow Table."""
         source = DataFrameSource(pyarrow_table, "test_data")
-        result = source.execute_query(
-            "SELECT * FROM test_data WHERE name = 'Alice'"
-        )
+        result = source.execute_query("SELECT * FROM test_data WHERE name = 'Alice'")
 
         assert isinstance(result, pa.Table)
         assert result.num_rows == 1

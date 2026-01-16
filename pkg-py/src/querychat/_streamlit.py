@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Optional, cast, overload
 
-import narwhals.stable.v1 as nw
 from narwhals.stable.v1.typing import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
 
 from ._querychat_base import TOOL_GROUPS, QueryChatBase
@@ -15,11 +14,14 @@ from ._querychat_core import (
     stream_response,
 )
 from ._ui_assets import STREAMLIT_JS, SUGGESTION_CSS
+from ._utils import as_narwhals
 
 if TYPE_CHECKING:
     from pathlib import Path
 
     import chatlas
+    import ibis
+    import narwhals.stable.v1 as nw
     import sqlalchemy
     from narwhals.stable.v1.typing import IntoFrame
 
@@ -55,6 +57,21 @@ class QueryChat(QueryChatBase[IntoFrameT]):
     ```
 
     """
+
+    @overload
+    def __init__(
+        self: QueryChat[ibis.Table],
+        data_source: ibis.Table,
+        table_name: str,
+        *,
+        greeting: Optional[str | Path] = None,
+        client: Optional[str | chatlas.Chat] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        data_description: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        extra_instructions: Optional[str | Path] = None,
+        prompt_template: Optional[str | Path] = None,
+    ) -> None: ...
 
     @overload
     def __init__(
@@ -103,7 +120,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
 
     def __init__(
         self,
-        data_source: IntoFrame | sqlalchemy.Engine,
+        data_source: IntoFrame | sqlalchemy.Engine | ibis.Table,
         table_name: str,
         *,
         greeting: Optional[str | Path] = None,
@@ -229,7 +246,14 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             st.rerun()
 
     def df(self) -> IntoFrameT:
-        """Get the current filtered data frame (or LazyFrame if data source is lazy)."""
+        """
+        Get the current filtered data.
+
+        Returns the same type as the original data source: a DataFrame for
+        eager sources, a LazyFrame for Polars lazy sources, or an Ibis Table
+        for Ibis sources. Callers needing an eager DataFrame should collect
+        the result (e.g., via ``as_narwhals(qc.df())``).
+        """
         # Cast is safe because get_current_data() returns the same type as the data source
         return cast("IntoFrameT", self._get_state().get_current_data())
 
@@ -282,9 +306,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 st.rerun()
 
         st.subheader("Data view")
-        df = nw.from_native(state.get_current_data())
-        if isinstance(df, nw.LazyFrame):
-            df = df.collect()
+        df = as_narwhals(state.get_current_data())
         if state.error:
             st.error(state.error)
         st.dataframe(df.to_native(), use_container_width=True, height=400, hide_index=True)

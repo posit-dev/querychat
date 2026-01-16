@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal, Optional, overload
 
-import narwhals.stable.v1 as nw
 from narwhals.stable.v1.typing import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
 from shiny.express._stub_session import ExpressStubSession
 from shiny.session import get_current_session
@@ -13,11 +12,14 @@ from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 from ._icons import bs_icon
 from ._querychat_base import TOOL_GROUPS, QueryChatBase
 from ._shiny_module import ServerValues, mod_server, mod_ui
+from ._utils import as_narwhals
 
 if TYPE_CHECKING:
     from pathlib import Path
 
     import chatlas
+    import ibis
+    import narwhals.stable.v1 as nw
     import sqlalchemy
     from narwhals.stable.v1.typing import IntoFrame
 
@@ -131,6 +133,22 @@ class QueryChat(QueryChatBase[IntoFrameT]):
 
     @overload
     def __init__(
+        self: QueryChat[ibis.Table],
+        data_source: ibis.Table,
+        table_name: str,
+        *,
+        id: Optional[str] = None,
+        greeting: Optional[str | Path] = None,
+        client: Optional[str | chatlas.Chat] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        data_description: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        extra_instructions: Optional[str | Path] = None,
+        prompt_template: Optional[str | Path] = None,
+    ) -> None: ...
+
+    @overload
+    def __init__(
         self: QueryChat[IntoLazyFrameT],
         data_source: IntoLazyFrameT,
         table_name: str,
@@ -179,7 +197,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
 
     def __init__(
         self,
-        data_source: IntoFrame | sqlalchemy.Engine,
+        data_source: IntoFrame | sqlalchemy.Engine | ibis.Table,
         table_name: str,
         *,
         id: Optional[str] = None,
@@ -288,11 +306,8 @@ class QueryChat(QueryChatBase[IntoFrameT]):
 
             @render.data_frame
             def dt():
-                df = vals.df()
-                # Collect if lazy
-                if isinstance(df, nw.LazyFrame):
-                    df = df.collect()
-                return df
+                # Collect lazy sources (LazyFrame, Ibis Table) to eager DataFrame
+                return as_narwhals(vals.df())
 
             @render.ui
             def sql_output():
@@ -545,6 +560,22 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
 
     @overload
     def __init__(
+        self: QueryChatExpress[ibis.Table],
+        data_source: ibis.Table,
+        table_name: str,
+        *,
+        id: Optional[str] = None,
+        greeting: Optional[str | Path] = None,
+        client: Optional[str | chatlas.Chat] = None,
+        data_description: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        extra_instructions: Optional[str | Path] = None,
+        prompt_template: Optional[str | Path] = None,
+        enable_bookmarking: Literal["auto", True, False] = "auto",
+    ) -> None: ...
+
+    @overload
+    def __init__(
         self: QueryChatExpress[IntoLazyFrameT],
         data_source: IntoLazyFrameT,
         table_name: str,
@@ -593,7 +624,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
 
     def __init__(
         self,
-        data_source: IntoFrame | sqlalchemy.Engine,
+        data_source: IntoFrame | sqlalchemy.Engine | ibis.Table,
         table_name: str,
         *,
         id: Optional[str] = None,
@@ -713,9 +744,10 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         Returns
         -------
         :
-            The current filtered data frame as a narwhals DataFrame or LazyFrame.
-            If the data source is lazy, returns a LazyFrame. If no query has been
-            set, this will return the unfiltered data from the data source.
+            The current filtered data frame, in the same format as the original
+            data source (e.g., polars DataFrame, Polars LazyFrame, Ibis Table).
+            If no query has been set, returns the unfiltered data from the
+            data source.
 
         """
         return self._vals.df()

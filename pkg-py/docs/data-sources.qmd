@@ -7,8 +7,9 @@ lightbox: true
 
 1. Any [narwhals-compatible](https://narwhals-dev.github.io/narwhals/) data frame.
 2. Polars LazyFrames for efficient handling of large datasets.
-3. Any [SQLAlchemy](https://www.sqlalchemy.org/) database.
-4. A custom [DataSource](reference/types.DataSource.qmd) interface/protocol.
+3. [Ibis](https://ibis-project.org/) Tables for lazy evaluation across many database backends.
+4. Any [SQLAlchemy](https://www.sqlalchemy.org/) database.
+5. A custom [DataSource](reference/types.DataSource.qmd) interface/protocol.
 
 The sections below describe how to use each type of data source with `querychat`.
 
@@ -126,6 +127,106 @@ result_lazy = qc.df()
 # Materialize when ready
 result_df = result_lazy.collect()
 ```
+
+## Ibis Tables
+
+[Ibis](https://ibis-project.org/) is a Python DataFrame API that provides a unified interface to many different database backends. It enables lazy evaluation and query optimization, making it ideal for working with large datasets that live in databases or data warehouses.
+
+Key benefits of using Ibis with `querychat`:
+
+- **Backend flexibility**: Write code once, run on DuckDB, PostgreSQL, BigQuery, Snowflake, and [many more](https://ibis-project.org/backends/)
+- **Lazy evaluation**: Queries are optimized and only executed when results are needed
+- **Data stays in place**: No need to move data out of your database or warehouse
+- **Chainable operations**: Query results are Ibis Tables that can be further transformed
+
+::: {.panel-tabset}
+
+### DuckDB
+
+```shell
+pip install ibis-framework[duckdb]
+```
+
+```{.python filename="ibis-duckdb-app.py"}
+import ibis
+from querychat import QueryChat
+
+# Connect to a DuckDB database
+conn = ibis.duckdb.connect("my_database.duckdb")
+table = conn.table("my_table")
+
+qc = QueryChat(table, "my_table")
+app = qc.app()
+```
+
+### PostgreSQL
+
+```shell
+pip install ibis-framework[postgres]
+```
+
+```{.python filename="ibis-postgres-app.py"}
+import ibis
+from querychat import QueryChat
+
+# Connect to PostgreSQL
+conn = ibis.postgres.connect(
+    host="localhost",
+    port=5432,
+    database="mydatabase",
+    user="user",
+    password="password",
+)
+table = conn.table("my_table")
+
+qc = QueryChat(table, "my_table")
+app = qc.app()
+```
+
+### BigQuery
+
+```shell
+pip install ibis-framework[bigquery]
+```
+
+```{.python filename="ibis-bigquery-app.py"}
+import ibis
+from querychat import QueryChat
+
+# Connect to BigQuery (uses default credentials from environment)
+conn = ibis.bigquery.connect(
+    project_id="my-project",
+    dataset_id="my_dataset",
+)
+table = conn.table("my_table")
+
+qc = QueryChat(table, "my_table")
+app = qc.app()
+```
+
+:::
+
+When using an Ibis source, the `df()` method returns an Ibis Table (lazy). You can chain additional Ibis operations or call `.execute()` to materialize the results as a pandas DataFrame:
+
+```python
+# Get the lazy Ibis Table
+result_table = qc.df()
+
+# Chain additional operations
+filtered = result_table.filter(result_table.amount > 100)
+
+# Materialize when ready
+result_df = result_table.execute()
+```
+
+::: {.callout-tip}
+### When to use Ibis vs SQLAlchemy
+
+Both Ibis and SQLAlchemy can connect to databases, but they serve different purposes:
+
+- **Use Ibis** when you want lazy evaluation, need to chain DataFrame-style operations on query results, or want to work with cloud data warehouses like BigQuery or Snowflake
+- **Use SQLAlchemy** when you need a simple, direct SQL connection and are comfortable working with eagerly-evaluated DataFrames
+:::
 
 ## Databases
 

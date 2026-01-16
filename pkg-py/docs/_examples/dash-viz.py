@@ -10,17 +10,26 @@ qc = QueryChat(titanic(), "titanic")
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
-app.layout = dbc.Container([
-    dbc.Row([
-        dbc.Col(qc.ui(), width=4),
-        dbc.Col([
-            dcc.Graph(id="age-histogram"),
-            dcc.Graph(id="class-survival"),
-        ], width=8),
-    ])
-], fluid=True)
+app.layout = dbc.Container(
+    [
+        dbc.Row(
+            [
+                dbc.Col(qc.ui(), width=4),
+                dbc.Col(
+                    [
+                        dcc.Graph(id="age-histogram"),
+                        dcc.Graph(id="class-survival"),
+                    ],
+                    width=8,
+                ),
+            ]
+        )
+    ],
+    fluid=True,
+)
 
 qc.init_app(app)
+
 
 @app.callback(
     [Output("age-histogram", "figure"), Output("class-survival", "figure")],
@@ -31,9 +40,12 @@ def update_charts(state: AppStateDict):
     fig1 = px.histogram(df, x="age", color="survived", title="Age Distribution")
     fig2 = px.bar(
         df.groupby("pclass")["survived"].mean().reset_index(),
-        x="pclass", y="survived", title="Survival by Class"
+        x="pclass",
+        y="survived",
+        title="Survival by Class",
     )
     return fig1, fig2
+
 
 if __name__ == "__main__":
     app.run(debug=True)

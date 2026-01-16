@@ -4,10 +4,16 @@ import os
 import re
 import warnings
 from contextlib import contextmanager
-from typing import Literal, Optional
+from typing import TYPE_CHECKING, Any, Literal, Optional, overload
 
 import narwhals.stable.v1 as nw
 from great_tables import GT
+
+if TYPE_CHECKING:
+    from typing import TypeGuard
+
+    import ibis
+    import pandas as pd
 
 
 class MISSING_TYPE:  # noqa: N801
@@ -193,6 +199,62 @@ def querychat_tool_starts_open(action: Literal["update", "query", "reset"]) -> b
         return action != "reset"
 
 
+def is_ibis_table(obj: Any) -> TypeGuard[ibis.Table]:
+    try:
+        import ibis
+
+        return isinstance(obj, ibis.Table)
+    except ImportError:
+        return False
+
+
+def is_pandas_df(obj: Any) -> TypeGuard[pd.DataFrame]:
+    try:
+        import pandas as pd
+
+        return isinstance(obj, pd.DataFrame)
+    except ImportError:
+        return False
+
+
+@overload
+def as_narwhals(x: Any, *, lazy: Literal[False] = False) -> nw.DataFrame[Any]: ...
+
+
+@overload
+def as_narwhals(x: Any, *, lazy: Literal[True]) -> nw.LazyFrame[Any]: ...
+
+
+def as_narwhals(x: Any, *, lazy: bool = False) -> nw.DataFrame[Any] | nw.LazyFrame[Any]:
+    """
+    Convert any query result to a narwhals DataFrame or LazyFrame.
+
+    Parameters
+    ----------
+    x
+        The data to convert (ibis.Table, polars LazyFrame/DataFrame, pandas DataFrame, etc.)
+    lazy
+        If False (default), collect to an eager DataFrame.
+        If True, return a LazyFrame where possible.
+
+    Returns
+    -------
+    :
+        A narwhals DataFrame (if lazy=False) or LazyFrame (if lazy=True).
+
+    """
+    if is_ibis_table(x):
+        x = x.execute()
+
+    if not isinstance(x, (nw.DataFrame, nw.LazyFrame)):
+        x = nw.from_native(x)
+
+    if lazy:
+        return x.lazy() if isinstance(x, nw.DataFrame) else x
+    else:
+        return x.collect() if isinstance(x, nw.LazyFrame) else x
+
+
 def df_to_html(df, maxrows: int = 5) -> str:
     """
     Convert a DataFrame to a Bootstrap-styled HTML table for display in chat.
@@ -200,7 +262,7 @@ def df_to_html(df, maxrows: int = 5) -> str:
     Parameters
     ----------
     df
-        The DataFrame to convert (narwhals or native polars/pandas)
+        The DataFrame to convert (narwhals, native polars/pandas, or ibis.Table)
     maxrows : int, default=5
         Maximum number of rows to display
 
@@ -210,18 +272,20 @@ def df_to_html(df, maxrows: int = 5) -> str:
         HTML string representation of the table
 
     """
-    if not isinstance(df, (nw.DataFrame, nw.LazyFrame)):
-        df = nw.from_native(df)
+    # Get row count and limited data, handling ibis vs narwhals
+    if is_ibis_table(df):
+        nrow_full = df.count().execute()
+        df_short = df.limit(maxrows).execute()
+    else:
+        if not isinstance(df, (nw.DataFrame, nw.LazyFrame)):
+            df = nw.from_native(df)
+        if isinstance(df, nw.DataFrame):
+            df = df.lazy()
+        nrow_full = df.select(nw.len()).collect().item()
+        df_short = df.head(maxrows).collect().to_native()
 
-    if isinstance(df, nw.DataFrame):
-        df = df.lazy()
-
-    df_short = df.head(maxrows).collect()
-    gt_tbl = GT(df_short.to_native())
-    table_html = gt_tbl.as_raw_html(make_page=False)
-
-    # Add note about truncated rows if needed
-    nrow_full = df.select(nw.len()).collect().item()
+    # Generate HTML table
+    table_html = GT(df_short).as_raw_html(make_page=False)
     if nrow_full > maxrows:
         table_html += f"\n\n*(Showing {maxrows} of {nrow_full} rows)*\n"
 

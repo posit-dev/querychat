@@ -15,13 +15,14 @@ import sqlalchemy
 from ._datasource import (
     DataFrameSource,
     DataSource,
+    IbisSource,
     IntoFrameT,
     PolarsLazySource,
     SQLAlchemySource,
 )
 from ._shiny_module import GREETING_PROMPT
 from ._system_prompt import QueryChatSystemPrompt
-from ._utils import MISSING, MISSING_TYPE
+from ._utils import MISSING, MISSING_TYPE, is_ibis_table
 from .tools import (
     UpdateDashboardData,
     tool_query,
@@ -180,6 +181,9 @@ def normalize_data_source(
         return data_source
     if isinstance(data_source, sqlalchemy.Engine):
         return SQLAlchemySource(data_source, table_name)
+
+    if is_ibis_table(data_source):
+        return IbisSource(data_source, table_name)
 
     src = nw.from_native(data_source, pass_through=True)
 

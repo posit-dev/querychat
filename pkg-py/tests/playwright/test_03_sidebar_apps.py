@@ -113,9 +113,7 @@ class Test03SidebarCore:
     """Tests for 03-sidebar-core-app.py - Shiny Core with sidebar layout."""
 
     @pytest.fixture(autouse=True)
-    def setup(
-        self, page: Page, app_03_core: str, chat_03_core: ChatController
-    ) -> None:
+    def setup(self, page: Page, app_03_core: str, chat_03_core: ChatController) -> None:
         """Navigate to the app before each test."""
         page.goto(app_03_core)
         # Wait for Shiny data frame to be ready (uses shiny-data-frame custom element)

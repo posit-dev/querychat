@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Optional, overload
 
-import narwhals.stable.v1 as nw
 from gradio.context import Context
 from narwhals.stable.v1.typing import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
+
+if TYPE_CHECKING:
+    import narwhals.stable.v1 as nw
 
 from ._querychat_base import TOOL_GROUPS, QueryChatBase
 from ._querychat_core import (
@@ -17,11 +19,13 @@ from ._querychat_core import (
     stream_response,
 )
 from ._ui_assets import GRADIO_CSS, GRADIO_JS, SUGGESTION_CSS
+from ._utils import as_narwhals
 
 if TYPE_CHECKING:
     from pathlib import Path
 
     import chatlas
+    import ibis
     import sqlalchemy
     from narwhals.stable.v1.typing import IntoFrame
 
@@ -81,6 +85,21 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
 
     @overload
     def __init__(
+        self: QueryChat[ibis.Table],
+        data_source: ibis.Table,
+        table_name: str,
+        *,
+        greeting: Optional[str | Path] = None,
+        client: Optional[str | chatlas.Chat] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        data_description: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        extra_instructions: Optional[str | Path] = None,
+        prompt_template: Optional[str | Path] = None,
+    ) -> None: ...
+
+    @overload
+    def __init__(
         self: QueryChat[IntoLazyFrameT],
         data_source: IntoLazyFrameT,
         table_name: str,
@@ -126,7 +145,7 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
 
     def __init__(
         self,
-        data_source: IntoFrame | sqlalchemy.Engine,
+        data_source: IntoFrame | sqlalchemy.Engine | ibis.Table,
         table_name: str,
         *,
         greeting: Optional[str | Path] = None,
@@ -340,19 +359,18 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
                     else f"SELECT * FROM {self._data_source.table_name}"
                 )
 
-                df = nw.from_native(self.df(state_dict))
-                if isinstance(df, nw.LazyFrame):
-                    df = df.collect()
+                df = self.df(state_dict)
+                nw_df = as_narwhals(df)
+                nrow, ncol = nw_df.shape
+                native_df = nw_df.to_native()
 
                 data_info_parts = []
                 if error:
                     data_info_parts.append(f"⚠️ {error}")
-                data_info_parts.append(
-                    f"*Data has {df.shape[0]} rows and {df.shape[1]} columns.*"
-                )
+                data_info_parts.append(f"*Data has {nrow} rows and {ncol} columns.*")
                 data_info_text = " ".join(data_info_parts)
 
-                return sql_title_text, sql_code, df.to_native(), data_info_text
+                return sql_title_text, sql_code, native_df, data_info_text
 
             def reset_query(state_dict: AppStateDict):
                 """Reset state to show full dataset."""

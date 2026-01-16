@@ -23,6 +23,10 @@ def sample_df():
 
 
 class TestGradioQueryChat:
+    @pytest.fixture(autouse=True)
+    def _skip_if_no_gradio(self):
+        pytest.importorskip("gradio")
+
     def test_import(self):
         from querychat.gradio import QueryChat
 
@@ -53,8 +57,11 @@ class TestGradioQueryChat:
         assert isinstance(result, gr.State)
 
 
-
 class TestDashQueryChat:
+    @pytest.fixture(autouse=True)
+    def _skip_if_no_dash(self):
+        pytest.importorskip("dash")
+
     def test_import(self):
         from querychat.dash import QueryChat
 
@@ -133,6 +140,10 @@ class TestDashQueryChat:
 
 
 class TestStreamlitQueryChat:
+    @pytest.fixture(autouse=True)
+    def _skip_if_no_streamlit(self):
+        pytest.importorskip("streamlit")
+
     def test_import(self):
         from querychat.streamlit import QueryChat
 

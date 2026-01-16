@@ -4,7 +4,7 @@ import pandas as pd
 import polars as pl
 import pytest
 from querychat import QueryChat
-from querychat._datasource import PolarsLazySource
+from querychat._datasource import IbisSource, PolarsLazySource
 
 
 @pytest.fixture(autouse=True)
@@ -119,3 +119,40 @@ def test_querychat_with_polars_lazyframe():
     collected = result.collect()
     assert len(collected) == 1
     assert collected.item(0, "name") == "Bob"
+
+
+def test_querychat_with_ibis_table():
+    """Test that QueryChat accepts an Ibis Table."""
+    ibis = pytest.importorskip("ibis")
+
+    conn = ibis.duckdb.connect()
+    try:
+        conn.create_table(
+            "test_table",
+            {
+                "id": [1, 2, 3],
+                "name": ["Alice", "Bob", "Charlie"],
+                "age": [25, 30, 35],
+            },
+        )
+        ibis_table = conn.table("test_table")
+
+        qc = QueryChat(
+            data_source=ibis_table,
+            table_name="test_table",
+            greeting="Hello!",
+        )
+
+        # Should have created an IbisSource
+        assert isinstance(qc.data_source, IbisSource)
+
+        # Query should return an ibis.Table
+        result = qc.data_source.execute_query("SELECT * FROM test_table WHERE id = 2")
+        assert isinstance(result, ibis.Table)
+
+        # Execute to verify results
+        executed = result.execute()
+        assert len(executed) == 1
+        assert executed["name"].iloc[0] == "Bob"
+    finally:
+        conn.disconnect()

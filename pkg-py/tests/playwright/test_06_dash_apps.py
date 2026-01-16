@@ -35,7 +35,9 @@ class Test06DashBasic:
         # Wait for Dash app to fully load (chat history and data table)
         page.wait_for_selector("#querychat-titanic-chat-history", timeout=30000)
         # AG Grid data table loads asynchronously - wait for it
-        page.wait_for_selector("#querychat-titanic-data-table .ag-body-viewport", timeout=30000)
+        page.wait_for_selector(
+            "#querychat-titanic-data-table .ag-body-viewport", timeout=30000
+        )
         # Wait for SQL display to be populated by callback
         expect(page.locator("#querychat-titanic-sql-display")).to_contain_text(
             "SELECT", timeout=30000
@@ -72,7 +74,9 @@ class Test06DashBasic:
     def test_data_table_visible(self) -> None:
         """Data table is visible."""
         # AG Grid uses custom DOM structure, not standard <table>
-        data_table = self.page.locator("#querychat-titanic-data-table .ag-body-viewport")
+        data_table = self.page.locator(
+            "#querychat-titanic-data-table .ag-body-viewport"
+        )
         expect(data_table).to_be_visible()
 
     def test_suggestion_links_present(self) -> None:

@@ -4,12 +4,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol, TypedDict, runtime_checkable
 
 import chevron
-import narwhals.stable.v1 as nw
 from chatlas import ContentToolResult, Tool
 from shinychat.types import ToolResultDisplay
 
 from ._icons import bs_icon
-from ._utils import df_to_html, querychat_tool_starts_open
+from ._utils import as_narwhals, df_to_html, querychat_tool_starts_open
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -233,11 +232,9 @@ def _query_impl(data_source: DataSource) -> Callable[[str, str], ContentToolResu
 
         try:
             result_df = data_source.execute_query(query)
-            if isinstance(result_df, nw.LazyFrame):
-                result_df = result_df.collect()
-            value = result_df.rows(named=True)
+            nw_df = as_narwhals(result_df)
+            value = nw_df.rows(named=True)
 
-            # Format table results
             tbl_html = df_to_html(result_df, maxrows=5)
             markdown += "\n\n" + str(tbl_html)
 

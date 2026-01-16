@@ -80,14 +80,16 @@ class TestAppState:
     def test_get_current_data_without_sql(self, data_source, mock_client, sample_df):
         state = AppState(data_source=data_source, client=mock_client)
         result = state.get_current_data()
-        pd.testing.assert_frame_equal(result.to_pandas(), sample_df.to_pandas())
+        # Result is now native pandas DataFrame
+        pd.testing.assert_frame_equal(result, sample_df.to_pandas())
 
     def test_get_current_data_with_valid_sql(self, data_source, mock_client):
         state = AppState(data_source=data_source, client=mock_client)
         state.sql = "SELECT * FROM test_table WHERE age > 25"
         result = state.get_current_data()
         assert len(result) == 2
-        assert result["name"].to_list() == ["Bob", "Charlie"]
+        # Result is now native pandas DataFrame
+        assert result["name"].tolist() == ["Bob", "Charlie"]
 
     def test_get_current_data_with_invalid_sql_resets(
         self, data_source, mock_client, sample_df
@@ -96,7 +98,8 @@ class TestAppState:
         state.sql = "INVALID SQL QUERY"
         state.title = "Will be cleared"
         result = state.get_current_data()
-        pd.testing.assert_frame_equal(result.to_pandas(), sample_df.to_pandas())
+        # Result is now native pandas DataFrame
+        pd.testing.assert_frame_equal(result, sample_df.to_pandas())
         assert state.sql is None
         assert state.title is None
         assert state.error is not None

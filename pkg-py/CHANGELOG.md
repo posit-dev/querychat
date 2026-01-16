@@ -9,14 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
-* Added `PolarsLazySource` to support Polars LazyFrames as data sources. Data stays lazy until the render boundary, enabling efficient handling of large datasets. Pass a `polars.LazyFrame` directly to `QueryChat()` and queries will be executed lazily via Polars' SQLContext.
-
 * Added support for Gradio, Dash, and Streamlit web frameworks in addition to Shiny. Import from the new submodules:
   * `from querychat.gradio import QueryChat`
   * `from querychat.dash import QueryChat`
   * `from querychat.streamlit import QueryChat`
 
-Each framework's `QueryChat` provides `.app()` for quick standalone apps and `.ui()` for custom layouts. Install framework dependencies with pip extras: `pip install querychat[gradio]`, `pip install querychat[dash]`, or `pip install querychat[streamlit]`.
+Each framework's `QueryChat` provides `.app()` for quick standalone apps and `.ui()` for custom layouts. Install framework dependencies with pip extras: `pip install querychat[gradio]`, `pip install querychat[dash]`, or `pip install querychat[streamlit]`. (#190)
+
+* `QueryChat()` gains support for more data sources:
+  * `polars.LazyFrame`: queries execute lazily via `polars.SQLContext`. In this case, `.df()` et al. methods will return a `polars.LazyFrame`. (#191)
+  * `pyarrow.Table`: queries execute in-memory via `duckdb`. In this case, `.df()` et al. methods will return a `pyarrow.Table`. (#196)
+
+### Improvements
+
+* Improved typing support for return types on `.df()` et al. (#196)
+
+### Changes
+
+* `DataFrameSource` methods now (once again) return the input DataFrame type (e.g., `pandas.DataFrame`) instead of `nw.DataFrame`. (#196)
 
 ## [0.4.0] - 2026-01-14
 

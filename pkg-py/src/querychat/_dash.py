@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, Optional, cast
+from typing import TYPE_CHECKING, Literal, Optional, cast, overload
 
 import narwhals.stable.v1 as nw
 from chatlas import Turn
+from narwhals.stable.v1.typing import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
 
 from ._dash_ui import IDs, card_ui, chat_container_ui, chat_messages_ui
 from ._querychat_base import TOOL_GROUPS, QueryChatBase
@@ -31,7 +32,7 @@ if TYPE_CHECKING:
     from dash import html
 
 
-class QueryChat(QueryChatBase, StateDictAccessorMixin):
+class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
     """
     QueryChat for Dash applications.
 
@@ -85,6 +86,54 @@ class QueryChat(QueryChatBase, StateDictAccessorMixin):
     ```
 
     """
+
+    @overload
+    def __init__(
+        self: QueryChat[IntoLazyFrameT],
+        data_source: IntoLazyFrameT,
+        table_name: str,
+        *,
+        greeting: Optional[str | PathType] = None,
+        client: Optional[str | chatlas.Chat] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        data_description: Optional[str | PathType] = None,
+        categorical_threshold: int = 20,
+        extra_instructions: Optional[str | PathType] = None,
+        prompt_template: Optional[str | PathType] = None,
+        storage_type: Literal["memory", "session", "local"] = "memory",
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: QueryChat[IntoDataFrameT],
+        data_source: IntoDataFrameT,
+        table_name: str,
+        *,
+        greeting: Optional[str | PathType] = None,
+        client: Optional[str | chatlas.Chat] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        data_description: Optional[str | PathType] = None,
+        categorical_threshold: int = 20,
+        extra_instructions: Optional[str | PathType] = None,
+        prompt_template: Optional[str | PathType] = None,
+        storage_type: Literal["memory", "session", "local"] = "memory",
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: QueryChat[nw.DataFrame],
+        data_source: sqlalchemy.Engine,
+        table_name: str,
+        *,
+        greeting: Optional[str | PathType] = None,
+        client: Optional[str | chatlas.Chat] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        data_description: Optional[str | PathType] = None,
+        categorical_threshold: int = 20,
+        extra_instructions: Optional[str | PathType] = None,
+        prompt_template: Optional[str | PathType] = None,
+        storage_type: Literal["memory", "session", "local"] = "memory",
+    ) -> None: ...
 
     def __init__(
         self,
@@ -374,8 +423,7 @@ def register_app_callbacks(
         sql_title = state.title or "SQL Query"
         sql_code = f"```sql\n{state.get_display_sql()}\n```"
 
-        df = state.get_current_data()
-        # Collect if lazy before accessing .to_pandas() or .shape
+        df = nw.from_native(state.get_current_data())
         if isinstance(df, nw.LazyFrame):
             df = df.collect()
 
@@ -408,8 +456,7 @@ def register_app_callbacks(
     )
     def export_csv(n_clicks: int, state_data: AppStateDict):
         state = deserialize_state(state_data)
-        df = state.get_current_data()
-        # Collect if lazy before converting to pandas
+        df = nw.from_native(state.get_current_data())
         if isinstance(df, nw.LazyFrame):
             df = df.collect()
         return send_data_frame(df.to_pandas().to_csv, "querychat_data.csv", index=False)

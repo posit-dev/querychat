@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, overload
 
 import narwhals.stable.v1 as nw
 from gradio.context import Context
+from narwhals.stable.v1.typing import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
 
 from ._querychat_base import TOOL_GROUPS, QueryChatBase
 from ._querychat_core import (
@@ -21,13 +22,14 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     import chatlas
+    import ibis
     import sqlalchemy
     from narwhals.stable.v1.typing import IntoFrame
 
     import gradio as gr
 
 
-class QueryChat(QueryChatBase, StateDictAccessorMixin):
+class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
     """
     QueryChat for Gradio applications.
 
@@ -78,9 +80,69 @@ class QueryChat(QueryChatBase, StateDictAccessorMixin):
 
     """
 
+    @overload
+    def __init__(
+        self: QueryChat[ibis.Table],
+        data_source: ibis.Table,
+        table_name: str,
+        *,
+        greeting: Optional[str | Path] = None,
+        client: Optional[str | chatlas.Chat] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        data_description: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        extra_instructions: Optional[str | Path] = None,
+        prompt_template: Optional[str | Path] = None,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: QueryChat[IntoLazyFrameT],
+        data_source: IntoLazyFrameT,
+        table_name: str,
+        *,
+        greeting: Optional[str | Path] = None,
+        client: Optional[str | chatlas.Chat] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        data_description: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        extra_instructions: Optional[str | Path] = None,
+        prompt_template: Optional[str | Path] = None,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: QueryChat[IntoDataFrameT],
+        data_source: IntoDataFrameT,
+        table_name: str,
+        *,
+        greeting: Optional[str | Path] = None,
+        client: Optional[str | chatlas.Chat] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        data_description: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        extra_instructions: Optional[str | Path] = None,
+        prompt_template: Optional[str | Path] = None,
+    ) -> None: ...
+
+    @overload
+    def __init__(
+        self: QueryChat[nw.DataFrame],
+        data_source: sqlalchemy.Engine,
+        table_name: str,
+        *,
+        greeting: Optional[str | Path] = None,
+        client: Optional[str | chatlas.Chat] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        data_description: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        extra_instructions: Optional[str | Path] = None,
+        prompt_template: Optional[str | Path] = None,
+    ) -> None: ...
+
     def __init__(
         self,
-        data_source: IntoFrame | sqlalchemy.Engine,
+        data_source: IntoFrame | sqlalchemy.Engine | ibis.Table,
         table_name: str,
         *,
         greeting: Optional[str | Path] = None,
@@ -314,7 +376,8 @@ class QueryChat(QueryChatBase, StateDictAccessorMixin):
                 except ImportError:
                     pass
 
-                # Collect if lazy before accessing .shape
+                # Handle narwhals DataFrames and LazyFrames
+                df = nw.from_native(df)
                 if isinstance(df, nw.LazyFrame):
                     df = df.collect()
 

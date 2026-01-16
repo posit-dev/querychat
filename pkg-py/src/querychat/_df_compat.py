@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING
 import narwhals.stable.v1 as nw
 
 if TYPE_CHECKING:
-    import duckdb
     from sqlalchemy.engine import Connection
     from sqlalchemy.sql.elements import TextClause
 
@@ -34,30 +33,6 @@ def read_sql(query: TextClause, conn: Connection) -> nw.DataFrame:
         pass
 
     raise ImportError(f"SQLAlchemySource requires 'polars' or 'pandas'. {_INSTALL_MSG}")
-
-
-def duckdb_result_to_nw(
-    result: duckdb.DuckDBPyRelation | duckdb.DuckDBPyConnection,
-) -> nw.DataFrame:
-    # Check for polars first without consuming the result
-    try:
-        import polars  # noqa: F401, ICN001  # pyright: ignore[reportMissingImports]
-
-        return nw.from_native(result.pl())
-    except ImportError:
-        pass
-    except Exception:  # noqa: S110
-        # Other polars errors (e.g., missing pyarrow) - fall through to pandas
-        pass
-
-    try:
-        import pandas  # noqa: F401, ICN001  # pyright: ignore[reportMissingImports]
-
-        return nw.from_native(result.df())
-    except ImportError:
-        pass
-
-    raise ImportError(f"DataFrameSource requires 'polars' or 'pandas'. {_INSTALL_MSG}")
 
 
 def read_csv(path: str) -> nw.DataFrame:

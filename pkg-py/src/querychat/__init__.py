@@ -1,5 +1,4 @@
 from ._datasource import (
-    AnyFrame,
     DataFrameSource,
     DataSource,
     IbisSource,
@@ -13,7 +12,6 @@ from ._deprecated import mod_ui as ui
 from ._shiny import QueryChat
 
 __all__ = (
-    "AnyFrame",
     "DataFrameSource",
     "DataSource",
     "IbisSource",

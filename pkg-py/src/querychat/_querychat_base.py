@@ -6,7 +6,7 @@ import copy
 import os
 import re
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, Optional
+from typing import TYPE_CHECKING, Generic, Literal, Optional
 
 import chatlas
 import narwhals.stable.v1 as nw
@@ -15,6 +15,7 @@ import sqlalchemy
 from ._datasource import (
     DataFrameSource,
     DataSource,
+    IntoFrameT,
     PolarsLazySource,
     SQLAlchemySource,
 )
@@ -36,7 +37,7 @@ if TYPE_CHECKING:
 TOOL_GROUPS = Literal["update", "query"]
 
 
-class QueryChatBase:
+class QueryChatBase(Generic[IntoFrameT]):
     """
     Base class for all QueryChat implementations.
 

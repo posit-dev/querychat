@@ -21,7 +21,9 @@ with gr.Blocks() as app:
         fig1 = px.histogram(df, x="age", color="survived", title="Age Distribution")
         fig2 = px.bar(
             df.groupby("pclass")["survived"].mean().reset_index(),
-            x="pclass", y="survived", title="Survival by Class"
+            x="pclass",
+            y="survived",
+            title="Survival by Class",
         )
         return fig1, fig2
 

@@ -16,7 +16,13 @@ def ibis_table():
             "name": ["Alice", "Bob", "Charlie", "Diana", "Eve"],
             "age": [25, 30, 35, 28, 32],
             "salary": [50000.0, 60000.0, 70000.0, 55000.0, 65000.0],
-            "department": ["Engineering", "Sales", "Engineering", "Sales", "Engineering"],
+            "department": [
+                "Engineering",
+                "Sales",
+                "Engineering",
+                "Sales",
+                "Engineering",
+            ],
         },
     )
     yield conn.table("employees")

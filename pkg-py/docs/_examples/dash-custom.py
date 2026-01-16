@@ -24,7 +24,10 @@ app.layout = dbc.Container(
                             id="data-table",
                             className="ag-theme-balham",
                             defaultColDef={"filter": True, "sortable": True},
-                            dashGridOptions={"pagination": True, "paginationPageSize": 10},
+                            dashGridOptions={
+                                "pagination": True,
+                                "paginationPageSize": 10,
+                            },
                             columnSize="responsiveSizeToFit",
                         ),
                         html.Pre(id="sql-display"),

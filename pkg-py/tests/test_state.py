@@ -65,7 +65,9 @@ class TestAppState:
 
     def test_update_dashboard(self, data_source, mock_client):
         state = AppState(data_source=data_source, client=mock_client)
-        state.update_dashboard({"query": "SELECT * FROM test_table", "title": "All Data"})
+        state.update_dashboard(
+            {"query": "SELECT * FROM test_table", "title": "All Data"}
+        )
         assert state.sql == "SELECT * FROM test_table"
         assert state.title == "All Data"
 
@@ -302,15 +304,25 @@ class TestAppStateDeserialization:
     def test_update_from_dict_restores_turns(self, data_source, mock_client):
         state = AppState(data_source=data_source, client=mock_client)
 
-        state.update_from_dict({
-            "sql": "SELECT name FROM test",
-            "title": "Names Only",
-            "error": None,
-            "turns": [
-                {"role": "user", "contents": [{"content_type": "text", "text": "Show names"}]},
-                {"role": "assistant", "contents": [{"content_type": "text", "text": "Here are names"}]},
-            ],
-        })
+        state.update_from_dict(
+            {
+                "sql": "SELECT name FROM test",
+                "title": "Names Only",
+                "error": None,
+                "turns": [
+                    {
+                        "role": "user",
+                        "contents": [{"content_type": "text", "text": "Show names"}],
+                    },
+                    {
+                        "role": "assistant",
+                        "contents": [
+                            {"content_type": "text", "text": "Here are names"}
+                        ],
+                    },
+                ],
+            }
+        )
 
         assert state.sql == "SELECT name FROM test"
         assert state.title == "Names Only"

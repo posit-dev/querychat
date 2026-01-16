@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Literal, Optional, cast, overload
 
-import narwhals.stable.v1 as nw
 from chatlas import Turn
 from narwhals.stable.v1.typing import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
 
@@ -19,12 +18,15 @@ from ._querychat_core import (
     stream_response_async,
 )
 from ._ui_assets import DASH_CSS, DASH_JS, SUGGESTION_CSS
+from ._utils import collect_to_narwhals
 
 if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path as PathType
 
     import chatlas
+    import ibis
+    import narwhals.stable.v1 as nw
     import sqlalchemy
     from narwhals.stable.v1.typing import IntoFrame
 
@@ -89,6 +91,22 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
 
     @overload
     def __init__(
+        self: QueryChat[ibis.Table],
+        data_source: ibis.Table,
+        table_name: str,
+        *,
+        greeting: Optional[str | PathType] = None,
+        client: Optional[str | chatlas.Chat] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        data_description: Optional[str | PathType] = None,
+        categorical_threshold: int = 20,
+        extra_instructions: Optional[str | PathType] = None,
+        prompt_template: Optional[str | PathType] = None,
+        storage_type: Literal["memory", "session", "local"] = "memory",
+    ) -> None: ...
+
+    @overload
+    def __init__(
         self: QueryChat[IntoLazyFrameT],
         data_source: IntoLazyFrameT,
         table_name: str,
@@ -137,7 +155,7 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
 
     def __init__(
         self,
-        data_source: IntoFrame | sqlalchemy.Engine,
+        data_source: IntoFrame | sqlalchemy.Engine | ibis.Table,
         table_name: str,
         *,
         greeting: Optional[str | PathType] = None,
@@ -423,20 +441,17 @@ def register_app_callbacks(
         sql_title = state.title or "SQL Query"
         sql_code = f"```sql\n{state.get_display_sql()}\n```"
 
-        df = nw.from_native(state.get_current_data())
-        if isinstance(df, nw.LazyFrame):
-            df = df.collect()
+        nw_df = collect_to_narwhals(state.get_current_data())
+        nrow, ncol = nw_df.shape
 
-        display_df = df.to_pandas()
+        display_df = nw_df.to_pandas()
         table_data = display_df.to_dict("records")
         table_columns = [{"field": col} for col in display_df.columns]
 
         data_info_parts = []
         if state.error:
             data_info_parts.append(f"Warning: {state.error}")
-        data_info_parts.append(
-            f"Data has {df.shape[0]} rows and {df.shape[1]} columns."
-        )
+        data_info_parts.append(f"Data has {nrow} rows and {ncol} columns.")
         data_info = " ".join(data_info_parts)
 
         return (
@@ -456,10 +471,10 @@ def register_app_callbacks(
     )
     def export_csv(n_clicks: int, state_data: AppStateDict):
         state = deserialize_state(state_data)
-        df = nw.from_native(state.get_current_data())
-        if isinstance(df, nw.LazyFrame):
-            df = df.collect()
-        return send_data_frame(df.to_pandas().to_csv, "querychat_data.csv", index=False)
+        nw_df = collect_to_narwhals(state.get_current_data())
+        return send_data_frame(
+            nw_df.to_pandas().to_csv, "querychat_data.csv", index=False
+        )
 
 
 def register_chat_callbacks(

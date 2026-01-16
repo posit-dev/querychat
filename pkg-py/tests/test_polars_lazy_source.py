@@ -14,7 +14,13 @@ def polars_lazy_df():
             "name": ["Alice", "Bob", "Charlie", "Diana", "Eve"],
             "age": [25, 30, 35, 28, 32],
             "salary": [50000.0, 60000.0, 70000.0, 55000.0, 65000.0],
-            "department": ["Engineering", "Sales", "Engineering", "Sales", "Engineering"],
+            "department": [
+                "Engineering",
+                "Sales",
+                "Engineering",
+                "Sales",
+                "Engineering",
+            ],
         }
     )
 
@@ -189,9 +195,7 @@ class TestPolarsLazySourceTestQuery:
         nw_lf = nw.from_native(polars_lazy_df)
         source = PolarsLazySource(nw_lf, "employees")
         # Should not raise
-        result = source.test_query(
-            "SELECT * FROM employees", require_all_columns=True
-        )
+        result = source.test_query("SELECT * FROM employees", require_all_columns=True)
         assert isinstance(result, pl.LazyFrame)
 
     def test_test_query_require_all_columns_fails(self, polars_lazy_df):

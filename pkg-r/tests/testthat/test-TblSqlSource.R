@@ -35,6 +35,31 @@ describe("TblSqlSource$new()", {
     expect_equal(collected$value, c(30, 40, 50))
   })
 
+  it("returns lazy tibble from execute_query() when collect = FALSE", {
+    source <- local_tbl_sql_source()
+
+    result <- source$execute_query(
+      "SELECT * FROM test_table WHERE value > 25",
+      collect = FALSE
+    )
+    expect_s3_class(result, "tbl_sql")
+    expect_s3_class(result, "tbl_lazy")
+  })
+
+  it("returns data frame from execute_query() when collect = TRUE", {
+    source <- local_tbl_sql_source()
+
+    result <- source$execute_query(
+      "SELECT * FROM test_table WHERE value > 25",
+      collect = TRUE
+    )
+    expect_s3_class(result, "data.frame")
+    expect_false(inherits(result, "tbl_sql"))
+    expect_false(inherits(result, "tbl_lazy"))
+    expect_equal(nrow(result), 3)
+    expect_equal(result$value, c(30, 40, 50))
+  })
+
   it("returns data frame from test_query()", {
     source <- local_tbl_sql_source()
 

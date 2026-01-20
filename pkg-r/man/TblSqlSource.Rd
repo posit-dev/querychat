@@ -117,18 +117,23 @@ A string containing schema information formatted for LLM prompts
 \subsection{Method \code{execute_query()}}{
 Execute a SQL query and return results
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{TblSqlSource$execute_query(query)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{TblSqlSource$execute_query(query, collect = FALSE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
 \item{\code{query}}{SQL query string to execute}
+
+\item{\code{collect}}{If \code{TRUE}, collects the results into a local data frame
+using \code{\link[dplyr:compute]{dplyr::collect()}}. If \code{FALSE} (default), returns a lazy SQL
+tibble.}
 }
 \if{html}{\out{</div>}}
 }
 \subsection{Returns}{
-A data frame containing query results
+A data frame (if \code{collect = TRUE}) or a lazy SQL tibble (if
+\code{collect = FALSE})
 }
 }
 \if{html}{\out{<hr>}}

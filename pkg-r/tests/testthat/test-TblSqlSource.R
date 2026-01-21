@@ -25,7 +25,10 @@ describe("TblSqlSource$new()", {
   it("returns lazy tibble from execute_query() when collect = FALSE", {
     source <- local_tbl_sql_source()
 
-    result <- source$execute_query("SELECT * FROM test_table WHERE value > 25", collect = FALSE)
+    result <- source$execute_query(
+      "SELECT * FROM test_table WHERE value > 25", 
+      collect = FALSE
+    )
     expect_s3_class(result, "tbl_sql")
     expect_s3_class(result, "tbl_lazy")
 

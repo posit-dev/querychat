@@ -22,10 +22,10 @@ describe("TblSqlSource$new()", {
     })
   })
 
-  it("returns lazy tibble from execute_query()", {
+  it("returns lazy tibble from execute_query() when collect = FALSE", {
     source <- local_tbl_sql_source()
 
-    result <- source$execute_query("SELECT * FROM test_table WHERE value > 25")
+    result <- source$execute_query("SELECT * FROM test_table WHERE value > 25", collect = FALSE)
     expect_s3_class(result, "tbl_sql")
     expect_s3_class(result, "tbl_lazy")
 
@@ -84,7 +84,7 @@ describe("TblSqlSource with transformed tbl (CTE mode)", {
     )
 
     # CTE should be used since tbl is transformed
-    result <- source$execute_query("SELECT * FROM test_table")
+    result <- source$execute_query("SELECT * FROM test_table", collect = FALSE)
     collected <- dplyr::collect(result)
     expect_equal(nrow(collected), 3)
     expect_true(all(collected$value > 20))
@@ -216,7 +216,8 @@ describe("TblSqlSource edge cases - Category B: Column Naming Issues", {
     # SELECT with explicit duplicate column names from JOIN
     # DuckDB allows duplicate names but tibble rejects them on collect
     result <- source$execute_query(
-      "SELECT table_a.id, table_b.id FROM table_a JOIN table_b ON table_a.id = table_b.id"
+      "SELECT table_a.id, table_b.id FROM table_a JOIN table_b ON table_a.id = table_b.id",
+      collect = FALSE
     )
     expect_error(
       dplyr::collect(result),
@@ -297,7 +298,8 @@ describe("TblSqlSource edge cases - Category B: Column Naming Issues", {
     # SELECT * from JOIN produces duplicate 'id' columns
     # tibble rejects duplicate names on collect
     result <- source$execute_query(
-      "SELECT * FROM table_a JOIN table_b ON table_a.id = table_b.id"
+      "SELECT * FROM table_a JOIN table_b ON table_a.id = table_b.id",
+      collect = FALSE
     )
     expect_error(
       dplyr::collect(result),

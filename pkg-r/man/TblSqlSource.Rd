@@ -117,7 +117,7 @@ A string containing schema information formatted for LLM prompts
 \subsection{Method \code{execute_query()}}{
 Execute a SQL query and return results
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{TblSqlSource$execute_query(query, collect = FALSE)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{TblSqlSource$execute_query(query, collect = TRUE)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -125,8 +125,8 @@ Execute a SQL query and return results
 \describe{
 \item{\code{query}}{SQL query string to execute}
 
-\item{\code{collect}}{If \code{TRUE}, collects the results into a local data frame
-using \code{\link[dplyr:compute]{dplyr::collect()}}. If \code{FALSE} (default), returns a lazy SQL
+\item{\code{collect}}{If \code{TRUE} (default), collects the results into a local data frame
+using \code{\link[dplyr:compute]{dplyr::collect()}}. If \code{FALSE}, returns a lazy SQL
 tibble.}
 }
 \if{html}{\out{</div>}}

@@ -117,12 +117,12 @@ TblSqlSource <- R6::R6Class(
     #' Execute a SQL query and return results
     #'
     #' @param query SQL query string to execute
-    #' @param collect If `TRUE`, collects the results into a local data frame
-    #'   using [dplyr::collect()]. If `FALSE` (default), returns a lazy SQL
+    #' @param collect If `TRUE` (default), collects the results into a local data frame
+    #'   using [dplyr::collect()]. If `FALSE`, returns a lazy SQL
     #'   tibble.
     #' @return A data frame (if `collect = TRUE`) or a lazy SQL tibble (if
     #'   `collect = FALSE`)
-    execute_query = function(query, collect = FALSE) {
+    execute_query = function(query, collect = TRUE) {
       sql_query <- self$prep_query(query)
       result <- dplyr::tbl(private$conn, dplyr::sql(sql_query))
       if (collect) {

@@ -71,6 +71,25 @@ quantile_cont(salary, 0.5)
 ```
 
 {{/is_duck_db}}
+{{#is_snowflake}}
+### Snowflake SQL Tips
+
+**QUALIFY clause:** Use QUALIFY instead of a subquery when filtering on window function results.
+
+**LATERAL FLATTEN:** Use for expanding JSON arrays or nested structures.
+
+**Time travel:** Use `AT` or `BEFORE` clauses for historical data access.
+
+{{/is_snowflake}}
+{{#has_semantic_views}}
+### Semantic Views
+
+**IMPORTANT**: This database has Semantic Views available. Semantic Views provide certified business metrics that encode correct calculation rules. When a Semantic View covers the data you need, **always prefer it over raw table queries**.
+
+Real-world example: Raw table queries for "external customer revenue" returned $184B while the semantic model's certified metric returned $84.5B (the correct answer). The raw query was 2x+ too high because it ignored discounts and included invalid transaction codes.
+
+{{{semantic_view_syntax}}}
+{{/has_semantic_views}}
 ## Your Capabilities
 
 You can handle these types of requests:

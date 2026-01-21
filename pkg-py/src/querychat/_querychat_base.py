@@ -18,6 +18,7 @@ from ._datasource import (
     IbisSource,
     IntoFrameT,
     PolarsLazySource,
+    SnowflakeSource,
     SQLAlchemySource,
 )
 from ._shiny_module import GREETING_PROMPT
@@ -229,6 +230,9 @@ def normalize_data_source(
     if isinstance(data_source, DataSource):
         return data_source
     if isinstance(data_source, sqlalchemy.Engine):
+        # Use SnowflakeSource for Snowflake connections to get semantic view support
+        if data_source.dialect.name.lower() == "snowflake":
+            return SnowflakeSource(data_source, table_name)
         return SQLAlchemySource(data_source, table_name)
 
     if is_ibis_table(data_source):

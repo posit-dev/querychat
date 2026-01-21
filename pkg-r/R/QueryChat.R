@@ -935,6 +935,10 @@ normalize_data_source <- function(data_source, table_name) {
   }
 
   if (inherits(data_source, "DBIConnection")) {
+    # Use SnowflakeSource for Snowflake connections to get semantic view support
+    if (is_snowflake_connection(data_source)) {
+      return(SnowflakeSource$new(data_source, table_name))
+    }
     return(DBISource$new(data_source, table_name))
   }
 

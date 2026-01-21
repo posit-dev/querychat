@@ -71,7 +71,6 @@ SnowflakeSource <- R6::R6Class(
 discover_semantic_views <- function(conn) {
   semantic_views <- list()
 
-
   tryCatch(
     {
       # Check for semantic views in the current schema
@@ -97,10 +96,13 @@ discover_semantic_views <- function(conn) {
         # Get the DDL for this semantic view
         ddl <- get_semantic_view_ddl(conn, fq_name)
         if (!is.null(ddl)) {
-          semantic_views <- c(semantic_views, list(list(
-            name = fq_name,
-            ddl = ddl
-          )))
+          semantic_views <- c(
+            semantic_views,
+            list(list(
+              name = fq_name,
+              ddl = ddl
+            ))
+          )
         }
       }
     },
@@ -132,7 +134,9 @@ get_semantic_view_ddl <- function(conn, fq_name) {
       }
     },
     error = function(e) {
-      cli::cli_warn("Failed to get DDL for semantic view {fq_name}: {conditionMessage(e)}")
+      cli::cli_warn(
+        "Failed to get DDL for semantic view {fq_name}: {conditionMessage(e)}"
+      )
       NULL
     }
   )

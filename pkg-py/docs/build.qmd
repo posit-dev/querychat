@@ -92,20 +92,21 @@ Some data sources, like database connections or reactive calculations, may need 
 <summary><code>deferred-app.py</code></summary>
 
 ```python
-from shiny.express import session, ui
-from querychat import QueryChat
+from shiny.express import render, session, ui
+from querychat.express import QueryChat
 
-# Imagine get_user_connection() is None 
-# when session.is_stub_session() == True
-# but returns a valid connection otherwise.
-conn = get_user_connection(session)
+# Don't create connection until we have an actual session
+if session.is_stub_session():
+    conn = None
+else:
+    conn = get_user_connection(session)
 
 qc = QueryChat(conn, "users")
 qc.sidebar()
 
 @render.data_frame
 def table():
-    return qc_vals.df()
+    return qc.df()
 ```
 
 </details>

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, Optional, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Optional, overload
 
 from narwhals.stable.v1.typing import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
 from shiny.express._stub_session import ExpressStubSession
@@ -540,7 +540,9 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
     ----------
     data_source
         Either a Narwhals-compatible data frame (e.g., Polars or Pandas) or a
-        SQLAlchemy engine containing the table to query against.
+        SQLAlchemy engine containing the table to query against. Can be ``None``
+        for deferred binding (set via the ``data_source`` property before the
+        real session starts).
     table_name
         If a data_source is a data frame, a name to use to refer to the table in
         SQL queries (usually the variable name of the data frame, but it doesn't
@@ -588,6 +590,25 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         - `{{extra_instructions}}`: Any additional instructions provided
 
     """
+
+    # Class-level cache for bookmarking settings detected during stub session
+    _bookmarking_settings: ClassVar[dict[str, bool]] = {}
+
+    @overload
+    def __init__(
+        self: QueryChatExpress[Any],
+        data_source: None,
+        table_name: str,
+        *,
+        id: Optional[str] = None,
+        greeting: Optional[str | Path] = None,
+        client: Optional[str | chatlas.Chat] = None,
+        data_description: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        extra_instructions: Optional[str | Path] = None,
+        prompt_template: Optional[str | Path] = None,
+        enable_bookmarking: Literal["auto", True, False] = "auto",
+    ) -> None: ...
 
     @overload
     def __init__(
@@ -655,7 +676,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
 
     def __init__(
         self,
-        data_source: IntoFrame | sqlalchemy.Engine | ibis.Table,
+        data_source: IntoFrame | sqlalchemy.Engine | ibis.Table | None,
         table_name: str,
         *,
         id: Optional[str] = None,
@@ -687,28 +708,48 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         )
         self.id = id or f"querychat_{table_name}"
 
-        # If the Express session has a bookmark store set, automatically enable
-        # querychat's bookmarking
+        # Determine bookmarking setting
+        # During stub session: detect from app_opts and cache in class variable
+        # During real session: retrieve from class variable
         enable: bool
         if enable_bookmarking == "auto":
             if isinstance(session, ExpressStubSession):
                 store = session.app_opts.get("bookmark_store", "disable")
                 enable = store != "disable"
+                # Cache for the real session
+                QueryChatExpress._bookmarking_settings[self.id] = enable
             else:
-                enable = False
+                # Retrieve and clean up (pop prevents memory accumulation)
+                enable = QueryChatExpress._bookmarking_settings.pop(self.id, False)
         else:
             enable = enable_bookmarking
 
-        # Require data_source for Express (it calls mod_server immediately)
-        resolved_data_source = self._require_data_source("QueryChatExpress.__init__")
+        # During stub session: just capture settings, defer mod_server()
+        # During real session: require data source and initialize
+        if isinstance(session, ExpressStubSession):
+            self._vals = None  # type: ignore[assignment]
+        else:
+            resolved_data_source = self._require_data_source(
+                "QueryChatExpress.__init__"
+            )
+            self._vals = mod_server(
+                self.id,
+                data_source=resolved_data_source,
+                greeting=self.greeting,
+                client=self._client,
+                enable_bookmarking=enable,
+            )
 
-        self._vals = mod_server(
-            self.id,
-            data_source=resolved_data_source,
-            greeting=self.greeting,
-            client=self._client,
-            enable_bookmarking=enable,
-        )
+    def _require_vals(self) -> ServerValues[IntoFrameT]:
+        """Raise if _vals is not initialized (i.e., still in stub session)."""
+        if self._vals is None:
+            raise RuntimeError(
+                "QueryChatExpress is not fully initialized. "
+                "This can happen if you try to access df(), sql(), or title() "
+                "during app definition. These methods are only available during "
+                "a real session."
+            )
+        return self._vals
 
     def sidebar(
         self,
@@ -784,7 +825,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             data source.
 
         """
-        return self._vals.df()
+        return self._require_vals().df()
 
     @overload
     def sql(self, query: None = None) -> str | None: ...
@@ -810,10 +851,11 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             if it was the same as the current value.
 
         """
+        vals = self._require_vals()
         if query is None:
-            return self._vals.sql()
+            return vals.sql()
         else:
-            return self._vals.sql.set(query)
+            return vals.sql.set(query)
 
     @overload
     def title(self, value: None = None) -> str | None: ...
@@ -844,7 +886,8 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             if it was the same as the current value.
 
         """
+        vals = self._require_vals()
         if value is None:
-            return self._vals.title()
+            return vals.title()
         else:
-            return self._vals.title.set(value)
+            return vals.title.set(value)

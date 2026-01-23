@@ -90,7 +90,7 @@ You'll need to call the `qc$server()` method within your server function to set 
 
 ## Deferred data sources {#deferred-data-sources}
 
-In some Shiny applications, you may need to create database connections per-user rather than globally. For example, when connections depend on session-specific authentication or user credentials. The deferred data source pattern supports this by allowing `data_source = NULL` at initialization:
+Some data sources, like database connections or reactive calculations, may need to be created within an active Shiny session. To help support this, `QueryChat` allows you to initialize without a data source and provide it later, like this:
 
 ```{r}
 library(shiny)
@@ -108,13 +108,7 @@ ui <- page_sidebar(
 server <- function(input, output, session) {
   # Server scope - create connection with session credentials
   conn <- get_user_connection(session)
-
-  # Option A: Pass data source to server()
   qc_vals <- qc$server(data_source = conn)
-
-  # Option B: Set property first
-  # qc$data_source <- conn
-  # qc_vals <- qc$server()
 
   output$table <- renderDataTable({
     qc_vals$df()
@@ -124,11 +118,7 @@ server <- function(input, output, session) {
 shinyApp(ui, server)
 ```
 
-When using this pattern:
-
-- **`table_name` is required** - it cannot be inferred from `NULL`
-- **UI methods work without data** - `$sidebar()` and `$ui()` don't need the data source
-- **Server methods require data** - `$server()`, `$client()`, `$console()`, and `$generate_greeting()` need the data source to be set first
+This is also a useful pattern when using something like [`{pool}`](https://github.com/rstudio/pool) to efficiently manage a pool of database connections (which we strongly recommend for production apps).
 
 ## Reactives
 

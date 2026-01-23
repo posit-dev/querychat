@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, Optional, overload
+from typing import TYPE_CHECKING, Any, Literal, Optional, overload
 
 from narwhals.stable.v1.typing import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
 from shiny.express._stub_session import ExpressStubSession
@@ -133,6 +133,22 @@ class QueryChat(QueryChatBase[IntoFrameT]):
 
     @overload
     def __init__(
+        self: QueryChat[Any],
+        data_source: None,
+        table_name: str,
+        *,
+        id: Optional[str] = None,
+        greeting: Optional[str | Path] = None,
+        client: Optional[str | chatlas.Chat] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        data_description: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        extra_instructions: Optional[str | Path] = None,
+        prompt_template: Optional[str | Path] = None,
+    ) -> None: ...
+
+    @overload
+    def __init__(
         self: QueryChat[ibis.Table],
         data_source: ibis.Table,
         table_name: str,
@@ -197,7 +213,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
 
     def __init__(
         self,
-        data_source: IntoFrame | sqlalchemy.Engine | ibis.Table,
+        data_source: IntoFrame | sqlalchemy.Engine | ibis.Table | None,
         table_name: str,
         *,
         id: Optional[str] = None,
@@ -220,7 +236,8 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             extra_instructions=extra_instructions,
             prompt_template=prompt_template,
         )
-        self.id = id or f"querychat_{self._data_source.table_name}"
+        # Use table_name for ID since data_source might be None
+        self.id = id or f"querychat_{table_name}"
 
     def app(
         self, *, bookmark_store: Literal["url", "server", "disable"] = "url"
@@ -245,6 +262,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             A Shiny App object that can be run with `app.run()` or served with `shiny run`.
 
         """
+        self._require_data_source("app")
         enable_bookmarking = bookmark_store != "disable"
         table_name = self._data_source.table_name
 
@@ -384,7 +402,11 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         return mod_ui(id or self.id, **kwargs)
 
     def server(
-        self, *, enable_bookmarking: bool = False, id: Optional[str] = None
+        self,
+        *,
+        data_source: IntoFrame | sqlalchemy.Engine | None = None,
+        enable_bookmarking: bool = False,
+        id: Optional[str] = None,
     ) -> ServerValues[IntoFrameT]:
         """
         Initialize Shiny server logic.
@@ -396,6 +418,10 @@ class QueryChat(QueryChatBase[IntoFrameT]):
 
         Parameters
         ----------
+        data_source
+            Optional data source to use. If provided, sets the data_source property
+            before initializing server logic. This is useful for the deferred pattern
+            where data_source is not known at initialization time.
         enable_bookmarking
             Whether to enable bookmarking for the querychat module.
         id
@@ -455,6 +481,13 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             raise RuntimeError(
                 ".server() must be called within an active Shiny session (i.e., within the server function). "
             )
+
+        # Set data_source if provided
+        if data_source is not None:
+            self.data_source = data_source
+
+        # Now require data_source to be set
+        self._require_data_source("server")
 
         return mod_server(
             id or self.id,

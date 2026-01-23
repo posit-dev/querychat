@@ -362,7 +362,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td>data_source</td>
-<td><code>IntoFrame</code> | <code>sqlalchemy</code>.<code>Engine</code> | <code>ibis</code>.<code>Table</code></td>
+<td><code>IntoFrame</code> | <code>sqlalchemy</code>.<code>Engine</code> | <code>ibis</code>.<code>Table</code> | None</td>
 <td>Either a Narwhals-compatible data frame (e.g., Polars or Pandas) or a SQLAlchemy engine containing the table to query against.</td>
 <td><em>required</em></td>
 </tr>
@@ -618,7 +618,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="querychat.QueryChat.server" class="level3">
 <h3 class="anchored" data-anchor-id="querychat.QueryChat.server">server</h3>
-<div class="sourceCode" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>QueryChat.server(enable_bookmarking<span class="op">=</span><span class="va">False</span>, <span class="bu">id</span><span class="op">=</span><span class="va">None</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>QueryChat.server(data_source<span class="op">=</span><span class="va">None</span>, enable_bookmarking<span class="op">=</span><span class="va">False</span>, <span class="bu">id</span><span class="op">=</span><span class="va">None</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Initialize Shiny server logic.</p>
 <p>This method is intended for use in Shiny Code mode, where the user must explicitly call <code>.server()</code> within the Shiny server function. In Shiny Express mode, you can use <code>querychat.express.QueryChat</code> instead of <code>querychat.QueryChat</code>, which calls <code>.server()</code> automatically.</p>
 <section id="parameters-3" class="level4 doc-section doc-section-parameters">
@@ -634,12 +634,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
+<td>data_source</td>
+<td><a href="https://docs.python.org/3/library/typing.html#typing.Optional">Optional</a>[<code>IntoFrame</code> | <code>sqlalchemy</code>.<code>Engine</code> | <code>ibis</code>.<code>Table</code>]</td>
+<td>Optional data source to use. If provided, sets the data_source property before initializing server logic. This is useful for the deferred pattern where data_source is not known at initialization time.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
 <td>enable_bookmarking</td>
 <td><a href="https://docs.python.org/3/library/functions.html#bool">bool</a></td>
 <td>Whether to enable bookmarking for the querychat module.</td>
 <td><code>False</code></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>id</td>
 <td><a href="https://docs.python.org/3/library/typing.html#typing.Optional">Optional</a>[<a href="https://docs.python.org/3/library/stdtypes.html#str">str</a>]</td>
 <td>Optional module ID for the QueryChat instance. If not provided, will use the ID provided at initialization. This must match the ID used in the <code>.ui()</code> or <code>.sidebar()</code> methods.</td>

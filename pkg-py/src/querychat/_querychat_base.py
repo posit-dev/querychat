@@ -116,14 +116,15 @@ class QueryChatBase(Generic[IntoFrameT]):
         )
         self._client.system_prompt = self._system_prompt.render(self.tools)
 
-    def _require_data_source(self, method_name: str) -> None:
-        """Raise if data_source is not set."""
+    def _require_data_source(self, method_name: str) -> DataSource[IntoFrameT]:
+        """Raise if data_source is not set, otherwise return it for type narrowing."""
         if self._data_source is None:
             raise RuntimeError(
                 f"data_source must be set before calling {method_name}(). "
                 "Either pass data_source to __init__(), set the data_source property, "
                 "or pass data_source to server()."
             )
+        return self._data_source
 
     def client(
         self,
@@ -150,9 +151,9 @@ class QueryChatBase(Generic[IntoFrameT]):
             A configured chat client.
 
         """
-        self._require_data_source("client")
-        assert self._data_source is not None  # noqa: S101
-        assert self._system_prompt is not None  # noqa: S101
+        data_source = self._require_data_source("client")
+        if self._system_prompt is None:
+            raise RuntimeError("System prompt not initialized")
         tools = normalize_tools(tools, default=self.tools)
 
         chat = copy.deepcopy(self._client)
@@ -165,11 +166,11 @@ class QueryChatBase(Generic[IntoFrameT]):
         if "update" in tools:
             update_fn = update_dashboard or (lambda _: None)
             reset_fn = reset_dashboard or (lambda: None)
-            chat.register_tool(tool_update_dashboard(self._data_source, update_fn))
+            chat.register_tool(tool_update_dashboard(data_source, update_fn))
             chat.register_tool(tool_reset_dashboard(reset_fn))
 
         if "query" in tools:
-            chat.register_tool(tool_query(self._data_source))
+            chat.register_tool(tool_query(data_source))
 
         return chat
 
@@ -200,7 +201,8 @@ class QueryChatBase(Generic[IntoFrameT]):
     def system_prompt(self) -> str:
         """Get the system prompt."""
         self._require_data_source("system_prompt")
-        assert self._system_prompt is not None  # noqa: S101
+        if self._system_prompt is None:
+            raise RuntimeError("System prompt not initialized")
         return self._system_prompt.render(self.tools)
 
     @property

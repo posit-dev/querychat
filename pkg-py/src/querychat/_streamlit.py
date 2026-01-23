@@ -161,13 +161,12 @@ class QueryChat(QueryChatBase[IntoFrameT]):
 
     def _get_state(self) -> AppState:
         """Get or create session state."""
-        self._require_data_source("_get_state")
-        assert self._data_source is not None  # noqa: S101
+        data_source = self._require_data_source("_get_state")
         import streamlit as st
 
         if self._state_key not in st.session_state:
             st.session_state[self._state_key] = create_app_state(
-                self._data_source,
+                data_source,
                 lambda update_cb, reset_cb: self.client(
                     update_dashboard=update_cb,
                     reset_dashboard=reset_cb,
@@ -183,12 +182,11 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         Configures the page, renders chat in sidebar, and displays
         SQL query and data table in the main area.
         """
-        self._require_data_source("app")
-        assert self._data_source is not None  # noqa: S101
+        data_source = self._require_data_source("app")
         import streamlit as st
 
         st.set_page_config(
-            page_title=f"querychat with {self._data_source.table_name}",
+            page_title=f"querychat with {data_source.table_name}",
             layout="wide",
             initial_sidebar_state="expanded",
         )
@@ -307,12 +305,12 @@ class QueryChat(QueryChatBase[IntoFrameT]):
 
     def _render_main_content(self) -> None:
         """Render the main content area (SQL + data table)."""
-        assert self._data_source is not None  # noqa: S101
+        data_source = self._require_data_source("_render_main_content")
         import streamlit as st
 
         state = self._get_state()
 
-        st.title(f"querychat with `{self._data_source.table_name}`")
+        st.title(f"querychat with `{data_source.table_name}`")
 
         st.subheader(state.title or "SQL Query")
 

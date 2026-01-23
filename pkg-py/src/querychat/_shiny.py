@@ -262,11 +262,9 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             A Shiny App object that can be run with `app.run()` or served with `shiny run`.
 
         """
-        self._require_data_source("app")
-        assert self._data_source is not None  # noqa: S101
+        data_source = self._require_data_source("app")
         enable_bookmarking = bookmark_store != "disable"
-        table_name = self._data_source.table_name
-        data_source = self._data_source
+        table_name = data_source.table_name
 
         def app_ui(request):
             return ui.page_sidebar(
@@ -487,12 +485,11 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         if data_source is not None:
             self.data_source = data_source
 
-        self._require_data_source("server")
-        assert self._data_source is not None  # noqa: S101
+        resolved_data_source = self._require_data_source("server")
 
         return mod_server(
             id or self.id,
-            data_source=self._data_source,
+            data_source=resolved_data_source,
             greeting=self.greeting,
             client=self.client,
             enable_bookmarking=enable_bookmarking,
@@ -703,12 +700,11 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             enable = enable_bookmarking
 
         # Require data_source for Express (it calls mod_server immediately)
-        self._require_data_source("QueryChatExpress.__init__")
-        assert self._data_source is not None  # noqa: S101
+        resolved_data_source = self._require_data_source("QueryChatExpress.__init__")
 
         self._vals = mod_server(
             self.id,
-            data_source=self._data_source,
+            data_source=resolved_data_source,
             greeting=self.greeting,
             client=self._client,
             enable_bookmarking=enable,

@@ -217,13 +217,12 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
             A Dash app ready to run.
 
         """
-        self._require_data_source("app")
-        assert self._data_source is not None  # noqa: S101
+        data_source = self._require_data_source("app")
         import dash_bootstrap_components as dbc
 
         import dash
 
-        table_name = self._data_source.table_name
+        table_name = data_source.table_name
 
         app = dash.Dash(
             __name__,
@@ -236,7 +235,7 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
         register_app_callbacks(
             app,
             self._ids,
-            self._data_source.table_name,
+            data_source.table_name,
             self._deserialize_state,
         )
 
@@ -277,12 +276,11 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
         ...     return f"Current SQL: {sql}"
 
         """
-        self._require_data_source("ui")
-        assert self._data_source is not None  # noqa: S101
+        data_source = self._require_data_source("ui")
         from dash import dcc, html
 
         initial_state = create_app_state(
-            self._data_source,
+            data_source,
             self._client_factory,
             self.greeting,
         )

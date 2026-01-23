@@ -247,12 +247,11 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
         >>> app.launch(css=qc.css, head=qc.head)
 
         """
-        self._require_data_source("ui")
-        assert self._data_source is not None  # noqa: S101
+        data_source = self._require_data_source("ui")
         import gradio as gr
 
         initial_state = create_app_state(
-            self._data_source, self._client_factory, self.greeting
+            data_source, self._client_factory, self.greeting
         )
 
         state_holder = gr.State(value=initial_state.to_dict())
@@ -329,13 +328,12 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
             querychat CSS/JS at launch time for Gradio 6.0+ compatibility.
 
         """
-        self._require_data_source("app")
-        assert self._data_source is not None  # noqa: S101
+        data_source = self._require_data_source("app")
         from gradio.themes import Soft
 
         import gradio as gr
 
-        table_name = self._data_source.table_name
+        table_name = data_source.table_name
 
         with gr.Blocks(
             title=f"querychat with {table_name}",
@@ -354,7 +352,7 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
                 sql_display = gr.Code(
                     label="",
                     language="sql",
-                    value=f"SELECT * FROM {self._data_source.table_name}",
+                    value=f"SELECT * FROM {table_name}",
                     interactive=False,
                     lines=2,
                 )

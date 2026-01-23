@@ -90,6 +90,51 @@ The most common pattern places chat in the sidebar with your custom filtered vie
 
 :::
 
+## Deferred data sources (Core only) {#deferred-data-sources}
+
+In Shiny Core applications, you may need to create database connections per-user rather than globally. For example, when connections depend on session-specific authentication or user credentials. The deferred data source pattern supports this by allowing `data_source=None` at initialization:
+
+```python
+from shiny import App, ui
+from querychat import QueryChat
+
+# Global scope - create QueryChat without data source
+qc = QueryChat(None, "users")
+
+def app_ui(request):
+    return ui.page_sidebar(
+        qc.sidebar(),
+        ui.output_data_frame("table"),
+    )
+
+def server(input, output, session):
+    # Server scope - create connection with session credentials
+    conn = get_user_connection(session)
+
+    # Option A: Pass data source to server()
+    qc_vals = qc.server(data_source=conn)
+
+    # Option B: Set property first
+    # qc.data_source = conn
+    # qc_vals = qc.server()
+
+    @render.data_frame
+    def table():
+        return qc_vals.df()
+
+app = App(app_ui, server)
+```
+
+When using this pattern:
+
+- **`table_name` is required** - it cannot be inferred from `None`
+- **UI methods work without data** - `.sidebar()` and `.ui()` don't need the data source
+- **Server methods require data** - `.server()`, `.client()`, `.console()`, and `.generate_greeting()` need the data source to be set first
+
+::: callout-note
+This pattern is primarily useful for Shiny Core. In Express mode, the single-scope design means you typically have access to session information when creating the `QueryChat` instance.
+:::
+
 ## Custom chat UI
 
 Use `.ui()` to place the chat anywhere in your layout. Here we use it simply to place custom content in the sidebar alongside the chat (like a [reset button](#resetting-filters)):

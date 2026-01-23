@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### New features
+
+* `QueryChat()` now supports deferred data source initialization for Shiny Core applications. Pass `data_source=None` at initialization time, then provide the actual data source via the `data_source` parameter of `server()` or by setting the `data_source` property. This enables use cases where the data source depends on session-specific authentication or per-user database connections. (#202)
+
 ## [0.5.0] - 2026-01-16
 
 ### New features

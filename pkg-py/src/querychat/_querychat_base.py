@@ -151,6 +151,8 @@ class QueryChatBase(Generic[IntoFrameT]):
 
         """
         self._require_data_source("client")
+        assert self._data_source is not None
+        assert self._system_prompt is not None
         tools = normalize_tools(tools, default=self.tools)
 
         chat = copy.deepcopy(self._client)
@@ -198,6 +200,7 @@ class QueryChatBase(Generic[IntoFrameT]):
     def system_prompt(self) -> str:
         """Get the system prompt."""
         self._require_data_source("system_prompt")
+        assert self._system_prompt is not None
         return self._system_prompt.render(self.tools)
 
     @property

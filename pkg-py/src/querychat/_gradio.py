@@ -248,6 +248,7 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
 
         """
         self._require_data_source("ui")
+        assert self._data_source is not None
         import gradio as gr
 
         initial_state = create_app_state(
@@ -329,17 +330,20 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
 
         """
         self._require_data_source("app")
+        assert self._data_source is not None
         from gradio.themes import Soft
 
         import gradio as gr
 
+        table_name = self._data_source.table_name
+
         with gr.Blocks(
-            title=f"querychat with {self._data_source.table_name}",
+            title=f"querychat with {table_name}",
         ) as blocks_app:
             with gr.Sidebar(label="Chat", open=True, width=420):
                 state_holder = self.ui()
 
-            gr.Markdown(f"## `{self._data_source.table_name}`")
+            gr.Markdown(f"## `{table_name}`")
 
             with gr.Group():
                 with gr.Row():
@@ -373,7 +377,7 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
                 sql_code = (
                     state_dict.get("sql")
                     if state_dict and state_dict.get("sql")
-                    else f"SELECT * FROM {self._data_source.table_name}"
+                    else f"SELECT * FROM {table_name}"
                 )
 
                 df = self.df(state_dict)

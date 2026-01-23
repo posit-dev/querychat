@@ -162,6 +162,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
     def _get_state(self) -> AppState:
         """Get or create session state."""
         self._require_data_source("_get_state")
+        assert self._data_source is not None
         import streamlit as st
 
         if self._state_key not in st.session_state:
@@ -183,6 +184,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         SQL query and data table in the main area.
         """
         self._require_data_source("app")
+        assert self._data_source is not None
         import streamlit as st
 
         st.set_page_config(
@@ -305,6 +307,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
 
     def _render_main_content(self) -> None:
         """Render the main content area (SQL + data table)."""
+        assert self._data_source is not None
         import streamlit as st
 
         state = self._get_state()

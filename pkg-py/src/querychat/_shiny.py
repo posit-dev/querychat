@@ -657,7 +657,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
 
     def __init__(
         self,
-        data_source: IntoFrame | sqlalchemy.Engine | ibis.Table,
+        data_source: IntoFrame | sqlalchemy.Engine | ibis.Table | None,
         table_name: str,
         *,
         id: Optional[str] = None,
@@ -687,7 +687,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             extra_instructions=extra_instructions,
             prompt_template=prompt_template,
         )
-        self.id = id or f"querychat_{self._data_source.table_name}"
+        self.id = id or f"querychat_{table_name}"
 
         # If the Express session has a bookmark store set, automatically enable
         # querychat's bookmarking
@@ -700,6 +700,9 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
                 enable = False
         else:
             enable = enable_bookmarking
+
+        # Require data_source for Express (it calls mod_server immediately)
+        self._require_data_source("QueryChatExpress.__init__")
 
         self._vals = mod_server(
             self.id,

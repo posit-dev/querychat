@@ -1,6 +1,13 @@
 <urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
 <url><loc>https://posit-dev.github.io/querychat/dev/LICENSE-text.html</loc></url>
 <url><loc>https://posit-dev.github.io/querychat/dev/LICENSE.html</loc></url>
+<url><loc>https://posit-dev.github.io/querychat/dev/articles/build.html</loc></url>
+<url><loc>https://posit-dev.github.io/querychat/dev/articles/context.html</loc></url>
+<url><loc>https://posit-dev.github.io/querychat/dev/articles/data-sources.html</loc></url>
+<url><loc>https://posit-dev.github.io/querychat/dev/articles/greet.html</loc></url>
+<url><loc>https://posit-dev.github.io/querychat/dev/articles/index.html</loc></url>
+<url><loc>https://posit-dev.github.io/querychat/dev/articles/models.html</loc></url>
+<url><loc>https://posit-dev.github.io/querychat/dev/articles/tools.html</loc></url>
 <url><loc>https://posit-dev.github.io/querychat/dev/authors.html</loc></url>
 <url><loc>https://posit-dev.github.io/querychat/dev/index.html</loc></url>
 <url><loc>https://posit-dev.github.io/querychat/dev/news/index.html</loc></url>
@@ -8,9 +15,9 @@
 <url><loc>https://posit-dev.github.io/querychat/dev/reference/DataFrameSource.html</loc></url>
 <url><loc>https://posit-dev.github.io/querychat/dev/reference/DataSource.html</loc></url>
 <url><loc>https://posit-dev.github.io/querychat/dev/reference/QueryChat.html</loc></url>
+<url><loc>https://posit-dev.github.io/querychat/dev/reference/TblSqlSource.html</loc></url>
 <url><loc>https://posit-dev.github.io/querychat/dev/reference/deprecated.html</loc></url>
 <url><loc>https://posit-dev.github.io/querychat/dev/reference/index.html</loc></url>
-<url><loc>https://posit-dev.github.io/querychat/dev/reference/is_data_source.html</loc></url>
 <url><loc>https://posit-dev.github.io/querychat/dev/reference/querychat-convenience.html</loc></url>
 <url><loc>https://posit-dev.github.io/querychat/dev/reference/querychat-package.html</loc></url>
 </urlset>

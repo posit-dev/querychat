@@ -2,6 +2,73 @@
 
 ## querychat (development version)
 
+- `QueryChat$new()` now supports deferred data source. Pass
+  `data_source = NULL` at initialization time, then provide the actual
+  data source via the `data_source` parameter of `$server()` or by
+  setting the `$data_source` property. This enables use cases where the
+  data source depends on session-specific authentication or per-user
+  database connections.
+  ([\#202](https://github.com/posit-dev/querychat/issues/202))
+
+## querychat 0.2.0
+
+CRAN release: 2026-01-12
+
+- The update tool now requires that the SQL query returns all columns
+  from the original data source, ensuring that the dashboard can display
+  the complete data frame after filtering or sorting. If the query does
+  not return all columns, an informative error message will be provided.
+  ([\#180](https://github.com/posit-dev/querychat/issues/180))
+
+- Obvious SQL keywords that lead to data modification (e.g., `INSERT`,
+  `UPDATE`, `DELETE`, `DROP`, etc.) are now prohibited in queries run
+  via the query tool or update tool, to prevent accidental data changes.
+  If such keywords are detected, an informative error message will be
+  provided. ([\#180](https://github.com/posit-dev/querychat/issues/180))
+
+- [`querychat()`](https://posit-dev.github.io/querychat/dev/reference/querychat-convenience.md)
+  and `QueryChat$new()` now use either [duckdb](https://r.duckdb.org/)
+  or `{SQLite}` for the in-memory database backend for data frames,
+  depending on which package is installed. If both are installed,
+  [duckdb](https://r.duckdb.org/) will be preferred. You can explicitly
+  choose the `engine` in `DataFrameSource$new()` or set
+  `querychat.DataFrameSource.engine` option to choose a global default.
+  ([\#178](https://github.com/posit-dev/querychat/issues/178))
+
+- `QueryChat$sidebar()`, `QueryChat$ui()`, and `QueryChat$server()` now
+  support an optional `id` parameter to enable use within Shiny modules.
+  When used in a module UI function, pass `id = ns("your_id")` where
+  `ns` is the namespacing function from
+  [`shiny::NS()`](https://rdrr.io/pkg/shiny/man/NS.html). In the
+  corresponding module server function, pass the unwrapped ID to
+  `QueryChat$server(id = "your_id")`. This enables multiple independent
+  QueryChat instances from the same QueryChat object.
+  ([\#172](https://github.com/posit-dev/querychat/issues/172))
+
+- `QueryChat$client()` can now create standalone querychat-enabled chat
+  clients with configurable tools and callbacks, enabling use outside of
+  Shiny applications.
+  ([\#168](https://github.com/posit-dev/querychat/issues/168))
+
+- `QueryChat$console()` was added to launch interactive console-based
+  chat sessions with your data source, with persistent conversation
+  state across invocations.
+  ([\#168](https://github.com/posit-dev/querychat/issues/168))
+
+- The tools used in a `QueryChat` chatbot are now configurable. Use the
+  new `tools` parameter of
+  [`querychat()`](https://posit-dev.github.io/querychat/dev/reference/querychat-convenience.md)
+  or `QueryChat$new()` to select either or both `"query"` or `"update"`
+  tools. Choose `tools = "update"` if you only want QueryChat to be able
+  to update the dashboard (useful when you want to be 100% certain that
+  the LLM will not see *any* raw data).
+  ([\#168](https://github.com/posit-dev/querychat/issues/168))
+
+- [`querychat_app()`](https://posit-dev.github.io/querychat/dev/reference/querychat-convenience.md)
+  will now only automatically clean up the data source if QueryChat
+  creates the data source internally from a data frame.
+  ([\#164](https://github.com/posit-dev/querychat/issues/164))
+
 - **Breaking change:** The `$sql()` method now returns `NULL` instead of
   `""` (empty string) when no query has been set, aligning with the
   behavior of `$title()` for consistency. Most code using
@@ -9,13 +76,14 @@
   falsy checks will continue working without changes. Code that
   explicitly checks `sql() == ""` should be updated to use falsy checks
   (e.g., `!isTruthy(sql())`) or explicit null checks (`is.null(sql())`).
-  (#146)
+  ([\#146](https://github.com/posit-dev/querychat/issues/146))
 
 - Tool detail cards can now be expanded or collapsed by default when
   querychat runs a query or updates the dashboard via the
   `querychat.tool_details` R option or the `QUERYCHAT_TOOL_DETAILS`
   environment variable. Valid values are `"expanded"`, `"collapsed"`, or
-  `"default"`. (#137)
+  `"default"`.
+  ([\#137](https://github.com/posit-dev/querychat/issues/137))
 
 - Added bookmarking support to `QueryChat$server()` and
   [`querychat_app()`](https://posit-dev.github.io/querychat/dev/reference/querychat-convenience.md).
@@ -24,7 +92,8 @@
   [`querychat_app()`](https://posit-dev.github.io/querychat/dev/reference/querychat-convenience.md)
   or `$app_obj()`, or via `enable_bookmarking = TRUE` in `$server()`),
   the chat state (including current query, title, and chat history) will
-  be saved and restored with Shiny bookmarks. (#107)
+  be saved and restored with Shiny bookmarks.
+  ([\#107](https://github.com/posit-dev/querychat/issues/107))
 
 - Nearly the entire functional API (i.e.,
   [`querychat_init()`](https://posit-dev.github.io/querychat/dev/reference/deprecated.md),
@@ -35,20 +104,24 @@
   (instead of
   [`querychat_init()`](https://posit-dev.github.io/querychat/dev/reference/deprecated.md))
   and has methods to replace old functions (e.g., `$sidebar()`,
-  `$server()`, etc). (#109)
+  `$server()`, etc).
+  ([\#109](https://github.com/posit-dev/querychat/issues/109))
 
   - In addition,
     [`querychat_data_source()`](https://posit-dev.github.io/querychat/dev/reference/deprecated.md)
     was renamed to `as_querychat_data_source()`, and remains exported
     for a developer extension point, but users no longer have to
-    explicitly create a data source. (#109)
+    explicitly create a data source.
+    ([\#109](https://github.com/posit-dev/querychat/issues/109))
 
 - Added `prompt_template` support for `querychat_system_prompt()`.
-  (Thank you, @oacar! \#37, \#45)
+  (Thank you, [@oacar](https://github.com/oacar)!
+  [\#37](https://github.com/posit-dev/querychat/issues/37),
+  [\#45](https://github.com/posit-dev/querychat/issues/45))
 
 - [`querychat_init()`](https://posit-dev.github.io/querychat/dev/reference/deprecated.md)
   now accepts a `client`, replacing the previous `create_chat_func`
-  argument. (#60)
+  argument. ([\#60](https://github.com/posit-dev/querychat/issues/60))
 
   The `client` can be:
 
@@ -74,27 +147,32 @@
   now uses a
   [`shiny::ExtendedTask`](https://rdrr.io/pkg/shiny/man/ExtendedTask.html)
   for streaming the chat response, which allows the dashboard to update
-  and remain responsive while the chat response is streaming in. (#63)
+  and remain responsive while the chat response is streaming in.
+  ([\#63](https://github.com/posit-dev/querychat/issues/63))
 
 - querychat now requires `ellmer` version 0.3.0 or later and uses rich
-  tool cards for dashboard updates and database queries. (#65)
+  tool cards for dashboard updates and database queries.
+  ([\#65](https://github.com/posit-dev/querychat/issues/65))
 
 - New
   [`querychat_app()`](https://posit-dev.github.io/querychat/dev/reference/querychat-convenience.md)
   function lets you quickly launch a Shiny app with a querychat chat
-  interface. (#66)
+  interface. ([\#66](https://github.com/posit-dev/querychat/issues/66))
 
 - [`querychat_ui()`](https://posit-dev.github.io/querychat/dev/reference/deprecated.md)
   now adds a `.querychat` class to the chat container and
   [`querychat_sidebar()`](https://posit-dev.github.io/querychat/dev/reference/deprecated.md)
   adds a `.querychat-sidebar` class to the sidebar, allowing for easier
-  customization via CSS. (#68)
+  customization via CSS.
+  ([\#68](https://github.com/posit-dev/querychat/issues/68))
 
-- querychat now uses a separate tool to reset the dashboard. (#80)
+- querychat now uses a separate tool to reset the dashboard.
+  ([\#80](https://github.com/posit-dev/querychat/issues/80))
 
 - [`querychat_greeting()`](https://posit-dev.github.io/querychat/dev/reference/deprecated.md)
   can be used to generate a greeting message for your querychat bot.
-  (#87)
+  ([\#87](https://github.com/posit-dev/querychat/issues/87))
 
 - querychat’s system prompt and tool descriptions were rewritten for
-  clarity and future extensibility. (#90)
+  clarity and future extensibility.
+  ([\#90](https://github.com/posit-dev/querychat/issues/90))

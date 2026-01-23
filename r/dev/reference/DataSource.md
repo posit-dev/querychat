@@ -94,13 +94,18 @@ Test a SQL query by fetching only one row
 
 #### Usage
 
-    DataSource$test_query(query)
+    DataSource$test_query(query, require_all_columns = FALSE)
 
 #### Arguments
 
 - `query`:
 
   SQL query string to test
+
+- `require_all_columns`:
+
+  If `TRUE`, validates that the result includes all original table
+  columns (default: `FALSE`)
 
 #### Returns
 
@@ -149,3 +154,18 @@ The objects of this class are cloneable with this method.
 - `deep`:
 
   Whether to make a deep clone.
+
+## Examples
+
+``` r
+MyDataSource <- R6::R6Class(
+  "MyDataSource",
+  inherit = DataSource,
+  public = list(
+    initialize = function(table_name) {
+      self$table_name <- table_name
+    }
+    # Implement abstract methods here...
+  )
+)
+```

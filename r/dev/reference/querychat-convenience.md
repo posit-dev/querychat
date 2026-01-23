@@ -15,6 +15,7 @@ querychat(
   id = NULL,
   greeting = NULL,
   client = NULL,
+  tools = c("update", "query"),
   data_description = NULL,
   categorical_threshold = 20,
   extra_instructions = NULL,
@@ -29,11 +30,12 @@ querychat_app(
   id = NULL,
   greeting = NULL,
   client = NULL,
+  tools = c("update", "query"),
   data_description = NULL,
   categorical_threshold = 20,
   extra_instructions = NULL,
   prompt_template = NULL,
-  cleanup = TRUE,
+  cleanup = NA,
   bookmark_store = "url"
 )
 ```
@@ -85,6 +87,15 @@ querychat_app(
     `QUERYCHAT_CLIENT` environment variable, or defaults to
     [`ellmer::chat_openai()`](https://ellmer.tidyverse.org/reference/chat_openai.html)
 
+- tools:
+
+  Which querychat tools to include in the chat client, by default.
+  `"update"` includes the tools for updating and resetting the dashboard
+  and `"query"` includes the tool for executing SQL queries. Use
+  `tools = "update"` when you only want the dashboard updating tools, or
+  when you want to disable the querying tool entirely to prevent the LLM
+  from seeing any of the data in your dataset.
+
 - data_description:
 
   Optional description of the data in plain text or Markdown. Can be a
@@ -110,9 +121,12 @@ querychat_app(
 - cleanup:
 
   Whether or not to automatically run `$cleanup()` when the Shiny
-  session/app stops. By default, cleanup only occurs if `QueryChat` gets
-  created within a Shiny session. Set to `TRUE` to always clean up, or
+  session/app stops. By default, cleanup only occurs if `QueryChat` is
+  created within a Shiny app. Set to `TRUE` to always clean up, or
   `FALSE` to never clean up automatically.
+
+  In `querychat_app()`, in-memory databases created for data frames are
+  always cleaned up.
 
 - bookmark_store:
 
@@ -132,7 +146,7 @@ Invisibly returns the chat object after the app stops.
 ## Examples
 
 ``` r
-if (FALSE) { # \dontrun{
+if (FALSE) { # rlang::is_interactive() && rlang::is_installed("RSQLite")
 # Quick start - chat with mtcars dataset in one line
 querychat_app(mtcars)
 
@@ -144,16 +158,14 @@ querychat_app(
 )
 
 # Chat with a database table (table_name required)
-library(DBI)
-conn <- dbConnect(RSQLite::SQLite(), ":memory:")
-dbWriteTable(conn, "mtcars", mtcars)
-querychat_app(conn, "mtcars")
+con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
+DBI::dbWriteTable(con, "mtcars", mtcars)
+querychat_app(con, "mtcars")
 
 # Create QueryChat class object
-qc <- querychat(mtcars)
+qc <- querychat(mtcars, greeting = "Welcome to the mtcars explorer!")
 
 # Run the app later
 qc$app()
-
-} # }
+}
 ```

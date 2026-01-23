@@ -14,12 +14,13 @@
 <script src="lightswitch.js"></script><script src="deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
 <script src="deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="https://fonts.bunny.net/css?family=Open%20Sans:100,200,300,400,500,600,700,800,900,100i,200i,300i,400i,500i,600i,700i,800i,900i&amp;display=auto" rel="stylesheet">
+<link href="https://fonts.bunny.net/css?family=Hubot%20Sans:100,200,300,400,500,600,700,800,900,100i,200i,300i,400i,500i,600i,700i,800i,900i&amp;display=auto" rel="stylesheet">
 <link href="https://fonts.bunny.net/css?family=Source%20Code%20Pro:100,200,300,400,500,600,700,800,900,100i,200i,300i,400i,500i,600i,700i,800i,900i&amp;display=auto" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Filter and Query Data Frames in shiny Using an LLM Chat Interface">
-<meta name="description" content="Adds an LLM-powered chatbot to your shiny app, that can turn your users' natural language questions into SQL queries that run against your data, and return the result as a reactive dataframe. Use it to drive reactive calculations, visualizations, downloads, etc.">
-<meta property="og:description" content="Adds an LLM-powered chatbot to your shiny app, that can turn your users' natural language questions into SQL queries that run against your data, and return the result as a reactive dataframe. Use it to drive reactive calculations, visualizations, downloads, etc.">
+<meta name="description" content="Adds an LLM-powered chatbot to your shiny app, that can turn your users natural language questions into SQL' queries that run against your data, and return the result as a reactive data frame. Use it to drive reactive calculations, visualizations, downloads, and more.">
+<meta property="og:description" content="Adds an LLM-powered chatbot to your shiny app, that can turn your users natural language questions into SQL' queries that run against your data, and return the result as a reactive data frame. Use it to drive reactive calculations, visualizations, downloads, and more.">
 <meta property="og:image" content="https://posit-dev.github.io/querychat/logo.png">
 <meta name="robots" content="noindex">
 </head>
@@ -31,7 +32,7 @@
 
     <a class="navbar-brand me-2" href="index.html">querychat</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.1.0.9000</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.2.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -40,6 +41,17 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
+<li><a class="dropdown-item" href="articles/models.html">Models</a></li>
+    <li><a class="dropdown-item" href="articles/data-sources.html">Data Sources</a></li>
+    <li><a class="dropdown-item" href="articles/context.html">Provide context</a></li>
+    <li><a class="dropdown-item" href="articles/build.html">Build an app</a></li>
+    <li><a class="dropdown-item" href="articles/greet.html">Greet users</a></li>
+    <li><a class="dropdown-item" href="articles/tools.html">Tools</a></li>
+  </ul>
+</li>
 <li class="nav-item"><a class="nav-link" href="reference/index.html">Reference</a></li>
 <li class="nav-item"><a class="nav-link" href="news/index.html">Changelog</a></li>
       </ul>
@@ -47,6 +59,7 @@
 <li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="search.json">
 </form></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/posit-dev/querychat/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-lightswitch" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true" aria-label="Light switch"><span class="fa fa-sun"></span></button>
   <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdown-lightswitch">
@@ -64,241 +77,104 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="section level1">
 <div class="page-header">
-<img src="logo.png" class="logo" alt=""><h1 id="querychat-chat-with-shiny-apps-r-">querychat: Chat with Shiny apps (R) 
-<a class="anchor" aria-label="anchor" href="#querychat-chat-with-shiny-apps-r-"></a>
+<img src="logo.png" class="logo" alt=""><h1 id="querychat-">querychat 
+<a class="anchor" aria-label="anchor" href="#querychat-"></a>
 </h1>
 </div>
-<p>Imagine typing questions like these directly into your Shiny dashboard, and seeing the results in realtime:</p>
-<ul>
-<li>“Show only penguins that are not species Gentoo and have a bill length greater than 50mm.”</li>
-<li>“Show only blue states with an incidence rate greater than 100 per 100,000 people.”</li>
-<li>“What is the average mpg of cars with 6 cylinders?”</li>
-</ul>
-<p>querychat is a drop-in component for Shiny that allows users to query a data frame using natural language. The results are available as a reactive data frame, so they can be easily used from Shiny outputs, reactive expressions, downloads, etc.</p>
-<p><strong>This is not as terrible an idea as you might think!</strong> We need to be very careful when bringing LLMs into data analysis, as we all know that they are prone to hallucinations and other classes of errors. querychat is designed to excel in reliability, transparency, and reproducibility by using this one technique: denying it raw access to the data, and forcing it to write SQL queries instead. See the section below on <a href="#how-it-works">“How it works”</a> for more.</p>
+<!-- badges: start -->
+
+<p>querychat facilitates safe and reliable natural language exploration of tabular data, powered by SQL and large language models (LLMs). For users, it offers an intuitive web application where they can quickly ask questions of their data and receive verifiable data-driven answers. As a developer, you can access the chat UI component, generated SQL queries, and filtered data to build custom applications that integrate natural language querying into your data workflows.</p>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
+<p>Install the stable release from CRAN:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"posit-dev/querychat/pkg-r"</span><span class="op">)</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="how-to-use">How to use<a class="anchor" aria-label="anchor" href="#how-to-use"></a>
-</h2>
-<p>First, you’ll need an OpenAI API key. See the <a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">instructions from Ellmer</a>. (Or use a different LLM provider, see below.)</p>
-<div class="section level3">
-<h3 id="quick-start">Quick Start<a class="anchor" aria-label="anchor" href="#quick-start"></a>
-</h3>
-<p>The fastest way to get started is with the built-in app:</p>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"querychat"</span><span class="op">)</span></span></code></pre></div>
+<p>Or the development version from GitHub:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://posit-dev.github.io/querychat/pkg-r">querychat</a></span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="va"><a href="reference/QueryChat.html">QueryChat</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">mtcars</span><span class="op">)</span></span>
-<span><span class="va">qc</span><span class="op">$</span><span class="fu">app</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
-<p>This launches a complete Shiny app with a chat interface, SQL query display, and data table. Perfect for quick exploration and prototyping!</p>
-</div>
-<div class="section level3">
-<h3 id="custom-shiny-apps">Custom Shiny Apps<a class="anchor" aria-label="anchor" href="#custom-shiny-apps"></a>
-</h3>
-<p>For more control, integrate querychat into your own Shiny app:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://shiny.posit.co/" class="external-link">shiny</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rstudio.github.io/bslib/" class="external-link">bslib</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://posit-dev.github.io/querychat/pkg-r">querychat</a></span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># 1. Create a QueryChat instance with your data</span></span>
-<span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="va"><a href="reference/QueryChat.html">QueryChat</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">mtcars</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">ui</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rstudio.github.io/bslib/reference/page_sidebar.html" class="external-link">page_sidebar</a></span><span class="op">(</span></span>
-<span>  <span class="co"># 2. Use qc$sidebar() in a bslib::page_sidebar.</span></span>
-<span>  <span class="co">#    Alternatively, use qc$ui() elsewhere if you don't want your</span></span>
-<span>  <span class="co">#    chat interface to live in a sidebar.</span></span>
-<span>  sidebar <span class="op">=</span> <span class="va">qc</span><span class="op">$</span><span class="fu">sidebar</span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  <span class="fu">DT</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/DT/man/dataTableOutput.html" class="external-link">DTOutput</a></span><span class="op">(</span><span class="st">"dt"</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">server</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">input</span>, <span class="va">output</span>, <span class="va">session</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="co"># 3. Initialize the QueryChat server (returns session-specific reactive values)</span></span>
-<span>  <span class="va">qc_vals</span> <span class="op">&lt;-</span> <span class="va">qc</span><span class="op">$</span><span class="fu">server</span><span class="op">(</span><span class="op">)</span></span>
-<span></span>
-<span>  <span class="va">output</span><span class="op">$</span><span class="va">dt</span> <span class="op">&lt;-</span> <span class="fu">DT</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/DT/man/dataTableOutput.html" class="external-link">renderDT</a></span><span class="op">(</span><span class="op">{</span></span>
-<span>    <span class="co"># 4. Use the filtered/sorted data frame anywhere you wish, via qc_vals$df()</span></span>
-<span>    <span class="fu">DT</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/DT/man/datatable.html" class="external-link">datatable</a></span><span class="op">(</span><span class="va">qc_vals</span><span class="op">$</span><span class="fu">df</span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
-<span>  <span class="op">}</span><span class="op">)</span></span>
-<span><span class="op">}</span></span>
-<span></span>
-<span><span class="fu"><a href="https://rdrr.io/pkg/shiny/man/shinyApp.html" class="external-link">shinyApp</a></span><span class="op">(</span><span class="va">ui</span>, <span class="va">server</span><span class="op">)</span></span></code></pre></div>
-</div>
+<code class="sourceCode R"><span><span class="co"># install.packages("pak")</span></span>
+<span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"posit-dev/querychat/pkg-r"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="using-database-sources">Using Database Sources<a class="anchor" aria-label="anchor" href="#using-database-sources"></a>
+<h2 id="quick-start">Quick start<a class="anchor" aria-label="anchor" href="#quick-start"></a>
 </h2>
-<p>In addition to data frames, querychat can connect to external databases via DBI:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://shiny.posit.co/" class="external-link">shiny</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rstudio.github.io/bslib/" class="external-link">bslib</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://posit-dev.github.io/querychat/pkg-r">querychat</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dbi.r-dbi.org" class="external-link">DBI</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rsqlite.r-dbi.org" class="external-link">RSQLite</a></span><span class="op">)</span></span>
+<p>The quickest way to start chatting with your data is via <code><a href="reference/querychat-convenience.html">querychat_app()</a></code>, which provides a fully polished Shiny app. It requires a data <a href="https://posit-dev.github.io/querychat/r/articles/data-sources.html">data source</a> (e.g., data.frame, database connection, etc.) and optionally other parameters (e.g. the LLM <code>client</code> <a href="https://posit-dev.github.io/querychat/r/articles/models.html">model</a>).</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://posit-dev.github.io/querychat/r/">querychat</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://allisonhorst.github.io/palmerpenguins/" class="external-link">palmerpenguins</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># 1. Connect to a database</span></span>
-<span><span class="va">conn</span> <span class="op">&lt;-</span> <span class="fu">DBI</span><span class="fu">::</span><span class="fu"><a href="https://dbi.r-dbi.org/reference/dbConnect.html" class="external-link">dbConnect</a></span><span class="op">(</span><span class="fu">RSQLite</span><span class="fu">::</span><span class="fu"><a href="https://rsqlite.r-dbi.org/reference/SQLite.html" class="external-link">SQLite</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"path/to/database.db"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># 2. Create a QueryChat instance with the database connection</span></span>
-<span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="va"><a href="reference/QueryChat.html">QueryChat</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">conn</span>, <span class="st">"table_name"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># 3. Use it in your Shiny app as shown above</span></span>
-<span><span class="va">qc</span><span class="op">$</span><span class="fu">app</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="reference/querychat-convenience.html">querychat_app</a></span><span class="op">(</span><span class="va">penguins</span>, client <span class="op">=</span> <span class="st">"openai/gpt-4.1"</span><span class="op">)</span></span></code></pre></div>
+<p>Once running (which requires an API key<a class="footnote-ref" tabindex="0" data-bs-toggle="popover" data-bs-content='&lt;p&gt;By default, querychat uses OpenAI to power the chat experience. So, for this example to work, you’ll need &lt;a href="https://platform.openai.com/" class="external-link"&gt;an OpenAI API key&lt;/a&gt;. See the &lt;a href="https://posit-dev.github.io/querychat/r/articles/models.html"&gt;Models&lt;/a&gt; article for details on how to set up credentials for other model providers.&lt;/p&gt;'><sup>1</sup></a>), you’ll notice 3 main views:</p>
+<ol style="list-style-type: decimal">
+<li>A sidebar chat with suggestions on where to start exploring.</li>
+<li>A data table that updates to reflect filtering and sorting queries.</li>
+<li>The SQL query behind the data table, for transparency and reproducibility.</li>
+</ol>
+<p><img src="reference/figures/quickstart.png" class="rounded shadow" alt="Screenshot of querychat's app with the penguins dataset."></p>
+<p>Suppose we pick a suggestion like “Show me Adelie penguins”. Since this is a filtering operation, both the data table and SQL query update accordingly.</p>
+<p><img src="reference/figures/quickstart-filter.png" class="rounded shadow" alt="Screenshot of the querychat's app with the penguins dataset filtered."></p>
+<p>querychat can also handle more general questions about the data that require calculations and aggregations. For example, we can ask “What is the average bill length by species?”. The LLM will generate the SQL query to perform the calculation, querychat will execute it, and return the result in the chat:</p>
+<p><img src="reference/figures/quickstart-summary.png" class="rounded shadow" alt="Screenshot of the querychat's app with a summary statistic inlined in the chat."></p>
+</div>
+<div class="section level2">
+<h2 id="custom-apps">Custom apps<a class="anchor" aria-label="anchor" href="#custom-apps"></a>
+</h2>
+<p>querychat is designed to be highly extensible – it provides programmatic access to the chat interface, the filtered/sorted data frame, SQL queries, and more. This makes it easy to build custom web apps that leverage natural language interaction with your data. For example, <a href="https://github.com/posit-conf-2025/llm/blob/main/_solutions/25_querychat/25_querychat_02-end-app.R" class="external-link">here</a>’s a bespoke app for exploring Airbnb listings in Ashville, NC:</p>
+<p><img src="reference/figures/airbnb.png" class="shadow rounded mb-3" alt="A custom app for exploring Airbnb listings, powered by querychat."></p>
+<p>To learn more, see <a href="https://posit-dev.github.io/querychat/r/articles/build.html">Build an app</a> for a step-by-step guide.</p>
 </div>
 <div class="section level2">
 <h2 id="how-it-works">How it works<a class="anchor" aria-label="anchor" href="#how-it-works"></a>
 </h2>
-<div class="section level3">
-<h3 id="powered-by-llms">Powered by LLMs<a class="anchor" aria-label="anchor" href="#powered-by-llms"></a>
-</h3>
-<p>querychat’s natural language chat experience is powered by LLMs. You may use any model that <a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a> supports that has the ability to do tool calls, but we currently recommend (as of March 2025):</p>
-<ul>
-<li>GPT-4o</li>
-<li>Claude 3.5 Sonnet</li>
-<li>Claude 3.7 Sonnet</li>
-</ul>
-<p>In our testing, we’ve found that those models strike a good balance between accuracy and latency. Smaller models like GPT-4o-mini are fine for simple queries but make surprising mistakes with moderately complex ones; and reasoning models like o3-mini slow down responses without providing meaningfully better results.</p>
-<p>The small open source models (8B and below) we’ve tested have fared extremely poorly. Sorry. 🤷</p>
-</div>
-<div class="section level3">
-<h3 id="powered-by-sql">Powered by SQL<a class="anchor" aria-label="anchor" href="#powered-by-sql"></a>
-</h3>
-<p>querychat does not have direct access to the raw data; it can <em>only</em> read or filter the data by writing SQL <code>SELECT</code> statements. This is crucial for ensuring relability, transparency, and reproducibility:</p>
+<p>querychat uses LLMs to translate natural language into SQL queries. Models of all sizes, from small ones you can run locally to large frontier models from major AI providers, are remarkably effective at this task. But even the best models need to understand your data’s overall structure to perform well.</p>
+<p>To address this, querychat includes schema metadata – column names, types, ranges, categorical values – in the LLM’s <a href="https://posit-dev.github.io/querychat/r/articles/context.html">system prompt</a>. Importantly, querychat <strong>does not</strong> send raw data to the LLM; it shares only enough structural information for the model to generate accurate queries. When the LLM produces a query, querychat executes it in a SQL database (DuckDB<a class="footnote-ref" tabindex="0" data-bs-toggle="popover" data-bs-content='&lt;p&gt;DuckDB is extremely fast and has a surprising number of &lt;a href="https://duckdb.org/docs/stable/sql/functions/aggregates.html#statistical-aggregates" class="external-link"&gt;statistical functions&lt;/a&gt;.&lt;/p&gt;'><sup>2</sup></a>, by default) to obtain precise results.</p>
+<p>This design makes querychat reliable, safe, and reproducible:</p>
 <ul>
 <li>
-<strong>Reliability:</strong> Today’s LLMs are excellent at writing SQL, but bad at direct calculation.</li>
+<strong>Reliable</strong>: query results come from a real database, not LLM-generated summaries – so outputs are precise, verifiable, and less vulnerable to hallucination<a class="footnote-ref" tabindex="0" data-bs-toggle="popover" data-bs-content='&lt;p&gt;The &lt;a href="https://posit-dev.github.io/querychat/r/articles/tools.html"&gt;query tool&lt;/a&gt; gives query results to the model for context and interpretation. Thus, there is &lt;em&gt;some&lt;/em&gt; potential that the model to mis-interpret those results.&lt;/p&gt;'><sup>3</sup></a>.</li>
 <li>
-<strong>Transparency:</strong> querychat always displays the SQL to the user, so it can be vetted instead of blindly trusted.</li>
+<strong>Safe</strong>: querychat’s tools are read-only by design, avoiding destructive actions on your data.<a class="footnote-ref" tabindex="0" data-bs-toggle="popover" data-bs-content="&lt;p&gt;To fully guarantee no destructive actions on your production database, ensure querychat’s database permissions are read-only.&lt;/p&gt;"><sup>4</sup></a>
+</li>
 <li>
-<strong>Reproducibility:</strong> The SQL query can be easily copied and reused.</li>
+<strong>Reproducible</strong>: generated SQL can be exported and re-run in other environments, so your analysis isn’t locked into a single tool.</li>
 </ul>
-<p>Currently, querychat uses DuckDB for its SQL engine when working with data frames. For database sources, it uses the native SQL dialect of the connected database. DuckDB is extremely fast and has a surprising number of <a href="https://duckdb.org/docs/stable/sql/functions/aggregates.html#statistical-aggregates" class="external-link">statistical functions</a>.</p>
+<div class="alert alert-warning">
+<p><strong>Data privacy</strong></p>
+<p>See the <a href="https://posit-dev.github.io/querychat/r/articles/context.html">Provide context</a> and <a href="https://posit-dev.github.io/querychat/r/articles/tools.html">Tools</a> articles for more details on exactly what information is provided to the LLM and how customize it.</p>
 </div>
 </div>
 <div class="section level2">
-<h2 id="customizing-querychat">Customizing querychat<a class="anchor" aria-label="anchor" href="#customizing-querychat"></a>
+<h2 id="next-steps">Next steps<a class="anchor" aria-label="anchor" href="#next-steps"></a>
 </h2>
-<div class="section level3">
-<h3 id="provide-a-greeting-recommended">Provide a greeting (recommended)<a class="anchor" aria-label="anchor" href="#provide-a-greeting-recommended"></a>
-</h3>
-<p>When the querychat UI first appears, you will usually want it to greet the user with some basic instructions. By default, these instructions are auto-generated every time a user arrives; this is potentially slow, wasteful, and unpredictable. Instead, you should create a file called <code>greeting.md</code>, and when creating your <code>QueryChat</code> instance, pass <code>greeting = "greeting.md"</code> (or use <code><a href="https://rdrr.io/r/base/readLines.html" class="external-link">readLines()</a></code> to read the file as a string).</p>
-<p>You can provide suggestions to the user by using the <code>&lt;span class="suggestion"&gt; &lt;/span&gt;</code> tag.</p>
-<p>For example:</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode markdown"><code class="sourceCode markdown"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="ss">* </span>**Filter and sort the data:**</span>
-<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="ss">  * </span><span class="dt">&lt;</span><span class="kw">span</span><span class="ot"> class</span><span class="op">=</span><span class="st">"suggestion"</span><span class="dt">&gt;</span>Show only survivors<span class="dt">&lt;/</span><span class="kw">span</span><span class="dt">&gt;</span></span>
-<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="ss">  * </span><span class="dt">&lt;</span><span class="kw">span</span><span class="ot"> class</span><span class="op">=</span><span class="st">"suggestion"</span><span class="dt">&gt;</span>Filter to first class passengers under 30<span class="dt">&lt;/</span><span class="kw">span</span><span class="dt">&gt;</span></span>
-<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a><span class="ss">  * </span><span class="dt">&lt;</span><span class="kw">span</span><span class="ot"> class</span><span class="op">=</span><span class="st">"suggestion"</span><span class="dt">&gt;</span>Sort by fare from highest to lowest<span class="dt">&lt;/</span><span class="kw">span</span><span class="dt">&gt;</span></span>
-<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a></span>
-<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a><span class="ss">* </span>**Answer questions about the data:**</span>
-<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a><span class="ss">  * </span><span class="dt">&lt;</span><span class="kw">span</span><span class="ot"> class</span><span class="op">=</span><span class="st">"suggestion"</span><span class="dt">&gt;</span>What was the survival rate by gender?<span class="dt">&lt;/</span><span class="kw">span</span><span class="dt">&gt;</span></span>
-<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a><span class="ss">  * </span><span class="dt">&lt;</span><span class="kw">span</span><span class="ot"> class</span><span class="op">=</span><span class="st">"suggestion"</span><span class="dt">&gt;</span>What's the average age of children who survived?<span class="dt">&lt;/</span><span class="kw">span</span><span class="dt">&gt;</span></span>
-<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a><span class="ss">  * </span><span class="dt">&lt;</span><span class="kw">span</span><span class="ot"> class</span><span class="op">=</span><span class="st">"suggestion"</span><span class="dt">&gt;</span>How many passengers were traveling alone?<span class="dt">&lt;/</span><span class="kw">span</span><span class="dt">&gt;</span></span></code></pre></div>
-<p>These suggestions appear in the greeting and automatically populate the chat text box when clicked. This gives the user a few ideas to explore on their own.</p>
-<p>You can use the <code>$generate_greeting()</code> method to help create a greeting:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="va"><a href="reference/QueryChat.html">QueryChat</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">mtcars</span><span class="op">)</span></span>
-<span><span class="va">greeting</span> <span class="op">&lt;-</span> <span class="va">qc</span><span class="op">$</span><span class="fu">generate_greeting</span><span class="op">(</span>echo <span class="op">=</span> <span class="st">"text"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Save it for reuse</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/writeLines.html" class="external-link">writeLines</a></span><span class="op">(</span><span class="va">greeting</span>, <span class="st">"greeting.md"</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Then use it in your app</span></span>
-<span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="va"><a href="reference/QueryChat.html">QueryChat</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">mtcars</span>, greeting <span class="op">=</span> <span class="st">"greeting.md"</span><span class="op">)</span></span></code></pre></div>
-<p>Alternatively, you can completely suppress the greeting by passing <code>greeting = ""</code>.</p>
-</div>
-<div class="section level3">
-<h3 id="augment-the-system-prompt-recommended">Augment the system prompt (recommended)<a class="anchor" aria-label="anchor" href="#augment-the-system-prompt-recommended"></a>
-</h3>
-<p>In LLM parlance, the <em>system prompt</em> is the set of instructions and specific knowledge you want the model to use during a conversation. querychat automatically creates a system prompt which is comprised of:</p>
-<ol style="list-style-type: decimal">
-<li>The basic set of behaviors the LLM must follow in order for querychat to work properly. (See <code>inst/prompt/prompt.md</code> if you’re curious what this looks like.)</li>
-<li>The SQL schema of the data source you provided.</li>
-<li>(Optional) Any additional description of the data you choose to provide.</li>
-<li>(Optional) Any additional instructions you want to use to guide querychat’s behavior.</li>
-</ol>
-<div class="section level4">
-<h4 id="data-description">Data description<a class="anchor" aria-label="anchor" href="#data-description"></a>
-</h4>
-<p>If you give querychat your dataset and nothing else, it will provide the LLM with the basic schema of your data:</p>
+<p>From here, you might want to learn more about:</p>
 <ul>
-<li>Column names</li>
-<li>SQL data type (integer, float, boolean, datetime, text)</li>
-<li>For text columns with less than 10 unique values, we assume they are categorical variables and include the list of values</li>
-<li>For integer and float columns, we include the range</li>
+<li>
+<a href="https://posit-dev.github.io/querychat/r/articles/models.html">Models</a>: customize the LLM behind querychat.</li>
+<li>
+<a href="https://posit-dev.github.io/querychat/r/articles/data-sources.html">Data sources</a>: different data sources you can use with querychat.</li>
+<li>
+<a href="https://posit-dev.github.io/querychat/r/articles/context.html">Provide context</a>: provide the LLM with the context it needs to work well.</li>
+<li>
+<a href="https://posit-dev.github.io/querychat/r/articles/build.html">Build an app</a>: design a custom Shiny app around querychat.</li>
+<li>
+<a href="https://posit-dev.github.io/querychat/r/articles/greet.html">Greet users</a>: create welcoming onboarding experiences.</li>
+<li>
+<a href="https://posit-dev.github.io/querychat/r/articles/tools.html">Tools</a>: understand what querychat can do under the hood.</li>
 </ul>
-<p>And that’s all the LLM will know about your data. The actual data does not get passed into the LLM. We calculate these values before we pass the schema information into the LLM.</p>
-<p>If the column names are usefully descriptive, it may be able to make a surprising amount of sense out of the data. But if your data frame’s columns are <code>x</code>, <code>V1</code>, <code>value</code>, etc., then the model will need to be given more background info–just like a human would.</p>
-<p>To provide this information, use the <code>data_description</code> argument. For example, the <code>mtcars</code> data frame used in the example above has pretty minimal column names. You might create a <code>data_description.md</code> like this:</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode markdown"><code class="sourceCode markdown"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>The data was extracted from the 1974 Motor Trend US magazine, and</span>
-<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>comprises fuel consumption and 10 aspects of automobile design and</span>
-<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>performance for 32 automobiles (1973–74 models).</span>
-<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a></span>
-<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a><span class="ss">- </span>mpg:  Miles/(US) gallon</span>
-<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a><span class="ss">- </span>cyl:  Number of cylinders</span>
-<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a><span class="ss">- </span>disp: Displacement (cu.in.)</span>
-<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a><span class="ss">- </span>hp:   Gross horsepower</span>
-<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a><span class="ss">- </span>drat: Rear axle ratio</span>
-<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a><span class="ss">- </span>wt:   Weight (1000 lbs)</span>
-<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a><span class="ss">- </span>qsec: 1/4 mile time</span>
-<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a><span class="ss">- </span>vs:   Engine (0 = V-shaped, 1 = straight)</span>
-<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a><span class="ss">- </span>am:   Transmission (0 = automatic, 1 = manual)</span>
-<span id="cb7-14"><a href="#cb7-14" tabindex="-1"></a><span class="ss">- </span>gear: Number of forward gears</span>
-<span id="cb7-15"><a href="#cb7-15" tabindex="-1"></a><span class="ss">- </span>carb: Number of carburetors</span></code></pre></div>
-<p>which you can then pass via:</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="va"><a href="reference/QueryChat.html">QueryChat</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span></span>
-<span>  <span class="va">mtcars</span>,</span>
-<span>  data_description <span class="op">=</span> <span class="st">"data_description.md"</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>querychat doesn’t need this information in any particular format; just put whatever information, in whatever format, you think a human would find helpful.</p>
-</div>
-<div class="section level4">
-<h4 id="additional-instructions">Additional instructions<a class="anchor" aria-label="anchor" href="#additional-instructions"></a>
-</h4>
-<p>You can add additional instructions of your own to the end of the system prompt, by passing <code>extra_instructions</code> to <code>QueryChat$new()</code>.</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="va"><a href="reference/QueryChat.html">QueryChat</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span></span>
-<span>  <span class="va">mtcars</span>,</span>
-<span>  extra_instructions <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
-<span>    <span class="st">"You're speaking to a British audience--please use appropriate spelling conventions."</span>,</span>
-<span>    <span class="st">"Use lots of emojis! 😃 Emojis everywhere, 🌍 emojis forever. ♾️"</span>,</span>
-<span>    <span class="st">"Stay on topic, only talk about the data dashboard and refuse to answer other questions."</span></span>
-<span>  <span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>You can also put these instructions in a separate file and pass the file path, as we did for <code>data_description</code> above.</p>
-<p><strong>Warning:</strong> It is not 100% guaranteed that the LLM will always—or in many cases, ever—obey your instructions, and it can be difficult to predict which instructions will be a problem. So be sure to test extensively each time you change your instructions, and especially, if you change the model you use.</p>
 </div>
 </div>
-<div class="section level3">
-<h3 id="use-a-different-llm-provider">Use a different LLM provider<a class="anchor" aria-label="anchor" href="#use-a-different-llm-provider"></a>
-</h3>
-<p>By default, querychat uses OpenAI with the default model chosen by <code><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">ellmer::chat_openai()</a></code>. If you want to use a different model, you can provide an ellmer chat object to the <code>client</code> argument of <code>QueryChat$new()</code>.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ellmer.tidyverse.org" class="external-link">ellmer</a></span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="va"><a href="reference/QueryChat.html">QueryChat</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span></span>
-<span>  <span class="va">mtcars</span>,</span>
-<span>  client <span class="op">=</span> <span class="fu">ellmer</span><span class="fu">::</span><span class="fu"><a href="https://ellmer.tidyverse.org/reference/chat_anthropic.html" class="external-link">chat_anthropic</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"claude-3-7-sonnet-latest"</span><span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>This would use Claude 3.7 Sonnet instead, which would require you to provide an API key. See the <a href="https://ellmer.tidyverse.org/reference/chat_anthropic.html" class="external-link">instructions from Ellmer</a> for more information on how to authenticate with different providers.</p>
-<p>Alternatively, you can use a provider-model string, which will be passed to <code><a href="https://ellmer.tidyverse.org/reference/chat-any.html" class="external-link">ellmer::chat()</a></code>:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="va"><a href="reference/QueryChat.html">QueryChat</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span></span>
-<span>  <span class="va">mtcars</span>,</span>
-<span>  client <span class="op">=</span> <span class="st">"anthropic/claude-3-7-sonnet-latest"</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p>Or you can set the <code>querychat.client</code> R option to a chat object or provider-model string, which will be used as the default client for all querychat apps in your session:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></span><span class="op">(</span>querychat.client <span class="op">=</span> <span class="st">"anthropic/claude-3-7-sonnet-latest"</span><span class="op">)</span></span></code></pre></div>
+
+
+  </main><aside class="col-md-3"><div class="links">
+<h2 data-toc-skip>Links</h2>
+<ul class="list-unstyled">
+<li><a href="https://cloud.r-project.org/package=querychat" class="external-link">View on CRAN</a></li>
+<li><a href="https://github.com/posit-dev/querychat/" class="external-link">Browse source code</a></li>
+<li><a href="https://github.com/posit-dev/querychat/issues" class="external-link">Report a bug</a></li>
+</ul>
 </div>
-</div>
-</div>
-  </main><aside class="col-md-3"><div class="license">
+
+<div class="license">
 <h2 data-toc-skip>License</h2>
 <ul class="list-unstyled">
 <li><a href="LICENSE.html">Full license</a></li>
@@ -318,20 +194,31 @@
 <h2 data-toc-skip>Developers</h2>
 <ul class="list-unstyled">
 <li>
-<a href="https://github.com/jcheng5" class="external-link">Joe Cheng</a> <br><small class="roles"> Author, maintainer </small>   </li>
+<a href="https://garrickadenbuie.com" class="external-link">Garrick Aden-Buie</a> <br><small class="roles"> Author, maintainer </small> <a href="https://orcid.org/0000-0002-7111-0077" target="orcid.widget" aria-label="ORCID" class="external-link"><span class="fab fa-orcid orcid" aria-hidden="true"></span></a>  </li>
+<li>
+<a href="https://github.com/jcheng5" class="external-link">Joe Cheng</a> <br><small class="roles"> Author, conceptor </small>   </li>
+<li>
+<a href="https://cpsievert.me" class="external-link">Carson Sievert</a> <br><small class="roles"> Author </small> <a href="https://orcid.org/0000-0002-4958-2844" target="orcid.widget" aria-label="ORCID" class="external-link"><span class="fab fa-orcid orcid" aria-hidden="true"></span></a>  </li>
 <li>
 <a href="https://www.posit.co" class="external-link"><img src="https://www.tidyverse.org/posit-logo.svg" alt="Posit" height="16" width="62" style="margin-bottom: 3px;"></a> <br><small class="roles"> Copyright holder, funder </small>   </li>
 </ul>
 </div>
 
-
+<div class="dev-status">
+<h2 data-toc-skip>Dev status</h2>
+<ul class="list-unstyled">
+<li><a href="https://github.com/posit-dev/querychat/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/posit-dev/querychat/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a></li>
+<li><a href="https://CRAN.R-project.org/package=querychat" class="external-link"><img src="https://www.r-pkg.org/badges/version/querychat" alt="CRAN status"></a></li>
+<li><a href="https://posit-dev.r-universe.dev/querychat" class="external-link"><img src="https://posit-dev.r-universe.dev/querychat/badges/version" alt="querychat status badge"></a></li>
+</ul>
+</div>
 
   </aside>
 </div>
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by <a href="https://github.com/jcheng5" class="external-link">Joe Cheng</a>, <a href="https://www.posit.co" class="external-link"><img src="https://www.tidyverse.org/posit-logo.svg" alt="Posit" height="16" width="62" style="margin-bottom: 3px;"></a>.</p>
+  <p>Developed by <a href="https://garrickadenbuie.com" class="external-link">Garrick Aden-Buie</a>, <a href="https://github.com/jcheng5" class="external-link">Joe Cheng</a>, <a href="https://cpsievert.me" class="external-link">Carson Sievert</a>, <a href="https://www.posit.co" class="external-link"><img src="https://www.tidyverse.org/posit-logo.svg" alt="Posit" height="16" width="62" style="margin-bottom: 3px;"></a>.</p>
 </div>
 
 <div class="pkgdown-footer-right">

@@ -1,0 +1,148 @@
+# Data Sources
+
+`querychat` supports several different data sources, including:
+
+1.  Data frames
+2.  DBI database connections (e.g., SQLite, PostgreSQL, MySQL, DuckDB)
+3.  Custom `DataSource` interfaces
+
+The sections below describe how to use each type of data source with
+`querychat`.
+
+## Data frames
+
+You can use any data frame as a data source in `querychat`. Simply pass
+it to
+[`querychat()`](https://posit-dev.github.io/querychat/dev/reference/querychat-convenience.md):
+
+``` r
+library(querychat)
+library(palmerpenguins)
+
+qc <- querychat(mtcars)
+qc$app()  # Launch the app
+```
+
+Behind the scenes, `querychat` creates an in-memory DuckDB database and
+registers your data frame as a table for SQL query execution.
+
+## Database connections
+
+You can also connect `querychat` directly to a table in any database
+supported by [DBI](https://dbi.r-dbi.org/). This includes popular
+databases like SQLite, DuckDB, PostgreSQL, MySQL, and many more.
+
+Assuming you have a database set up and accessible, you can create a DBI
+connection and pass it to
+[`querychat()`](https://posit-dev.github.io/querychat/dev/reference/querychat-convenience.md).
+Below are some examples for common databases.
+
+### DuckDB
+
+``` r
+library(DBI)
+library(duckdb)
+library(querychat)
+
+# Connect to a DuckDB database file
+con <- dbConnect(duckdb::duckdb(), dbdir = "my_database.duckdb")
+
+qc <- querychat(con, "my_table")
+qc$app()  # Launch the app
+
+# Don't forget to disconnect when done
+# dbDisconnect(con)
+```
+
+### SQLite
+
+``` r
+library(DBI)
+library(RSQLite)
+library(querychat)
+
+# Connect to a SQLite database file
+con <- dbConnect(RSQLite::SQLite(), "my_database.db")
+
+qc <- querychat(con, "my_table")
+qc$app()  # Launch the app
+
+# Don't forget to disconnect when done
+# dbDisconnect(con)
+```
+
+### PostgreSQL
+
+``` r
+library(DBI)
+library(RPostgres)
+library(querychat)
+
+# Connect to PostgreSQL
+con <- dbConnect(
+  RPostgres::Postgres(),
+  host = "localhost",
+  port = 5432,
+  dbname = "mydatabase",
+  user = "myuser",
+  password = "mypassword"
+)
+
+qc <- querychat(con, "my_table")
+qc$app()  # Launch the app
+
+# Don't forget to disconnect when done
+# dbDisconnect(con)
+```
+
+### MySQL
+
+``` r
+library(DBI)
+library(RMariaDB)
+library(querychat)
+
+# Connect to MySQL
+con <- dbConnect(
+  RMariaDB::MariaDB(),
+  host = "localhost",
+  port = 3306,
+  dbname = "mydatabase",
+  user = "myuser",
+  password = "mypassword"
+)
+
+qc <- querychat(con, "my_table")
+qc$app()  # Launch the app
+
+# Don't forget to disconnect when done
+# dbDisconnect(con)
+```
+
+## Creating a database from a data frame
+
+If you don’t have a database set up, you can easily create a local
+DuckDB database from a data frame:
+
+``` r
+library(DBI)
+library(duckdb)
+
+con <- dbConnect(duckdb::duckdb(), dbdir = "my_database.duckdb")
+
+# Write a data frame to the database
+dbWriteTable(con, "penguins", penguins)
+
+# Or from CSV
+duckdb::duckdb_read_csv(con, "my_table", "path/to/your/file.csv")
+```
+
+Then you can connect to this database using the DuckDB example above.
+
+## Custom sources
+
+If you have a custom data source that doesn’t fit into the above
+categories, you can implement the `DataSource` interface. See the
+[DataSource
+reference](https://posit-dev.github.io/querychat/dev/reference/DataSource.md)
+for more details on implementing this interface.

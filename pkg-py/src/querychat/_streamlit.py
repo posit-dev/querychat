@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, cast, overload
+from typing import TYPE_CHECKING, Any, Optional, cast, overload
 
 from narwhals.stable.v1.typing import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
 
@@ -57,6 +57,21 @@ class QueryChat(QueryChatBase[IntoFrameT]):
     ```
 
     """
+
+    @overload
+    def __init__(
+        self: QueryChat[Any],
+        data_source: None,
+        table_name: str,
+        *,
+        greeting: Optional[str | Path] = None,
+        client: Optional[str | chatlas.Chat] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        data_description: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        extra_instructions: Optional[str | Path] = None,
+        prompt_template: Optional[str | Path] = None,
+    ) -> None: ...
 
     @overload
     def __init__(
@@ -120,7 +135,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
 
     def __init__(
         self,
-        data_source: IntoFrame | sqlalchemy.Engine | ibis.Table,
+        data_source: IntoFrame | sqlalchemy.Engine | ibis.Table | None,
         table_name: str,
         *,
         greeting: Optional[str | Path] = None,
@@ -142,10 +157,11 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             extra_instructions=extra_instructions,
             prompt_template=prompt_template,
         )
-        self._state_key = f"_querychat_{self._data_source.table_name}"
+        self._state_key = f"_querychat_{table_name}"
 
     def _get_state(self) -> AppState:
         """Get or create session state."""
+        self._require_data_source("_get_state")
         import streamlit as st
 
         if self._state_key not in st.session_state:
@@ -166,6 +182,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         Configures the page, renders chat in sidebar, and displays
         SQL query and data table in the main area.
         """
+        self._require_data_source("app")
         import streamlit as st
 
         st.set_page_config(

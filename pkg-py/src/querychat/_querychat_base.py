@@ -116,6 +116,15 @@ class QueryChatBase(Generic[IntoFrameT]):
         )
         self._client.system_prompt = self._system_prompt.render(self.tools)
 
+    def _require_data_source(self, method_name: str) -> None:
+        """Raise if data_source is not set."""
+        if self._data_source is None:
+            raise RuntimeError(
+                f"data_source must be set before calling {method_name}(). "
+                "Either pass data_source to __init__(), set the data_source property, "
+                "or pass data_source to server()."
+            )
+
     def client(
         self,
         *,
@@ -141,6 +150,7 @@ class QueryChatBase(Generic[IntoFrameT]):
             A configured chat client.
 
         """
+        self._require_data_source("client")
         tools = normalize_tools(tools, default=self.tools)
 
         chat = copy.deepcopy(self._client)
@@ -163,6 +173,7 @@ class QueryChatBase(Generic[IntoFrameT]):
 
     def generate_greeting(self, *, echo: Literal["none", "output"] = "none") -> str:
         """Generate a welcome greeting for the chat."""
+        self._require_data_source("generate_greeting")
         client = copy.deepcopy(self._client)
         client.set_turns([])
         return str(client.chat(GREETING_PROMPT, echo=echo))
@@ -175,6 +186,7 @@ class QueryChatBase(Generic[IntoFrameT]):
         **kwargs,
     ) -> None:
         """Launch an interactive console chat with the data."""
+        self._require_data_source("console")
         tools = normalize_tools(tools, default=("query",))
 
         if new or self._client_console is None:
@@ -185,6 +197,7 @@ class QueryChatBase(Generic[IntoFrameT]):
     @property
     def system_prompt(self) -> str:
         """Get the system prompt."""
+        self._require_data_source("system_prompt")
         return self._system_prompt.render(self.tools)
 
     @property
@@ -200,7 +213,8 @@ class QueryChatBase(Generic[IntoFrameT]):
 
     def cleanup(self) -> None:
         """Clean up resources associated with the data source."""
-        self._data_source.cleanup()
+        if self._data_source is not None:
+            self._data_source.cleanup()
 
 
 def normalize_data_source(

@@ -94,7 +94,7 @@ def mod_server(
     output: Outputs,
     session: Session,
     *,
-    data_source: DataSource[IntoFrameT],
+    data_source: DataSource[IntoFrameT] | None,
     greeting: str | None,
     client: chatlas.Chat | Callable,
     enable_bookmarking: bool,
@@ -103,6 +103,24 @@ def mod_server(
     sql = ReactiveStringOrNone(None)
     title = ReactiveStringOrNone(None)
     has_greeted = reactive.value[bool](False)  # noqa: FBT003
+
+    # Short-circuit for stub sessions (e.g. 1st run of an Express app)
+    # data_source may be None during stub session for deferred pattern
+    if session.is_stub_session():
+        # Missing
+        return ServerValues(
+            df=lambda: None,  # type: ignore[return-value]
+            sql=sql,
+            title=title,
+            client=client if isinstance(client, chatlas.Chat) else client(),
+        )
+
+    # Real session requires data_source
+    if data_source is None:
+        raise RuntimeError(
+            "data_source must be set before the real session. "
+            "Set it via the data_source property before users connect."
+        )
 
     def update_dashboard(data: UpdateDashboardData):
         sql.set(data["query"])

@@ -724,32 +724,13 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         else:
             enable = enable_bookmarking
 
-        # During stub session: just capture settings, defer mod_server()
-        # During real session: require data source and initialize
-        if isinstance(session, ExpressStubSession):
-            self._vals = None  # type: ignore[assignment]
-        else:
-            resolved_data_source = self._require_data_source(
-                "QueryChatExpress.__init__"
-            )
-            self._vals = mod_server(
-                self.id,
-                data_source=resolved_data_source,
-                greeting=self.greeting,
-                client=self._client,
-                enable_bookmarking=enable,
-            )
-
-    def _require_vals(self) -> ServerValues[IntoFrameT]:
-        """Raise if _vals is not initialized (i.e., still in stub session)."""
-        if self._vals is None:
-            raise RuntimeError(
-                "QueryChatExpress is not fully initialized. "
-                "This can happen if you try to access df(), sql(), or title() "
-                "during app definition. These methods are only available during "
-                "a real session."
-            )
-        return self._vals
+        self._vals = mod_server(
+            self.id,
+            data_source=self._data_source,
+            greeting=self.greeting,
+            client=self._client,
+            enable_bookmarking=enable,
+        )
 
     def sidebar(
         self,
@@ -825,7 +806,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             data source.
 
         """
-        return self._require_vals().df()
+        return self._vals.df()
 
     @overload
     def sql(self, query: None = None) -> str | None: ...
@@ -851,11 +832,10 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             if it was the same as the current value.
 
         """
-        vals = self._require_vals()
         if query is None:
-            return vals.sql()
+            return self._vals.sql()
         else:
-            return vals.sql.set(query)
+            return self._vals.sql.set(query)
 
     @overload
     def title(self, value: None = None) -> str | None: ...
@@ -886,8 +866,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             if it was the same as the current value.
 
         """
-        vals = self._require_vals()
         if value is None:
-            return vals.title()
+            return self._vals.title()
         else:
-            return vals.title.set(value)
+            return self._vals.title.set(value)

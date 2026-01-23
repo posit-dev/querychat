@@ -32,7 +32,9 @@ def empty_ibis_table(ibis_conn):
     import polars as pl
 
     # Use empty polars DataFrame to create empty table
-    empty_df = pl.DataFrame({"x": pl.Series([], dtype=pl.Int64), "name": pl.Series([], dtype=pl.String)})
+    empty_df = pl.DataFrame(
+        {"x": pl.Series([], dtype=pl.Int64), "name": pl.Series([], dtype=pl.String)}
+    )
     ibis_conn.create_table("empty", empty_df)
     return ibis_conn.table("empty")
 

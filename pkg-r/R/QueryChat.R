@@ -738,7 +738,10 @@ QueryChat <- R6::R6Class(
       if (missing(value)) {
         private$.data_source
       } else {
-        private$.data_source <- normalize_data_source(value, private$.table_name)
+        private$.data_source <- normalize_data_source(
+          value,
+          private$.table_name
+        )
         private$build_system_prompt()
         invisible(self)
       }

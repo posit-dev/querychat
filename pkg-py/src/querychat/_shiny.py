@@ -404,7 +404,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
     def server(
         self,
         *,
-        data_source: IntoFrame | sqlalchemy.Engine | None = None,
+        data_source: Optional[IntoFrame | sqlalchemy.Engine | ibis.Table] = None,
         enable_bookmarking: bool = False,
         id: Optional[str] = None,
     ) -> ServerValues[IntoFrameT]:
@@ -482,11 +482,9 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 ".server() must be called within an active Shiny session (i.e., within the server function). "
             )
 
-        # Set data_source if provided
         if data_source is not None:
             self.data_source = data_source
 
-        # Now require data_source to be set
         self._require_data_source("server")
 
         return mod_server(
@@ -657,7 +655,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
 
     def __init__(
         self,
-        data_source: IntoFrame | sqlalchemy.Engine | ibis.Table | None,
+        data_source: IntoFrame | sqlalchemy.Engine | ibis.Table,
         table_name: str,
         *,
         id: Optional[str] = None,

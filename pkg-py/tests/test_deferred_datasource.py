@@ -132,3 +132,38 @@ class TestBackwardCompatibility:
 
         prompt = qc.system_prompt
         assert "test_table" in prompt
+
+
+class TestDeferredPatternIntegration:
+    """Integration tests for the full deferred pattern workflow."""
+
+    def test_deferred_then_set_property(self, sample_df):
+        """Test setting data_source via property after init."""
+        # Create with None
+        qc = QueryChatBase(None, "users")
+        assert qc.data_source is None
+
+        # Set via property
+        qc.data_source = sample_df
+        assert qc.data_source is not None
+
+        # Now methods should work
+        client = qc.client()
+        assert client is not None
+        assert "users" in qc.system_prompt
+
+    def test_data_source_change_rebuilds_prompt(self, sample_df):
+        """Test that changing data_source rebuilds system prompt."""
+        qc = QueryChatBase(sample_df, "original")
+        original_prompt = qc.system_prompt
+
+        # Change data source (same table name)
+        new_df = pd.DataFrame({"different": [1, 2], "columns": [3, 4]})
+        qc.data_source = new_df
+
+        new_prompt = qc.system_prompt
+
+        # Prompt should be different (different schema)
+        assert original_prompt != new_prompt
+        # But table name should be preserved
+        assert "original" in new_prompt

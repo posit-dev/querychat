@@ -188,9 +188,15 @@ class QueryChatBase(Generic[IntoFrameT]):
         return self._system_prompt.render(self.tools)
 
     @property
-    def data_source(self) -> DataSource:
+    def data_source(self) -> DataSource | None:
         """Get the current data source."""
         return self._data_source
+
+    @data_source.setter
+    def data_source(self, value: IntoFrame | sqlalchemy.Engine) -> None:
+        """Set the data source, normalizing and rebuilding system prompt."""
+        self._data_source = normalize_data_source(value, self._table_name)
+        self._build_system_prompt()
 
     def cleanup(self) -> None:
         """Clean up resources associated with the data source."""

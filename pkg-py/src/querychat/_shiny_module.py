@@ -107,9 +107,12 @@ def mod_server(
     # Short-circuit for stub sessions (e.g. 1st run of an Express app)
     # data_source may be None during stub session for deferred pattern
     if session.is_stub_session():
-        # Missing
+        # Mock the error that would otherwise occur in a real session
+        def _stub_df():
+            raise RuntimeError("RuntimeError: No current reactive context")
+
         return ServerValues(
-            df=lambda: None,  # type: ignore[return-value]
+            df=_stub_df,
             sql=sql,
             title=title,
             client=client if isinstance(client, chatlas.Chat) else client(),

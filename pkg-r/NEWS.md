@@ -1,5 +1,7 @@
 # querychat (development version)
 
+* `QueryChat$new()` now supports deferred data source. Pass `data_source = NULL` at initialization time, then provide the actual data source via the `data_source` parameter of `$server()` or by setting the `$data_source` property. This enables use cases where the data source depends on session-specific authentication or per-user database connections. (#202)
+
 # querychat 0.2.0
 
 * The update tool now requires that the SQL query returns all columns from the original data source, ensuring that the dashboard can display the complete data frame after filtering or sorting. If the query does not return all columns, an informative error message will be provided. (#180)

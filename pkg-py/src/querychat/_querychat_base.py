@@ -53,7 +53,7 @@ class QueryChatBase(Generic[IntoFrameT]):
 
     def __init__(
         self,
-        data_source: IntoFrame | sqlalchemy.Engine,
+        data_source: IntoFrame | sqlalchemy.Engine | None,
         table_name: str,
         *,
         greeting: Optional[str | Path] = None,
@@ -64,7 +64,8 @@ class QueryChatBase(Generic[IntoFrameT]):
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
     ):
-        self._data_source = normalize_data_source(data_source, table_name)
+        # Store table_name for later normalization
+        self._table_name = table_name
 
         if not re.match(r"^[a-zA-Z][a-zA-Z0-9_]*$", table_name):
             raise ValueError(
@@ -74,23 +75,56 @@ class QueryChatBase(Generic[IntoFrameT]):
         self.tools = normalize_tools(tools, default=("update", "query"))
         self.greeting = greeting.read_text() if isinstance(greeting, Path) else greeting
 
+        # Store init parameters for deferred system prompt building
+        self._prompt_template = prompt_template
+        self._data_description = data_description
+        self._extra_instructions = extra_instructions
+        self._categorical_threshold = categorical_threshold
+
+        # Normalize and initialize client (doesn't need data_source)
+        client = normalize_client(client)
+        self._client = copy.deepcopy(client)
+        self._client.set_turns([])
+
+        self._client_console = None
+
+        # Initialize data source (may be None for deferred pattern)
+        if data_source is not None:
+            self._data_source: DataSource | None = normalize_data_source(
+                data_source, table_name
+            )
+            self._build_system_prompt()
+        else:
+            self._data_source = None
+            self._system_prompt = None
+
+    def _build_system_prompt(self) -> None:
+        """Build/rebuild the system prompt from current data source."""
+        if self._data_source is None:
+            raise RuntimeError("Cannot build system prompt without data_source")
+
+        prompt_template = self._prompt_template
         if prompt_template is None:
             prompt_template = Path(__file__).parent / "prompts" / "prompt.md"
 
         self._system_prompt = QueryChatSystemPrompt(
             prompt_template=prompt_template,
             data_source=self._data_source,
-            data_description=data_description,
-            extra_instructions=extra_instructions,
-            categorical_threshold=categorical_threshold,
+            data_description=self._data_description,
+            extra_instructions=self._extra_instructions,
+            categorical_threshold=self._categorical_threshold,
         )
-
-        client = normalize_client(client)
-        self._client = copy.deepcopy(client)
-        self._client.set_turns([])
         self._client.system_prompt = self._system_prompt.render(self.tools)
 
-        self._client_console = None
+    def _require_data_source(self, method_name: str) -> DataSource[IntoFrameT]:
+        """Raise if data_source is not set, otherwise return it for type narrowing."""
+        if self._data_source is None:
+            raise RuntimeError(
+                f"data_source must be set before calling {method_name}(). "
+                "Either pass data_source to __init__(), set the data_source property, "
+                "or pass data_source to server()."
+            )
+        return self._data_source
 
     def client(
         self,
@@ -117,6 +151,9 @@ class QueryChatBase(Generic[IntoFrameT]):
             A configured chat client.
 
         """
+        data_source = self._require_data_source("client")
+        if self._system_prompt is None:
+            raise RuntimeError("System prompt not initialized")
         tools = normalize_tools(tools, default=self.tools)
 
         chat = copy.deepcopy(self._client)
@@ -129,16 +166,17 @@ class QueryChatBase(Generic[IntoFrameT]):
         if "update" in tools:
             update_fn = update_dashboard or (lambda _: None)
             reset_fn = reset_dashboard or (lambda: None)
-            chat.register_tool(tool_update_dashboard(self._data_source, update_fn))
+            chat.register_tool(tool_update_dashboard(data_source, update_fn))
             chat.register_tool(tool_reset_dashboard(reset_fn))
 
         if "query" in tools:
-            chat.register_tool(tool_query(self._data_source))
+            chat.register_tool(tool_query(data_source))
 
         return chat
 
     def generate_greeting(self, *, echo: Literal["none", "output"] = "none") -> str:
         """Generate a welcome greeting for the chat."""
+        self._require_data_source("generate_greeting")
         client = copy.deepcopy(self._client)
         client.set_turns([])
         return str(client.chat(GREETING_PROMPT, echo=echo))
@@ -151,6 +189,7 @@ class QueryChatBase(Generic[IntoFrameT]):
         **kwargs,
     ) -> None:
         """Launch an interactive console chat with the data."""
+        self._require_data_source("console")
         tools = normalize_tools(tools, default=("query",))
 
         if new or self._client_console is None:
@@ -161,16 +200,26 @@ class QueryChatBase(Generic[IntoFrameT]):
     @property
     def system_prompt(self) -> str:
         """Get the system prompt."""
+        self._require_data_source("system_prompt")
+        if self._system_prompt is None:
+            raise RuntimeError("System prompt not initialized")
         return self._system_prompt.render(self.tools)
 
     @property
-    def data_source(self) -> DataSource:
+    def data_source(self) -> DataSource | None:
         """Get the current data source."""
         return self._data_source
 
+    @data_source.setter
+    def data_source(self, value: IntoFrame | sqlalchemy.Engine) -> None:
+        """Set the data source, normalizing and rebuilding system prompt."""
+        self._data_source = normalize_data_source(value, self._table_name)
+        self._build_system_prompt()
+
     def cleanup(self) -> None:
         """Clean up resources associated with the data source."""
-        self._data_source.cleanup()
+        if self._data_source is not None:
+            self._data_source.cleanup()
 
 
 def normalize_data_source(

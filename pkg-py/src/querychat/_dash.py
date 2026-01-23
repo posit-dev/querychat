@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, Optional, cast, overload
+from typing import TYPE_CHECKING, Any, Literal, Optional, cast, overload
 
 from chatlas import Turn
 from narwhals.stable.v1.typing import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
@@ -91,6 +91,22 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
 
     @overload
     def __init__(
+        self: QueryChat[Any],
+        data_source: None,
+        table_name: str,
+        *,
+        greeting: Optional[str | PathType] = None,
+        client: Optional[str | chatlas.Chat] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        data_description: Optional[str | PathType] = None,
+        categorical_threshold: int = 20,
+        extra_instructions: Optional[str | PathType] = None,
+        prompt_template: Optional[str | PathType] = None,
+        storage_type: Literal["memory", "session", "local"] = "memory",
+    ) -> None: ...
+
+    @overload
+    def __init__(
         self: QueryChat[ibis.Table],
         data_source: ibis.Table,
         table_name: str,
@@ -155,7 +171,7 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
 
     def __init__(
         self,
-        data_source: IntoFrame | sqlalchemy.Engine | ibis.Table,
+        data_source: IntoFrame | sqlalchemy.Engine | ibis.Table | None,
         table_name: str,
         *,
         greeting: Optional[str | PathType] = None,
@@ -179,7 +195,7 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
             prompt_template=prompt_template,
         )
         self._storage_type: Literal["memory", "session", "local"] = storage_type
-        self._ids = IDs.from_table_name(self._data_source.table_name)
+        self._ids = IDs.from_table_name(table_name)
         self._initialized_apps: set[int] = set()
 
     @property
@@ -201,11 +217,12 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
             A Dash app ready to run.
 
         """
+        data_source = self._require_data_source("app")
         import dash_bootstrap_components as dbc
 
         import dash
 
-        table_name = self._data_source.table_name
+        table_name = data_source.table_name
 
         app = dash.Dash(
             __name__,
@@ -218,7 +235,7 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
         register_app_callbacks(
             app,
             self._ids,
-            self._data_source.table_name,
+            data_source.table_name,
             self._deserialize_state,
         )
 
@@ -259,10 +276,11 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
         ...     return f"Current SQL: {sql}"
 
         """
+        data_source = self._require_data_source("ui")
         from dash import dcc, html
 
         initial_state = create_app_state(
-            self._data_source,
+            data_source,
             self._client_factory,
             self.greeting,
         )

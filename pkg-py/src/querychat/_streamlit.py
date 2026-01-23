@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, cast, overload
+from typing import TYPE_CHECKING, Any, Optional, cast, overload
 
 from narwhals.stable.v1.typing import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
 
@@ -57,6 +57,21 @@ class QueryChat(QueryChatBase[IntoFrameT]):
     ```
 
     """
+
+    @overload
+    def __init__(
+        self: QueryChat[Any],
+        data_source: None,
+        table_name: str,
+        *,
+        greeting: Optional[str | Path] = None,
+        client: Optional[str | chatlas.Chat] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        data_description: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        extra_instructions: Optional[str | Path] = None,
+        prompt_template: Optional[str | Path] = None,
+    ) -> None: ...
 
     @overload
     def __init__(
@@ -120,7 +135,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
 
     def __init__(
         self,
-        data_source: IntoFrame | sqlalchemy.Engine | ibis.Table,
+        data_source: IntoFrame | sqlalchemy.Engine | ibis.Table | None,
         table_name: str,
         *,
         greeting: Optional[str | Path] = None,
@@ -142,15 +157,16 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             extra_instructions=extra_instructions,
             prompt_template=prompt_template,
         )
-        self._state_key = f"_querychat_{self._data_source.table_name}"
+        self._state_key = f"_querychat_{table_name}"
 
     def _get_state(self) -> AppState:
         """Get or create session state."""
+        data_source = self._require_data_source("_get_state")
         import streamlit as st
 
         if self._state_key not in st.session_state:
             st.session_state[self._state_key] = create_app_state(
-                self._data_source,
+                data_source,
                 lambda update_cb, reset_cb: self.client(
                     update_dashboard=update_cb,
                     reset_dashboard=reset_cb,
@@ -166,10 +182,11 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         Configures the page, renders chat in sidebar, and displays
         SQL query and data table in the main area.
         """
+        data_source = self._require_data_source("app")
         import streamlit as st
 
         st.set_page_config(
-            page_title=f"querychat with {self._data_source.table_name}",
+            page_title=f"querychat with {data_source.table_name}",
             layout="wide",
             initial_sidebar_state="expanded",
         )
@@ -288,11 +305,12 @@ class QueryChat(QueryChatBase[IntoFrameT]):
 
     def _render_main_content(self) -> None:
         """Render the main content area (SQL + data table)."""
+        data_source = self._require_data_source("_render_main_content")
         import streamlit as st
 
         state = self._get_state()
 
-        st.title(f"querychat with `{self._data_source.table_name}`")
+        st.title(f"querychat with `{data_source.table_name}`")
 
         st.subheader(state.title or "SQL Query")
 
@@ -309,5 +327,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         df = as_narwhals(state.get_current_data())
         if state.error:
             st.error(state.error)
-        st.dataframe(df.to_native(), use_container_width=True, height=400, hide_index=True)
+        st.dataframe(
+            df.to_native(), use_container_width=True, height=400, hide_index=True
+        )
         st.caption(f"Data has {df.shape[0]} rows and {df.shape[1]} columns.")

@@ -263,7 +263,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
 
         """
         self._require_data_source("app")
-        assert self._data_source is not None
+        assert self._data_source is not None  # noqa: S101
         enable_bookmarking = bookmark_store != "disable"
         table_name = self._data_source.table_name
         data_source = self._data_source
@@ -488,7 +488,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             self.data_source = data_source
 
         self._require_data_source("server")
-        assert self._data_source is not None
+        assert self._data_source is not None  # noqa: S101
 
         return mod_server(
             id or self.id,
@@ -704,7 +704,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
 
         # Require data_source for Express (it calls mod_server immediately)
         self._require_data_source("QueryChatExpress.__init__")
-        assert self._data_source is not None
+        assert self._data_source is not None  # noqa: S101
 
         self._vals = mod_server(
             self.id,

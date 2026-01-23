@@ -218,7 +218,7 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
 
         """
         self._require_data_source("app")
-        assert self._data_source is not None
+        assert self._data_source is not None  # noqa: S101
         import dash_bootstrap_components as dbc
 
         import dash
@@ -278,7 +278,7 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
 
         """
         self._require_data_source("ui")
-        assert self._data_source is not None
+        assert self._data_source is not None  # noqa: S101
         from dash import dcc, html
 
         initial_state = create_app_state(

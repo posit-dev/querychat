@@ -89,7 +89,7 @@ class StateDictAccessorMixin(Generic[IntoFrameT]):
             Returns a LazyFrame if the data source is lazy.
 
         """
-        assert self._data_source is not None
+        assert self._data_source is not None  # noqa: S101
         sql = state.get("sql") if state else None
         if sql:
             try:
@@ -134,7 +134,7 @@ class StateDictAccessorMixin(Generic[IntoFrameT]):
 
     def _deserialize_state(self, state_data: AppStateDict | None) -> AppState:
         """Reconstruct AppState from a serialized state dict."""
-        assert self._data_source is not None
+        assert self._data_source is not None  # noqa: S101
         state = create_app_state(
             self._data_source,
             self._client_factory,

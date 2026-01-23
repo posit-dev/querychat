@@ -248,7 +248,7 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
 
         """
         self._require_data_source("ui")
-        assert self._data_source is not None
+        assert self._data_source is not None  # noqa: S101
         import gradio as gr
 
         initial_state = create_app_state(
@@ -330,7 +330,7 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
 
         """
         self._require_data_source("app")
-        assert self._data_source is not None
+        assert self._data_source is not None  # noqa: S101
         from gradio.themes import Soft
 
         import gradio as gr

@@ -461,9 +461,6 @@ class SQLAlchemySource(DataSource[nw.DataFrame]):
         self._columns_info = inspector.get_columns(table_name)
         self._colnames = [col["name"] for col in self._columns_info]
 
-        # Semantic views are discovered lazily in get_schema()
-        self._semantic_views = None
-
     def get_db_type(self) -> str:
         """
         Get the database type.
@@ -496,22 +493,12 @@ class SQLAlchemySource(DataSource[nw.DataFrame]):
         self._add_column_stats(columns, categorical_threshold)
         schema = format_schema(self.table_name, columns)
 
-        # Discover Snowflake semantic views lazily (only on first call)
-        if self._semantic_views is None:
-            if self._engine.dialect.name.lower() == "snowflake":
-                self._semantic_views = discover_semantic_views(self._engine)
-            else:
-                self._semantic_views = []
-
-        if self._semantic_views:
-            schema = f"{schema}\n\n{format_semantic_views_section(self._semantic_views)}"
+        if self._engine.dialect.name.lower() == "snowflake":
+            semantic_views = discover_semantic_views(self._engine)
+            if semantic_views:
+                schema = f"{schema}\n\n{format_semantic_views_section(semantic_views)}"
 
         return schema
-
-    @property
-    def has_semantic_views(self) -> bool:
-        """Check if semantic views are available."""
-        return bool(self._semantic_views)
 
     @staticmethod
     def _make_column_meta(name: str, sa_type: sqltypes.TypeEngine) -> ColumnMeta:
@@ -974,9 +961,6 @@ class IbisSource(DataSource["ibis.Table"]):
             )
         self._colnames = list(colnames)
 
-        # Semantic views are discovered lazily in get_schema()
-        self._semantic_views = None
-
     def get_db_type(self) -> str:
         return self._backend.name
 
@@ -987,22 +971,12 @@ class IbisSource(DataSource["ibis.Table"]):
         self._add_column_stats(columns, self._table, categorical_threshold)
         schema = format_schema(self.table_name, columns)
 
-        # Discover Snowflake semantic views lazily (only on first call)
-        if self._semantic_views is None:
-            if self._backend.name.lower() == "snowflake":
-                self._semantic_views = discover_semantic_views(self._backend)
-            else:
-                self._semantic_views = []
-
-        if self._semantic_views:
-            schema = f"{schema}\n\n{format_semantic_views_section(self._semantic_views)}"
+        if self._backend.name.lower() == "snowflake":
+            semantic_views = discover_semantic_views(self._backend)
+            if semantic_views:
+                schema = f"{schema}\n\n{format_semantic_views_section(semantic_views)}"
 
         return schema
-
-    @property
-    def has_semantic_views(self) -> bool:
-        """Check if semantic views are available."""
-        return bool(self._semantic_views)
 
     @staticmethod
     def _make_column_meta(name: str, dtype: IbisDataType) -> ColumnMeta:

@@ -75,10 +75,7 @@ class QueryChatSystemPrompt:
         """
         db_type = self.data_source.get_db_type()
         is_duck_db = db_type.lower() == "duckdb"
-
-        # Check for semantic views (only available with SnowflakeSource)
-        # Use getattr to safely access the property that only exists on SnowflakeSource
-        has_semantic_views: bool = getattr(self.data_source, "has_semantic_views", False)
+        has_semantic_views = "## Snowflake Semantic Views" in self.schema
 
         context = {
             "db_type": db_type,

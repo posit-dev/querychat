@@ -42,9 +42,7 @@ class TestFormatSemanticViewDdls:
 
     def test_format_single_view(self):
         """Test that format produces expected markdown structure for single view."""
-        views = [
-            SemanticViewInfo(name="db.schema.view1", ddl="CREATE SEMANTIC VIEW v1")
-        ]
+        views = [SemanticViewInfo(name="db.schema.view1", ddl="CREATE SEMANTIC VIEW v1")]
         section = format_semantic_view_ddls(views)
 
         assert "db.schema.view1" in section

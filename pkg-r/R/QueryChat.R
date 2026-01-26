@@ -285,10 +285,8 @@ QueryChat <- R6::R6Class(
     #'   `reset_dashboard` tool is called.
     client = function(
       tools = NA,
-      update_dashboard = function(query, title) {
-      },
-      reset_dashboard = function() {
-      }
+      update_dashboard = function(query, title) {},
+      reset_dashboard = function() {}
     ) {
       private$require_data_source("$client")
 

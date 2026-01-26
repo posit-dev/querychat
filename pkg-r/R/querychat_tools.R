@@ -5,8 +5,7 @@
 #   summarizing the intent of the SQL query.
 tool_update_dashboard <- function(
   data_source,
-  update_fn = function(query, title) {
-  }
+  update_fn = function(query, title) {}
 ) {
   check_data_source(data_source)
 

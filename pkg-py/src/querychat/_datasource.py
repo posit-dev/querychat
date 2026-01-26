@@ -12,7 +12,6 @@ from sqlalchemy.sql import sqltypes
 
 from ._df_compat import read_sql
 from ._snowflake import (
-    SemanticViewInfo,
     discover_semantic_views,
     format_semantic_views_section,
 )
@@ -433,8 +432,6 @@ class SQLAlchemySource(DataSource[nw.DataFrame]):
     Supports various databases including PostgreSQL, MySQL, SQLite, Snowflake,
     and Databricks.
     """
-
-    _semantic_views: list[SemanticViewInfo] | None
 
     def __init__(
         self,
@@ -953,7 +950,6 @@ class IbisSource(DataSource["ibis.Table"]):
 
     _table: ibis.Table
     _backend: SQLBackend
-    _semantic_views: list[SemanticViewInfo] | None
     table_name: str
 
     def __init__(self, table: ibis.Table, table_name: str):

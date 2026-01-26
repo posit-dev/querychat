@@ -75,14 +75,14 @@ class QueryChatSystemPrompt:
         """
         db_type = self.data_source.get_db_type()
         is_duck_db = db_type.lower() == "duckdb"
-        has_semantic_views = self.data_source.has_semantic_views()
+        semantic_view_ddls = self.data_source.get_semantic_view_ddls()
 
         context = {
             "db_type": db_type,
             "is_duck_db": is_duck_db,
-            "has_semantic_views": has_semantic_views,
-            "semantic_view_syntax": get_semantic_view_syntax() if has_semantic_views else "",
-            "semantic_view_ddls": self.data_source.get_semantic_view_ddls() if has_semantic_views else "",
+            "has_semantic_views": bool(semantic_view_ddls),
+            "semantic_view_syntax": get_semantic_view_syntax() if semantic_view_ddls else "",
+            "semantic_view_ddls": semantic_view_ddls,
             "schema": self.schema,
             "data_description": self.data_description,
             "extra_instructions": self.extra_instructions,

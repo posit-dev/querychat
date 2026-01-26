@@ -109,16 +109,6 @@ DBISource <- R6::R6Class(
     #' @return A string describing the schema
     get_schema = function(categorical_threshold = 20) {
       check_number_whole(categorical_threshold, min = 1)
-
-      # Discover Snowflake semantic views lazily (only on first call)
-      if (is.null(private$semantic_views)) {
-        if (is_snowflake_connection(private$conn)) {
-          private$semantic_views <- discover_semantic_views_impl(private$conn)
-        } else {
-          private$semantic_views <- list()
-        }
-      }
-
       get_schema_impl(
         private$conn,
         self$table_name,
@@ -127,17 +117,18 @@ DBISource <- R6::R6Class(
     },
 
     #' @description
-    #' Check if semantic views are available
-    #' @return TRUE if semantic views were discovered
-    has_semantic_views = function() {
-      length(private$semantic_views %||% list()) > 0
-    },
-
-    #' @description
     #' Get formatted DDL content for semantic views
     #' @return A string with DDL definitions, or empty string if none
     get_semantic_view_ddls = function() {
-      if (!self$has_semantic_views()) {
+      # Discover Snowflake semantic views lazily (only on first call)
+      if (is.null(private$semantic_views)) {
+        if (is_snowflake_connection(private$conn)) {
+          private$semantic_views <- discover_semantic_views_impl(private$conn)
+        } else {
+          private$semantic_views <- list()
+        }
+      }
+      if (length(private$semantic_views) == 0) {
         return("")
       }
       format_semantic_view_ddls(private$semantic_views)

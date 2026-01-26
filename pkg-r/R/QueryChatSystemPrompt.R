@@ -83,13 +83,11 @@ QueryChatSystemPrompt <- R6::R6Class(
       is_duck_db <- tolower(db_type) == "duckdb"
 
       # Check for semantic views (available with DBISource for Snowflake connections)
-      has_semantic_views <- FALSE
-      if (
-        inherits(self$data_source, "DBISource") &&
-          self$data_source$has_semantic_views()
-      ) {
-        has_semantic_views <- TRUE
+      semantic_view_ddls <- ""
+      if (inherits(self$data_source, "DBISource")) {
+        semantic_view_ddls <- self$data_source$get_semantic_view_ddls()
       }
+      has_semantic_views <- nzchar(semantic_view_ddls)
 
       context <- list(
         db_type = db_type,
@@ -98,9 +96,7 @@ QueryChatSystemPrompt <- R6::R6Class(
         semantic_view_syntax = if (has_semantic_views) {
           get_semantic_view_syntax()
         },
-        semantic_view_ddls = if (has_semantic_views) {
-          self$data_source$get_semantic_view_ddls()
-        },
+        semantic_view_ddls = semantic_view_ddls,
         schema = self$schema,
         data_description = self$data_description,
         extra_instructions = self$extra_instructions,

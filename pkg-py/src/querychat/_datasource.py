@@ -184,10 +184,6 @@ class DataSource(ABC, Generic[IntoFrameT]):
 
         """
 
-    def has_semantic_views(self) -> bool:
-        """Check if semantic views are available."""
-        return False
-
     def get_semantic_view_ddls(self) -> str:
         """Get formatted DDL content for semantic views."""
         return ""
@@ -503,21 +499,13 @@ class SQLAlchemySource(DataSource[nw.DataFrame]):
         self._add_column_stats(columns, categorical_threshold)
         return format_schema(self.table_name, columns)
 
-    def _ensure_semantic_views_discovered(self) -> None:
+    def get_semantic_view_ddls(self) -> str:
+        """Get formatted DDL content for semantic views."""
         if self._semantic_views is None:
             if self._engine.dialect.name.lower() == "snowflake":
                 self._semantic_views = discover_semantic_views(self._engine)
             else:
                 self._semantic_views = []
-
-    def has_semantic_views(self) -> bool:
-        """Check if semantic views are available."""
-        self._ensure_semantic_views_discovered()
-        return bool(self._semantic_views)
-
-    def get_semantic_view_ddls(self) -> str:
-        """Get formatted DDL content for semantic views."""
-        self._ensure_semantic_views_discovered()
         if not self._semantic_views:
             return ""
         return format_semantic_view_ddls(self._semantic_views)
@@ -994,21 +982,13 @@ class IbisSource(DataSource["ibis.Table"]):
         self._add_column_stats(columns, self._table, categorical_threshold)
         return format_schema(self.table_name, columns)
 
-    def _ensure_semantic_views_discovered(self) -> None:
+    def get_semantic_view_ddls(self) -> str:
+        """Get formatted DDL content for semantic views."""
         if self._semantic_views is None:
             if self._backend.name.lower() == "snowflake":
                 self._semantic_views = discover_semantic_views(self._backend)
             else:
                 self._semantic_views = []
-
-    def has_semantic_views(self) -> bool:
-        """Check if semantic views are available."""
-        self._ensure_semantic_views_discovered()
-        return bool(self._semantic_views)
-
-    def get_semantic_view_ddls(self) -> str:
-        """Get formatted DDL content for semantic views."""
-        self._ensure_semantic_views_discovered()
         if not self._semantic_views:
             return ""
         return format_semantic_view_ddls(self._semantic_views)

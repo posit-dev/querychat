@@ -364,9 +364,13 @@ describe("QueryChat$client()", {
 
     # Find and call the update tool
     tools <- client$get_tools()
-    update_tool <- tools[[which(sapply(tools, function(t) {
-      t@name == "querychat_update_dashboard"
-    }))]]
+    update_tool <- tools[[
+      which(
+        sapply(tools, function(t) {
+          t@name == "querychat_update_dashboard"
+        })
+      )
+    ]]
 
     # Call the tool - it should execute the query and call the callback
     result <- update_tool(
@@ -396,9 +400,13 @@ describe("QueryChat$client()", {
 
     # Find and call the reset tool
     tools <- client$get_tools()
-    reset_tool <- tools[[which(sapply(tools, function(t) {
-      t@name == "querychat_reset_dashboard"
-    }))]]
+    reset_tool <- tools[[
+      which(
+        sapply(tools, function(t) {
+          t@name == "querychat_reset_dashboard"
+        })
+      )
+    ]]
 
     # Call the tool
     reset_tool()
@@ -657,7 +665,8 @@ test_that("querychat_app() only cleans up data frame sources on exit", {
         # have to use an option because the code is evaluated in a far-away env
         options(.test_cleanup = cleanup)
       },
-      app = function(...) {}
+      app = function(...) {
+      }
     )
   )
   withr::local_options(rlang_interactive = TRUE)

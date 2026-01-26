@@ -5,7 +5,8 @@
 #   summarizing the intent of the SQL query.
 tool_update_dashboard <- function(
   data_source,
-  update_fn = function(query, title) {}
+  update_fn = function(query, title) {
+  }
 ) {
   check_data_source(data_source)
 
@@ -66,7 +67,6 @@ tool_update_dashboard_impl <- function(data_source, update_fn) {
     res
   }
 }
-
 
 tool_reset_dashboard <- function(reset_fn = identity) {
   check_function(reset_fn)
@@ -132,10 +132,12 @@ querychat_tool_details_option <- function() {
   valid_settings <- c("expanded", "collapsed", "default")
 
   if (!setting %in% valid_settings) {
-    cli::cli_warn(c(
-      "Invalid value for {.code querychat.tool_details} option or {.envvar QUERYCHAT_TOOL_DETAILS} environment variable: {.val {setting}}",
-      "i" = "Must be one of: {.or {.val {valid_settings}}}"
-    ))
+    cli::cli_warn(
+      c(
+        "Invalid value for {.code querychat.tool_details} option or {.envvar QUERYCHAT_TOOL_DETAILS} environment variable: {.val {setting}}",
+        "i" = "Must be one of: {.or {.val {valid_settings}}}"
+      )
+    )
     return(NULL)
   }
 

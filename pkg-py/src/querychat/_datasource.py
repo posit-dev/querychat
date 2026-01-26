@@ -502,9 +502,7 @@ class SQLAlchemySource(DataSource[nw.DataFrame]):
         # Discover Snowflake semantic views lazily (only on first call)
         if self._semantic_views is None:
             if self._engine.dialect.name.lower() == "snowflake":
-                self._semantic_views = discover_semantic_views(
-                    self._engine, "sqlalchemy"
-                )
+                self._semantic_views = discover_semantic_views(self._engine)
             else:
                 self._semantic_views = []
 
@@ -996,7 +994,7 @@ class IbisSource(DataSource["ibis.Table"]):
         # Discover Snowflake semantic views lazily (only on first call)
         if self._semantic_views is None:
             if self._backend.name.lower() == "snowflake":
-                self._semantic_views = discover_semantic_views(self._backend, "ibis")
+                self._semantic_views = discover_semantic_views(self._backend)
             else:
                 self._semantic_views = []
 

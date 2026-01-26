@@ -13,6 +13,12 @@ from querychat._snowflake import (
 )
 
 
+# Decorator to make MagicMock pass isinstance(mock, sqlalchemy.Engine)
+def patch_sqlalchemy_engine(func):
+    """Patch sqlalchemy.Engine so MagicMock instances pass isinstance checks."""
+    return patch("querychat._snowflake.sqlalchemy.Engine", MagicMock)(func)
+
+
 class TestSemanticViewInfo:
     """Tests for SemanticViewInfo dataclass."""
 
@@ -62,6 +68,7 @@ class TestFormatSemanticViewsSection:
 class TestSQLEscaping:
     """Tests for SQL injection prevention in get_semantic_view_ddl."""
 
+    @patch_sqlalchemy_engine
     def test_single_quote_escaped(self):
         """Verify that names with single quotes are properly escaped."""
         mock_engine = MagicMock()
@@ -74,13 +81,14 @@ class TestSQLEscaping:
         mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
         mock_conn.execute.return_value = mock_result
 
-        get_semantic_view_ddl(mock_engine, "sqlalchemy", "db.schema.test'view")
+        get_semantic_view_ddl(mock_engine, "db.schema.test'view")
 
         # Verify the executed query has escaped quotes
         call_args = mock_conn.execute.call_args
         query_str = str(call_args[0][0])
         assert "test''view" in query_str
 
+    @patch_sqlalchemy_engine
     def test_normal_name_unchanged(self):
         """Verify that normal names without special chars work correctly."""
         mock_engine = MagicMock()
@@ -93,7 +101,7 @@ class TestSQLEscaping:
         mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
         mock_conn.execute.return_value = mock_result
 
-        get_semantic_view_ddl(mock_engine, "sqlalchemy", "db.schema.normal_view")
+        get_semantic_view_ddl(mock_engine, "db.schema.normal_view")
 
         call_args = mock_conn.execute.call_args
         query_str = str(call_args[0][0])
@@ -103,6 +111,7 @@ class TestSQLEscaping:
 class TestExecuteRawSQL:
     """Tests for execute_raw_sql function."""
 
+    @patch_sqlalchemy_engine
     def test_sqlalchemy_backend(self):
         """Test execute_raw_sql with SQLAlchemy backend."""
         mock_engine = MagicMock()
@@ -115,7 +124,7 @@ class TestExecuteRawSQL:
         mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
         mock_conn.execute.return_value = mock_result
 
-        result = execute_raw_sql("SELECT 1", mock_engine, "sqlalchemy")
+        result = execute_raw_sql("SELECT 1", mock_engine)
 
         assert result == [{"col1": "a", "col2": "b"}, {"col1": "c", "col2": "d"}]
 
@@ -129,7 +138,7 @@ class TestExecuteRawSQL:
         mock_backend.sql.return_value = mock_table
         mock_table.execute.return_value = mock_df
 
-        result = execute_raw_sql("SELECT 1", mock_backend, "ibis")
+        result = execute_raw_sql("SELECT 1", mock_backend)
 
         assert result == [{"col1": "a"}, {"col1": "b"}]
         mock_backend.sql.assert_called_once_with("SELECT 1")
@@ -139,6 +148,7 @@ class TestExecuteRawSQL:
 class TestDiscoverSemanticViews:
     """Tests for the discover_semantic_views function."""
 
+    @patch_sqlalchemy_engine
     def test_discover_returns_views(self):
         """Test successful discovery of semantic views."""
         mock_engine = MagicMock()
@@ -158,7 +168,7 @@ class TestDiscoverSemanticViews:
         ]
         call_count = [0]
 
-        def mock_execute(*args, **kwargs):
+        def mock_execute(_query):
             result = MagicMock()
             current_result = results[call_count[0]]
             call_count[0] += 1
@@ -178,7 +188,7 @@ class TestDiscoverSemanticViews:
         mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
         mock_conn.execute.side_effect = mock_execute
 
-        views = discover_semantic_views(mock_engine, "sqlalchemy")
+        views = discover_semantic_views(mock_engine)
 
         assert len(views) == 2
         assert views[0].name == "DB.SCH.VIEW1"
@@ -186,6 +196,7 @@ class TestDiscoverSemanticViews:
         assert views[1].name == "DB.SCH.VIEW2"
         assert views[1].ddl == "DDL2"
 
+    @patch_sqlalchemy_engine
     def test_discover_no_views(self, caplog):
         """Test discovery when no views exist."""
         mock_engine = MagicMock()
@@ -199,7 +210,7 @@ class TestDiscoverSemanticViews:
         mock_conn.execute.return_value = mock_result
 
         with caplog.at_level(logging.DEBUG, logger="querychat._snowflake"):
-            views = discover_semantic_views(mock_engine, "sqlalchemy")
+            views = discover_semantic_views(mock_engine)
 
         assert views == []
         assert "No semantic views found" in caplog.text
@@ -209,12 +220,13 @@ class TestDiscoverSemanticViews:
         mock_engine = MagicMock()
 
         with patch.dict(os.environ, {"QUERYCHAT_DISABLE_SEMANTIC_VIEWS": "1"}):
-            views = discover_semantic_views(mock_engine, "sqlalchemy")
+            views = discover_semantic_views(mock_engine)
 
         assert views == []
         # Engine should not be accessed
         mock_engine.connect.assert_not_called()
 
+    @patch_sqlalchemy_engine
     def test_discover_skips_null_names(self):
         """Test that rows with null names are skipped."""
         mock_engine = MagicMock()
@@ -231,7 +243,7 @@ class TestDiscoverSemanticViews:
         ]
         call_count = [0]
 
-        def mock_execute(*args, **kwargs):
+        def mock_execute(_query):
             result = MagicMock()
             current_result = results[call_count[0]]
             call_count[0] += 1
@@ -251,7 +263,7 @@ class TestDiscoverSemanticViews:
         mock_engine.connect.return_value.__exit__ = MagicMock(return_value=False)
         mock_conn.execute.side_effect = mock_execute
 
-        views = discover_semantic_views(mock_engine, "sqlalchemy")
+        views = discover_semantic_views(mock_engine)
 
         assert len(views) == 1
         assert views[0].name == "DB.SCH.VIEW1"
@@ -285,7 +297,7 @@ class TestSQLAlchemySourceSemanticViews:
             with patch.object(source, "_add_column_stats"):
                 source.get_schema(categorical_threshold=20)
 
-            mock_discover.assert_called_once_with(mock_engine, "sqlalchemy")
+            mock_discover.assert_called_once_with(mock_engine)
 
     def test_discovery_skipped_for_non_snowflake(self):
         """Test that discovery is skipped for non-Snowflake backends."""
@@ -421,7 +433,7 @@ class TestIbisSourceSemanticViews:
             with patch.object(IbisSource, "_add_column_stats"):
                 source.get_schema(categorical_threshold=20)
 
-            mock_discover.assert_called_once_with(mock_backend, "ibis")
+            mock_discover.assert_called_once_with(mock_backend)
 
     def test_discovery_skipped_for_non_snowflake(self):
         """Test that discovery is skipped for non-Snowflake backends."""

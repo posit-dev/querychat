@@ -2,7 +2,7 @@
 Snowflake-specific utilities for semantic view discovery.
 
 This module provides functions for discovering Snowflake Semantic Views,
-supporting both SQLAlchemy engines and Ibis backends through a type parameter.
+supporting both SQLAlchemy engines and Ibis backends via isinstance() checks.
 """
 
 from __future__ import annotations
@@ -10,15 +10,14 @@ from __future__ import annotations
 import logging
 import os
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any
+
+import sqlalchemy
 
 if TYPE_CHECKING:
     from ibis.backends.sql import SQLBackend
-    from sqlalchemy import Engine
 
 logger = logging.getLogger(__name__)
-
-BackendType = Literal["sqlalchemy", "ibis"]
 
 
 @dataclass
@@ -34,8 +33,7 @@ class SemanticViewInfo:
 
 def execute_raw_sql(
     query: str,
-    backend: Engine | SQLBackend,
-    backend_type: BackendType,
+    backend: sqlalchemy.Engine | SQLBackend,
 ) -> list[dict[str, Any]]:
     """
     Execute raw SQL and return results as list of row dicts.
@@ -46,8 +44,6 @@ def execute_raw_sql(
         SQL query to execute
     backend
         SQLAlchemy Engine or Ibis SQLBackend
-    backend_type
-        Type of backend: "sqlalchemy" or "ibis"
 
     Returns
     -------
@@ -55,23 +51,20 @@ def execute_raw_sql(
         Query results as list of row dictionaries
 
     """
-    if backend_type == "sqlalchemy":
-        from sqlalchemy import text
-
-        with backend.connect() as conn:  # type: ignore[union-attr]
-            result = conn.execute(text(query))
+    if isinstance(backend, sqlalchemy.Engine):
+        with backend.connect() as conn:
+            result = conn.execute(sqlalchemy.text(query))
             keys = list(result.keys())
             return [dict(zip(keys, row, strict=False)) for row in result.fetchall()]
     else:
         # Ibis backend
-        result_table = backend.sql(query)  # type: ignore[union-attr]
+        result_table = backend.sql(query)
         df = result_table.execute()
         return df.to_dict(orient="records")  # type: ignore[return-value]
 
 
 def discover_semantic_views(
-    backend: Engine | SQLBackend,
-    backend_type: BackendType,
+    backend: sqlalchemy.Engine | SQLBackend,
 ) -> list[SemanticViewInfo]:
     """
     Discover semantic views in the current schema.
@@ -80,8 +73,6 @@ def discover_semantic_views(
     ----------
     backend
         SQLAlchemy Engine or Ibis SQLBackend
-    backend_type
-        Type of backend: "sqlalchemy" or "ibis"
 
     Returns
     -------
@@ -93,7 +84,7 @@ def discover_semantic_views(
     if os.environ.get("QUERYCHAT_DISABLE_SEMANTIC_VIEWS"):
         return []
 
-    rows = execute_raw_sql("SHOW SEMANTIC VIEWS", backend, backend_type)
+    rows = execute_raw_sql("SHOW SEMANTIC VIEWS", backend)
 
     if not rows:
         logger.debug("No semantic views found in current schema")
@@ -109,7 +100,7 @@ def discover_semantic_views(
             continue
 
         fq_name = f"{db}.{schema}.{name}"
-        ddl = get_semantic_view_ddl(backend, backend_type, fq_name)
+        ddl = get_semantic_view_ddl(backend, fq_name)
         if ddl:
             views.append(SemanticViewInfo(name=fq_name, ddl=ddl))
 
@@ -117,8 +108,7 @@ def discover_semantic_views(
 
 
 def get_semantic_view_ddl(
-    backend: Engine | SQLBackend,
-    backend_type: BackendType,
+    backend: sqlalchemy.Engine | SQLBackend,
     fq_name: str,
 ) -> str | None:
     """
@@ -128,8 +118,6 @@ def get_semantic_view_ddl(
     ----------
     backend
         SQLAlchemy Engine or Ibis SQLBackend
-    backend_type
-        Type of backend: "sqlalchemy" or "ibis"
     fq_name
         Fully qualified name (database.schema.view_name)
 
@@ -141,9 +129,7 @@ def get_semantic_view_ddl(
     """
     # Escape single quotes to prevent SQL injection
     safe_name = fq_name.replace("'", "''")
-    rows = execute_raw_sql(
-        f"SELECT GET_DDL('SEMANTIC_VIEW', '{safe_name}')", backend, backend_type
-    )
+    rows = execute_raw_sql(f"SELECT GET_DDL('SEMANTIC_VIEW', '{safe_name}')", backend)
     if rows:
         return str(next(iter(rows[0].values())))
     return None

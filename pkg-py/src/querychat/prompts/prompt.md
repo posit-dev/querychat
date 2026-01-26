@@ -71,16 +71,6 @@ quantile_cont(salary, 0.5)
 ```
 
 {{/is_duck_db}}
-{{#is_snowflake}}
-### Snowflake SQL Tips
-
-**QUALIFY clause:** Use QUALIFY instead of a subquery when filtering on window function results.
-
-**LATERAL FLATTEN:** Use for expanding JSON arrays or nested structures.
-
-**Time travel:** Use `AT` or `BEFORE` clauses for historical data access.
-
-{{/is_snowflake}}
 {{#has_semantic_views}}
 ### Semantic Views
 

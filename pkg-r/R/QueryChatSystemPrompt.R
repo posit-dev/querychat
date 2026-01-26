@@ -81,7 +81,6 @@ QueryChatSystemPrompt <- R6::R6Class(
       # Build context for whisker rendering
       db_type <- self$data_source$get_db_type()
       is_duck_db <- tolower(db_type) == "duckdb"
-      is_snowflake <- tolower(db_type) == "snowflake"
 
       # Check for semantic views (only available with SnowflakeSource)
       has_semantic_views <- FALSE
@@ -95,7 +94,6 @@ QueryChatSystemPrompt <- R6::R6Class(
       context <- list(
         db_type = db_type,
         is_duck_db = is_duck_db,
-        is_snowflake = if (is_snowflake) "true",
         has_semantic_views = if (has_semantic_views) "true",
         semantic_view_syntax = if (has_semantic_views) {
           get_semantic_view_syntax()

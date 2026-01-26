@@ -228,7 +228,6 @@ def normalize_data_source(
 ) -> DataSource:
     if isinstance(data_source, DataSource):
         return data_source
-
     if isinstance(data_source, sqlalchemy.Engine):
         return SQLAlchemySource(data_source, table_name)
 

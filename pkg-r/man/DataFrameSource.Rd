@@ -56,6 +56,7 @@ df_sqlite$cleanup()
 <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_data"><a href='../../querychat/html/DBISource.html#method-DBISource-get_data'><code>querychat::DBISource$get_data()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_db_type"><a href='../../querychat/html/DBISource.html#method-DBISource-get_db_type'><code>querychat::DBISource$get_db_type()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_schema"><a href='../../querychat/html/DBISource.html#method-DBISource-get_schema'><code>querychat::DBISource$get_schema()</code></a></span></li>
+<li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_semantic_view_ddls"><a href='../../querychat/html/DBISource.html#method-DBISource-get_semantic_view_ddls'><code>querychat::DBISource$get_semantic_view_ddls()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="has_semantic_views"><a href='../../querychat/html/DBISource.html#method-DBISource-has_semantic_views'><code>querychat::DBISource$has_semantic_views()</code></a></span></li>
 <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="test_query"><a href='../../querychat/html/DBISource.html#method-DBISource-test_query'><code>querychat::DBISource$test_query()</code></a></span></li>
 </ul>

@@ -231,7 +231,8 @@ def normalize_data_source(
         return data_source
     if isinstance(data_source, sqlalchemy.Engine):
         # Use SnowflakeSource for Snowflake connections to get semantic view support
-        if data_source.dialect.name.lower() == "snowflake":
+        dialect_name = getattr(getattr(data_source, "dialect", None), "name", "") or ""
+        if dialect_name.lower() == "snowflake":
             return SnowflakeSource(data_source, table_name)
         return SQLAlchemySource(data_source, table_name)
 

@@ -14,6 +14,8 @@ from sqlalchemy.sql import sqltypes
 from ._df_compat import read_sql
 from ._utils import as_narwhals, check_query
 
+logger = logging.getLogger(__name__)
+
 if TYPE_CHECKING:
     import ibis
     import polars as pl
@@ -718,9 +720,6 @@ class SemanticViewInfo:
     """The DDL definition from GET_DDL()."""
 
 
-logger = logging.getLogger(__name__)
-
-
 class SnowflakeSource(SQLAlchemySource):
     """
     A DataSource implementation for Snowflake with Semantic View support.
@@ -735,6 +734,8 @@ class SnowflakeSource(SQLAlchemySource):
         self,
         engine: Engine,
         table_name: str,
+        *,
+        discover_semantic_views: bool = True,
     ):
         """
         Initialize with a SQLAlchemy engine connected to Snowflake.
@@ -745,12 +746,18 @@ class SnowflakeSource(SQLAlchemySource):
             SQLAlchemy engine connected to Snowflake
         table_name
             Name of the table to query
+        discover_semantic_views
+            If True (default), automatically discover semantic views at
+            initialization. Set to False to skip discovery (e.g., for
+            performance or if not needed).
 
         """
         super().__init__(engine, table_name)
 
-        # Discover semantic views at initialization
-        self._semantic_views = self._discover_semantic_views()
+        if discover_semantic_views:
+            self._semantic_views = self._discover_semantic_views()
+        else:
+            self._semantic_views = []
 
     def _discover_semantic_views(self) -> list[SemanticViewInfo]:
         """
@@ -764,41 +771,36 @@ class SnowflakeSource(SQLAlchemySource):
         """
         semantic_views: list[SemanticViewInfo] = []
 
-        try:
-            with self._get_connection() as conn:
-                # Check for semantic views in the current schema
-                result = conn.execute(text("SHOW SEMANTIC VIEWS"))
-                rows = result.fetchall()
+        with self._get_connection() as conn:
+            # Check for semantic views in the current schema
+            result = conn.execute(text("SHOW SEMANTIC VIEWS"))
+            rows = result.fetchall()
 
-                if not rows:
-                    return []
+            if not rows:
+                logger.debug("No semantic views found in current schema")
+                return []
 
-                # Get column names from result
-                column_names = list(result.keys())
+            # Get column names from result
+            column_names = list(result.keys())
 
-                for row in rows:
-                    row_dict = dict(zip(column_names, row, strict=False))
-                    # SHOW SEMANTIC VIEWS returns columns like:
-                    # created_on, name, database_name, schema_name, owner, ...
-                    view_name = row_dict.get("name")
-                    database_name = row_dict.get("database_name")
-                    schema_name = row_dict.get("schema_name")
+            for row in rows:
+                row_dict = dict(zip(column_names, row, strict=False))
+                # SHOW SEMANTIC VIEWS returns columns like:
+                # created_on, name, database_name, schema_name, owner, ...
+                view_name = row_dict.get("name")
+                database_name = row_dict.get("database_name")
+                schema_name = row_dict.get("schema_name")
 
-                    if not view_name:
-                        continue
+                if not view_name:
+                    continue
 
-                    # Build fully qualified name
-                    fq_name = f"{database_name}.{schema_name}.{view_name}"
+                # Build fully qualified name
+                fq_name = f"{database_name}.{schema_name}.{view_name}"
 
-                    # Get the DDL for this semantic view
-                    ddl = self._get_semantic_view_ddl(conn, fq_name)
-                    if ddl:
-                        semantic_views.append(SemanticViewInfo(name=fq_name, ddl=ddl))
-
-        except Exception as e:
-            # Log warning but don't fail - gracefully fall back to no semantic views
-            logger.warning(f"Failed to discover semantic views: {e}")
-            return []
+                # Get the DDL for this semantic view
+                ddl = self._get_semantic_view_ddl(conn, fq_name)
+                if ddl:
+                    semantic_views.append(SemanticViewInfo(name=fq_name, ddl=ddl))
 
         return semantic_views
 
@@ -819,15 +821,14 @@ class SnowflakeSource(SQLAlchemySource):
             The DDL text, or None if retrieval failed
 
         """
-        try:
-            result = conn.execute(
-                text(f"SELECT GET_DDL('SEMANTIC_VIEW', '{fq_name}')")
-            )
-            row = result.fetchone()
-            if row:
-                return str(row[0])
-        except Exception as e:
-            logger.warning(f"Failed to get DDL for semantic view {fq_name}: {e}")
+        # Escape single quotes to prevent SQL injection
+        safe_name = fq_name.replace("'", "''")
+        result = conn.execute(
+            text(f"SELECT GET_DDL('SEMANTIC_VIEW', '{safe_name}')")
+        )
+        row = result.fetchone()
+        if row:
+            return str(row[0])
 
         return None
 

@@ -1,6 +1,7 @@
 """Tests for Snowflake semantic view functionality."""
 
 import logging
+import os
 from unittest.mock import MagicMock, patch
 
 from querychat._snowflake import (
@@ -12,7 +13,6 @@ from querychat._snowflake import (
     format_semantic_views_section,
     get_semantic_view_ddl,
 )
-from querychat._snowflake_sources import SnowflakeIbisSource, SnowflakeSource
 
 
 class TestSemanticViewInfo:
@@ -203,32 +203,13 @@ class TestIbisExecutor:
         mock_df.to_dict.assert_called_once_with(orient="records")
 
 
-class TestSnowflakeSourceDiscovery:
-    """Tests for SnowflakeSource semantic view discovery."""
+class TestSQLAlchemySourceSemanticViews:
+    """Tests for SQLAlchemySource semantic view discovery."""
 
-    def test_discovery_disabled(self):
-        """Test that discover_semantic_views_flag=False skips discovery."""
-        mock_engine = MagicMock()
-        mock_engine.dialect.name = "snowflake"
-        mock_inspector = MagicMock()
-        mock_inspector.has_table.return_value = True
-        mock_inspector.get_columns.return_value = [{"name": "id"}]
+    def test_discovery_for_snowflake_backend(self):
+        """Test that discovery is called for Snowflake backends."""
+        from querychat._datasource import SQLAlchemySource
 
-        with patch(
-            "querychat._snowflake_sources.SQLAlchemySource.__init__", return_value=None
-        ):
-            source = SnowflakeSource.__new__(SnowflakeSource)
-            source._engine = mock_engine
-            source.table_name = "test"
-            source._columns_info = []
-            source._colnames = []
-            source._semantic_views = []
-
-        assert source._semantic_views == []
-        assert not source.has_semantic_views
-
-    def test_discovery_enabled_calls_discover(self):
-        """Test that discovery is called when enabled."""
         mock_engine = MagicMock()
         mock_engine.dialect.name = "snowflake"
         mock_inspector = MagicMock()
@@ -238,19 +219,21 @@ class TestSnowflakeSourceDiscovery:
         with (
             patch("querychat._datasource.inspect", return_value=mock_inspector),
             patch(
-                "querychat._snowflake_sources.discover_semantic_views", return_value=[]
+                "querychat._datasource.discover_semantic_views", return_value=[]
             ) as mock_discover,
+            patch.dict(os.environ, {}, clear=False),
         ):
-            SnowflakeSource(mock_engine, "test_table")
+            # Remove the disable env var if present
+            os.environ.pop("QUERYCHAT_DISABLE_SEMANTIC_VIEWS", None)
+            SQLAlchemySource(mock_engine, "test_table")
             mock_discover.assert_called_once()
 
+    def test_discovery_skipped_for_non_snowflake(self):
+        """Test that discovery is skipped for non-Snowflake backends."""
+        from querychat._datasource import SQLAlchemySource
 
-class TestSnowflakeSourceProperties:
-    """Tests for SnowflakeSource properties."""
-
-    def test_has_semantic_views_true(self):
-        """Test has_semantic_views returns True when views exist."""
         mock_engine = MagicMock()
+        mock_engine.dialect.name = "postgresql"
         mock_inspector = MagicMock()
         mock_inspector.has_table.return_value = True
         mock_inspector.get_columns.return_value = [{"name": "id"}]
@@ -258,16 +241,19 @@ class TestSnowflakeSourceProperties:
         with (
             patch("querychat._datasource.inspect", return_value=mock_inspector),
             patch(
-                "querychat._snowflake_sources.discover_semantic_views", return_value=[]
-            ),
+                "querychat._datasource.discover_semantic_views"
+            ) as mock_discover,
         ):
-            source = SnowflakeSource(mock_engine, "test_table")
-            source._semantic_views = [SemanticViewInfo(name="test", ddl="DDL")]
-            assert source.has_semantic_views is True
+            source = SQLAlchemySource(mock_engine, "test_table")
+            mock_discover.assert_not_called()
+            assert source._semantic_views == []
 
-    def test_has_semantic_views_false(self):
-        """Test has_semantic_views returns False when no views."""
+    def test_discovery_disabled_via_env_var(self):
+        """Test that QUERYCHAT_DISABLE_SEMANTIC_VIEWS disables discovery."""
+        from querychat._datasource import SQLAlchemySource
+
         mock_engine = MagicMock()
+        mock_engine.dialect.name = "snowflake"
         mock_inspector = MagicMock()
         mock_inspector.has_table.return_value = True
         mock_inspector.get_columns.return_value = [{"name": "id"}]
@@ -275,43 +261,22 @@ class TestSnowflakeSourceProperties:
         with (
             patch("querychat._datasource.inspect", return_value=mock_inspector),
             patch(
-                "querychat._snowflake_sources.discover_semantic_views", return_value=[]
-            ),
+                "querychat._datasource.discover_semantic_views"
+            ) as mock_discover,
+            patch.dict(os.environ, {"QUERYCHAT_DISABLE_SEMANTIC_VIEWS": "1"}),
         ):
-            source = SnowflakeSource(mock_engine, "test_table")
-            assert source.has_semantic_views is False
+            source = SQLAlchemySource(mock_engine, "test_table")
+            mock_discover.assert_not_called()
+            assert source._semantic_views == []
 
-    def test_semantic_views_property(self):
-        """Test semantic_views property returns the list."""
-        views = [
-            SemanticViewInfo(name="view1", ddl="DDL1"),
-            SemanticViewInfo(name="view2", ddl="DDL2"),
-        ]
-
-        mock_engine = MagicMock()
-        mock_inspector = MagicMock()
-        mock_inspector.has_table.return_value = True
-        mock_inspector.get_columns.return_value = [{"name": "id"}]
-
-        with (
-            patch("querychat._datasource.inspect", return_value=mock_inspector),
-            patch(
-                "querychat._snowflake_sources.discover_semantic_views",
-                return_value=views,
-            ),
-        ):
-            source = SnowflakeSource(mock_engine, "test_table")
-            assert source.semantic_views == views
-
-
-class TestGetSchemaWithSemanticViews:
-    """Tests for get_schema with semantic views included."""
-
-    def test_schema_includes_semantic_views(self):
+    def test_get_schema_includes_semantic_views(self):
         """Test that get_schema includes semantic view section."""
+        from querychat._datasource import SQLAlchemySource
+
         views = [SemanticViewInfo(name="db.schema.metrics", ddl="CREATE SEMANTIC VIEW")]
 
         mock_engine = MagicMock()
+        mock_engine.dialect.name = "snowflake"
         mock_inspector = MagicMock()
         mock_inspector.has_table.return_value = True
         mock_inspector.get_columns.return_value = [{"name": "id", "type": MagicMock()}]
@@ -319,54 +284,53 @@ class TestGetSchemaWithSemanticViews:
         with (
             patch("querychat._datasource.inspect", return_value=mock_inspector),
             patch(
-                "querychat._snowflake_sources.discover_semantic_views",
+                "querychat._datasource.discover_semantic_views",
                 return_value=views,
             ),
-            patch.object(
-                SnowflakeSource.__bases__[0],
-                "get_schema",
-                return_value="Table: test_table\nColumns:\n- id",
-            ),
+            patch.dict(os.environ, {}, clear=False),
         ):
-            source = SnowflakeSource(mock_engine, "test_table")
-            schema = source.get_schema(categorical_threshold=20)
+            os.environ.pop("QUERYCHAT_DISABLE_SEMANTIC_VIEWS", None)
+            source = SQLAlchemySource(mock_engine, "test_table")
+
+            # Mock the stats query to avoid needing a real connection
+            with patch.object(source, "_add_column_stats"):
+                schema = source.get_schema(categorical_threshold=20)
 
             assert "Table: test_table" in schema
             assert "## Snowflake Semantic Views" in schema
             assert "db.schema.metrics" in schema
 
-    def test_schema_without_semantic_views(self):
+    def test_get_schema_without_semantic_views(self):
         """Test that get_schema works without semantic views."""
+        from querychat._datasource import SQLAlchemySource
+
         mock_engine = MagicMock()
+        mock_engine.dialect.name = "postgresql"
         mock_inspector = MagicMock()
         mock_inspector.has_table.return_value = True
         mock_inspector.get_columns.return_value = [{"name": "id", "type": MagicMock()}]
 
-        with (
-            patch("querychat._datasource.inspect", return_value=mock_inspector),
-            patch(
-                "querychat._snowflake_sources.discover_semantic_views", return_value=[]
-            ),
-            patch.object(
-                SnowflakeSource.__bases__[0],
-                "get_schema",
-                return_value="Table: test_table\nColumns:\n- id",
-            ),
-        ):
-            source = SnowflakeSource(mock_engine, "test_table")
-            schema = source.get_schema(categorical_threshold=20)
+        with patch("querychat._datasource.inspect", return_value=mock_inspector):
+            source = SQLAlchemySource(mock_engine, "test_table")
+
+            # Mock the stats query
+            with patch.object(source, "_add_column_stats"):
+                schema = source.get_schema(categorical_threshold=20)
 
             assert "Table: test_table" in schema
             assert "## Snowflake Semantic Views" not in schema
 
 
-class TestSnowflakeIbisSource:
-    """Tests for SnowflakeIbisSource."""
+class TestIbisSourceSemanticViews:
+    """Tests for IbisSource semantic view discovery."""
 
-    def test_discovery_enabled_for_snowflake(self):
+    def test_discovery_for_snowflake_backend(self):
         """Test that discovery runs for Snowflake backends."""
+        from ibis.backends.sql import SQLBackend
+        from querychat._datasource import IbisSource
+
         mock_table = MagicMock()
-        mock_backend = MagicMock()
+        mock_backend = MagicMock(spec=SQLBackend)
         mock_backend.name = "snowflake"
         mock_table.get_backend.return_value = mock_backend
         mock_schema = MagicMock()
@@ -374,33 +338,23 @@ class TestSnowflakeIbisSource:
         mock_schema.names = []
         mock_table.schema.return_value = mock_schema
 
-        with patch(
-            "querychat._snowflake_sources.discover_semantic_views", return_value=[]
-        ) as mock_discover:
-            with patch(
-                "querychat._snowflake_sources.IbisSource.__init__", return_value=None
-            ):
-                source = SnowflakeIbisSource.__new__(SnowflakeIbisSource)
-                source._table = mock_table
-                source.table_name = "test"
-                source._schema = mock_schema
-                source._backend = mock_backend
-                source._colnames = []
-
-                # Manually call the __init__ logic that would use discover_semantic_views
-                # Import from _snowflake_sources module's namespace (where it's imported)
-                import querychat._snowflake_sources as sf_sources
-
-                # Verify the function is importable and would be called
-                executor = sf_sources.IbisExecutor(mock_backend)
-                source._semantic_views = sf_sources.discover_semantic_views(executor)
-
+        with (
+            patch(
+                "querychat._datasource.discover_semantic_views", return_value=[]
+            ) as mock_discover,
+            patch.dict(os.environ, {}, clear=False),
+        ):
+            os.environ.pop("QUERYCHAT_DISABLE_SEMANTIC_VIEWS", None)
+            IbisSource(mock_table, "test")
             mock_discover.assert_called_once()
 
-    def test_discovery_disabled_for_non_snowflake(self):
+    def test_discovery_skipped_for_non_snowflake(self):
         """Test that discovery is skipped for non-Snowflake backends."""
+        from ibis.backends.sql import SQLBackend
+        from querychat._datasource import IbisSource
+
         mock_table = MagicMock()
-        mock_backend = MagicMock()
+        mock_backend = MagicMock(spec=SQLBackend)
         mock_backend.name = "postgres"
         mock_table.get_backend.return_value = mock_backend
         mock_schema = MagicMock()
@@ -409,29 +363,19 @@ class TestSnowflakeIbisSource:
         mock_table.schema.return_value = mock_schema
 
         with patch(
-            "querychat._snowflake_sources.discover_semantic_views"
+            "querychat._datasource.discover_semantic_views"
         ) as mock_discover:
-            with patch(
-                "querychat._snowflake_sources.IbisSource.__init__", return_value=None
-            ):
-                source = SnowflakeIbisSource.__new__(SnowflakeIbisSource)
-                source._table = mock_table
-                source.table_name = "test"
-                source._schema = mock_schema
-                source._backend = mock_backend
-                source._colnames = []
-
-                # Manually set semantic views (simulating what __init__ does for non-Snowflake)
-                source._semantic_views = []
-
-            # Since backend is not Snowflake, discover should not be called
+            source = IbisSource(mock_table, "test")
             mock_discover.assert_not_called()
             assert source._semantic_views == []
 
-    def test_has_semantic_views_mixin(self):
-        """Test that SnowflakeIbisSource has semantic view mixin properties."""
+    def test_discovery_disabled_via_env_var(self):
+        """Test that QUERYCHAT_DISABLE_SEMANTIC_VIEWS disables discovery."""
+        from ibis.backends.sql import SQLBackend
+        from querychat._datasource import IbisSource
+
         mock_table = MagicMock()
-        mock_backend = MagicMock()
+        mock_backend = MagicMock(spec=SQLBackend)
         mock_backend.name = "snowflake"
         mock_table.get_backend.return_value = mock_backend
         mock_schema = MagicMock()
@@ -441,19 +385,44 @@ class TestSnowflakeIbisSource:
 
         with (
             patch(
-                "querychat._snowflake_sources.discover_semantic_views", return_value=[]
-            ),
-            patch(
-                "querychat._snowflake_sources.IbisSource.__init__", return_value=None
-            ),
+                "querychat._datasource.discover_semantic_views"
+            ) as mock_discover,
+            patch.dict(os.environ, {"QUERYCHAT_DISABLE_SEMANTIC_VIEWS": "1"}),
         ):
-            source = SnowflakeIbisSource.__new__(SnowflakeIbisSource)
-            source._table = mock_table
-            source.table_name = "test"
-            source._schema = mock_schema
-            source._backend = mock_backend
-            source._colnames = []
-            source._semantic_views = [SemanticViewInfo(name="test", ddl="DDL")]
+            source = IbisSource(mock_table, "test")
+            mock_discover.assert_not_called()
+            assert source._semantic_views == []
 
-            assert source.has_semantic_views is True
-            assert source.semantic_views == [SemanticViewInfo(name="test", ddl="DDL")]
+    def test_get_schema_includes_semantic_views(self):
+        """Test that get_schema includes semantic view section."""
+        from ibis.backends.sql import SQLBackend
+        from querychat._datasource import IbisSource
+
+        views = [SemanticViewInfo(name="db.schema.metrics", ddl="CREATE SEMANTIC VIEW")]
+
+        mock_table = MagicMock()
+        mock_backend = MagicMock(spec=SQLBackend)
+        mock_backend.name = "snowflake"
+        mock_table.get_backend.return_value = mock_backend
+        mock_schema = MagicMock()
+        mock_schema.items.return_value = [("id", MagicMock())]
+        mock_schema.names = ["id"]
+        mock_table.schema.return_value = mock_schema
+
+        with (
+            patch(
+                "querychat._datasource.discover_semantic_views",
+                return_value=views,
+            ),
+            patch.dict(os.environ, {}, clear=False),
+        ):
+            os.environ.pop("QUERYCHAT_DISABLE_SEMANTIC_VIEWS", None)
+            source = IbisSource(mock_table, "test_table")
+
+            # Mock _add_column_stats to avoid complex aggregation setup
+            with patch.object(IbisSource, "_add_column_stats"):
+                schema = source.get_schema(categorical_threshold=20)
+
+            assert "Table: test_table" in schema
+            assert "## Snowflake Semantic Views" in schema
+            assert "db.schema.metrics" in schema

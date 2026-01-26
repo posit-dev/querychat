@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Generic, Literal, cast
@@ -11,6 +12,13 @@ from sqlalchemy import inspect, text
 from sqlalchemy.sql import sqltypes
 
 from ._df_compat import read_sql
+from ._snowflake import (
+    IbisExecutor,
+    SemanticViewInfo,
+    SQLAlchemyExecutor,
+    discover_semantic_views,
+    format_semantic_views_section,
+)
 from ._utils import as_narwhals, check_query
 
 if TYPE_CHECKING:
@@ -429,6 +437,8 @@ class SQLAlchemySource(DataSource[nw.DataFrame]):
     and Databricks.
     """
 
+    _semantic_views: list[SemanticViewInfo]
+
     def __init__(
         self,
         engine: Engine,
@@ -456,6 +466,15 @@ class SQLAlchemySource(DataSource[nw.DataFrame]):
         # Store column info for schema generation
         self._columns_info = inspector.get_columns(table_name)
         self._colnames = [col["name"] for col in self._columns_info]
+
+        # Discover Snowflake semantic views if applicable
+        self._semantic_views = []
+        if (
+            self._engine.dialect.name.lower() == "snowflake"
+            and not os.environ.get("QUERYCHAT_DISABLE_SEMANTIC_VIEWS")
+        ):
+            executor = SQLAlchemyExecutor(engine)
+            self._semantic_views = discover_semantic_views(executor)
 
     def get_db_type(self) -> str:
         """
@@ -487,7 +506,12 @@ class SQLAlchemySource(DataSource[nw.DataFrame]):
             for col in self._columns_info
         ]
         self._add_column_stats(columns, categorical_threshold)
-        return format_schema(self.table_name, columns)
+        schema = format_schema(self.table_name, columns)
+
+        if self._semantic_views:
+            schema = f"{schema}\n\n{format_semantic_views_section(self._semantic_views)}"
+
+        return schema
 
     @staticmethod
     def _make_column_meta(name: str, sa_type: sqltypes.TypeEngine) -> ColumnMeta:
@@ -926,6 +950,7 @@ class IbisSource(DataSource["ibis.Table"]):
 
     _table: ibis.Table
     _backend: SQLBackend
+    _semantic_views: list[SemanticViewInfo]
     table_name: str
 
     def __init__(self, table: ibis.Table, table_name: str):
@@ -950,6 +975,15 @@ class IbisSource(DataSource["ibis.Table"]):
             )
         self._colnames = list(colnames)
 
+        # Discover Snowflake semantic views if applicable
+        self._semantic_views = []
+        if (
+            self._backend.name.lower() == "snowflake"
+            and not os.environ.get("QUERYCHAT_DISABLE_SEMANTIC_VIEWS")
+        ):
+            executor = IbisExecutor(self._backend)
+            self._semantic_views = discover_semantic_views(executor)
+
     def get_db_type(self) -> str:
         return self._backend.name
 
@@ -958,7 +992,12 @@ class IbisSource(DataSource["ibis.Table"]):
             self._make_column_meta(name, dtype) for name, dtype in self._schema.items()
         ]
         self._add_column_stats(columns, self._table, categorical_threshold)
-        return format_schema(self.table_name, columns)
+        schema = format_schema(self.table_name, columns)
+
+        if self._semantic_views:
+            schema = f"{schema}\n\n{format_semantic_views_section(self._semantic_views)}"
+
+        return schema
 
     @staticmethod
     def _make_column_meta(name: str, dtype: IbisDataType) -> ColumnMeta:

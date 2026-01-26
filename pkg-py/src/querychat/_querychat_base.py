@@ -21,7 +21,6 @@ from ._datasource import (
     SQLAlchemySource,
 )
 from ._shiny_module import GREETING_PROMPT
-from ._snowflake_sources import SnowflakeIbisSource, SnowflakeSource
 from ._system_prompt import QueryChatSystemPrompt
 from ._utils import MISSING, MISSING_TYPE, is_ibis_table
 from .tools import (
@@ -223,23 +222,17 @@ class QueryChatBase(Generic[IntoFrameT]):
             self._data_source.cleanup()
 
 
-def normalize_data_source(  # noqa: PLR0911
+def normalize_data_source(
     data_source: IntoFrame | sqlalchemy.Engine | DataSource,
     table_name: str,
 ) -> DataSource:
     if isinstance(data_source, DataSource):
         return data_source
+
     if isinstance(data_source, sqlalchemy.Engine):
-        # Use SnowflakeSource for Snowflake connections to get semantic view support
-        dialect_name = getattr(getattr(data_source, "dialect", None), "name", "") or ""
-        if dialect_name.lower() == "snowflake":
-            return SnowflakeSource(data_source, table_name)
         return SQLAlchemySource(data_source, table_name)
 
     if is_ibis_table(data_source):
-        backend = data_source.get_backend()
-        if backend.name.lower() == "snowflake":
-            return SnowflakeIbisSource(data_source, table_name)
         return IbisSource(data_source, table_name)
 
     src = nw.from_native(data_source, pass_through=True)

@@ -35,29 +35,13 @@ def execute_raw_sql(
     query: str,
     backend: sqlalchemy.Engine | SQLBackend,
 ) -> list[dict[str, Any]]:
-    """
-    Execute raw SQL and return results as list of row dicts.
-
-    Parameters
-    ----------
-    query
-        SQL query to execute
-    backend
-        SQLAlchemy Engine or Ibis SQLBackend
-
-    Returns
-    -------
-    list[dict[str, Any]]
-        Query results as list of row dictionaries
-
-    """
+    """Execute raw SQL and return results as list of row dicts."""
     if isinstance(backend, sqlalchemy.Engine):
         with backend.connect() as conn:
             result = conn.execute(sqlalchemy.text(query))
             keys = list(result.keys())
             return [dict(zip(keys, row, strict=False)) for row in result.fetchall()]
     else:
-        # Ibis backend
         result_table = backend.sql(query)
         df = result_table.execute()
         return df.to_dict(orient="records")  # type: ignore[return-value]
@@ -66,21 +50,7 @@ def execute_raw_sql(
 def discover_semantic_views(
     backend: sqlalchemy.Engine | SQLBackend,
 ) -> list[SemanticViewInfo]:
-    """
-    Discover semantic views in the current schema.
-
-    Parameters
-    ----------
-    backend
-        SQLAlchemy Engine or Ibis SQLBackend
-
-    Returns
-    -------
-    list[SemanticViewInfo]
-        List of semantic views with their DDL definitions
-
-    """
-    # Check env var for early exit
+    """Discover semantic views in the current schema."""
     if os.environ.get("QUERYCHAT_DISABLE_SEMANTIC_VIEWS"):
         return []
 
@@ -111,23 +81,7 @@ def get_semantic_view_ddl(
     backend: sqlalchemy.Engine | SQLBackend,
     fq_name: str,
 ) -> str | None:
-    """
-    Get DDL for a semantic view.
-
-    Parameters
-    ----------
-    backend
-        SQLAlchemy Engine or Ibis SQLBackend
-    fq_name
-        Fully qualified name (database.schema.view_name)
-
-    Returns
-    -------
-    str | None
-        The DDL text, or None if retrieval failed
-
-    """
-    # Escape single quotes to prevent SQL injection
+    """Get DDL for a semantic view by fully qualified name."""
     safe_name = fq_name.replace("'", "''")
     rows = execute_raw_sql(f"SELECT GET_DDL('SEMANTIC_VIEW', '{safe_name}')", backend)
     if rows:
@@ -136,20 +90,7 @@ def get_semantic_view_ddl(
 
 
 def format_semantic_views_section(semantic_views: list[SemanticViewInfo]) -> str:
-    """
-    Format the semantic views section for schema output.
-
-    Parameters
-    ----------
-    semantic_views
-        List of semantic view metadata
-
-    Returns
-    -------
-    str
-        Formatted markdown section describing the semantic views
-
-    """
+    """Format the semantic views section for schema output."""
     lines = [
         "## Snowflake Semantic Views",
         "",

@@ -79,6 +79,10 @@ quantile_cont(salary, 0.5)
 Real-world example: Raw table queries for "external customer revenue" returned $184B while the semantic model's certified metric returned $84.5B (the correct answer). The raw query was 2x+ too high because it ignored discounts and included invalid transaction codes.
 
 {{{semantic_view_syntax}}}
+
+<semantic_views>
+{{{semantic_view_ddls}}}
+</semantic_views>
 {{/has_semantic_views}}
 ## Your Capabilities
 

@@ -75,13 +75,23 @@ class QueryChatSystemPrompt:
         """
         db_type = self.data_source.get_db_type()
         is_duck_db = db_type.lower() == "duckdb"
-        has_semantic_views = "## Snowflake Semantic Views" in self.schema
+
+        # Check for semantic views (available with SQLAlchemySource/IbisSource for Snowflake)
+        has_semantic_views = (
+            hasattr(self.data_source, "has_semantic_views")
+            and self.data_source.has_semantic_views()
+        )
 
         context = {
             "db_type": db_type,
             "is_duck_db": is_duck_db,
             "has_semantic_views": has_semantic_views,
-            "semantic_view_syntax": get_semantic_view_syntax() if has_semantic_views else "",
+            "semantic_view_syntax": get_semantic_view_syntax()
+            if has_semantic_views
+            else "",
+            "semantic_view_ddls": (
+                self.data_source.get_semantic_view_ddls() if has_semantic_views else ""
+            ),
             "schema": self.schema,
             "data_description": self.data_description,
             "extra_instructions": self.extra_instructions,

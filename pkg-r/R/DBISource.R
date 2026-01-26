@@ -109,11 +109,6 @@ DBISource <- R6::R6Class(
     #' @return A string describing the schema
     get_schema = function(categorical_threshold = 20) {
       check_number_whole(categorical_threshold, min = 1)
-      schema <- get_schema_impl(
-        private$conn,
-        self$table_name,
-        categorical_threshold
-      )
 
       # Discover Snowflake semantic views lazily (only on first call)
       if (is.null(private$semantic_views)) {
@@ -124,14 +119,11 @@ DBISource <- R6::R6Class(
         }
       }
 
-      if (length(private$semantic_views) > 0) {
-        semantic_section <- format_semantic_views_section(
-          private$semantic_views
-        )
-        schema <- paste(schema, semantic_section, sep = "\n\n")
-      }
-
-      schema
+      get_schema_impl(
+        private$conn,
+        self$table_name,
+        categorical_threshold
+      )
     },
 
     #' @description
@@ -139,6 +131,16 @@ DBISource <- R6::R6Class(
     #' @return TRUE if semantic views were discovered
     has_semantic_views = function() {
       length(private$semantic_views %||% list()) > 0
+    },
+
+    #' @description
+    #' Get formatted DDL content for semantic views
+    #' @return A string with DDL definitions, or empty string if none
+    get_semantic_view_ddls = function() {
+      if (!self$has_semantic_views()) {
+        return("")
+      }
+      format_semantic_view_ddls(private$semantic_views)
     },
 
     #' @description
@@ -515,28 +517,13 @@ get_semantic_view_ddl <- function(conn, fq_name) {
   }
 }
 
-#' Format Semantic Views Section for Schema Output
+#' Format Semantic View DDLs
 #'
 #' @param semantic_views A list of semantic view info (name and ddl)
-#' @return A formatted string describing the semantic views
+#' @return A formatted string with just the DDL definitions
 #' @noRd
-format_semantic_views_section <- function(semantic_views) {
-  lines <- c(
-    "## Snowflake Semantic Views",
-    "",
-    paste0(
-      "This database has Semantic Views available. Semantic Views provide a ",
-      "curated layer over raw data with pre-defined metrics, dimensions, and ",
-      "relationships. They encode business logic and calculation rules that ",
-      "ensure consistent, accurate results."
-    ),
-    "",
-    paste0(
-      "**IMPORTANT**: When a Semantic View covers the data you need, prefer ",
-      "it over raw table queries to benefit from certified metric definitions."
-    ),
-    ""
-  )
+format_semantic_view_ddls <- function(semantic_views) {
+  lines <- character(0)
 
   for (sv in semantic_views) {
     lines <- c(

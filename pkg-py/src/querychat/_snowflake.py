@@ -89,20 +89,9 @@ def get_semantic_view_ddl(
     return None
 
 
-def format_semantic_views_section(semantic_views: list[SemanticViewInfo]) -> str:
-    """Format the semantic views section for schema output."""
-    lines = [
-        "## Snowflake Semantic Views",
-        "",
-        "This database has Semantic Views available. Semantic Views provide a curated ",
-        "layer over raw data with pre-defined metrics, dimensions, and relationships. ",
-        "They encode business logic and calculation rules that ensure consistent, ",
-        "accurate results.",
-        "",
-        "**IMPORTANT**: When a Semantic View covers the data you need, prefer it over ",
-        "raw table queries to benefit from certified metric definitions.",
-        "",
-    ]
+def format_semantic_view_ddls(semantic_views: list[SemanticViewInfo]) -> str:
+    """Format just the DDL definitions for semantic views."""
+    lines: list[str] = []
 
     for sv in semantic_views:
         lines.append(f"### Semantic View: `{sv.name}`")

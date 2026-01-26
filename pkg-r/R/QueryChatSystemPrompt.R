@@ -98,6 +98,9 @@ QueryChatSystemPrompt <- R6::R6Class(
         semantic_view_syntax = if (has_semantic_views) {
           get_semantic_view_syntax()
         },
+        semantic_view_ddls = if (has_semantic_views) {
+          self$data_source$get_semantic_view_ddls()
+        },
         schema = self$schema,
         data_description = self$data_description,
         extra_instructions = self$extra_instructions,

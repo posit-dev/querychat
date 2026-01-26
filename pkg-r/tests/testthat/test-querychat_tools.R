@@ -6,8 +6,10 @@ test_that("tool_update_dashboard() checks inputs", {
   df_source <- local_data_frame_source(new_test_df())
   expect_snapshot(error = TRUE, {
     tool_update_dashboard(df_source, update_fn = NULL)
-    tool_update_dashboard(df_source, update_fn = function(query) {})
-    tool_update_dashboard(df_source, update_fn = function(title, extra) {})
+    tool_update_dashboard(df_source, update_fn = function(query) {
+    })
+    tool_update_dashboard(df_source, update_fn = function(title, extra) {
+    })
   })
 })
 

@@ -8,7 +8,7 @@ from querychat._snowflake import (
     SemanticViewInfo,
     discover_semantic_views,
     execute_raw_sql,
-    format_semantic_views_section,
+    format_semantic_view_ddls,
     get_semantic_view_ddl,
 )
 
@@ -37,19 +37,19 @@ class TestSemanticViewInfo:
         assert info1 != info3
 
 
-class TestFormatSemanticViewsSection:
-    """Tests for semantic view formatting."""
+class TestFormatSemanticViewDdls:
+    """Tests for semantic view DDL formatting."""
 
     def test_format_single_view(self):
         """Test that format produces expected markdown structure for single view."""
-        views = [SemanticViewInfo(name="db.schema.view1", ddl="CREATE SEMANTIC VIEW v1")]
-        section = format_semantic_views_section(views)
+        views = [
+            SemanticViewInfo(name="db.schema.view1", ddl="CREATE SEMANTIC VIEW v1")
+        ]
+        section = format_semantic_view_ddls(views)
 
-        assert "## Snowflake Semantic Views" in section
         assert "db.schema.view1" in section
         assert "CREATE SEMANTIC VIEW v1" in section
         assert "```sql" in section
-        assert "**IMPORTANT**" in section
 
     def test_format_multiple_views(self):
         """Test formatting with multiple views."""
@@ -57,7 +57,7 @@ class TestFormatSemanticViewsSection:
             SemanticViewInfo(name="db.schema.view1", ddl="CREATE SEMANTIC VIEW v1"),
             SemanticViewInfo(name="db.schema.view2", ddl="CREATE SEMANTIC VIEW v2"),
         ]
-        section = format_semantic_views_section(views)
+        section = format_semantic_view_ddls(views)
 
         assert "db.schema.view1" in section
         assert "db.schema.view2" in section
@@ -308,9 +308,7 @@ class TestSQLAlchemySourceSemanticViews:
 
         with (
             patch("querychat._datasource.inspect", return_value=mock_inspector),
-            patch(
-                "querychat._datasource.discover_semantic_views"
-            ) as mock_discover,
+            patch("querychat._datasource.discover_semantic_views") as mock_discover,
         ):
             source = SQLAlchemySource(mock_engine, "test_table")
 
@@ -415,9 +413,7 @@ class TestIbisSourceSemanticViews:
         mock_schema.names = ["id"]
         mock_table.schema.return_value = mock_schema
 
-        with patch(
-            "querychat._datasource.discover_semantic_views"
-        ) as mock_discover:
+        with patch("querychat._datasource.discover_semantic_views") as mock_discover:
             source = IbisSource(mock_table, "test")
 
             with patch.object(IbisSource, "_add_column_stats"):

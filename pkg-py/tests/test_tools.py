@@ -3,6 +3,10 @@
 import warnings
 
 from querychat._utils import querychat_tool_starts_open
+from querychat.tools import (
+    UpdateDashboardData,
+    tool_reset_dashboard,
+)
 
 
 def test_querychat_tool_starts_open_default_behavior(monkeypatch):
@@ -64,3 +68,26 @@ def test_querychat_tool_starts_open_invalid_setting(monkeypatch):
         assert len(w) == 1
         assert "Invalid value" in str(w[0].message)
         assert result is True  # Falls back to default behavior
+
+
+def test_update_dashboard_data_has_table_field():
+    """Test that UpdateDashboardData includes table field."""
+    # TypedDict should have table as a key
+    assert "table" in UpdateDashboardData.__annotations__
+
+
+def test_reset_dashboard_accepts_table_parameter():
+    """Test that reset_dashboard tool accepts table parameter."""
+    reset_tables = []
+
+    def callback(table: str):
+        reset_tables.append(table)
+
+    tool = tool_reset_dashboard(callback)
+
+    # The tool function should accept table parameter
+    tool.func(table="orders")
+
+    assert reset_tables == ["orders"]
+
+

@@ -709,193 +709,6 @@ class SQLAlchemySource(DataSource[nw.DataFrame]):
             self._engine.dispose()
 
 
-@dataclass
-class SemanticViewInfo:
-    """Metadata for a Snowflake Semantic View."""
-
-    name: str
-    """Fully qualified name (database.schema.view_name)."""
-
-    ddl: str
-    """The DDL definition from GET_DDL()."""
-
-
-class SnowflakeSource(SQLAlchemySource):
-    """
-    A DataSource implementation for Snowflake with Semantic View support.
-
-    Extends SQLAlchemySource to automatically detect and provide context about
-    Snowflake Semantic Views when available.
-    """
-
-    _semantic_views: list[SemanticViewInfo]
-
-    def __init__(
-        self,
-        engine: Engine,
-        table_name: str,
-        *,
-        discover_semantic_views: bool = True,
-    ):
-        """
-        Initialize with a SQLAlchemy engine connected to Snowflake.
-
-        Parameters
-        ----------
-        engine
-            SQLAlchemy engine connected to Snowflake
-        table_name
-            Name of the table to query
-        discover_semantic_views
-            If True (default), automatically discover semantic views at
-            initialization. Set to False to skip discovery (e.g., for
-            performance or if not needed).
-
-        """
-        super().__init__(engine, table_name)
-
-        if discover_semantic_views:
-            self._semantic_views = self._discover_semantic_views()
-        else:
-            self._semantic_views = []
-
-    def _discover_semantic_views(self) -> list[SemanticViewInfo]:
-        """
-        Discover Semantic Views in the current schema and retrieve their DDLs.
-
-        Returns
-        -------
-        list[SemanticViewInfo]
-            List of semantic views with their DDL definitions
-
-        """
-        semantic_views: list[SemanticViewInfo] = []
-
-        with self._get_connection() as conn:
-            # Check for semantic views in the current schema
-            result = conn.execute(text("SHOW SEMANTIC VIEWS"))
-            rows = result.fetchall()
-
-            if not rows:
-                logger.debug("No semantic views found in current schema")
-                return []
-
-            # Get column names from result
-            column_names = list(result.keys())
-
-            for row in rows:
-                row_dict = dict(zip(column_names, row, strict=False))
-                # SHOW SEMANTIC VIEWS returns columns like:
-                # created_on, name, database_name, schema_name, owner, ...
-                view_name = row_dict.get("name")
-                database_name = row_dict.get("database_name")
-                schema_name = row_dict.get("schema_name")
-
-                if not view_name:
-                    continue
-
-                # Build fully qualified name
-                fq_name = f"{database_name}.{schema_name}.{view_name}"
-
-                # Get the DDL for this semantic view
-                ddl = self._get_semantic_view_ddl(conn, fq_name)
-                if ddl:
-                    semantic_views.append(SemanticViewInfo(name=fq_name, ddl=ddl))
-
-        return semantic_views
-
-    def _get_semantic_view_ddl(self, conn: Connection, fq_name: str) -> str | None:
-        """
-        Retrieve the DDL for a semantic view.
-
-        Parameters
-        ----------
-        conn
-            Active database connection
-        fq_name
-            Fully qualified name (database.schema.view_name)
-
-        Returns
-        -------
-        str | None
-            The DDL text, or None if retrieval failed
-
-        """
-        # Escape single quotes to prevent SQL injection
-        safe_name = fq_name.replace("'", "''")
-        result = conn.execute(
-            text(f"SELECT GET_DDL('SEMANTIC_VIEW', '{safe_name}')")
-        )
-        row = result.fetchone()
-        if row:
-            return str(row[0])
-
-        return None
-
-    @property
-    def has_semantic_views(self) -> bool:
-        """Check if semantic views are available."""
-        return len(self._semantic_views) > 0
-
-    @property
-    def semantic_views(self) -> list[SemanticViewInfo]:
-        """Get the list of discovered semantic views."""
-        return self._semantic_views
-
-    def get_schema(self, *, categorical_threshold: int) -> str:
-        """
-        Generate schema information including semantic view context.
-
-        Parameters
-        ----------
-        categorical_threshold
-            Maximum number of unique values for a text column to be considered
-            categorical
-
-        Returns
-        -------
-        str
-            String describing the schema, including semantic view information
-            if available
-
-        """
-        # Get base schema from parent
-        schema = super().get_schema(categorical_threshold=categorical_threshold)
-
-        # If no semantic views, return base schema
-        if not self._semantic_views:
-            return schema
-
-        # Add semantic view information
-        semantic_section = self._format_semantic_views_section()
-        return f"{schema}\n\n{semantic_section}"
-
-    def _format_semantic_views_section(self) -> str:
-        """Format the semantic views section for the schema output."""
-        lines = [
-            "## Snowflake Semantic Views",
-            "",
-            "This database has Semantic Views available. Semantic Views provide a curated ",
-            "layer over raw data with pre-defined metrics, dimensions, and relationships. ",
-            "They encode business logic and calculation rules that ensure consistent, ",
-            "accurate results.",
-            "",
-            "**IMPORTANT**: When a Semantic View covers the data you need, prefer it over ",
-            "raw table queries to benefit from certified metric definitions.",
-            "",
-        ]
-
-        for sv in self._semantic_views:
-            lines.append(f"### Semantic View: `{sv.name}`")
-            lines.append("")
-            lines.append("```sql")
-            lines.append(sv.ddl)
-            lines.append("```")
-            lines.append("")
-
-        return "\n".join(lines)
-
-
 class PolarsLazySource(DataSource["pl.LazyFrame"]):
     """
     A DataSource implementation for Polars LazyFrames.
@@ -1324,3 +1137,25 @@ class IbisSource(DataSource["ibis.Table"]):
         The Ibis backend connection is owned by the caller and should be
         closed by calling `backend.disconnect()` when appropriate.
         """
+
+
+# Backwards-compatible re-exports (moved to _snowflake.py and _snowflake_sources.py)
+from ._snowflake import SemanticViewInfo  # noqa: E402
+from ._snowflake_sources import (  # noqa: E402
+    SnowflakeIbisSource,
+    SnowflakeSource,
+)
+
+__all__ = [
+    "ColumnMeta",
+    "DataFrameSource",
+    "DataSource",
+    "IbisSource",
+    "MissingColumnsError",
+    "PolarsLazySource",
+    "SQLAlchemySource",
+    "SemanticViewInfo",
+    "SnowflakeIbisSource",
+    "SnowflakeSource",
+    "format_schema",
+]

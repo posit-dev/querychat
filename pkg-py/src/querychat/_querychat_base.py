@@ -18,10 +18,10 @@ from ._datasource import (
     IbisSource,
     IntoFrameT,
     PolarsLazySource,
-    SnowflakeSource,
     SQLAlchemySource,
 )
 from ._shiny_module import GREETING_PROMPT
+from ._snowflake_sources import SnowflakeIbisSource, SnowflakeSource
 from ._system_prompt import QueryChatSystemPrompt
 from ._utils import MISSING, MISSING_TYPE, is_ibis_table
 from .tools import (
@@ -223,7 +223,7 @@ class QueryChatBase(Generic[IntoFrameT]):
             self._data_source.cleanup()
 
 
-def normalize_data_source(
+def normalize_data_source(  # noqa: PLR0911
     data_source: IntoFrame | sqlalchemy.Engine | DataSource,
     table_name: str,
 ) -> DataSource:
@@ -237,6 +237,9 @@ def normalize_data_source(
         return SQLAlchemySource(data_source, table_name)
 
     if is_ibis_table(data_source):
+        backend = data_source.get_backend()
+        if backend.name.lower() == "snowflake":
+            return SnowflakeIbisSource(data_source, table_name)
         return IbisSource(data_source, table_name)
 
     src = nw.from_native(data_source, pass_through=True)

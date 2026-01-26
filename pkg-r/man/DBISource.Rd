@@ -42,7 +42,6 @@ db_source$cleanup()
 \item \href{#method-DBISource-new}{\code{DBISource$new()}}
 \item \href{#method-DBISource-get_db_type}{\code{DBISource$get_db_type()}}
 \item \href{#method-DBISource-get_schema}{\code{DBISource$get_schema()}}
-\item \href{#method-DBISource-has_semantic_views}{\code{DBISource$has_semantic_views()}}
 \item \href{#method-DBISource-get_semantic_view_ddls}{\code{DBISource$get_semantic_view_ddls()}}
 \item \href{#method-DBISource-execute_query}{\code{DBISource$execute_query()}}
 \item \href{#method-DBISource-test_query}{\code{DBISource$test_query()}}
@@ -106,19 +105,6 @@ column to be considered categorical (default: 20)}
 }
 \subsection{Returns}{
 A string describing the schema
-}
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-DBISource-has_semantic_views"></a>}}
-\if{latex}{\out{\hypertarget{method-DBISource-has_semantic_views}{}}}
-\subsection{Method \code{has_semantic_views()}}{
-Check if semantic views are available
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{DBISource$has_semantic_views()}\if{html}{\out{</div>}}
-}
-
-\subsection{Returns}{
-TRUE if semantic views were discovered
 }
 }
 \if{html}{\out{<hr>}}

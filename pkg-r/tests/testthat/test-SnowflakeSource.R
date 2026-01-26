@@ -82,9 +82,12 @@ describe("SnowflakeSource initialization", {
     # which skips the discovery when FALSE
 
     # The parameter exists and should be accepted by the class
-    expect_true("discover_semantic_views" %in% formalArgs(
-      SnowflakeSource$public_methods$initialize
-    ))
+    expect_true(
+      "discover_semantic_views" %in%
+        formalArgs(
+          SnowflakeSource$public_methods$initialize
+        )
+    )
   })
 
   it("inherits from DBISource", {

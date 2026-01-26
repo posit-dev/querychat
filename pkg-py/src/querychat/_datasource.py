@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Generic, Literal, cast
@@ -13,8 +12,6 @@ from sqlalchemy.sql import sqltypes
 
 from ._df_compat import read_sql
 from ._utils import as_narwhals, check_query
-
-logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     import ibis
@@ -1137,25 +1134,3 @@ class IbisSource(DataSource["ibis.Table"]):
         The Ibis backend connection is owned by the caller and should be
         closed by calling `backend.disconnect()` when appropriate.
         """
-
-
-# Backwards-compatible re-exports (moved to _snowflake.py and _snowflake_sources.py)
-from ._snowflake import SemanticViewInfo  # noqa: E402
-from ._snowflake_sources import (  # noqa: E402
-    SnowflakeIbisSource,
-    SnowflakeSource,
-)
-
-__all__ = [
-    "ColumnMeta",
-    "DataFrameSource",
-    "DataSource",
-    "IbisSource",
-    "MissingColumnsError",
-    "PolarsLazySource",
-    "SQLAlchemySource",
-    "SemanticViewInfo",
-    "SnowflakeIbisSource",
-    "SnowflakeSource",
-    "format_schema",
-]

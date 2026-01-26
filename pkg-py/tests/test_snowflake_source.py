@@ -3,17 +3,16 @@
 import logging
 from unittest.mock import MagicMock, patch
 
-# Import from _datasource for backwards compatibility testing
-from querychat._datasource import SemanticViewInfo, SnowflakeSource
 from querychat._snowflake import (
     IbisExecutor,
+    SemanticViewInfo,
     SQLAlchemyConnectionExecutor,
     SQLAlchemyExecutor,
     discover_semantic_views,
     format_semantic_views_section,
     get_semantic_view_ddl,
 )
-from querychat._snowflake_sources import SnowflakeIbisSource
+from querychat._snowflake_sources import SnowflakeIbisSource, SnowflakeSource
 
 
 class TestSemanticViewInfo:
@@ -458,20 +457,3 @@ class TestSnowflakeIbisSource:
 
             assert source.has_semantic_views is True
             assert source.semantic_views == [SemanticViewInfo(name="test", ddl="DDL")]
-
-
-class TestBackwardsCompatibility:
-    """Tests for backwards-compatible imports."""
-
-    def test_import_from_datasource(self):
-        """Test that imports from _datasource still work."""
-        from querychat._datasource import SemanticViewInfo, SnowflakeSource
-
-        assert SemanticViewInfo is not None
-        assert SnowflakeSource is not None
-
-    def test_snowflake_ibis_source_import(self):
-        """Test that SnowflakeIbisSource can be imported from _datasource."""
-        from querychat._datasource import SnowflakeIbisSource
-
-        assert SnowflakeIbisSource is not None

@@ -184,7 +184,8 @@ class TestQueryChatBase:
 
     def test_data_source_property(self, sample_df):
         qc = QueryChatBase(sample_df, "test_table")
-        assert qc.data_source is qc._data_source
+        # data_source returns first source from _data_sources dict
+        assert qc.data_source is qc._data_sources["test_table"]
 
     def test_system_prompt_property(self, sample_df):
         qc = QueryChatBase(sample_df, "test_table")

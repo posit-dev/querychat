@@ -60,7 +60,6 @@ def card_ui(
 ) -> Component:
     """Create a Bootstrap card with optional header and action button."""
     import dash_bootstrap_components as dbc
-
     from dash import html
 
     children = []
@@ -93,7 +92,6 @@ def card_ui(
 def chat_container_ui(ids: IDs) -> list[Component]:
     """Create the chat UI container (messages + input)."""
     import dash_bootstrap_components as dbc
-
     from dash import html
 
     return [

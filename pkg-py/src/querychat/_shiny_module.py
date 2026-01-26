@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Generic, Union
 import chatlas
 import shinychat
 from narwhals.stable.v1.typing import IntoFrameT
-
 from shiny import module, reactive, ui
 
 from ._querychat_core import GREETING_PROMPT
@@ -18,9 +17,8 @@ from .tools import tool_query, tool_reset_dashboard, tool_update_dashboard
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from shiny.bookmark import BookmarkState, RestoreState
-
     from shiny import Inputs, Outputs, Session
+    from shiny.bookmark import BookmarkState, RestoreState
 
     from ._datasource import DataSource
     from .types import UpdateDashboardData
@@ -129,7 +127,7 @@ def mod_server(
         sql.set(data["query"])
         title.set(data["title"])
 
-    def reset_dashboard():
+    def reset_dashboard(_table_name: str = ""):
         sql.set(None)
         title.set(None)
 
@@ -143,8 +141,10 @@ def mod_server(
         # Legacy pattern: client is Chat instance
         chat = copy.deepcopy(client)
 
-        chat.register_tool(tool_update_dashboard(data_source, update_dashboard))
-        chat.register_tool(tool_query(data_source))
+        # Wrap single data source in dict for tool functions
+        data_sources = {data_source.table_name: data_source}
+        chat.register_tool(tool_update_dashboard(data_sources, update_dashboard))
+        chat.register_tool(tool_query(data_sources))
         chat.register_tool(tool_reset_dashboard(reset_dashboard))
 
     # Execute query when SQL changes

@@ -1,5 +1,6 @@
 import os
 
+import ibis
 import pandas as pd
 import polars as pl
 import pytest
@@ -86,6 +87,10 @@ def test_querychat_client_has_system_prompt(sample_df):
     # The system_prompt should contain the table name since it includes schema info
     assert "test_table" in client.system_prompt
 
+    # The system_prompt property should also return the prompt with table info
+    assert qc.system_prompt is not None
+    assert "test_table" in qc.system_prompt
+
     # The internal _client should also have the system prompt set
     # (needed for methods like generate_greeting() that use _client directly)
     assert qc._client.system_prompt is not None
@@ -123,8 +128,6 @@ def test_querychat_with_polars_lazyframe():
 
 def test_querychat_with_ibis_table():
     """Test that QueryChat accepts an Ibis Table."""
-    ibis = pytest.importorskip("ibis")
-
     conn = ibis.duckdb.connect()
     try:
         conn.create_table(

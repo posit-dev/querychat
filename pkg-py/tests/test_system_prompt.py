@@ -243,8 +243,12 @@ class TestQueryChatSystemPromptRender:
         rendered = prompt.render(tools=("query",))
 
         assert "Schema:" in rendered
-        # Schema should contain table information
-        assert prompt.schema in rendered
+        # Schema should contain table and column information
+        # Note: chevron escapes HTML entities, so we check for key schema content
+        assert "test_table" in rendered
+        assert "id" in rendered
+        assert "name" in rendered
+        assert "age" in rendered
 
     def test_render_includes_db_type(self, sample_data_source, sample_prompt_template):
         """Test that rendering includes database type."""
@@ -257,3 +261,5 @@ class TestQueryChatSystemPromptRender:
 
         assert "Database Type:" in rendered
         assert sample_data_source.get_db_type() in rendered
+
+

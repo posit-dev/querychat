@@ -724,9 +724,11 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         else:
             enable = enable_bookmarking
 
+        # Use first data source for backwards compatibility
+        first_source = self._require_data_source("__init__")
         self._vals = mod_server(
             self.id,
-            data_source=self._data_source,
+            data_source=first_source,
             greeting=self.greeting,
             client=self._client,
             enable_bookmarking=enable,

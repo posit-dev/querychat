@@ -45,6 +45,8 @@ Each framework's `QueryChat` provides `.app()` for quick standalone apps and `.u
 
 ### New features
 
+* Added `PolarsLazySource` to support Polars LazyFrames as data sources. Data stays lazy until the render boundary, enabling efficient handling of large datasets. Pass a `polars.LazyFrame` directly to `QueryChat()` and queries will be executed lazily via Polars' SQLContext.
+
 * `QueryChat.console()` was added to launch interactive console-based chat sessions with your data source, with persistent conversation state across invocations. (#168)
 
 * `QueryChat.client()` can now create standalone querychat-enabled chat clients with configurable tools and callbacks, enabling use outside of Shiny applications. (#168)

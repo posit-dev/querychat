@@ -40,6 +40,8 @@ class UpdateDashboardData(TypedDict):
 
     Attributes
     ----------
+    table
+        The name of the table being filtered.
     query
         The SQL query string to execute for filtering/sorting the dashboard.
     title
@@ -54,6 +56,7 @@ class UpdateDashboardData(TypedDict):
 
 
     def log_update(data: UpdateDashboardData):
+        print(f"Table: {data['table']}")
         print(f"Executing: {data['query']}")
         print(f"Title: {data['title']}")
 
@@ -65,6 +68,7 @@ class UpdateDashboardData(TypedDict):
 
     """
 
+    table: str
     query: str
     title: str
 
@@ -77,15 +81,24 @@ def _read_prompt_template(filename: str, **kwargs) -> str:
 
 
 def _update_dashboard_impl(
-    data_source: DataSource,
+    data_sources: dict[str, DataSource],
     update_fn: Callable[[UpdateDashboardData], None],
-) -> Callable[[str, str], ContentToolResult]:
+) -> Callable[[str, str, str], ContentToolResult]:
     """Create the implementation function for updating the dashboard."""
 
-    def update_dashboard(query: str, title: str) -> ContentToolResult:
+    def update_dashboard(table: str, query: str, title: str) -> ContentToolResult:
         error = None
         markdown = f"```sql\n{query}\n```"
         value = "Dashboard updated. Use `query` tool to review results, if needed."
+
+        # Validate table exists
+        if table not in data_sources:
+            available = ", ".join(data_sources.keys())
+            error = f"Table '{table}' not found. Available: {available}"
+            markdown += f"\n\n> Error: {error}"
+            return ContentToolResult(value=markdown, error=Exception(error))
+
+        data_source = data_sources[table]
 
         try:
             # Test the query but don't execute it yet
@@ -94,13 +107,14 @@ def _update_dashboard_impl(
             # Add Apply Filter button
             button_html = f"""<button
                 class="btn btn-outline-primary btn-sm float-end mt-3 querychat-update-dashboard-btn"
+                data-table="{table}"
                 data-query="{query}"
                 data-title="{title}">
                 Apply Filter
             </button>"""
 
             # Call the callback with TypedDict data on success
-            update_fn({"query": query, "title": title})
+            update_fn({"table": table, "query": query, "title": title})
 
         except Exception as e:
             error = str(e)
@@ -125,30 +139,32 @@ def _update_dashboard_impl(
 
 
 def tool_update_dashboard(
-    data_source: DataSource,
+    data_sources: dict[str, DataSource],
     update_fn: Callable[[UpdateDashboardData], None],
 ) -> Tool:
     """
-    Create a tool that modifies the data presented in the dashboard based on the SQL query.
+    Create a tool that modifies the data presented in the dashboard.
 
     Parameters
     ----------
-    data_source
-        The data source to query against
+    data_sources
+        Dictionary of data sources keyed by table name.
     update_fn
-        Callback function to call with UpdateDashboardData when update succeeds
+        Callback function to call with UpdateDashboardData when update succeeds.
 
     Returns
     -------
     Tool
-        A tool that can be registered with chatlas
+        A tool that can be registered with chatlas.
 
     """
-    impl = _update_dashboard_impl(data_source, update_fn)
+    impl = _update_dashboard_impl(data_sources, update_fn)
 
+    # Get db_type from first source (all should be same dialect)
+    first_source = next(iter(data_sources.values()))
     description = _read_prompt_template(
         "tool-update-dashboard.md",
-        db_type=data_source.get_db_type(),
+        db_type=first_source.get_db_type(),
     )
     impl.__doc__ = description
 
@@ -160,17 +176,18 @@ def tool_update_dashboard(
 
 
 def _reset_dashboard_impl(
-    reset_fn: Callable[[], None],
-) -> Callable[[], ContentToolResult]:
+    reset_fn: Callable[[str], None],
+) -> Callable[[str], ContentToolResult]:
     """Create the implementation function for resetting the dashboard."""
 
-    def reset_dashboard() -> ContentToolResult:
+    def reset_dashboard(table: str) -> ContentToolResult:
         # Call the callback to reset
-        reset_fn()
+        reset_fn(table)
 
         # Add Reset Filter button
-        button_html = """<button
+        button_html = f"""<button
             class="btn btn-outline-primary btn-sm float-end mt-3 querychat-update-dashboard-btn"
+            data-table="{table}"
             data-query=""
             data-title="">
             Reset Filter
@@ -194,7 +211,7 @@ def _reset_dashboard_impl(
 
 
 def tool_reset_dashboard(
-    reset_fn: Callable[[], None],
+    reset_fn: Callable[[str], None],
 ) -> Tool:
     """
     Create a tool that resets the dashboard to show all data.
@@ -202,12 +219,12 @@ def tool_reset_dashboard(
     Parameters
     ----------
     reset_fn
-        Callback function to call when reset is invoked
+        Callback function to call with table name when reset is requested.
 
     Returns
     -------
     Tool
-        A tool that can be registered with chatlas
+        A tool that can be registered with chatlas.
 
     """
     impl = _reset_dashboard_impl(reset_fn)
@@ -259,25 +276,34 @@ def _query_impl(data_source: DataSource) -> Callable[[str, str], ContentToolResu
     return query
 
 
-def tool_query(data_source: DataSource) -> Tool:
+def tool_query(data_sources: dict[str, DataSource]) -> Tool:
     """
     Create a tool that performs a SQL query on the data.
 
     Parameters
     ----------
-    data_source
-        The data source to query against
+    data_sources
+        Dictionary of data sources keyed by table name.
 
     Returns
     -------
     Tool
-        A tool that can be registered with chatlas
+        A tool that can be registered with chatlas.
+
+    Note
+    ----
+    For now, this uses the first data source. True multi-table JOIN support
+    would require all tables to share a database connection, which is more
+    complex and not needed for MVP.
 
     """
-    impl = _query_impl(data_source)
+    # Use first source for now - multi-table JOINs will need shared connection
+    first_source = next(iter(data_sources.values()))
+
+    impl = _query_impl(first_source)
 
     description = _read_prompt_template(
-        "tool-query.md", db_type=data_source.get_db_type()
+        "tool-query.md", db_type=first_source.get_db_type()
     )
     impl.__doc__ = description
 

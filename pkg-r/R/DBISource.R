@@ -27,7 +27,8 @@ DBISource <- R6::R6Class(
   "DBISource",
   inherit = DataSource,
   private = list(
-    conn = NULL
+    conn = NULL,
+    semantic_views = NULL
   ),
   public = list(
     #' @description
@@ -58,23 +59,27 @@ DBISource <- R6::R6Class(
 
       # Check if table exists
       if (!DBI::dbExistsTable(conn, table_name)) {
-        cli::cli_abort(c(
-          "Table {.val {DBI::dbQuoteIdentifier(conn, table_name)}} not found in database",
-          "i" = "If you're using a table in a catalog or schema, pass a {.fn DBI::Id} object to {.arg table_name}"
-        ))
+        cli::cli_abort(
+          c(
+            "Table {.val {DBI::dbQuoteIdentifier(conn, table_name)}} not found in database",
+            "i" = "If you're using a table in a catalog or schema, pass a {.fn DBI::Id} object to {.arg table_name}"
+          )
+        )
       }
 
       private$conn <- conn
       self$table_name <- table_name
 
       # Store original column names for validation
-      private$colnames <- colnames(DBI::dbGetQuery(
-        conn,
-        sprintf(
-          "SELECT * FROM %s LIMIT 0",
-          DBI::dbQuoteIdentifier(conn, table_name)
+      private$colnames <- colnames(
+        DBI::dbGetQuery(
+          conn,
+          sprintf(
+            "SELECT * FROM %s LIMIT 0",
+            DBI::dbQuoteIdentifier(conn, table_name)
+          )
         )
-      ))
+      )
     },
 
     #' @description Get the database type
@@ -104,7 +109,36 @@ DBISource <- R6::R6Class(
     #' @return A string describing the schema
     get_schema = function(categorical_threshold = 20) {
       check_number_whole(categorical_threshold, min = 1)
-      get_schema_impl(private$conn, self$table_name, categorical_threshold)
+      schema <- get_schema_impl(
+        private$conn,
+        self$table_name,
+        categorical_threshold
+      )
+
+      # Discover Snowflake semantic views lazily (only on first call)
+      if (is.null(private$semantic_views)) {
+        if (is_snowflake_connection(private$conn)) {
+          private$semantic_views <- discover_semantic_views_impl(private$conn)
+        } else {
+          private$semantic_views <- list()
+        }
+      }
+
+      if (length(private$semantic_views) > 0) {
+        semantic_section <- format_semantic_views_section(
+          private$semantic_views
+        )
+        schema <- paste(schema, semantic_section, sep = "\n\n")
+      }
+
+      schema
+    },
+
+    #' @description
+    #' Check if semantic views are available
+    #' @return TRUE if semantic views were discovered
+    has_semantic_views = function() {
+      length(private$semantic_views %||% list()) > 0
     },
 
     #' @description
@@ -180,7 +214,6 @@ DBISource <- R6::R6Class(
     }
   )
 )
-
 
 get_schema_impl <- function(
   conn,
@@ -361,7 +394,6 @@ get_schema_impl <- function(
   paste(schema_lines, collapse = "\n")
 }
 
-
 # nocov start
 # Map R classes to SQL types
 r_class_to_sql_type <- function(r_class) {
@@ -380,3 +412,143 @@ r_class_to_sql_type <- function(r_class) {
   )
 }
 # nocov end
+
+# Snowflake Semantic Views Support ----
+
+#' Check if a connection is a Snowflake connection
+#'
+#' @param conn A DBI connection object
+#' @return TRUE if the connection is to Snowflake
+#' @noRd
+is_snowflake_connection <- function(conn) {
+  if (!inherits(conn, "DBIConnection")) {
+    return(FALSE)
+  }
+
+  # Check for known Snowflake connection classes
+  if (inherits(conn, "Snowflake")) {
+    return(TRUE)
+  }
+
+  # Check dbms.name from connection info
+  tryCatch(
+    {
+      conn_info <- DBI::dbGetInfo(conn)
+      dbms_name <- tolower(conn_info[["dbms.name"]] %||% "")
+      grepl("snowflake", dbms_name, ignore.case = TRUE)
+    },
+    error = function(e) FALSE
+  )
+}
+
+#' Discover Semantic Views in Snowflake
+#'
+#' @param conn A DBI connection to Snowflake
+#' @return A list of semantic views with name and ddl
+#' @noRd
+discover_semantic_views_impl <- function(conn) {
+  # Check env var for early exit
+  if (nzchar(Sys.getenv("QUERYCHAT_DISABLE_SEMANTIC_VIEWS", ""))) {
+    return(list())
+  }
+
+  semantic_views <- list()
+
+  # Check for semantic views in the current schema
+  result <- DBI::dbGetQuery(conn, "SHOW SEMANTIC VIEWS")
+
+  if (nrow(result) == 0) {
+    cli::cli_inform(
+      c("i" = "No semantic views found in current schema"),
+      .frequency = "once",
+      .frequency_id = "querychat_no_semantic_views"
+    )
+    return(list())
+  }
+
+  for (i in seq_len(nrow(result))) {
+    row <- result[i, ]
+    view_name <- row[["name"]]
+    database_name <- row[["database_name"]]
+    schema_name <- row[["schema_name"]]
+
+    if (is.null(view_name) || is.na(view_name)) {
+      next
+    }
+
+    # Build fully qualified name
+    fq_name <- paste(database_name, schema_name, view_name, sep = ".")
+
+    # Get the DDL for this semantic view
+    ddl <- get_semantic_view_ddl(conn, fq_name)
+    if (!is.null(ddl)) {
+      semantic_views <- c(
+        semantic_views,
+        list(
+          list(
+            name = fq_name,
+            ddl = ddl
+          )
+        )
+      )
+    }
+  }
+
+  semantic_views
+}
+
+#' Get the DDL for a Semantic View
+#'
+#' @param conn A DBI connection to Snowflake
+#' @param fq_name Fully qualified name (database.schema.view_name)
+#' @return The DDL text, or NULL if retrieval failed
+#' @noRd
+get_semantic_view_ddl <- function(conn, fq_name) {
+  # Escape single quotes to prevent SQL injection
+  safe_name <- gsub("'", "''", fq_name, fixed = TRUE)
+  query <- sprintf("SELECT GET_DDL('SEMANTIC_VIEW', '%s')", safe_name)
+  result <- DBI::dbGetQuery(conn, query)
+  if (nrow(result) > 0 && ncol(result) > 0) {
+    as.character(result[[1, 1]])
+  } else {
+    NULL
+  }
+}
+
+#' Format Semantic Views Section for Schema Output
+#'
+#' @param semantic_views A list of semantic view info (name and ddl)
+#' @return A formatted string describing the semantic views
+#' @noRd
+format_semantic_views_section <- function(semantic_views) {
+  lines <- c(
+    "## Snowflake Semantic Views",
+    "",
+    paste0(
+      "This database has Semantic Views available. Semantic Views provide a ",
+      "curated layer over raw data with pre-defined metrics, dimensions, and ",
+      "relationships. They encode business logic and calculation rules that ",
+      "ensure consistent, accurate results."
+    ),
+    "",
+    paste0(
+      "**IMPORTANT**: When a Semantic View covers the data you need, prefer ",
+      "it over raw table queries to benefit from certified metric definitions."
+    ),
+    ""
+  )
+
+  for (sv in semantic_views) {
+    lines <- c(
+      lines,
+      sprintf("### Semantic View: `%s`", sv$name),
+      "",
+      "```sql",
+      sv$ddl,
+      "```",
+      ""
+    )
+  }
+
+  paste(lines, collapse = "\n")
+}

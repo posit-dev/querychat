@@ -1,4 +1,4 @@
-# Tests for SnowflakeSource and semantic view functionality
+# Tests for Snowflake semantic view functionality in DBISource
 
 describe("format_semantic_views_section()", {
   it("formats single semantic view correctly", {
@@ -71,28 +71,28 @@ describe("is_snowflake_connection()", {
   })
 })
 
-describe("SnowflakeSource initialization", {
-  # Note: We cannot fully test SnowflakeSource without a real Snowflake
-  # connection, but we can test the parameter validation and discovery
-  # option through integration with DBISource
+describe("DBISource semantic views", {
+  it("has_semantic_views() returns FALSE before get_schema() is called", {
+    skip_if_not_installed("RSQLite")
 
-  it("can disable semantic view discovery", {
-    # This is a mock test - in reality you'd need a Snowflake connection
-    # The actual behavior is tested through the discover_semantic_views param
-    # which skips the discovery when FALSE
+    conn <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
+    withr::defer(DBI::dbDisconnect(conn))
+    DBI::dbWriteTable(conn, "test_table", data.frame(x = 1:3))
 
-    # The parameter exists and should be accepted by the class
-    expect_true(
-      "discover_semantic_views" %in%
-        formalArgs(
-          SnowflakeSource$public_methods$initialize
-        )
-    )
+    source <- DBISource$new(conn, "test_table")
+    expect_false(source$has_semantic_views())
   })
 
-  it("inherits from DBISource", {
-    # Check that SnowflakeSource inherits from DBISource
-    expect_identical(SnowflakeSource$get_inherit(), DBISource)
+  it("has_semantic_views() returns FALSE for non-Snowflake after get_schema()", {
+    skip_if_not_installed("RSQLite")
+
+    conn <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
+    withr::defer(DBI::dbDisconnect(conn))
+    DBI::dbWriteTable(conn, "test_table", data.frame(x = 1:3))
+
+    source <- DBISource$new(conn, "test_table")
+    source$get_schema()
+    expect_false(source$has_semantic_views())
   })
 })
 
@@ -110,5 +110,18 @@ describe("discover_semantic_views_impl()", {
       discover_semantic_views_impl(conn),
       "SHOW"
     )
+  })
+
+  it("respects QUERYCHAT_DISABLE_SEMANTIC_VIEWS env var", {
+    skip_if_not_installed("RSQLite")
+
+    conn <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
+    withr::defer(DBI::dbDisconnect(conn))
+
+    withr::with_envvar(c("QUERYCHAT_DISABLE_SEMANTIC_VIEWS" = "1"), {
+      # Should return empty list without querying (no error from SQLite)
+      result <- discover_semantic_views_impl(conn)
+      expect_equal(result, list())
+    })
   })
 })

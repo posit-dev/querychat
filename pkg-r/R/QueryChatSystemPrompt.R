@@ -82,10 +82,10 @@ QueryChatSystemPrompt <- R6::R6Class(
       db_type <- self$data_source$get_db_type()
       is_duck_db <- tolower(db_type) == "duckdb"
 
-      # Check for semantic views (only available with SnowflakeSource)
+      # Check for semantic views (available with DBISource for Snowflake connections)
       has_semantic_views <- FALSE
       if (
-        inherits(self$data_source, "SnowflakeSource") &&
+        inherits(self$data_source, "DBISource") &&
           self$data_source$has_semantic_views()
       ) {
         has_semantic_views <- TRUE

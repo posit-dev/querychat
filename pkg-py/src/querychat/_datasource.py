@@ -501,25 +501,26 @@ class SQLAlchemySource(DataSource[nw.DataFrame]):
             for col in self._columns_info
         ]
         self._add_column_stats(columns, categorical_threshold)
+        return format_schema(self.table_name, columns)
 
-        # Discover semantic views lazily (only on first call)
+    def _ensure_semantic_views_discovered(self) -> None:
         if self._semantic_views is None:
             if self._engine.dialect.name.lower() == "snowflake":
                 self._semantic_views = discover_semantic_views(self._engine)
             else:
                 self._semantic_views = []
 
-        return format_schema(self.table_name, columns)
-
     def has_semantic_views(self) -> bool:
         """Check if semantic views are available."""
+        self._ensure_semantic_views_discovered()
         return bool(self._semantic_views)
 
     def get_semantic_view_ddls(self) -> str:
         """Get formatted DDL content for semantic views."""
-        if not self.has_semantic_views():
+        self._ensure_semantic_views_discovered()
+        if not self._semantic_views:
             return ""
-        return format_semantic_view_ddls(self._semantic_views)  # type: ignore[arg-type]
+        return format_semantic_view_ddls(self._semantic_views)
 
     @staticmethod
     def _make_column_meta(name: str, sa_type: sqltypes.TypeEngine) -> ColumnMeta:
@@ -991,25 +992,26 @@ class IbisSource(DataSource["ibis.Table"]):
             self._make_column_meta(name, dtype) for name, dtype in self._schema.items()
         ]
         self._add_column_stats(columns, self._table, categorical_threshold)
+        return format_schema(self.table_name, columns)
 
-        # Discover semantic views lazily (only on first call)
+    def _ensure_semantic_views_discovered(self) -> None:
         if self._semantic_views is None:
             if self._backend.name.lower() == "snowflake":
                 self._semantic_views = discover_semantic_views(self._backend)
             else:
                 self._semantic_views = []
 
-        return format_schema(self.table_name, columns)
-
     def has_semantic_views(self) -> bool:
         """Check if semantic views are available."""
+        self._ensure_semantic_views_discovered()
         return bool(self._semantic_views)
 
     def get_semantic_view_ddls(self) -> str:
         """Get formatted DDL content for semantic views."""
-        if not self.has_semantic_views():
+        self._ensure_semantic_views_discovered()
+        if not self._semantic_views:
             return ""
-        return format_semantic_view_ddls(self._semantic_views)  # type: ignore[arg-type]
+        return format_semantic_view_ddls(self._semantic_views)
 
     @staticmethod
     def _make_column_meta(name: str, dtype: IbisDataType) -> ColumnMeta:

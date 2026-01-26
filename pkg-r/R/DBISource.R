@@ -58,27 +58,23 @@ DBISource <- R6::R6Class(
 
       # Check if table exists
       if (!DBI::dbExistsTable(conn, table_name)) {
-        cli::cli_abort(
-          c(
-            "Table {.val {DBI::dbQuoteIdentifier(conn, table_name)}} not found in database",
-            "i" = "If you're using a table in a catalog or schema, pass a {.fn DBI::Id} object to {.arg table_name}"
-          )
-        )
+        cli::cli_abort(c(
+          "Table {.val {DBI::dbQuoteIdentifier(conn, table_name)}} not found in database",
+          "i" = "If you're using a table in a catalog or schema, pass a {.fn DBI::Id} object to {.arg table_name}"
+        ))
       }
 
       private$conn <- conn
       self$table_name <- table_name
 
       # Store original column names for validation
-      private$colnames <- colnames(
-        DBI::dbGetQuery(
-          conn,
-          sprintf(
-            "SELECT * FROM %s LIMIT 0",
-            DBI::dbQuoteIdentifier(conn, table_name)
-          )
+      private$colnames <- colnames(DBI::dbGetQuery(
+        conn,
+        sprintf(
+          "SELECT * FROM %s LIMIT 0",
+          DBI::dbQuoteIdentifier(conn, table_name)
         )
-      )
+      ))
     },
 
     #' @description Get the database type
@@ -108,11 +104,7 @@ DBISource <- R6::R6Class(
     #' @return A string describing the schema
     get_schema = function(categorical_threshold = 20) {
       check_number_whole(categorical_threshold, min = 1)
-      get_schema_impl(
-        private$conn,
-        self$table_name,
-        categorical_threshold
-      )
+      get_schema_impl(private$conn, self$table_name, categorical_threshold)
     },
 
     #' @description
@@ -202,6 +194,7 @@ DBISource <- R6::R6Class(
     }
   )
 )
+
 
 get_schema_impl <- function(
   conn,
@@ -381,6 +374,7 @@ get_schema_impl <- function(
 
   paste(schema_lines, collapse = "\n")
 }
+
 
 # nocov start
 # Map R classes to SQL types

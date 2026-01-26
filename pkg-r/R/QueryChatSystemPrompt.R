@@ -97,7 +97,9 @@ QueryChatSystemPrompt <- R6::R6Class(
         is_duck_db = is_duck_db,
         is_snowflake = if (is_snowflake) "true",
         has_semantic_views = if (has_semantic_views) "true",
-        semantic_view_syntax = if (has_semantic_views) get_semantic_view_syntax(),
+        semantic_view_syntax = if (has_semantic_views) {
+          get_semantic_view_syntax()
+        },
         schema = self$schema,
         data_description = self$data_description,
         extra_instructions = self$extra_instructions,
@@ -113,7 +115,11 @@ QueryChatSystemPrompt <- R6::R6Class(
 
 # Load SEMANTIC_VIEW_SYNTAX from shared prompt file
 get_semantic_view_syntax <- function() {
-  path <- system.file("prompts", "semantic-view-syntax.md", package = "querychat")
+  path <- system.file(
+    "prompts",
+    "semantic-view-syntax.md",
+    package = "querychat"
+  )
   read_utf8(path)
 }
 

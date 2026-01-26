@@ -82,21 +82,16 @@ QueryChatSystemPrompt <- R6::R6Class(
       db_type <- self$data_source$get_db_type()
       is_duck_db <- tolower(db_type) == "duckdb"
 
-      # Check for semantic views (available with DBISource for Snowflake connections)
-      semantic_view_ddls <- ""
+      # Get semantic views section (available with DBISource for Snowflake)
+      semantic_views <- ""
       if (inherits(self$data_source, "DBISource")) {
-        semantic_view_ddls <- self$data_source$get_semantic_view_ddls()
+        semantic_views <- self$data_source$get_semantic_views_section()
       }
-      has_semantic_views <- nzchar(semantic_view_ddls)
 
       context <- list(
         db_type = db_type,
         is_duck_db = is_duck_db,
-        has_semantic_views = if (has_semantic_views) "true",
-        semantic_view_syntax = if (has_semantic_views) {
-          get_semantic_view_syntax()
-        },
-        semantic_view_ddls = semantic_view_ddls,
+        semantic_views = semantic_views,
         schema = self$schema,
         data_description = self$data_description,
         extra_instructions = self$extra_instructions,
@@ -109,16 +104,6 @@ QueryChatSystemPrompt <- R6::R6Class(
     }
   )
 )
-
-# Load SEMANTIC_VIEW_SYNTAX from shared prompt file
-get_semantic_view_syntax <- function() {
-  path <- system.file(
-    "prompts",
-    "semantic-view-syntax.md",
-    package = "querychat"
-  )
-  read_utf8(path)
-}
 
 # Utility function for loading file or string content
 read_text <- function(x) {

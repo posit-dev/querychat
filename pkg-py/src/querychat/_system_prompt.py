@@ -13,11 +13,6 @@ if TYPE_CHECKING:
 PROMPTS_DIR = Path(__file__).parent / "prompts"
 
 
-def get_semantic_view_syntax() -> str:
-    """Load SEMANTIC_VIEW_SYNTAX from shared prompt file."""
-    return (PROMPTS_DIR / "semantic-view-syntax.md").read_text()
-
-
 class QueryChatSystemPrompt:
     """Manages system prompt template and component assembly."""
 
@@ -75,14 +70,11 @@ class QueryChatSystemPrompt:
         """
         db_type = self.data_source.get_db_type()
         is_duck_db = db_type.lower() == "duckdb"
-        semantic_view_ddls = self.data_source.get_semantic_view_ddls()
 
         context = {
             "db_type": db_type,
             "is_duck_db": is_duck_db,
-            "has_semantic_views": bool(semantic_view_ddls),
-            "semantic_view_syntax": get_semantic_view_syntax() if semantic_view_ddls else "",
-            "semantic_view_ddls": semantic_view_ddls,
+            "semantic_views": self.data_source.get_semantic_views_section(),
             "schema": self.schema,
             "data_description": self.data_description,
             "extra_instructions": self.extra_instructions,

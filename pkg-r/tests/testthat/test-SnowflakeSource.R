@@ -1,13 +1,12 @@
 # Tests for Snowflake semantic view functionality in DBISource
 
-describe("format_semantic_views_section()", {
+describe("format_semantic_view_ddls()", {
   it("formats single semantic view correctly", {
     views <- list(
       list(name = "db.schema.view", ddl = "CREATE SEMANTIC VIEW test_view")
     )
-    result <- format_semantic_views_section(views)
+    result <- format_semantic_view_ddls(views)
 
-    expect_match(result, "## Snowflake Semantic Views")
     expect_match(result, "db.schema.view")
     expect_match(result, "CREATE SEMANTIC VIEW test_view")
     expect_match(result, "```sql")
@@ -18,20 +17,35 @@ describe("format_semantic_views_section()", {
       list(name = "db.schema.view1", ddl = "CREATE SEMANTIC VIEW v1"),
       list(name = "db.schema.view2", ddl = "CREATE SEMANTIC VIEW v2")
     )
-    result <- format_semantic_views_section(views)
+    result <- format_semantic_view_ddls(views)
 
     expect_match(result, "db.schema.view1")
     expect_match(result, "db.schema.view2")
     expect_match(result, "CREATE SEMANTIC VIEW v1")
     expect_match(result, "CREATE SEMANTIC VIEW v2")
   })
+})
 
+describe("get_semantic_views_section_impl()", {
   it("includes IMPORTANT notice", {
     views <- list(
       list(name = "test", ddl = "DDL")
     )
-    result <- format_semantic_views_section(views)
+    result <- get_semantic_views_section_impl(views)
     expect_match(result, "\\*\\*IMPORTANT\\*\\*")
+  })
+
+  it("includes section header", {
+    views <- list(
+      list(name = "test", ddl = "DDL")
+    )
+    result <- get_semantic_views_section_impl(views)
+    expect_match(result, "## Semantic Views")
+  })
+
+  it("returns empty string for empty views list", {
+    result <- get_semantic_views_section_impl(list())
+    expect_equal(result, "")
   })
 })
 
@@ -72,7 +86,7 @@ describe("is_snowflake_connection()", {
 })
 
 describe("DBISource semantic views", {
-  it("has_semantic_views() returns FALSE before get_schema() is called", {
+  it("get_semantic_views_section() returns empty for non-Snowflake", {
     skip_if_not_installed("RSQLite")
 
     conn <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
@@ -80,19 +94,7 @@ describe("DBISource semantic views", {
     DBI::dbWriteTable(conn, "test_table", data.frame(x = 1:3))
 
     source <- DBISource$new(conn, "test_table")
-    expect_false(source$has_semantic_views())
-  })
-
-  it("has_semantic_views() returns FALSE for non-Snowflake after get_schema()", {
-    skip_if_not_installed("RSQLite")
-
-    conn <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
-    withr::defer(DBI::dbDisconnect(conn))
-    DBI::dbWriteTable(conn, "test_table", data.frame(x = 1:3))
-
-    source <- DBISource$new(conn, "test_table")
-    source$get_schema()
-    expect_false(source$has_semantic_views())
+    expect_equal(source$get_semantic_views_section(), "")
   })
 })
 

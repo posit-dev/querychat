@@ -13,7 +13,7 @@ from sqlalchemy.sql import sqltypes
 from ._df_compat import read_sql
 from ._snowflake import (
     discover_semantic_views,
-    format_semantic_view_ddls,
+    get_semantic_views_section,
 )
 from ._utils import as_narwhals, check_query
 
@@ -183,8 +183,8 @@ class DataSource(ABC, Generic[IntoFrameT]):
 
         """
 
-    def get_semantic_view_ddls(self) -> str:
-        """Get formatted DDL content for semantic views."""
+    def get_semantic_views_section(self) -> str:
+        """Get the complete semantic views section for the prompt."""
         return ""
 
 
@@ -497,14 +497,12 @@ class SQLAlchemySource(DataSource[nw.DataFrame]):
         self._add_column_stats(columns, categorical_threshold)
         return format_schema(self.table_name, columns)
 
-    def get_semantic_view_ddls(self) -> str:
-        """Get formatted DDL content for semantic views."""
+    def get_semantic_views_section(self) -> str:
+        """Get the complete semantic views section for the prompt."""
         if self._engine.dialect.name.lower() != "snowflake":
             return ""
         views = discover_semantic_views(self._engine)
-        if not views:
-            return ""
-        return format_semantic_view_ddls(views)
+        return get_semantic_views_section(views)
 
     @staticmethod
     def _make_column_meta(name: str, sa_type: sqltypes.TypeEngine) -> ColumnMeta:
@@ -977,14 +975,12 @@ class IbisSource(DataSource["ibis.Table"]):
         self._add_column_stats(columns, self._table, categorical_threshold)
         return format_schema(self.table_name, columns)
 
-    def get_semantic_view_ddls(self) -> str:
-        """Get formatted DDL content for semantic views."""
+    def get_semantic_views_section(self) -> str:
+        """Get the complete semantic views section for the prompt."""
         if self._backend.name.lower() != "snowflake":
             return ""
         views = discover_semantic_views(self._backend)
-        if not views:
-            return ""
-        return format_semantic_view_ddls(views)
+        return get_semantic_views_section(views)
 
     @staticmethod
     def _make_column_meta(name: str, dtype: IbisDataType) -> ColumnMeta:

@@ -44,7 +44,8 @@ def execute_raw_sql(
     else:
         result_table = backend.sql(query)
         df = result_table.execute()
-        return df.to_dict(orient="records")  # type: ignore[return-value]
+        columns = list(df.columns)
+        return [dict(zip(columns, row, strict=False)) for row in df.itertuples(index=False)]
 
 
 def discover_semantic_views(
@@ -102,3 +103,25 @@ def format_semantic_view_ddls(semantic_views: list[SemanticViewInfo]) -> str:
         lines.append("")
 
     return "\n".join(lines)
+
+
+def get_semantic_views_section(semantic_views: list[SemanticViewInfo]) -> str:
+    """Build the complete semantic views section for the prompt."""
+    if not semantic_views:
+        return ""
+
+    from importlib.resources import files
+
+    prompts = files("querychat.prompts.semantic-views")
+    prompt_text = (prompts / "prompt.md").read_text()
+    syntax_text = (prompts / "syntax.md").read_text()
+    ddls_text = format_semantic_view_ddls(semantic_views)
+
+    return f"""{prompt_text}
+
+{syntax_text}
+
+<semantic_views>
+{ddls_text}
+</semantic_views>
+"""

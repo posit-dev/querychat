@@ -116,9 +116,9 @@ DBISource <- R6::R6Class(
     },
 
     #' @description
-    #' Get formatted DDL content for semantic views
-    #' @return A string with DDL definitions, or empty string if none
-    get_semantic_view_ddls = function() {
+    #' Get the complete semantic views section for the prompt
+    #' @return A string with the full semantic views section, or empty string if none
+    get_semantic_views_section = function() {
       if (!is_snowflake_connection(private$conn)) {
         return("")
       }
@@ -126,7 +126,7 @@ DBISource <- R6::R6Class(
       if (length(views) == 0) {
         return("")
       }
-      format_semantic_view_ddls(views)
+      get_semantic_views_section_impl(views)
     },
 
     #' @description
@@ -524,4 +524,31 @@ format_semantic_view_ddls <- function(semantic_views) {
   }
 
   paste(lines, collapse = "\n")
+}
+
+#' Build the complete semantic views section for the prompt
+#'
+#' @param semantic_views A list of semantic view info (name and ddl)
+#' @return A formatted string with the full semantic views section
+#' @noRd
+get_semantic_views_section_impl <- function(semantic_views) {
+  if (length(semantic_views) == 0) {
+    return("")
+  }
+
+  prompts_dir <- system.file("prompts", "semantic-views", package = "querychat")
+  prompt_text <- readLines(file.path(prompts_dir, "prompt.md"), warn = FALSE)
+  syntax_text <- readLines(file.path(prompts_dir, "syntax.md"), warn = FALSE)
+  ddls_text <- format_semantic_view_ddls(semantic_views)
+
+  paste(
+    paste(prompt_text, collapse = "\n"),
+    "",
+    paste(syntax_text, collapse = "\n"),
+    "",
+    "<semantic_views>",
+    ddls_text,
+    "</semantic_views>",
+    sep = "\n"
+  )
 }

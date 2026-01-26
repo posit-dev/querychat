@@ -12,7 +12,6 @@ from sqlalchemy.sql import sqltypes
 
 from ._df_compat import read_sql
 from ._snowflake import (
-    SemanticViewInfo,
     discover_semantic_views,
     format_semantic_view_ddls,
 )
@@ -456,7 +455,6 @@ class SQLAlchemySource(DataSource[nw.DataFrame]):
         """
         self._engine = engine
         self.table_name = table_name
-        self._semantic_views: list[SemanticViewInfo] | None = None
 
         # Validate table exists
         inspector = inspect(self._engine)
@@ -501,14 +499,12 @@ class SQLAlchemySource(DataSource[nw.DataFrame]):
 
     def get_semantic_view_ddls(self) -> str:
         """Get formatted DDL content for semantic views."""
-        if self._semantic_views is None:
-            if self._engine.dialect.name.lower() == "snowflake":
-                self._semantic_views = discover_semantic_views(self._engine)
-            else:
-                self._semantic_views = []
-        if not self._semantic_views:
+        if self._engine.dialect.name.lower() != "snowflake":
             return ""
-        return format_semantic_view_ddls(self._semantic_views)
+        views = discover_semantic_views(self._engine)
+        if not views:
+            return ""
+        return format_semantic_view_ddls(views)
 
     @staticmethod
     def _make_column_meta(name: str, sa_type: sqltypes.TypeEngine) -> ColumnMeta:
@@ -955,7 +951,6 @@ class IbisSource(DataSource["ibis.Table"]):
         self._table = table
         self.table_name = table_name
         self._schema = table.schema()
-        self._semantic_views: list[SemanticViewInfo] | None = None
 
         backend = table.get_backend()
         if not isinstance(backend, SQLBackend):
@@ -984,14 +979,12 @@ class IbisSource(DataSource["ibis.Table"]):
 
     def get_semantic_view_ddls(self) -> str:
         """Get formatted DDL content for semantic views."""
-        if self._semantic_views is None:
-            if self._backend.name.lower() == "snowflake":
-                self._semantic_views = discover_semantic_views(self._backend)
-            else:
-                self._semantic_views = []
-        if not self._semantic_views:
+        if self._backend.name.lower() != "snowflake":
             return ""
-        return format_semantic_view_ddls(self._semantic_views)
+        views = discover_semantic_views(self._backend)
+        if not views:
+            return ""
+        return format_semantic_view_ddls(views)
 
     @staticmethod
     def _make_column_meta(name: str, dtype: IbisDataType) -> ColumnMeta:

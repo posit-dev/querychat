@@ -27,8 +27,7 @@ DBISource <- R6::R6Class(
   "DBISource",
   inherit = DataSource,
   private = list(
-    conn = NULL,
-    semantic_views = NULL
+    conn = NULL
   ),
   public = list(
     #' @description
@@ -120,18 +119,14 @@ DBISource <- R6::R6Class(
     #' Get formatted DDL content for semantic views
     #' @return A string with DDL definitions, or empty string if none
     get_semantic_view_ddls = function() {
-      # Discover Snowflake semantic views lazily (only on first call)
-      if (is.null(private$semantic_views)) {
-        if (is_snowflake_connection(private$conn)) {
-          private$semantic_views <- discover_semantic_views_impl(private$conn)
-        } else {
-          private$semantic_views <- list()
-        }
-      }
-      if (length(private$semantic_views) == 0) {
+      if (!is_snowflake_connection(private$conn)) {
         return("")
       }
-      format_semantic_view_ddls(private$semantic_views)
+      views <- discover_semantic_views_impl(private$conn)
+      if (length(views) == 0) {
+        return("")
+      }
+      format_semantic_view_ddls(views)
     },
 
     #' @description

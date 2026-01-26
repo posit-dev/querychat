@@ -1,8 +1,6 @@
-## SEMANTIC_VIEW() Query Syntax
+### SEMANTIC_VIEW() Query Syntax
 
-When Semantic Views are available, use the `SEMANTIC_VIEW()` table function instead of raw SQL.
-
-### Basic Syntax
+#### Basic Syntax
 
 ```sql
 SELECT * FROM SEMANTIC_VIEW(
@@ -14,7 +12,7 @@ SELECT * FROM SEMANTIC_VIEW(
 [WHERE {column} = 'value']  -- Optional: post-aggregation filter
 ```
 
-### Key Rules
+#### Key Rules
 
 1. **Use `SEMANTIC_VIEW()` function** - Not direct SELECT FROM the view
 2. **No GROUP BY needed** - Semantic layer handles aggregation via DIMENSIONS
@@ -22,7 +20,7 @@ SELECT * FROM SEMANTIC_VIEW(
 4. **No aggregate functions needed** - Metrics are pre-aggregated
 5. **Use DDL-defined names** - Metrics and dimensions must match the DDL exactly
 
-### WHERE Clause: Inside vs Outside
+#### WHERE Clause: Inside vs Outside
 
 - **Inside** (pre-aggregation): Filters base data BEFORE metrics are computed
 - **Outside** (post-aggregation): Filters results AFTER metrics are computed
@@ -45,7 +43,7 @@ SELECT * FROM SEMANTIC_VIEW(
 WHERE NET_REVENUE > 1000000
 ```
 
-### Common Patterns
+#### Common Patterns
 
 **Single metric (total):**
 ```sql
@@ -92,7 +90,7 @@ FROM SEMANTIC_VIEW(
 JOIN category_lookup AS lookup ON sv.ACC_TYPE_CD = lookup.code
 ```
 
-### Troubleshooting
+#### Troubleshooting
 
 - **"Invalid identifier"**: Verify metric/dimension names match exactly what's in the DDL
 - **Syntax error**: Use SEMANTIC_VIEW() function, GROUP BY isn't needed

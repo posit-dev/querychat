@@ -42,7 +42,7 @@ db_source$cleanup()
 \item \href{#method-DBISource-new}{\code{DBISource$new()}}
 \item \href{#method-DBISource-get_db_type}{\code{DBISource$get_db_type()}}
 \item \href{#method-DBISource-get_schema}{\code{DBISource$get_schema()}}
-\item \href{#method-DBISource-get_semantic_view_ddls}{\code{DBISource$get_semantic_view_ddls()}}
+\item \href{#method-DBISource-get_semantic_views_section}{\code{DBISource$get_semantic_views_section()}}
 \item \href{#method-DBISource-execute_query}{\code{DBISource$execute_query()}}
 \item \href{#method-DBISource-test_query}{\code{DBISource$test_query()}}
 \item \href{#method-DBISource-get_data}{\code{DBISource$get_data()}}
@@ -108,16 +108,16 @@ A string describing the schema
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-DBISource-get_semantic_view_ddls"></a>}}
-\if{latex}{\out{\hypertarget{method-DBISource-get_semantic_view_ddls}{}}}
-\subsection{Method \code{get_semantic_view_ddls()}}{
-Get formatted DDL content for semantic views
+\if{html}{\out{<a id="method-DBISource-get_semantic_views_section"></a>}}
+\if{latex}{\out{\hypertarget{method-DBISource-get_semantic_views_section}{}}}
+\subsection{Method \code{get_semantic_views_section()}}{
+Get the complete semantic views section for the prompt
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{DBISource$get_semantic_view_ddls()}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{DBISource$get_semantic_views_section()}\if{html}{\out{</div>}}
 }
 
 \subsection{Returns}{
-A string with DDL definitions, or empty string if none
+A string with the full semantic views section, or empty string if none
 }
 }
 \if{html}{\out{<hr>}}

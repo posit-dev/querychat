@@ -1,23 +1,24 @@
 """
 Snowflake-specific utilities for semantic view discovery.
 
-This module provides a backend-agnostic interface for discovering Snowflake
-Semantic Views. It uses a Protocol pattern to abstract SQL execution, allowing
-the same discovery logic to work with both SQLAlchemy engines and Ibis backends.
+This module provides functions for discovering Snowflake Semantic Views,
+supporting both SQLAlchemy engines and Ibis backends through a type parameter.
 """
 
 from __future__ import annotations
 
 import logging
+import os
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Any, Literal
 
 if TYPE_CHECKING:
     from ibis.backends.sql import SQLBackend
     from sqlalchemy import Engine
-    from sqlalchemy.engine import Connection
 
 logger = logging.getLogger(__name__)
+
+BackendType = Literal["sqlalchemy", "ibis"]
 
 
 @dataclass
@@ -31,81 +32,56 @@ class SemanticViewInfo:
     """The DDL definition from GET_DDL()."""
 
 
-class RawSQLExecutor(Protocol):
+def execute_raw_sql(
+    query: str,
+    backend: Engine | SQLBackend,
+    backend_type: BackendType,
+) -> list[dict[str, Any]]:
     """
-    Protocol for executing raw SQL queries.
-
-    This abstraction allows semantic view discovery to work with different
-    database backends (SQLAlchemy, Ibis) without knowing the specific API.
-    """
-
-    def execute_raw_sql(self, query: str) -> list[dict[str, Any]]:
-        """Execute raw SQL and return results as list of row dicts."""
-        ...
-
-
-class SQLAlchemyExecutor:
-    """Raw SQL executor for SQLAlchemy engines."""
-
-    def __init__(self, engine: Engine):
-        from sqlalchemy import text
-
-        self._engine = engine
-        self._text = text
-
-    def execute_raw_sql(self, query: str) -> list[dict[str, Any]]:
-        """Execute raw SQL and return results as list of row dicts."""
-        with self._engine.connect() as conn:
-            result = conn.execute(self._text(query))
-            keys = list(result.keys())
-            return [dict(zip(keys, row, strict=False)) for row in result.fetchall()]
-
-
-class SQLAlchemyConnectionExecutor:
-    """
-    Raw SQL executor for an active SQLAlchemy connection.
-
-    Unlike SQLAlchemyExecutor, this uses an existing connection rather than
-    creating a new one. Useful when you need to execute multiple queries
-    within the same connection/transaction.
-    """
-
-    def __init__(self, conn: Connection):
-        from sqlalchemy import text
-
-        self._conn = conn
-        self._text = text
-
-    def execute_raw_sql(self, query: str) -> list[dict[str, Any]]:
-        """Execute raw SQL and return results as list of row dicts."""
-        result = self._conn.execute(self._text(query))
-        keys = list(result.keys())
-        return [dict(zip(keys, row, strict=False)) for row in result.fetchall()]
-
-
-class IbisExecutor:
-    """Raw SQL executor for Ibis backends."""
-
-    def __init__(self, backend: SQLBackend):
-        self._backend = backend
-
-    def execute_raw_sql(self, query: str) -> list[dict[str, Any]]:
-        """Execute raw SQL and return results as list of row dicts."""
-        # Use backend.sql() to create an ibis table from raw SQL, then execute
-        result_table = self._backend.sql(query)
-        df = result_table.execute()
-        # execute() returns a pandas DataFrame
-        return df.to_dict(orient="records")  # type: ignore[call-overload]
-
-
-def discover_semantic_views(executor: RawSQLExecutor) -> list[SemanticViewInfo]:
-    """
-    Discover semantic views using any SQL executor.
+    Execute raw SQL and return results as list of row dicts.
 
     Parameters
     ----------
-    executor
-        An object implementing the RawSQLExecutor protocol
+    query
+        SQL query to execute
+    backend
+        SQLAlchemy Engine or Ibis SQLBackend
+    backend_type
+        Type of backend: "sqlalchemy" or "ibis"
+
+    Returns
+    -------
+    list[dict[str, Any]]
+        Query results as list of row dictionaries
+
+    """
+    if backend_type == "sqlalchemy":
+        from sqlalchemy import text
+
+        with backend.connect() as conn:  # type: ignore[union-attr]
+            result = conn.execute(text(query))
+            keys = list(result.keys())
+            return [dict(zip(keys, row, strict=False)) for row in result.fetchall()]
+    else:
+        # Ibis backend
+        result_table = backend.sql(query)  # type: ignore[union-attr]
+        df = result_table.execute()
+        return df.to_dict(orient="records")  # type: ignore[return-value]
+
+
+def discover_semantic_views(
+    backend: Engine | SQLBackend,
+    backend_type: BackendType,
+) -> list[SemanticViewInfo]:
+    """
+    Discover semantic views in the current schema.
+
+    Parameters
+    ----------
+    backend
+        SQLAlchemy Engine or Ibis SQLBackend
+    backend_type
+        Type of backend: "sqlalchemy" or "ibis"
 
     Returns
     -------
@@ -113,7 +89,11 @@ def discover_semantic_views(executor: RawSQLExecutor) -> list[SemanticViewInfo]:
         List of semantic views with their DDL definitions
 
     """
-    rows = executor.execute_raw_sql("SHOW SEMANTIC VIEWS")
+    # Check env var for early exit
+    if os.environ.get("QUERYCHAT_DISABLE_SEMANTIC_VIEWS"):
+        return []
+
+    rows = execute_raw_sql("SHOW SEMANTIC VIEWS", backend, backend_type)
 
     if not rows:
         logger.debug("No semantic views found in current schema")
@@ -129,21 +109,27 @@ def discover_semantic_views(executor: RawSQLExecutor) -> list[SemanticViewInfo]:
             continue
 
         fq_name = f"{db}.{schema}.{name}"
-        ddl = get_semantic_view_ddl(executor, fq_name)
+        ddl = get_semantic_view_ddl(backend, backend_type, fq_name)
         if ddl:
             views.append(SemanticViewInfo(name=fq_name, ddl=ddl))
 
     return views
 
 
-def get_semantic_view_ddl(executor: RawSQLExecutor, fq_name: str) -> str | None:
+def get_semantic_view_ddl(
+    backend: Engine | SQLBackend,
+    backend_type: BackendType,
+    fq_name: str,
+) -> str | None:
     """
     Get DDL for a semantic view.
 
     Parameters
     ----------
-    executor
-        An object implementing the RawSQLExecutor protocol
+    backend
+        SQLAlchemy Engine or Ibis SQLBackend
+    backend_type
+        Type of backend: "sqlalchemy" or "ibis"
     fq_name
         Fully qualified name (database.schema.view_name)
 
@@ -155,7 +141,9 @@ def get_semantic_view_ddl(executor: RawSQLExecutor, fq_name: str) -> str | None:
     """
     # Escape single quotes to prevent SQL injection
     safe_name = fq_name.replace("'", "''")
-    rows = executor.execute_raw_sql(f"SELECT GET_DDL('SEMANTIC_VIEW', '{safe_name}')")
+    rows = execute_raw_sql(
+        f"SELECT GET_DDL('SEMANTIC_VIEW', '{safe_name}')", backend, backend_type
+    )
     if rows:
         return str(next(iter(rows[0].values())))
     return None
@@ -198,50 +186,3 @@ def format_semantic_views_section(semantic_views: list[SemanticViewInfo]) -> str
         lines.append("")
 
     return "\n".join(lines)
-
-
-class SemanticViewMixin:
-    """
-    Mixin providing semantic view support for get_schema().
-
-    This mixin adds semantic view discovery and schema formatting to DataSource
-    subclasses. Classes using this mixin must initialize `_semantic_views` in
-    their constructor.
-
-    Attributes
-    ----------
-    _semantic_views : list[SemanticViewInfo]
-        List of discovered semantic views (set by subclass)
-
-    """
-
-    _semantic_views: list[SemanticViewInfo]
-
-    def _get_schema_with_semantic_views(self, base_schema: str) -> str:
-        """
-        Append semantic view section to base schema if views exist.
-
-        Parameters
-        ----------
-        base_schema
-            The base schema string from the parent class
-
-        Returns
-        -------
-        str
-            Schema with semantic views section appended (if any exist)
-
-        """
-        if not self._semantic_views:
-            return base_schema
-        return f"{base_schema}\n\n{format_semantic_views_section(self._semantic_views)}"
-
-    @property
-    def has_semantic_views(self) -> bool:
-        """Check if semantic views are available."""
-        return len(self._semantic_views) > 0
-
-    @property
-    def semantic_views(self) -> list[SemanticViewInfo]:
-        """Get the list of discovered semantic views."""
-        return self._semantic_views

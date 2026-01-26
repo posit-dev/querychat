@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Generic, Literal, cast
@@ -13,9 +12,7 @@ from sqlalchemy.sql import sqltypes
 
 from ._df_compat import read_sql
 from ._snowflake import (
-    IbisExecutor,
     SemanticViewInfo,
-    SQLAlchemyExecutor,
     discover_semantic_views,
     format_semantic_views_section,
 )
@@ -437,7 +434,7 @@ class SQLAlchemySource(DataSource[nw.DataFrame]):
     and Databricks.
     """
 
-    _semantic_views: list[SemanticViewInfo]
+    _semantic_views: list[SemanticViewInfo] | None
 
     def __init__(
         self,
@@ -467,14 +464,8 @@ class SQLAlchemySource(DataSource[nw.DataFrame]):
         self._columns_info = inspector.get_columns(table_name)
         self._colnames = [col["name"] for col in self._columns_info]
 
-        # Discover Snowflake semantic views if applicable
-        self._semantic_views = []
-        if (
-            self._engine.dialect.name.lower() == "snowflake"
-            and not os.environ.get("QUERYCHAT_DISABLE_SEMANTIC_VIEWS")
-        ):
-            executor = SQLAlchemyExecutor(engine)
-            self._semantic_views = discover_semantic_views(executor)
+        # Semantic views are discovered lazily in get_schema()
+        self._semantic_views = None
 
     def get_db_type(self) -> str:
         """
@@ -508,10 +499,24 @@ class SQLAlchemySource(DataSource[nw.DataFrame]):
         self._add_column_stats(columns, categorical_threshold)
         schema = format_schema(self.table_name, columns)
 
+        # Discover Snowflake semantic views lazily (only on first call)
+        if self._semantic_views is None:
+            if self._engine.dialect.name.lower() == "snowflake":
+                self._semantic_views = discover_semantic_views(
+                    self._engine, "sqlalchemy"
+                )
+            else:
+                self._semantic_views = []
+
         if self._semantic_views:
             schema = f"{schema}\n\n{format_semantic_views_section(self._semantic_views)}"
 
         return schema
+
+    @property
+    def has_semantic_views(self) -> bool:
+        """Check if semantic views are available."""
+        return bool(self._semantic_views)
 
     @staticmethod
     def _make_column_meta(name: str, sa_type: sqltypes.TypeEngine) -> ColumnMeta:
@@ -950,7 +955,7 @@ class IbisSource(DataSource["ibis.Table"]):
 
     _table: ibis.Table
     _backend: SQLBackend
-    _semantic_views: list[SemanticViewInfo]
+    _semantic_views: list[SemanticViewInfo] | None
     table_name: str
 
     def __init__(self, table: ibis.Table, table_name: str):
@@ -975,14 +980,8 @@ class IbisSource(DataSource["ibis.Table"]):
             )
         self._colnames = list(colnames)
 
-        # Discover Snowflake semantic views if applicable
-        self._semantic_views = []
-        if (
-            self._backend.name.lower() == "snowflake"
-            and not os.environ.get("QUERYCHAT_DISABLE_SEMANTIC_VIEWS")
-        ):
-            executor = IbisExecutor(self._backend)
-            self._semantic_views = discover_semantic_views(executor)
+        # Semantic views are discovered lazily in get_schema()
+        self._semantic_views = None
 
     def get_db_type(self) -> str:
         return self._backend.name
@@ -994,10 +993,22 @@ class IbisSource(DataSource["ibis.Table"]):
         self._add_column_stats(columns, self._table, categorical_threshold)
         schema = format_schema(self.table_name, columns)
 
+        # Discover Snowflake semantic views lazily (only on first call)
+        if self._semantic_views is None:
+            if self._backend.name.lower() == "snowflake":
+                self._semantic_views = discover_semantic_views(self._backend, "ibis")
+            else:
+                self._semantic_views = []
+
         if self._semantic_views:
             schema = f"{schema}\n\n{format_semantic_views_section(self._semantic_views)}"
 
         return schema
+
+    @property
+    def has_semantic_views(self) -> bool:
+        """Check if semantic views are available."""
+        return bool(self._semantic_views)
 
     @staticmethod
     def _make_column_meta(name: str, dtype: IbisDataType) -> ColumnMeta:

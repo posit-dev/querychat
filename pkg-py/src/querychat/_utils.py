@@ -171,14 +171,18 @@ def get_tool_details_setting() -> Optional[Literal["expanded", "collapsed", "def
     return setting_lower
 
 
-def querychat_tool_starts_open(action: Literal["update", "query", "reset"]) -> bool:
+def querychat_tool_starts_open(
+    action: Literal[
+        "update", "query", "reset", "visualize_dashboard", "visualize_query"
+    ],
+) -> bool:
     """
     Determine whether a tool card should be open based on action and setting.
 
     Parameters
     ----------
     action : str
-        The action type ('update', 'query', or 'reset')
+        The action type ('update', 'query', 'reset', 'visualize_dashboard', or 'visualize_query')
 
     Returns
     -------
@@ -189,14 +193,14 @@ def querychat_tool_starts_open(action: Literal["update", "query", "reset"]) -> b
     setting = get_tool_details_setting()
 
     if setting is None:
-        return action != "reset"
+        return action in ("query", "update", "visualize_dashboard", "visualize_query")
 
     if setting == "expanded":
         return True
     elif setting == "collapsed":
         return False
     else:  # setting == "default"
-        return action != "reset"
+        return action in ("query", "update", "visualize_dashboard", "visualize_query")
 
 
 def is_ibis_table(obj: Any) -> TypeGuard[ibis.Table]:

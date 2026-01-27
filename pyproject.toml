@@ -23,12 +23,15 @@ dependencies = [
     "duckdb",
     "shiny>=1.5.1",
     "shinychat>=0.2.8",
+    "shinywidgets>=0.3.0",
     "htmltools",
     "chatlas>=0.13.2",
     "narwhals",
     "chevron",
     "sqlalchemy>=2.0.0", # Using 2.0+ for improved type hints and API
     "great-tables>=0.16.0",
+    "ggsql @ {root:uri}/../ggsql/ggsql-python",
+    "altair>=5.0",
 ]
 classifiers = [
     "Programming Language :: Python",
@@ -42,7 +45,7 @@ classifiers = [
 [project.optional-dependencies]
 # For SQLAlchemySource and sample data, one of polars or pandas is required
 pandas = ["pandas"]
-polars = ["polars"]
+polars = ["polars", "pyarrow"] # duckdb requires pyarrow for polars DataFrame registration
 ibis = ["ibis-framework>=9.0.0", "pandas"]  # pandas required for ibis .execute() to return DataFrames
 # Web framework extras
 streamlit = ["streamlit>=1.30"]

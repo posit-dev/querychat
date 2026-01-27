@@ -77,6 +77,10 @@ class QueryChatSystemPrompt:
             "extra_instructions": self.extra_instructions,
             "has_tool_update": "update" in tools if tools else False,
             "has_tool_query": "query" in tools if tools else False,
+            "has_tool_visualize_dashboard": "visualize_dashboard" in tools
+            if tools
+            else False,
+            "has_tool_visualize_query": "visualize_query" in tools if tools else False,
             "include_query_guidelines": len(tools or ()) > 0,
         }
 

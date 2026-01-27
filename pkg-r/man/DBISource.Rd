@@ -42,7 +42,7 @@ db_source$cleanup()
 \item \href{#method-DBISource-new}{\code{DBISource$new()}}
 \item \href{#method-DBISource-get_db_type}{\code{DBISource$get_db_type()}}
 \item \href{#method-DBISource-get_schema}{\code{DBISource$get_schema()}}
-\item \href{#method-DBISource-get_semantic_views_section}{\code{DBISource$get_semantic_views_section()}}
+\item \href{#method-DBISource-get_semantic_views_description}{\code{DBISource$get_semantic_views_description()}}
 \item \href{#method-DBISource-execute_query}{\code{DBISource$execute_query()}}
 \item \href{#method-DBISource-test_query}{\code{DBISource$test_query()}}
 \item \href{#method-DBISource-get_data}{\code{DBISource$get_data()}}
@@ -108,12 +108,12 @@ A string describing the schema
 }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-DBISource-get_semantic_views_section"></a>}}
-\if{latex}{\out{\hypertarget{method-DBISource-get_semantic_views_section}{}}}
-\subsection{Method \code{get_semantic_views_section()}}{
-Get the complete semantic views section for the prompt
+\if{html}{\out{<a id="method-DBISource-get_semantic_views_description"></a>}}
+\if{latex}{\out{\hypertarget{method-DBISource-get_semantic_views_description}{}}}
+\subsection{Method \code{get_semantic_views_description()}}{
+Get the complete semantic views description for the prompt
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{DBISource$get_semantic_views_section()}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{DBISource$get_semantic_views_description()}\if{html}{\out{</div>}}
 }
 
 \subsection{Returns}{

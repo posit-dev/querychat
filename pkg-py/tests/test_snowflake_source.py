@@ -42,9 +42,7 @@ class TestFormatSemanticViewDdls:
 
     def test_format_single_view(self):
         """Test that format produces expected markdown structure for single view."""
-        views = [
-            SemanticViewInfo(name="db.schema.view1", ddl="CREATE SEMANTIC VIEW v1")
-        ]
+        views = [SemanticViewInfo(name="db.schema.view1", ddl="CREATE SEMANTIC VIEW v1")]
         section = format_semantic_view_ddls(views)
 
         assert "db.schema.view1" in section
@@ -136,9 +134,7 @@ class TestExecuteRawSQL:
         mock_cursor.fetchall.return_value = [("a", "b"), ("c", "d")]
 
         # raw_sql returns a context manager
-        mock_backend.raw_sql.return_value.__enter__ = MagicMock(
-            return_value=mock_cursor
-        )
+        mock_backend.raw_sql.return_value.__enter__ = MagicMock(return_value=mock_cursor)
         mock_backend.raw_sql.return_value.__exit__ = MagicMock(return_value=False)
 
         result = execute_raw_sql("SELECT 1", mock_backend)

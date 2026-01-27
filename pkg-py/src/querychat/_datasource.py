@@ -60,11 +60,7 @@ def format_schema(table_name: str, columns: list[ColumnMeta]) -> str:
     for col in columns:
         lines.append(f"- {col.name} ({col.sql_type})")
 
-        if (
-            col.kind in ("numeric", "date")
-            and col.min_val is not None
-            and col.max_val is not None
-        ):
+        if col.kind in ("numeric", "date") and col.min_val is not None and col.max_val is not None:
             lines.append(f"  Range: {col.min_val} to {col.max_val}")
         elif col.categories:
             cats = ", ".join(f"'{v}'" for v in col.categories)
@@ -513,9 +509,7 @@ class SQLAlchemySource(DataSource[nw.DataFrame]):
         """Create ColumnMeta from SQLAlchemy type."""
         kind: Literal["numeric", "text", "date", "other"]
 
-        if isinstance(
-            sa_type, (sqltypes.Integer, sqltypes.BigInteger, sqltypes.SmallInteger)
-        ):
+        if isinstance(sa_type, (sqltypes.Integer, sqltypes.BigInteger, sqltypes.SmallInteger)):
             kind = "numeric"
             sql_type = "INTEGER"
         elif isinstance(sa_type, sqltypes.Float):
@@ -558,9 +552,7 @@ class SQLAlchemySource(DataSource[nw.DataFrame]):
                 select_parts.append(f"MIN({col.name}) as {col.name}__min")
                 select_parts.append(f"MAX({col.name}) as {col.name}__max")
             elif col.kind == "text":
-                select_parts.append(
-                    f"COUNT(DISTINCT {col.name}) as {col.name}__nunique"
-                )
+                select_parts.append(f"COUNT(DISTINCT {col.name}) as {col.name}__nunique")
 
         if not select_parts:
             return
@@ -568,9 +560,7 @@ class SQLAlchemySource(DataSource[nw.DataFrame]):
         # Execute stats query
         stats = {}
         try:
-            stats_query = text(
-                f"SELECT {', '.join(select_parts)} FROM {self.table_name}"
-            )
+            stats_query = text(f"SELECT {', '.join(select_parts)} FROM {self.table_name}")
             with self._get_connection() as conn:
                 result = conn.execute(stats_query).fetchone()
                 if result:
@@ -586,8 +576,7 @@ class SQLAlchemySource(DataSource[nw.DataFrame]):
 
         # Find text columns that qualify as categorical
         categorical_cols = [
-            col
-            for col in columns
+            col for col in columns
             if col.kind == "text"
             and (nunique := stats.get(f"{col.name}__nunique"))
             and nunique <= categorical_threshold
@@ -921,8 +910,7 @@ class PolarsLazySource(DataSource["pl.LazyFrame"]):
 
         # Find text columns that qualify as categorical
         categorical_cols = [
-            col
-            for col in columns
+            col for col in columns
             if col.kind == "text"
             and (nunique := stats.get(f"{col.name}__nunique"))
             and nunique <= categorical_threshold
@@ -1051,8 +1039,7 @@ class IbisSource(DataSource["ibis.Table"]):
                 col.max_val = stats.get(f"{col.name}__max")
 
         categorical_cols = [
-            col
-            for col in columns
+            col for col in columns
             if col.kind == "text"
             and (nunique := stats.get(f"{col.name}__nunique"))
             and nunique <= categorical_threshold

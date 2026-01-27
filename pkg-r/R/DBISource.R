@@ -108,8 +108,8 @@ DBISource <- R6::R6Class(
     },
 
     #' @description
-    #' Get the complete semantic views description for the prompt
-    #' @return A string with the full semantic views section, or empty string if none
+    #' Get information about semantic views (if any) for the system prompt.
+    #' @return A string with semantic view information, or empty string if none
     get_semantic_views_description = function() {
       if (!is_snowflake_connection(private$conn)) {
         return("")

@@ -184,7 +184,7 @@ class DataSource(ABC, Generic[IntoFrameT]):
         """
 
     def get_semantic_views_description(self) -> str:
-        """Get the complete semantic views section for the prompt."""
+        """Get information about semantic views (if any) for the system prompt."""
         return ""
 
 
@@ -498,7 +498,7 @@ class SQLAlchemySource(DataSource[nw.DataFrame]):
         return format_schema(self.table_name, columns)
 
     def get_semantic_views_description(self) -> str:
-        """Get the complete semantic views section for the prompt."""
+        """Get information about semantic views (if any) for the system prompt."""
         if self._engine.dialect.name.lower() != "snowflake":
             return ""
         views = discover_semantic_views(self._engine)
@@ -576,7 +576,8 @@ class SQLAlchemySource(DataSource[nw.DataFrame]):
 
         # Find text columns that qualify as categorical
         categorical_cols = [
-            col for col in columns
+            col
+            for col in columns
             if col.kind == "text"
             and (nunique := stats.get(f"{col.name}__nunique"))
             and nunique <= categorical_threshold
@@ -910,7 +911,8 @@ class PolarsLazySource(DataSource["pl.LazyFrame"]):
 
         # Find text columns that qualify as categorical
         categorical_cols = [
-            col for col in columns
+            col
+            for col in columns
             if col.kind == "text"
             and (nunique := stats.get(f"{col.name}__nunique"))
             and nunique <= categorical_threshold
@@ -975,7 +977,7 @@ class IbisSource(DataSource["ibis.Table"]):
         return format_schema(self.table_name, columns)
 
     def get_semantic_views_description(self) -> str:
-        """Get the complete semantic views section for the prompt."""
+        """Get information about semantic views (if any) for the system prompt."""
         if self._backend.name.lower() != "snowflake":
             return ""
         views = discover_semantic_views(self._backend)
@@ -1039,7 +1041,8 @@ class IbisSource(DataSource["ibis.Table"]):
                 col.max_val = stats.get(f"{col.name}__max")
 
         categorical_cols = [
-            col for col in columns
+            col
+            for col in columns
             if col.kind == "text"
             and (nunique := stats.get(f"{col.name}__nunique"))
             and nunique <= categorical_threshold

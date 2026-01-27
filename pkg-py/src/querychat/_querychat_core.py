@@ -21,7 +21,7 @@ from chatlas import Chat, ContentToolRequest, ContentToolResult
 from chatlas.types import Content
 from narwhals.stable.v1.typing import IntoFrameT
 
-from .tools import UpdateDashboardData
+from .tools import UpdateDashboardData, VisualizeDashboardData, VisualizeQueryData
 
 GREETING_PROMPT: str = (
     "Please give me a friendly greeting. "
@@ -38,10 +38,15 @@ if TYPE_CHECKING:
 
 
 ClientFactory = Callable[
-    [Callable[[UpdateDashboardData], None], Callable[[], None]],
+    [
+        Callable[[UpdateDashboardData], None],
+        Callable[[], None],
+        Callable[[VisualizeDashboardData], None],
+        Callable[[VisualizeQueryData], None],
+    ],
     Chat,
 ]
-"""Factory that creates a Chat client with update_dashboard and reset_dashboard callbacks."""
+"""Factory that creates a Chat client with dashboard and visualization callbacks."""
 
 
 class AppStateDict(TypedDict):
@@ -51,6 +56,11 @@ class AppStateDict(TypedDict):
     title: str | None
     error: str | None
     turns: list[dict]  # Serialized chatlas Turns via model_dump()
+    # Visualization state - only specs stored, charts rendered on demand
+    filter_viz_spec: str | None
+    filter_viz_title: str | None
+    query_viz_ggsql: str | None
+    query_viz_title: str | None
 
 
 class DisplayMessage(TypedDict):
@@ -69,9 +79,16 @@ class StateDictAccessorMixin(Generic[IntoFrameT]):
         self,
         update_cb: Callable[[UpdateDashboardData], None],
         reset_cb: Callable[[], None],
+        filter_viz_cb: Callable[[VisualizeDashboardData], None],
+        query_viz_cb: Callable[[VisualizeQueryData], None],
     ) -> Chat:
-        """Create a chat client with dashboard callbacks."""
-        return self.client(update_dashboard=update_cb, reset_dashboard=reset_cb)  # type: ignore[attr-defined]
+        """Create a chat client with dashboard and visualization callbacks."""
+        return self.client(  # type: ignore[attr-defined]
+            update_dashboard=update_cb,
+            reset_dashboard=reset_cb,
+            visualize_dashboard=filter_viz_cb,
+            visualize_query=query_viz_cb,
+        )
 
     def df(self, state: AppStateDict | None) -> IntoFrameT:
         """
@@ -204,6 +221,15 @@ class AppState:
     title: Optional[str] = None
     error: Optional[str] = None
 
+    # Filter visualization state (from visualize_dashboard tool)
+    # Only specs stored, charts rendered on demand via ggsql.render_altair()
+    filter_viz_spec: Optional[str] = None
+    filter_viz_title: Optional[str] = None
+
+    # Query visualization state (from visualize_query tool)
+    query_viz_ggsql: Optional[str] = None
+    query_viz_title: Optional[str] = None
+
     def update_dashboard(self, data: UpdateDashboardData) -> None:
         self.sql = data["query"]
         self.title = data["title"]
@@ -213,6 +239,27 @@ class AppState:
         self.sql = None
         self.title = None
         self.error = None
+        # Also clear filter visualization
+        self.filter_viz_spec = None
+        self.filter_viz_title = None
+
+    def update_filter_viz(
+        self,
+        spec: str,
+        title: Optional[str],
+    ) -> None:
+        """Update filter visualization state."""
+        self.filter_viz_spec = spec
+        self.filter_viz_title = title
+
+    def update_query_viz(
+        self,
+        ggsql: str,
+        title: Optional[str],
+    ) -> None:
+        """Update query visualization state."""
+        self.query_viz_ggsql = ggsql
+        self.query_viz_title = title
 
     def get_current_data(self) -> IntoFrame:
         """Get current data, falling back to default if query fails."""
@@ -281,6 +328,10 @@ class AppState:
             "title": self.title,
             "error": self.error,
             "turns": [turn.model_dump() for turn in self.client.get_turns()],
+            "filter_viz_spec": self.filter_viz_spec,
+            "filter_viz_title": self.filter_viz_title,
+            "query_viz_ggsql": self.query_viz_ggsql,
+            "query_viz_title": self.query_viz_title,
         }
 
     def update_from_dict(self, data: AppStateDict) -> None:
@@ -294,6 +345,12 @@ class AppState:
         turns_data = data["turns"]
         turns = [Turn.model_validate(t) for t in turns_data]
         self.client.set_turns(turns)
+
+        # Restore visualization state
+        self.filter_viz_spec = data.get("filter_viz_spec")
+        self.filter_viz_title = data.get("filter_viz_title")
+        self.query_viz_ggsql = data.get("query_viz_ggsql")
+        self.query_viz_title = data.get("query_viz_title")
 
 
 def create_app_state(
@@ -316,7 +373,21 @@ def create_app_state(
             raise RuntimeError("Callback invoked before state initialization")
         state.reset_dashboard()
 
-    client = client_factory(update_callback, reset_callback)
+    def filter_viz_callback(data: VisualizeDashboardData) -> None:
+        state = state_holder["state"]
+        if state is None:
+            raise RuntimeError("Callback invoked before state initialization")
+        state.update_filter_viz(data["spec"], data["title"])
+
+    def query_viz_callback(data: VisualizeQueryData) -> None:
+        state = state_holder["state"]
+        if state is None:
+            raise RuntimeError("Callback invoked before state initialization")
+        state.update_query_viz(data["ggsql"], data["title"])
+
+    client = client_factory(
+        update_callback, reset_callback, filter_viz_callback, query_viz_callback
+    )
     state = AppState(
         data_source=data_source,
         client=client,

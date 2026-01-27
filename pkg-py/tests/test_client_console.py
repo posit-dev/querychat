@@ -273,7 +273,7 @@ class TestBackwardCompatibility:
         # Without tools parameter, should include both tools (like before)
         qc = QueryChat(sample_df, "test_table", greeting="Hello!")
 
-        assert qc.tools == ("update", "query")
+        assert qc.tools == ("update", "query", "visualize_dashboard", "visualize_query")
 
         prompt = qc.system_prompt
         assert "Filtering and Sorting Data" in prompt
@@ -292,4 +292,4 @@ class TestBackwardCompatibility:
 
         assert qc is not None
         assert qc.id == "querychat_test_table"
-        assert qc.tools == ("update", "query")
+        assert qc.tools == ("update", "query", "visualize_dashboard", "visualize_query")

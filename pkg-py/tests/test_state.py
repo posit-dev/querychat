@@ -141,10 +141,14 @@ class TestCreateAppState:
     def test_creates_state_with_callbacks(self, data_source):
         callback_data: dict[str, Any] = {}
 
-        def client_factory(update_callback, reset_callback):
+        def client_factory(
+            update_callback, reset_callback, filter_viz_callback, query_viz_callback
+        ):
             # Store the callbacks for testing
             callback_data["update_callback"] = update_callback
             callback_data["reset_callback"] = reset_callback
+            callback_data["filter_viz_callback"] = filter_viz_callback
+            callback_data["query_viz_callback"] = query_viz_callback
             return MagicMock()
 
         state = create_app_state(data_source, client_factory, greeting="Welcome!")
@@ -160,6 +164,20 @@ class TestCreateAppState:
         callback_data["reset_callback"]()
         assert state.sql is None
         assert state.title is None
+
+        # Test that the filter visualization callback works
+        callback_data["filter_viz_callback"](
+            {"spec": "VISUALISE ...", "title": "Filter Chart"}
+        )
+        assert state.filter_viz_spec == "VISUALISE ..."
+        assert state.filter_viz_title == "Filter Chart"
+
+        # Test that the query visualization callback works
+        callback_data["query_viz_callback"](
+            {"ggsql": "SELECT * VISUALISE ...", "title": "Query Chart"}
+        )
+        assert state.query_viz_ggsql == "SELECT * VISUALISE ..."
+        assert state.query_viz_title == "Query Chart"
 
 
 class TestStreamResponse:
@@ -266,6 +284,10 @@ class TestTypedDicts:
             "turns": [
                 {"role": "user", "contents": [{"content_type": "text", "text": "hi"}]}
             ],
+            "filter_viz_spec": None,
+            "filter_viz_title": None,
+            "query_viz_ggsql": None,
+            "query_viz_title": None,
         }
         assert state["sql"] == "SELECT * FROM test"
         assert len(state["turns"]) == 1
@@ -321,6 +343,10 @@ class TestAppStateDeserialization:
                         ],
                     },
                 ],
+                "filter_viz_spec": None,
+                "filter_viz_title": None,
+                "query_viz_ggsql": None,
+                "query_viz_title": None,
             }
         )
 
@@ -334,5 +360,51 @@ class TestAppStateDeserialization:
 
     def test_update_from_dict_empty_turns(self, data_source, mock_client):
         state = AppState(data_source=data_source, client=mock_client)
-        state.update_from_dict({"sql": None, "title": None, "error": None, "turns": []})
+        state.update_from_dict(
+            {
+                "sql": None,
+                "title": None,
+                "error": None,
+                "turns": [],
+                "filter_viz_spec": None,
+                "filter_viz_title": None,
+                "query_viz_ggsql": None,
+                "query_viz_title": None,
+            }
+        )
         mock_client.set_turns.assert_called_with([])
+
+
+class TestVisualizationState:
+    def test_initial_viz_state(self, data_source, mock_client):
+        state = AppState(data_source=data_source, client=mock_client)
+        assert state.filter_viz_spec is None
+        assert state.filter_viz_title is None
+        assert state.query_viz_ggsql is None
+        assert state.query_viz_title is None
+
+    def test_update_filter_viz(self, data_source, mock_client):
+        state = AppState(data_source=data_source, client=mock_client)
+        state.update_filter_viz(
+            spec="VISUALISE x, y DRAW point",
+            title="Scatter Plot",
+        )
+        assert state.filter_viz_spec == "VISUALISE x, y DRAW point"
+        assert state.filter_viz_title == "Scatter Plot"
+
+    def test_update_query_viz(self, data_source, mock_client):
+        state = AppState(data_source=data_source, client=mock_client)
+        state.update_query_viz(
+            ggsql="SELECT x, y FROM t VISUALISE x, y DRAW point",
+            title="Query Plot",
+        )
+        assert state.query_viz_ggsql == "SELECT x, y FROM t VISUALISE x, y DRAW point"
+        assert state.query_viz_title == "Query Plot"
+
+    def test_reset_dashboard_clears_filter_viz(self, data_source, mock_client):
+        state = AppState(data_source=data_source, client=mock_client)
+        state.filter_viz_spec = "VISUALISE x, y DRAW point"
+        state.filter_viz_title = "Plot"
+        state.reset_dashboard()
+        assert state.filter_viz_spec is None
+        assert state.filter_viz_title is None

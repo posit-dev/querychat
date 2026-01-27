@@ -108,6 +108,20 @@ DBISource <- R6::R6Class(
     },
 
     #' @description
+    #' Get information about semantic views (if any) for the system prompt.
+    #' @return A string with semantic view information, or empty string if none
+    get_semantic_views_description = function() {
+      if (!is_snowflake_connection(private$conn)) {
+        return("")
+      }
+      views <- discover_semantic_views_impl(private$conn)
+      if (length(views) == 0) {
+        return("")
+      }
+      format_semantic_views(views)
+    },
+
+    #' @description
     #' Execute a SQL query
     #'
     #' @param query SQL query string. If NULL or empty, returns all data
@@ -380,3 +394,155 @@ r_class_to_sql_type <- function(r_class) {
   )
 }
 # nocov end
+
+# Snowflake Semantic Views Support ----
+
+#' Check if a connection is a Snowflake connection
+#'
+#' @param conn A DBI connection object
+#' @return TRUE if the connection is to Snowflake
+#' @noRd
+is_snowflake_connection <- function(conn) {
+  if (!inherits(conn, "DBIConnection")) {
+    return(FALSE)
+  }
+
+  # Check for known Snowflake connection classes
+  if (inherits(conn, "Snowflake")) {
+    return(TRUE)
+  }
+
+  # Check dbms.name from connection info
+  tryCatch(
+    {
+      conn_info <- DBI::dbGetInfo(conn)
+      dbms_name <- tolower(conn_info[["dbms.name"]] %||% "")
+      grepl("snowflake", dbms_name, ignore.case = TRUE)
+    },
+    error = function(e) FALSE
+  )
+}
+
+#' Discover Semantic Views in Snowflake
+#'
+#' @param conn A DBI connection to Snowflake
+#' @return A list of semantic views with name and ddl
+#' @noRd
+discover_semantic_views_impl <- function(conn) {
+  # Check env var for early exit
+  if (nzchar(Sys.getenv("QUERYCHAT_DISABLE_SEMANTIC_VIEWS", ""))) {
+    return(list())
+  }
+
+  semantic_views <- list()
+
+  # Check for semantic views in the current schema
+  result <- DBI::dbGetQuery(conn, "SHOW SEMANTIC VIEWS")
+
+  if (nrow(result) == 0) {
+    cli::cli_inform(
+      c("i" = "No semantic views found in current schema"),
+      .frequency = "once",
+      .frequency_id = "querychat_no_semantic_views"
+    )
+    return(list())
+  }
+
+  for (i in seq_len(nrow(result))) {
+    row <- result[i, ]
+    view_name <- row[["name"]]
+    database_name <- row[["database_name"]]
+    schema_name <- row[["schema_name"]]
+
+    if (is.null(view_name) || is.na(view_name)) {
+      next
+    }
+
+    # Build fully qualified name
+    fq_name <- paste(database_name, schema_name, view_name, sep = ".")
+
+    # Get the DDL for this semantic view
+    ddl <- get_semantic_view_ddl(conn, fq_name)
+    if (!is.null(ddl)) {
+      semantic_views <- c(
+        semantic_views,
+        list(
+          list(
+            name = fq_name,
+            ddl = ddl
+          )
+        )
+      )
+    }
+  }
+
+  semantic_views
+}
+
+#' Get the DDL for a Semantic View
+#'
+#' @param conn A DBI connection to Snowflake
+#' @param fq_name Fully qualified name (database.schema.view_name)
+#' @return The DDL text, or NULL if retrieval failed
+#' @noRd
+get_semantic_view_ddl <- function(conn, fq_name) {
+  # Escape single quotes to prevent SQL injection
+  safe_name <- gsub("'", "''", fq_name, fixed = TRUE)
+  query <- sprintf("SELECT GET_DDL('SEMANTIC_VIEW', '%s')", safe_name)
+  result <- DBI::dbGetQuery(conn, query)
+  if (nrow(result) > 0 && ncol(result) > 0) {
+    as.character(result[[1, 1]])
+  } else {
+    NULL
+  }
+}
+
+#' Format Semantic View DDLs
+#'
+#' @param semantic_views A list of semantic view info (name and ddl)
+#' @return A formatted string with just the DDL definitions
+#' @noRd
+format_semantic_view_ddls <- function(semantic_views) {
+  lines <- character(0)
+
+  for (sv in semantic_views) {
+    lines <- c(
+      lines,
+      sprintf("### Semantic View: `%s`", sv$name),
+      "",
+      "```sql",
+      sv$ddl,
+      "```",
+      ""
+    )
+  }
+
+  paste(lines, collapse = "\n")
+}
+
+#' Build the complete semantic views section for the prompt
+#'
+#' @param semantic_views A list of semantic view info (name and ddl)
+#' @return A formatted string with the full semantic views section
+#' @noRd
+format_semantic_views <- function(semantic_views) {
+  if (length(semantic_views) == 0) {
+    return("")
+  }
+
+  prompts_dir <- system.file("prompts", "semantic-views", package = "querychat")
+  prompt_text <- readLines(file.path(prompts_dir, "prompt.md"), warn = FALSE)
+  syntax_text <- readLines(file.path(prompts_dir, "syntax.md"), warn = FALSE)
+  ddls_text <- format_semantic_view_ddls(semantic_views)
+
+  paste(
+    paste(prompt_text, collapse = "\n"),
+    "",
+    paste(syntax_text, collapse = "\n"),
+    "",
+    "<semantic_views>",
+    ddls_text,
+    "</semantic_views>",
+    sep = "\n"
+  )
+}

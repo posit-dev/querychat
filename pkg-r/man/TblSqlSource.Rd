@@ -54,6 +54,13 @@ mtcars_source$cleanup()
 \item \href{#method-TblSqlSource-clone}{\code{TblSqlSource$clone()}}
 }
 }
+\if{html}{\out{
+<details open><summary>Inherited methods</summary>
+<ul>
+<li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_semantic_views_description"><a href='../../querychat/html/DBISource.html#method-DBISource-get_semantic_views_description'><code>querychat::DBISource$get_semantic_views_description()</code></a></span></li>
+</ul>
+</details>
+}}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-TblSqlSource-new"></a>}}
 \if{latex}{\out{\hypertarget{method-TblSqlSource-new}{}}}

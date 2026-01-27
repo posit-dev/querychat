@@ -11,6 +11,10 @@ from sqlalchemy import inspect, text
 from sqlalchemy.sql import sqltypes
 
 from ._df_compat import read_sql
+from ._snowflake import (
+    discover_semantic_views,
+    format_semantic_views,
+)
 from ._utils import as_narwhals, check_query
 
 if TYPE_CHECKING:
@@ -178,6 +182,10 @@ class DataSource(ABC, Generic[IntoFrameT]):
         None
 
         """
+
+    def get_semantic_views_description(self) -> str:
+        """Get information about semantic views (if any) for the system prompt."""
+        return ""
 
 
 class DataFrameSource(DataSource[IntoDataFrameT]):
@@ -488,6 +496,13 @@ class SQLAlchemySource(DataSource[nw.DataFrame]):
         ]
         self._add_column_stats(columns, categorical_threshold)
         return format_schema(self.table_name, columns)
+
+    def get_semantic_views_description(self) -> str:
+        """Get information about semantic views (if any) for the system prompt."""
+        if self._engine.dialect.name.lower() != "snowflake":
+            return ""
+        views = discover_semantic_views(self._engine)
+        return format_semantic_views(views)
 
     @staticmethod
     def _make_column_meta(name: str, sa_type: sqltypes.TypeEngine) -> ColumnMeta:
@@ -895,8 +910,7 @@ class PolarsLazySource(DataSource["pl.LazyFrame"]):
 
         # Find text columns that qualify as categorical
         categorical_cols = [
-            col
-            for col in columns
+            col for col in columns
             if col.kind == "text"
             and (nunique := stats.get(f"{col.name}__nunique"))
             and nunique <= categorical_threshold
@@ -960,6 +974,13 @@ class IbisSource(DataSource["ibis.Table"]):
         self._add_column_stats(columns, self._table, categorical_threshold)
         return format_schema(self.table_name, columns)
 
+    def get_semantic_views_description(self) -> str:
+        """Get information about semantic views (if any) for the system prompt."""
+        if self._backend.name.lower() != "snowflake":
+            return ""
+        views = discover_semantic_views(self._backend)
+        return format_semantic_views(views)
+
     @staticmethod
     def _make_column_meta(name: str, dtype: IbisDataType) -> ColumnMeta:
         """Create ColumnMeta from an ibis dtype."""
@@ -1018,8 +1039,7 @@ class IbisSource(DataSource["ibis.Table"]):
                 col.max_val = stats.get(f"{col.name}__max")
 
         categorical_cols = [
-            col
-            for col in columns
+            col for col in columns
             if col.kind == "text"
             and (nunique := stats.get(f"{col.name}__nunique"))
             and nunique <= categorical_threshold

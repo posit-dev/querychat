@@ -111,13 +111,13 @@ A string describing the schema
 \if{html}{\out{<a id="method-DBISource-get_semantic_views_description"></a>}}
 \if{latex}{\out{\hypertarget{method-DBISource-get_semantic_views_description}{}}}
 \subsection{Method \code{get_semantic_views_description()}}{
-Get the complete semantic views description for the prompt
+Get information about semantic views (if any) for the system prompt.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{DBISource$get_semantic_views_description()}\if{html}{\out{</div>}}
 }
 
 \subsection{Returns}{
-A string with the full semantic views section, or empty string if none
+A string with semantic view information, or empty string if none
 }
 }
 \if{html}{\out{<hr>}}

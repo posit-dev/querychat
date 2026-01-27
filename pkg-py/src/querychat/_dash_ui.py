@@ -28,6 +28,13 @@ class IDs:
     data_info: str
     download_csv: str
     export_button: str
+    tabs: str
+    filter_plot: str
+    filter_plot_title: str
+    filter_ggsql: str
+    query_plot: str
+    query_plot_title: str
+    query_ggsql: str
 
     @classmethod
     def from_table_name(cls, table_name: str) -> IDs:
@@ -46,6 +53,13 @@ class IDs:
             data_info=f"{prefix}-data-info",
             download_csv=f"{prefix}-download-csv",
             export_button=f"{prefix}-export-button",
+            tabs=f"{prefix}-tabs",
+            filter_plot=f"{prefix}-filter-plot",
+            filter_plot_title=f"{prefix}-filter-plot-title",
+            filter_ggsql=f"{prefix}-filter-ggsql",
+            query_plot=f"{prefix}-query-plot",
+            query_plot_title=f"{prefix}-query-plot-title",
+            query_ggsql=f"{prefix}-query-ggsql",
         )
 
 

@@ -82,11 +82,9 @@ describe("DBISource$test_query()", {
 
     expect_error(dbi_source$test_query("SELECT * FROM non_existent_table"))
 
-    expect_error(
-      dbi_source$test_query(
-        "SELECT non_existent_column FROM test_table"
-      )
-    )
+    expect_error(dbi_source$test_query(
+      "SELECT non_existent_column FROM test_table"
+    ))
   })
 
   it("works with different data types", {

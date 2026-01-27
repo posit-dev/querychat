@@ -125,26 +125,30 @@ ul.task-list li input[type="checkbox"] {
   <ul>
   <li><a href="#changelog" id="toc-changelog" class="nav-link active" data-scroll-target="#changelog">Changelog</a>
   <ul class="collapse">
-  <li><a href="#section" id="toc-section" class="nav-link" data-scroll-target="#section">[0.5.1] - 2026-01-23</a>
+  <li><a href="#unreleased" id="toc-unreleased" class="nav-link" data-scroll-target="#unreleased">[Unreleased]</a>
   <ul class="collapse">
   <li><a href="#new-features" id="toc-new-features" class="nav-link" data-scroll-target="#new-features">New features</a></li>
   </ul></li>
-  <li><a href="#section-1" id="toc-section-1" class="nav-link" data-scroll-target="#section-1">[0.5.0] - 2026-01-16</a>
+  <li><a href="#section" id="toc-section" class="nav-link" data-scroll-target="#section">[0.5.1] - 2026-01-23</a>
   <ul class="collapse">
   <li><a href="#new-features-1" id="toc-new-features-1" class="nav-link" data-scroll-target="#new-features-1">New features</a></li>
+  </ul></li>
+  <li><a href="#section-1" id="toc-section-1" class="nav-link" data-scroll-target="#section-1">[0.5.0] - 2026-01-16</a>
+  <ul class="collapse">
+  <li><a href="#new-features-2" id="toc-new-features-2" class="nav-link" data-scroll-target="#new-features-2">New features</a></li>
   <li><a href="#improvements" id="toc-improvements" class="nav-link" data-scroll-target="#improvements">Improvements</a></li>
   <li><a href="#changes" id="toc-changes" class="nav-link" data-scroll-target="#changes">Changes</a></li>
   </ul></li>
   <li><a href="#section-2" id="toc-section-2" class="nav-link" data-scroll-target="#section-2">[0.4.0] - 2026-01-14</a>
   <ul class="collapse">
   <li><a href="#breaking-changes" id="toc-breaking-changes" class="nav-link" data-scroll-target="#breaking-changes">Breaking Changes</a></li>
-  <li><a href="#new-features-2" id="toc-new-features-2" class="nav-link" data-scroll-target="#new-features-2">New features</a></li>
+  <li><a href="#new-features-3" id="toc-new-features-3" class="nav-link" data-scroll-target="#new-features-3">New features</a></li>
   <li><a href="#improvements-1" id="toc-improvements-1" class="nav-link" data-scroll-target="#improvements-1">Improvements</a></li>
   </ul></li>
   <li><a href="#section-3" id="toc-section-3" class="nav-link" data-scroll-target="#section-3">[0.3.0] - 2025-12-10</a>
   <ul class="collapse">
   <li><a href="#breaking-changes-1" id="toc-breaking-changes-1" class="nav-link" data-scroll-target="#breaking-changes-1">Breaking Changes</a></li>
-  <li><a href="#new-features-3" id="toc-new-features-3" class="nav-link" data-scroll-target="#new-features-3">New features</a></li>
+  <li><a href="#new-features-4" id="toc-new-features-4" class="nav-link" data-scroll-target="#new-features-4">New features</a></li>
   <li><a href="#improvements-2" id="toc-improvements-2" class="nav-link" data-scroll-target="#improvements-2">Improvements</a></li>
   </ul></li>
   <li><a href="#section-4" id="toc-section-4" class="nav-link" data-scroll-target="#section-4">[0.2.2] - 2025-09-04</a></li>
@@ -165,10 +169,19 @@ ul.task-list li input[type="checkbox"] {
 <h1>Changelog</h1>
 <p>All notable changes to this project will be documented in this file.</p>
 <p>The format is based on <a href="https://keepachangelog.com/en/1.1.0/">Keep a Changelog</a>, and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
-<section id="section" class="level2">
-<h2 class="anchored" data-anchor-id="section">[0.5.1] - 2026-01-23</h2>
+<section id="unreleased" class="level2">
+<h2 class="anchored" data-anchor-id="unreleased">[Unreleased]</h2>
 <section id="new-features" class="level3">
 <h3 class="anchored" data-anchor-id="new-features">New features</h3>
+<ul>
+<li>Added support for Snowflake Semantic Views. When connected to Snowflake (via SQLAlchemy or Ibis), querychat automatically discovers available Semantic Views and includes their definitions in the system prompt. This helps the LLM generate correct queries using the <code>SEMANTIC_VIEW()</code> table function with certified business metrics and dimensions. (#200)</li>
+</ul>
+</section>
+</section>
+<section id="section" class="level2">
+<h2 class="anchored" data-anchor-id="section">[0.5.1] - 2026-01-23</h2>
+<section id="new-features-1" class="level3">
+<h3 class="anchored" data-anchor-id="new-features-1">New features</h3>
 <ul>
 <li><code>QueryChat()</code> now supports deferred data source initialization for Shiny Core applications. Pass <code>data_source=None</code> at initialization time, then provide the actual data source via the <code>data_source</code> parameter of <code>server()</code> or by setting the <code>data_source</code> property. This enables use cases where the data source depends on session-specific authentication or per-user database connections. (#202)</li>
 </ul>
@@ -176,8 +189,8 @@ ul.task-list li input[type="checkbox"] {
 </section>
 <section id="section-1" class="level2">
 <h2 class="anchored" data-anchor-id="section-1">[0.5.0] - 2026-01-16</h2>
-<section id="new-features-1" class="level3">
-<h3 class="anchored" data-anchor-id="new-features-1">New features</h3>
+<section id="new-features-2" class="level3">
+<h3 class="anchored" data-anchor-id="new-features-2">New features</h3>
 <ul>
 <li>Added support for Gradio, Dash, and Streamlit web frameworks in addition to Shiny. Import from the new submodules:
 <ul>
@@ -221,8 +234,8 @@ ul.task-list li input[type="checkbox"] {
 </ul></li>
 </ul>
 </section>
-<section id="new-features-2" class="level3">
-<h3 class="anchored" data-anchor-id="new-features-2">New features</h3>
+<section id="new-features-3" class="level3">
+<h3 class="anchored" data-anchor-id="new-features-3">New features</h3>
 <ul>
 <li><p><code>QueryChat.console()</code> was added to launch interactive console-based chat sessions with your data source, with persistent conversation state across invocations. (#168)</p></li>
 <li><p><code>QueryChat.client()</code> can now create standalone querychat-enabled chat clients with configurable tools and callbacks, enabling use outside of Shiny applications. (#168)</p></li>
@@ -247,8 +260,8 @@ ul.task-list li input[type="checkbox"] {
 <li><p>The <code>.sql()</code> method now returns <code>None</code> instead of <code>""</code> (empty string) when no query has been set, aligning with the behavior of <code>.title()</code> for consistency. Most code using the <code>or</code> operator or <code>req()</code> for falsy checks will continue working without changes. Code that explicitly checks <code>sql() == ""</code> should be updated to use falsy checks (<code>if not sql()</code>) or explicit null checks (<code>if sql() is None</code>). (#146)</p></li>
 </ul>
 </section>
-<section id="new-features-3" class="level3">
-<h3 class="anchored" data-anchor-id="new-features-3">New features</h3>
+<section id="new-features-4" class="level3">
+<h3 class="anchored" data-anchor-id="new-features-4">New features</h3>
 <ul>
 <li><p>New <code>QueryChat.app()</code> method enables quicker/easier chatting with a dataset. (#104)</p></li>
 <li><p>Enabled bookmarking by default in both <code>.app()</code> and <code>.server()</code> methods. In latter case, you’ll need to also specify the <code>bookmark_store</code> (either in <code>shiny.App()</code> or <code>shiny.express.app_opts()</code>) for it to take effect. (#104)</p></li>

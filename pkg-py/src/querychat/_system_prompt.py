@@ -10,9 +10,6 @@ if TYPE_CHECKING:
     from ._querychat_base import TOOL_GROUPS
 
 
-PROMPTS_DIR = Path(__file__).parent / "prompts"
-
-
 class QueryChatSystemPrompt:
     """Manages system prompt template and component assembly."""
 

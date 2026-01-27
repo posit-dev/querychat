@@ -128,20 +128,19 @@ class TestExecuteRawSQL:
 
     def test_ibis_backend(self):
         """Test execute_raw_sql with Ibis backend."""
-        import pandas as pd
-
         mock_backend = MagicMock()
-        mock_table = MagicMock()
-        # Use a real pandas DataFrame for itertuples to work correctly
-        df = pd.DataFrame({"col1": ["a", "b"]})
+        mock_cursor = MagicMock()
+        mock_cursor.description = [("col1",), ("col2",)]
+        mock_cursor.fetchall.return_value = [("a", "b"), ("c", "d")]
 
-        mock_backend.sql.return_value = mock_table
-        mock_table.execute.return_value = df
+        # raw_sql returns a context manager
+        mock_backend.raw_sql.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_backend.raw_sql.return_value.__exit__ = MagicMock(return_value=False)
 
         result = execute_raw_sql("SELECT 1", mock_backend)
 
-        assert result == [{"col1": "a"}, {"col1": "b"}]
-        mock_backend.sql.assert_called_once_with("SELECT 1")
+        assert result == [{"col1": "a", "col2": "b"}, {"col1": "c", "col2": "d"}]
+        mock_backend.raw_sql.assert_called_once_with("SELECT 1")
 
 
 class TestDiscoverSemanticViews:

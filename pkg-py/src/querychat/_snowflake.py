@@ -42,10 +42,11 @@ def execute_raw_sql(
             keys = list(result.keys())
             return [dict(zip(keys, row, strict=False)) for row in result.fetchall()]
     else:
-        result_table = backend.sql(query)
-        df = result_table.execute()
-        columns = list(df.columns)
-        return [dict(zip(columns, row, strict=False)) for row in df.itertuples(index=False)]
+        # Use raw_sql() for Ibis backends to avoid SQL parsing issues
+        # with Snowflake commands like SHOW SEMANTIC VIEWS
+        with backend.raw_sql(query) as cursor:
+            columns = [desc[0] for desc in cursor.description]
+            return [dict(zip(columns, row, strict=False)) for row in cursor.fetchall()]
 
 
 def discover_semantic_views(

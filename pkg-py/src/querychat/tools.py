@@ -69,6 +69,48 @@ class UpdateDashboardData(TypedDict):
     title: str
 
 
+class VisualizeDashboardData(TypedDict):
+    """
+    Data passed to visualize_dashboard callback.
+
+    This TypedDict defines the structure of data passed to the
+    `tool_visualize_dashboard` callback function when the LLM creates a
+    persistent visualization for the dashboard.
+
+    Attributes
+    ----------
+    spec
+        The ggsql VISUALISE specification string.
+    title
+        A descriptive title for the visualization, or None if not provided.
+
+    """
+
+    spec: str
+    title: str | None
+
+
+class VisualizeQueryData(TypedDict):
+    """
+    Data passed to visualize_query callback.
+
+    This TypedDict defines the structure of data passed to the
+    `tool_visualize_query` callback function when the LLM creates an
+    exploratory visualization from a ggsql query.
+
+    Attributes
+    ----------
+    ggsql
+        The full ggsql query string (SQL + VISUALISE).
+    title
+        A descriptive title for the visualization, or None if not provided.
+
+    """
+
+    ggsql: str
+    title: str | None
+
+
 def _read_prompt_template(filename: str, **kwargs) -> str:
     """Read and interpolate a prompt template file."""
     template_path = Path(__file__).parent / "prompts" / filename
@@ -285,4 +327,197 @@ def tool_query(data_source: DataSource) -> Tool:
         impl,
         name="querychat_query",
         annotations={"title": "Query Data"},
+    )
+
+
+def _visualize_dashboard_impl(
+    data_source: DataSource,
+    update_fn: Callable[[VisualizeDashboardData], None],
+) -> Callable[[str, str | None], ContentToolResult]:
+    """Create the visualize_dashboard implementation function."""
+    import ggsql
+
+    from ._ggsql import extract_title
+
+    def visualize_dashboard(
+        viz_spec: str,
+        title: str | None = None,
+    ) -> ContentToolResult:
+        """Create a dashboard visualization from a VISUALISE spec."""
+        markdown = f"```ggsql\n{viz_spec}\n```"
+
+        try:
+            # Validate the spec by rendering it (will raise on error)
+            df = data_source.get_data()
+            ggsql.render_altair(df, viz_spec)
+
+            # Extract title from spec if not provided
+            if title is None:
+                title = extract_title(viz_spec)
+
+            # Store just the spec - rendering happens on display
+            update_fn(
+                {
+                    "spec": viz_spec,
+                    "title": title,
+                }
+            )
+
+            # Format success message
+            title_display = f" - {title}" if title else ""
+            markdown += f"\n\nVisualization created{title_display}."
+
+            return ContentToolResult(
+                value=markdown,
+                extra={
+                    "display": ToolResultDisplay(
+                        markdown=markdown,
+                        title=title or "Filter Visualization",
+                        show_request=False,
+                        open=querychat_tool_starts_open("visualize_dashboard"),
+                        icon=bs_icon("bar-chart-fill"),
+                    ),
+                },
+            )
+
+        except Exception as e:
+            error_msg = str(e)
+            markdown += f"\n\n> Error: {error_msg}"
+            return ContentToolResult(value=markdown, error=e)
+
+    return visualize_dashboard
+
+
+def tool_visualize_dashboard(
+    data_source: DataSource,
+    update_fn: Callable[[VisualizeDashboardData], None],
+) -> Tool:
+    """
+    Create a tool that creates a persistent visualization for the dashboard.
+
+    Parameters
+    ----------
+    data_source
+        The data source to visualize
+    update_fn
+        Callback function to call with VisualizeDashboardData when visualization succeeds
+
+    Returns
+    -------
+    Tool
+        A tool that can be registered with chatlas
+
+    """
+    impl = _visualize_dashboard_impl(data_source, update_fn)
+    impl.__doc__ = _read_prompt_template("tool-visualize-dashboard.md")
+
+    return Tool.from_func(
+        impl,
+        name="querychat_visualize_dashboard",
+        annotations={"title": "Create Filter Visualization"},
+    )
+
+
+def _visualize_query_impl(
+    data_source: DataSource,
+    update_fn: Callable[[VisualizeQueryData], None],
+) -> Callable[[str, str | None], ContentToolResult]:
+    """Create the visualize_query implementation function."""
+    import ggsql as ggsql_pkg
+
+    from ._ggsql import extract_title
+
+    def visualize_query(
+        ggsql: str,
+        title: str | None = None,
+    ) -> ContentToolResult:
+        """Execute a ggsql query and render the visualization."""
+        markdown = f"```sql\n{ggsql}\n```"
+
+        try:
+            # Split the query
+            sql, viz_spec = ggsql_pkg.split_query(ggsql)
+
+            if not viz_spec:
+                raise ValueError(
+                    "Query must include a VISUALISE clause. "
+                    "Use querychat_query for queries without visualization."
+                )
+
+            # Execute the SQL and validate by rendering
+            df = data_source.execute_query(sql)
+            ggsql_pkg.render_altair(df, viz_spec)
+
+            # Extract title from spec if not provided
+            if title is None:
+                title = extract_title(viz_spec)
+
+            # Store just the ggsql - rendering happens on display
+            update_fn(
+                {
+                    "ggsql": ggsql,
+                    "title": title,
+                }
+            )
+
+            # Format success message with data summary
+            nw_df = as_narwhals(df)
+            row_count = len(nw_df)
+            col_count = len(nw_df.columns)
+
+            title_display = f" - {title}" if title else ""
+            markdown += f"\n\nVisualization created{title_display}."
+            markdown += f"\n\nData: {row_count} rows, {col_count} columns."
+
+            return ContentToolResult(
+                value=markdown,
+                extra={
+                    "display": ToolResultDisplay(
+                        markdown=markdown,
+                        title=title or "Query Visualization",
+                        show_request=False,
+                        open=querychat_tool_starts_open("visualize_query"),
+                        icon=bs_icon("graph-up"),
+                    ),
+                },
+            )
+
+        except Exception as e:
+            error_msg = str(e)
+            markdown += f"\n\n> Error: {error_msg}"
+            return ContentToolResult(value=markdown, error=e)
+
+    return visualize_query
+
+
+def tool_visualize_query(
+    data_source: DataSource,
+    update_fn: Callable[[VisualizeQueryData], None],
+) -> Tool:
+    """
+    Create a tool that executes a ggsql query and renders the visualization.
+
+    Parameters
+    ----------
+    data_source
+        The data source to query against
+    update_fn
+        Callback function to call with VisualizeQueryData when visualization succeeds
+
+    Returns
+    -------
+    Tool
+        A tool that can be registered with chatlas
+
+    """
+    impl = _visualize_query_impl(data_source, update_fn)
+    impl.__doc__ = _read_prompt_template(
+        "tool-visualize-query.md",
+        db_type=data_source.get_db_type(),
+    )
+
+    return Tool.from_func(
+        impl,
+        name="querychat_visualize_query",
+        annotations={"title": "Query Visualization"},
     )

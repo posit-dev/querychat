@@ -576,8 +576,7 @@ class SQLAlchemySource(DataSource[nw.DataFrame]):
 
         # Find text columns that qualify as categorical
         categorical_cols = [
-            col
-            for col in columns
+            col for col in columns
             if col.kind == "text"
             and (nunique := stats.get(f"{col.name}__nunique"))
             and nunique <= categorical_threshold
@@ -911,8 +910,7 @@ class PolarsLazySource(DataSource["pl.LazyFrame"]):
 
         # Find text columns that qualify as categorical
         categorical_cols = [
-            col
-            for col in columns
+            col for col in columns
             if col.kind == "text"
             and (nunique := stats.get(f"{col.name}__nunique"))
             and nunique <= categorical_threshold
@@ -1041,8 +1039,7 @@ class IbisSource(DataSource["ibis.Table"]):
                 col.max_val = stats.get(f"{col.name}__max")
 
         categorical_cols = [
-            col
-            for col in columns
+            col for col in columns
             if col.kind == "text"
             and (nunique := stats.get(f"{col.name}__nunique"))
             and nunique <= categorical_threshold

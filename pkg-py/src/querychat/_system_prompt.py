@@ -71,7 +71,7 @@ class QueryChatSystemPrompt:
         context = {
             "db_type": db_type,
             "is_duck_db": is_duck_db,
-            "semantic_views": self.data_source.get_semantic_views_section(),
+            "semantic_views": self.data_source.get_semantic_views_description(),
             "schema": self.schema,
             "data_description": self.data_description,
             "extra_instructions": self.extra_instructions,

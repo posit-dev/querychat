@@ -104,7 +104,7 @@ def format_semantic_view_ddls(semantic_views: list[SemanticViewInfo]) -> str:
     return "\n".join(lines)
 
 
-def get_semantic_views_section(semantic_views: list[SemanticViewInfo]) -> str:
+def format_semantic_views(semantic_views: list[SemanticViewInfo]) -> str:
     """Build the complete semantic views section for the prompt."""
     if not semantic_views:
         return ""

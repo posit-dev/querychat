@@ -26,12 +26,12 @@ describe("format_semantic_view_ddls()", {
   })
 })
 
-describe("get_semantic_views_section_impl()", {
+describe("format_semantic_views()", {
   it("includes IMPORTANT notice", {
     views <- list(
       list(name = "test", ddl = "DDL")
     )
-    result <- get_semantic_views_section_impl(views)
+    result <- format_semantic_views(views)
     expect_match(result, "\\*\\*IMPORTANT\\*\\*")
   })
 
@@ -39,12 +39,12 @@ describe("get_semantic_views_section_impl()", {
     views <- list(
       list(name = "test", ddl = "DDL")
     )
-    result <- get_semantic_views_section_impl(views)
+    result <- format_semantic_views(views)
     expect_match(result, "## Semantic Views")
   })
 
   it("returns empty string for empty views list", {
-    result <- get_semantic_views_section_impl(list())
+    result <- format_semantic_views(list())
     expect_equal(result, "")
   })
 })
@@ -86,7 +86,7 @@ describe("is_snowflake_connection()", {
 })
 
 describe("DBISource semantic views", {
-  it("get_semantic_views_section() returns empty for non-Snowflake", {
+  it("get_semantic_views_description() returns empty for non-Snowflake", {
     skip_if_not_installed("RSQLite")
 
     conn <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
@@ -94,7 +94,7 @@ describe("DBISource semantic views", {
     DBI::dbWriteTable(conn, "test_table", data.frame(x = 1:3))
 
     source <- DBISource$new(conn, "test_table")
-    expect_equal(source$get_semantic_views_section(), "")
+    expect_equal(source$get_semantic_views_description(), "")
   })
 })
 

@@ -325,7 +325,9 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             @render.data_frame
             def dt():
                 # Collect lazy sources (LazyFrame, Ibis Table) to eager DataFrame
-                return as_narwhals(vals.df())
+                res = as_narwhals(vals.df())
+                # TODO: Allow for specifying max rows?
+                return res.head(100)
 
             @render.ui
             def sql_output():

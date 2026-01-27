@@ -42,7 +42,9 @@ class TestFormatSemanticViewDdls:
 
     def test_format_single_view(self):
         """Test that format produces expected markdown structure for single view."""
-        views = [SemanticViewInfo(name="db.schema.view1", ddl="CREATE SEMANTIC VIEW v1")]
+        views = [
+            SemanticViewInfo(name="db.schema.view1", ddl="CREATE SEMANTIC VIEW v1")
+        ]
         section = format_semantic_view_ddls(views)
 
         assert "db.schema.view1" in section
@@ -134,7 +136,9 @@ class TestExecuteRawSQL:
         mock_cursor.fetchall.return_value = [("a", "b"), ("c", "d")]
 
         # raw_sql returns a context manager
-        mock_backend.raw_sql.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+        mock_backend.raw_sql.return_value.__enter__ = MagicMock(
+            return_value=mock_cursor
+        )
         mock_backend.raw_sql.return_value.__exit__ = MagicMock(return_value=False)
 
         result = execute_raw_sql("SELECT 1", mock_backend)
@@ -289,8 +293,8 @@ class TestSQLAlchemySourceSemanticViews:
             source = SQLAlchemySource(mock_engine, "test_table")
             mock_discover.assert_not_called()
 
-            # Discovery happens when calling get_semantic_views_section
-            source.get_semantic_views_section()
+            # Discovery happens when calling get_semantic_views_description
+            source.get_semantic_views_description()
 
             mock_discover.assert_called_once_with(mock_engine)
 
@@ -311,12 +315,12 @@ class TestSQLAlchemySourceSemanticViews:
             source = SQLAlchemySource(mock_engine, "test_table")
 
             # For non-Snowflake, discovery is not called
-            source.get_semantic_views_section()
+            source.get_semantic_views_description()
 
             mock_discover.assert_not_called()
 
-    def test_get_semantic_views_section_includes_views(self):
-        """Test that get_semantic_views_section includes semantic view content."""
+    def test_get_semantic_views_description_includes_views(self):
+        """Test that get_semantic_views_description includes semantic view content."""
         from querychat._datasource import SQLAlchemySource
 
         views = [SemanticViewInfo(name="db.schema.metrics", ddl="CREATE SEMANTIC VIEW")]
@@ -335,14 +339,14 @@ class TestSQLAlchemySourceSemanticViews:
             ),
         ):
             source = SQLAlchemySource(mock_engine, "test_table")
-            section = source.get_semantic_views_section()
+            section = source.get_semantic_views_description()
 
             assert "## Semantic Views" in section
             assert "db.schema.metrics" in section
             assert "CREATE SEMANTIC VIEW" in section
 
-    def test_get_semantic_views_section_empty_for_non_snowflake(self):
-        """Test that get_semantic_views_section returns empty for non-Snowflake."""
+    def test_get_semantic_views_description_empty_for_non_snowflake(self):
+        """Test that get_semantic_views_description returns empty for non-Snowflake."""
         from querychat._datasource import SQLAlchemySource
 
         mock_engine = MagicMock()
@@ -353,7 +357,7 @@ class TestSQLAlchemySourceSemanticViews:
 
         with patch("querychat._datasource.inspect", return_value=mock_inspector):
             source = SQLAlchemySource(mock_engine, "test_table")
-            section = source.get_semantic_views_section()
+            section = source.get_semantic_views_description()
 
             assert section == ""
 
@@ -384,8 +388,8 @@ class TestIbisSourceSemanticViews:
             source = IbisSource(mock_table, "test")
             mock_discover.assert_not_called()
 
-            # Discovery happens when calling get_semantic_views_section
-            source.get_semantic_views_section()
+            # Discovery happens when calling get_semantic_views_description
+            source.get_semantic_views_description()
 
             mock_discover.assert_called_once_with(mock_backend)
 
@@ -410,12 +414,12 @@ class TestIbisSourceSemanticViews:
             source = IbisSource(mock_table, "test")
 
             # For non-Snowflake, discovery is not called
-            source.get_semantic_views_section()
+            source.get_semantic_views_description()
 
             mock_discover.assert_not_called()
 
-    def test_get_semantic_views_section_includes_views(self):
-        """Test that get_semantic_views_section includes semantic view content."""
+    def test_get_semantic_views_description_includes_views(self):
+        """Test that get_semantic_views_description includes semantic view content."""
         from ibis.backends.sql import SQLBackend
         from querychat._datasource import IbisSource
 
@@ -438,7 +442,7 @@ class TestIbisSourceSemanticViews:
             return_value=views,
         ):
             source = IbisSource(mock_table, "test_table")
-            section = source.get_semantic_views_section()
+            section = source.get_semantic_views_description()
 
             assert "## Semantic Views" in section
             assert "db.schema.metrics" in section

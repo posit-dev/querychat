@@ -108,9 +108,9 @@ DBISource <- R6::R6Class(
     },
 
     #' @description
-    #' Get the complete semantic views section for the prompt
+    #' Get the complete semantic views description for the prompt
     #' @return A string with the full semantic views section, or empty string if none
-    get_semantic_views_section = function() {
+    get_semantic_views_description = function() {
       if (!is_snowflake_connection(private$conn)) {
         return("")
       }
@@ -118,7 +118,7 @@ DBISource <- R6::R6Class(
       if (length(views) == 0) {
         return("")
       }
-      get_semantic_views_section_impl(views)
+      format_semantic_views(views)
     },
 
     #' @description
@@ -525,7 +525,7 @@ format_semantic_view_ddls <- function(semantic_views) {
 #' @param semantic_views A list of semantic view info (name and ddl)
 #' @return A formatted string with the full semantic views section
 #' @noRd
-get_semantic_views_section_impl <- function(semantic_views) {
+format_semantic_views <- function(semantic_views) {
   if (length(semantic_views) == 0) {
     return("")
   }

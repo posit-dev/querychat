@@ -74,6 +74,7 @@ execution against a single table in the database.</p>
 <ul><li><p><a href="#method-DBISource-new"><code>DBISource$new()</code></a></p></li>
 <li><p><a href="#method-DBISource-get_db_type"><code>DBISource$get_db_type()</code></a></p></li>
 <li><p><a href="#method-DBISource-get_schema"><code>DBISource$get_schema()</code></a></p></li>
+<li><p><a href="#method-DBISource-get_semantic_views_description"><code>DBISource$get_semantic_views_description()</code></a></p></li>
 <li><p><a href="#method-DBISource-execute_query"><code>DBISource$execute_query()</code></a></p></li>
 <li><p><a href="#method-DBISource-test_query"><code>DBISource$test_query()</code></a></p></li>
 <li><p><a href="#method-DBISource-get_data"><code>DBISource$get_data()</code></a></p></li>
@@ -137,10 +138,22 @@ column to be considered categorical (default: 20)</p></dd>
 <p>A string describing the schema</p>
 </div>
 
+</div><p></p><hr><a id="method-DBISource-get_semantic_views_description"></a><div class="section">
+<h3 id="method-get-semantic-views-description-">Method <code>get_semantic_views_description()</code><a class="anchor" aria-label="anchor" href="#method-get-semantic-views-description-"></a></h3>
+<p>Get information about semantic views (if any) for the system prompt.</p><div class="section">
+<h4 id="usage-3">Usage<a class="anchor" aria-label="anchor" href="#usage-3"></a></h4>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">DBISource</span><span class="op">$</span><span class="fu">get_semantic_views_description</span><span class="op">(</span><span class="op">)</span></span></code></pre></div><p></p></div>
+</div>
+
+<div class="section">
+<h4 id="returns-3">Returns<a class="anchor" aria-label="anchor" href="#returns-3"></a></h4>
+<p>A string with semantic view information, or empty string if none</p>
+</div>
+
 </div><p></p><hr><a id="method-DBISource-execute_query"></a><div class="section">
 <h3 id="method-execute-query-">Method <code>execute_query()</code><a class="anchor" aria-label="anchor" href="#method-execute-query-"></a></h3>
 <p>Execute a SQL query</p><div class="section">
-<h4 id="usage-3">Usage<a class="anchor" aria-label="anchor" href="#usage-3"></a></h4>
+<h4 id="usage-4">Usage<a class="anchor" aria-label="anchor" href="#usage-4"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">DBISource</span><span class="op">$</span><span class="fu">execute_query</span><span class="op">(</span><span class="va">query</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
@@ -153,14 +166,14 @@ column to be considered categorical (default: 20)</p></dd>
 </dl><p></p></div>
 </div>
 <div class="section">
-<h4 id="returns-3">Returns<a class="anchor" aria-label="anchor" href="#returns-3"></a></h4>
+<h4 id="returns-4">Returns<a class="anchor" aria-label="anchor" href="#returns-4"></a></h4>
 <p>A data frame with query results</p>
 </div>
 
 </div><p></p><hr><a id="method-DBISource-test_query"></a><div class="section">
 <h3 id="method-test-query-">Method <code>test_query()</code><a class="anchor" aria-label="anchor" href="#method-test-query-"></a></h3>
 <p>Test a SQL query by fetching only one row</p><div class="section">
-<h4 id="usage-4">Usage<a class="anchor" aria-label="anchor" href="#usage-4"></a></h4>
+<h4 id="usage-5">Usage<a class="anchor" aria-label="anchor" href="#usage-5"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">DBISource</span><span class="op">$</span><span class="fu">test_query</span><span class="op">(</span><span class="va">query</span>, require_all_columns <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
@@ -178,38 +191,38 @@ all original table columns (default: <code>FALSE</code>)</p></dd>
 </dl><p></p></div>
 </div>
 <div class="section">
-<h4 id="returns-4">Returns<a class="anchor" aria-label="anchor" href="#returns-4"></a></h4>
+<h4 id="returns-5">Returns<a class="anchor" aria-label="anchor" href="#returns-5"></a></h4>
 <p>A data frame with one row of results</p>
 </div>
 
 </div><p></p><hr><a id="method-DBISource-get_data"></a><div class="section">
 <h3 id="method-get-data-">Method <code>get_data()</code><a class="anchor" aria-label="anchor" href="#method-get-data-"></a></h3>
 <p>Get all data from the table</p><div class="section">
-<h4 id="usage-5">Usage<a class="anchor" aria-label="anchor" href="#usage-5"></a></h4>
+<h4 id="usage-6">Usage<a class="anchor" aria-label="anchor" href="#usage-6"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">DBISource</span><span class="op">$</span><span class="fu">get_data</span><span class="op">(</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
 <div class="section">
-<h4 id="returns-5">Returns<a class="anchor" aria-label="anchor" href="#returns-5"></a></h4>
+<h4 id="returns-6">Returns<a class="anchor" aria-label="anchor" href="#returns-6"></a></h4>
 <p>A data frame containing all data</p>
 </div>
 
 </div><p></p><hr><a id="method-DBISource-cleanup"></a><div class="section">
 <h3 id="method-cleanup-">Method <code>cleanup()</code><a class="anchor" aria-label="anchor" href="#method-cleanup-"></a></h3>
 <p>Disconnect from the database</p><div class="section">
-<h4 id="usage-6">Usage<a class="anchor" aria-label="anchor" href="#usage-6"></a></h4>
+<h4 id="usage-7">Usage<a class="anchor" aria-label="anchor" href="#usage-7"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">DBISource</span><span class="op">$</span><span class="fu">cleanup</span><span class="op">(</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 
 <div class="section">
-<h4 id="returns-6">Returns<a class="anchor" aria-label="anchor" href="#returns-6"></a></h4>
+<h4 id="returns-7">Returns<a class="anchor" aria-label="anchor" href="#returns-7"></a></h4>
 <p>NULL (invisibly)</p>
 </div>
 
 </div><p></p><hr><a id="method-DBISource-clone"></a><div class="section">
 <h3 id="method-clone-">Method <code>clone()</code><a class="anchor" aria-label="anchor" href="#method-clone-"></a></h3>
 <p>The objects of this class are cloneable with this method.</p><div class="section">
-<h4 id="usage-7">Usage<a class="anchor" aria-label="anchor" href="#usage-7"></a></h4>
+<h4 id="usage-8">Usage<a class="anchor" aria-label="anchor" href="#usage-8"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">DBISource</span><span class="op">$</span><span class="fu">clone</span><span class="op">(</span>deep <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div>
 

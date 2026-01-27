@@ -40,6 +40,7 @@ Inherited methods
 - [`querychat::DBISource$get_data()`](https://posit-dev.github.io/querychat/dev/reference/DBISource.html#method-get_data)
 - [`querychat::DBISource$get_db_type()`](https://posit-dev.github.io/querychat/dev/reference/DBISource.html#method-get_db_type)
 - [`querychat::DBISource$get_schema()`](https://posit-dev.github.io/querychat/dev/reference/DBISource.html#method-get_schema)
+- [`querychat::DBISource$get_semantic_views_description()`](https://posit-dev.github.io/querychat/dev/reference/DBISource.html#method-get_semantic_views_description)
 - [`querychat::DBISource$test_query()`](https://posit-dev.github.io/querychat/dev/reference/DBISource.html#method-test_query)
 
 ------------------------------------------------------------------------

@@ -48,8 +48,8 @@
 
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="development version" id="querychat-development-version">querychat (development version)<a class="anchor" aria-label="anchor" href="#querychat-development-version"></a></h2>
-<ul><li>
-<code>QueryChat$new()</code> now supports deferred data source. Pass <code>data_source = NULL</code> at initialization time, then provide the actual data source via the <code>data_source</code> parameter of <code>$server()</code> or by setting the <code>$data_source</code> property. This enables use cases where the data source depends on session-specific authentication or per-user database connections. (<a href="https://github.com/posit-dev/querychat/issues/202" class="external-link">#202</a>)</li>
+<ul><li><p>Added support for Snowflake Semantic Views. When connected to Snowflake via DBI, querychat automatically discovers available Semantic Views and includes their definitions in the system prompt. This helps the LLM generate correct queries using the <code>SEMANTIC_VIEW()</code> table function with certified business metrics and dimensions. (<a href="https://github.com/posit-dev/querychat/issues/200" class="external-link">#200</a>)</p></li>
+<li><p><code>QueryChat$new()</code> now supports deferred data source. Pass <code>data_source = NULL</code> at initialization time, then provide the actual data source via the <code>data_source</code> parameter of <code>$server()</code> or by setting the <code>$data_source</code> property. This enables use cases where the data source depends on session-specific authentication or per-user database connections. (<a href="https://github.com/posit-dev/querychat/issues/202" class="external-link">#202</a>)</p></li>
 </ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.2.0" id="querychat-020">querychat 0.2.0<a class="anchor" aria-label="anchor" href="#querychat-020"></a></h2><p class="text-muted">CRAN release: 2026-01-12</p>

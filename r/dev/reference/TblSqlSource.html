@@ -82,7 +82,8 @@ dbplyr::tbl_sql() or dplyr::sql()."><meta property="og:image" content="https://p
 <li><p><a href="#method-TblSqlSource-get_data"><code>TblSqlSource$get_data()</code></a></p></li>
 <li><p><a href="#method-TblSqlSource-cleanup"><code>TblSqlSource$cleanup()</code></a></p></li>
 <li><p><a href="#method-TblSqlSource-clone"><code>TblSqlSource$clone()</code></a></p></li>
-</ul></div><p></p><hr><a id="method-TblSqlSource-new"></a><div class="section">
+</ul></div><p><details open><summary>Inherited methods</summary><ul><li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_semantic_views_description"><a href="DBISource.html#method-get_semantic_views_description"><code>querychat::DBISource$get_semantic_views_description()</code></a></span></li>
+</ul></details></p><hr><a id="method-TblSqlSource-new"></a><div class="section">
 <h3 id="method-new-">Method <code>new()</code><a class="anchor" aria-label="anchor" href="#method-new-"></a></h3>
 <p>Create a new TblSqlSource</p><div class="section">
 <h4 id="usage">Usage<a class="anchor" aria-label="anchor" href="#usage"></a></h4>
@@ -285,10 +286,10 @@ all original table columns (default: <code>FALSE</code>)</p></dd>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     cyl  gear     n</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span>     6     3     2</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span>     6     5     1</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">3</span>     8     5     2</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">4</span>     6     4     4</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">5</span>     8     3    12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span>     6     4     4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">3</span>     8     3    12</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">4</span>     6     5     1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">5</span>     8     5     2</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Or collect the entire data frame into local memory</span></span></span>
 <span class="r-in"><span><span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/compute.html" class="external-link">collect</a></span><span class="op">(</span><span class="va">result</span><span class="op">)</span></span></span>

@@ -25,6 +25,8 @@ SQL query execution against a single table in the database.
 
 - [`DBISource$get_schema()`](#method-DBISource-get_schema)
 
+- [`DBISource$get_semantic_views_description()`](#method-DBISource-get_semantic_views_description)
+
 - [`DBISource$execute_query()`](#method-DBISource-execute_query)
 
 - [`DBISource$test_query()`](#method-DBISource-test_query)
@@ -95,6 +97,20 @@ Get schema information for the database table
 #### Returns
 
 A string describing the schema
+
+------------------------------------------------------------------------
+
+### Method `get_semantic_views_description()`
+
+Get information about semantic views (if any) for the system prompt.
+
+#### Usage
+
+    DBISource$get_semantic_views_description()
+
+#### Returns
+
+A string with semantic view information, or empty string if none
 
 ------------------------------------------------------------------------
 

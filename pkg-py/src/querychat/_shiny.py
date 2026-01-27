@@ -17,6 +17,7 @@ from ._utils import as_narwhals
 if TYPE_CHECKING:
     from pathlib import Path
 
+    import altair as alt
     import chatlas
     import ibis
     import narwhals.stable.v1 as nw
@@ -97,10 +98,10 @@ class QueryChat(QueryChatBase[IntoFrameT]):
     tools
         Which querychat tools to include in the chat client by default. Can be:
         - A single tool string: `"update"` or `"query"`
-        - A tuple of tools: `("update", "query")`
+        - A tuple of tools: `("update", "query", "visualize_dashboard", "visualize_query")`
         - `None` or `()` to disable all tools
 
-        Default is `("update", "query")` (both tools enabled).
+        Default is `("update", "query", "visualize_dashboard", "visualize_query")` (all tools enabled).
 
         Set to `"update"` to prevent the LLM from accessing data values, only
         allowing dashboard filtering without answering questions.
@@ -156,7 +157,12 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
-        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = (
+            "update",
+            "query",
+            "visualize_dashboard",
+            "visualize_query",
+        ),
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -172,7 +178,12 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
-        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = (
+            "update",
+            "query",
+            "visualize_dashboard",
+            "visualize_query",
+        ),
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -188,7 +199,12 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
-        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = (
+            "update",
+            "query",
+            "visualize_dashboard",
+            "visualize_query",
+        ),
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -204,7 +220,12 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
-        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = (
+            "update",
+            "query",
+            "visualize_dashboard",
+            "visualize_query",
+        ),
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -219,7 +240,12 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
-        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = (
+            "update",
+            "query",
+            "visualize_dashboard",
+            "visualize_query",
+        ),
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -245,8 +271,13 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         """
         Quickly chat with a dataset.
 
-        Creates a Shiny app with a chat sidebar and data table view -- providing a
+        Creates a Shiny app with a chat sidebar and tabbed view -- providing a
         quick-and-easy way to start chatting with your data.
+
+        The app includes three tabs:
+        - **Data**: Shows the filtered data table
+        - **Filter Plot**: Shows the persistent dashboard visualization
+        - **Query Plot**: Shows the most recent query visualization
 
         Parameters
         ----------
@@ -285,9 +316,23 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                     fill=False,
                     style="max-height: 33%;",
                 ),
-                ui.card(
-                    ui.card_header(bs_icon("table"), " Data"),
-                    ui.output_data_frame("dt"),
+                ui.navset_tab(
+                    ui.nav_panel(
+                        "Data",
+                        ui.card(
+                            ui.card_header(bs_icon("table"), " Data"),
+                            ui.output_data_frame("dt"),
+                        ),
+                    ),
+                    ui.nav_panel(
+                        "Filter Plot",
+                        ui.output_ui("filter_plot_container"),
+                    ),
+                    ui.nav_panel(
+                        "Query Plot",
+                        ui.output_ui("query_plot_container"),
+                    ),
+                    id="main_tabs",
                 ),
                 title=ui.span("querychat with ", ui.code(table_name)),
                 class_="bslib-page-dashboard",
@@ -301,6 +346,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 greeting=self.greeting,
                 client=self._client,
                 enable_bookmarking=enable_bookmarking,
+                tools=self.tools,
             )
 
             @render.text
@@ -336,6 +382,64 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                     content=sql_code,
                     auto_scroll=False,
                     width="100%",
+                )
+
+            @render.ui
+            def filter_plot_container():
+                from shinywidgets import output_widget, render_altair
+
+                chart = vals.filter_viz_chart()
+                if chart is None:
+                    return ui.card(
+                        ui.card_body(
+                            ui.p(
+                                "No filter visualization yet. "
+                                "Use the chat to create one."
+                            ),
+                            class_="text-muted text-center py-5",
+                        ),
+                    )
+
+                @render_altair
+                def filter_chart():
+                    return chart
+
+                return ui.card(
+                    ui.card_header(
+                        bs_icon("bar-chart-fill"),
+                        " ",
+                        vals.filter_viz_title.get() or "Filter Visualization",
+                    ),
+                    output_widget("filter_chart"),
+                )
+
+            @render.ui
+            def query_plot_container():
+                from shinywidgets import output_widget, render_altair
+
+                chart = vals.query_viz_chart()
+                if chart is None:
+                    return ui.card(
+                        ui.card_body(
+                            ui.p(
+                                "No query visualization yet. "
+                                "Use the chat to create one."
+                            ),
+                            class_="text-muted text-center py-5",
+                        ),
+                    )
+
+                @render_altair
+                def query_chart():
+                    return chart
+
+                return ui.card(
+                    ui.card_header(
+                        bs_icon("bar-chart-fill"),
+                        " ",
+                        vals.query_viz_title.get() or "Query Visualization",
+                    ),
+                    output_widget("query_chart"),
                 )
 
         return App(app_ui, app_server, bookmark_store=bookmark_store)
@@ -493,6 +597,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             greeting=self.greeting,
             client=self.client,
             enable_bookmarking=enable_bookmarking,
+            tools=self.tools,
         )
 
 
@@ -730,6 +835,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             greeting=self.greeting,
             client=self._client,
             enable_bookmarking=enable,
+            tools=self.tools,
         )
 
     def sidebar(
@@ -870,3 +976,69 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             return self._vals.title()
         else:
             return self._vals.title.set(value)
+
+    def ggvis(self, source: Literal["filter", "query"] = "filter") -> alt.Chart | None:
+        """
+        Get the visualization chart.
+
+        Parameters
+        ----------
+        source
+            Which visualization to return:
+            - "filter": Chart from visualize_dashboard (updates with filter changes)
+            - "query": Chart from visualize_query (most recent inline visualization)
+
+        Returns
+        -------
+        :
+            The Altair chart, or None if no visualization exists.
+
+        """
+        if source == "filter":
+            return self._vals.filter_viz_chart()
+        else:
+            return self._vals.query_viz_chart()
+
+    def ggsql(self, source: Literal["filter", "query"] = "filter") -> str | None:
+        """
+        Get the ggsql specification.
+
+        Parameters
+        ----------
+        source
+            Which specification to return:
+            - "filter": VISUALISE spec only (from visualize_dashboard)
+            - "query": Full ggsql query (from visualize_query)
+
+        Returns
+        -------
+        :
+            The ggsql specification, or None if no visualization exists.
+
+        """
+        if source == "filter":
+            return self._vals.filter_viz_spec.get()
+        else:
+            return self._vals.query_viz_ggsql.get()
+
+    def ggtitle(self, source: Literal["filter", "query"] = "filter") -> str | None:
+        """
+        Get the visualization title.
+
+        Parameters
+        ----------
+        source
+            Which title to return:
+            - "filter": Title from visualize_dashboard
+            - "query": Title from visualize_query
+
+        Returns
+        -------
+        :
+            The title, or None if no visualization exists.
+
+        """
+        if source == "filter":
+            return self._vals.filter_viz_title.get()
+        else:
+            return self._vals.query_viz_title.get()

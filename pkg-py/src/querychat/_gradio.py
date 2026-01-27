@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Optional, overload
+from typing import TYPE_CHECKING, Any, Literal, Optional, overload
 
 from gradio.context import Context
 from narwhals.stable.v1.typing import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
@@ -24,6 +24,7 @@ from ._utils import as_narwhals
 if TYPE_CHECKING:
     from pathlib import Path
 
+    import altair as alt
     import chatlas
     import ibis
     import sqlalchemy
@@ -106,7 +107,12 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
         *,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
-        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = (
+            "update",
+            "query",
+            "visualize_dashboard",
+            "visualize_query",
+        ),
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -121,7 +127,12 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
         *,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
-        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = (
+            "update",
+            "query",
+            "visualize_dashboard",
+            "visualize_query",
+        ),
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -136,7 +147,12 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
         *,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
-        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = (
+            "update",
+            "query",
+            "visualize_dashboard",
+            "visualize_query",
+        ),
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -151,7 +167,12 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
         *,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
-        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = (
+            "update",
+            "query",
+            "visualize_dashboard",
+            "visualize_query",
+        ),
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -165,7 +186,12 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
         *,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
-        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = (
+            "update",
+            "query",
+            "visualize_dashboard",
+            "visualize_query",
+        ),
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -202,6 +228,96 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
         suggestion click handling. Pass to `.launch(head=qc.head)`.
         """
         return f"<script>{GRADIO_JS}</script>"
+
+    def ggvis(
+        self, state: AppStateDict, source: Literal["filter", "query"] = "filter"
+    ) -> alt.Chart | None:
+        """
+        Get the current Altair visualization chart.
+
+        Parameters
+        ----------
+        state
+            The state dict from the state component.
+        source
+            Which visualization to return. "filter" returns the dashboard
+            visualization (from visualize_dashboard tool), "query" returns
+            the query visualization (from visualize_query tool).
+
+        Returns
+        -------
+        :
+            An Altair Chart object, or None if no visualization exists.
+
+        """
+        import ggsql
+
+        if source == "filter":
+            spec = state.get("filter_viz_spec")
+            if spec is None:
+                return None
+            # Render against current filtered data
+            df = as_narwhals(self.df(state))
+            return ggsql.render_altair(df, spec)
+        else:
+            ggsql_query = state.get("query_viz_ggsql")
+            if ggsql_query is None:
+                return None
+            # Re-execute SQL and render
+            sql, viz_spec = ggsql.split_query(ggsql_query)
+            df = as_narwhals(self._data_source.execute_query(sql))
+            return ggsql.render_altair(df, viz_spec)
+
+    def ggsql(
+        self, state: AppStateDict, source: Literal["filter", "query"] = "filter"
+    ) -> str | None:
+        """
+        Get the current ggsql specification.
+
+        Parameters
+        ----------
+        state
+            The state dict from the state component.
+        source
+            Which specification to return. "filter" returns the VISUALISE spec
+            from visualize_dashboard, "query" returns the full ggsql query
+            from visualize_query.
+
+        Returns
+        -------
+        :
+            The ggsql specification string, or None if no visualization exists.
+
+        """
+        if source == "filter":
+            return state.get("filter_viz_spec")
+        else:
+            return state.get("query_viz_ggsql")
+
+    def ggtitle(
+        self, state: AppStateDict, source: Literal["filter", "query"] = "filter"
+    ) -> str | None:
+        """
+        Get the current visualization title.
+
+        Parameters
+        ----------
+        state
+            The state dict from the state component.
+        source
+            Which title to return. "filter" returns the title from
+            visualize_dashboard, "query" returns the title from visualize_query.
+
+        Returns
+        -------
+        :
+            The visualization title, or None if no visualization exists.
+
+        """
+        if source == "filter":
+            return state.get("filter_viz_title")
+        else:
+            return state.get("query_viz_title")
 
     def ui(self) -> gr.State:
         """
@@ -327,6 +443,11 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
             A wrapped Gradio Blocks app ready to launch. The wrapper injects
             querychat CSS/JS at launch time for Gradio 6.0+ compatibility.
 
+        The app includes three tabs:
+        - **Data**: Shows the filtered data table with the current SQL query
+        - **Filter Plot**: Shows the persistent dashboard visualization
+        - **Query Plot**: Shows the most recent query visualization
+
         """
         data_source = self._require_data_source("app")
         from gradio.themes import Soft
@@ -343,31 +464,53 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
 
             gr.Markdown(f"## `{table_name}`")
 
-            with gr.Group():
-                with gr.Row():
-                    sql_title = gr.Markdown("**Current Query**")
-                    reset_btn = gr.Button(
-                        "Reset", size="sm", variant="secondary", scale=0
-                    )
-                sql_display = gr.Code(
-                    label="",
-                    language="sql",
-                    value=f"SELECT * FROM {table_name}",
-                    interactive=False,
-                    lines=2,
-                )
+            with gr.Tabs():
+                with gr.Tab("Data"):
+                    with gr.Group():
+                        with gr.Row():
+                            sql_title = gr.Markdown("**Current Query**")
+                            reset_btn = gr.Button(
+                                "Reset", size="sm", variant="secondary", scale=0
+                            )
+                        sql_display = gr.Code(
+                            label="",
+                            language="sql",
+                            value=f"SELECT * FROM {table_name}",
+                            interactive=False,
+                            lines=2,
+                        )
 
-            with gr.Group():
-                gr.Markdown("**Data Preview**")
-                data_display = gr.Dataframe(
-                    label="",
-                    buttons=["fullscreen", "copy"],
-                    show_search="filter",
-                )
-                data_info = gr.Markdown("")
+                    with gr.Group():
+                        gr.Markdown("**Data Preview**")
+                        data_display = gr.Dataframe(
+                            label="",
+                            buttons=["fullscreen", "copy"],
+                            show_search="filter",
+                        )
+                        data_info = gr.Markdown("")
+
+                with gr.Tab("Filter Plot"):
+                    filter_plot_title = gr.Markdown("")
+                    filter_plot_display = gr.Plot(label="")
+                    filter_ggsql_display = gr.Code(
+                        label="ggsql spec", language="sql", lines=2
+                    )
+                    filter_plot_info = gr.Markdown(
+                        "*No filter visualization yet. Ask the assistant to create one.*"
+                    )
+
+                with gr.Tab("Query Plot"):
+                    query_plot_title = gr.Markdown("")
+                    query_plot_display = gr.Plot(label="")
+                    query_ggsql_display = gr.Code(
+                        label="ggsql query", language="sql", lines=2
+                    )
+                    query_plot_info = gr.Markdown(
+                        "*No query visualization yet. Ask the assistant to create one.*"
+                    )
 
             def update_displays(state_dict: AppStateDict):
-                """Update SQL and data displays based on state."""
+                """Update SQL, data, and visualization displays based on state."""
                 title = state_dict.get("title") if state_dict else None
                 error = state_dict.get("error") if state_dict else None
 
@@ -385,11 +528,44 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
 
                 data_info_parts = []
                 if error:
-                    data_info_parts.append(f"⚠️ {error}")
+                    data_info_parts.append(f"Warning: {error}")
                 data_info_parts.append(f"*Data has {nrow} rows and {ncol} columns.*")
                 data_info_text = " ".join(data_info_parts)
 
-                return sql_title_text, sql_code, native_df, data_info_text
+                # Filter visualization
+                filter_chart = self.ggvis(state_dict, "filter")
+                filter_title_text = self.ggtitle(state_dict, "filter") or ""
+                filter_spec = self.ggsql(state_dict, "filter") or ""
+                filter_info = (
+                    ""
+                    if filter_chart
+                    else "*No filter visualization yet. Ask the assistant to create one.*"
+                )
+
+                # Query visualization
+                query_chart = self.ggvis(state_dict, "query")
+                query_title_text = self.ggtitle(state_dict, "query") or ""
+                query_spec = self.ggsql(state_dict, "query") or ""
+                query_info = (
+                    ""
+                    if query_chart
+                    else "*No query visualization yet. Ask the assistant to create one.*"
+                )
+
+                return (
+                    sql_title_text,
+                    sql_code,
+                    native_df,
+                    data_info_text,
+                    f"### {filter_title_text}" if filter_title_text else "",
+                    filter_chart,
+                    filter_spec,
+                    filter_info,
+                    f"### {query_title_text}" if query_title_text else "",
+                    query_chart,
+                    query_spec,
+                    query_info,
+                )
 
             def reset_query(state_dict: AppStateDict):
                 """Reset state to show full dataset."""
@@ -401,7 +577,20 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
             state_holder.change(
                 fn=update_displays,
                 inputs=[state_holder],
-                outputs=[sql_title, sql_display, data_display, data_info],
+                outputs=[
+                    sql_title,
+                    sql_display,
+                    data_display,
+                    data_info,
+                    filter_plot_title,
+                    filter_plot_display,
+                    filter_ggsql_display,
+                    filter_plot_info,
+                    query_plot_title,
+                    query_plot_display,
+                    query_ggsql_display,
+                    query_plot_info,
+                ],
             )
 
             reset_btn.click(

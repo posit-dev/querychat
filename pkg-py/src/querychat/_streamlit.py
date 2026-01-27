@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Optional, cast, overload
+from typing import TYPE_CHECKING, Any, Literal, Optional, cast, overload
 
 from narwhals.stable.v1.typing import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
 
@@ -19,6 +19,7 @@ from ._utils import as_narwhals
 if TYPE_CHECKING:
     from pathlib import Path
 
+    import altair as alt
     import chatlas
     import ibis
     import narwhals.stable.v1 as nw
@@ -81,7 +82,12 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         *,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
-        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = (
+            "update",
+            "query",
+            "visualize_dashboard",
+            "visualize_query",
+        ),
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -96,7 +102,12 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         *,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
-        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = (
+            "update",
+            "query",
+            "visualize_dashboard",
+            "visualize_query",
+        ),
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -111,7 +122,12 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         *,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
-        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = (
+            "update",
+            "query",
+            "visualize_dashboard",
+            "visualize_query",
+        ),
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -126,7 +142,12 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         *,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
-        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = (
+            "update",
+            "query",
+            "visualize_dashboard",
+            "visualize_query",
+        ),
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -140,7 +161,12 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         *,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
-        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = (
+            "update",
+            "query",
+            "visualize_dashboard",
+            "visualize_query",
+        ),
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -167,9 +193,11 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         if self._state_key not in st.session_state:
             st.session_state[self._state_key] = create_app_state(
                 data_source,
-                lambda update_cb, reset_cb: self.client(
+                lambda update_cb, reset_cb, filter_viz_cb, query_viz_cb: self.client(
                     update_dashboard=update_cb,
                     reset_dashboard=reset_cb,
+                    visualize_dashboard=filter_viz_cb,
+                    visualize_query=query_viz_cb,
                 ),
                 self.greeting,
             )
@@ -180,7 +208,12 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         Render a complete Streamlit app.
 
         Configures the page, renders chat in sidebar, and displays
-        SQL query and data table in the main area.
+        SQL query, data table, and visualizations in a tabbed interface.
+
+        The app includes three tabs:
+        - **Data**: Shows the filtered data table with the current SQL query
+        - **Filter Plot**: Shows the persistent dashboard visualization
+        - **Query Plot**: Shows the most recent query visualization
         """
         data_source = self._require_data_source("app")
         import streamlit as st
@@ -192,7 +225,23 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         )
 
         self.sidebar()
-        self._render_main_content()
+
+        state = self._get_state()
+
+        st.title(f"querychat with `{self._data_source.table_name}`")
+
+        data_tab, filter_plot_tab, query_plot_tab = st.tabs(
+            ["Data", "Filter Plot", "Query Plot"]
+        )
+
+        with data_tab:
+            self._render_data_tab(state)
+
+        with filter_plot_tab:
+            self._render_filter_plot_tab()
+
+        with query_plot_tab:
+            self._render_query_plot_tab()
 
     def sidebar(self) -> None:
         """Render the chat interface in the Streamlit sidebar."""
@@ -303,14 +352,92 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         state.reset_dashboard()
         st.rerun()
 
-    def _render_main_content(self) -> None:
-        """Render the main content area (SQL + data table)."""
-        data_source = self._require_data_source("_render_main_content")
-        import streamlit as st
+    def ggvis(self, source: Literal["filter", "query"] = "filter") -> alt.Chart | None:
+        """
+        Get the current Altair visualization chart.
+
+        Parameters
+        ----------
+        source
+            Which visualization to return. "filter" returns the dashboard
+            visualization (from visualize_dashboard tool), "query" returns
+            the query visualization (from visualize_query tool).
+
+        Returns
+        -------
+        :
+            An Altair Chart object, or None if no visualization exists.
+
+        """
+        import ggsql
+
+        from ._utils import as_narwhals
 
         state = self._get_state()
+        if source == "filter":
+            spec = state.filter_viz_spec
+            if spec is None:
+                return None
+            # Render against current filtered data
+            df = as_narwhals(self.df())
+            return ggsql.render_altair(df, spec)
+        else:
+            ggsql_query = state.query_viz_ggsql
+            if ggsql_query is None:
+                return None
+            # Re-execute SQL and render
+            sql, viz_spec = ggsql.split_query(ggsql_query)
+            df = as_narwhals(self._data_source.execute_query(sql))
+            return ggsql.render_altair(df, viz_spec)
 
-        st.title(f"querychat with `{data_source.table_name}`")
+    def ggsql(self, source: Literal["filter", "query"] = "filter") -> str | None:
+        """
+        Get the current ggsql specification.
+
+        Parameters
+        ----------
+        source
+            Which specification to return. "filter" returns the VISUALISE spec
+            from visualize_dashboard, "query" returns the full ggsql query
+            from visualize_query.
+
+        Returns
+        -------
+        :
+            The ggsql specification string, or None if no visualization exists.
+
+        """
+        state = self._get_state()
+        if source == "filter":
+            return state.filter_viz_spec
+        else:
+            return state.query_viz_ggsql
+
+    def ggtitle(self, source: Literal["filter", "query"] = "filter") -> str | None:
+        """
+        Get the current visualization title.
+
+        Parameters
+        ----------
+        source
+            Which title to return. "filter" returns the title from
+            visualize_dashboard, "query" returns the title from visualize_query.
+
+        Returns
+        -------
+        :
+            The visualization title, or None if no visualization exists.
+
+        """
+        state = self._get_state()
+        if source == "filter":
+            return state.filter_viz_title
+        else:
+            return state.query_viz_title
+
+    def _render_data_tab(self, state: AppState) -> None:
+        """Render the Data tab content."""
+        import streamlit as st
 
         st.subheader(state.title or "SQL Query")
 
@@ -331,3 +458,45 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             df.to_native(), use_container_width=True, height=400, hide_index=True
         )
         st.caption(f"Data has {df.shape[0]} rows and {df.shape[1]} columns.")
+
+    def _render_filter_plot_tab(self) -> None:
+        """Render the Filter Plot tab content."""
+        import streamlit as st
+
+        chart = self.ggvis("filter")
+        if chart is not None:
+            title = self.ggtitle("filter")
+            if title:
+                st.subheader(title)
+            st.altair_chart(chart, use_container_width=True)
+
+            spec = self.ggsql("filter")
+            if spec:
+                with st.expander("ggsql spec"):
+                    st.code(spec, language="sql")
+        else:
+            st.info(
+                "No filter visualization. Ask the assistant to create one "
+                "using the visualize_dashboard tool."
+            )
+
+    def _render_query_plot_tab(self) -> None:
+        """Render the Query Plot tab content."""
+        import streamlit as st
+
+        chart = self.ggvis("query")
+        if chart is not None:
+            title = self.ggtitle("query")
+            if title:
+                st.subheader(title)
+            st.altair_chart(chart, use_container_width=True)
+
+            spec = self.ggsql("query")
+            if spec:
+                with st.expander("ggsql query"):
+                    st.code(spec, language="sql")
+        else:
+            st.info(
+                "No query visualization. Ask the assistant to create one "
+                "using the visualize_query tool."
+            )

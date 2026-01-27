@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import logging
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
@@ -13,17 +14,26 @@ from narwhals.stable.v1.typing import IntoFrameT
 from shiny import module, reactive, ui
 
 from ._querychat_core import GREETING_PROMPT
-from .tools import tool_query, tool_reset_dashboard, tool_update_dashboard
+from .tools import (
+    tool_query,
+    tool_reset_dashboard,
+    tool_update_dashboard,
+    tool_visualize_dashboard,
+    tool_visualize_query,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    import altair as alt
     from shiny.bookmark import BookmarkState, RestoreState
 
     from shiny import Inputs, Outputs, Session
 
     from ._datasource import DataSource
-    from .types import UpdateDashboardData
+    from .tools import UpdateDashboardData, VisualizeDashboardData, VisualizeQueryData
+
+logger = logging.getLogger(__name__)
 
 ReactiveString = reactive.Value[str]
 """A reactive string value."""
@@ -79,6 +89,26 @@ class ServerValues(Generic[IntoFrameT]):
         The session-specific chat client instance. This is a deep copy of the
         base client configured for this specific session, containing the chat
         history and tool registrations for this session only.
+    filter_viz_spec
+        A reactive Value containing the VISUALISE spec from visualize_dashboard.
+        Returns `None` if no visualization has been created.
+    filter_viz_title
+        A reactive Value containing the title from visualize_dashboard.
+        Returns `None` if no visualization has been created.
+    filter_viz_chart
+        A callable returning the rendered Altair chart from visualize_dashboard.
+        Returns `None` if no visualization has been created. The chart is
+        re-rendered on each call using `ggsql.render_altair()`.
+    query_viz_ggsql
+        A reactive Value containing the full ggsql query from visualize_query.
+        Returns `None` if no visualization has been created.
+    query_viz_title
+        A reactive Value containing the title from visualize_query.
+        Returns `None` if no visualization has been created.
+    query_viz_chart
+        A callable returning the rendered Altair chart from visualize_query.
+        Returns `None` if no visualization has been created. The chart is
+        re-rendered on each call using `ggsql.render_altair()`.
 
     """
 
@@ -86,6 +116,13 @@ class ServerValues(Generic[IntoFrameT]):
     sql: ReactiveStringOrNone
     title: ReactiveStringOrNone
     client: chatlas.Chat
+    # Visualization state
+    filter_viz_spec: ReactiveStringOrNone
+    filter_viz_title: ReactiveStringOrNone
+    filter_viz_chart: Callable[[], alt.TopLevelMixin | None]
+    query_viz_ggsql: ReactiveStringOrNone
+    query_viz_title: ReactiveStringOrNone
+    query_viz_chart: Callable[[], alt.TopLevelMixin | None]
 
 
 @module.server
@@ -98,11 +135,18 @@ def mod_server(
     greeting: str | None,
     client: chatlas.Chat | Callable,
     enable_bookmarking: bool,
+    tools: tuple[str, ...] | None = None,
 ) -> ServerValues[IntoFrameT]:
     # Reactive values to store state
     sql = ReactiveStringOrNone(None)
     title = ReactiveStringOrNone(None)
     has_greeted = reactive.value[bool](False)  # noqa: FBT003
+
+    # Visualization state - store only specs, render on demand
+    filter_viz_spec: reactive.Value[str | None] = reactive.value(None)
+    filter_viz_title: reactive.Value[str | None] = reactive.value(None)
+    query_viz_ggsql: reactive.Value[str | None] = reactive.value(None)
+    query_viz_title: reactive.Value[str | None] = reactive.value(None)
 
     # Short-circuit for stub sessions (e.g. 1st run of an Express app)
     # data_source may be None during stub session for deferred pattern
@@ -116,6 +160,12 @@ def mod_server(
             sql=sql,
             title=title,
             client=client if isinstance(client, chatlas.Chat) else client(),
+            filter_viz_spec=filter_viz_spec,
+            filter_viz_title=filter_viz_title,
+            filter_viz_chart=lambda: filter_viz_chart.get(),
+            query_viz_ggsql=query_viz_ggsql,
+            query_viz_title=query_viz_title,
+            query_viz_chart=lambda: query_viz_chart.get(),
         )
 
     # Real session requires data_source
@@ -133,6 +183,14 @@ def mod_server(
         sql.set(None)
         title.set(None)
 
+    def update_filter_viz(data: VisualizeDashboardData):
+        filter_viz_spec.set(data["spec"])
+        filter_viz_title.set(data["title"])
+
+    def update_query_viz(data: VisualizeQueryData):
+        query_viz_ggsql.set(data["ggsql"])
+        query_viz_title.set(data["title"])
+
     # Set up the chat object for this session
     # Support both a callable that creates a client and legacy instance pattern
     if callable(client) and not isinstance(client, chatlas.Chat):
@@ -147,12 +205,45 @@ def mod_server(
         chat.register_tool(tool_query(data_source))
         chat.register_tool(tool_reset_dashboard(reset_dashboard))
 
+        # Register visualization tools if enabled
+        if tools and "visualize_dashboard" in tools:
+            chat.register_tool(tool_visualize_dashboard(data_source, update_filter_viz))
+        if tools and "visualize_query" in tools:
+            chat.register_tool(tool_visualize_query(data_source, update_query_viz))
+
     # Execute query when SQL changes
     @reactive.calc
     def filtered_df():
         query = sql.get()
         df = data_source.get_data() if not query else data_source.execute_query(query)
         return df
+
+    # Render filter visualization on demand
+    @reactive.calc
+    def render_filter_viz_chart():
+        """Render filter visualization using current filtered data."""
+        import ggsql
+
+        spec = filter_viz_spec.get()
+        if spec is None:
+            return None
+
+        current_df = filtered_df()
+        return ggsql.render_altair(current_df, spec)
+
+    # Render query visualization on demand
+    @reactive.calc
+    def render_query_viz_chart():
+        """Render query visualization by re-executing the ggsql query."""
+        import ggsql
+
+        ggsql_query = query_viz_ggsql.get()
+        if ggsql_query is None:
+            return None
+
+        sql_part, viz_spec = ggsql.split_query(ggsql_query)
+        df = data_source.execute_query(sql_part)
+        return ggsql.render_altair(df, viz_spec)
 
     # Chat UI logic
     chat_ui = shinychat.Chat(CHAT_ID)
@@ -220,7 +311,18 @@ def mod_server(
             if "querychat_has_greeted" in vals:
                 has_greeted.set(vals["querychat_has_greeted"])
 
-    return ServerValues(df=filtered_df, sql=sql, title=title, client=chat)
+    return ServerValues(
+        df=filtered_df,
+        sql=sql,
+        title=title,
+        client=chat,
+        filter_viz_spec=filter_viz_spec,
+        filter_viz_title=filter_viz_title,
+        filter_viz_chart=render_filter_viz_chart,
+        query_viz_ggsql=query_viz_ggsql,
+        query_viz_title=query_viz_title,
+        query_viz_chart=render_query_viz_chart,
+    )
 
 
 class GreetWarning(Warning):

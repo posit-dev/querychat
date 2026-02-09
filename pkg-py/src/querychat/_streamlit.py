@@ -14,7 +14,7 @@ from ._querychat_core import (
     stream_response,
 )
 from ._ui_assets import STREAMLIT_JS, SUGGESTION_CSS
-from ._utils import as_narwhals
+from ._utils import as_narwhals, maybe_truncate
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -175,12 +175,20 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             )
         return st.session_state[self._state_key]
 
-    def app(self) -> None:
+    def app(self, *, max_rows: Optional[int] = 1000) -> None:
         """
         Render a complete Streamlit app.
 
         Configures the page, renders chat in sidebar, and displays
         SQL query and data table in the main area.
+
+        Parameters
+        ----------
+        max_rows
+            Maximum number of rows to display in the data table. This does not
+            affect the number of rows that the LLM can query against. Default
+            is 1000. Set to ``None`` to disable row limit.
+
         """
         data_source = self._require_data_source("app")
         import streamlit as st
@@ -192,7 +200,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         )
 
         self.sidebar()
-        self._render_main_content()
+        self._render_main_content(max_rows=max_rows)
 
     def sidebar(self) -> None:
         """Render the chat interface in the Streamlit sidebar."""
@@ -303,7 +311,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         state.reset_dashboard()
         st.rerun()
 
-    def _render_main_content(self) -> None:
+    def _render_main_content(self, *, max_rows: Optional[int] = None) -> None:
         """Render the main content area (SQL + data table)."""
         data_source = self._require_data_source("_render_main_content")
         import streamlit as st
@@ -327,7 +335,11 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         df = as_narwhals(state.get_current_data())
         if state.error:
             st.error(state.error)
+        result = maybe_truncate(df, max_rows)
         st.dataframe(
-            df.to_native(), use_container_width=True, height=400, hide_index=True
+            result.df.to_native(),
+            use_container_width=True,
+            height=400,
+            hide_index=True,
         )
-        st.caption(f"Data has {df.shape[0]} rows and {df.shape[1]} columns.")
+        st.caption(result.info_message)

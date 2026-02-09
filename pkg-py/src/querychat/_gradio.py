@@ -19,7 +19,7 @@ from ._querychat_core import (
     stream_response,
 )
 from ._ui_assets import GRADIO_CSS, GRADIO_JS, SUGGESTION_CSS
-from ._utils import as_narwhals
+from ._utils import as_narwhals, maybe_truncate
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -317,9 +317,16 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
 
         return state_holder
 
-    def app(self) -> GradioBlocksWrapper:
+    def app(self, *, max_rows: Optional[int] = 1000) -> GradioBlocksWrapper:
         """
         Create a complete Gradio app.
+
+        Parameters
+        ----------
+        max_rows
+            Maximum number of rows to display in the data table. This does not
+            affect the number of rows that the LLM can query against. Default
+            is 1000. Set to ``None`` to disable row limit.
 
         Returns
         -------
@@ -380,13 +387,13 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
 
                 df = self.df(state_dict)
                 nw_df = as_narwhals(df)
-                nrow, ncol = nw_df.shape
-                native_df = nw_df.to_native()
+                result = maybe_truncate(nw_df, max_rows)
+                native_df = result.df.to_native()
 
                 data_info_parts = []
                 if error:
                     data_info_parts.append(f"⚠️ {error}")
-                data_info_parts.append(f"*Data has {nrow} rows and {ncol} columns.*")
+                data_info_parts.append(f"*{result.info_message}*")
                 data_info_text = " ".join(data_info_parts)
 
                 return sql_title_text, sql_code, native_df, data_info_text

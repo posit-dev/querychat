@@ -4,6 +4,7 @@ import os
 import re
 import warnings
 from contextlib import contextmanager
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal, Optional, overload
 
 import narwhals.stable.v1 as nw
@@ -290,3 +291,65 @@ def df_to_html(df, maxrows: int = 5) -> str:
         table_html += f"\n\n*(Showing {maxrows} of {nrow_full} rows)*\n"
 
     return table_html
+
+
+@dataclass
+class TruncationResult:
+    """Result of maybe_truncate(), holding the (possibly truncated) DataFrame and metadata."""
+
+    df: nw.DataFrame
+    total_rows: int
+    total_cols: int
+    truncated: bool
+
+    @property
+    def info_message(self) -> str:
+        """User-facing message describing the data dimensions and any truncation."""
+        if self.truncated:
+            return f"Showing first {len(self.df)} of {self.total_rows} rows ({self.total_cols} columns)."
+        return f"Data has {self.total_rows} rows and {self.total_cols} columns."
+
+
+def maybe_truncate(
+    df: nw.DataFrame,
+    max_rows: int | None,
+    *,
+    warn: bool = True,
+) -> TruncationResult:
+    """
+    Truncate a DataFrame if it exceeds max_rows, with optional developer warning.
+
+    Parameters
+    ----------
+    df
+        An eager narwhals DataFrame.
+    max_rows
+        Maximum rows to keep. None disables truncation.
+    warn
+        If True and truncation occurs, emit a warnings.warn() for the developer.
+
+    Returns
+    -------
+    :
+        A TruncationResult with the (possibly truncated) df and metadata.
+
+    """
+    total_rows, total_cols = df.shape
+    truncated = max_rows is not None and total_rows > max_rows
+    if truncated:
+        assert max_rows is not None  # for type narrowing
+        display_df = df.head(max_rows)
+        if warn:
+            warnings.warn(
+                f"querychat: Displaying {max_rows} of {total_rows} rows. "
+                "Set `max_rows` to increase or `None` to disable.",
+                stacklevel=2,
+            )
+    else:
+        display_df = df
+    return TruncationResult(
+        df=display_df,
+        total_rows=total_rows,
+        total_cols=total_cols,
+        truncated=truncated,
+    )

@@ -65,11 +65,13 @@ class QueryChatSystemPrompt:
             Fully rendered system prompt string
 
         """
-        is_duck_db = self.data_source.get_db_type().lower() == "duckdb"
+        db_type = self.data_source.get_db_type()
+        is_duck_db = db_type.lower() == "duckdb"
 
         context = {
-            "db_type": self.data_source.get_db_type(),
+            "db_type": db_type,
             "is_duck_db": is_duck_db,
+            "semantic_views": self.data_source.get_semantic_views_description(),
             "schema": self.schema,
             "data_description": self.data_description,
             "extra_instructions": self.extra_instructions,

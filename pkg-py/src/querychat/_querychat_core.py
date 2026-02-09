@@ -63,7 +63,7 @@ class DisplayMessage(TypedDict):
 class StateDictAccessorMixin(Generic[IntoFrameT]):
     """Mixin providing df/sql/title accessors for frameworks using serialized state dicts."""
 
-    _data_source: DataSource[IntoFrameT]
+    _data_source: DataSource[IntoFrameT] | None
 
     def _client_factory(
         self,
@@ -89,13 +89,14 @@ class StateDictAccessorMixin(Generic[IntoFrameT]):
             Returns a LazyFrame if the data source is lazy.
 
         """
+        data_source = self._require_data_source("df")  # type: ignore[attr-defined]
         sql = state.get("sql") if state else None
         if sql:
             try:
-                return self._data_source.execute_query(sql)
+                return data_source.execute_query(sql)
             except Exception:
-                return self._data_source.get_data()
-        return self._data_source.get_data()
+                return data_source.get_data()
+        return data_source.get_data()
 
     def sql(self, state: AppStateDict | None) -> str | None:
         """
@@ -133,8 +134,9 @@ class StateDictAccessorMixin(Generic[IntoFrameT]):
 
     def _deserialize_state(self, state_data: AppStateDict | None) -> AppState:
         """Reconstruct AppState from a serialized state dict."""
+        data_source = self._require_data_source("_deserialize_state")  # type: ignore[attr-defined]
         state = create_app_state(
-            self._data_source,
+            data_source,
             self._client_factory,
             self.greeting,  # type: ignore[attr-defined]
         )

@@ -91,9 +91,48 @@ QueryChat <- R6::R6Class(
   private = list(
     server_values = NULL,
     .data_source = NULL,
+    .table_name = NULL,
     .client = NULL,
     .client_console = NULL,
-    .system_prompt = NULL
+    .system_prompt = NULL,
+    # Store init parameters for deferred system prompt building
+    .prompt_template = NULL,
+    .data_description = NULL,
+    .extra_instructions = NULL,
+    .categorical_threshold = NULL,
+
+    require_data_source = function(method_name) {
+      if (is.null(private$.data_source)) {
+        cli::cli_abort(
+          "{.arg data_source} must be set before calling {.fn ${method_name}}.
+           Either pass {.arg data_source} to {.fn $new}, set the
+           {.field $data_source} property, or pass {.arg data_source} to {.fn $server}."
+        )
+      }
+    },
+
+    build_system_prompt = function() {
+      if (is.null(private$.data_source)) {
+        cli::cli_abort("Cannot build system prompt without data_source")
+      }
+
+      prompt_template <- private$.prompt_template
+      if (is.null(prompt_template)) {
+        prompt_template <- system.file(
+          "prompts",
+          "prompt.md",
+          package = "querychat"
+        )
+      }
+
+      private$.system_prompt <- QueryChatSystemPrompt$new(
+        prompt_template = prompt_template,
+        data_source = private$.data_source,
+        data_description = private$.data_description,
+        extra_instructions = private$.extra_instructions,
+        categorical_threshold = private$.categorical_threshold
+      )
+    }
   ),
   public = list(
     #' @field greeting The greeting message displayed to users.
@@ -106,13 +145,15 @@ QueryChat <- R6::R6Class(
     #' @description
     #' Create a new QueryChat object.
     #'
-    #' @param data_source Either a data.frame or a database connection (e.g., DBI
-    #'   connection).
+    #' @param data_source Either a data.frame, a database connection (e.g., DBI
+    #'   connection), or `NULL` to defer setting the data source until later.
+    #'   When `NULL`, the data source must be set via the `$data_source` property
+    #'   or passed to `$server()` before calling methods that require data access.
     #' @param table_name A string specifying the table name to use in SQL
     #'   queries. If `data_source` is a data.frame, this is the name to refer to
     #'   it by in queries (typically the variable name). If not provided, will
     #'   be inferred from the variable name for data.frame inputs. For database
-    #'   connections, this parameter is required.
+    #'   connections or `NULL` data sources, this parameter is required.
     #' @param ... Additional arguments (currently unused).
     #' @param id Optional module ID for the QueryChat instance. If not provided,
     #'   will be auto-generated from `table_name`. The ID is used to namespace
@@ -177,13 +218,26 @@ QueryChat <- R6::R6Class(
       check_string(prompt_template, allow_null = TRUE)
       check_bool(cleanup, allow_na = TRUE)
 
+      # Handle table_name inference for non-NULL data sources
       if (is_missing(table_name)) {
+        if (is.null(data_source)) {
+          cli::cli_abort(
+            "{.arg table_name} is required when {.arg data_source} is {.val NULL}."
+          )
+        }
         if (is.data.frame(data_source) || inherits(data_source, "tbl_sql")) {
           table_name <- deparse1(substitute(data_source))
         }
       }
 
-      private$.data_source <- normalize_data_source(data_source, table_name)
+      # Store table_name for later normalization (needed for deferred pattern)
+      private$.table_name <- table_name
+
+      # Store init parameters for deferred system prompt building
+      private$.prompt_template <- prompt_template
+      private$.data_description <- data_description
+      private$.extra_instructions <- extra_instructions
+      private$.categorical_threshold <- categorical_threshold
 
       self$id <- id %||% sprintf("querychat_%s", table_name)
       self$tools <- tools
@@ -193,22 +247,11 @@ QueryChat <- R6::R6Class(
       }
       self$greeting <- greeting
 
-      # Create system prompt manager
-      if (is.null(prompt_template)) {
-        prompt_template <- system.file(
-          "prompts",
-          "prompt.md",
-          package = "querychat"
-        )
+      # Initialize data source (may be NULL for deferred pattern)
+      if (!is.null(data_source)) {
+        private$.data_source <- normalize_data_source(data_source, table_name)
+        private$build_system_prompt()
       }
-
-      private$.system_prompt <- QueryChatSystemPrompt$new(
-        prompt_template = prompt_template,
-        data_source = private$.data_source,
-        data_description = data_description,
-        extra_instructions = extra_instructions,
-        categorical_threshold = categorical_threshold
-      )
 
       # Fork and empty chat now so the per-session forks are fast
       client <- as_querychat_client(client)
@@ -245,6 +288,8 @@ QueryChat <- R6::R6Class(
       update_dashboard = function(query, title) {},
       reset_dashboard = function() {}
     ) {
+      private$require_data_source("$client")
+
       if (is_na(tools)) {
         tools <- self$tools
       }
@@ -291,6 +336,7 @@ QueryChat <- R6::R6Class(
     #'   By default, only the `"query"` tool is included, regardless of the
     #'   `tools` set at initialization.
     console = function(new = FALSE, ..., tools = "query") {
+      private$require_data_source("$console")
       check_bool(new)
       if (new || is.null(private$.client_console)) {
         private$.client_console <- self$client(tools = tools, ...)
@@ -354,6 +400,7 @@ QueryChat <- R6::R6Class(
     #'
     #' @return A Shiny app object that can be run with `shiny::runApp()`.
     app_obj = function(..., bookmark_store = "url") {
+      private$require_data_source("$app_obj")
       check_installed("DT")
       check_installed("bsicons")
       check_dots_empty()
@@ -571,6 +618,11 @@ QueryChat <- R6::R6Class(
     #' }
     #' ```
     #'
+    #' @param data_source Optional data source to use. If provided, sets the
+    #'   data_source property before initializing server logic. This is useful
+    #'   for the deferred pattern where data_source is not known at
+    #'   initialization time (e.g., when the data source depends on session-
+    #'   specific authentication).
     #' @param enable_bookmarking Whether to enable bookmarking for the chat
     #'   state. Default is `FALSE`. When enabled, the chat state (including
     #'   current query, title, and chat history) will be saved and restored
@@ -593,6 +645,7 @@ QueryChat <- R6::R6Class(
     #'   - `client`: The session-specific chat client instance
     #'
     server = function(
+      data_source = NULL,
       enable_bookmarking = FALSE,
       ...,
       id = NULL,
@@ -606,6 +659,12 @@ QueryChat <- R6::R6Class(
           "{.fn $server} must be called within a Shiny server function"
         )
       }
+
+      if (!is.null(data_source)) {
+        self$data_source <- data_source
+      }
+
+      private$require_data_source("$server")
 
       mod_server(
         id %||% self$id,
@@ -641,6 +700,7 @@ QueryChat <- R6::R6Class(
     #'
     #' @return The greeting string in Markdown format.
     generate_greeting = function(echo = c("none", "output")) {
+      private$require_data_source("$generate_greeting")
       chat <- self$client()
       chat$set_turns(list())
 
@@ -668,12 +728,23 @@ QueryChat <- R6::R6Class(
   active = list(
     #' @field system_prompt Get the system prompt.
     system_prompt = function() {
+      private$require_data_source("$system_prompt")
       private$.system_prompt$render(tools = self$tools)
     },
 
-    #' @field data_source Get the current data source.
-    data_source = function() {
-      private$.data_source
+    #' @field data_source Get or set the current data source. When setting,
+    #'   the value is normalized and the system prompt is rebuilt.
+    data_source = function(value) {
+      if (missing(value)) {
+        private$.data_source
+      } else {
+        private$.data_source <- normalize_data_source(
+          value,
+          private$.table_name
+        )
+        private$build_system_prompt()
+        invisible(self)
+      }
     }
   )
 )

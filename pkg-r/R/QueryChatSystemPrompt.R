@@ -79,11 +79,19 @@ QueryChatSystemPrompt <- R6::R6Class(
     #' @return A character string containing the rendered system prompt.
     render = function(tools) {
       # Build context for whisker rendering
-      is_duck_db <- tolower(self$data_source$get_db_type()) == "duckdb"
+      db_type <- self$data_source$get_db_type()
+      is_duck_db <- tolower(db_type) == "duckdb"
+
+      # Get semantic views description (available with DBISource for Snowflake)
+      semantic_views <- ""
+      if (inherits(self$data_source, "DBISource")) {
+        semantic_views <- self$data_source$get_semantic_views_description()
+      }
 
       context <- list(
-        db_type = self$data_source$get_db_type(),
+        db_type = db_type,
         is_duck_db = is_duck_db,
+        semantic_views = semantic_views,
         schema = self$schema,
         data_description = self$data_description,
         extra_instructions = self$extra_instructions,

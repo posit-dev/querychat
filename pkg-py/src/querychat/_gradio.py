@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, overload
+from typing import TYPE_CHECKING, Any, Optional, overload
 
 from gradio.context import Context
 from narwhals.stable.v1.typing import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
@@ -85,6 +85,21 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
 
     @overload
     def __init__(
+        self: QueryChat[Any],
+        data_source: None,
+        table_name: str,
+        *,
+        greeting: Optional[str | Path] = None,
+        client: Optional[str | chatlas.Chat] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        data_description: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        extra_instructions: Optional[str | Path] = None,
+        prompt_template: Optional[str | Path] = None,
+    ) -> None: ...
+
+    @overload
+    def __init__(
         self: QueryChat[ibis.Table],
         data_source: ibis.Table,
         table_name: str,
@@ -145,7 +160,7 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
 
     def __init__(
         self,
-        data_source: IntoFrame | sqlalchemy.Engine | ibis.Table,
+        data_source: IntoFrame | sqlalchemy.Engine | ibis.Table | None,
         table_name: str,
         *,
         greeting: Optional[str | Path] = None,
@@ -232,10 +247,11 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
         >>> app.launch(css=qc.css, head=qc.head)
 
         """
+        data_source = self._require_data_source("ui")
         import gradio as gr
 
         initial_state = create_app_state(
-            self._data_source, self._client_factory, self.greeting
+            data_source, self._client_factory, self.greeting
         )
 
         state_holder = gr.State(value=initial_state.to_dict())
@@ -312,17 +328,20 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
             querychat CSS/JS at launch time for Gradio 6.0+ compatibility.
 
         """
+        data_source = self._require_data_source("app")
         from gradio.themes import Soft
 
         import gradio as gr
 
+        table_name = data_source.table_name
+
         with gr.Blocks(
-            title=f"querychat with {self._data_source.table_name}",
+            title=f"querychat with {table_name}",
         ) as blocks_app:
             with gr.Sidebar(label="Chat", open=True, width=420):
                 state_holder = self.ui()
 
-            gr.Markdown(f"## `{self._data_source.table_name}`")
+            gr.Markdown(f"## `{table_name}`")
 
             with gr.Group():
                 with gr.Row():
@@ -333,7 +352,7 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
                 sql_display = gr.Code(
                     label="",
                     language="sql",
-                    value=f"SELECT * FROM {self._data_source.table_name}",
+                    value=f"SELECT * FROM {table_name}",
                     interactive=False,
                     lines=2,
                 )
@@ -356,7 +375,7 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
                 sql_code = (
                     state_dict.get("sql")
                     if state_dict and state_dict.get("sql")
-                    else f"SELECT * FROM {self._data_source.table_name}"
+                    else f"SELECT * FROM {table_name}"
                 )
 
                 df = self.df(state_dict)

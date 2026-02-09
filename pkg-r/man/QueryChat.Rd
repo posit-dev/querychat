@@ -109,7 +109,8 @@ qc <- QueryChat$new(con, "mtcars")
 \describe{
 \item{\code{system_prompt}}{Get the system prompt.}
 
-\item{\code{data_source}}{Get the current data source.}
+\item{\code{data_source}}{Get or set the current data source. When setting,
+the value is normalized and the system prompt is rebuilt.}
 }
 \if{html}{\out{</div>}}
 }
@@ -154,14 +155,16 @@ Create a new QueryChat object.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{data_source}}{Either a data.frame or a database connection (e.g., DBI
-connection).}
+\item{\code{data_source}}{Either a data.frame, a database connection (e.g., DBI
+connection), or \code{NULL} to defer setting the data source until later.
+When \code{NULL}, the data source must be set via the \verb{$data_source} property
+or passed to \verb{$server()} before calling methods that require data access.}
 
 \item{\code{table_name}}{A string specifying the table name to use in SQL
 queries. If \code{data_source} is a data.frame, this is the name to refer to
 it by in queries (typically the variable name). If not provided, will
 be inferred from the variable name for data.frame inputs. For database
-connections, this parameter is required.}
+connections or \code{NULL} data sources, this parameter is required.}
 
 \item{\code{...}}{Additional arguments (currently unused).}
 
@@ -462,6 +465,7 @@ server <- function(input, output, session) \{
 }\if{html}{\out{</div>}}
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{QueryChat$server(
+  data_source = NULL,
   enable_bookmarking = FALSE,
   ...,
   id = NULL,
@@ -472,6 +476,12 @@ server <- function(input, output, session) \{
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
+\item{\code{data_source}}{Optional data source to use. If provided, sets the
+data_source property before initializing server logic. This is useful
+for the deferred pattern where data_source is not known at
+initialization time (e.g., when the data source depends on session-
+specific authentication).}
+
 \item{\code{enable_bookmarking}}{Whether to enable bookmarking for the chat
 state. Default is \code{FALSE}. When enabled, the chat state (including
 current query, title, and chat history) will be saved and restored

@@ -42,6 +42,7 @@ db_source$cleanup()
 \item \href{#method-DBISource-new}{\code{DBISource$new()}}
 \item \href{#method-DBISource-get_db_type}{\code{DBISource$get_db_type()}}
 \item \href{#method-DBISource-get_schema}{\code{DBISource$get_schema()}}
+\item \href{#method-DBISource-get_semantic_views_description}{\code{DBISource$get_semantic_views_description()}}
 \item \href{#method-DBISource-execute_query}{\code{DBISource$execute_query()}}
 \item \href{#method-DBISource-test_query}{\code{DBISource$test_query()}}
 \item \href{#method-DBISource-get_data}{\code{DBISource$get_data()}}
@@ -104,6 +105,19 @@ column to be considered categorical (default: 20)}
 }
 \subsection{Returns}{
 A string describing the schema
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-DBISource-get_semantic_views_description"></a>}}
+\if{latex}{\out{\hypertarget{method-DBISource-get_semantic_views_description}{}}}
+\subsection{Method \code{get_semantic_views_description()}}{
+Get information about semantic views (if any) for the system prompt.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{DBISource$get_semantic_views_description()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A string with semantic view information, or empty string if none
 }
 }
 \if{html}{\out{<hr>}}

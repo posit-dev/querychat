@@ -88,6 +88,38 @@ shinyApp(ui, server)
 You'll need to call the `qc$server()` method within your server function to set up querychat's reactive behavior, and capture its return value to access reactive data.
 :::
 
+## Deferred data sources {#deferred-data-sources}
+
+Some data sources, like database connections or reactive calculations, may need to be created within an active Shiny session. To help support this, `QueryChat` allows you to initialize without a data source and provide it later, like this:
+
+```{r}
+library(shiny)
+library(bslib)
+library(querychat)
+
+# Global scope - create QueryChat without data source
+qc <- QueryChat$new(NULL, "users")
+
+ui <- page_sidebar(
+  sidebar = qc$sidebar(),
+  card(dataTableOutput("table"))
+)
+
+server <- function(input, output, session) {
+  # Server scope - create connection with session credentials
+  conn <- get_user_connection(session)
+  qc_vals <- qc$server(data_source = conn)
+
+  output$table <- renderDataTable({
+    qc_vals$df()
+  })
+}
+
+shinyApp(ui, server)
+```
+
+This is also a useful pattern when using something like [`{pool}`](https://github.com/rstudio/pool) to efficiently manage a pool of database connections (which we strongly recommend for production apps).
+
 ## Reactives
 
 There are three main reactive values provided by querychat for use in your app:

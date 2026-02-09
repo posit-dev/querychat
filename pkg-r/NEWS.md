@@ -1,5 +1,10 @@
 # querychat (development version)
 
+
+* Added support for Snowflake Semantic Views. When connected to Snowflake via DBI, querychat automatically discovers available Semantic Views and includes their definitions in the system prompt. This helps the LLM generate correct queries using the `SEMANTIC_VIEW()` table function with certified business metrics and dimensions. (#200)
+
+* `QueryChat$new()` now supports deferred data source. Pass `data_source = NULL` at initialization time, then provide the actual data source via the `data_source` parameter of `$server()` or by setting the `$data_source` property. This enables use cases where the data source depends on session-specific authentication or per-user database connections. (#202)
+
 * `DBISource` now uses database-agnostic SQL for column and type detection, replacing `LIMIT` syntax with `WHERE 1=0` and `dbFetch(n=1)`. This fixes compatibility with SQL Server and other databases that don't support `LIMIT`. (#112, #197)
 
 # querychat 0.2.0

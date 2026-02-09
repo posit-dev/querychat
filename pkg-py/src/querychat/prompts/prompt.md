@@ -71,6 +71,7 @@ quantile_cont(salary, 0.5)
 ```
 
 {{/is_duck_db}}
+{{{semantic_views}}}
 ## Your Capabilities
 
 You can handle these types of requests:

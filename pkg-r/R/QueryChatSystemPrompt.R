@@ -62,10 +62,14 @@ QueryChatSystemPrompt <- R6::R6Class(
         self$extra_instructions <- read_text(extra_instructions)
       }
 
-      # Store schema and other fields
-      self$schema <- data_source$get_schema(
-        categorical_threshold = categorical_threshold
-      )
+      # Only compute schema if the template references it
+      if (grepl("\\{\\{[{#^/]?\\s*schema\\b", self$template)) {
+        self$schema <- data_source$get_schema(
+          categorical_threshold = categorical_threshold
+        )
+      } else {
+        self$schema <- ""
+      }
       self$categorical_threshold <- categorical_threshold
       self$data_source <- data_source
     },

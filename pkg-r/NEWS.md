@@ -1,5 +1,7 @@
 # querychat (development version)
 
+* `DBISource` now uses database-agnostic SQL for column and type detection, replacing `LIMIT` syntax with `WHERE 1=0` and `dbFetch(n=1)`. This fixes compatibility with SQL Server and other databases that don't support `LIMIT`. (#112, #197)
+
 # querychat 0.2.0
 
 * The update tool now requires that the SQL query returns all columns from the original data source, ensuring that the dashboard can display the complete data frame after filtering or sorting. If the query does not return all columns, an informative error message will be provided. (#180)

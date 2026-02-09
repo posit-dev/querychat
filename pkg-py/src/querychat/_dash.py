@@ -18,7 +18,7 @@ from ._querychat_core import (
     stream_response_async,
 )
 from ._ui_assets import DASH_CSS, DASH_JS, SUGGESTION_CSS
-from ._utils import as_narwhals
+from ._utils import as_narwhals, maybe_truncate
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -207,9 +207,16 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
         """
         return self._ids.store
 
-    def app(self) -> dash.Dash:
+    def app(self, *, max_rows: Optional[int] = 1000) -> dash.Dash:
         """
         Create a complete Dash app.
+
+        Parameters
+        ----------
+        max_rows
+            Maximum number of rows to display in the data table. This does not
+            affect the number of rows that the LLM can query against. Default
+            is 1000. Set to ``None`` to disable row limit.
 
         Returns
         -------
@@ -237,6 +244,7 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
             self._ids,
             data_source.table_name,
             self._deserialize_state,
+            max_rows=max_rows,
         )
 
         return app
@@ -425,6 +433,8 @@ def register_app_callbacks(
     ids: IDs,
     table_name: str,
     deserialize_state: Callable[[AppStateDict], AppState],
+    *,
+    max_rows: int | None = None,
 ) -> None:
     """Register callbacks for SQL display, data table, and export."""
     from dash.dcc.express import send_data_frame
@@ -460,16 +470,16 @@ def register_app_callbacks(
         sql_code = f"```sql\n{state.get_display_sql()}\n```"
 
         nw_df = as_narwhals(state.get_current_data())
-        nrow, ncol = nw_df.shape
+        result = maybe_truncate(nw_df, max_rows)
 
-        display_df = nw_df.to_pandas()
+        display_df = result.df.to_pandas()
         table_data = display_df.to_dict("records")
         table_columns = [{"field": col} for col in display_df.columns]
 
         data_info_parts = []
         if state.error:
             data_info_parts.append(f"Warning: {state.error}")
-        data_info_parts.append(f"Data has {nrow} rows and {ncol} columns.")
+        data_info_parts.append(result.info_message)
         data_info = " ".join(data_info_parts)
 
         return (

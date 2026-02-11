@@ -208,7 +208,7 @@ class TestQueryChatBase:
         reset_called = []
 
         client = qc.client(
-            update_dashboard=lambda data: update_called.append(data),
+            update_dashboard=update_called.append,
             reset_dashboard=lambda: reset_called.append(True),
         )
         assert isinstance(client, chatlas.Chat)

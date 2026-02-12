@@ -139,13 +139,18 @@ class TestDeferredPatternIntegration:
 
     def test_deferred_then_set_property(self, sample_df):
         """Test setting data_source via property after init."""
-        # Create with None
+        # Create with None - both data_source and client are deferred
         qc = QueryChatBase(None, "users")
         assert qc.data_source is None
+        assert qc.chat_client is None
 
-        # Set via property
+        # Set data_source via property
         qc.data_source = sample_df
         assert qc.data_source is not None
+
+        # Set client via property (required now that we defer both)
+        qc.chat_client = "openai"
+        assert qc.chat_client is not None
 
         # Now methods should work
         client = qc.client()

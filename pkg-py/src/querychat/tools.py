@@ -14,6 +14,8 @@ from ._utils import as_narwhals, df_to_html, querychat_tool_starts_open
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from htmltools import TagList
+
     from ._datasource import DataSource
 
 
@@ -310,6 +312,129 @@ def tool_query(data_source: DataSource) -> Tool:
     )
 
 
+def _build_viz_footer(
+    ggsql_str: str,
+    title: str | None,
+    widget_id: str,
+) -> TagList:
+    """Build footer HTML for visualization tool results."""
+    from htmltools import HTMLDependency, TagList, tags
+
+    from shiny import ui
+
+    footer_id = f"querychat_footer_{uuid4().hex[:8]}"
+    query_section_id = f"{footer_id}_query"
+    code_editor_id = f"{footer_id}_code"
+
+    # ggsql grammar dependency (extends SQL grammar at runtime)
+    ggsql_grammar_dep = HTMLDependency(
+        name="querychat-ggsql-grammar",
+        version="0.1.0",
+        source={"package": "querychat", "subdir": "static/js"},
+        script={"src": "ggsql-grammar.js", "type": "module"},
+    )
+
+    # Read-only code editor for query display
+    code_editor = ui.input_code_editor(
+        id=code_editor_id,
+        value=ggsql_str,
+        language="sql",
+        read_only=True,
+        line_numbers=False,
+        height="auto",
+        theme_dark="github-dark",
+    )
+
+    # Query section (hidden by default)
+    query_section = tags.div(
+        {"class": "querychat-query-section", "id": query_section_id},
+        code_editor,
+        tags.button(
+            {"class": "querychat-copy-btn", "data-query": ggsql_str},
+            "Copy",
+        ),
+    )
+
+    # Footer buttons row
+    buttons_row = tags.div(
+        {"class": "querychat-footer-buttons"},
+        # Left: Show Query toggle
+        tags.div(
+            {"class": "querychat-footer-left"},
+            tags.button(
+                {
+                    "class": "querychat-show-query-btn",
+                    "data-target": query_section_id,
+                },
+                tags.span({"class": "querychat-query-chevron"}, "\u25B6"),
+                tags.span({"class": "querychat-query-label"}, "Show Query"),
+            ),
+        ),
+        # Right: Save dropdown
+        tags.div(
+            {"class": "querychat-footer-right"},
+            tags.div(
+                {"class": "querychat-save-dropdown"},
+                tags.button(
+                    {
+                        "class": "querychat-save-btn",
+                        "data-widget-id": widget_id,
+                    },
+                    tags.svg(
+                        {
+                            "class": "querychat-icon",
+                            "viewBox": "0 0 20 20",
+                            "fill": "currentColor",
+                            "xmlns": "http://www.w3.org/2000/svg",
+                        },
+                        tags.path(
+                            d="M10.75 2.75a.75.75 0 00-1.5 0v8.614L6.295 8.235a.75.75 0 10-1.09 1.03l4.25 4.5a.75.75 0 001.09 0l4.25-4.5a.75.75 0 00-1.09-1.03l-2.955 3.129V2.75z"
+                        ),
+                        tags.path(
+                            d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5z"
+                        ),
+                    ),
+                    "Save",
+                    tags.svg(
+                        {
+                            "class": "querychat-dropdown-chevron",
+                            "viewBox": "0 0 20 20",
+                            "fill": "currentColor",
+                            "xmlns": "http://www.w3.org/2000/svg",
+                        },
+                        tags.path(
+                            clip_rule="evenodd",
+                            fill_rule="evenodd",
+                            d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z",
+                        ),
+                    ),
+                ),
+                tags.div(
+                    {"class": "querychat-save-menu"},
+                    tags.button(
+                        {
+                            "class": "querychat-save-png-btn",
+                            "data-widget-id": widget_id,
+                            "data-title": title or "chart",
+                        },
+                        "Save as PNG",
+                    ),
+                    tags.button(
+                        {
+                            "class": "querychat-save-svg-btn",
+                            "data-widget-id": widget_id,
+                            "data-title": title or "chart",
+                        },
+                        "Save as SVG",
+                    ),
+                ),
+            ),
+        ),
+    )
+
+    return TagList(ggsql_grammar_dep, buttons_row, query_section)
+
+
 class VisualizeQueryResult(ContentToolResult):
     """Tool result that embeds an Altair chart inline via shinywidgets."""
 
@@ -332,6 +457,8 @@ class VisualizeQueryResult(ContentToolResult):
         markdown += f"\n\nVisualization created{title_display}."
         markdown += f"\n\nData: {row_count} rows, {col_count} columns."
 
+        footer = _build_viz_footer(ggsql_str, title, widget_id)
+
         extra = {
             "display": ToolResultDisplay(
                 html=output_widget(widget_id),
@@ -340,6 +467,7 @@ class VisualizeQueryResult(ContentToolResult):
                 open=True,
                 full_screen=True,
                 icon=bs_icon("graph-up"),
+                footer=footer,
             ),
         }
 

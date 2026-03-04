@@ -1,4 +1,9 @@
-"""Helpers for ggsql integration."""
+"""
+Helpers for ggsql integration.
+
+These are workarounds for functionality not yet exposed by the ggsql package.
+When ggsql adds native title/metadata extraction, these should be replaced.
+"""
 
 from __future__ import annotations
 
@@ -8,6 +13,12 @@ import re
 def extract_title(viz_spec: str) -> str | None:
     """
     Extract the title from a VISUALISE spec's LABEL clause.
+
+    .. note::
+        This is a workaround. Ideally ggsql would expose title extraction
+        from its ``Validated`` or ``Spec`` objects. This regex will break if
+        ggsql's LABEL syntax changes (e.g., escaped quotes, multi-line values).
+        TODO: File ggsql issue for native title extraction API.
 
     Parameters
     ----------
@@ -26,49 +37,3 @@ def extract_title(viz_spec: str) -> str | None:
     if match:
         return match.group(1)
     return None
-
-
-def vegalite_to_html(vegalite_spec: dict) -> str:
-    """
-    Convert a Vega-Lite specification to standalone HTML.
-
-    This renders the spec directly using vega-embed.
-
-    Parameters
-    ----------
-    vegalite_spec
-        A Vega-Lite specification as a dictionary.
-
-    Returns
-    -------
-    str
-        A complete HTML document that renders the chart.
-
-    """
-    import json
-
-    spec_json = json.dumps(vegalite_spec)
-
-    # ggsql produces v6 specs
-    vl_version = "6"
-
-    return f"""<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
-  <script src="https://cdn.jsdelivr.net/npm/vega-lite@{vl_version}"></script>
-  <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
-  <style>
-    body {{ margin: 0; padding: 8px; }}
-    #vis {{ width: 100%; }}
-  </style>
-</head>
-<body>
-  <div id="vis"></div>
-  <script>
-    vegaEmbed('#vis', {spec_json}, {{actions: false}})
-      .catch(console.error);
-  </script>
-</body>
-</html>"""

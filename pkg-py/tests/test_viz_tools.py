@@ -1,8 +1,11 @@
 """Tests for visualization tool functions."""
 
+import builtins
+
 import narwhals.stable.v1 as nw
 import polars as pl
 import pytest
+from conftest import ggsql_render_works
 from querychat._datasource import DataFrameSource
 from querychat.tools import (
     VisualizeDashboardData,
@@ -10,6 +13,32 @@ from querychat.tools import (
     tool_visualize_dashboard,
     tool_visualize_query,
 )
+
+
+class TestVizDependencyCheck:
+    def test_missing_ggsql_raises_helpful_error(self, monkeypatch):
+        """Requesting viz tools without ggsql installed should fail early."""
+        real_import = builtins.__import__
+
+        def mock_import(name, *args, **kwargs):
+            if name == "ggsql":
+                raise ImportError("No module named 'ggsql'")
+            return real_import(name, *args, **kwargs)
+
+        monkeypatch.setattr(builtins, "__import__", mock_import)
+
+        from querychat._querychat_base import check_viz_dependencies
+
+        with pytest.raises(ImportError, match="pip install querychat\\[viz\\]"):
+            check_viz_dependencies(("visualize_dashboard",))
+
+    def test_no_error_without_viz_tools(self):
+        """Non-viz tool configs should not check for ggsql."""
+        from querychat._querychat_base import check_viz_dependencies
+
+        # Should not raise
+        check_viz_dependencies(("update", "query"))
+        check_viz_dependencies(None)
 
 
 @pytest.fixture
@@ -27,25 +56,6 @@ def sample_df():
 def data_source(sample_df):
     nw_df = nw.from_native(sample_df)
     return DataFrameSource(nw_df, "test_data")
-
-
-def _ggsql_render_works() -> bool:
-    """Check if ggsql.render_altair() is functional (build can be broken in some envs)."""
-    try:
-        import ggsql
-
-        df = pl.DataFrame({"x": [1, 2], "y": [3, 4]})
-        result = ggsql.render_altair(df, "VISUALISE x, y DRAW point")
-        spec = result.to_dict()
-        return "$schema" in spec
-    except (ValueError, ImportError):
-        return False
-
-
-ggsql_render_works = pytest.mark.skipif(
-    not _ggsql_render_works(),
-    reason="ggsql.render_altair() not functional (build environment issue)",
-)
 
 
 class TestToolVisualizeDashboard:

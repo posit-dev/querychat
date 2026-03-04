@@ -2,43 +2,26 @@
 
 import ggsql
 import polars as pl
-import pytest
-from querychat._ggsql import extract_title
+from conftest import ggsql_render_works
+from querychat.tools import _extract_title as extract_title
 
 
-def _ggsql_render_works() -> bool:
-    """Check if ggsql.render_altair() is functional (build can be broken in some envs)."""
-    try:
-        import ggsql
-
-        df = pl.DataFrame({"x": [1, 2], "y": [3, 4]})
-        result = ggsql.render_altair(df, "VISUALISE x, y DRAW point")
-        spec = result.to_dict()
-        return "$schema" in spec
-    except (ValueError, ImportError):
-        return False
-
-
-ggsql_render_works = pytest.mark.skipif(
-    not _ggsql_render_works(),
-    reason="ggsql.render_altair() not functional (build environment issue)",
-)
-
-
-class TestGgsqlSplitQuery:
-    """Tests for ggsql.split_query() usage."""
+class TestGgsqlValidate:
+    """Tests for ggsql.validate() usage (split SQL and VISUALISE)."""
 
     def test_splits_query_with_visualise(self):
         query = "SELECT x, y FROM data VISUALISE x, y DRAW point"
-        sql, viz = ggsql.split_query(query)
-        assert sql == "SELECT x, y FROM data"
-        assert viz == "VISUALISE x, y DRAW point"
+        validated = ggsql.validate(query)
+        assert validated.sql() == "SELECT x, y FROM data"
+        assert validated.visual() == "VISUALISE x, y DRAW point"
+        assert validated.has_visual()
 
     def test_returns_empty_viz_without_visualise(self):
         query = "SELECT x, y FROM data"
-        sql, viz = ggsql.split_query(query)
-        assert sql == "SELECT x, y FROM data"
-        assert viz == ""
+        validated = ggsql.validate(query)
+        assert validated.sql() == "SELECT x, y FROM data"
+        assert validated.visual() == ""
+        assert not validated.has_visual()
 
     def test_handles_complex_query(self):
         query = """
@@ -49,11 +32,11 @@ class TestGgsqlSplitQuery:
         DRAW line
         LABEL title => 'Revenue Over Time'
         """
-        sql, viz = ggsql.split_query(query)
-        assert "SELECT date, SUM(revenue)" in sql
-        assert "GROUP BY date" in sql
-        assert "VISUALISE date AS x" in viz
-        assert "LABEL title" in viz
+        validated = ggsql.validate(query)
+        assert "SELECT date, SUM(revenue)" in validated.sql()
+        assert "GROUP BY date" in validated.sql()
+        assert "VISUALISE date AS x" in validated.visual()
+        assert "LABEL title" in validated.visual()
 
 
 class TestGgsqlRenderAltair:

@@ -37,10 +37,35 @@ from .tools import (
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    import altair as alt
     from narwhals.stable.v1.typing import IntoFrame
 
 TOOL_GROUPS = Literal["update", "query", "visualize_dashboard", "visualize_query"]
+DEFAULT_TOOLS: tuple[TOOL_GROUPS, ...] = ("update", "query")
+ALL_TOOLS: tuple[TOOL_GROUPS, ...] = (
+    "update",
+    "query",
+    "visualize_dashboard",
+    "visualize_query",
+)
+
+VIZ_TOOLS: tuple[TOOL_GROUPS, ...] = ("visualize_dashboard", "visualize_query")
+
+
+def check_viz_dependencies(tools: tuple[TOOL_GROUPS, ...] | None) -> None:
+    """Raise ImportError early if viz tools are requested but ggsql is not installed."""
+    if tools is None:
+        return
+    has_viz = any(t in VIZ_TOOLS for t in tools)
+    if not has_viz:
+        return
+    try:
+        import altair as alt  # noqa: F401
+        import ggsql  # noqa: F401
+    except ImportError as e:
+        raise ImportError(
+            f"Visualization tools require ggsql and altair: {e}. "
+            "Install them with: pip install querychat[viz]"
+        ) from e
 
 
 class QueryChatBase(Generic[IntoFrameT]):
@@ -63,12 +88,7 @@ class QueryChatBase(Generic[IntoFrameT]):
         *,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
-        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = (
-            "update",
-            "query",
-            "visualize_dashboard",
-            "visualize_query",
-        ),
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -82,9 +102,8 @@ class QueryChatBase(Generic[IntoFrameT]):
                 "Table name must begin with a letter and contain only letters, numbers, and underscores",
             )
 
-        self.tools = normalize_tools(
-            tools, default=("update", "query", "visualize_dashboard", "visualize_query")
-        )
+        self.tools = normalize_tools(tools, default=DEFAULT_TOOLS)
+        check_viz_dependencies(self.tools)
         self.greeting = greeting.read_text() if isinstance(greeting, Path) else greeting
 
         # Store init parameters for deferred system prompt building
@@ -247,63 +266,6 @@ class QueryChatBase(Generic[IntoFrameT]):
         """Clean up resources associated with the data source."""
         if self._data_source is not None:
             self._data_source.cleanup()
-
-    def ggvis(self, source: Literal["filter", "query"] = "filter") -> alt.Chart | None:
-        """
-        Get the visualization chart.
-
-        Parameters
-        ----------
-        source
-            Which visualization to return:
-            - "filter": Chart from visualize_dashboard (updates with filter changes)
-            - "query": Chart from visualize_query (most recent inline visualization)
-
-        Returns
-        -------
-        alt.Chart | None
-            The Altair chart, or None if no visualization exists.
-
-        """
-        raise NotImplementedError("Subclasses must implement ggvis()")
-
-    def ggsql(self, source: Literal["filter", "query"] = "filter") -> str | None:
-        """
-        Get the ggsql specification.
-
-        Parameters
-        ----------
-        source
-            Which specification to return:
-            - "filter": VISUALISE spec only (from visualize_dashboard)
-            - "query": Full ggsql query (from visualize_query)
-
-        Returns
-        -------
-        str | None
-            The ggsql specification, or None if no visualization exists.
-
-        """
-        raise NotImplementedError("Subclasses must implement ggsql()")
-
-    def ggtitle(self, source: Literal["filter", "query"] = "filter") -> str | None:
-        """
-        Get the visualization title.
-
-        Parameters
-        ----------
-        source
-            Which title to return:
-            - "filter": Title from visualize_dashboard
-            - "query": Title from visualize_query
-
-        Returns
-        -------
-        str | None
-            The title, or None if no visualization exists.
-
-        """
-        raise NotImplementedError("Subclasses must implement ggtitle()")
 
 
 def normalize_data_source(

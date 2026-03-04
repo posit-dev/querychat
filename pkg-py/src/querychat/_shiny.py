@@ -10,7 +10,7 @@ from shinychat import output_markdown_stream
 from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 
 from ._icons import bs_icon
-from ._querychat_base import TOOL_GROUPS, QueryChatBase
+from ._querychat_base import DEFAULT_TOOLS, TOOL_GROUPS, QueryChatBase
 from ._shiny_module import ServerValues, mod_server, mod_ui
 from ._utils import as_narwhals
 
@@ -101,7 +101,8 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         - A tuple of tools: `("update", "query", "visualize_dashboard", "visualize_query")`
         - `None` or `()` to disable all tools
 
-        Default is `("update", "query", "visualize_dashboard", "visualize_query")` (all tools enabled).
+        Default is `("update", "query")`. Visualization tools (`"visualize_dashboard"`,
+        `"visualize_query"`) can be opted into by including them in the tuple.
 
         Set to `"update"` to prevent the LLM from accessing data values, only
         allowing dashboard filtering without answering questions.
@@ -157,12 +158,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
-        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = (
-            "update",
-            "query",
-            "visualize_dashboard",
-            "visualize_query",
-        ),
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -178,12 +174,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
-        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = (
-            "update",
-            "query",
-            "visualize_dashboard",
-            "visualize_query",
-        ),
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -199,12 +190,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
-        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = (
-            "update",
-            "query",
-            "visualize_dashboard",
-            "visualize_query",
-        ),
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -220,12 +206,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
-        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = (
-            "update",
-            "query",
-            "visualize_dashboard",
-            "visualize_query",
-        ),
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -240,12 +221,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
-        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = (
-            "update",
-            "query",
-            "visualize_dashboard",
-            "visualize_query",
-        ),
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -297,7 +273,38 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         enable_bookmarking = bookmark_store != "disable"
         table_name = data_source.table_name
 
+        tools_tuple = (
+            (self.tools,)
+            if isinstance(self.tools, str)
+            else (self.tools or ())
+        )
+        has_filter_viz = "visualize_dashboard" in tools_tuple
+        has_query_viz = "visualize_query" in tools_tuple
+
         def app_ui(request):
+            nav_panels = [
+                ui.nav_panel(
+                    "Data",
+                    ui.card(
+                        ui.card_header(bs_icon("table"), " Data"),
+                        ui.output_data_frame("dt"),
+                    ),
+                ),
+            ]
+            if has_filter_viz:
+                nav_panels.append(
+                    ui.nav_panel(
+                        "Filter Plot",
+                        ui.output_ui("filter_plot_container"),
+                    )
+                )
+            if has_query_viz:
+                nav_panels.append(
+                    ui.nav_panel(
+                        "Query Plot",
+                        ui.output_ui("query_plot_container"),
+                    )
+                )
             return ui.page_sidebar(
                 self.sidebar(),
                 ui.card(
@@ -316,24 +323,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                     fill=False,
                     style="max-height: 33%;",
                 ),
-                ui.navset_tab(
-                    ui.nav_panel(
-                        "Data",
-                        ui.card(
-                            ui.card_header(bs_icon("table"), " Data"),
-                            ui.output_data_frame("dt"),
-                        ),
-                    ),
-                    ui.nav_panel(
-                        "Filter Plot",
-                        ui.output_ui("filter_plot_container"),
-                    ),
-                    ui.nav_panel(
-                        "Query Plot",
-                        ui.output_ui("query_plot_container"),
-                    ),
-                    id="main_tabs",
-                ),
+                ui.navset_tab(*nav_panels, id="main_tabs"),
                 title=ui.span("querychat with ", ui.code(table_name)),
                 class_="bslib-page-dashboard",
                 fillable=True,
@@ -384,63 +374,67 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                     width="100%",
                 )
 
-            @render.ui
-            def filter_plot_container():
-                from shinywidgets import output_widget, render_altair
+            if has_filter_viz:
 
-                chart = vals.filter_viz_chart()
-                if chart is None:
-                    return ui.card(
-                        ui.card_body(
-                            ui.p(
-                                "No filter visualization yet. "
-                                "Use the chat to create one."
+                @render.ui
+                def filter_plot_container():
+                    from shinywidgets import output_widget, render_altair
+
+                    chart = vals.filter_viz_chart()
+                    if chart is None:
+                        return ui.card(
+                            ui.card_body(
+                                ui.p(
+                                    "No filter visualization yet. "
+                                    "Use the chat to create one."
+                                ),
+                                class_="text-muted text-center py-5",
                             ),
-                            class_="text-muted text-center py-5",
+                        )
+
+                    @render_altair
+                    def filter_chart():
+                        return chart
+
+                    return ui.card(
+                        ui.card_header(
+                            bs_icon("bar-chart-fill"),
+                            " ",
+                            vals.filter_viz_title.get() or "Filter Visualization",
                         ),
+                        output_widget("filter_chart"),
                     )
 
-                @render_altair
-                def filter_chart():
-                    return chart
+            if has_query_viz:
 
-                return ui.card(
-                    ui.card_header(
-                        bs_icon("bar-chart-fill"),
-                        " ",
-                        vals.filter_viz_title.get() or "Filter Visualization",
-                    ),
-                    output_widget("filter_chart"),
-                )
+                @render.ui
+                def query_plot_container():
+                    from shinywidgets import output_widget, render_altair
 
-            @render.ui
-            def query_plot_container():
-                from shinywidgets import output_widget, render_altair
-
-                chart = vals.query_viz_chart()
-                if chart is None:
-                    return ui.card(
-                        ui.card_body(
-                            ui.p(
-                                "No query visualization yet. "
-                                "Use the chat to create one."
+                    chart = vals.query_viz_chart()
+                    if chart is None:
+                        return ui.card(
+                            ui.card_body(
+                                ui.p(
+                                    "No query visualization yet. "
+                                    "Use the chat to create one."
+                                ),
+                                class_="text-muted text-center py-5",
                             ),
-                            class_="text-muted text-center py-5",
+                        )
+
+                    @render_altair
+                    def query_chart():
+                        return chart
+
+                    return ui.card(
+                        ui.card_header(
+                            bs_icon("bar-chart-fill"),
+                            " ",
+                            vals.query_viz_title.get() or "Query Visualization",
                         ),
+                        output_widget("query_chart"),
                     )
-
-                @render_altair
-                def query_chart():
-                    return chart
-
-                return ui.card(
-                    ui.card_header(
-                        bs_icon("bar-chart-fill"),
-                        " ",
-                        vals.query_viz_title.get() or "Query Visualization",
-                    ),
-                    output_widget("query_chart"),
-                )
 
         return App(app_ui, app_server, bookmark_store=bookmark_store)
 

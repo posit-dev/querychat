@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol, TypedDict, runtime_checkable
 
@@ -330,6 +331,12 @@ def tool_query(data_source: DataSource) -> Tool:
     )
 
 
+def _extract_title(viz_spec: str) -> str | None:
+    """Extract the title from a VISUALISE spec's LABEL clause."""
+    match = re.search(r"LABEL\s+title\s*=>\s*['\"]([^'\"]+)['\"]", viz_spec, re.IGNORECASE)
+    return match.group(1) if match else None
+
+
 def _visualize_dashboard_impl(
     data_source: DataSource,
     update_fn: Callable[[VisualizeDashboardData], None],
@@ -337,7 +344,6 @@ def _visualize_dashboard_impl(
     """Create the visualize_dashboard implementation function."""
     import ggsql
 
-    from ._ggsql import extract_title
 
     def visualize_dashboard(
         viz_spec: str,
@@ -353,7 +359,7 @@ def _visualize_dashboard_impl(
 
             # Extract title from spec if not provided
             if title is None:
-                title = extract_title(viz_spec)
+                title = _extract_title(viz_spec)
 
             # Store just the spec - rendering happens on display
             update_fn(
@@ -425,7 +431,6 @@ def _visualize_query_impl(
     """Create the visualize_query implementation function."""
     import ggsql as ggsql_pkg
 
-    from ._ggsql import extract_title
 
     def visualize_query(
         ggsql: str,
@@ -435,10 +440,12 @@ def _visualize_query_impl(
         markdown = f"```sql\n{ggsql}\n```"
 
         try:
-            # Split the query
-            sql, viz_spec = ggsql_pkg.split_query(ggsql)
+            # Validate and split the query
+            validated = ggsql_pkg.validate(ggsql)
+            sql = validated.sql()
+            viz_spec = validated.visual()
 
-            if not viz_spec:
+            if not validated.has_visual():
                 raise ValueError(
                     "Query must include a VISUALISE clause. "
                     "Use querychat_query for queries without visualization."
@@ -450,7 +457,7 @@ def _visualize_query_impl(
 
             # Extract title from spec if not provided
             if title is None:
-                title = extract_title(viz_spec)
+                title = _extract_title(viz_spec)
 
             # Store just the ggsql - rendering happens on display
             update_fn(

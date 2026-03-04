@@ -31,6 +31,7 @@ if TYPE_CHECKING:
     from shiny import Inputs, Outputs, Session
 
     from ._datasource import DataSource
+    from ._querychat_base import TOOL_GROUPS
     from .tools import UpdateDashboardData, VisualizeDashboardData, VisualizeQueryData
 
 logger = logging.getLogger(__name__)
@@ -135,7 +136,7 @@ def mod_server(
     greeting: str | None,
     client: chatlas.Chat | Callable,
     enable_bookmarking: bool,
-    tools: tuple[str, ...] | None = None,
+    tools: tuple[TOOL_GROUPS, ...] | None = None,
 ) -> ServerValues[IntoFrameT]:
     # Reactive values to store state
     sql = ReactiveStringOrNone(None)
@@ -162,10 +163,10 @@ def mod_server(
             client=client if isinstance(client, chatlas.Chat) else client(),
             filter_viz_spec=filter_viz_spec,
             filter_viz_title=filter_viz_title,
-            filter_viz_chart=lambda: filter_viz_chart.get(),
+            filter_viz_chart=lambda: None,
             query_viz_ggsql=query_viz_ggsql,
             query_viz_title=query_viz_title,
-            query_viz_chart=lambda: query_viz_chart.get(),
+            query_viz_chart=lambda: None,
         )
 
     # Real session requires data_source
@@ -195,7 +196,10 @@ def mod_server(
     # Support both a callable that creates a client and legacy instance pattern
     if callable(client) and not isinstance(client, chatlas.Chat):
         chat = client(
-            update_dashboard=update_dashboard, reset_dashboard=reset_dashboard
+            update_dashboard=update_dashboard,
+            reset_dashboard=reset_dashboard,
+            visualize_dashboard=update_filter_viz,
+            visualize_query=update_query_viz,
         )
     else:
         # Legacy pattern: client is Chat instance
@@ -241,9 +245,9 @@ def mod_server(
         if ggsql_query is None:
             return None
 
-        sql_part, viz_spec = ggsql.split_query(ggsql_query)
-        df = data_source.execute_query(sql_part)
-        return ggsql.render_altair(df, viz_spec)
+        validated = ggsql.validate(ggsql_query)
+        df = data_source.execute_query(validated.sql())
+        return ggsql.render_altair(df, validated.visual())
 
     # Chat UI logic
     chat_ui = shinychat.Chat(CHAT_ID)
@@ -300,6 +304,10 @@ def mod_server(
             vals["querychat_sql"] = sql.get()
             vals["querychat_title"] = title.get()
             vals["querychat_has_greeted"] = has_greeted.get()
+            vals["querychat_filter_viz_spec"] = filter_viz_spec.get()
+            vals["querychat_filter_viz_title"] = filter_viz_title.get()
+            vals["querychat_query_viz_ggsql"] = query_viz_ggsql.get()
+            vals["querychat_query_viz_title"] = query_viz_title.get()
 
         @session.bookmark.on_restore
         def _on_restore(x: RestoreState) -> None:
@@ -310,6 +318,14 @@ def mod_server(
                 title.set(vals["querychat_title"])
             if "querychat_has_greeted" in vals:
                 has_greeted.set(vals["querychat_has_greeted"])
+            if "querychat_filter_viz_spec" in vals:
+                filter_viz_spec.set(vals["querychat_filter_viz_spec"])
+            if "querychat_filter_viz_title" in vals:
+                filter_viz_title.set(vals["querychat_filter_viz_title"])
+            if "querychat_query_viz_ggsql" in vals:
+                query_viz_ggsql.set(vals["querychat_query_viz_ggsql"])
+            if "querychat_query_viz_title" in vals:
+                query_viz_title.set(vals["querychat_query_viz_title"])
 
     return ServerValues(
         df=filtered_df,

@@ -26,15 +26,12 @@
   const sqlGrammar = await waitForSql();
   if (!sqlGrammar) return;
 
-  // Clone and extend with ggsql keywords
-  const ggsqlGrammar = Object.assign({}, sqlGrammar);
-  const existingKeyword = ggsqlGrammar.keyword;
+  // Extend SQL grammar in-place with ggsql keywords
+  const existingKeyword = sqlGrammar.keyword;
   if (existingKeyword instanceof RegExp) {
     const src = existingKeyword.source;
     const ggsqlKeywords = "VISUALISE|DRAW|LABEL|FACET|SCALE|THEME";
     const newSrc = src.replace(/\)\\b/, `|${ggsqlKeywords})\\b`);
-    ggsqlGrammar.keyword = new RegExp(newSrc, existingKeyword.flags);
+    sqlGrammar.keyword = new RegExp(newSrc, existingKeyword.flags);
   }
-
-  languages.ggsql = ggsqlGrammar;
 })();

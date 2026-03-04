@@ -1,9 +1,9 @@
 """
 Playwright tests for visualization tab behavior based on tools config.
 
-These tests verify that visualization tabs (Filter Plot, Query Plot) are only
-present when the corresponding viz tools are enabled. With default tools
-("update", "query"), only the Data tab should appear.
+These tests verify that the Query Plot tab is only present when the
+visualize_query tool is enabled. With default tools ("update", "query"),
+only the Data tab should appear.
 """
 
 from __future__ import annotations
@@ -32,10 +32,6 @@ class TestShinyVisualizationTabs:
         tabs = self.page.locator('[role="tab"]')
         expect(tabs).to_have_count(1)
         expect(self.page.get_by_role("tab", name="Data")).to_be_visible()
-
-    def test_no_filter_plot_tab(self) -> None:
-        """Filter Plot tab should not exist without visualize_dashboard tool."""
-        expect(self.page.get_by_role("tab", name="Filter Plot")).to_have_count(0)
 
     def test_no_query_plot_tab(self) -> None:
         """Query Plot tab should not exist without visualize_query tool."""

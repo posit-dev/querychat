@@ -98,11 +98,11 @@ class QueryChat(QueryChatBase[IntoFrameT]):
     tools
         Which querychat tools to include in the chat client by default. Can be:
         - A single tool string: `"update"` or `"query"`
-        - A tuple of tools: `("update", "query", "visualize_dashboard", "visualize_query")`
+        - A tuple of tools: `("update", "query", "visualize_query")`
         - `None` or `()` to disable all tools
 
-        Default is `("update", "query")`. Visualization tools (`"visualize_dashboard"`,
-        `"visualize_query"`) can be opted into by including them in the tuple.
+        Default is `("update", "query")`. The visualization tool (`"visualize_query"`)
+        can be opted into by including it in the tuple.
 
         Set to `"update"` to prevent the LLM from accessing data values, only
         allowing dashboard filtering without answering questions.
@@ -250,9 +250,8 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         Creates a Shiny app with a chat sidebar and tabbed view -- providing a
         quick-and-easy way to start chatting with your data.
 
-        The app includes three tabs:
+        The app includes two tabs:
         - **Data**: Shows the filtered data table
-        - **Filter Plot**: Shows the persistent dashboard visualization
         - **Query Plot**: Shows the most recent query visualization
 
         Parameters
@@ -278,7 +277,6 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             if isinstance(self.tools, str)
             else (self.tools or ())
         )
-        has_filter_viz = "visualize_dashboard" in tools_tuple
         has_query_viz = "visualize_query" in tools_tuple
 
         def app_ui(request):
@@ -291,13 +289,6 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                     ),
                 ),
             ]
-            if has_filter_viz:
-                nav_panels.append(
-                    ui.nav_panel(
-                        "Filter Plot",
-                        ui.output_ui("filter_plot_container"),
-                    )
-                )
             if has_query_viz:
                 nav_panels.append(
                     ui.nav_panel(
@@ -373,37 +364,6 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                     auto_scroll=False,
                     width="100%",
                 )
-
-            if has_filter_viz:
-
-                @render.ui
-                def filter_plot_container():
-                    from shinywidgets import output_widget, render_altair
-
-                    chart = vals.filter_viz_chart()
-                    if chart is None:
-                        return ui.card(
-                            ui.card_body(
-                                ui.p(
-                                    "No filter visualization yet. "
-                                    "Use the chat to create one."
-                                ),
-                                class_="text-muted text-center py-5",
-                            ),
-                        )
-
-                    @render_altair
-                    def filter_chart():
-                        return chart
-
-                    return ui.card(
-                        ui.card_header(
-                            bs_icon("bar-chart-fill"),
-                            " ",
-                            vals.filter_viz_title.get() or "Filter Visualization",
-                        ),
-                        output_widget("filter_chart"),
-                    )
 
             if has_query_viz:
 
@@ -971,16 +931,9 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         else:
             return self._vals.title.set(value)
 
-    def ggvis(self, source: Literal["filter", "query"] = "filter") -> alt.Chart | None:
+    def ggvis(self) -> alt.Chart | None:
         """
-        Get the visualization chart.
-
-        Parameters
-        ----------
-        source
-            Which visualization to return:
-            - "filter": Chart from visualize_dashboard (updates with filter changes)
-            - "query": Chart from visualize_query (most recent inline visualization)
+        Get the visualization chart from the most recent visualize_query call.
 
         Returns
         -------
@@ -988,43 +941,23 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             The Altair chart, or None if no visualization exists.
 
         """
-        if source == "filter":
-            return self._vals.filter_viz_chart()
-        else:
-            return self._vals.query_viz_chart()
+        return self._vals.query_viz_chart()
 
-    def ggsql(self, source: Literal["filter", "query"] = "filter") -> str | None:
+    def ggsql(self) -> str | None:
         """
-        Get the ggsql specification.
-
-        Parameters
-        ----------
-        source
-            Which specification to return:
-            - "filter": VISUALISE spec only (from visualize_dashboard)
-            - "query": Full ggsql query (from visualize_query)
+        Get the full ggsql query from the most recent visualize_query call.
 
         Returns
         -------
         :
-            The ggsql specification, or None if no visualization exists.
+            The ggsql query string, or None if no visualization exists.
 
         """
-        if source == "filter":
-            return self._vals.filter_viz_spec.get()
-        else:
-            return self._vals.query_viz_ggsql.get()
+        return self._vals.query_viz_ggsql.get()
 
-    def ggtitle(self, source: Literal["filter", "query"] = "filter") -> str | None:
+    def ggtitle(self) -> str | None:
         """
-        Get the visualization title.
-
-        Parameters
-        ----------
-        source
-            Which title to return:
-            - "filter": Title from visualize_dashboard
-            - "query": Title from visualize_query
+        Get the visualization title from the most recent visualize_query call.
 
         Returns
         -------
@@ -1032,7 +965,4 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             The title, or None if no visualization exists.
 
         """
-        if source == "filter":
-            return self._vals.filter_viz_title.get()
-        else:
-            return self._vals.query_viz_title.get()
+        return self._vals.query_viz_title.get()

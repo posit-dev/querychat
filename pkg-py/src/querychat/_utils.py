@@ -173,7 +173,7 @@ def get_tool_details_setting() -> Optional[Literal["expanded", "collapsed", "def
 
 def querychat_tool_starts_open(
     action: Literal[
-        "update", "query", "reset", "visualize_dashboard", "visualize_query"
+        "update", "query", "reset", "visualize_query"
     ],
 ) -> bool:
     """
@@ -182,7 +182,7 @@ def querychat_tool_starts_open(
     Parameters
     ----------
     action : str
-        The action type ('update', 'query', 'reset', 'visualize_dashboard', or 'visualize_query')
+        The action type ('update', 'query', 'reset', or 'visualize_query')
 
     Returns
     -------
@@ -193,14 +193,14 @@ def querychat_tool_starts_open(
     setting = get_tool_details_setting()
 
     if setting is None:
-        return action in ("query", "update", "visualize_dashboard", "visualize_query")
+        return action != "reset"
 
     if setting == "expanded":
         return True
     elif setting == "collapsed":
         return False
     else:  # setting == "default"
-        return action in ("query", "update", "visualize_dashboard", "visualize_query")
+        return action != "reset"
 
 
 def is_ibis_table(obj: Any) -> TypeGuard[ibis.Table]:

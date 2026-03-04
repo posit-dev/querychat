@@ -23,13 +23,7 @@ Use this tool when:
 - You want to show a one-off chart without affecting the dashboard filter
 - You need to visualize data with specific SQL transformations
 
-Use `visualize_dashboard` instead when:
-- The user wants a persistent chart that updates with filter changes
-- The visualization should reflect the current filtered data
-
 ## ggsql VISUALISE Syntax
-
-See `visualize_dashboard` tool for full syntax reference.
 
 ### Quick Reference
 

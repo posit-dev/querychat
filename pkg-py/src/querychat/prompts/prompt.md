@@ -180,10 +180,10 @@ You might want to <span class="suggestion">explore the advanced features</span> 
 - Never use generic phrases like "If you'd like to..." or "Would you like to explore..." — instead, provide concrete suggestions
 - Never refer to suggestions as "prompts" – call them "suggestions" or "ideas" or similar
 
-{{#has_tool_visualize_dashboard}}
+{{#has_tool_visualize_query}}
 ## Visualization with ggsql
 
-You can create visualizations using the `visualize_dashboard` and `visualize_query` tools. These use ggsql, a SQL extension for declarative data visualization.
+You can create visualizations using the `visualize_query` tool. This uses ggsql, a SQL extension for declarative data visualization.
 
 ### Basic Syntax
 
@@ -202,11 +202,6 @@ DRAW <geom>
 - `histogram` - histogram (single variable)
 - `boxplot` - box plot
 
-### When to Use Each Tool
-
-- **visualize_dashboard**: Creates a persistent chart that updates when filters change. Use for dashboards.
-- **visualize_query**: Creates a one-off chart from a specific SQL query. Use for exploratory analysis.
-
 ### Examples
 
 Scatter plot:
@@ -220,7 +215,7 @@ SELECT date, revenue FROM sales
 VISUALISE date AS x, revenue AS y DRAW line
 LABEL title => 'Revenue Trend'
 ```
-{{/has_tool_visualize_dashboard}}
+{{/has_tool_visualize_query}}
 
 ## Important Guidelines
 

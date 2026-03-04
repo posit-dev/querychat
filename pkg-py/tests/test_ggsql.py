@@ -1,9 +1,11 @@
 """Tests for ggsql integration helpers."""
 
 import ggsql
+import narwhals.stable.v1 as nw
 import polars as pl
 from conftest import ggsql_render_works
-from querychat.tools import _extract_title as extract_title
+from querychat._datasource import DataFrameSource
+from querychat._ggsql import execute_ggsql, extract_title, spec_to_altair
 
 
 class TestGgsqlValidate:
@@ -39,58 +41,76 @@ class TestGgsqlValidate:
         assert "LABEL title" in validated.visual()
 
 
-class TestGgsqlRenderAltair:
+class TestExtractTitle:
     @ggsql_render_works
-    def test_renders_simple_scatter(self):
-        import ggsql
-
-        df = pl.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]})
-        viz_spec = "VISUALISE x, y DRAW point"
-        chart = ggsql.render_altair(df, viz_spec)
-        result = chart.to_dict()
-        assert "$schema" in result
-        assert "vega-lite" in result["$schema"]
-        assert "layer" in result
+    def test_extracts_title_from_spec(self):
+        nw_df = nw.from_native(pl.DataFrame({"x": [1, 2], "y": [3, 4]}))
+        ds = DataFrameSource(nw_df, "data")
+        spec = execute_ggsql(
+            ds, "SELECT * FROM data VISUALISE x, y DRAW point LABEL title => 'My Chart'"
+        )
+        assert extract_title(spec) == "My Chart"
 
     @ggsql_render_works
-    def test_returns_altair_chart(self):
+    def test_returns_none_without_title(self):
+        nw_df = nw.from_native(pl.DataFrame({"x": [1, 2], "y": [3, 4]}))
+        ds = DataFrameSource(nw_df, "data")
+        spec = execute_ggsql(ds, "SELECT * FROM data VISUALISE x, y DRAW point")
+        assert extract_title(spec) is None
+
+
+class TestSpecToAltair:
+    @ggsql_render_works
+    def test_produces_altair_chart(self):
         import altair as alt
         import ggsql
 
-        df = pl.DataFrame({"a": [1, 2], "b": [3, 4]})
-        viz_spec = "VISUALISE a AS x, b AS y DRAW line"
-        chart = ggsql.render_altair(df, viz_spec)
-        # ggsql returns LayerChart or other chart types
+        reader = ggsql.DuckDBReader("duckdb://memory")
+        df = pl.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]})
+        reader.register("data", df)
+        spec = reader.execute("SELECT * FROM data VISUALISE x, y DRAW point")
+        chart = spec_to_altair(spec)
         assert isinstance(chart, (alt.Chart, alt.LayerChart, alt.FacetChart))
-        result = chart.to_dict()
-        assert result["$schema"] == "https://vega.github.io/schema/vega-lite/v6.json"
-
-    @ggsql_render_works
-    def test_renders_pandas_dataframe(self):
-        import ggsql
-        import pandas as pd
-
-        df = pd.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]})
-        viz_spec = "VISUALISE x, y DRAW point"
-        chart = ggsql.render_altair(df, viz_spec)
         result = chart.to_dict()
         assert "$schema" in result
         assert "vega-lite" in result["$schema"]
-        assert "layer" in result
 
 
-class TestExtractTitle:
-    def test_extracts_title_from_label(self):
-        viz_spec = "VISUALISE x, y DRAW point LABEL title => 'My Chart'"
-        title = extract_title(viz_spec)
-        assert title == "My Chart"
+class TestExecuteGgsql:
+    @ggsql_render_works
+    def test_full_pipeline(self):
+        nw_df = nw.from_native(pl.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]}))
+        ds = DataFrameSource(nw_df, "test_data")
+        spec = execute_ggsql(ds, "SELECT * FROM test_data VISUALISE x, y DRAW point")
+        chart = spec_to_altair(spec)
+        result = chart.to_dict()
+        assert "$schema" in result
 
-    def test_returns_none_without_title(self):
-        viz_spec = "VISUALISE x, y DRAW point"
-        title = extract_title(viz_spec)
-        assert title is None
+    @ggsql_render_works
+    def test_with_filtered_query(self):
+        nw_df = nw.from_native(
+            pl.DataFrame({"x": [1, 2, 3, 4, 5], "y": [10, 20, 30, 40, 50]})
+        )
+        ds = DataFrameSource(nw_df, "test_data")
+        spec = execute_ggsql(
+            ds, "SELECT * FROM test_data WHERE x > 2 VISUALISE x, y DRAW point"
+        )
+        assert spec.metadata()["rows"] == 3
 
-    def test_extracts_title_with_double_quotes(self):
-        viz_spec = 'VISUALISE x, y DRAW point LABEL title => "Double Quoted"'
-        title = extract_title(viz_spec)
-        assert title == "Double Quoted"
+    @ggsql_render_works
+    def test_spec_has_visual(self):
+        nw_df = nw.from_native(pl.DataFrame({"x": [1, 2], "y": [3, 4]}))
+        ds = DataFrameSource(nw_df, "test_data")
+        spec = execute_ggsql(ds, "SELECT * FROM test_data VISUALISE x, y DRAW point")
+        assert "VISUALISE" in spec.visual()
+
+    @ggsql_render_works
+    def test_with_pandas_dataframe(self):
+        import pandas as pd
+
+        nw_df = nw.from_native(pd.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]}))
+        ds = DataFrameSource(nw_df, "test_data")
+        spec = execute_ggsql(ds, "SELECT * FROM test_data VISUALISE x, y DRAW point")
+        chart = spec_to_altair(spec)
+        result = chart.to_dict()
+        assert "$schema" in result

@@ -18,7 +18,6 @@ from .tools import (
     tool_query,
     tool_reset_dashboard,
     tool_update_dashboard,
-    tool_visualize_dashboard,
     tool_visualize_query,
 )
 
@@ -32,7 +31,7 @@ if TYPE_CHECKING:
 
     from ._datasource import DataSource
     from ._querychat_base import TOOL_GROUPS
-    from .tools import UpdateDashboardData, VisualizeDashboardData, VisualizeQueryData
+    from .tools import UpdateDashboardData, VisualizeQueryData
 
 logger = logging.getLogger(__name__)
 
@@ -90,16 +89,6 @@ class ServerValues(Generic[IntoFrameT]):
         The session-specific chat client instance. This is a deep copy of the
         base client configured for this specific session, containing the chat
         history and tool registrations for this session only.
-    filter_viz_spec
-        A reactive Value containing the VISUALISE spec from visualize_dashboard.
-        Returns `None` if no visualization has been created.
-    filter_viz_title
-        A reactive Value containing the title from visualize_dashboard.
-        Returns `None` if no visualization has been created.
-    filter_viz_chart
-        A callable returning the rendered Altair chart from visualize_dashboard.
-        Returns `None` if no visualization has been created. The chart is
-        re-rendered on each call using `ggsql.render_altair()`.
     query_viz_ggsql
         A reactive Value containing the full ggsql query from visualize_query.
         Returns `None` if no visualization has been created.
@@ -118,9 +107,6 @@ class ServerValues(Generic[IntoFrameT]):
     title: ReactiveStringOrNone
     client: chatlas.Chat
     # Visualization state
-    filter_viz_spec: ReactiveStringOrNone
-    filter_viz_title: ReactiveStringOrNone
-    filter_viz_chart: Callable[[], alt.TopLevelMixin | None]
     query_viz_ggsql: ReactiveStringOrNone
     query_viz_title: ReactiveStringOrNone
     query_viz_chart: Callable[[], alt.TopLevelMixin | None]
@@ -144,10 +130,8 @@ def mod_server(
     has_greeted = reactive.value[bool](False)  # noqa: FBT003
 
     # Visualization state - store only specs, render on demand
-    filter_viz_spec: reactive.Value[str | None] = reactive.value(None)
-    filter_viz_title: reactive.Value[str | None] = reactive.value(None)
-    query_viz_ggsql: reactive.Value[str | None] = reactive.value(None)
-    query_viz_title: reactive.Value[str | None] = reactive.value(None)
+    query_viz_ggsql = ReactiveStringOrNone(None)
+    query_viz_title = ReactiveStringOrNone(None)
 
     # Short-circuit for stub sessions (e.g. 1st run of an Express app)
     # data_source may be None during stub session for deferred pattern
@@ -161,9 +145,6 @@ def mod_server(
             sql=sql,
             title=title,
             client=client if isinstance(client, chatlas.Chat) else client(),
-            filter_viz_spec=filter_viz_spec,
-            filter_viz_title=filter_viz_title,
-            filter_viz_chart=lambda: None,
             query_viz_ggsql=query_viz_ggsql,
             query_viz_title=query_viz_title,
             query_viz_chart=lambda: None,
@@ -184,10 +165,6 @@ def mod_server(
         sql.set(None)
         title.set(None)
 
-    def update_filter_viz(data: VisualizeDashboardData):
-        filter_viz_spec.set(data["spec"])
-        filter_viz_title.set(data["title"])
-
     def update_query_viz(data: VisualizeQueryData):
         query_viz_ggsql.set(data["ggsql"])
         query_viz_title.set(data["title"])
@@ -198,7 +175,6 @@ def mod_server(
         chat = client(
             update_dashboard=update_dashboard,
             reset_dashboard=reset_dashboard,
-            visualize_dashboard=update_filter_viz,
             visualize_query=update_query_viz,
         )
     else:
@@ -209,9 +185,6 @@ def mod_server(
         chat.register_tool(tool_query(data_source))
         chat.register_tool(tool_reset_dashboard(reset_dashboard))
 
-        # Register visualization tools if enabled
-        if tools and "visualize_dashboard" in tools:
-            chat.register_tool(tool_visualize_dashboard(data_source, update_filter_viz))
         if tools and "visualize_query" in tools:
             chat.register_tool(tool_visualize_query(data_source, update_query_viz))
 
@@ -219,35 +192,19 @@ def mod_server(
     @reactive.calc
     def filtered_df():
         query = sql.get()
-        df = data_source.get_data() if not query else data_source.execute_query(query)
-        return df
-
-    # Render filter visualization on demand
-    @reactive.calc
-    def render_filter_viz_chart():
-        """Render filter visualization using current filtered data."""
-        import ggsql
-
-        spec = filter_viz_spec.get()
-        if spec is None:
-            return None
-
-        current_df = filtered_df()
-        return ggsql.render_altair(current_df, spec)
+        return data_source.get_data() if not query else data_source.execute_query(query)
 
     # Render query visualization on demand
     @reactive.calc
     def render_query_viz_chart():
-        """Render query visualization by re-executing the ggsql query."""
-        import ggsql
+        from ._ggsql import execute_ggsql, spec_to_altair
 
         ggsql_query = query_viz_ggsql.get()
         if ggsql_query is None:
             return None
 
-        validated = ggsql.validate(ggsql_query)
-        df = data_source.execute_query(validated.sql())
-        return ggsql.render_altair(df, validated.visual())
+        spec = execute_ggsql(data_source, ggsql_query)
+        return spec_to_altair(spec)
 
     # Chat UI logic
     chat_ui = shinychat.Chat(CHAT_ID)
@@ -304,8 +261,6 @@ def mod_server(
             vals["querychat_sql"] = sql.get()
             vals["querychat_title"] = title.get()
             vals["querychat_has_greeted"] = has_greeted.get()
-            vals["querychat_filter_viz_spec"] = filter_viz_spec.get()
-            vals["querychat_filter_viz_title"] = filter_viz_title.get()
             vals["querychat_query_viz_ggsql"] = query_viz_ggsql.get()
             vals["querychat_query_viz_title"] = query_viz_title.get()
 
@@ -318,10 +273,6 @@ def mod_server(
                 title.set(vals["querychat_title"])
             if "querychat_has_greeted" in vals:
                 has_greeted.set(vals["querychat_has_greeted"])
-            if "querychat_filter_viz_spec" in vals:
-                filter_viz_spec.set(vals["querychat_filter_viz_spec"])
-            if "querychat_filter_viz_title" in vals:
-                filter_viz_title.set(vals["querychat_filter_viz_title"])
             if "querychat_query_viz_ggsql" in vals:
                 query_viz_ggsql.set(vals["querychat_query_viz_ggsql"])
             if "querychat_query_viz_title" in vals:
@@ -332,9 +283,6 @@ def mod_server(
         sql=sql,
         title=title,
         client=chat,
-        filter_viz_spec=filter_viz_spec,
-        filter_viz_title=filter_viz_title,
-        filter_viz_chart=render_filter_viz_chart,
         query_viz_ggsql=query_viz_ggsql,
         query_viz_title=query_viz_title,
         query_viz_chart=render_query_viz_chart,

@@ -12,7 +12,6 @@ def test_querychat_tool_starts_open_default_behavior(monkeypatch):
     assert querychat_tool_starts_open("query") is True
     assert querychat_tool_starts_open("update") is True
     assert querychat_tool_starts_open("reset") is False
-    assert querychat_tool_starts_open("visualize_dashboard") is True
     assert querychat_tool_starts_open("visualize_query") is True
 
 
@@ -23,7 +22,6 @@ def test_querychat_tool_starts_open_expanded(monkeypatch):
     assert querychat_tool_starts_open("query") is True
     assert querychat_tool_starts_open("update") is True
     assert querychat_tool_starts_open("reset") is True
-    assert querychat_tool_starts_open("visualize_dashboard") is True
     assert querychat_tool_starts_open("visualize_query") is True
 
 
@@ -34,7 +32,6 @@ def test_querychat_tool_starts_open_collapsed(monkeypatch):
     assert querychat_tool_starts_open("query") is False
     assert querychat_tool_starts_open("update") is False
     assert querychat_tool_starts_open("reset") is False
-    assert querychat_tool_starts_open("visualize_dashboard") is False
     assert querychat_tool_starts_open("visualize_query") is False
 
 
@@ -45,7 +42,6 @@ def test_querychat_tool_starts_open_default_setting(monkeypatch):
     assert querychat_tool_starts_open("query") is True
     assert querychat_tool_starts_open("update") is True
     assert querychat_tool_starts_open("reset") is False
-    assert querychat_tool_starts_open("visualize_dashboard") is True
     assert querychat_tool_starts_open("visualize_query") is True
 
 

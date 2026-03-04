@@ -8,9 +8,7 @@ import pytest
 from conftest import ggsql_render_works
 from querychat._datasource import DataFrameSource
 from querychat.tools import (
-    VisualizeDashboardData,
     VisualizeQueryData,
-    tool_visualize_dashboard,
     tool_visualize_query,
 )
 
@@ -30,7 +28,7 @@ class TestVizDependencyCheck:
         from querychat._querychat_base import check_viz_dependencies
 
         with pytest.raises(ImportError, match="pip install querychat\\[viz\\]"):
-            check_viz_dependencies(("visualize_dashboard",))
+            check_viz_dependencies(("visualize_query",))
 
     def test_no_error_without_viz_tools(self):
         """Non-viz tool configs should not check for ggsql."""
@@ -56,52 +54,6 @@ def sample_df():
 def data_source(sample_df):
     nw_df = nw.from_native(sample_df)
     return DataFrameSource(nw_df, "test_data")
-
-
-class TestToolVisualizeDashboard:
-    def test_creates_tool(self, data_source):
-        callback_data = {}
-
-        def update_fn(data: VisualizeDashboardData):
-            callback_data.update(data)
-
-        tool = tool_visualize_dashboard(data_source, update_fn)
-        assert tool.name == "querychat_visualize_dashboard"
-
-    @ggsql_render_works
-    def test_tool_renders_visualization(self, data_source):
-        callback_data = {}
-
-        def update_fn(data: VisualizeDashboardData):
-            callback_data.update(data)
-
-        tool = tool_visualize_dashboard(data_source, update_fn)
-        impl = tool.func
-
-        impl(viz_spec="VISUALISE x, y DRAW point", title="Test Scatter")
-
-        assert "spec" in callback_data
-        assert "title" in callback_data
-        assert callback_data["title"] == "Test Scatter"
-        # Chart is now rendered on demand, not stored in callback data
-        assert "chart" not in callback_data
-
-    @ggsql_render_works
-    def test_tool_extracts_title_from_spec(self, data_source):
-        callback_data = {}
-
-        def update_fn(data: VisualizeDashboardData):
-            callback_data.update(data)
-
-        tool = tool_visualize_dashboard(data_source, update_fn)
-        impl = tool.func
-
-        impl(
-            viz_spec="VISUALISE x, y DRAW point LABEL title => 'From Spec'", title=None
-        )
-
-        # Title from spec should be used when title param is None
-        assert callback_data["title"] == "From Spec"
 
 
 class TestToolVisualizeQuery:
@@ -132,8 +84,6 @@ class TestToolVisualizeQuery:
         assert "ggsql" in callback_data
         assert "title" in callback_data
         assert callback_data["title"] == "Filtered Scatter"
-        # Chart is now rendered on demand, not stored in callback data
-        assert "chart" not in callback_data
 
     @ggsql_render_works
     def test_tool_handles_query_without_visualise(self, data_source):
@@ -145,10 +95,7 @@ class TestToolVisualizeQuery:
         tool = tool_visualize_query(data_source, update_fn)
         impl = tool.func
 
-        # Query without VISUALISE should return error result
         result = impl(ggsql="SELECT x, y FROM test_data", title="No Viz")
 
-        # Check that error is returned and callback was not called
         assert result.error is not None
         assert "VISUALISE" in str(result.error)
-        assert "chart" not in callback_data

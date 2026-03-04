@@ -25,12 +25,10 @@ from ._system_prompt import QueryChatSystemPrompt
 from ._utils import MISSING, MISSING_TYPE, is_ibis_table
 from .tools import (
     UpdateDashboardData,
-    VisualizeDashboardData,
     VisualizeQueryData,
     tool_query,
     tool_reset_dashboard,
     tool_update_dashboard,
-    tool_visualize_dashboard,
     tool_visualize_query,
 )
 
@@ -39,16 +37,15 @@ if TYPE_CHECKING:
 
     from narwhals.stable.v1.typing import IntoFrame
 
-TOOL_GROUPS = Literal["update", "query", "visualize_dashboard", "visualize_query"]
+TOOL_GROUPS = Literal["update", "query", "visualize_query"]
 DEFAULT_TOOLS: tuple[TOOL_GROUPS, ...] = ("update", "query")
 ALL_TOOLS: tuple[TOOL_GROUPS, ...] = (
     "update",
     "query",
-    "visualize_dashboard",
     "visualize_query",
 )
 
-VIZ_TOOLS: tuple[TOOL_GROUPS, ...] = ("visualize_dashboard", "visualize_query")
+VIZ_TOOLS: tuple[TOOL_GROUPS, ...] = ("visualize_query",)
 
 
 def check_viz_dependencies(tools: tuple[TOOL_GROUPS, ...] | None) -> None:
@@ -163,7 +160,6 @@ class QueryChatBase(Generic[IntoFrameT]):
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None | MISSING_TYPE = MISSING,
         update_dashboard: Callable[[UpdateDashboardData], None] | None = None,
         reset_dashboard: Callable[[], None] | None = None,
-        visualize_dashboard: Callable[[VisualizeDashboardData], None] | None = None,
         visualize_query: Callable[[VisualizeQueryData], None] | None = None,
     ) -> chatlas.Chat:
         """
@@ -172,14 +168,12 @@ class QueryChatBase(Generic[IntoFrameT]):
         Parameters
         ----------
         tools
-            Which tools to include: `"update"`, `"query"`, `"visualize_dashboard"`,
-            `"visualize_query"`, or a combination.
+            Which tools to include: `"update"`, `"query"`, `"visualize_query"`,
+            or a combination.
         update_dashboard
             Callback when update_dashboard tool succeeds.
         reset_dashboard
             Callback when reset_dashboard tool is invoked.
-        visualize_dashboard
-            Callback when visualize_dashboard tool succeeds.
         visualize_query
             Callback when visualize_query tool succeeds.
 
@@ -209,10 +203,6 @@ class QueryChatBase(Generic[IntoFrameT]):
 
         if "query" in tools:
             chat.register_tool(tool_query(data_source))
-
-        if "visualize_dashboard" in tools:
-            viz_fn = visualize_dashboard or (lambda _: None)
-            chat.register_tool(tool_visualize_dashboard(self._data_source, viz_fn))
 
         if "visualize_query" in tools:
             query_viz_fn = visualize_query or (lambda _: None)

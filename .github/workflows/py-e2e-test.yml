@@ -22,7 +22,7 @@ jobs:
   e2e-test:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    environment: pypi
+    environment: testing
 
     steps:
       - uses: actions/checkout@v4

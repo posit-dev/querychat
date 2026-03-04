@@ -59,11 +59,7 @@ def spec_to_altair(spec: ggsql.Spec) -> ggsql.AltairChart:
     import ggsql as _ggsql
 
     writer = _ggsql.VegaLiteWriter()
-    vegalite_json = writer.render(spec)
-
-    import altair as alt
-
-    return alt.Chart.from_json(vegalite_json)
+    return writer.render_chart(spec, validate=False)
 
 
 def extract_title(spec: ggsql.Spec) -> str | None:

@@ -9,6 +9,7 @@ from conftest import ggsql_render_works
 from querychat._datasource import DataFrameSource
 from querychat.tools import (
     VisualizeQueryData,
+    VisualizeQueryResult,
     tool_visualize_query,
 )
 
@@ -67,16 +68,19 @@ class TestToolVisualizeQuery:
         assert tool.name == "querychat_visualize_query"
 
     @ggsql_render_works
-    def test_tool_executes_sql_and_renders(self, data_source):
+    def test_tool_executes_sql_and_renders(self, data_source, monkeypatch):
         callback_data = {}
 
         def update_fn(data: VisualizeQueryData):
             callback_data.update(data)
 
+        monkeypatch.setattr("shinywidgets.register_widget", lambda _widget_id, _chart: None)
+        monkeypatch.setattr("shinywidgets.output_widget", lambda widget_id: widget_id)
+
         tool = tool_visualize_query(data_source, update_fn)
         impl = tool.func
 
-        impl(
+        result = impl(
             ggsql="SELECT x, y FROM test_data WHERE x > 2 VISUALISE x, y DRAW point",
             title="Filtered Scatter",
         )
@@ -84,6 +88,11 @@ class TestToolVisualizeQuery:
         assert "ggsql" in callback_data
         assert "title" in callback_data
         assert callback_data["title"] == "Filtered Scatter"
+
+        assert isinstance(result, VisualizeQueryResult)
+        display = result.extra["display"]
+        assert display.full_screen is True
+        assert display.open is True
 
     @ggsql_render_works
     def test_tool_handles_query_without_visualise(self, data_source):

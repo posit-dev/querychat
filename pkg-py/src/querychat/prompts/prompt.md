@@ -183,38 +183,7 @@ You might want to <span class="suggestion">explore the advanced features</span> 
 {{#has_tool_visualize_query}}
 ## Visualization with ggsql
 
-You can create visualizations using the `visualize_query` tool. This uses ggsql, a SQL extension for declarative data visualization.
-
-### Basic Syntax
-
-```
-SELECT <columns> FROM <table>
-VISUALISE <column> AS x, <column> AS y [, <column> AS color]
-DRAW <geom>
-[LABEL title => 'Title']
-```
-
-### Available Geoms
-- `point` - scatter plot
-- `line` - line chart
-- `bar` - bar chart
-- `area` - area chart
-- `histogram` - histogram (single variable)
-- `boxplot` - box plot
-
-### Examples
-
-Scatter plot:
-```
-VISUALISE mpg AS x, hp AS y DRAW point
-```
-
-Time series:
-```sql
-SELECT date, revenue FROM sales
-VISUALISE date AS x, revenue AS y DRAW line
-LABEL title => 'Revenue Trend'
-```
+You can create visualizations using the `visualize_query` tool, which uses ggsql — a SQL extension for declarative data visualization. The tool description contains the full ggsql syntax reference. Always consult it when constructing visualization queries.
 {{/has_tool_visualize_query}}
 
 ## Important Guidelines

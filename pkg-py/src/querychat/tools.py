@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol, TypedDict, runtime_checkable
+from uuid import uuid4
 
 import chevron
 from chatlas import ContentToolResult, Tool
@@ -309,6 +310,42 @@ def tool_query(data_source: DataSource) -> Tool:
     )
 
 
+class VisualizeQueryResult(ContentToolResult):
+    """Tool result that embeds an Altair chart inline via shinywidgets."""
+
+    def __init__(
+        self,
+        chart: Any,
+        ggsql_str: str,
+        title: str | None,
+        row_count: int,
+        col_count: int,
+        **kwargs: Any,
+    ):
+        from shinywidgets import output_widget, register_widget
+
+        widget_id = f"querychat_viz_{uuid4().hex[:8]}"
+        register_widget(widget_id, chart)
+
+        title_display = f" - {title}" if title else ""
+        markdown = f"```sql\n{ggsql_str}\n```"
+        markdown += f"\n\nVisualization created{title_display}."
+        markdown += f"\n\nData: {row_count} rows, {col_count} columns."
+
+        extra = {
+            "display": ToolResultDisplay(
+                html=output_widget(widget_id),
+                title=title or "Query Visualization",
+                show_request=False,
+                open=True,
+                full_screen=True,
+                icon=bs_icon("graph-up"),
+            ),
+        }
+
+        super().__init__(value=markdown, extra=extra, **kwargs)
+
+
 def _visualize_query_impl(
     data_source: DataSource,
     update_fn: Callable[[VisualizeQueryData], None],
@@ -334,18 +371,16 @@ def _visualize_query_impl(
                     "Use querychat_query for queries without visualization."
                 )
 
-            # Execute the SQL and validate by rendering
+            # Execute the SQL and render the visualization
             spec = execute_ggsql(data_source, ggsql)
-            spec_to_altair(spec)
+            chart = spec_to_altair(spec)
 
-            # Extract title from spec if not provided
             if title is None:
                 title = extract_title(spec)
             metadata = spec.metadata()
             row_count = metadata["rows"]
             col_count = len(metadata["columns"])
 
-            # Store just the ggsql - rendering happens on display
             update_fn(
                 {
                     "ggsql": ggsql,
@@ -353,22 +388,14 @@ def _visualize_query_impl(
                 }
             )
 
-            # Format success message with data summary
-            title_display = f" - {title}" if title else ""
-            markdown += f"\n\nVisualization created{title_display}."
-            markdown += f"\n\nData: {row_count} rows, {col_count} columns."
+            chart = chart.properties(height=300, width="container")
 
-            return ContentToolResult(
-                value=markdown,
-                extra={
-                    "display": ToolResultDisplay(
-                        markdown=markdown,
-                        title=title or "Query Visualization",
-                        show_request=False,
-                        open=querychat_tool_starts_open("visualize_query"),
-                        icon=bs_icon("graph-up"),
-                    ),
-                },
+            return VisualizeQueryResult(
+                chart=chart,
+                ggsql_str=ggsql,
+                title=title,
+                row_count=row_count,
+                col_count=col_count,
             )
 
         except Exception as e:

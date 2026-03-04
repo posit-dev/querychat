@@ -8,15 +8,12 @@ on:
       - 'pkg-py/**'
       - 'pyproject.toml'
       - '.github/workflows/py-e2e-test.yml'
-  # E2E tests require OPENAI_API_KEY from the pypi environment, which is
-  # not available to pull_request-triggered workflows. Run on push to
-  # main/rc only; use workflow_dispatch to test manually on branches.
-  # pull_request:
-  #   types: [opened, synchronize, reopened, ready_for_review]
-  #   paths:
-  #     - 'pkg-py/**'
-  #     - 'pyproject.toml'
-  #     - '.github/workflows/py-e2e-test.yml'
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - 'pkg-py/**'
+      - 'pyproject.toml'
+      - '.github/workflows/py-e2e-test.yml'
 
 permissions:
   contents: read
@@ -25,7 +22,6 @@ jobs:
   e2e-test:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    environment: pypi
 
     steps:
       - uses: actions/checkout@v4

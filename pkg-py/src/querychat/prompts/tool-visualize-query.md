@@ -394,6 +394,22 @@ LABEL y => 'Temperature'
    DRAW bar
    ```
 9. **COORD flip is broken**: It currently produces empty charts. Avoid using it.
+10. **Do not mix `VISUALISE FROM` with a preceding `SELECT`**: `VISUALISE FROM table` is shorthand that auto-generates `SELECT * FROM table`. If you already have a `SELECT`, use `SELECT ... VISUALISE` instead:
+    ```sql
+    -- WRONG: VISUALISE FROM after SELECT
+    SELECT * FROM titanic
+    VISUALISE FROM titanic
+    DRAW bar MAPPING class AS x
+
+    -- CORRECT: use VISUALISE (without FROM) after SELECT
+    SELECT * FROM titanic
+    VISUALISE class AS x
+    DRAW bar
+
+    -- ALSO CORRECT: use VISUALISE FROM without any SELECT
+    VISUALISE FROM titanic
+    DRAW bar MAPPING class AS x
+    ```
 
 Parameters
 ----------

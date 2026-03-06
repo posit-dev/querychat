@@ -42,32 +42,47 @@
 
   // --- Extend the SQL grammar in-place with ggsql tokens ---
 
-  // ggsql clause keywords
-  sqlGrammar["ggsql-keyword"] =
-    /\b(?:VISUALISE|VISUALIZE|DRAW|MAPPING|REMAPPING|SETTING|FILTER|PARTITION|SCALE|FACET|PROJECT|LABEL|THEME|RENAMING|VIA|TO)\b/i;
+  // ggsql clause keywords — alias "keyword" so the theme styles them
+  sqlGrammar["ggsql-keyword"] = {
+    pattern: /\b(?:VISUALISE|VISUALIZE|DRAW|MAPPING|REMAPPING|SETTING|FILTER|PARTITION|SCALE|FACET|PROJECT|LABEL|THEME|RENAMING|VIA|TO)\b/i,
+    alias: "keyword",
+  };
 
   // Geom types (after DRAW)
-  sqlGrammar["ggsql-geom"] =
-    /\b(?:point|line|path|bar|col|area|tile|polygon|ribbon|histogram|density|smooth|boxplot|violin|text|label|segment|arrow|hline|vline|abline|errorbar)\b/;
+  sqlGrammar["ggsql-geom"] = {
+    pattern: /\b(?:point|line|path|bar|col|area|tile|polygon|ribbon|histogram|density|smooth|boxplot|violin|text|label|segment|arrow|hline|vline|abline|errorbar)\b/,
+    alias: "builtin",
+  };
 
   // Scale type modifiers
-  sqlGrammar["ggsql-scale-type"] =
-    /\b(?:CONTINUOUS|DISCRETE|BINNED|ORDINAL|IDENTITY)\b/i;
+  sqlGrammar["ggsql-scale-type"] = {
+    pattern: /\b(?:CONTINUOUS|DISCRETE|BINNED|ORDINAL|IDENTITY)\b/i,
+    alias: "builtin",
+  };
 
   // Aesthetic names
-  sqlGrammar["ggsql-aesthetic"] =
-    /\b(?:x|y|xmin|xmax|ymin|ymax|xend|yend|weight|color|colour|fill|stroke|opacity|size|shape|linetype|linewidth|width|height|family|fontface|hjust|vjust|panel|row|column|theta|radius|thetamin|thetamax|radiusmin|radiusmax|thetaend|radiusend|offset)\b/;
+  sqlGrammar["ggsql-aesthetic"] = {
+    pattern: /\b(?:x|y|xmin|xmax|ymin|ymax|xend|yend|weight|color|colour|fill|stroke|opacity|size|shape|linetype|linewidth|width|height|family|fontface|hjust|vjust|panel|row|column|theta|radius|thetamin|thetamax|radiusmin|radiusmax|thetaend|radiusend|offset)\b/,
+    alias: "attr-name",
+  };
 
   // Theme names
-  sqlGrammar["ggsql-theme"] =
-    /\b(?:minimal|classic|gray|grey|bw|dark|light|void)\b/;
+  sqlGrammar["ggsql-theme"] = {
+    pattern: /\b(?:minimal|classic|gray|grey|bw|dark|light|void)\b/,
+    alias: "class-name",
+  };
 
   // Project types
-  sqlGrammar["ggsql-project"] =
-    /\b(?:cartesian|polar|flip|fixed|trans|map|quickmap)\b/;
+  sqlGrammar["ggsql-project"] = {
+    pattern: /\b(?:cartesian|polar|flip|fixed|trans|map|quickmap)\b/,
+    alias: "class-name",
+  };
 
   // Fat arrow operator (SETTING/LABEL/RENAMING clauses)
-  sqlGrammar["ggsql-arrow"] = /=>/;
+  sqlGrammar["ggsql-arrow"] = {
+    pattern: /=>/,
+    alias: "operator",
+  };
 
   // Broader SQL function coverage: aggregate, window, datetime, string, math,
   // conversion, conditional, JSON, list (from TextMate grammar sql-functions)

@@ -14,10 +14,15 @@
     top: 4px;
 }
 
+/* Hide Vega's built-in action dropdown (we have our own save button) */
+.querychat-viz-container details:has(> .vega-actions) {
+  display: none !important;
+}
+
 /* ---- Visualization container ---- */
 
 .querychat-viz-container {
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 4 / 2;
   width: 100%;
 }
 

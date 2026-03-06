@@ -47,8 +47,7 @@
 }
 
 .querychat-show-query-btn,
-.querychat-save-btn,
-.querychat-copy-btn {
+.querychat-save-btn {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -64,8 +63,7 @@
 }
 
 .querychat-show-query-btn:hover,
-.querychat-save-btn:hover,
-.querychat-copy-btn:hover {
+.querychat-save-btn:hover {
   color: var(--bs-body-color, #212529);
   background-color: rgba(var(--bs-emphasis-color-rgb, 0, 0, 0), 0.05);
 }
@@ -144,11 +142,3 @@
   border-radius: 0;
 }
 
-.querychat-query-section .querychat-copy-btn {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  z-index: 5;
-  height: 24px;
-  font-size: 0.6875rem;
-}

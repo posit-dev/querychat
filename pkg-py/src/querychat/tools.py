@@ -349,10 +349,6 @@ def _build_viz_footer(
     query_section = tags.div(
         {"class": "querychat-query-section", "id": query_section_id},
         code_editor,
-        tags.button(
-            {"class": "querychat-copy-btn", "data-query": ggsql_str},
-            "Copy",
-        ),
     )
 
     # Footer buttons row

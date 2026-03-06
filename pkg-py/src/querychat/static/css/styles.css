@@ -14,6 +14,18 @@
     top: 4px;
 }
 
+/* ---- Visualization container ---- */
+
+.querychat-viz-container {
+  aspect-ratio: 4 / 3;
+  width: 100%;
+}
+
+/* In full-screen mode, let the chart fill the available space */
+.bslib-full-screen-container .querychat-viz-container {
+  aspect-ratio: unset;
+}
+
 /* ---- Visualization footer ---- */
 
 .querychat-footer-buttons {

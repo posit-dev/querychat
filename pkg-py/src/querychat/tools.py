@@ -366,7 +366,7 @@ def _build_viz_footer(
                     "class": "querychat-show-query-btn",
                     "data-target": query_section_id,
                 },
-                tags.span({"class": "querychat-query-chevron"}, "\u25B6"),
+                tags.span({"class": "querychat-query-chevron"}, "\u25b6"),
                 tags.span({"class": "querychat-query-label"}, "Show Query"),
             ),
         ),
@@ -387,11 +387,13 @@ def _build_viz_footer(
                             "fill": "currentColor",
                             "xmlns": "http://www.w3.org/2000/svg",
                         },
-                        Tag("path",
-                            d="M10.75 2.75a.75.75 0 00-1.5 0v8.614L6.295 8.235a.75.75 0 10-1.09 1.03l4.25 4.5a.75.75 0 001.09 0l4.25-4.5a.75.75 0 00-1.09-1.03l-2.955 3.129V2.75z"
+                        Tag(
+                            "path",
+                            d="M10.75 2.75a.75.75 0 00-1.5 0v8.614L6.295 8.235a.75.75 0 10-1.09 1.03l4.25 4.5a.75.75 0 001.09 0l4.25-4.5a.75.75 0 00-1.09-1.03l-2.955 3.129V2.75z",
                         ),
-                        Tag("path",
-                            d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5z"
+                        Tag(
+                            "path",
+                            d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5z",
                         ),
                     ),
                     "Save",
@@ -402,7 +404,8 @@ def _build_viz_footer(
                             "fill": "currentColor",
                             "xmlns": "http://www.w3.org/2000/svg",
                         },
-                        Tag("path",
+                        Tag(
+                            "path",
                             clip_rule="evenodd",
                             fill_rule="evenodd",
                             d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z",
@@ -459,9 +462,12 @@ class VisualizeQueryResult(ContentToolResult):
 
         footer = _build_viz_footer(ggsql_str, title, widget_id)
 
+        widget_html = output_widget(widget_id, fill=True, fillable=True)
+        widget_html.add_class("querychat-viz-container")
+
         extra = {
             "display": ToolResultDisplay(
-                html=output_widget(widget_id),
+                html=widget_html,
                 title=title or "Query Visualization",
                 show_request=False,
                 open=True,
@@ -516,7 +522,7 @@ def _visualize_query_impl(
                 }
             )
 
-            chart = chart.properties(height=300, width="container")
+            chart = chart.properties(width="container", height="container")
 
             return VisualizeQueryResult(
                 chart=chart,

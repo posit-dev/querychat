@@ -9,48 +9,21 @@
 // upgrade, check:
 //   {shiny_package}/www/shared/prism-code-editor/prism/languages/sql.js
 // and copy the hashed filename from the import on the first line.
-(async () => {
-  // Locate the prism-code-editor base URL from its script tag.
-  var scriptEl = document.querySelector(
-    'script[src*="prism-code-editor"][src$="index.js"]'
-  );
-  if (!scriptEl) return;
 
-  var baseUrl = scriptEl.src.replace(/\/index\.js$/, "");
-
-  // Import the GRAMMAR registry (not the languageMap from index.js).
-  // The grammar registry is only exported from the internal hashed module.
-  var grammarModule = await import(baseUrl + "/index-C1_GGQ8y.js");
-  var languages = grammarModule.l;
-  if (!languages) return;
-
-  // Wait for SQL grammar to be loaded on demand by the code editor.
-  var sqlGrammar = await new Promise(function (resolve) {
-    if (languages.sql) return resolve(languages.sql);
-    var check = setInterval(function () {
-      if (languages.sql) {
-        clearInterval(check);
-        resolve(languages.sql);
-      }
-    }, 50);
-    setTimeout(function () {
-      clearInterval(check);
-      resolve(null);
-    }, 5000);
-  });
-  if (!sqlGrammar) return;
-
-  // --- Extend the SQL grammar in-place with ggsql tokens ---
-
+// Extend a SQL grammar object in-place with ggsql tokens, then reorder keys
+// so ggsql tokens are checked before generic SQL tokens.
+function extendWithGgsql(sqlGrammar) {
   // ggsql clause keywords — alias "keyword" so the theme styles them
   sqlGrammar["ggsql-keyword"] = {
-    pattern: /\b(?:VISUALISE|VISUALIZE|DRAW|MAPPING|REMAPPING|SETTING|FILTER|PARTITION|SCALE|FACET|PROJECT|LABEL|THEME|RENAMING|VIA|TO)\b/i,
+    pattern:
+      /\b(?:VISUALISE|VISUALIZE|DRAW|MAPPING|REMAPPING|SETTING|FILTER|PARTITION|SCALE|FACET|PROJECT|LABEL|THEME|RENAMING|VIA|TO)\b/i,
     alias: "keyword",
   };
 
   // Geom types (after DRAW)
   sqlGrammar["ggsql-geom"] = {
-    pattern: /\b(?:point|line|path|bar|col|area|tile|polygon|ribbon|histogram|density|smooth|boxplot|violin|text|label|segment|arrow|hline|vline|abline|errorbar)\b/,
+    pattern:
+      /\b(?:point|line|path|bar|col|area|tile|polygon|ribbon|histogram|density|smooth|boxplot|violin|text|label|segment|arrow|hline|vline|abline|errorbar)\b/,
     alias: "builtin",
   };
 
@@ -62,7 +35,8 @@
 
   // Aesthetic names
   sqlGrammar["ggsql-aesthetic"] = {
-    pattern: /\b(?:x|y|xmin|xmax|ymin|ymax|xend|yend|weight|color|colour|fill|stroke|opacity|size|shape|linetype|linewidth|width|height|family|fontface|hjust|vjust|panel|row|column|theta|radius|thetamin|thetamax|radiusmin|radiusmax|thetaend|radiusend|offset)\b/,
+    pattern:
+      /\b(?:x|y|xmin|xmax|ymin|ymax|xend|yend|weight|color|colour|fill|stroke|opacity|size|shape|linetype|linewidth|width|height|family|fontface|hjust|vjust|panel|row|column|theta|radius|thetamin|thetamax|radiusmin|radiusmax|thetaend|radiusend|offset)\b/,
     alias: "attr-name",
   };
 
@@ -89,8 +63,8 @@
   sqlGrammar["function"] =
     /\b(?:count|sum|avg|min|max|stddev|variance|array_agg|string_agg|group_concat|row_number|rank|dense_rank|ntile|lag|lead|first_value|last_value|nth_value|cume_dist|percent_rank|date_trunc|date_part|datepart|datename|dateadd|datediff|extract|now|current_date|current_time|current_timestamp|getdate|getutcdate|strftime|strptime|make_date|make_time|make_timestamp|concat|substring|substr|left|right|length|len|char_length|lower|upper|trim|ltrim|rtrim|replace|reverse|repeat|lpad|rpad|split_part|string_split|format|printf|regexp_replace|regexp_extract|regexp_matches|abs|ceil|ceiling|floor|round|trunc|truncate|mod|power|sqrt|exp|ln|log|log10|log2|sign|sin|cos|tan|asin|acos|atan|atan2|pi|degrees|radians|random|rand|cast|convert|coalesce|nullif|ifnull|isnull|nvl|try_cast|typeof|if|iff|iif|greatest|least|decode|json|json_extract|json_extract_path|json_extract_string|json_value|json_query|json_object|json_array|json_array_length|to_json|from_json|list|list_value|list_aggregate|array_length|unnest|generate_series|range|first|last)(?=\s*\()/i;
 
-  // Reorder grammar so ggsql tokens are checked before generic SQL tokens.
-  // Prism checks tokens in object key order.
+  // Reorder: Prism checks tokens in object key order.
+  // ggsql tokens must come before generic SQL keyword/boolean to win.
   var ggsqlKeys = [
     "ggsql-keyword",
     "ggsql-geom",
@@ -122,4 +96,51 @@
     delete sqlGrammar[key];
   });
   Object.assign(sqlGrammar, ordered);
+}
+
+(async () => {
+  // Locate the prism-code-editor base URL from its script tag.
+  var scriptEl = document.querySelector(
+    'script[src*="prism-code-editor"][src$="index.js"]'
+  );
+  if (!scriptEl) return;
+
+  var baseUrl = scriptEl.src.replace(/\/index\.js$/, "");
+
+  // Import the GRAMMAR registry (not the languageMap from index.js).
+  // The grammar registry is only exported from the internal hashed module.
+  var grammarModule = await import(baseUrl + "/index-C1_GGQ8y.js");
+  var languages = grammarModule.l;
+  if (!languages) return;
+
+  // If the SQL grammar is already loaded, extend it directly.
+  if (languages.sql) {
+    extendWithGgsql(languages.sql);
+    return;
+  }
+
+  // Otherwise, intercept the assignment from sql.js so we extend the grammar
+  // BEFORE the code editor reads it for tokenization. Using a property setter
+  // ensures zero timing gap — the grammar is extended the instant sql.js
+  // assigns it.
+  var _sql;
+  Object.defineProperty(languages, "sql", {
+    set: function (grammar) {
+      // Store the grammar, then extend it with ggsql tokens.
+      _sql = grammar;
+      extendWithGgsql(_sql);
+      // Replace the setter with a plain property now that we've intercepted.
+      Object.defineProperty(languages, "sql", {
+        value: _sql,
+        writable: true,
+        configurable: true,
+        enumerable: true,
+      });
+    },
+    get: function () {
+      return _sql;
+    },
+    configurable: true,
+    enumerable: true,
+  });
 })();

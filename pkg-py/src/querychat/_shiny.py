@@ -10,13 +10,14 @@ from shinychat import output_markdown_stream
 from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 
 from ._icons import bs_icon
-from ._querychat_base import TOOL_GROUPS, QueryChatBase
+from ._querychat_base import DEFAULT_TOOLS, TOOL_GROUPS, QueryChatBase
 from ._shiny_module import ServerValues, mod_server, mod_ui
 from ._utils import as_narwhals
 
 if TYPE_CHECKING:
     from pathlib import Path
 
+    import altair as alt
     import chatlas
     import ibis
     import narwhals.stable.v1 as nw
@@ -97,10 +98,11 @@ class QueryChat(QueryChatBase[IntoFrameT]):
     tools
         Which querychat tools to include in the chat client by default. Can be:
         - A single tool string: `"update"` or `"query"`
-        - A tuple of tools: `("update", "query")`
+        - A tuple of tools: `("update", "query", "visualize_query")`
         - `None` or `()` to disable all tools
 
-        Default is `("update", "query")` (both tools enabled).
+        Default is `("update", "query")`. The visualization tool (`"visualize_query"`)
+        can be opted into by including it in the tuple.
 
         Set to `"update"` to prevent the LLM from accessing data values, only
         allowing dashboard filtering without answering questions.
@@ -156,7 +158,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
-        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -172,7 +174,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
-        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -188,7 +190,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
-        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -204,7 +206,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
-        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -219,7 +221,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
-        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -245,8 +247,12 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         """
         Quickly chat with a dataset.
 
-        Creates a Shiny app with a chat sidebar and data table view -- providing a
+        Creates a Shiny app with a chat sidebar and tabbed view -- providing a
         quick-and-easy way to start chatting with your data.
+
+        The app includes two tabs:
+        - **Data**: Shows the filtered data table
+        - **Query Plot**: Shows the most recent query visualization
 
         Parameters
         ----------
@@ -266,7 +272,30 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         enable_bookmarking = bookmark_store != "disable"
         table_name = data_source.table_name
 
+        tools_tuple = (
+            (self.tools,)
+            if isinstance(self.tools, str)
+            else (self.tools or ())
+        )
+        has_query_viz = "visualize_query" in tools_tuple
+
         def app_ui(request):
+            nav_panels = [
+                ui.nav_panel(
+                    "Data",
+                    ui.card(
+                        ui.card_header(bs_icon("table"), " Data"),
+                        ui.output_data_frame("dt"),
+                    ),
+                ),
+            ]
+            if has_query_viz:
+                nav_panels.append(
+                    ui.nav_panel(
+                        "Query Plot",
+                        ui.output_ui("query_plot_container"),
+                    )
+                )
             return ui.page_sidebar(
                 self.sidebar(),
                 ui.card(
@@ -285,10 +314,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                     fill=False,
                     style="max-height: 33%;",
                 ),
-                ui.card(
-                    ui.card_header(bs_icon("table"), " Data"),
-                    ui.output_data_frame("dt"),
-                ),
+                ui.navset_tab(*nav_panels, id="main_tabs"),
                 title=ui.span("querychat with ", ui.code(table_name)),
                 class_="bslib-page-dashboard",
                 fillable=True,
@@ -301,6 +327,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 greeting=self.greeting,
                 client=self._client,
                 enable_bookmarking=enable_bookmarking,
+                tools=self.tools,
             )
 
             @render.text
@@ -337,6 +364,37 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                     auto_scroll=False,
                     width="100%",
                 )
+
+            if has_query_viz:
+
+                @render.ui
+                def query_plot_container():
+                    from shinywidgets import output_widget, render_altair
+
+                    chart = vals.query_viz_chart()
+                    if chart is None:
+                        return ui.card(
+                            ui.card_body(
+                                ui.p(
+                                    "No query visualization yet. "
+                                    "Use the chat to create one."
+                                ),
+                                class_="text-muted text-center py-5",
+                            ),
+                        )
+
+                    @render_altair
+                    def query_chart():
+                        return chart
+
+                    return ui.card(
+                        ui.card_header(
+                            bs_icon("bar-chart-fill"),
+                            " ",
+                            vals.query_viz_title.get() or "Query Visualization",
+                        ),
+                        output_widget("query_chart"),
+                    )
 
         return App(app_ui, app_server, bookmark_store=bookmark_store)
 
@@ -493,6 +551,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             greeting=self.greeting,
             client=self.client,
             enable_bookmarking=enable_bookmarking,
+            tools=self.tools,
         )
 
 
@@ -730,6 +789,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             greeting=self.greeting,
             client=self._client,
             enable_bookmarking=enable,
+            tools=self.tools,
         )
 
     def sidebar(
@@ -870,3 +930,39 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             return self._vals.title()
         else:
             return self._vals.title.set(value)
+
+    def ggvis(self) -> alt.Chart | None:
+        """
+        Get the visualization chart from the most recent visualize_query call.
+
+        Returns
+        -------
+        :
+            The Altair chart, or None if no visualization exists.
+
+        """
+        return self._vals.query_viz_chart()
+
+    def ggsql(self) -> str | None:
+        """
+        Get the full ggsql query from the most recent visualize_query call.
+
+        Returns
+        -------
+        :
+            The ggsql query string, or None if no visualization exists.
+
+        """
+        return self._vals.query_viz_ggsql.get()
+
+    def ggtitle(self) -> str | None:
+        """
+        Get the visualization title from the most recent visualize_query call.
+
+        Returns
+        -------
+        :
+            The title, or None if no visualization exists.
+
+        """
+        return self._vals.query_viz_title.get()

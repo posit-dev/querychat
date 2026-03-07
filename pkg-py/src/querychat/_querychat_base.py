@@ -25,9 +25,11 @@ from ._system_prompt import QueryChatSystemPrompt
 from ._utils import MISSING, MISSING_TYPE, is_ibis_table
 from .tools import (
     UpdateDashboardData,
+    VisualizeQueryData,
     tool_query,
     tool_reset_dashboard,
     tool_update_dashboard,
+    tool_visualize_query,
 )
 
 if TYPE_CHECKING:
@@ -35,7 +37,32 @@ if TYPE_CHECKING:
 
     from narwhals.stable.v1.typing import IntoFrame
 
-TOOL_GROUPS = Literal["update", "query"]
+TOOL_GROUPS = Literal["update", "query", "visualize_query"]
+DEFAULT_TOOLS: tuple[TOOL_GROUPS, ...] = ("update", "query")
+ALL_TOOLS: tuple[TOOL_GROUPS, ...] = (
+    "update",
+    "query",
+    "visualize_query",
+)
+
+VIZ_TOOLS: tuple[TOOL_GROUPS, ...] = ("visualize_query",)
+
+
+def check_viz_dependencies(tools: tuple[TOOL_GROUPS, ...] | None) -> None:
+    """Raise ImportError early if viz tools are requested but ggsql is not installed."""
+    if tools is None:
+        return
+    has_viz = any(t in VIZ_TOOLS for t in tools)
+    if not has_viz:
+        return
+    try:
+        import altair as alt  # noqa: F401
+        import ggsql  # noqa: F401
+    except ImportError as e:
+        raise ImportError(
+            f"Visualization tools require ggsql and altair: {e}. "
+            "Install them with: pip install querychat[viz]"
+        ) from e
 
 
 class QueryChatBase(Generic[IntoFrameT]):
@@ -58,7 +85,7 @@ class QueryChatBase(Generic[IntoFrameT]):
         *,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
-        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -72,7 +99,8 @@ class QueryChatBase(Generic[IntoFrameT]):
                 "Table name must begin with a letter and contain only letters, numbers, and underscores",
             )
 
-        self.tools = normalize_tools(tools, default=("update", "query"))
+        self.tools = normalize_tools(tools, default=DEFAULT_TOOLS)
+        check_viz_dependencies(self.tools)
         self.greeting = greeting.read_text() if isinstance(greeting, Path) else greeting
 
         # Store init parameters for deferred system prompt building
@@ -132,6 +160,7 @@ class QueryChatBase(Generic[IntoFrameT]):
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None | MISSING_TYPE = MISSING,
         update_dashboard: Callable[[UpdateDashboardData], None] | None = None,
         reset_dashboard: Callable[[], None] | None = None,
+        visualize_query: Callable[[VisualizeQueryData], None] | None = None,
     ) -> chatlas.Chat:
         """
         Create a chat client with registered tools.
@@ -139,11 +168,14 @@ class QueryChatBase(Generic[IntoFrameT]):
         Parameters
         ----------
         tools
-            Which tools to include: `"update"`, `"query"`, or both.
+            Which tools to include: `"update"`, `"query"`, `"visualize_query"`,
+            or a combination.
         update_dashboard
             Callback when update_dashboard tool succeeds.
         reset_dashboard
             Callback when reset_dashboard tool is invoked.
+        visualize_query
+            Callback when visualize_query tool succeeds.
 
         Returns
         -------
@@ -171,6 +203,10 @@ class QueryChatBase(Generic[IntoFrameT]):
 
         if "query" in tools:
             chat.register_tool(tool_query(data_source))
+
+        if "visualize_query" in tools:
+            query_viz_fn = visualize_query or (lambda _: None)
+            chat.register_tool(tool_visualize_query(self._data_source, query_viz_fn))
 
         return chat
 

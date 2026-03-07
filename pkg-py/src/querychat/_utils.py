@@ -171,14 +171,18 @@ def get_tool_details_setting() -> Optional[Literal["expanded", "collapsed", "def
     return setting_lower
 
 
-def querychat_tool_starts_open(action: Literal["update", "query", "reset"]) -> bool:
+def querychat_tool_starts_open(
+    action: Literal[
+        "update", "query", "reset", "visualize_query"
+    ],
+) -> bool:
     """
     Determine whether a tool card should be open based on action and setting.
 
     Parameters
     ----------
     action : str
-        The action type ('update', 'query', or 'reset')
+        The action type ('update', 'query', 'reset', or 'visualize_query')
 
     Returns
     -------

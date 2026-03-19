@@ -1,4 +1,5 @@
 __pycache__/
+__version.py
 animation.screenflow/
 README_files/
 README.html

@@ -42,7 +42,7 @@ classifiers = [
 [project.optional-dependencies]
 # For SQLAlchemySource and sample data, one of polars or pandas is required
 pandas = ["pandas"]
-polars = ["polars"]
+polars = ["polars", "pyarrow"] # duckdb requires pyarrow for polars DataFrame registration
 ibis = ["ibis-framework>=9.0.0", "pandas"]  # pandas required for ibis .execute() to return DataFrames
 # Web framework extras
 streamlit = ["streamlit>=1.30"]

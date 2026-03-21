@@ -24,7 +24,6 @@ from .tools import (
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    import altair as alt
     from shiny.bookmark import BookmarkState, RestoreState
 
     from shiny import Inputs, Outputs, Session
@@ -93,17 +92,6 @@ class ServerValues(Generic[IntoFrameT]):
         The session-specific chat client instance. This is a deep copy of the
         base client configured for this specific session, containing the chat
         history and tool registrations for this session only.
-    viz_ggsql
-        A reactive Value containing the full ggsql query from visualize_query.
-        Returns `None` if no visualization has been created.
-    viz_title
-        A reactive Value containing the title from visualize_query.
-        Returns `None` if no visualization has been created.
-    viz_widget
-        A callable returning the rendered Altair chart from visualize_query.
-        Returns `None` if no visualization has been created. The chart is
-        re-rendered on each call using ``execute_ggsql()`` and
-        ``AltairWidget.from_ggsql()``.
 
     """
 
@@ -111,10 +99,6 @@ class ServerValues(Generic[IntoFrameT]):
     sql: ReactiveStringOrNone
     title: ReactiveStringOrNone
     client: chatlas.Chat
-    # Visualization state
-    viz_ggsql: ReactiveStringOrNone
-    viz_title: ReactiveStringOrNone
-    viz_widget: Callable[[], alt.JupyterChart | None]
 
 
 @module.server
@@ -150,9 +134,6 @@ def mod_server(
             sql=sql,
             title=title,
             client=client if isinstance(client, chatlas.Chat) else client(),
-            viz_ggsql=viz_ggsql,
-            viz_title=viz_title,
-            viz_widget=lambda: None,
         )
 
     # Real session requires data_source
@@ -292,9 +273,6 @@ def mod_server(
         sql=sql,
         title=title,
         client=chat,
-        viz_ggsql=viz_ggsql,
-        viz_title=viz_title,
-        viz_widget=render_viz_widget,
     )
 
 

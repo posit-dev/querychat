@@ -32,10 +32,6 @@ class TestInlineVisualization:
         self.page = page
         self.chat = chat_10_viz
 
-    def test_app_loads_with_query_plot_tab(self) -> None:
-        """VIZ-INIT: App with visualize_query has a Query Plot tab."""
-        expect(self.page.get_by_role("tab", name="Query Plot")).to_be_visible()
-
     def test_viz_tool_renders_inline_chart(self) -> None:
         """VIZ-INLINE: Visualization tool result contains an inline chart widget."""
         self.chat.set_user_input(

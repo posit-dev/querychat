@@ -13,17 +13,25 @@ from narwhals.stable.v1.typing import IntoFrameT
 from shiny import module, reactive, ui
 
 from ._querychat_core import GREETING_PROMPT
-from .tools import tool_query, tool_reset_dashboard, tool_update_dashboard
+from ._viz_utils import has_viz_tool, preload_viz_deps_server, preload_viz_deps_ui
+from .tools import (
+    tool_query,
+    tool_reset_dashboard,
+    tool_update_dashboard,
+    tool_visualize_query,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    import altair as alt
     from shiny.bookmark import BookmarkState, RestoreState
 
     from shiny import Inputs, Outputs, Session
 
     from ._datasource import DataSource
-    from .types import UpdateDashboardData
+    from ._querychat_base import TOOL_GROUPS
+    from .tools import UpdateDashboardData, VisualizeQueryData
 
 ReactiveString = reactive.Value[str]
 """A reactive string value."""
@@ -34,20 +42,25 @@ CHAT_ID = "chat"
 
 
 @module.ui
-def mod_ui(**kwargs):
+def mod_ui(*, preload_viz: bool = False, **kwargs):
     css_path = Path(__file__).parent / "static" / "css" / "styles.css"
     js_path = Path(__file__).parent / "static" / "js" / "querychat.js"
 
     tag = shinychat.chat_ui(CHAT_ID, **kwargs)
     tag.add_class("querychat")
 
-    return ui.TagList(
+    children: list[ui.TagChild] = [
         ui.head_content(
             ui.include_css(css_path),
             ui.include_js(js_path),
         ),
         tag,
-    )
+    ]
+
+    if preload_viz:
+        children.append(preload_viz_deps_ui())
+
+    return ui.TagList(*children)
 
 
 @dataclass
@@ -79,6 +92,17 @@ class ServerValues(Generic[IntoFrameT]):
         The session-specific chat client instance. This is a deep copy of the
         base client configured for this specific session, containing the chat
         history and tool registrations for this session only.
+    viz_ggsql
+        A reactive Value containing the full ggsql query from visualize_query.
+        Returns `None` if no visualization has been created.
+    viz_title
+        A reactive Value containing the title from visualize_query.
+        Returns `None` if no visualization has been created.
+    viz_widget
+        A callable returning the rendered Altair chart from visualize_query.
+        Returns `None` if no visualization has been created. The chart is
+        re-rendered on each call using ``execute_ggsql()`` and
+        ``AltairWidget.from_ggsql()``.
 
     """
 
@@ -86,6 +110,10 @@ class ServerValues(Generic[IntoFrameT]):
     sql: ReactiveStringOrNone
     title: ReactiveStringOrNone
     client: chatlas.Chat
+    # Visualization state
+    viz_ggsql: ReactiveStringOrNone
+    viz_title: ReactiveStringOrNone
+    viz_widget: Callable[[], alt.JupyterChart | None]
 
 
 @module.server
@@ -98,11 +126,16 @@ def mod_server(
     greeting: str | None,
     client: chatlas.Chat | Callable,
     enable_bookmarking: bool,
+    tools: tuple[TOOL_GROUPS, ...] | None = None,
 ) -> ServerValues[IntoFrameT]:
     # Reactive values to store state
     sql = ReactiveStringOrNone(None)
     title = ReactiveStringOrNone(None)
     has_greeted = reactive.value[bool](False)  # noqa: FBT003
+
+    # Visualization state - store only specs, render on demand
+    viz_ggsql = ReactiveStringOrNone(None)
+    viz_title = ReactiveStringOrNone(None)
 
     # Short-circuit for stub sessions (e.g. 1st run of an Express app)
     # data_source may be None during stub session for deferred pattern
@@ -116,6 +149,9 @@ def mod_server(
             sql=sql,
             title=title,
             client=client if isinstance(client, chatlas.Chat) else client(),
+            viz_ggsql=viz_ggsql,
+            viz_title=viz_title,
+            viz_widget=lambda: None,
         )
 
     # Real session requires data_source
@@ -133,11 +169,17 @@ def mod_server(
         sql.set(None)
         title.set(None)
 
+    def update_query_viz(data: VisualizeQueryData):
+        viz_ggsql.set(data["ggsql"])
+        viz_title.set(data["title"])
+
     # Set up the chat object for this session
     # Support both a callable that creates a client and legacy instance pattern
     if callable(client) and not isinstance(client, chatlas.Chat):
         chat = client(
-            update_dashboard=update_dashboard, reset_dashboard=reset_dashboard
+            update_dashboard=update_dashboard,
+            reset_dashboard=reset_dashboard,
+            visualize_query=update_query_viz,
         )
     else:
         # Legacy pattern: client is Chat instance
@@ -147,12 +189,30 @@ def mod_server(
         chat.register_tool(tool_query(data_source))
         chat.register_tool(tool_reset_dashboard(reset_dashboard))
 
+        if has_viz_tool(tools):
+            chat.register_tool(tool_visualize_query(data_source, update_query_viz))
+
+    if has_viz_tool(tools):
+        preload_viz_deps_server()
+
     # Execute query when SQL changes
     @reactive.calc
     def filtered_df():
         query = sql.get()
-        df = data_source.get_data() if not query else data_source.execute_query(query)
-        return df
+        return data_source.get_data() if not query else data_source.execute_query(query)
+
+    # Render query visualization on demand
+    @reactive.calc
+    def render_viz_widget():
+        from ._viz_altair_widget import AltairWidget
+        from ._viz_ggsql import execute_ggsql
+
+        ggsql_query = viz_ggsql.get()
+        if ggsql_query is None:
+            return None
+
+        spec = execute_ggsql(data_source, ggsql_query)
+        return AltairWidget.from_ggsql(spec).widget
 
     # Chat UI logic
     chat_ui = shinychat.Chat(CHAT_ID)
@@ -209,6 +269,8 @@ def mod_server(
             vals["querychat_sql"] = sql.get()
             vals["querychat_title"] = title.get()
             vals["querychat_has_greeted"] = has_greeted.get()
+            vals["querychat_viz_ggsql"] = viz_ggsql.get()
+            vals["querychat_viz_title"] = viz_title.get()
 
         @session.bookmark.on_restore
         def _on_restore(x: RestoreState) -> None:
@@ -219,8 +281,20 @@ def mod_server(
                 title.set(vals["querychat_title"])
             if "querychat_has_greeted" in vals:
                 has_greeted.set(vals["querychat_has_greeted"])
+            if "querychat_viz_ggsql" in vals:
+                viz_ggsql.set(vals["querychat_viz_ggsql"])
+            if "querychat_viz_title" in vals:
+                viz_title.set(vals["querychat_viz_title"])
 
-    return ServerValues(df=filtered_df, sql=sql, title=title, client=chat)
+    return ServerValues(
+        df=filtered_df,
+        sql=sql,
+        title=title,
+        client=chat,
+        viz_ggsql=viz_ggsql,
+        viz_title=viz_title,
+        viz_widget=render_viz_widget,
+    )
 
 
 class GreetWarning(Warning):

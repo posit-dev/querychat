@@ -6,7 +6,9 @@ from typing import TYPE_CHECKING
 
 import chevron
 
-_SCHEMA_TAG_RE = re.compile(r"\{\{[{#^/]?\s*schema\b")
+from ._viz_utils import has_viz_tool
+
+SCHEMA_TAG_RE = re.compile(r"\{\{[{#^/]?\s*schema\b")
 
 if TYPE_CHECKING:
     from ._datasource import DataSource
@@ -50,7 +52,7 @@ class QueryChatSystemPrompt:
         else:
             self.extra_instructions = extra_instructions
 
-        if _SCHEMA_TAG_RE.search(self.template):
+        if SCHEMA_TAG_RE.search(self.template):
             self.schema = data_source.get_schema(
                 categorical_threshold=categorical_threshold
             )
@@ -83,6 +85,7 @@ class QueryChatSystemPrompt:
             "extra_instructions": self.extra_instructions,
             "has_tool_update": "update" in tools if tools else False,
             "has_tool_query": "query" in tools if tools else False,
+            "has_tool_visualize_query": has_viz_tool(tools),
             "include_query_guidelines": len(tools or ()) > 0,
         }
 

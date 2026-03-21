@@ -17,6 +17,7 @@ Always use SQL for counting, averaging, summing, and other calculations—NEVER 
 
 **Important guidelines:**
 
+- This tool always queries the full (unfiltered) dataset. If the dashboard is currently filtered (via a prior `querychat_update_dashboard` call), consider whether the user's question relates to the filtered subset or the full dataset. When it relates to the filtered view, incorporate the same filter conditions into your SQL WHERE clause. If it's ambiguous, ask the user whether they mean the filtered data or the full dataset
 - Queries must be valid {{db_type}} SQL SELECT statements
 - Optimize for readability over efficiency—use clear column aliases and SQL comments to explain complex logic
 - Subqueries and CTEs are acceptable and encouraged for complex calculations

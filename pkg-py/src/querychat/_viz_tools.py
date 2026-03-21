@@ -144,6 +144,12 @@ def visualize_query_impl(
         try:
             validated = ggsql_pkg.validate(ggsql)
             if not validated.has_visual():
+                # When VISUALISE contains SQL expressions (e.g., CAST()),
+                # ggsql silently treats the entire query as plain SQL:
+                # valid()=True, has_visual()=False, no errors. This
+                # heuristic catches that case so we can guide the LLM.
+                # Remove when ggsql reports this as a parse error:
+                # https://github.com/posit-dev/ggsql/issues/256
                 has_keyword = "VISUALISE" in ggsql.upper() or "VISUALIZE" in ggsql.upper()
                 if has_keyword:
                     raise ValueError(

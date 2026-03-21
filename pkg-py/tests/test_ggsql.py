@@ -6,7 +6,43 @@ import polars as pl
 import pytest
 from querychat._datasource import DataFrameSource
 from querychat._viz_altair_widget import AltairWidget
-from querychat._viz_ggsql import execute_ggsql
+from querychat._viz_ggsql import execute_ggsql, extract_visualise_table
+
+
+class TestExtractVisualiseTable:
+    """Tests for extract_visualise_table() regex parsing."""
+
+    def test_bare_identifier(self):
+        assert extract_visualise_table("VISUALISE x, y FROM mytable DRAW point") == "mytable"
+
+    def test_quoted_identifier(self):
+        assert (
+            extract_visualise_table('VISUALISE x FROM "my table" DRAW point')
+            == '"my table"'
+        )
+
+    def test_no_from_returns_none(self):
+        assert extract_visualise_table("VISUALISE x, y DRAW point") is None
+
+    def test_ignores_draw_level_from(self):
+        visual = "VISUALISE x, y DRAW bar MAPPING z AS fill FROM summary"
+        assert extract_visualise_table(visual) is None
+
+    def test_cte_name(self):
+        assert (
+            extract_visualise_table("VISUALISE month AS x, total AS y FROM monthly DRAW line")
+            == "monthly"
+        )
+
+    def test_from_only_no_mappings(self):
+        assert extract_visualise_table("VISUALISE FROM products DRAW bar") == "products"
+
+    def test_case_insensitive_from(self):
+        assert extract_visualise_table("VISUALISE x from mytable DRAW point") == "mytable"
+
+    def test_case_insensitive_draw(self):
+        visual = "VISUALISE x, y draw bar MAPPING z AS fill FROM summary"
+        assert extract_visualise_table(visual) is None
 
 
 class TestGgsqlValidate:
@@ -94,6 +130,14 @@ class TestExecuteGgsql:
         nw_df = nw.from_native(pl.DataFrame({"x": [1, 2], "y": [3, 4]}))
         ds = DataFrameSource(nw_df, "test_data")
         spec = execute_ggsql(ds, "SELECT * FROM test_data VISUALISE x, y DRAW point")
+        assert "VISUALISE" in spec.visual()
+
+    @pytest.mark.ggsql
+    def test_visualise_from_path(self):
+        nw_df = nw.from_native(pl.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]}))
+        ds = DataFrameSource(nw_df, "test_data")
+        spec = execute_ggsql(ds, "VISUALISE x, y FROM test_data DRAW point")
+        assert spec.metadata()["rows"] == 3
         assert "VISUALISE" in spec.visual()
 
     @pytest.mark.ggsql

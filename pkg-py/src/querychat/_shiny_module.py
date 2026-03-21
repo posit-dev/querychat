@@ -31,7 +31,8 @@ if TYPE_CHECKING:
 
     from ._datasource import DataSource
     from ._querychat_base import TOOL_GROUPS
-    from .tools import UpdateDashboardData, VisualizeQueryData
+    from ._viz_tools import VisualizeQueryData
+    from .tools import UpdateDashboardData
 
 ReactiveString = reactive.Value[str]
 """A reactive string value."""

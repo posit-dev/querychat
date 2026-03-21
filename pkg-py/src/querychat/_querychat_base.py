@@ -26,7 +26,6 @@ from ._utils import MISSING, MISSING_TYPE, is_ibis_table
 from ._viz_utils import has_viz_deps, has_viz_tool
 from .tools import (
     UpdateDashboardData,
-    VisualizeQueryData,
     tool_query,
     tool_reset_dashboard,
     tool_update_dashboard,
@@ -37,6 +36,8 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from narwhals.stable.v1.typing import IntoFrame
+
+    from ._viz_tools import VisualizeQueryData
 
 TOOL_GROUPS = Literal["update", "query", "visualize_query"]
 DEFAULT_TOOLS: tuple[TOOL_GROUPS, ...] = ("update", "query")

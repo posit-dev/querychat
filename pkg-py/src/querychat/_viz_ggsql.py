@@ -56,7 +56,15 @@ def execute_ggsql(data_source: DataSource, query: str) -> ggsql.Spec:
 
 
 def extract_visualise_table(visual: str) -> str | None:
-    """Extract the table name from ``VISUALISE ... FROM <table>`` if present."""
+    """
+    Extract the table name from ``VISUALISE ... FROM <table>`` if present.
+
+    This regex reimplements part of ggsql's parser because the Python bindings
+    don't expose the parsed table name. Internally, ggsql stores it as
+    ``Plot.source: Option<DataSource>`` (see ``ggsql/src/plot/types.rs``).
+    If ggsql ever exposes a ``source_table()`` or ``visual_table()`` method
+    on ``Validated`` or ``Spec``, this function should be replaced.
+    """
     # Only look at the VISUALISE clause (before the first DRAW) to avoid
     # matching layer-level FROM (e.g., DRAW bar MAPPING ... FROM summary).
     draw_pos = re.search(r"\bDRAW\b", visual, re.IGNORECASE)

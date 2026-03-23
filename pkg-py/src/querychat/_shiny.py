@@ -405,6 +405,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         self,
         *,
         data_source: Optional[IntoFrame | sqlalchemy.Engine | ibis.Table] = None,
+        client: Optional[str | chatlas.Chat] = None,
         enable_bookmarking: bool = False,
         id: Optional[str] = None,
     ) -> ServerValues[IntoFrameT]:
@@ -422,6 +423,11 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             Optional data source to use. If provided, sets the data_source property
             before initializing server logic. This is useful for the deferred pattern
             where data_source is not known at initialization time.
+        client
+            Optional chat client to use. If provided, sets the chat_client property
+            before initializing server logic. This is useful for the deferred pattern
+            where the client cannot be created at initialization time (e.g., when
+            using Posit Connect managed OAuth credentials that require session access).
         enable_bookmarking
             Whether to enable bookmarking for the querychat module.
         id
@@ -485,7 +491,11 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         if data_source is not None:
             self.data_source = data_source
 
+        if client is not None:
+            self.chat_client = client
+
         resolved_data_source = self._require_data_source("server")
+        self._require_client("server")
 
         return mod_server(
             id or self.id,

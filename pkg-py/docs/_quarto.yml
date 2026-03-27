@@ -65,6 +65,8 @@ website:
 
 format:
   html:
+    include-in-header:
+      - "include-in-header.html"
     theme:
       - styles.scss
     toc: true

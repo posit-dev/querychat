@@ -76,7 +76,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="site_libs/quarto-html/quarto-syntax-highlighting-51e9ba6732aa6bc0134376f05742e55b.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="site_libs/bootstrap/bootstrap-9d4a01437c10349db818fa982cbbb5f9.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="site_libs/bootstrap/bootstrap-6beba4682d7463222a4f11cd9d0a3fd0.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script src="site_libs/quarto-contrib/glightbox/glightbox.min.js"></script>
 <link href="site_libs/quarto-contrib/glightbox/glightbox.min.css" rel="stylesheet">
 <link href="site_libs/quarto-contrib/glightbox/lightbox.css" rel="stylesheet">
@@ -107,6 +107,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     "search-label": "Search"
   }
 }</script>
+<!-- Privacy-friendly analytics by Plausible -->
+<script async="" src="https://plausible.io/js/pa-wgo-tEXQwSOuN51WDI0ry.js"></script>
+<script>
+  window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};
+  plausible.init()
+</script>
 
 
 <meta property="og:title" content="Dash – querychat">
@@ -411,7 +417,7 @@ Quick start with <code>.app()</code>
 <section id="basic-layout" class="level2">
 <h2 class="anchored" data-anchor-id="basic-layout">Basic layout</h2>
 <p>The most common pattern places chat alongside your custom filtered views:</p>
-<div id="43197fe9" class="cell" data-execution_count="1">
+<div id="6301c7aa" class="cell" data-execution_count="1">
 <details class="code-fold">
 <summary>dash-custom.py</summary>
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> dash_ag_grid <span class="im">as</span> dag</span>
@@ -488,7 +494,7 @@ Quick start with <code>.app()</code>
 <section id="data-views" class="level2">
 <h2 class="anchored" data-anchor-id="data-views">Data views</h2>
 <p>The real power of querychat comes from connecting it to visualizations. Here’s an example showing both filtered data and charts:</p>
-<div id="1ebf604a" class="cell" data-execution_count="2">
+<div id="7f883df2" class="cell" data-execution_count="2">
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> dash_bootstrap_components <span class="im">as</span> dbc</span>
 <span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> plotly.express <span class="im">as</span> px</span>
 <span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat.dash <span class="im">import</span> QueryChat</span>
@@ -544,7 +550,7 @@ Quick start with <code>.app()</code>
 <p>When users filter data through the chat (e.g., “show only survivors”), both charts update automatically.</p>
 <p><a href="./images/dash-viz.png" class="lightbox" data-gallery="quarto-lightbox-gallery-3"><img src="./images/dash-viz.png" class="shadow rounded mb-3 img-fluid" alt="Screenshot of Dash data views example."></a></p>
 <p>A more complete example adds metrics:</p>
-<div id="dbcb745c" class="cell" data-execution_count="3">
+<div id="772e906c" class="cell" data-execution_count="3">
 <details class="code-fold">
 <summary>dash-complete.py</summary>
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> dash_bootstrap_components <span class="im">as</span> dbc</span>

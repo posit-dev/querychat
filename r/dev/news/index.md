@@ -2,6 +2,13 @@
 
 ## querychat (development version)
 
+- When a custom `prompt_template` is provided that doesn’t contain
+  Mustache references to `{{schema}}`, the expensive `get_schema()` call
+  is now skipped entirely. This allows users with large databases to
+  avoid slow startup by providing their own prompt that includes schema
+  information inline (or omits it).
+  ([\#208](https://github.com/posit-dev/querychat/issues/208))
+
 - Added support for Snowflake Semantic Views. When connected to
   Snowflake via DBI, querychat automatically discovers available
   Semantic Views and includes their definitions in the system prompt.
@@ -17,6 +24,13 @@
   data source depends on session-specific authentication or per-user
   database connections.
   ([\#202](https://github.com/posit-dev/querychat/issues/202))
+
+- `DBISource` now uses database-agnostic SQL for column and type
+  detection, replacing `LIMIT` syntax with `WHERE 1=0` and
+  `dbFetch(n=1)`. This fixes compatibility with SQL Server and other
+  databases that don’t support `LIMIT`.
+  ([\#112](https://github.com/posit-dev/querychat/issues/112),
+  [\#197](https://github.com/posit-dev/querychat/issues/197))
 
 ## querychat 0.2.0
 

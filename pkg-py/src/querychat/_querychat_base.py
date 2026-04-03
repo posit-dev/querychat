@@ -81,12 +81,18 @@ class QueryChatBase(Generic[IntoFrameT]):
         self._extra_instructions = extra_instructions
         self._categorical_threshold = categorical_threshold
 
-        # Normalize and initialize client (doesn't need data_source)
-        client = normalize_client(client)
-        self._client = copy.deepcopy(client)
-        self._client.set_turns([])
-
+        # Initialize client
+        # When data_source is None (deferred pattern), also defer client initialization
+        # unless an explicit client is provided
         self._client_console = None
+        if data_source is None and client is None:
+            # Deferred pattern: don't try to create a default client
+            self._client: chatlas.Chat | None = None
+        else:
+            # Normalize and initialize client
+            normalized_client = normalize_client(client)
+            self._client = copy.deepcopy(normalized_client)
+            self._client.set_turns([])
 
         # Initialize data source (may be None for deferred pattern)
         if data_source is not None:
@@ -114,7 +120,9 @@ class QueryChatBase(Generic[IntoFrameT]):
             extra_instructions=self._extra_instructions,
             categorical_threshold=self._categorical_threshold,
         )
-        self._client.system_prompt = self._system_prompt.render(self.tools)
+        # Only set system_prompt on client if client is available
+        if self._client is not None:
+            self._client.system_prompt = self._system_prompt.render(self.tools)
 
     def _require_data_source(self, method_name: str) -> DataSource[IntoFrameT]:
         """Raise if data_source is not set, otherwise return it for type narrowing."""
@@ -125,6 +133,16 @@ class QueryChatBase(Generic[IntoFrameT]):
                 "or pass data_source to server()."
             )
         return self._data_source
+
+    def _require_client(self, method_name: str) -> chatlas.Chat:
+        """Raise if client is not set, otherwise return it for type narrowing."""
+        if self._client is None:
+            raise RuntimeError(
+                f"client must be set before calling {method_name}(). "
+                "Either pass client to __init__(), set the chat_client property, "
+                "or pass client to server()."
+            )
+        return self._client
 
     def client(
         self,
@@ -152,11 +170,12 @@ class QueryChatBase(Generic[IntoFrameT]):
 
         """
         data_source = self._require_data_source("client")
+        base_client = self._require_client("client")
         if self._system_prompt is None:
             raise RuntimeError("System prompt not initialized")
         tools = normalize_tools(tools, default=self.tools)
 
-        chat = copy.deepcopy(self._client)
+        chat = copy.deepcopy(base_client)
         chat.set_turns([])
         chat.system_prompt = self._system_prompt.render(tools)
 
@@ -177,7 +196,8 @@ class QueryChatBase(Generic[IntoFrameT]):
     def generate_greeting(self, *, echo: Literal["none", "output"] = "none") -> str:
         """Generate a welcome greeting for the chat."""
         self._require_data_source("generate_greeting")
-        client = copy.deepcopy(self._client)
+        base_client = self._require_client("generate_greeting")
+        client = copy.deepcopy(base_client)
         client.set_turns([])
         return str(client.chat(GREETING_PROMPT, echo=echo))
 
@@ -190,6 +210,7 @@ class QueryChatBase(Generic[IntoFrameT]):
     ) -> None:
         """Launch an interactive console chat with the data."""
         self._require_data_source("console")
+        self._require_client("console")
         tools = normalize_tools(tools, default=("query",))
 
         if new or self._client_console is None:
@@ -215,6 +236,21 @@ class QueryChatBase(Generic[IntoFrameT]):
         """Set the data source, normalizing and rebuilding system prompt."""
         self._data_source = normalize_data_source(value, self._table_name)
         self._build_system_prompt()
+
+    @property
+    def chat_client(self) -> chatlas.Chat | None:
+        """Get the current chat client."""
+        return self._client
+
+    @chat_client.setter
+    def chat_client(self, value: str | chatlas.Chat) -> None:
+        """Set the chat client, normalizing and updating system prompt if needed."""
+        normalized_client = normalize_client(value)
+        self._client = copy.deepcopy(normalized_client)
+        self._client.set_turns([])
+        # Update system prompt on client if data_source is already set
+        if self._data_source is not None and self._system_prompt is not None:
+            self._client.system_prompt = self._system_prompt.render(self.tools)
 
     def cleanup(self) -> None:
         """Clean up resources associated with the data source."""

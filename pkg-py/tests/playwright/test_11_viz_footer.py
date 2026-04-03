@@ -35,7 +35,7 @@ def _send_viz_prompt(
     chat_10_viz.send_user_input(method="click")
 
     # Wait for the viz tool result card with fullscreen support
-    page.locator("shiny-tool-result[full-screen]").wait_for(
+    page.locator(".shiny-tool-result:has(.tool-fullscreen-toggle)").wait_for(
         state="visible", timeout=TOOL_RESULT_TIMEOUT
     )
     # Wait for the footer buttons to appear inside the card
@@ -159,7 +159,7 @@ class TestVizFooterScreenshots:
 
     def test_footer_default_state(self, page: Page) -> None:
         """Screenshot: footer in default state (query hidden, menu closed)."""
-        card = page.locator("shiny-tool-result[full-screen]")
+        card = page.locator(".shiny-tool-result:has(.tool-fullscreen-toggle)")
         card.screenshot(path="test-results/viz-footer-default.png")
 
     def test_footer_query_expanded(self, page: Page) -> None:
@@ -168,7 +168,7 @@ class TestVizFooterScreenshots:
         btn.click()
         page.wait_for_timeout(300)  # wait for CSS transition
 
-        card = page.locator("shiny-tool-result[full-screen]")
+        card = page.locator(".shiny-tool-result:has(.tool-fullscreen-toggle)")
         card.screenshot(path="test-results/viz-footer-query-expanded.png")
 
     def test_footer_save_menu_open(self, page: Page) -> None:
@@ -176,5 +176,5 @@ class TestVizFooterScreenshots:
         btn = page.locator(".querychat-save-btn")
         btn.click()
 
-        card = page.locator("shiny-tool-result[full-screen]")
+        card = page.locator(".shiny-tool-result:has(.tool-fullscreen-toggle)")
         card.screenshot(path="test-results/viz-footer-save-menu-open.png")

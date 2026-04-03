@@ -1,0 +1,110 @@
+---
+title: Visualizations
+lightbox: true
+---
+
+querychat can create charts inline in the chat.
+When you ask a question that benefits from a visualization, the LLM writes a query using [ggsql](https://ggsql.org/) — a SQL-like visualization grammar — and renders an [Altair](https://altair-viz.github.io/) chart directly in the conversation.
+
+## Getting started
+
+Visualization is enabled by default.
+The simplest way to try it is with `.app()`:
+
+```{.python filename="app.py"}
+from querychat import QueryChat
+from querychat.data import titanic
+
+qc = QueryChat(titanic(), "titanic")
+app = qc.app()
+```
+
+Ask something like "Show me survival rate by passenger class as a bar chart" and querychat will generate and display the chart inline:
+
+![](/images/viz-bar-chart.png){fig-alt="Bar chart showing survival rate by passenger class." class="lightbox shadow rounded mb-3"}
+
+## Enabling and disabling
+
+The `tools` parameter controls which capabilities the LLM has access to.
+By default, all tools are enabled (including visualization):
+
+```{.python}
+# Default — all tools enabled
+qc = QueryChat(titanic(), "titanic")
+```
+
+To disable visualization, pass a tuple that omits `"visualize_query"`:
+
+```{.python}
+# No visualization
+qc = QueryChat(titanic(), "titanic", tools=("query", "update"))
+```
+
+To enable only query and visualization (no dashboard filtering):
+
+```{.python}
+# Query + visualization only
+qc = QueryChat(titanic(), "titanic", tools=("query", "visualize_query"))
+```
+
+See [Tools](tools.qmd) for a full reference on available tools and what each one does.
+
+## Custom apps
+
+The example below shows a minimal custom Shiny app using only the `"query"` and `"visualize_query"` tools.
+It omits `"update"` to focus entirely on data analysis and visualization rather than dashboard filtering:
+
+```{.python filename="app.py"}
+{{< include /../examples/10-viz-app.py >}}
+```
+
+## What you can ask for
+
+querychat can generate a wide range of chart types.
+Some example prompts:
+
+- "Show me a bar chart of survival rate by passenger class"
+- "Scatter plot of age vs fare, colored by survival"
+- "Line chart of average fare over time"
+- "Histogram of passenger ages"
+- "Facet survival rate by class and sex"
+
+The LLM chooses an appropriate chart type based on your question, but you can always be specific.
+If you ask for a bar chart, you'll get a bar chart.
+
+![](/images/viz-scatter.png){fig-alt="Scatter plot of age vs fare colored by survival status." class="lightbox shadow rounded mb-3"}
+
+::: {.callout-tip}
+If you don't like the chart, ask the LLM to adjust it — for example, "make the dots bigger" or "use a log scale on the y-axis".
+:::
+
+## Chart controls
+
+Each chart has controls in its footer:
+
+**Fullscreen** — Click the expand icon to view the chart in fullscreen mode.
+
+![](/images/viz-fullscreen.png){fig-alt="A chart displayed in fullscreen mode." class="lightbox shadow rounded mb-3"}
+
+**Save** — Download the chart as a PNG or SVG file.
+
+**Show Query** — Expand the footer to see the ggsql query used to generate the chart.
+
+![](/images/viz-show-query.png){fig-alt="A chart with the Show Query footer expanded, showing the ggsql query." class="lightbox shadow rounded mb-3"}
+
+## How it works
+
+1. **The LLM generates a ggsql query** — a SQL-like grammar that describes both data transformation and visual encoding in a single statement.
+2. **The SQL is executed** — querychat runs the data portion of the query against your data source locally.
+3. **The VISUALISE clause is rendered** — the result is passed to Altair, which produces a Vega-Lite chart specification.
+4. **The chart appears inline** — the chart is streamed back into the conversation as an interactive widget.
+
+Note that visualization queries are independent of any active dashboard filter set by the `update` tool.
+They always run against the full dataset.
+
+Learn more about the ggsql grammar at [ggsql.org](https://ggsql.org/).
+
+## See also
+
+- [Tools](tools.qmd) — Understand what querychat can do under the hood
+- [Provide context](context.qmd) — Help the LLM understand your data better

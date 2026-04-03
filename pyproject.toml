@@ -22,7 +22,7 @@ maintainers = [
 dependencies = [
     "duckdb",
     "shiny @ git+https://github.com/posit-dev/py-shiny.git@feat/ggsql-language",
-    "shinychat @ git+https://github.com/posit-dev/shinychat.git@feat/react-migration",
+    "shinychat @ git+https://github.com/posit-dev/shinychat.git",
     "htmltools",
     "chatlas>=0.13.2",
     "narwhals",
@@ -223,6 +223,7 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 "pkg-py/src/querychat/_gradio.py" = ["E402"]  # Backwards-compat aliases at end of file
 "pkg-py/src/querychat/_streamlit.py" = ["E402"]  # Backwards-compat aliases at end of file
 "pkg-py/src/querychat/types/__init__.py" = ["A005"]  # Deliberately shadows stdlib types module
+"pkg-py/docs/_screenshots/*.py" = ["S310", "PLR2004", "PERF203"]  # Dev utility scripts
 
 [tool.ruff.format]
 quote-style = "double"

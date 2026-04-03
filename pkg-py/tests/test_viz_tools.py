@@ -1,6 +1,6 @@
 """Tests for visualization tool functions."""
 
-import builtins
+import importlib.util
 
 import narwhals.stable.v1 as nw
 import polars as pl
@@ -13,14 +13,14 @@ from querychat.types import VisualizeQueryData, VisualizeQueryResult
 class TestVizDependencyCheck:
     def test_missing_ggsql_raises_helpful_error(self, monkeypatch):
         """Requesting viz tools without ggsql installed should fail early."""
-        real_import = builtins.__import__
+        real_find_spec = importlib.util.find_spec
 
-        def mock_import(name, *args, **kwargs):
+        def mock_find_spec(name, *args, **kwargs):
             if name == "ggsql":
-                raise ImportError("No module named 'ggsql'")
-            return real_import(name, *args, **kwargs)
+                return None
+            return real_find_spec(name, *args, **kwargs)
 
-        monkeypatch.setattr(builtins, "__import__", mock_import)
+        monkeypatch.setattr(importlib.util, "find_spec", mock_find_spec)
 
         from querychat._querychat_base import normalize_tools
 
@@ -37,18 +37,13 @@ class TestVizDependencyCheck:
 
     def test_check_deps_false_skips_check(self, monkeypatch):
         """check_deps=False should skip the dependency check."""
-        real_import = builtins.__import__
-
-        def mock_import(name, *args, **kwargs):
-            if name == "ggsql":
-                raise ImportError("No module named 'ggsql'")
-            return real_import(name, *args, **kwargs)
-
-        monkeypatch.setattr(builtins, "__import__", mock_import)
+        monkeypatch.setattr(
+            importlib.util, "find_spec", lambda name, *a, **kw: None
+        )
 
         from querychat._querychat_base import normalize_tools
 
-        # Should not raise even though ggsql is missing
+        # Should not raise even though find_spec returns None for everything
         result = normalize_tools(("visualize_query",), default=None, check_deps=False)
         assert result == ("visualize_query",)
 

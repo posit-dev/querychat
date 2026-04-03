@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import functools
 from typing import TYPE_CHECKING, Any, cast
 from uuid import uuid4
 
@@ -13,18 +12,6 @@ from shiny import reactive
 if TYPE_CHECKING:
     import altair as alt
     import ggsql
-
-@functools.cache
-def get_compound_chart_types() -> tuple[type, ...]:
-    import altair as alt
-
-    return (
-        alt.FacetChart,
-        alt.ConcatChart,
-        alt.HConcatChart,
-        alt.VConcatChart,
-    )
-
 
 class AltairWidget:
     """
@@ -45,7 +32,10 @@ class AltairWidget:
     def __init__(self, chart: alt.TopLevelMixin) -> None:
         import altair as alt
 
-        is_compound = isinstance(chart, get_compound_chart_types())
+        is_compound = isinstance(
+            chart,
+            (alt.FacetChart, alt.ConcatChart, alt.HConcatChart, alt.VConcatChart),
+        )
 
         # Workaround: Vega-Lite's width/height: "container" doesn't work for
         # compound specs (facet, concat, etc.), so we inject pixel dimensions
@@ -122,12 +112,9 @@ def inject_compound_sizes(
     container_height: int,
 ) -> alt.TopLevelMixin:
     """
-    Set cell ``width``/``height`` on a compound spec via in-place mutation.
+    Return a copy of ``chart`` with cell ``width``/``height`` set.
 
-    The chart is mutated in-place **and** returned. Callers that need to
-    trigger traitlets change detection should serialize the returned chart
-    (e.g., ``chart.to_dict()``) rather than reassigning ``widget.chart``,
-    because traitlets won't fire events for the same object after mutation.
+    The original chart is never mutated.
 
     For faceted charts, divides the container width by the number of columns.
     For hconcat/concat, divides by the number of sub-specs.
@@ -137,6 +124,8 @@ def inject_compound_sizes(
     including space for legends when present.
     """
     import altair as alt
+
+    chart = chart.copy()
 
     # Approximate padding; will be replaced when ggsql handles compound sizing
     # natively (https://github.com/posit-dev/ggsql/issues/238).

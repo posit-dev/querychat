@@ -8,22 +8,14 @@ def has_viz_tool(tools: tuple[str, ...] | None) -> bool:
     return tools is not None and "visualize_query" in tools
 
 
-_viz_deps_available: bool | None = None
-
-
 def has_viz_deps() -> bool:
     """Check whether visualization dependencies (ggsql, altair, shinywidgets) are installed."""
-    global _viz_deps_available  # noqa: PLW0603
-    if _viz_deps_available is None:
-        try:
-            import altair as alt  # noqa: F401
-            import ggsql  # noqa: F401
-            import shinywidgets  # noqa: F401
-        except ImportError:
-            _viz_deps_available = False
-        else:
-            _viz_deps_available = True
-    return _viz_deps_available
+    import importlib.util
+
+    return all(
+        importlib.util.find_spec(pkg) is not None
+        for pkg in ("ggsql", "altair", "shinywidgets")
+    )
 
 
 

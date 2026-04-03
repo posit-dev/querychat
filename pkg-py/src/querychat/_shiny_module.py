@@ -18,7 +18,6 @@ from .tools import (
     tool_query,
     tool_reset_dashboard,
     tool_update_dashboard,
-    tool_visualize_query,
 )
 
 if TYPE_CHECKING:
@@ -30,8 +29,7 @@ if TYPE_CHECKING:
 
     from ._datasource import DataSource
     from ._querychat_base import TOOL_GROUPS
-    from ._viz_tools import VisualizeQueryData
-    from .tools import UpdateDashboardData
+    from .types import UpdateDashboardData
 
 ReactiveString = reactive.Value[str]
 """A reactive string value."""
@@ -118,10 +116,6 @@ def mod_server(
     title = ReactiveStringOrNone(None)
     has_greeted = reactive.value[bool](False)  # noqa: FBT003
 
-    # Visualization state - store only specs, render on demand
-    viz_ggsql = ReactiveStringOrNone(None)
-    viz_title = ReactiveStringOrNone(None)
-
     # Short-circuit for stub sessions (e.g. 1st run of an Express app)
     # data_source may be None during stub session for deferred pattern
     if session.is_stub_session():
@@ -151,17 +145,11 @@ def mod_server(
         sql.set(None)
         title.set(None)
 
-    def update_query_viz(data: VisualizeQueryData):
-        viz_ggsql.set(data["ggsql"])
-        viz_title.set(data["title"])
-
     # Set up the chat object for this session
     # Support both a callable that creates a client and legacy instance pattern
     if callable(client) and not isinstance(client, chatlas.Chat):
         chat = client(
-            update_dashboard=update_dashboard,
-            reset_dashboard=reset_dashboard,
-            visualize_query=update_query_viz,
+            update_dashboard=update_dashboard, reset_dashboard=reset_dashboard
         )
     else:
         # Legacy pattern: client is Chat instance
@@ -171,9 +159,6 @@ def mod_server(
         chat.register_tool(tool_query(data_source))
         chat.register_tool(tool_reset_dashboard(reset_dashboard))
 
-        if has_viz_tool(tools):
-            chat.register_tool(tool_visualize_query(data_source, update_query_viz))
-
     if has_viz_tool(tools):
         preload_viz_deps_server()
 
@@ -181,20 +166,8 @@ def mod_server(
     @reactive.calc
     def filtered_df():
         query = sql.get()
-        return data_source.get_data() if not query else data_source.execute_query(query)
-
-    # Render query visualization on demand
-    @reactive.calc
-    def render_viz_widget():
-        from ._viz_altair_widget import AltairWidget
-        from ._viz_ggsql import execute_ggsql
-
-        ggsql_query = viz_ggsql.get()
-        if ggsql_query is None:
-            return None
-
-        spec = execute_ggsql(data_source, ggsql_query)
-        return AltairWidget.from_ggsql(spec).widget
+        df = data_source.get_data() if not query else data_source.execute_query(query)
+        return df
 
     # Chat UI logic
     chat_ui = shinychat.Chat(CHAT_ID)
@@ -251,8 +224,6 @@ def mod_server(
             vals["querychat_sql"] = sql.get()
             vals["querychat_title"] = title.get()
             vals["querychat_has_greeted"] = has_greeted.get()
-            vals["querychat_viz_ggsql"] = viz_ggsql.get()
-            vals["querychat_viz_title"] = viz_title.get()
 
         @session.bookmark.on_restore
         def _on_restore(x: RestoreState) -> None:
@@ -263,17 +234,8 @@ def mod_server(
                 title.set(vals["querychat_title"])
             if "querychat_has_greeted" in vals:
                 has_greeted.set(vals["querychat_has_greeted"])
-            if "querychat_viz_ggsql" in vals:
-                viz_ggsql.set(vals["querychat_viz_ggsql"])
-            if "querychat_viz_title" in vals:
-                viz_title.set(vals["querychat_viz_title"])
 
-    return ServerValues(
-        df=filtered_df,
-        sql=sql,
-        title=title,
-        client=chat,
-    )
+    return ServerValues(df=filtered_df, sql=sql, title=title, client=chat)
 
 
 class GreetWarning(Warning):

@@ -9,6 +9,14 @@ from shinychat.types import ToolResultDisplay
 
 from ._icons import bs_icon
 from ._utils import as_narwhals, df_to_html, querychat_tool_starts_open
+from ._viz_tools import tool_visualize_query
+
+__all__ = [
+    "tool_query",
+    "tool_reset_dashboard",
+    "tool_update_dashboard",
+    "tool_visualize_query",
+]
 
 if TYPE_CHECKING:
     from collections.abc import Callable

@@ -13,7 +13,12 @@ from narwhals.stable.v1.typing import IntoFrameT
 from shiny import module, reactive, ui
 
 from ._querychat_core import GREETING_PROMPT
-from .tools import tool_query, tool_reset_dashboard, tool_update_dashboard
+from ._viz_utils import has_viz_tool, preload_viz_deps_server, preload_viz_deps_ui
+from .tools import (
+    tool_query,
+    tool_reset_dashboard,
+    tool_update_dashboard,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -23,6 +28,7 @@ if TYPE_CHECKING:
     from shiny import Inputs, Outputs, Session
 
     from ._datasource import DataSource
+    from ._querychat_base import TOOL_GROUPS
     from .types import UpdateDashboardData
 
 ReactiveString = reactive.Value[str]
@@ -34,20 +40,25 @@ CHAT_ID = "chat"
 
 
 @module.ui
-def mod_ui(**kwargs):
+def mod_ui(*, preload_viz: bool = False, **kwargs):
     css_path = Path(__file__).parent / "static" / "css" / "styles.css"
     js_path = Path(__file__).parent / "static" / "js" / "querychat.js"
 
     tag = shinychat.chat_ui(CHAT_ID, **kwargs)
     tag.add_class("querychat")
 
-    return ui.TagList(
+    children: list[ui.TagChild] = [
         ui.head_content(
             ui.include_css(css_path),
             ui.include_js(js_path),
         ),
         tag,
-    )
+    ]
+
+    if preload_viz:
+        children.append(preload_viz_deps_ui())
+
+    return ui.TagList(*children)
 
 
 @dataclass
@@ -98,6 +109,7 @@ def mod_server(
     greeting: str | None,
     client: chatlas.Chat | Callable,
     enable_bookmarking: bool,
+    tools: tuple[TOOL_GROUPS, ...] | None = None,
 ) -> ServerValues[IntoFrameT]:
     # Reactive values to store state
     sql = ReactiveStringOrNone(None)
@@ -146,6 +158,9 @@ def mod_server(
         chat.register_tool(tool_update_dashboard(data_source, update_dashboard))
         chat.register_tool(tool_query(data_source))
         chat.register_tool(tool_reset_dashboard(reset_dashboard))
+
+    if has_viz_tool(tools):
+        preload_viz_deps_server()
 
     # Execute query when SQL changes
     @reactive.calc

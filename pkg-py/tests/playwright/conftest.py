@@ -592,3 +592,31 @@ def app_08_dash_custom() -> Generator[str, None, None]:
         yield url
     finally:
         _stop_dash_server(server)
+
+
+@pytest.fixture(scope="module")
+def app_10_viz() -> Generator[str, None, None]:
+    """Start the 10-viz-app.py Shiny server for testing."""
+    app_path = str(EXAMPLES_DIR / "10-viz-app.py")
+
+    def start_factory():
+        port = _find_free_port()
+        url = f"http://localhost:{port}"
+        return url, lambda: _start_shiny_app_threaded(app_path, port)
+
+    def shiny_cleanup(_thread, server):
+        _stop_shiny_server(server)
+
+    url, _thread, server = _start_server_with_retry(
+        start_factory, shiny_cleanup, timeout=30.0
+    )
+    try:
+        yield url
+    finally:
+        _stop_shiny_server(server)
+
+
+@pytest.fixture
+def chat_10_viz(page: Page) -> ChatControllerType:
+    """Create a ChatController for the 10-viz-app chat component."""
+    return _create_chat_controller(page, "titanic")

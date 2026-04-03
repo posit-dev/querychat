@@ -50,6 +50,7 @@ website:
             - models.qmd
             - data-sources.qmd
             - context.qmd
+            - visualize.qmd
         - section: "Build custom apps"
           contents:
             - build-intro.qmd
@@ -113,6 +114,8 @@ quartodoc:
         - name: tools.tool_update_dashboard
           signature_name: short
         - name: tools.tool_reset_dashboard
+          signature_name: short
+        - name: tools.tool_visualize_query
           signature_name: short
 
 filters:

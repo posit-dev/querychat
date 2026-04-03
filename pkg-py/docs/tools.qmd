@@ -52,6 +52,39 @@ app = qc.app()
 ![](/images/quickstart-summary.png){fig-alt="Screenshot of the querychat's app with a summary statistic inlined in the chat." class="lightbox shadow rounded mb-3"}
 
 
+## Data visualization
+
+When a user asks for a chart or visualization, the LLM generates a [ggsql](https://ggsql.org/) query — standard SQL extended with a `VISUALISE` clause — and requests a call to the `visualize_query` tool.
+This tool:
+
+1. Executes the SQL portion of the query
+2. Renders the `VISUALISE` clause as an Altair chart
+3. Displays the chart inline in the chat
+
+Unlike the data updating tools, visualization queries don't affect the dashboard filter.
+They query the full dataset independently, and each call replaces the previous visualization.
+
+The inline chart includes controls for fullscreen viewing, saving as PNG/SVG, and a "Show Query" toggle that reveals the underlying ggsql code.
+
+```{.python filename="viz-app.py"}
+from querychat import QueryChat
+from querychat.data import titanic
+
+qc = QueryChat(titanic(), "titanic")
+app = qc.app()
+```
+
+![](/images/viz-scatter.png){fig-alt="Screenshot of querychat with an inline scatter plot." class="lightbox shadow rounded mb-3"}
+
+The `tools` parameter controls which tools are available.
+To disable visualization:
+
+```{.python}
+qc = QueryChat(titanic(), "titanic", tools=("query", "update"))
+```
+
+See [Visualizations](visualize.qmd) for more details.
+
 ## View the source
 
 If you'd like to better understand how the tools work and how the LLM is prompted to use them, check out the following resources:
@@ -65,3 +98,4 @@ If you'd like to better understand how the tools work and how the LLM is prompte
 - [`prompts/tool-update-dashboard.md`](https://github.com/posit-dev/querychat/blob/main/pkg-py/src/querychat/prompts/tool-update-dashboard.md)
 - [`prompts/tool-reset-dashboard.md`](https://github.com/posit-dev/querychat/blob/main/pkg-py/src/querychat/prompts/tool-reset-dashboard.md)
 - [`prompts/tool-query.md`](https://github.com/posit-dev/querychat/blob/main/pkg-py/src/querychat/prompts/tool-query.md)
+- [`prompts/tool-visualize-query.md`](https://github.com/posit-dev/querychat/blob/main/pkg-py/src/querychat/prompts/tool-visualize-query.md)

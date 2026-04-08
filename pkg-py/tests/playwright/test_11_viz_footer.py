@@ -152,29 +152,3 @@ class TestSaveDropdown:
 
         btn.click()
         expect(menu).not_to_have_class("querychat-save-menu--visible")
-
-
-class TestVizFooterScreenshots:
-    """Screenshot tests for visual verification of footer rendering."""
-
-    def test_footer_default_state(self, page: Page) -> None:
-        """Screenshot: footer in default state (query hidden, menu closed)."""
-        card = page.locator(".shiny-tool-result:has(.tool-fullscreen-toggle)")
-        card.screenshot(path="test-results/viz-footer-default.png")
-
-    def test_footer_query_expanded(self, page: Page) -> None:
-        """Screenshot: footer with query section expanded."""
-        btn = page.locator(".querychat-show-query-btn")
-        btn.click()
-        page.wait_for_timeout(300)  # wait for CSS transition
-
-        card = page.locator(".shiny-tool-result:has(.tool-fullscreen-toggle)")
-        card.screenshot(path="test-results/viz-footer-query-expanded.png")
-
-    def test_footer_save_menu_open(self, page: Page) -> None:
-        """Screenshot: footer with save dropdown open."""
-        btn = page.locator(".querychat-save-btn")
-        btn.click()
-
-        card = page.locator(".shiny-tool-result:has(.tool-fullscreen-toggle)")
-        card.screenshot(path="test-results/viz-footer-save-menu-open.png")

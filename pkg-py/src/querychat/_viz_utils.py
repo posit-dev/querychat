@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+from htmltools import HTMLDependency, tags
+from shinywidgets import output_widget
+
+from .__version import __version__
+
 
 def has_viz_tool(tools: tuple[str, ...] | None) -> bool:
     """Check if visualize_query is among the configured tools."""
@@ -23,13 +28,26 @@ PRELOAD_WIDGET_ID = "__querychat_preload_viz__"
 
 def preload_viz_deps_ui():
     """Return a hidden widget output that triggers eager JS dependency loading."""
-    from htmltools import tags
-    from shinywidgets import output_widget
-
     return tags.div(
         output_widget(PRELOAD_WIDGET_ID),
+        viz_preload_dep(),
+        class_="querychat-viz-preload",
+        hidden="",
+        aria_hidden="true",
         style="position:absolute; left:-9999px; width:1px; height:1px;",
-        **{"aria-hidden": "true"},
+    )
+
+
+def viz_preload_dep() -> HTMLDependency:
+    """HTMLDependency for viz preload-specific JS."""
+    return HTMLDependency(
+        "querychat-viz-preload",
+        __version__,
+        source={
+            "package": "querychat",
+            "subdir": "static",
+        },
+        script=[{"src": "js/viz-preload.js"}],
     )
 
 

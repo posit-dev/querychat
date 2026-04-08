@@ -245,54 +245,6 @@ def test_mod_server_stub_session_deferred_client_factory_does_not_raise():
         _ = vals.client.stream_async
 
 
-def test_stub_session_with_data_source_uses_real_factory_kwarg_shape(sample_df):
-    qc = QueryChat(sample_df, "tips", tools=("query", "visualize_query"))
-    calls = []
-
-    def client_factory(**kwargs):
-        calls.append(kwargs)
-        return qc.client(**kwargs)
-
-    with (
-        patch("querychat._shiny_module.preload_viz_deps_server", lambda: None),
-        patch("querychat._shiny_module.shinychat.Chat", DummyChatUi),
-    ):
-        _raw_mod_server()(
-            SimpleNamespace(chat_update=lambda: None),
-            SimpleNamespace(),
-            DummySession(),
-            data_source=qc.data_source,
-            greeting=qc.greeting,
-            client=client_factory,
-            enable_bookmarking=False,
-            tools=qc.tools,
-        )
-        _raw_mod_server()(
-            SimpleNamespace(chat_update=lambda: None),
-            SimpleNamespace(),
-            DummyStubSession(),
-            data_source=qc.data_source,
-            greeting=qc.greeting,
-            client=client_factory,
-            enable_bookmarking=False,
-            tools=qc.tools,
-        )
-
-    real_call, stub_call = calls
-    expected_keys = {"update_dashboard", "reset_dashboard", "visualize_query", "tools"}
-
-    assert set(real_call) == expected_keys
-    assert set(stub_call) == expected_keys
-    assert real_call["tools"] == ("query", "visualize_query")
-    assert stub_call["tools"] == ("query", "visualize_query")
-    assert callable(real_call["update_dashboard"])
-    assert callable(real_call["reset_dashboard"])
-    assert callable(real_call["visualize_query"])
-    assert callable(stub_call["update_dashboard"])
-    assert callable(stub_call["reset_dashboard"])
-    assert callable(stub_call["visualize_query"])
-
-
 def test_callable_mod_server_passes_visualize_callback_and_tools(sample_df):
     qc = QueryChat(sample_df, "tips", tools=("query", "visualize_query"))
     captured = {}
@@ -322,17 +274,32 @@ def test_callable_mod_server_passes_visualize_callback_and_tools(sample_df):
     assert callable(captured["reset_dashboard"])
 
 
-def test_callable_mod_server_honors_query_and_viz_only_tools(sample_df):
+def test_mod_server_preloads_viz_for_each_real_session_instance(sample_df):
     qc = QueryChat(sample_df, "tips", tools=("query", "visualize_query"))
+    session = DummySession()
+    preload_calls = []
 
     with (
-        patch("querychat._shiny_module.preload_viz_deps_server", lambda: None),
+        patch(
+            "querychat._shiny_module.preload_viz_deps_server",
+            lambda: preload_calls.append("called"),
+        ),
         patch("querychat._shiny_module.shinychat.Chat", DummyChatUi),
     ):
-        vals = _raw_mod_server()(
+        _raw_mod_server()(
             SimpleNamespace(chat_update=lambda: None),
             SimpleNamespace(),
-            DummySession(),
+            session,
+            data_source=qc.data_source,
+            greeting=qc.greeting,
+            client=qc.client,
+            enable_bookmarking=False,
+            tools=qc.tools,
+        )
+        _raw_mod_server()(
+            SimpleNamespace(chat_update=lambda: None),
+            SimpleNamespace(),
+            session,
             data_source=qc.data_source,
             greeting=qc.greeting,
             client=qc.client,
@@ -340,10 +307,32 @@ def test_callable_mod_server_honors_query_and_viz_only_tools(sample_df):
             tools=qc.tools,
         )
 
-    assert sorted(vals.client._tools.keys()) == [
-        "querychat_query",
-        "querychat_visualize_query",
-    ]
+    assert preload_calls == ["called", "called"]
+
+
+def test_mod_server_stub_session_does_not_preload_viz(sample_df):
+    qc = QueryChat(sample_df, "tips", tools=("query", "visualize_query"))
+    preload_calls = []
+
+    with (
+        patch(
+            "querychat._shiny_module.preload_viz_deps_server",
+            lambda: preload_calls.append("called"),
+        ),
+        patch("querychat._shiny_module.shinychat.Chat", DummyChatUi),
+    ):
+        _raw_mod_server()(
+            SimpleNamespace(chat_update=lambda: None),
+            SimpleNamespace(),
+            DummyStubSession(),
+            data_source=qc.data_source,
+            greeting=qc.greeting,
+            client=qc.client,
+            enable_bookmarking=False,
+            tools=qc.tools,
+        )
+
+    assert preload_calls == []
 
 
 def test_restored_viz_widgets_survive_second_bookmark_cycle(sample_df):

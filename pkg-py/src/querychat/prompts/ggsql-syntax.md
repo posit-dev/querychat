@@ -86,16 +86,6 @@ DRAW geom_type
 | Aggregation | `weight` (for histogram/bar/density/violin) |
 | Linear | `coef`, `intercept` (for `linear` layer only) |
 
-**Layer-specific data source:** Each layer can use a different data source:
-
-```sql
-WITH summary AS (SELECT region, SUM(sales) as total FROM sales GROUP BY region)
-SELECT * FROM sales
-VISUALISE date AS x, amount AS y
-DRAW line
-DRAW bar MAPPING region AS x, total AS y FROM summary
-```
-
 **PARTITION BY** groups data without visual encoding (useful for separate lines per group without color):
 
 ```sql
@@ -134,7 +124,7 @@ PLACE text SETTING x => 10, y => 50, label => 'Threshold'
 PLACE linear SETTING coef => 0.4, intercept => -1
 ```
 
-`PLACE` supports any geom type but is most useful with `rule`, `linear`, `text`, `segment`, and `rect`. Unlike `DRAW`, `PLACE` has no `MAPPING`, `FILTER`, `PARTITION BY`, or `ORDER BY` sub-clauses.
+`PLACE` supports any geom type but is most useful with `rule`, `linear`, `text`, `segment`, and `rect`. Use `PLACE` for fixed annotation values known at query time; use `DRAW` with `MAPPING` when values come from data columns. Unlike `DRAW`, `PLACE` has no `MAPPING`, `FILTER`, `PARTITION BY`, or `ORDER BY` sub-clauses.
 
 ### Statistical Layers and REMAPPING
 
@@ -321,7 +311,7 @@ SCALE panel RENAMING 'N' => 'North', 'S' => 'South'
 
 ### LABEL Clause
 
-Use LABEL for axis labels only. Do NOT use `title =>` — the tool's `title` parameter handles chart titles.
+Use LABEL for axis labels only. Do NOT use `LABEL title => ...` — the tool's `title` parameter handles chart titles.
 
 ```sql
 LABEL x => 'X Axis Label', y => 'Y Axis Label'
@@ -491,16 +481,41 @@ PROJECT TO polar SETTING inner => 0.5
     VISUALISE FROM titanic
     DRAW bar MAPPING class AS x
     ```
-3. **String values use single quotes**: In SETTING, LABEL, and RENAMING clauses, always use single quotes for string values. Double quotes cause parse errors.
-4. **Column casing**: VISUALISE validates column references case-sensitively. The column name in VISUALISE/MAPPING must exactly match the column name from the SQL result. If a column is aliased as `MyCol`, reference it as `MyCol`, not `mycol` or `MYCOL`.
-5. **Charts vs Tables**: For visualizations use VISUALISE with DRAW. For tabular data use plain SQL without VISUALISE.
-6. **Statistical layers**: When using `histogram`, `bar` (without y), `density`, `smooth`, `violin`, or `boxplot`, the layer computes statistics. Use REMAPPING to access `density`, `intensity`, `proportion`, etc.
-7. **Bar position adjustments**: Bars stack automatically when `fill` is mapped. Use `SETTING position => 'dodge'` for side-by-side bars, or `position => 'fill'` for proportional stacking:
+3. **In querychat, all layers must come from the final SQL result**: Do not use layer-specific `FROM source` inside `DRAW ... MAPPING ...` clauses. If you need raw data and a summary in one chart, put both into one final relation and distinguish layers with a column such as `layer_type`:
+    ```sql
+    WITH raw AS (
+      SELECT
+        date,
+        amount,
+        region,
+        'raw' AS layer_type
+      FROM sales
+    ),
+    summary AS (
+      SELECT
+        date,
+        AVG(amount) AS amount,
+        region,
+        'summary' AS layer_type
+      FROM sales
+      GROUP BY date, region
+    ),
+    combined AS (
+      SELECT * FROM raw
+      UNION ALL
+      SELECT * FROM summary
+    )
+    SELECT * FROM combined
+    VISUALISE date AS x, amount AS y
+    DRAW point MAPPING region AS color FILTER layer_type = 'raw'
+    DRAW line MAPPING region AS color FILTER layer_type = 'summary'
+    ```
+4. **String values use single quotes**: In SETTING, LABEL, and RENAMING clauses, always use single quotes for string values. Double quotes cause parse errors.
+5. **Column casing**: VISUALISE validates column references case-sensitively. The column name in VISUALISE/MAPPING must exactly match the column name from the SQL result. If a column is aliased as `MyCol`, reference it as `MyCol`, not `mycol` or `MYCOL`.
+6. **Charts vs Tables**: For visualizations use VISUALISE with DRAW. For tabular data use plain SQL without VISUALISE.
+7. **Statistical layers**: When using `histogram`, `bar` (without y), `density`, `smooth`, `violin`, or `boxplot`, the layer computes statistics. Use REMAPPING to access `density`, `intensity`, `proportion`, etc.
+8. **Bar position adjustments**: Bars stack automatically when `fill` is mapped. Use `SETTING position => 'dodge'` for side-by-side bars, or `position => 'fill'` for proportional stacking:
    ```sql
    DRAW bar MAPPING category AS x, subcategory AS fill                       -- stacked (default)
    DRAW bar MAPPING category AS x, subcategory AS fill SETTING position => 'dodge'  -- side-by-side
    ```
-8. **Date columns**: Date/time columns are auto-detected as temporal, including after `DATE_TRUNC`. Use `RENAMING * => '{:time ...}'` on the scale to customize date label formatting for readable axes.
-9. **Multiple layers**: Use multiple DRAW clauses for overlaid visualizations.
-10. **CTEs work**: Use `WITH ... SELECT ... VISUALISE` or shorthand `WITH ... VISUALISE FROM cte_name`.
-11. **Axis flipping**: Use `PROJECT y, x TO cartesian` to flip axes (e.g., for horizontal bar charts). This maps `y` to the horizontal axis and `x` to the vertical axis.

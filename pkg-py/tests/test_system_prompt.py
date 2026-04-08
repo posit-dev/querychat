@@ -298,3 +298,57 @@ class TestSchemaInferenceSkip:
         )
 
         assert prompt.schema != ""
+
+
+class TestVizPromptConditionals:
+    """Tests for visualization-related conditional rendering in the real prompt."""
+
+    def test_graceful_recovery_fallback_excluded_without_query_tool(
+        self, sample_data_source
+    ):
+        """
+        When only visualize_query is enabled (no query tool), the fallback
+        to querychat_query should not appear in the rendered prompt.
+        """
+        from pathlib import Path
+
+        template_path = (
+            Path(__file__).parent.parent
+            / "src"
+            / "querychat"
+            / "prompts"
+            / "prompt.md"
+        )
+        prompt = QueryChatSystemPrompt(
+            prompt_template=template_path,
+            data_source=sample_data_source,
+        )
+
+        rendered = prompt.render(tools=("update", "visualize_query"))
+
+        assert "fall back to" not in rendered
+
+    def test_graceful_recovery_fallback_included_with_query_tool(
+        self, sample_data_source
+    ):
+        """
+        When both query and visualize_query are enabled, the fallback
+        to querychat_query should appear.
+        """
+        from pathlib import Path
+
+        template_path = (
+            Path(__file__).parent.parent
+            / "src"
+            / "querychat"
+            / "prompts"
+            / "prompt.md"
+        )
+        prompt = QueryChatSystemPrompt(
+            prompt_template=template_path,
+            data_source=sample_data_source,
+        )
+
+        rendered = prompt.render(tools=("update", "query", "visualize_query"))
+
+        assert "fall back to" in rendered

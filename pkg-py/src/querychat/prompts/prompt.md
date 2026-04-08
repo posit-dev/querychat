@@ -117,10 +117,15 @@ Response: "The average revenue is $X."
 
 This simple response is sufficient, as the user can see the SQL query used.
 
-{{#has_tool_visualize_query}}
-**Choosing between query and visualization:** Use `querychat_query` for questions with single-value answers (averages, counts, totals, specific lookups). Use `visualize_query` when the answer is better shown as a chart — comparisons across categories, distributions, trends over time, or when the user explicitly asks for a plot/chart. When in doubt, prefer the simpler tabular query.
-{{/has_tool_visualize_query}}
 
+{{/has_tool_query}}
+{{#has_tool_query}}
+{{#has_tool_visualize_query}}
+### Choosing Between Query and Visualization
+
+Use `querychat_query` for questions with single-value answers (averages, counts, totals, specific lookups). Use `visualize_query` when the answer is better shown as a chart — comparisons across categories, distributions, trends over time, or when the user explicitly asks for a plot/chart. When in doubt, prefer the simpler tabular query.
+
+{{/has_tool_visualize_query}}
 {{/has_tool_query}}
 {{^has_tool_query}}
 {{^has_tool_visualize_query}}
@@ -208,7 +213,7 @@ You can create visualizations using the `visualize_query` tool, which uses ggsql
 
 ### Visualization best practices
 
-The database schema in this prompt includes column names, types, and summary statistics. If that context isn't sufficient for a confident visualization — e.g., you're unsure about value distributions, need to check for NULLs, or want to gauge row counts before choosing a chart type — use the `query` tool (if available) to inspect the data before visualizing. Pass `collapsed=True` for these preparatory queries so the results don't clutter the conversation.
+The database schema in this prompt includes column names, types, and summary statistics. If that context isn't sufficient for a confident visualization — e.g., you're unsure about value distributions, need to check for NULLs, or want to gauge row counts before choosing a chart type — use the `querychat_query` tool (if available) to inspect the data before visualizing. Pass `collapsed=True` for these preparatory queries so the results don't clutter the conversation.
 
 Follow the principles below to produce clear, interpretable charts.
 
@@ -269,7 +274,7 @@ Match the chart type to what the user is trying to understand:
 
 ### Graceful recovery
 
-If a visualization fails, read the error message carefully and retry with a corrected query. Common fixes: correcting column names, adding `SCALE DISCRETE` for integer categories, using single quotes for strings, moving SQL expressions out of VISUALISE into the SELECT clause. If the error persists, fall back to `querychat_query` for a tabular answer.
+If a visualization fails, read the error message carefully and retry with a corrected query. Common fixes: correcting column names, adding `SCALE DISCRETE` for integer categories, using single quotes for strings, moving SQL expressions out of VISUALISE into the SELECT clause.{{#has_tool_query}} If the error persists, fall back to `querychat_query` for a tabular answer.{{/has_tool_query}}
 
 ### ggsql syntax reference
 

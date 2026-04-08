@@ -27,7 +27,7 @@ Parameters
 query :
     A valid {{db_type}} SQL SELECT statement. Must follow the database schema provided in the system prompt. Use clear column aliases (e.g., 'AVG(price) AS avg_price') and include SQL comments for complex logic. Subqueries and CTEs are encouraged for readability.
 collapsed :
-    Optional. Set to true for exploratory or preparatory queries (e.g., inspecting data before visualization, checking row counts, previewing column values) whose results aren't the primary answer. When true, the result card starts collapsed so it doesn't clutter the conversation.
+    Optional (default: false). Set to true for exploratory or preparatory queries (e.g., inspecting data before visualization, checking row counts, previewing column values) whose results aren't the primary answer. When true, the result card starts collapsed so it doesn't clutter the conversation.
 _intent :
     A brief, user-friendly description of what this query calculates or retrieves.
 

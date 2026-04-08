@@ -35,11 +35,22 @@ def execute_ggsql(data_source: DataSource, validated: ggsql.Validated) -> ggsql.
     """
     from ggsql import DuckDBReader
 
+    visual = validated.visual()
+    if has_layer_level_source(visual):
+        # Short term, querychat only supports visual layers that can be replayed
+        # from one final SQL result. Long term, the cleaner fix is likely to use
+        # ggsql's native remote-reader execution path (for example via ODBC-backed
+        # Readers) instead of reconstructing multi-relation scope here.
+        raise ValueError(
+            "Layer-specific sources are not currently supported in querychat visual "
+            "queries. Rewrite the query so that all layers come from the final SQL "
+            "result."
+        )
+
     pl_df = to_polars(data_source.execute_query(validated.sql()))
 
     reader = DuckDBReader("duckdb://memory")
-    visual = validated.visual()
-    table = extract_visualise_table(visual)
+    table = validated_source_table(validated)
 
     if table is not None:
         # VISUALISE [mappings] FROM <table> — register data under the
@@ -54,20 +65,52 @@ def execute_ggsql(data_source: DataSource, validated: ggsql.Validated) -> ggsql.
         return reader.execute(f"SELECT * FROM _data {visual}")
 
 
+def validated_source_table(validated: ggsql.Validated) -> str | None:
+    """
+    Return the top-level ``VISUALISE ... FROM <table>`` source table.
+
+    Prefer ggsql's structured ``Validated.source_table()`` API when available.
+    Fall back to parsing the visual clause while querychat still supports older
+    ggsql Python bindings that do not expose that method yet.
+    """
+    source_table = getattr(validated, "source_table", None)
+    if callable(source_table):
+        return source_table()
+    return extract_visualise_table(validated.visual())
+
+
 def extract_visualise_table(visual: str) -> str | None:
     """
     Extract the table name from ``VISUALISE ... FROM <table>`` if present.
 
-    This regex reimplements part of ggsql's parser because the Python bindings
-    don't expose the parsed table name. Internally, ggsql stores it as
-    ``Plot.source: Option<DataSource>`` (see ``ggsql/src/plot/types.rs``).
-    If ggsql ever exposes a ``source_table()`` or ``visual_table()`` method
-    on ``Validated`` or ``Spec``, this function should be replaced.
+    This is a compatibility fallback for older ggsql Python bindings that do
+    not yet expose ``Validated.source_table()``.
     """
-    # Only look at the VISUALISE clause (before the first DRAW) to avoid
-    # matching layer-level FROM (e.g., DRAW bar MAPPING ... FROM summary).
     draw_pos = re.search(r"\bDRAW\b", visual, re.IGNORECASE)
     vis_clause = visual[: draw_pos.start()] if draw_pos else visual
-    # Matches double-quoted or bare identifiers (the only forms ggsql supports).
     m = re.search(r'\bFROM\s+("[^"]+?"|\S+)', vis_clause, re.IGNORECASE)
     return m.group(1) if m else None
+
+
+def has_layer_level_source(visual: str) -> bool:
+    """
+    Return ``True`` when a DRAW clause defines its own ``FROM <source>``.
+
+    Querychat currently replays the VISUALISE portion against a single local
+    relation, so layer-specific sources cannot be preserved reliably.
+    """
+    clauses = re.split(
+        r"(?=\b(?:DRAW|SCALE|PROJECT|FACET|PLACE|LABEL|THEME)\b)",
+        visual,
+        flags=re.IGNORECASE,
+    )
+    for clause in clauses:
+        if not re.match(r"^\s*DRAW\b", clause, re.IGNORECASE):
+            continue
+        if re.search(
+            r'\bMAPPING\b[\s\S]*?\bFROM\s+("[^"]+?"|\S+)',
+            clause,
+            re.IGNORECASE,
+        ):
+            return True
+    return False

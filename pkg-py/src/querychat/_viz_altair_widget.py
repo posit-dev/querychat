@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import functools
 from typing import TYPE_CHECKING, Any, cast
 from uuid import uuid4
 
@@ -13,18 +12,6 @@ from shiny import reactive
 if TYPE_CHECKING:
     import altair as alt
     import ggsql
-
-@functools.cache
-def get_compound_chart_types() -> tuple[type, ...]:
-    import altair as alt
-
-    return (
-        alt.FacetChart,
-        alt.ConcatChart,
-        alt.HConcatChart,
-        alt.VConcatChart,
-    )
-
 
 class AltairWidget:
     """
@@ -42,24 +29,32 @@ class AltairWidget:
     widget: alt.JupyterChart
     widget_id: str
 
-    def __init__(self, chart: alt.TopLevelMixin) -> None:
+    def __init__(
+        self,
+        chart: alt.TopLevelMixin,
+        *,
+        widget_id: str | None = None,
+    ) -> None:
         import altair as alt
 
-        is_compound = isinstance(chart, get_compound_chart_types())
+        is_compound = isinstance(
+            chart,
+            (alt.FacetChart, alt.ConcatChart, alt.HConcatChart, alt.VConcatChart),
+        )
 
         # Workaround: Vega-Lite's width/height: "container" doesn't work for
         # compound specs (facet, concat, etc.), so we inject pixel dimensions
         # and reconstruct the chart. Remove this branch when ggsql handles it
         # natively: https://github.com/posit-dev/ggsql/issues/238
         if is_compound:
-            chart = inject_compound_sizes(
+            chart = fit_chart_to_container(
                 chart, DEFAULT_COMPOUND_WIDTH, DEFAULT_COMPOUND_HEIGHT
             )
         else:
             chart = chart.properties(width="container", height="container")
 
         self.widget = alt.JupyterChart(chart)
-        self.widget_id = f"querychat_viz_{uuid4().hex[:8]}"
+        self.widget_id = widget_id or f"querychat_viz_{uuid4().hex[:8]}"
 
         # Reactively update compound cell sizes when the container resizes.
         # Also part of the compound sizing workaround (issue #238).
@@ -67,11 +62,13 @@ class AltairWidget:
             self._setup_reactive_sizing(self.widget, self.widget_id)
 
     @classmethod
-    def from_ggsql(cls, spec: ggsql.Spec) -> AltairWidget:
+    def from_ggsql(
+        cls, spec: ggsql.Spec, *, widget_id: str | None = None
+    ) -> AltairWidget:
         from ggsql import VegaLiteWriter
 
         writer = VegaLiteWriter()
-        return cls(writer.render_chart(spec))
+        return cls(writer.render_chart(spec), widget_id=widget_id)
 
     @staticmethod
     def _setup_reactive_sizing(widget: alt.JupyterChart, widget_id: str) -> None:
@@ -89,7 +86,7 @@ class AltairWidget:
             if chart is None:
                 return
             chart = cast("alt.Chart", chart)
-            chart2 = inject_compound_sizes(chart, int(width), int(height))
+            chart2 = fit_chart_to_container(chart, int(width), int(height))
             # Must set widget.spec (a new dict) rather than widget.chart,
             # because traitlets won't fire change events when the same
             # chart object is assigned back after in-place mutation.
@@ -111,23 +108,20 @@ DEFAULT_COMPOUND_WIDTH = 900
 DEFAULT_COMPOUND_HEIGHT = 450
 
 LEGEND_CHANNELS = frozenset(
-    {"color", "colour", "fill", "stroke", "shape", "size", "opacity"}
+    {"color", "fill", "stroke", "shape", "size", "opacity"}
 )
 LEGEND_WIDTH = 120  # approximate space for a right-side legend
 
 
-def inject_compound_sizes(
+def fit_chart_to_container(
     chart: alt.TopLevelMixin,
     container_width: int,
     container_height: int,
 ) -> alt.TopLevelMixin:
     """
-    Set cell ``width``/``height`` on a compound spec via in-place mutation.
+    Return a copy of ``chart`` with cell ``width``/``height`` set.
 
-    The chart is mutated in-place **and** returned. Callers that need to
-    trigger traitlets change detection should serialize the returned chart
-    (e.g., ``chart.to_dict()``) rather than reassigning ``widget.chart``,
-    because traitlets won't fire events for the same object after mutation.
+    The original chart is never mutated.
 
     For faceted charts, divides the container width by the number of columns.
     For hconcat/concat, divides by the number of sub-specs.
@@ -136,7 +130,11 @@ def inject_compound_sizes(
     Subtracts padding estimates so the rendered cells fill the container,
     including space for legends when present.
     """
+    import copy
+
     import altair as alt
+
+    chart = copy.copy(chart)
 
     # Approximate padding; will be replaced when ggsql handles compound sizing
     # natively (https://github.com/posit-dev/ggsql/issues/238).

@@ -109,7 +109,8 @@ class TestExecuteGgsql:
     def test_full_pipeline(self):
         nw_df = nw.from_native(pl.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]}))
         ds = DataFrameSource(nw_df, "test_data")
-        spec = execute_ggsql(ds, "SELECT * FROM test_data VISUALISE x, y DRAW point")
+        query = "SELECT * FROM test_data VISUALISE x, y DRAW point"
+        spec = execute_ggsql(ds, ggsql.validate(query))
         altair_widget = AltairWidget.from_ggsql(spec)
         result = altair_widget.widget.chart.to_dict()
         assert "$schema" in result
@@ -120,23 +121,24 @@ class TestExecuteGgsql:
             pl.DataFrame({"x": [1, 2, 3, 4, 5], "y": [10, 20, 30, 40, 50]})
         )
         ds = DataFrameSource(nw_df, "test_data")
-        spec = execute_ggsql(
-            ds, "SELECT * FROM test_data WHERE x > 2 VISUALISE x, y DRAW point"
-        )
+        query = "SELECT * FROM test_data WHERE x > 2 VISUALISE x, y DRAW point"
+        spec = execute_ggsql(ds, ggsql.validate(query))
         assert spec.metadata()["rows"] == 3
 
     @pytest.mark.ggsql
     def test_spec_has_visual(self):
         nw_df = nw.from_native(pl.DataFrame({"x": [1, 2], "y": [3, 4]}))
         ds = DataFrameSource(nw_df, "test_data")
-        spec = execute_ggsql(ds, "SELECT * FROM test_data VISUALISE x, y DRAW point")
+        query = "SELECT * FROM test_data VISUALISE x, y DRAW point"
+        spec = execute_ggsql(ds, ggsql.validate(query))
         assert "VISUALISE" in spec.visual()
 
     @pytest.mark.ggsql
     def test_visualise_from_path(self):
         nw_df = nw.from_native(pl.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]}))
         ds = DataFrameSource(nw_df, "test_data")
-        spec = execute_ggsql(ds, "VISUALISE x, y FROM test_data DRAW point")
+        query = "VISUALISE x, y FROM test_data DRAW point"
+        spec = execute_ggsql(ds, ggsql.validate(query))
         assert spec.metadata()["rows"] == 3
         assert "VISUALISE" in spec.visual()
 
@@ -146,7 +148,8 @@ class TestExecuteGgsql:
 
         nw_df = nw.from_native(pd.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]}))
         ds = DataFrameSource(nw_df, "test_data")
-        spec = execute_ggsql(ds, "SELECT * FROM test_data VISUALISE x, y DRAW point")
+        query = "SELECT * FROM test_data VISUALISE x, y DRAW point"
+        spec = execute_ggsql(ds, ggsql.validate(query))
         altair_widget = AltairWidget.from_ggsql(spec)
         result = altair_widget.widget.chart.to_dict()
         assert "$schema" in result

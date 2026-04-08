@@ -1,6 +1,6 @@
 """Tests for visualization tool functions."""
 
-import builtins
+import importlib.util
 
 import narwhals.stable.v1 as nw
 import polars as pl
@@ -13,14 +13,14 @@ from querychat.types import VisualizeQueryData, VisualizeQueryResult
 class TestVizDependencyCheck:
     def test_missing_ggsql_raises_helpful_error(self, monkeypatch):
         """Requesting viz tools without ggsql installed should fail early."""
-        real_import = builtins.__import__
+        real_find_spec = importlib.util.find_spec
 
-        def mock_import(name, *args, **kwargs):
+        def mock_find_spec(name, *args, **kwargs):
             if name == "ggsql":
-                raise ImportError("No module named 'ggsql'")
-            return real_import(name, *args, **kwargs)
+                return None
+            return real_find_spec(name, *args, **kwargs)
 
-        monkeypatch.setattr(builtins, "__import__", mock_import)
+        monkeypatch.setattr(importlib.util, "find_spec", mock_find_spec)
 
         from querychat._querychat_base import normalize_tools
 
@@ -37,18 +37,13 @@ class TestVizDependencyCheck:
 
     def test_check_deps_false_skips_check(self, monkeypatch):
         """check_deps=False should skip the dependency check."""
-        real_import = builtins.__import__
-
-        def mock_import(name, *args, **kwargs):
-            if name == "ggsql":
-                raise ImportError("No module named 'ggsql'")
-            return real_import(name, *args, **kwargs)
-
-        monkeypatch.setattr(builtins, "__import__", mock_import)
+        monkeypatch.setattr(
+            importlib.util, "find_spec", lambda name, *a, **kw: None
+        )
 
         from querychat._querychat_base import normalize_tools
 
-        # Should not raise even though ggsql is missing
+        # Should not raise even though find_spec returns None for everything
         result = normalize_tools(("visualize_query",), default=None, check_deps=False)
         assert result == ("visualize_query",)
 
@@ -129,3 +124,122 @@ class TestToolVisualizeQuery:
 
         assert result.error is not None
         assert "VISUALISE" in str(result.error)
+
+
+class TestVisualizeQueryResultContent:
+    @pytest.mark.ggsql
+    def test_result_value_contains_image(self, data_source, monkeypatch):
+        from unittest.mock import MagicMock
+
+        from chatlas._content import ContentImageInline
+        from ipywidgets.widgets.widget import Widget
+
+        monkeypatch.setattr("shinywidgets.register_widget", lambda _id, _w: None)
+        monkeypatch.setattr(
+            "shinywidgets.output_widget", lambda _id, **_kw: MagicMock()
+        )
+        monkeypatch.setattr(Widget, "_widget_construction_callback", lambda _w: None)
+
+        callback_data = {}
+
+        def update_fn(data: VisualizeQueryData):
+            callback_data.update(data)
+
+        tool = tool_visualize_query(data_source, update_fn)
+        result = tool.func(
+            ggsql="SELECT x, y FROM test_data VISUALISE x, y DRAW point",
+            title="Test Chart",
+        )
+
+        assert isinstance(result, VisualizeQueryResult)
+        # value should be a list with [str, ContentImageInline]
+        assert isinstance(result.value, list)
+        assert len(result.value) == 2
+        assert isinstance(result.value[0], str)
+        assert isinstance(result.value[1], ContentImageInline)
+        assert result.value[1].image_content_type == "image/png"
+        # model_format must be "as_is" so chatlas passes the list as
+        # multimodal content (not stringified) to the LLM provider
+        assert result.model_format == "as_is"
+
+    @pytest.mark.ggsql
+    def test_result_text_includes_column_names(self, data_source, monkeypatch):
+        from unittest.mock import MagicMock
+
+        from ipywidgets.widgets.widget import Widget
+
+        monkeypatch.setattr("shinywidgets.register_widget", lambda _id, _w: None)
+        monkeypatch.setattr(
+            "shinywidgets.output_widget", lambda _id, **_kw: MagicMock()
+        )
+        monkeypatch.setattr(Widget, "_widget_construction_callback", lambda _w: None)
+
+        tool = tool_visualize_query(data_source, lambda _: None)
+        result = tool.func(
+            ggsql="SELECT x, y FROM test_data VISUALISE x, y DRAW point",
+            title="Test Chart",
+        )
+
+        text_part = result.value[0]
+        assert "x" in text_part
+        assert "y" in text_part
+        assert "Test Chart" in text_part
+
+    @pytest.mark.ggsql
+    def test_png_failure_falls_back_to_text_only(self, data_source, monkeypatch):
+        from unittest.mock import MagicMock
+
+        from ipywidgets.widgets.widget import Widget
+
+        monkeypatch.setattr("shinywidgets.register_widget", lambda _id, _w: None)
+        monkeypatch.setattr(
+            "shinywidgets.output_widget", lambda _id, **_kw: MagicMock()
+        )
+        monkeypatch.setattr(Widget, "_widget_construction_callback", lambda _w: None)
+
+        def explode(_chart):
+            raise RuntimeError("vl-convert failed")
+
+        monkeypatch.setattr("querychat._viz_tools.render_chart_to_png", explode)
+
+        tool = tool_visualize_query(data_source, lambda _: None)
+        result = tool.func(
+            ggsql="SELECT x, y FROM test_data VISUALISE x, y DRAW point",
+            title="Test Chart",
+        )
+
+        # Should still succeed, just text-only
+        assert isinstance(result, VisualizeQueryResult)
+        assert isinstance(result.value, str)
+        assert result.error is None
+
+
+class TestRenderChartToPng:
+    @pytest.mark.ggsql
+    def test_simple_chart_returns_bytes(self):
+        import altair as alt
+
+        chart = alt.Chart({"values": [{"x": 1, "y": 2}]}).mark_point().encode(
+            x="x:Q", y="y:Q"
+        )
+        from querychat._viz_tools import render_chart_to_png
+
+        result = render_chart_to_png(chart)
+        assert isinstance(result, bytes)
+        assert result[:8] == b"\x89PNG\r\n\x1a\n"  # PNG magic bytes
+
+    @pytest.mark.ggsql
+    def test_compound_chart_returns_bytes(self):
+        import altair as alt
+
+        chart = (
+            alt.Chart({"values": [{"x": 1, "y": 2, "c": "A"}]})
+            .mark_point()
+            .encode(x="x:Q", y="y:Q")
+            .facet("c:N")
+        )
+        from querychat._viz_tools import render_chart_to_png
+
+        result = render_chart_to_png(chart)
+        assert isinstance(result, bytes)
+        assert result[:8] == b"\x89PNG\r\n\x1a\n"

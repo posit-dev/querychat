@@ -301,7 +301,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 self.id,
                 data_source=data_source,
                 greeting=self.greeting,
-                client=self._client,
+                client=self.client,
                 enable_bookmarking=enable_bookmarking,
                 tools=self.tools,
             )
@@ -607,6 +607,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -623,6 +624,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -639,6 +641,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -655,6 +658,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -671,6 +675,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -686,6 +691,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -705,6 +711,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             table_name,
             greeting=greeting,
             client=client,
+            tools=tools,
             data_description=data_description,
             categorical_threshold=categorical_threshold,
             extra_instructions=extra_instructions,
@@ -732,7 +739,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             self.id,
             data_source=self._data_source,
             greeting=self.greeting,
-            client=self._client,
+            client=self.client,
             enable_bookmarking=enable,
             tools=self.tools,
         )
@@ -875,4 +882,3 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             return self._vals.title()
         else:
             return self._vals.title.set(value)
-

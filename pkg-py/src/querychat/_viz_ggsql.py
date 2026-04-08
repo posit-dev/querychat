@@ -13,20 +13,19 @@ if TYPE_CHECKING:
     from ._datasource import DataSource
 
 
-def execute_ggsql(data_source: DataSource, query: str) -> ggsql.Spec:
+def execute_ggsql(data_source: DataSource, validated: ggsql.Validated) -> ggsql.Spec:
     """
-    Execute a full ggsql query against a DataSource, returning a Spec.
+    Execute a pre-validated ggsql query against a DataSource, returning a Spec.
 
-    Uses ggsql.validate() to split SQL from VISUALISE, executes the SQL
-    through DataSource (preserving database pushdown), then feeds the result
-    into a ggsql DuckDBReader to produce a Spec.
+    Executes the SQL portion through DataSource (preserving database pushdown),
+    then feeds the result into a ggsql DuckDBReader to produce a Spec.
 
     Parameters
     ----------
     data_source
         The querychat DataSource to execute the SQL portion against.
-    query
-        A full ggsql query (SQL + VISUALISE).
+    validated
+        A pre-validated ggsql query (from ``ggsql.validate()``).
 
     Returns
     -------
@@ -34,19 +33,19 @@ def execute_ggsql(data_source: DataSource, query: str) -> ggsql.Spec:
         The writer-independent plot specification.
 
     """
-    import ggsql as _ggsql
+    from ggsql import DuckDBReader
 
-    validated = _ggsql.validate(query)
     pl_df = to_polars(data_source.execute_query(validated.sql()))
 
-    reader = _ggsql.DuckDBReader("duckdb://memory")
+    reader = DuckDBReader("duckdb://memory")
     visual = validated.visual()
     table = extract_visualise_table(visual)
 
     if table is not None:
         # VISUALISE [mappings] FROM <table> — register data under the
         # referenced table name and execute the visual part directly.
-        reader.register(table.strip('"'), pl_df)
+        name = table[1:-1] if table.startswith('"') and table.endswith('"') else table
+        reader.register(name, pl_df)
         return reader.execute(visual)
     else:
         # SELECT ... VISUALISE — no FROM in VISUALISE clause, so register

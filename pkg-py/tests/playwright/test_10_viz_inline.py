@@ -40,12 +40,12 @@ class TestInlineVisualization:
         self.chat.send_user_input(method="click")
 
         # Wait for a tool result card with full-screen attribute (viz results have it)
-        tool_card = self.page.locator("shiny-tool-result[full-screen]")
+        tool_card = self.page.locator(".shiny-tool-result:has(.tool-fullscreen-toggle)")
         expect(tool_card).to_be_visible(timeout=90000)
 
-        # The card should contain a widget output (Altair chart)
-        widget_output = tool_card.locator(".jupyter-widgets")
-        expect(widget_output).to_be_visible(timeout=10000)
+        # The card should contain the viz container (Altair chart via shinywidgets)
+        viz_container = tool_card.locator(".querychat-viz-container")
+        expect(viz_container).to_be_visible(timeout=10000)
 
     def test_fullscreen_button_visible_on_viz_card(self) -> None:
         """VIZ-FS-BTN: Fullscreen toggle button appears on visualization cards."""
@@ -55,7 +55,7 @@ class TestInlineVisualization:
         self.chat.send_user_input(method="click")
 
         # Wait for viz tool result
-        tool_card = self.page.locator("shiny-tool-result[full-screen]")
+        tool_card = self.page.locator(".shiny-tool-result:has(.tool-fullscreen-toggle)")
         expect(tool_card).to_be_visible(timeout=90000)
 
         # Fullscreen toggle should be visible
@@ -70,7 +70,7 @@ class TestInlineVisualization:
         self.chat.send_user_input(method="click")
 
         # Wait for viz tool result
-        tool_result = self.page.locator("shiny-tool-result[full-screen]")
+        tool_result = self.page.locator(".shiny-tool-result:has(.tool-fullscreen-toggle)")
         expect(tool_result).to_be_visible(timeout=90000)
 
         # Click fullscreen toggle
@@ -89,7 +89,7 @@ class TestInlineVisualization:
         self.chat.send_user_input(method="click")
 
         # Wait for viz tool result
-        tool_result = self.page.locator("shiny-tool-result[full-screen]")
+        tool_result = self.page.locator(".shiny-tool-result:has(.tool-fullscreen-toggle)")
         expect(tool_result).to_be_visible(timeout=90000)
 
         # Enter fullscreen
@@ -111,9 +111,9 @@ class TestInlineVisualization:
         self.chat.send_user_input(method="click")
 
         # Wait for a tool result (any)
-        tool_result = self.page.locator("shiny-tool-result").first
+        tool_result = self.page.locator(".shiny-tool-result").first
         expect(tool_result).to_be_visible(timeout=90000)
 
-        # Non-viz tool results should NOT have full-screen attribute
-        fs_results = self.page.locator("shiny-tool-result[full-screen]")
+        # Non-viz tool results should NOT have fullscreen toggle
+        fs_results = self.page.locator(".shiny-tool-result:has(.tool-fullscreen-toggle)")
         expect(fs_results).to_have_count(0)

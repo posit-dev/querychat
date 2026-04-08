@@ -8,7 +8,7 @@ import chevron
 
 from ._viz_utils import has_viz_tool
 
-SCHEMA_TAG_RE = re.compile(r"\{\{[{#^/]?\s*schema\b")
+_SCHEMA_TAG_RE = re.compile(r"\{\{[{#^/]?\s*schema\b")
 
 if TYPE_CHECKING:
     from ._datasource import DataSource
@@ -52,7 +52,7 @@ class QueryChatSystemPrompt:
         else:
             self.extra_instructions = extra_instructions
 
-        if SCHEMA_TAG_RE.search(self.template):
+        if _SCHEMA_TAG_RE.search(self.template):
             self.schema = data_source.get_schema(
                 categorical_threshold=categorical_threshold
             )
@@ -89,4 +89,10 @@ class QueryChatSystemPrompt:
             "include_query_guidelines": len(tools or ()) > 0,
         }
 
-        return chevron.render(self.template, context)
+        prompts_dir = str(Path(__file__).parent / "prompts")
+        return chevron.render(
+            self.template,
+            context,
+            partials_path=prompts_dir,
+            partials_ext="md",
+        )

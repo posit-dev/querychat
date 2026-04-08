@@ -304,3 +304,14 @@ def to_polars(data: IntoFrame) -> pl.DataFrame:
     if isinstance(nw_df, nw.LazyFrame):
         nw_df = nw_df.collect()
     return nw_df.to_polars()
+
+
+def read_prompt_template(filename: str, **kwargs: object) -> str:
+    """Read and interpolate a prompt template file."""
+    from pathlib import Path
+
+    import chevron
+
+    template_path = Path(__file__).parent / "prompts" / filename
+    template = template_path.read_text()
+    return chevron.render(template, kwargs)

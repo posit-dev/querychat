@@ -77,6 +77,20 @@ def _patch_deps(monkeypatch):
         lambda _ggsql, _title, _wid: TagList(FOOTER_SENTINEL),
     )
 
+    import ggsql
+    from querychat import _viz_tools
+
+    mock_raw_chart = MagicMock()
+    mock_vl_writer = MagicMock()
+    mock_vl_writer.render_chart.return_value = mock_raw_chart
+    monkeypatch.setattr(ggsql, "VegaLiteWriter", lambda: mock_vl_writer)
+    monkeypatch.setattr(
+        _viz_tools, "_extract_column_names", lambda _chart: ["x", "y"]
+    )
+    monkeypatch.setattr(
+        _viz_tools, "render_chart_to_png", lambda _chart: b"\x89PNG\r\n\x1a\n"
+    )
+
 
 def _make_viz_result(data_source):
     """Create a VisualizeQueryResult for testing."""

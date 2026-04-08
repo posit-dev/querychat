@@ -10,13 +10,17 @@ qc = QueryChat(
     tools=("query", "visualize_query"),
 )
 
-app_ui = ui.page_fillable(
-    qc.ui(),
-)
+#def app_ui(request):
+#    return ui.page_fillable(
+#        qc.ui(),
+#    )
+#
+#
+#def server(input, output, session):
+#    qc.server(enable_bookmarking=True)
+#
+#
+#app = App(app_ui, server, bookmark_store="url")
 
 
-def server(input, output, session):
-    qc.server()
-
-
-app = App(app_ui, server)
+app = qc.app()

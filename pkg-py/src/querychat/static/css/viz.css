@@ -125,7 +125,7 @@
 
 
 /* shinychat sets max-height:500px on all cards, which is too small for viz+editor */
-.card:has(.querychat-viz-container) {
+.shiny-tool-card:has(.querychat-viz-container) {
   max-height: 700px;
   overflow: hidden;
 }

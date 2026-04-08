@@ -22,7 +22,7 @@ maintainers = [
 dependencies = [
     "duckdb",
     "shiny @ git+https://github.com/posit-dev/py-shiny.git@feat/ggsql-language",
-    "shinychat @ git+https://github.com/posit-dev/shinychat.git@feat/react-migration",
+    "shinychat @ git+https://github.com/posit-dev/shinychat.git@fix/simplify-message-storage-and-streaming-deps",
     "htmltools",
     "chatlas>=0.13.2",
     "narwhals",
@@ -49,13 +49,19 @@ streamlit = ["streamlit>=1.30"]
 gradio = ["gradio>=6.0"]
 dash = ["dash-ag-grid>=31.0", "dash[async]>=3.1", "dash-bootstrap-components>=2.0", "pandas"]
 # Visualization with ggsql
-viz = ["ggsql>=0.1.8", "altair>=5.0", "shinywidgets>=0.3.0"]
+viz = ["ggsql>=0.1.8", "altair>=5.0", "shinywidgets>=0.3.0", "vl-convert-python>=1.3.0"]
 
 [project.urls]
 Homepage = "https://github.com/posit-dev/querychat" # TODO update when we have docs
 Repository = "https://github.com/posit-dev/querychat"
 Issues = "https://github.com/posit-dev/querychat/issues"
 Source = "https://github.com/posit-dev/querychat/tree/main/pkg-py"
+
+[tool.uv]
+required-environments = [
+    "sys_platform == 'linux' and platform_machine == 'x86_64'",
+    "sys_platform == 'darwin'",
+]
 
 [tool.hatch.metadata]
 allow-direct-references = true
@@ -78,7 +84,7 @@ git_describe_command = "git describe --dirty --tags --long --match 'py/v*'"
 version-file = "pkg-py/src/querychat/__version.py"
 
 [dependency-groups]
-dev = ["ruff>=0.6.5", "pyright>=1.1.401", "tox-uv>=1.11.4", "pytest>=8.4.0", "polars>=1.0.0", "pyarrow>=14.0.0", "ibis-framework[duckdb]>=9.0.0", "ggsql>=0.1.8", "altair>=5.0", "shinywidgets>=0.3.0"]
+dev = ["ruff>=0.6.5", "pyright>=1.1.401", "tox-uv>=1.11.4", "pytest>=8.4.0", "polars>=1.0.0", "pyarrow>=14.0.0", "ibis-framework[duckdb]>=9.0.0", "ggsql>=0.1.8", "altair>=5.0", "shinywidgets>=0.3.0", "vl-convert-python>=1.3.0"]
 docs = ["quartodoc>=0.11.1", "griffe<2", "nbformat", "nbclient", "ipykernel"]
 examples = [
     "openai",
@@ -216,13 +222,14 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 # disable S101 (flagging asserts) for tests
 [tool.ruff.lint.per-file-ignores]
-"pkg-py/tests/*.py" = ["S101", "PLR2004"]  # Allow assert and magic numbers in tests
+"pkg-py/tests/*.py" = ["S101", "PLR2004", "ARG", "PLW0108"]  # Allow assert, magic numbers, unused args, and unnecessary lambdas in tests
 "pkg-py/tests/playwright/*.py" = ["S101", "PLR2004", "S310", "S603", "S607", "PERF203"]  # Test fixtures launch subprocesses
 "pkg-py/examples/tests/*.py" = ["S101", "PLR2004"]  # Allow assert and magic numbers in tests
 "pkg-py/src/querychat/_dash.py" = ["E402"]  # Backwards-compat aliases at end of file
 "pkg-py/src/querychat/_gradio.py" = ["E402"]  # Backwards-compat aliases at end of file
 "pkg-py/src/querychat/_streamlit.py" = ["E402"]  # Backwards-compat aliases at end of file
 "pkg-py/src/querychat/types/__init__.py" = ["A005"]  # Deliberately shadows stdlib types module
+"pkg-py/docs/_screenshots/*.py" = ["S310", "PLR2004", "PERF203"]  # Dev utility scripts
 
 [tool.ruff.format]
 quote-style = "double"

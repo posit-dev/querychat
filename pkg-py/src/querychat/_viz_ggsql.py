@@ -50,7 +50,7 @@ def execute_ggsql(data_source: DataSource, validated: ggsql.Validated) -> ggsql.
     pl_df = to_polars(data_source.execute_query(validated.sql()))
 
     reader = DuckDBReader("duckdb://memory")
-    table = validated_source_table(validated)
+    table = extract_visualise_table(visual)
 
     if table is not None:
         # VISUALISE [mappings] FROM <table> — register data under the
@@ -65,26 +65,12 @@ def execute_ggsql(data_source: DataSource, validated: ggsql.Validated) -> ggsql.
         return reader.execute(f"SELECT * FROM _data {visual}")
 
 
-def validated_source_table(validated: ggsql.Validated) -> str | None:
-    """
-    Return the top-level ``VISUALISE ... FROM <table>`` source table.
-
-    Prefer ggsql's structured ``Validated.source_table()`` API when available.
-    Fall back to parsing the visual clause while querychat still supports older
-    ggsql Python bindings that do not expose that method yet.
-    """
-    source_table = getattr(validated, "source_table", None)
-    if callable(source_table):
-        return source_table()
-    return extract_visualise_table(validated.visual())
-
-
 def extract_visualise_table(visual: str) -> str | None:
     """
     Extract the table name from ``VISUALISE ... FROM <table>`` if present.
 
-    This is a compatibility fallback for older ggsql Python bindings that do
-    not yet expose ``Validated.source_table()``.
+    This reimplements a small part of ggsql's parsing because the current
+    Python bindings do not expose the top-level VISUALISE source directly.
     """
     draw_pos = re.search(r"\bDRAW\b", visual, re.IGNORECASE)
     vis_clause = visual[: draw_pos.start()] if draw_pos else visual

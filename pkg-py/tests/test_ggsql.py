@@ -10,12 +10,11 @@ from querychat._viz_ggsql import (
     execute_ggsql,
     extract_visualise_table,
     has_layer_level_source,
-    validated_source_table,
 )
 
 
 class TestExtractVisualiseTable:
-    """Tests for extract_visualise_table() compatibility parsing."""
+    """Tests for extract_visualise_table() parsing."""
 
     def test_bare_identifier(self):
         assert extract_visualise_table("VISUALISE x, y FROM mytable DRAW point") == "mytable"
@@ -32,25 +31,6 @@ class TestExtractVisualiseTable:
     def test_ignores_draw_level_from(self):
         visual = "VISUALISE x, y DRAW bar MAPPING z AS fill FROM summary"
         assert extract_visualise_table(visual) is None
-
-
-class TestValidatedSourceTable:
-    def test_uses_structured_method_when_available(self):
-        class FakeValidated:
-            def source_table(self):
-                return "sales"
-
-            def visual(self):
-                return "VISUALISE x FROM ignored DRAW point"
-
-        assert validated_source_table(FakeValidated()) == "sales"
-
-    def test_falls_back_to_visual_parse_for_older_bindings(self):
-        class FakeValidated:
-            def visual(self):
-                return "VISUALISE x FROM sales DRAW point"
-
-        assert validated_source_table(FakeValidated()) == "sales"
 
 
 class TestHasLayerLevelSource:

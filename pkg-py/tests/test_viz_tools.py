@@ -131,7 +131,6 @@ class TestVisualizeQueryResultContent:
     def test_result_value_contains_image(self, data_source, monkeypatch):
         from unittest.mock import MagicMock
 
-        from chatlas._content import ContentImageInline
         from ipywidgets.widgets.widget import Widget
 
         monkeypatch.setattr("shinywidgets.register_widget", lambda _id, _w: None)
@@ -152,18 +151,18 @@ class TestVisualizeQueryResultContent:
         )
 
         assert isinstance(result, VisualizeQueryResult)
-        # value should be a list with [str, ContentImageInline]
+        # value should be a list with [str, image content]
         assert isinstance(result.value, list)
         assert len(result.value) == 2
         assert isinstance(result.value[0], str)
-        assert isinstance(result.value[1], ContentImageInline)
+        assert getattr(result.value[1], "content_type", None) == "image_inline"
         assert result.value[1].image_content_type == "image/png"
         # model_format must be "as_is" so chatlas passes the list as
         # multimodal content (not stringified) to the LLM provider
         assert result.model_format == "as_is"
 
     @pytest.mark.ggsql
-    def test_result_text_includes_column_names(self, data_source, monkeypatch):
+    def test_result_text_is_minimal(self, data_source, monkeypatch):
         from unittest.mock import MagicMock
 
         from ipywidgets.widgets.widget import Widget
@@ -181,8 +180,7 @@ class TestVisualizeQueryResultContent:
         )
 
         text_part = result.value[0]
-        assert "x" in text_part
-        assert "y" in text_part
+        assert text_part == "Chart displayed with title 'Test Chart'."
         assert "Test Chart" in text_part
 
     @pytest.mark.ggsql

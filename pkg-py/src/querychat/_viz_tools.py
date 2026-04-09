@@ -8,7 +8,7 @@ import io
 from typing import TYPE_CHECKING, Any, TypedDict
 from uuid import uuid4
 
-from chatlas import ContentToolResult, Tool
+from chatlas import ContentToolResult, Tool, content_image_url
 from htmltools import HTMLDependency, TagList, tags
 from shinychat.types import ToolResultDisplay
 
@@ -93,9 +93,6 @@ class VisualizeQueryResult(ContentToolResult):
         widget: Widget,
         ggsql_str: str,
         title: str,
-        row_count: int,
-        col_count: int,
-        column_names: list[str],
         png_bytes: bytes | None = None,
         **kwargs: Any,
     ):
@@ -103,17 +100,14 @@ class VisualizeQueryResult(ContentToolResult):
 
         register_widget(widget_id, widget)
 
-        cols_str = ", ".join(column_names)
         title_display = f" with title '{title}'" if title else ""
-        text = f"Chart displayed{title_display}. Data: {row_count} rows, {col_count} columns: {cols_str}."
+        text = f"Chart displayed{title_display}."
 
         if png_bytes is not None:
-            from chatlas._content import ContentImageInline
-
             png_b64 = base64.b64encode(png_bytes).decode("ascii")
-            value: Any = [
+            value = [
                 text,
-                ContentImageInline(image_content_type="image/png", data=png_b64),
+                content_image_url(f"data:image/png;base64,{png_b64}"),
             ]
         else:
             value = text
@@ -149,7 +143,7 @@ def visualize_query_impl(
     update_fn: Callable[[VisualizeQueryData], None],
 ) -> Callable[[str, str], ContentToolResult]:
     """Create the visualize_query implementation function."""
-    from ggsql import validate
+    from ggsql import VegaLiteWriter, validate
 
     from ._viz_altair_widget import AltairWidget
     from ._viz_ggsql import execute_ggsql
@@ -187,18 +181,9 @@ def visualize_query_impl(
                 )
 
             spec = execute_ggsql(data_source, validated)
-            altair_widget = AltairWidget.from_ggsql(spec)
-
-            metadata = spec.metadata()
-            row_count = metadata["rows"]
-
-            # Render a static PNG thumbnail for LLM feedback.
-            # render_chart needs a fresh Altair chart (AltairWidget mutates its copy).
-            from ggsql import VegaLiteWriter
 
             raw_chart = VegaLiteWriter().render_chart(spec)
-            column_names = _extract_column_names(raw_chart)
-            col_count = len(column_names)
+            altair_widget = AltairWidget(copy.deepcopy(raw_chart))
 
             try:
                 png_bytes = render_chart_to_png(raw_chart)
@@ -214,9 +199,6 @@ def visualize_query_impl(
                 widget=altair_widget.widget,
                 ggsql_str=ggsql,
                 title=title,
-                row_count=row_count,
-                col_count=col_count,
-                column_names=column_names,
                 png_bytes=png_bytes,
             )
 
@@ -226,21 +208,6 @@ def visualize_query_impl(
             return ContentToolResult(value=markdown, error=e)
 
     return visualize_query
-
-
-def _extract_column_names(chart: alt.TopLevelMixin) -> list[str]:
-    """Extract user-facing column names from a VegaLite chart's encoding titles."""
-    chart_dict = chart.to_dict()
-    layers = chart_dict.get("layer", [chart_dict])
-    seen: list[str] = []
-    for layer in layers:
-        enc = layer.get("encoding", {})
-        for ch_val in enc.values():
-            if isinstance(ch_val, dict):
-                title = ch_val.get("title")
-                if title and title not in seen:
-                    seen.append(title)
-    return seen
 
 
 PNG_WIDTH = 500

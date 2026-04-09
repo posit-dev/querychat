@@ -7,13 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### New features
+
+* Added a `"visualize_query"` tool that lets the LLM create inline Altair charts from natural language requests using [ggsql](https://github.com/posit-dev/ggsql) — a SQL extension for declarative data visualization. Include it via `tools=("query", "visualize_query")` (or alongside `"update"`). Charts render inline in the chat with fullscreen support, a "Show Query" toggle, and Save as PNG/SVG. Install the optional dependencies with `pip install querychat[viz]`. (#219)
+
+* The `querychat_query` tool now accepts an optional `collapsed` parameter. When `collapsed=True`, the result card starts collapsed so preparatory or exploratory queries don't clutter the conversation. The LLM is guided to use this automatically when running queries before a visualization.
+
+* Added support for Snowflake Semantic Views. When connected to Snowflake (via SQLAlchemy or Ibis), querychat automatically discovers available Semantic Views and includes their definitions in the system prompt. This helps the LLM generate correct queries using the `SEMANTIC_VIEW()` table function with certified business metrics and dimensions. (#200)
+
 ### Improvements
 
 * When a custom `prompt_template` is provided that doesn't contain Mustache references to `{{schema}}`, the expensive `get_schema()` call is now skipped entirely. This allows users with large databases to avoid slow startup by providing their own prompt that includes schema information inline (or omits it). (#208)
-
-### New features
-
-* Added support for Snowflake Semantic Views. When connected to Snowflake (via SQLAlchemy or Ibis), querychat automatically discovers available Semantic Views and includes their definitions in the system prompt. This helps the LLM generate correct queries using the `SEMANTIC_VIEW()` table function with certified business metrics and dimensions. (#200)
 
 ## [0.5.1] - 2026-01-23
 

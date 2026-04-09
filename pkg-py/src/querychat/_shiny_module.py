@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import copy
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Generic, Union
+from typing import TYPE_CHECKING, Generic, TypedDict, Union
 
 import chatlas
 import shinychat
@@ -13,7 +12,9 @@ from narwhals.stable.v1.typing import IntoFrameT
 from shiny import module, reactive, ui
 
 from ._querychat_core import GREETING_PROMPT
-from .tools import tool_query, tool_reset_dashboard, tool_update_dashboard
+from ._viz_altair_widget import AltairWidget
+from ._viz_ggsql import execute_ggsql
+from ._viz_utils import has_viz_tool, preload_viz_deps_server, preload_viz_deps_ui
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -23,6 +24,8 @@ if TYPE_CHECKING:
     from shiny import Inputs, Outputs, Session
 
     from ._datasource import DataSource
+    from ._querychat_base import TOOL_GROUPS
+    from ._viz_tools import VisualizeQueryData
     from .types import UpdateDashboardData
 
 ReactiveString = reactive.Value[str]
@@ -30,11 +33,31 @@ ReactiveString = reactive.Value[str]
 ReactiveStringOrNone = reactive.Value[Union[str, None]]
 """A reactive string (or None) value."""
 
+
+class VizWidgetEntry(TypedDict):
+    """A bookmarked visualization widget: enough state to re-register on restore."""
+
+    widget_id: str
+    ggsql: str
+
+
 CHAT_ID = "chat"
 
 
+class _DeferredStubChatClient:
+    """Placeholder chat client for deferred stub sessions."""
+
+    def __getattr__(self, _name: str):
+        raise RuntimeError(
+            "Chat client is unavailable during stub session before data_source is set."
+        )
+
+
+ServerClient = chatlas.Chat | _DeferredStubChatClient
+
+
 @module.ui
-def mod_ui(**kwargs):
+def mod_ui(*, preload_viz: bool = False, **kwargs):
     css_path = Path(__file__).parent / "static" / "css" / "styles.css"
     js_path = Path(__file__).parent / "static" / "js" / "querychat.js"
 
@@ -47,6 +70,7 @@ def mod_ui(**kwargs):
             ui.include_js(js_path),
         ),
         tag,
+        preload_viz_deps_ui() if preload_viz else None,
     )
 
 
@@ -76,16 +100,17 @@ class ServerValues(Generic[IntoFrameT]):
         `.title()`, or set it with `.title.set("...")`. Returns
         `None` if no title has been set.
     client
-        The session-specific chat client instance. This is a deep copy of the
-        base client configured for this specific session, containing the chat
-        history and tool registrations for this session only.
+        Session chat client value.
+        For real sessions this is a `chatlas.Chat` created by the client
+        factory. For deferred stub sessions (where `data_source` is not set
+        yet), this is a placeholder client that raises when accessed.
 
     """
 
     df: Callable[[], IntoFrameT]
     sql: ReactiveStringOrNone
     title: ReactiveStringOrNone
-    client: chatlas.Chat
+    client: ServerClient
 
 
 @module.server
@@ -96,34 +121,17 @@ def mod_server(
     *,
     data_source: DataSource[IntoFrameT] | None,
     greeting: str | None,
-    client: chatlas.Chat | Callable,
+    client: Callable[..., chatlas.Chat],
     enable_bookmarking: bool,
+    tools: tuple[TOOL_GROUPS, ...] | None = None,
 ) -> ServerValues[IntoFrameT]:
     # Reactive values to store state
     sql = ReactiveStringOrNone(None)
     title = ReactiveStringOrNone(None)
     has_greeted = reactive.value[bool](False)  # noqa: FBT003
 
-    # Short-circuit for stub sessions (e.g. 1st run of an Express app)
-    # data_source may be None during stub session for deferred pattern
-    if session.is_stub_session():
-        # Mock the error that would otherwise occur in a real session
-        def _stub_df():
-            raise RuntimeError("RuntimeError: No current reactive context")
-
-        return ServerValues(
-            df=_stub_df,
-            sql=sql,
-            title=title,
-            client=client if isinstance(client, chatlas.Chat) else client(),
-        )
-
-    # Real session requires data_source
-    if data_source is None:
-        raise RuntimeError(
-            "data_source must be set before the real session. "
-            "Set it via the data_source property before users connect."
-        )
+    if not callable(client):
+        raise TypeError("mod_server() requires a callable client factory.")
 
     def update_dashboard(data: UpdateDashboardData):
         sql.set(data["query"])
@@ -133,19 +141,49 @@ def mod_server(
         sql.set(None)
         title.set(None)
 
-    # Set up the chat object for this session
-    # Support both a callable that creates a client and legacy instance pattern
-    if callable(client) and not isinstance(client, chatlas.Chat):
-        chat = client(
-            update_dashboard=update_dashboard, reset_dashboard=reset_dashboard
-        )
-    else:
-        # Legacy pattern: client is Chat instance
-        chat = copy.deepcopy(client)
+    viz_widgets: list[VizWidgetEntry] = []
 
-        chat.register_tool(tool_update_dashboard(data_source, update_dashboard))
-        chat.register_tool(tool_query(data_source))
-        chat.register_tool(tool_reset_dashboard(reset_dashboard))
+    def on_visualize(data: VisualizeQueryData):
+        viz_widgets.append({"widget_id": data["widget_id"], "ggsql": data["ggsql"]})
+
+    def build_chat_client() -> chatlas.Chat:
+        return client(
+            update_dashboard=update_dashboard,
+            reset_dashboard=reset_dashboard,
+            visualize_query=on_visualize,
+            tools=tools,
+        )
+
+    # Short-circuit for stub sessions (e.g. 1st run of an Express app)
+    # data_source may be None during stub session for deferred pattern
+    if session.is_stub_session():
+        # Mock the error that would otherwise occur in a real session
+        def _stub_df():
+            raise RuntimeError("RuntimeError: No current reactive context")
+
+        stub_client = (
+            _DeferredStubChatClient() if data_source is None else build_chat_client()
+        )
+
+        return ServerValues(
+            df=_stub_df,
+            sql=sql,
+            title=title,
+            client=stub_client,
+        )
+
+    # Real session requires data_source
+    if data_source is None:
+        raise RuntimeError(
+            "data_source must be set before the real session. "
+            "Set it via the data_source property before users connect."
+        )
+
+    # Build the session-specific chat client through QueryChat.client(...).
+    chat = build_chat_client()
+
+    if has_viz_tool(tools):
+        preload_viz_deps_server()
 
     # Execute query when SQL changes
     @reactive.calc
@@ -209,6 +247,8 @@ def mod_server(
             vals["querychat_sql"] = sql.get()
             vals["querychat_title"] = title.get()
             vals["querychat_has_greeted"] = has_greeted.get()
+            if viz_widgets:
+                vals["querychat_viz_widgets"] = viz_widgets
 
         @session.bookmark.on_restore
         def _on_restore(x: RestoreState) -> None:
@@ -219,9 +259,44 @@ def mod_server(
                 title.set(vals["querychat_title"])
             if "querychat_has_greeted" in vals:
                 has_greeted.set(vals["querychat_has_greeted"])
+            if "querychat_viz_widgets" in vals:
+                restored = restore_viz_widgets(
+                    data_source, vals["querychat_viz_widgets"]
+                )
+                viz_widgets[:] = restored
 
     return ServerValues(df=filtered_df, sql=sql, title=title, client=chat)
 
 
 class GreetWarning(Warning):
     """Warning raised when no greeting is provided to QueryChat."""
+
+
+def restore_viz_widgets(
+    data_source: DataSource[IntoFrameT],
+    saved_widgets: list[VizWidgetEntry],
+) -> list[VizWidgetEntry]:
+    """Re-execute ggsql queries, register widgets, and return restored entries."""
+    from ggsql import validate
+    from shinywidgets import register_widget
+
+    restored: list[VizWidgetEntry] = []
+
+    for entry in saved_widgets:
+        widget_id = entry["widget_id"]
+        ggsql_str = entry["ggsql"]
+        try:
+            validated = validate(ggsql_str)
+            spec = execute_ggsql(data_source, validated)
+            altair_widget = AltairWidget.from_ggsql(spec, widget_id=widget_id)
+            register_widget(widget_id, altair_widget.widget)
+            restored.append(entry)
+        except Exception:
+            # If a query fails on restore (e.g. data changed), skip it.
+            # The placeholder will remain empty but the rest of the chat restores.
+            warnings.warn(
+                f"Failed to restore visualization widget '{widget_id}' on bookmark restore.",
+                stacklevel=2,
+            )
+
+    return restored

@@ -17,6 +17,8 @@ from shiny import ui
 from .__version import __version__
 from ._icons import bs_icon
 from ._utils import read_prompt_template
+from ._viz_altair_widget import AltairWidget, fit_chart_to_container
+from ._viz_ggsql import execute_ggsql
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -145,9 +147,6 @@ def visualize_query_impl(
     """Create the visualize_query implementation function."""
     from ggsql import VegaLiteWriter, validate
 
-    from ._viz_altair_widget import AltairWidget
-    from ._viz_ggsql import execute_ggsql
-
     def visualize_query(
         ggsql: str,
         title: str,
@@ -217,8 +216,6 @@ PNG_HEIGHT = 300
 def render_chart_to_png(chart: alt.TopLevelMixin) -> bytes:
     """Render an Altair chart to PNG bytes at a fixed size for LLM feedback."""
     import altair as alt
-
-    from ._viz_altair_widget import fit_chart_to_container
 
     chart = copy.deepcopy(chart)
     is_compound = isinstance(

@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import importlib.util
+
 from htmltools import HTMLDependency, tags
-from shinywidgets import output_widget
 
 from .__version import __version__
 
@@ -15,8 +16,6 @@ def has_viz_tool(tools: tuple[str, ...] | None) -> bool:
 
 def has_viz_deps() -> bool:
     """Check whether visualization dependencies (ggsql, altair, shinywidgets, vl-convert-python) are installed."""
-    import importlib.util
-
     return all(
         importlib.util.find_spec(pkg) is not None
         for pkg in ("ggsql", "altair", "shinywidgets", "vl_convert")
@@ -28,6 +27,8 @@ PRELOAD_WIDGET_ID = "__querychat_preload_viz__"
 
 def preload_viz_deps_ui():
     """Return a hidden widget output that triggers eager JS dependency loading."""
+    from shinywidgets import output_widget
+
     return tags.div(
         output_widget(PRELOAD_WIDGET_ID),
         viz_preload_dep(),

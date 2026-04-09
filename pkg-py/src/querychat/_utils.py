@@ -4,8 +4,10 @@ import os
 import re
 import warnings
 from contextlib import contextmanager
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Optional, overload
 
+import chevron
 import narwhals.stable.v1 as nw
 from great_tables import GT
 
@@ -308,10 +310,6 @@ def to_polars(data: IntoFrame) -> pl.DataFrame:
 
 def read_prompt_template(filename: str, **kwargs: object) -> str:
     """Read and interpolate a prompt template file."""
-    from pathlib import Path
-
-    import chevron
-
     template_path = Path(__file__).parent / "prompts" / filename
     template = template_path.read_text()
     return chevron.render(template, kwargs)

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 from typing import TYPE_CHECKING, Any, cast
 from uuid import uuid4
 
@@ -130,8 +131,6 @@ def fit_chart_to_container(
     Subtracts padding estimates so the rendered cells fill the container,
     including space for legends when present.
     """
-    import copy
-
     import altair as alt
 
     chart = copy.copy(chart)

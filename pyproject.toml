@@ -58,6 +58,9 @@ Issues = "https://github.com/posit-dev/querychat/issues"
 Source = "https://github.com/posit-dev/querychat/tree/main/pkg-py"
 
 [tool.uv]
+# Restrict lock-file resolution to platforms we actually target in CI.
+# Without this, uv may resolve dependency versions whose wheels aren't
+# available on all platforms (e.g. non-x86_64 Linux), causing CI failures.
 required-environments = [
     "sys_platform == 'linux' and platform_machine == 'x86_64'",
     "sys_platform == 'darwin'",

@@ -307,7 +307,7 @@ def normalize_tools(
         return result
     if has_viz_tool(result) and not has_viz_deps():
         raise ImportError(
-            "Visualization tools require ggsql, altair, and shinywidgets. "
-            "Install them with: pip install querychat[viz]"
+            "Visualization tools require ggsql, altair, shinywidgets, and "
+            "vl-convert-python. Install them with: pip install querychat[viz]"
         )
     return result

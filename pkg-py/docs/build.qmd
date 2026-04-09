@@ -34,8 +34,8 @@ qc = QueryChat(titanic(), "titanic")
 ::: {.callout-tip}
 ### Visualization support
 
-By default, querychat includes a visualization tool that lets the LLM create inline charts.
-You can control which tools are available with the `tools` parameter.
+querychat supports an optional visualization tool that lets the LLM create inline charts.
+Enable it by including `"visualize_query"` in the `tools` parameter.
 See [Visualizations](visualize.qmd) for details.
 :::
 

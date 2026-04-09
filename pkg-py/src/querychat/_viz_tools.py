@@ -16,7 +16,7 @@ from shiny import ui
 
 from .__version import __version__
 from ._icons import bs_icon
-from ._utils import read_prompt_template
+from ._utils import querychat_tool_starts_open, read_prompt_template
 from ._viz_altair_widget import AltairWidget, fit_chart_to_container
 from ._viz_ggsql import execute_ggsql
 
@@ -125,7 +125,7 @@ class VisualizeQueryResult(ContentToolResult):
                 html=widget_html,
                 title=title or "Query Visualization",
                 show_request=False,
-                open=True,
+                open=querychat_tool_starts_open("visualize_query"),
                 full_screen=True,
                 icon=bs_icon("graph-up"),
                 footer=footer,

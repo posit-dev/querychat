@@ -62,7 +62,7 @@ This tool:
 3. Displays the chart inline in the chat
 
 Unlike the data updating tools, visualization queries don't affect the dashboard filter.
-They query the full dataset independently, and each call replaces the previous visualization.
+They query the full dataset independently, and each call produces a new inline chart message in the chat.
 
 The inline chart includes controls for fullscreen viewing, saving as PNG/SVG, and a "Show Query" toggle that reveals the underlying ggsql code.
 

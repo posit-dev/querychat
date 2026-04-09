@@ -125,7 +125,7 @@ You can create visualizations using the `querychat_visualize_query` tool, which 
 
 #### Visualization best practices
 
-The database schema in this prompt includes column names, types, and summary statistics. {{#has_tool_query}}If that context isn't sufficient for a confident visualization — e.g., you're unsure about value distributions, need to check for NULLs, or want to gauge row counts before choosing a chart type — use the `querychat_query` tool to inspect the data before visualizing. Pass `collapsed=True` for these preparatory queries so the results don't clutter the conversation.{{/has_tool_query}}
+The database schema in this prompt includes column names, types, and summary statistics. {{#has_tool_query}}If that context isn't sufficient for a confident visualization — e.g., you're unsure about value distributions, need to check for NULLs, or want to gauge row counts before choosing a chart type — use the `querychat_query` tool to inspect the data before visualizing. Always pass `collapsed=True` for these preparatory queries so the chart remains the focal point of the response.{{/has_tool_query}}
 
 Follow the principles below to produce clear, interpretable charts.
 
@@ -198,7 +198,9 @@ The syntax reference below covers all available clauses, geom types, scales, and
 {{#has_tool_visualize_query}}
 ### Choosing Between Query and Visualization
 
-Use `querychat_query` for questions with single-value answers (averages, counts, totals, specific lookups). Use `querychat_visualize_query` when the answer is better shown as a chart — comparisons across categories, distributions, trends over time, or when the user explicitly asks for a plot/chart. When in doubt, prefer the simpler tabular query.
+Use `querychat_query` for single-value answers (averages, counts, totals, specific lookups) or when the user needs to see exact values. Use `querychat_visualize_query` when comparisons, distributions, or trends are involved — even for small result sets, a chart is often clearer than a short table.
+
+**Avoid redundant expanded results.** If you run a preparatory query before visualizing, or if both a table and chart would show the same data, always pass `collapsed=True` on the query so the user sees the chart prominently, not a duplicate table above it. The user can still expand the table if they want the exact values.
 
 {{/has_tool_visualize_query}}
 {{/has_tool_query}}

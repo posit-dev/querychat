@@ -352,3 +352,55 @@ class TestVizPromptConditionals:
         rendered = prompt.render(tools=("update", "query", "visualize_query"))
 
         assert "fall back to" in rendered
+
+    def test_viz_only_has_no_cannot_query_message(self, sample_data_source):
+        """
+        When only visualize_query is enabled (no query tool), the rendered prompt
+        should NOT contain "cannot query or analyze" and SHOULD contain
+        "Visualizing Data".
+        """
+        from pathlib import Path
+
+        template_path = (
+            Path(__file__).parent.parent
+            / "src"
+            / "querychat"
+            / "prompts"
+            / "prompt.md"
+        )
+        prompt = QueryChatSystemPrompt(
+            prompt_template=template_path,
+            data_source=sample_data_source,
+        )
+
+        rendered = prompt.render(tools=("visualize_query",))
+
+        assert "cannot query or analyze" not in rendered
+        assert "Visualizing Data" in rendered
+
+    def test_choosing_section_only_with_both_tools(self, sample_data_source):
+        """
+        The "Choosing Between Query and Visualization" section should only appear
+        when both query and visualize_query are enabled.
+        """
+        from pathlib import Path
+
+        template_path = (
+            Path(__file__).parent.parent
+            / "src"
+            / "querychat"
+            / "prompts"
+            / "prompt.md"
+        )
+        prompt = QueryChatSystemPrompt(
+            prompt_template=template_path,
+            data_source=sample_data_source,
+        )
+
+        rendered_both = prompt.render(tools=("query", "visualize_query"))
+        rendered_query_only = prompt.render(tools=("query",))
+        rendered_viz_only = prompt.render(tools=("visualize_query",))
+
+        assert "Choosing Between Query and Visualization" in rendered_both
+        assert "Choosing Between Query and Visualization" not in rendered_query_only
+        assert "Choosing Between Query and Visualization" not in rendered_viz_only

@@ -10,7 +10,7 @@ import pytest
 from querychat._datasource import DataFrameSource, SQLAlchemySource
 from querychat._querychat_base import (
     QueryChatBase,
-    normalize_client,
+    create_client,
     normalize_data_source,
     normalize_tools,
 )
@@ -110,26 +110,26 @@ class TestNormalizeDataSource:
 
 class TestNormalizeClient:
     def test_with_none_uses_default(self):
-        result = normalize_client(None)
+        result = create_client(None)
         assert isinstance(result, chatlas.Chat)
 
     def test_with_string_provider(self):
-        result = normalize_client("openai")
+        result = create_client("openai")
         assert isinstance(result, chatlas.Chat)
 
     def test_with_chat_instance(self):
         chat = chatlas.ChatOpenAI()
-        result = normalize_client(chat)
+        result = create_client(chat)
         assert isinstance(result, chatlas.Chat)
 
     def test_respects_env_variable(self, monkeypatch):
         monkeypatch.setenv("QUERYCHAT_CLIENT", "openai")
-        result = normalize_client(None)
+        result = create_client(None)
         assert isinstance(result, chatlas.Chat)
 
     def test_with_invalid_provider_raises(self):
         with pytest.raises(ValueError, match="is not a known chatlas provider"):
-            normalize_client("not_a_real_provider_xyz123")
+            create_client("not_a_real_provider_xyz123")
 
 
 class TestNormalizeTools:

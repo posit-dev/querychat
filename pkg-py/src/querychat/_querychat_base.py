@@ -182,8 +182,7 @@ class QueryChatBase(Generic[IntoFrameT]):
             raise RuntimeError("System prompt not initialized")
         tools = normalize_tools(tools, default=self.tools)
 
-        chat = copy.deepcopy(base_client)
-        chat.set_turns([])
+        chat = create_client(base_client)
         chat.system_prompt = self._system_prompt.render(tools)
 
         if tools is None:
@@ -204,8 +203,7 @@ class QueryChatBase(Generic[IntoFrameT]):
         """Generate a welcome greeting for the chat."""
         self._require_data_source("generate_greeting")
         base_client = self._ensure_client(default=None)
-        client = copy.deepcopy(base_client)
-        client.set_turns([])
+        client = create_client(base_client)
         return str(client.chat(GREETING_PROMPT, echo=echo))
 
     def console(

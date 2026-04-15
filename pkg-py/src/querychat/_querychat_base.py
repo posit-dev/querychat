@@ -126,7 +126,7 @@ class QueryChatBase(Generic[IntoFrameT]):
             )
         return self._data_source
 
-    def _require_client(
+    def _ensure_client(
         self,
         default: str | chatlas.Chat | None | MISSING_TYPE = MISSING,
     ) -> chatlas.Chat:
@@ -177,7 +177,7 @@ class QueryChatBase(Generic[IntoFrameT]):
 
         """
         data_source = self._require_data_source("client")
-        base_client = self._require_client(default=None)
+        base_client = self._ensure_client(default=None)
         if self._system_prompt is None:
             raise RuntimeError("System prompt not initialized")
         tools = normalize_tools(tools, default=self.tools)
@@ -203,7 +203,7 @@ class QueryChatBase(Generic[IntoFrameT]):
     def generate_greeting(self, *, echo: Literal["none", "output"] = "none") -> str:
         """Generate a welcome greeting for the chat."""
         self._require_data_source("generate_greeting")
-        base_client = self._require_client(default=None)
+        base_client = self._ensure_client(default=None)
         client = copy.deepcopy(base_client)
         client.set_turns([])
         return str(client.chat(GREETING_PROMPT, echo=echo))
@@ -217,7 +217,7 @@ class QueryChatBase(Generic[IntoFrameT]):
     ) -> None:
         """Launch an interactive console chat with the data."""
         self._require_data_source("console")
-        self._require_client(default=None)
+        self._ensure_client(default=None)
         tools = normalize_tools(tools, default=("query",))
 
         if new or self._client_console is None:

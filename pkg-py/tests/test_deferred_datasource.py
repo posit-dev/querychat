@@ -139,20 +139,16 @@ class TestDeferredPatternIntegration:
 
     def test_deferred_then_set_property(self, sample_df):
         """Test setting data_source via property after init."""
-        # Create with None - both data_source and client are deferred
         qc = QueryChatBase(None, "users")
         assert qc.data_source is None
         assert qc.chat_client is None
 
-        # Set data_source via property
         qc.data_source = sample_df
         assert qc.data_source is not None
 
-        # Set client via property (required now that we defer both)
         qc.chat_client = "openai"
         assert qc.chat_client is not None
 
-        # Now methods should work
         client = qc.client()
         assert client is not None
         assert "users" in qc.system_prompt
@@ -162,13 +158,10 @@ class TestDeferredPatternIntegration:
         qc = QueryChatBase(sample_df, "original")
         original_prompt = qc.system_prompt
 
-        # Change data source (same table name)
         new_df = pd.DataFrame({"different": [1, 2], "columns": [3, 4]})
         qc.data_source = new_df
 
         new_prompt = qc.system_prompt
 
-        # Prompt should be different (different schema)
         assert original_prompt != new_prompt
-        # But table name should be preserved
         assert "original" in new_prompt

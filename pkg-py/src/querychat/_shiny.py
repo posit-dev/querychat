@@ -12,7 +12,7 @@ from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 from ._icons import bs_icon
 from ._querychat_base import TOOL_GROUPS, QueryChatBase
 from ._shiny_module import ServerValues, mod_server, mod_ui
-from ._utils import as_narwhals
+from ._utils import MISSING, MISSING_TYPE, as_narwhals
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -263,7 +263,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
 
         """
         data_source = self._require_data_source("app")
-        self._require_client("app")
+        self._require_client(default=None)
         enable_bookmarking = bookmark_store != "disable"
         table_name = data_source.table_name
 
@@ -300,7 +300,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 self.id,
                 data_source=data_source,
                 greeting=self.greeting,
-                client=self._client,
+                client=self.client,
                 enable_bookmarking=enable_bookmarking,
             )
 
@@ -406,7 +406,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         self,
         *,
         data_source: Optional[IntoFrame | sqlalchemy.Engine | ibis.Table] = None,
-        client: Optional[str | chatlas.Chat] = None,
+        client: str | chatlas.Chat | MISSING_TYPE = MISSING,
         enable_bookmarking: bool = False,
         id: Optional[str] = None,
     ) -> ServerValues[IntoFrameT]:
@@ -492,11 +492,8 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         if data_source is not None:
             self.data_source = data_source
 
-        if client is not None:
-            self.chat_client = client
-
         resolved_data_source = self._require_data_source("server")
-        self._require_client("server")
+        self._require_client(default=client)
 
         return mod_server(
             id or self.id,
@@ -735,12 +732,13 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         else:
             enable = enable_bookmarking
 
-        client = self._require_client("__init__")
+        self._require_client(default=None)
+
         self._vals = mod_server(
             self.id,
             data_source=self._data_source,
             greeting=self.greeting,
-            client=client,
+            client=self.client,
             enable_bookmarking=enable,
         )
 

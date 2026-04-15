@@ -65,16 +65,8 @@ class TestShinyDeferredDataSource:
         with pytest.raises(RuntimeError, match="data_source must be set"):
             qc.app()
 
-    def test_app_requires_client_when_deferred(self, sample_df):
-        """app() should raise a clear error when the client is still deferred."""
-        qc = QueryChat(None, "users")
-        qc.data_source = sample_df
-
-        with pytest.raises(RuntimeError, match="client must be set"):
-            qc.app()
-
-    def test_express_requires_client_when_deferred(self):
-        """Express should fail with a clear error when the client is still deferred."""
+    def test_express_requires_data_source_when_deferred(self):
+        """Express should fail with a clear error when data_source is still deferred."""
         with session_context(ExpressStubSession()):
-            with pytest.raises(RuntimeError, match="client must be set"):
+            with pytest.raises(RuntimeError, match="data_source must be set"):
                 ExpressQueryChat(None, "users")

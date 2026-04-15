@@ -83,9 +83,7 @@ class QueryChatBase(Generic[IntoFrameT]):
 
         self._client_console = None
         if client is not None:
-            normalized_client = normalize_client(client)
-            self._client: chatlas.Chat | None = copy.deepcopy(normalized_client)
-            self._client.set_turns([])
+            self._client: chatlas.Chat | None = normalize_client(client)
         else:
             self._client = None
 
@@ -141,9 +139,7 @@ class QueryChatBase(Generic[IntoFrameT]):
         subsequent use.
         """
         if self._client is None and not isinstance(default, MISSING_TYPE):
-            normalized = normalize_client(default)
-            self._client = copy.deepcopy(normalized)
-            self._client.set_turns([])
+            self._client = normalize_client(default)
             if self._system_prompt is not None:
                 self._client.system_prompt = self._system_prompt.render(self.tools)
 
@@ -256,9 +252,7 @@ class QueryChatBase(Generic[IntoFrameT]):
     @chat_client.setter
     def chat_client(self, value: str | chatlas.Chat) -> None:
         """Set the chat client, normalizing and updating system prompt if needed."""
-        normalized_client = normalize_client(value)
-        self._client = copy.deepcopy(normalized_client)
-        self._client.set_turns([])
+        self._client = normalize_client(value)
         if self._data_source is not None and self._system_prompt is not None:
             self._client.system_prompt = self._system_prompt.render(self.tools)
 
@@ -309,6 +303,7 @@ def normalize_data_source(
 
 
 def normalize_client(client: str | chatlas.Chat | None) -> chatlas.Chat:
+    """Resolve a client spec into a fresh Chat with no conversation history."""
     if client is None:
         client = os.getenv("QUERYCHAT_CLIENT", None)
 
@@ -316,9 +311,12 @@ def normalize_client(client: str | chatlas.Chat | None) -> chatlas.Chat:
         client = "openai"
 
     if isinstance(client, chatlas.Chat):
-        return client
+        chat = copy.deepcopy(client)
+    else:
+        chat = chatlas.ChatAuto(provider_model=client)
 
-    return chatlas.ChatAuto(provider_model=client)
+    chat.set_turns([])
+    return chat
 
 
 def normalize_tools(

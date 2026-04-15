@@ -263,6 +263,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
 
         """
         data_source = self._require_data_source("app")
+        self._require_client("app")
         enable_bookmarking = bookmark_store != "disable"
         table_name = data_source.table_name
 
@@ -734,11 +735,12 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         else:
             enable = enable_bookmarking
 
+        client = self._require_client("__init__")
         self._vals = mod_server(
             self.id,
             data_source=self._data_source,
             greeting=self.greeting,
-            client=self._client,
+            client=client,
             enable_bookmarking=enable,
         )
 

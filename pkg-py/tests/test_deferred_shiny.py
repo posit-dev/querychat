@@ -5,6 +5,9 @@ import os
 import pandas as pd
 import pytest
 from querychat import QueryChat
+from querychat.express import QueryChat as ExpressQueryChat
+from shiny.express._stub_session import ExpressStubSession
+from shiny.session import session_context
 
 
 @pytest.fixture(autouse=True)
@@ -61,3 +64,17 @@ class TestShinyDeferredDataSource:
         qc = QueryChat(None, "users")
         with pytest.raises(RuntimeError, match="data_source must be set"):
             qc.app()
+
+    def test_app_requires_client_when_deferred(self, sample_df):
+        """app() should raise a clear error when the client is still deferred."""
+        qc = QueryChat(None, "users")
+        qc.data_source = sample_df
+
+        with pytest.raises(RuntimeError, match="client must be set"):
+            qc.app()
+
+    def test_express_requires_client_when_deferred(self):
+        """Express should fail with a clear error when the client is still deferred."""
+        with session_context(ExpressStubSession()):
+            with pytest.raises(RuntimeError, match="client must be set"):
+                ExpressQueryChat(None, "users")

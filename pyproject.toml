@@ -25,7 +25,7 @@ dependencies = [
     "shinychat>=0.2.8",
     "htmltools",
     "chatlas>=0.13.2",
-    "narwhals",
+    "narwhals>=2.2.0",
     "chevron",
     "sqlalchemy>=2.0.0", # Using 2.0+ for improved type hints and API
     "great-tables>=0.16.0",

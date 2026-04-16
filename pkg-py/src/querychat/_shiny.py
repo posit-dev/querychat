@@ -425,11 +425,12 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             before initializing server logic. This is useful for the deferred pattern
             where data_source is not known at initialization time.
         client
-            Optional chat client to use. If provided, updates the deferred client
-            configuration before initializing server logic. This is useful for the
-            deferred pattern where the client cannot be created at initialization
-            time (e.g., when using Posit Connect managed OAuth credentials that
-            require session access).
+            Optional chat client to use for this session. If provided, overrides
+            any client set at initialization time for this call only. This is useful
+            for the deferred pattern where the client cannot be created at
+            initialization time (e.g., when using Posit Connect managed OAuth
+            credentials that require session access). Passing ``client=None`` is
+            not supported.
         enable_bookmarking
             Whether to enable bookmarking for the querychat module.
         id
@@ -492,16 +493,28 @@ class QueryChat(QueryChatBase[IntoFrameT]):
 
         if data_source is not None:
             self.data_source = data_source
-        if not isinstance(client, MISSING_TYPE):
-            self._client_spec = client
 
         resolved_data_source = self._require_data_source("server")
+        resolved_client_spec = self._require_client_spec("server", client)
+
+        def create_session_client(
+            *,
+            tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None | MISSING_TYPE = MISSING,
+            update_dashboard: Callable[[UpdateDashboardData], None] | None = None,
+            reset_dashboard: Callable[[], None] | None = None,
+        ) -> chatlas.Chat:
+            return self._create_session_client_from_spec(
+                resolved_client_spec,
+                tools=tools,
+                update_dashboard=update_dashboard,
+                reset_dashboard=reset_dashboard,
+            )
 
         return mod_server(
             id or self.id,
             data_source=resolved_data_source,
             greeting=self.greeting,
-            client=self._create_session_client,
+            client=create_session_client,
             enable_bookmarking=enable_bookmarking,
         )
 

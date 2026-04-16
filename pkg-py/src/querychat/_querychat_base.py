@@ -121,15 +121,16 @@ class QueryChatBase(Generic[IntoFrameT]):
             )
         return self._data_source
 
-    def _create_session_client(
+    def _create_session_client_from_spec(
         self,
+        client_spec: str | chatlas.Chat | None,
         *,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None | MISSING_TYPE = MISSING,
         update_dashboard: Callable[[UpdateDashboardData], None] | None = None,
         reset_dashboard: Callable[[], None] | None = None,
     ) -> chatlas.Chat:
-        """Create a fresh, fully-configured Chat from the current spec."""
-        chat = create_client(self._client_spec)
+        """Create a fresh, fully-configured Chat from an explicit spec."""
+        chat = create_client(client_spec)
 
         resolved_tools = normalize_tools(tools, default=self.tools)
 
@@ -154,6 +155,40 @@ class QueryChatBase(Generic[IntoFrameT]):
             chat.register_tool(tool_query(data_source))
 
         return chat
+
+    def _create_session_client(
+        self,
+        *,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None | MISSING_TYPE = MISSING,
+        update_dashboard: Callable[[UpdateDashboardData], None] | None = None,
+        reset_dashboard: Callable[[], None] | None = None,
+    ) -> chatlas.Chat:
+        """Create a fresh, fully-configured Chat from the current spec."""
+        return self._create_session_client_from_spec(
+            self._client_spec,
+            tools=tools,
+            update_dashboard=update_dashboard,
+            reset_dashboard=reset_dashboard,
+        )
+
+    def _require_client_spec(
+        self,
+        method_name: str,
+        client: str | chatlas.Chat | None | MISSING_TYPE,
+    ) -> str | chatlas.Chat:
+        """Resolve a usable client spec or raise with a method-specific message."""
+        if isinstance(client, MISSING_TYPE):
+            resolved_client = self._client_spec
+        else:
+            resolved_client = client
+
+        if resolved_client is None:
+            raise RuntimeError(
+                f"client must be set before calling {method_name}(). "
+                "Either pass client to __init__() or pass client to server()."
+            )
+
+        return resolved_client
 
     def client(
         self,

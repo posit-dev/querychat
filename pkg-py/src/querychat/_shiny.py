@@ -406,7 +406,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         self,
         *,
         data_source: Optional[IntoFrame | sqlalchemy.Engine | ibis.Table] = None,
-        client: str | chatlas.Chat | None | MISSING_TYPE = MISSING,
+        client: str | chatlas.Chat | MISSING_TYPE = MISSING,
         enable_bookmarking: bool = False,
         id: Optional[str] = None,
     ) -> ServerValues[IntoFrameT]:

@@ -26,9 +26,10 @@ from querychat.express import QueryChat
 Once imported, initialize it with your [data source](data-sources.qmd):
 
 ```{.python}
+from chatlas import ChatOpenAI
 from querychat.data import titanic
 
-qc = QueryChat(titanic(), "titanic")
+qc = QueryChat(titanic(), "titanic", client=ChatOpenAI())
 ```
 
 ::: {.callout-note collapse="true"}
@@ -130,10 +131,11 @@ Some data sources, like database connections or reactive calculations, may need 
 
 ```python
 from shiny import App, ui
+from chatlas import ChatOpenAI
 from querychat import QueryChat
 
 # Global scope - create QueryChat without data source
-qc = QueryChat(None, "users")
+qc = QueryChat(None, "users", client=ChatOpenAI())
 
 app_ui = ui.page_sidebar(
     qc.sidebar(),
@@ -184,9 +186,10 @@ with ui.sidebar():
 
 ```python
 from shiny import ui
+from chatlas import ChatOpenAI
 from querychat import QueryChat
 
-qc = QueryChat(data, "my_data")
+qc = QueryChat(data, "my_data", client=ChatOpenAI())
 
 app_ui = ui.page_sidebar(
     ui.sidebar(
@@ -280,6 +283,7 @@ def _():
 ```python
 ui.input_action_button("reset", "Reset Filters")
 
+# Assumes qc was created with a client (e.g., client=ChatOpenAI()).
 qc_vals = qc.server()
 
 @reactive.effect

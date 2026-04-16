@@ -637,6 +637,11 @@ QueryChat <- R6::R6Class(
     #'   for the deferred pattern where data_source is not known at
     #'   initialization time (e.g., when the data source depends on session-
     #'   specific authentication).
+    #' @param client Optional chat client override for this session. Can be an
+    #'   [ellmer::Chat] object or a string (e.g., `"openai/gpt-4o"`). If provided,
+    #'   overrides the client set at initialization for this session only —
+    #'   other sessions are unaffected. This is useful when the client must be
+    #'   created within a session scope (e.g., Posit Connect managed credentials).
     #' @param enable_bookmarking Whether to enable bookmarking for the chat
     #'   state. Default is `FALSE`. When enabled, the chat state (including
     #'   current query, title, and chat history) will be saved and restored
@@ -660,6 +665,7 @@ QueryChat <- R6::R6Class(
     #'
     server = function(
       data_source = NULL,
+      client = NULL,
       enable_bookmarking = FALSE,
       ...,
       id = NULL,
@@ -680,11 +686,20 @@ QueryChat <- R6::R6Class(
 
       private$require_data_source("$server")
 
+      resolved_client_spec <- client %||% private$.client_spec
+
+      create_session_client <- function(...) {
+        private$create_session_client(
+          client_spec = resolved_client_spec,
+          ...
+        )
+      }
+
       mod_server(
         id %||% self$id,
         data_source = private$.data_source,
         greeting = self$greeting,
-        client = self$client,
+        client = create_session_client,
         enable_bookmarking = enable_bookmarking
       )
     },

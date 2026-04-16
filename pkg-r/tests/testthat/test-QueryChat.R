@@ -742,3 +742,38 @@ test_that("querychat_app() only cleans up data frame sources on exit", {
     expect_false(cleanup_result)
   })
 })
+
+describe("QueryChat$server() client override", {
+  it("accepts a client parameter", {
+    withr::local_envvar(OPENAI_API_KEY = "boop")
+    test_df <- new_test_df()
+    qc <- QueryChat$new(test_df, table_name = "test_df", greeting = "Test")
+    withr::defer(qc$cleanup())
+
+    expect_error(
+      qc$server(client = "openai"),
+      "must be called within a Shiny server function"
+    )
+  })
+})
+
+describe("QueryChat deferred client with $server()", {
+  it("$server() errors when data_source is NULL", {
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+    expect_error(
+      qc$server(),
+      "must be called within a Shiny server function"
+    )
+  })
+
+  it("$server(data_source=...) sets the data_source", {
+    skip_if_no_dataframe_engine()
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+    expect_null(qc$data_source)
+
+    expect_error(
+      qc$server(data_source = new_users_df()),
+      "must be called within a Shiny server function"
+    )
+  })
+})

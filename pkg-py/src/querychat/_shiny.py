@@ -498,7 +498,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             self.data_source = data_source
 
         resolved_data_source = self._require_data_source("server")
-        resolved_client_spec = self._require_client_spec("server", client)
+        resolved_client_spec = client if not isinstance(client, MISSING_TYPE) else self._client_spec
 
         def create_session_client(
             *,

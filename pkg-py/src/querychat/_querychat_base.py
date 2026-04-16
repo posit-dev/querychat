@@ -171,32 +171,6 @@ class QueryChatBase(Generic[IntoFrameT]):
             reset_dashboard=reset_dashboard,
         )
 
-    def _require_client_spec(
-        self,
-        method_name: str,
-        client: str | chatlas.Chat | None | MISSING_TYPE,
-    ) -> str | chatlas.Chat:
-        """Resolve a usable client spec or raise with a method-specific message."""
-        if not isinstance(client, MISSING_TYPE) and client is None:
-            raise RuntimeError(
-                f"client must be set before calling {method_name}(). "
-                "Passing client=None is not supported. "
-                "Either pass client to __init__() or pass client to server()."
-            )
-
-        if isinstance(client, MISSING_TYPE):
-            resolved_client = self._client_spec
-        else:
-            resolved_client = client
-
-        if resolved_client is None:
-            raise RuntimeError(
-                f"client must be set before calling {method_name}(). "
-                "Either pass client to __init__() or pass client to server()."
-            )
-
-        return resolved_client
-
     def client(
         self,
         *,

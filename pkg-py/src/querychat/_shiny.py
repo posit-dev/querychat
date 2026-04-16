@@ -15,7 +15,6 @@ from ._shiny_module import ServerValues, mod_server, mod_ui
 from ._utils import MISSING, MISSING_TYPE, as_narwhals
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
     from pathlib import Path
 
     import chatlas
@@ -23,8 +22,6 @@ if TYPE_CHECKING:
     import narwhals.stable.v1 as nw
     import sqlalchemy
     from narwhals.stable.v1.typing import IntoFrame
-
-    from .tools import UpdateDashboardData
 
 
 class QueryChat(QueryChatBase[IntoFrameT]):
@@ -499,17 +496,9 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         resolved_data_source = self._require_data_source("server")
         resolved_client_spec = self._client_spec if isinstance(client, MISSING_TYPE) else client
 
-        def create_session_client(
-            *,
-            tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None | MISSING_TYPE = MISSING,
-            update_dashboard: Callable[[UpdateDashboardData], None] | None = None,
-            reset_dashboard: Callable[[], None] | None = None,
-        ) -> chatlas.Chat:
-            return self._create_session_client_from_spec(
-                resolved_client_spec,
-                tools=tools,
-                update_dashboard=update_dashboard,
-                reset_dashboard=reset_dashboard,
+        def create_session_client(**kwargs) -> chatlas.Chat:
+            return self._create_session_client(
+                client_spec=resolved_client_spec, **kwargs
             )
 
         return mod_server(

@@ -121,16 +121,17 @@ class QueryChatBase(Generic[IntoFrameT]):
             )
         return self._data_source
 
-    def _create_session_client_from_spec(
+    def _create_session_client(
         self,
-        client_spec: str | chatlas.Chat | None,
         *,
+        client_spec: str | chatlas.Chat | None | MISSING_TYPE = MISSING,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None | MISSING_TYPE = MISSING,
         update_dashboard: Callable[[UpdateDashboardData], None] | None = None,
         reset_dashboard: Callable[[], None] | None = None,
     ) -> chatlas.Chat:
-        """Create a fresh, fully-configured Chat from an explicit spec."""
-        chat = create_client(client_spec)
+        """Create a fresh, fully-configured Chat."""
+        spec = self._client_spec if isinstance(client_spec, MISSING_TYPE) else client_spec
+        chat = create_client(spec)
 
         resolved_tools = normalize_tools(tools, default=self.tools)
 
@@ -140,9 +141,6 @@ class QueryChatBase(Generic[IntoFrameT]):
         if resolved_tools is None:
             return chat
 
-        # Safety net — public callers (client(), server(), app()) should call
-        # _require_data_source() first so users see a message referencing the
-        # method they actually called.
         data_source = self._require_data_source("_create_session_client")
 
         if "update" in resolved_tools:
@@ -155,21 +153,6 @@ class QueryChatBase(Generic[IntoFrameT]):
             chat.register_tool(tool_query(data_source))
 
         return chat
-
-    def _create_session_client(
-        self,
-        *,
-        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None | MISSING_TYPE = MISSING,
-        update_dashboard: Callable[[UpdateDashboardData], None] | None = None,
-        reset_dashboard: Callable[[], None] | None = None,
-    ) -> chatlas.Chat:
-        """Create a fresh, fully-configured Chat from the current spec."""
-        return self._create_session_client_from_spec(
-            self._client_spec,
-            tools=tools,
-            update_dashboard=update_dashboard,
-            reset_dashboard=reset_dashboard,
-        )
 
     def client(
         self,

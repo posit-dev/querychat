@@ -200,6 +200,7 @@ class QueryChatBase(Generic[IntoFrameT]):
         **kwargs,
     ) -> None:
         """Launch an interactive console chat with the data."""
+        self._require_data_source("console")
         if new or self._client_console is None:
             self._client_console = self.client(tools=tools, **kwargs)
 

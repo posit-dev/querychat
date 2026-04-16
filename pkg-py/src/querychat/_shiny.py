@@ -441,12 +441,11 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         ```python
         from shiny import App, render, ui
         from seaborn import load_dataset
-        from chatlas import ChatOpenAI
         from querychat import QueryChat
 
         titanic = load_dataset("titanic")
 
-        qc = QueryChat(titanic, "titanic", client=ChatOpenAI())
+        qc = QueryChat(titanic, "titanic")
 
 
         def app_ui(request):

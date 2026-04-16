@@ -431,8 +431,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             any client set at initialization time for this call only. This is useful
             for the deferred pattern where the client cannot be created at
             initialization time (e.g., when using Posit Connect managed OAuth
-            credentials that require session access). Passing ``client=None`` is
-            not supported.
+            credentials that require session access).
         enable_bookmarking
             Whether to enable bookmarking for the querychat module.
         id
@@ -498,7 +497,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             self.data_source = data_source
 
         resolved_data_source = self._require_data_source("server")
-        resolved_client_spec = client if not isinstance(client, MISSING_TYPE) else self._client_spec
+        resolved_client_spec = self._client_spec if isinstance(client, MISSING_TYPE) else client
 
         def create_session_client(
             *,

@@ -137,10 +137,8 @@ QueryChat <- R6::R6Class(
     create_session_client = function(
       client_spec = NULL,
       tools = NA,
-      update_dashboard = function(query, title) {
-      },
-      reset_dashboard = function() {
-      }
+      update_dashboard = function(query, title) {},
+      reset_dashboard = function() {}
     ) {
       spec <- client_spec %||% private$.client_spec
       chat <- as_querychat_client(spec)
@@ -322,10 +320,8 @@ QueryChat <- R6::R6Class(
     #'   `reset_dashboard` tool is called.
     client = function(
       tools = NA,
-      update_dashboard = function(query, title) {
-      },
-      reset_dashboard = function() {
-      }
+      update_dashboard = function(query, title) {},
+      reset_dashboard = function() {}
     ) {
       private$require_data_source("$client")
 

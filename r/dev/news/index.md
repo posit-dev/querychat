@@ -2,6 +2,14 @@
 
 ## querychat (development version)
 
+- `QueryChat$server()` now accepts a `client` parameter for
+  session-scoped chat client overrides. This enables Posit Connect
+  managed OAuth workflows where API credentials are only available
+  inside the Shiny server function. The client spec is stored lazily at
+  construction time and resolved only when needed, so
+  `QueryChat$new(NULL, "table")` no longer requires an API key.
+  ([\#205](https://github.com/posit-dev/querychat/issues/205))
+
 - When a custom `prompt_template` is provided that doesn’t contain
   Mustache references to `{{schema}}`, the expensive `get_schema()` call
   is now skipped entirely. This allows users with large databases to

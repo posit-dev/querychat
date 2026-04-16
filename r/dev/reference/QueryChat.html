@@ -522,6 +522,7 @@ reactive values.</p>
 <h4 id="usage-7">Usage<a class="anchor" aria-label="anchor" href="#usage-7"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">QueryChat</span><span class="op">$</span><span class="fu">server</span><span class="op">(</span></span>
 <span>  data_source <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  client <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  enable_bookmarking <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  <span class="va">...</span>,</span>
 <span>  id <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -537,6 +538,14 @@ data_source property before initializing server logic. This is useful
 for the deferred pattern where data_source is not known at
 initialization time (e.g., when the data source depends on session-
 specific authentication).</p></dd>
+
+
+<dt><code>client</code></dt>
+<dd><p>Optional chat client override for this session. Can be an
+<a href="https://ellmer.tidyverse.org/reference/Chat.html" class="external-link">ellmer::Chat</a> object or a string (e.g., <code>"openai/gpt-4o"</code>). If provided,
+overrides the client set at initialization for this session only —
+other sessions are unaffected. This is useful when the client must be
+created within a session scope (e.g., Posit Connect managed credentials).</p></dd>
 
 
 <dt><code>enable_bookmarking</code></dt>
@@ -649,7 +658,6 @@ be called automatically when the Shiny app stops.</p><div class="section">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Basic usage with a data frame</span></span></span>
 <span class="r-in"><span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="va">QueryChat</span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">mtcars</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Using <span style="color: #00BB00;">model</span> = <span style="color: #0000BB;">"gpt-4.1"</span>.</span>
 <span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
 <span class="r-in"><span><span class="va">app</span> <span class="op">&lt;-</span> <span class="va">qc</span><span class="op">$</span><span class="fu">app</span><span class="op">(</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span> <span class="co"># }</span></span></span>
@@ -657,7 +665,6 @@ be called automatically when the Shiny app stops.</p><div class="section">
 <span class="r-in"><span><span class="co"># With a custom greeting</span></span></span>
 <span class="r-in"><span><span class="va">greeting</span> <span class="op">&lt;-</span> <span class="st">"Welcome! Ask me about the mtcars dataset."</span></span></span>
 <span class="r-in"><span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="va">QueryChat</span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">mtcars</span>, greeting <span class="op">=</span> <span class="va">greeting</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Using <span style="color: #00BB00;">model</span> = <span style="color: #0000BB;">"gpt-4.1"</span>.</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># With a specific LLM provider</span></span></span>
 <span class="r-in"><span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="va">QueryChat</span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">mtcars</span>, client <span class="op">=</span> <span class="st">"anthropic/claude-sonnet-4-5"</span><span class="op">)</span></span></span>
@@ -686,7 +693,6 @@ be called automatically when the Shiny app stops.</p><div class="section">
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># 3. Pass the connection and table name to `QueryChat`</span></span></span>
 <span class="r-in"><span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="va">QueryChat</span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">con</span>, <span class="st">"mtcars"</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Using <span style="color: #00BB00;">model</span> = <span style="color: #0000BB;">"gpt-4.1"</span>.</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

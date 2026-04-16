@@ -213,6 +213,9 @@ without a data source and provide it later, like this:</p>
 <span><span class="op">}</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/pkg/shiny/man/shinyApp.html" class="external-link">shinyApp</a></span><span class="op">(</span><span class="va">ui</span>, <span class="va">server</span><span class="op">)</span></span></code></pre></div>
+<p>If your chat client also depends on session-scoped credentials, you
+can defer that too by passing it to <code>qc$server(client = ...)</code>
+alongside the <code>data_source</code>.</p>
 <p>This is also a useful pattern when using something like <a href="https://github.com/rstudio/pool" class="external-link"><code>{pool}</code></a> to
 efficiently manage a pool of database connections (which we strongly
 recommend for production apps).</p>

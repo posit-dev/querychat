@@ -125,6 +125,10 @@ server <- function(input, output, session) {
 shinyApp(ui, server)
 ```
 
+If your chat client also depends on session-scoped credentials, you can
+defer that too by passing it to `qc$server(client = ...)` alongside the
+`data_source`.
+
 This is also a useful pattern when using something like
 [`{pool}`](https://github.com/rstudio/pool) to efficiently manage a pool
 of database connections (which we strongly recommend for production

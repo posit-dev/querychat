@@ -486,6 +486,7 @@ reactive values.
 
     QueryChat$server(
       data_source = NULL,
+      client = NULL,
       enable_bookmarking = FALSE,
       ...,
       id = NULL,
@@ -501,6 +502,16 @@ reactive values.
   deferred pattern where data_source is not known at initialization time
   (e.g., when the data source depends on session- specific
   authentication).
+
+- `client`:
+
+  Optional chat client override for this session. Can be an
+  [ellmer::Chat](https://ellmer.tidyverse.org/reference/Chat.html)
+  object or a string (e.g., `"openai/gpt-4o"`). If provided, overrides
+  the client set at initialization for this session only — other
+  sessions are unaffected. This is useful when the client must be
+  created within a session scope (e.g., Posit Connect managed
+  credentials).
 
 - `enable_bookmarking`:
 
@@ -619,7 +630,6 @@ The objects of this class are cloneable with this method.
 ``` r
 # Basic usage with a data frame
 qc <- QueryChat$new(mtcars)
-#> Using model = "gpt-4.1".
 if (FALSE) { # \dontrun{
 app <- qc$app()
 } # }
@@ -627,7 +637,6 @@ app <- qc$app()
 # With a custom greeting
 greeting <- "Welcome! Ask me about the mtcars dataset."
 qc <- QueryChat$new(mtcars, greeting = greeting)
-#> Using model = "gpt-4.1".
 
 # With a specific LLM provider
 qc <- QueryChat$new(mtcars, client = "anthropic/claude-sonnet-4-5")
@@ -656,5 +665,4 @@ DBI::dbWriteTable(con, "mtcars", mtcars)
 
 # 3. Pass the connection and table name to `QueryChat`
 qc <- QueryChat$new(con, "mtcars")
-#> Using model = "gpt-4.1".
 ```

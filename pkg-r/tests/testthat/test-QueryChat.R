@@ -491,6 +491,27 @@ describe("QueryChat$client()", {
     expect_length(client2$get_turns(), 0)
   })
 
+  it("returns independent instances when client spec is a Chat object", {
+    withr::local_envvar(OPENAI_API_KEY = "boop")
+    chat_spec <- ellmer::chat_openai()
+
+    qc <- QueryChat$new(
+      new_test_df(),
+      "test_df",
+      client = chat_spec
+    )
+    withr::defer(qc$cleanup())
+
+    client1 <- qc$client()
+    client2 <- qc$client()
+
+    expect_false(identical(client1, client2))
+
+    client1$set_turns(list(ellmer::Turn("user", "test message")))
+    expect_length(client1$get_turns(), 1)
+    expect_length(client2$get_turns(), 0)
+  })
+
   it("respects QueryChat initialization tools by default", {
     qc_query_only <- QueryChat$new(
       new_test_df(),

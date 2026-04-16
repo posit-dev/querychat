@@ -144,6 +144,7 @@ QueryChat <- R6::R6Class(
     ) {
       spec <- client_spec %||% private$.client_spec
       chat <- as_querychat_client(spec)
+      chat <- chat$clone()
       chat$set_turns(list())
 
       if (is_na(tools)) {

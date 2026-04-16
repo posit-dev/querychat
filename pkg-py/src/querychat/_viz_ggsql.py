@@ -48,6 +48,10 @@ def execute_ggsql(data_source: DataSource, validated: ggsql.Validated) -> ggsql.
         )
 
     pl_df = to_polars(data_source.execute_query(validated.sql()))
+    # Snowflake (and some other backends) uppercase unquoted identifiers,
+    # but the LLM writes lowercase aliases in the VISUALISE clause.
+    # DuckDB is case-insensitive, so lowercasing here lets both match.
+    pl_df.columns = [c.lower() for c in pl_df.columns]
 
     reader = DuckDBReader("duckdb://memory")
     table = extract_visualise_table(visual)

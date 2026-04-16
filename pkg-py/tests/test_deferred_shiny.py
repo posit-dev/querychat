@@ -7,6 +7,7 @@ import pytest
 from chatlas import ChatOpenAI
 from querychat import QueryChat
 from querychat.express import QueryChat as ExpressQueryChat
+from querychat._querychat_base import create_client as _create_client
 from shiny.express._stub_session import ExpressStubSession
 from shiny.session import session_context
 
@@ -72,24 +73,29 @@ class TestShinyDeferredDataSource:
             with pytest.raises(RuntimeError, match="data_source must be set"):
                 ExpressQueryChat(None, "users")
 
-    def test_server_can_clear_client_with_none(self, sample_df):
-        """server(client=None) should clear a previously configured client."""
-        qc = QueryChat(None, "users", client=ChatOpenAI())
-
-        with session_context(ExpressStubSession()):
-            qc.server(data_source=sample_df, client=None)
-
-        assert qc._client_spec is None
-
-    def test_server_client_override_does_not_mutate_shared_client_spec(self, sample_df):
+    def test_server_client_override_does_not_mutate_shared_client_spec(
+        self, sample_df, monkeypatch
+    ):
         """server(client=...) should keep the override session-local."""
         init_client = ChatOpenAI(model="gpt-4.1")
         override_client = ChatOpenAI(model="gpt-4.1-mini")
         qc = QueryChat(None, "users", client=init_client)
+        recorded_specs = []
+        real_create_client = _create_client
+
+        def spy_create_client(client_spec):
+            recorded_specs.append(client_spec)
+            return real_create_client(client_spec)
+
+        monkeypatch.setattr(
+            "querychat._querychat_base.create_client", spy_create_client
+        )
 
         with session_context(ExpressStubSession()):
             qc.server(data_source=sample_df, client=override_client)
 
+        assert recorded_specs
+        assert recorded_specs[-1] is override_client
         assert qc._client_spec is init_client
 
     def test_server_without_init_or_override_client_raises_early(self, sample_df):

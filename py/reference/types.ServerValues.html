@@ -333,8 +333,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tr>
 <tr class="even">
 <td>client</td>
-<td><code>chatlas</code>.<code>Chat</code></td>
-<td>The session-specific chat client instance. This is a deep copy of the base client configured for this specific session, containing the chat history and tool registrations for this session only.</td>
+<td><code>chatlas</code>.<code>Chat</code> | None</td>
+<td>The session-specific chat client instance. This is a deep copy of the base client configured for this specific session, containing the chat history and tool registrations for this session only. This may be <code>None</code> during stub sessions when the client depends on deferred, session-scoped state.</td>
 </tr>
 </tbody>
 </table>

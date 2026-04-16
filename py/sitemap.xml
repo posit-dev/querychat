@@ -2,90 +2,90 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://posit-dev.github.io/querychat/py/build.html</loc>
-    <lastmod>2026-04-08T22:31:06.513Z</lastmod>
+    <lastmod>2026-04-16T21:29:42.200Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/build-dash.html</loc>
-    <lastmod>2026-04-08T22:31:06.513Z</lastmod>
+    <lastmod>2026-04-16T21:29:42.200Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/index.html</loc>
-    <lastmod>2026-04-08T22:31:06.528Z</lastmod>
+    <lastmod>2026-04-16T21:29:42.216Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/tools.html</loc>
-    <lastmod>2026-04-08T22:31:06.528Z</lastmod>
+    <lastmod>2026-04-16T21:29:42.216Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/build-streamlit.html</loc>
-    <lastmod>2026-04-08T22:31:06.513Z</lastmod>
+    <lastmod>2026-04-16T21:29:42.200Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/greet.html</loc>
-    <lastmod>2026-04-08T22:31:06.513Z</lastmod>
+    <lastmod>2026-04-16T21:29:42.200Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/reference/types.SQLAlchemySource.html</loc>
-    <lastmod>2026-04-08T22:31:35.994Z</lastmod>
+    <lastmod>2026-04-16T21:30:10.839Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/reference/tools.tool_update_dashboard.html</loc>
-    <lastmod>2026-04-08T22:31:35.999Z</lastmod>
+    <lastmod>2026-04-16T21:30:10.844Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/reference/types.DataFrameSource.html</loc>
-    <lastmod>2026-04-08T22:31:35.978Z</lastmod>
+    <lastmod>2026-04-16T21:30:10.822Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/reference/types.DataSource.html</loc>
-    <lastmod>2026-04-08T22:31:35.962Z</lastmod>
+    <lastmod>2026-04-16T21:30:10.806Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/reference/types.ServerValues.html</loc>
-    <lastmod>2026-04-08T22:31:35.946Z</lastmod>
+    <lastmod>2026-04-16T21:30:10.790Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/data-sources.html</loc>
-    <lastmod>2026-04-08T22:31:06.513Z</lastmod>
+    <lastmod>2026-04-16T21:29:42.200Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/reference/tools.tool_reset_dashboard.html</loc>
-    <lastmod>2026-04-08T22:31:36.002Z</lastmod>
+    <lastmod>2026-04-16T21:30:10.847Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/reference/QueryChat.html</loc>
-    <lastmod>2026-04-08T22:31:35.914Z</lastmod>
+    <lastmod>2026-04-16T21:30:10.759Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/reference/express.QueryChat.html</loc>
-    <lastmod>2026-04-08T22:31:35.943Z</lastmod>
+    <lastmod>2026-04-16T21:30:10.787Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/reference/index.html</loc>
-    <lastmod>2026-04-08T22:31:35.871Z</lastmod>
+    <lastmod>2026-04-16T21:30:10.713Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/reference/tools.tool_query.html</loc>
-    <lastmod>2026-04-08T22:31:35.996Z</lastmod>
+    <lastmod>2026-04-16T21:30:10.841Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/models.html</loc>
-    <lastmod>2026-04-08T22:31:06.528Z</lastmod>
+    <lastmod>2026-04-16T21:29:42.216Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/build-intro.html</loc>
-    <lastmod>2026-04-08T22:31:06.513Z</lastmod>
+    <lastmod>2026-04-16T21:29:42.200Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/build-gradio.html</loc>
-    <lastmod>2026-04-08T22:31:06.513Z</lastmod>
+    <lastmod>2026-04-16T21:29:42.200Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/context.html</loc>
-    <lastmod>2026-04-08T22:31:06.513Z</lastmod>
+    <lastmod>2026-04-16T21:29:42.200Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/CHANGELOG.html</loc>
-    <lastmod>2026-04-08T22:31:38.344Z</lastmod>
+    <lastmod>2026-04-16T21:30:12.940Z</lastmod>
   </url>
 </urlset>

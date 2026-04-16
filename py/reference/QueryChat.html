@@ -624,7 +624,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="querychat.QueryChat.server" class="level3">
 <h3 class="anchored" data-anchor-id="querychat.QueryChat.server">server</h3>
-<div class="sourceCode" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>QueryChat.server(data_source<span class="op">=</span><span class="va">None</span>, enable_bookmarking<span class="op">=</span><span class="va">False</span>, <span class="bu">id</span><span class="op">=</span><span class="va">None</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>QueryChat.server(</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>    data_source<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    client<span class="op">=</span>MISSING,</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    enable_bookmarking<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    <span class="bu">id</span><span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Initialize Shiny server logic.</p>
 <p>This method is intended for use in Shiny Code mode, where the user must explicitly call <code>.server()</code> within the Shiny server function. In Shiny Express mode, you can use <code>querychat.express.QueryChat</code> instead of <code>querychat.QueryChat</code>, which calls <code>.server()</code> automatically.</p>
 <section id="parameters-3" class="level4 doc-section doc-section-parameters">
@@ -646,12 +651,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td><code>None</code></td>
 </tr>
 <tr class="even">
+<td>client</td>
+<td><a href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | <code>chatlas</code>.<code>Chat</code> | <code>MISSING_TYPE</code></td>
+<td>Optional chat client to use for this session. If provided, overrides any client set at initialization time for this call only. This is useful for the deferred pattern where the client cannot be created at initialization time (e.g., when using Posit Connect managed OAuth credentials that require session access).</td>
+<td><code>MISSING</code></td>
+</tr>
+<tr class="odd">
 <td>enable_bookmarking</td>
 <td><a href="https://docs.python.org/3/library/functions.html#bool">bool</a></td>
 <td>Whether to enable bookmarking for the querychat module.</td>
 <td><code>False</code></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>id</td>
 <td><a href="https://docs.python.org/3/library/typing.html#typing.Optional">Optional</a>[<a href="https://docs.python.org/3/library/stdtypes.html#str">str</a>]</td>
 <td>Optional module ID for the QueryChat instance. If not provided, will use the ID provided at initialization. This must match the ID used in the <code>.ui()</code> or <code>.sidebar()</code> methods.</td>

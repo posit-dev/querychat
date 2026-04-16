@@ -139,6 +139,9 @@ class QueryChatBase(Generic[IntoFrameT]):
         if resolved_tools is None:
             return chat
 
+        # Safety net — public callers (client(), server(), app()) should call
+        # _require_data_source() first so users see a message referencing the
+        # method they actually called.
         data_source = self._require_data_source("_create_session_client")
 
         if "update" in resolved_tools:

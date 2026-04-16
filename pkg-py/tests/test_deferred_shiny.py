@@ -6,8 +6,8 @@ import pandas as pd
 import pytest
 from chatlas import ChatOpenAI
 from querychat import QueryChat
-from querychat.express import QueryChat as ExpressQueryChat
 from querychat._querychat_base import create_client as _create_client
+from querychat.express import QueryChat as ExpressQueryChat
 from shiny.express._stub_session import ExpressStubSession
 from shiny.session import session_context
 
@@ -69,9 +69,11 @@ class TestShinyDeferredDataSource:
 
     def test_express_requires_data_source_when_deferred(self):
         """Express should fail with a clear error when data_source is still deferred."""
-        with session_context(ExpressStubSession()):
-            with pytest.raises(RuntimeError, match="data_source must be set"):
-                ExpressQueryChat(None, "users")
+        with (
+            session_context(ExpressStubSession()),
+            pytest.raises(RuntimeError, match="data_source must be set"),
+        ):
+            ExpressQueryChat(None, "users")
 
     def test_server_client_override_does_not_mutate_shared_client_spec(
         self, sample_df, monkeypatch
@@ -102,17 +104,21 @@ class TestShinyDeferredDataSource:
         """Deferred Shiny setup should fail from server() when no client is available."""
         qc = QueryChat(None, "users")
 
-        with session_context(ExpressStubSession()):
-            with pytest.raises(RuntimeError, match="client must be set"):
-                qc.server(data_source=sample_df)
+        with (
+            session_context(ExpressStubSession()),
+            pytest.raises(RuntimeError, match="client must be set"),
+        ):
+            qc.server(data_source=sample_df)
 
     def test_server_rejects_explicit_none_client(self, sample_df):
         """server(client=None) is invalid because None is ambiguous in this API."""
         qc = QueryChat(None, "users", client=ChatOpenAI())
 
-        with session_context(ExpressStubSession()):
-            with pytest.raises(RuntimeError, match="client must be set"):
-                qc.server(data_source=sample_df, client=None)
+        with (
+            session_context(ExpressStubSession()),
+            pytest.raises(RuntimeError, match="client must be set"),
+        ):
+            qc.server(data_source=sample_df, client=None)
 
     def test_multiple_server_overrides_do_not_leak_into_shared_state(self, sample_df):
         """Sequential overrides should not overwrite the instance-level client spec."""

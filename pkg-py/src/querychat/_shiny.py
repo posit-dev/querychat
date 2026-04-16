@@ -12,8 +12,7 @@ from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 from ._icons import bs_icon
 from ._querychat_base import TOOL_GROUPS, QueryChatBase
 from ._shiny_module import ServerValues, mod_server, mod_ui
-from ._utils import MISSING, MISSING_TYPE
-from ._utils import as_narwhals
+from ._utils import MISSING, MISSING_TYPE, as_narwhals
 
 if TYPE_CHECKING:
     from collections.abc import Callable

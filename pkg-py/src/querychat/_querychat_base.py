@@ -189,7 +189,9 @@ class QueryChatBase(Generic[IntoFrameT]):
     def generate_greeting(self, *, echo: Literal["none", "output"] = "none") -> str:
         """Generate a welcome greeting for the chat."""
         self._require_data_source("generate_greeting")
-        chat = self._create_session_client()
+        chat = create_client(self._client_spec)
+        if self._system_prompt is not None:
+            chat.system_prompt = self._system_prompt.render(self.tools)
         return str(chat.chat(GREETING_PROMPT, echo=echo))
 
     def console(

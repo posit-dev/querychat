@@ -43,6 +43,11 @@ class TestDeferredClientInit:
         qc = QueryChatBase(sample_df, "users")
         assert qc._client_spec is None
 
+    def test_init_with_invalid_explicit_client_is_still_lazy(self):
+        """Explicit client specs should be stored lazily and fail only when resolved."""
+        qc = QueryChatBase(None, "users", client="not_a_real_provider_xyz123")
+        assert qc._client_spec == "not_a_real_provider_xyz123"
+
 class TestClientMethodRequirements:
     """Tests that methods properly require data_source to be set."""
 
@@ -102,6 +107,14 @@ class TestDeferredClientIntegration:
 
         qc = QueryChatBase(None, "users")
         assert qc._client_spec is None
+
+    def test_invalid_explicit_client_raises_when_client_is_resolved(self, sample_df):
+        """Invalid explicit client specs should fail when a live client is requested."""
+        qc = QueryChatBase(None, "users", client="not_a_real_provider_xyz123")
+        qc.data_source = sample_df
+
+        with pytest.raises(ValueError, match="is not a known chatlas provider"):
+            qc.client()
 
 
 class TestBackwardCompatibility:

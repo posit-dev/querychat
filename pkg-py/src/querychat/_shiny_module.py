@@ -78,14 +78,16 @@ class ServerValues(Generic[IntoFrameT]):
     client
         The session-specific chat client instance. This is a deep copy of the
         base client configured for this specific session, containing the chat
-        history and tool registrations for this session only.
+        history and tool registrations for this session only. This may be
+        `None` during stub sessions when the client depends on deferred,
+        session-scoped state.
 
     """
 
     df: Callable[[], IntoFrameT]
     sql: ReactiveStringOrNone
     title: ReactiveStringOrNone
-    client: chatlas.Chat
+    client: chatlas.Chat | None
 
 
 @module.server
@@ -115,7 +117,7 @@ def mod_server(
             df=_stub_df,
             sql=sql,
             title=title,
-            client=client if isinstance(client, chatlas.Chat) else client(),
+            client=client if isinstance(client, chatlas.Chat) else None,
         )
 
     # Real session requires data_source

@@ -67,18 +67,17 @@ class TestShinyDeferredDataSource:
         with pytest.raises(RuntimeError, match="data_source must be set"):
             qc.app()
 
-    def test_express_requires_data_source_when_deferred(self):
-        """Express should fail with a clear error when data_source is still deferred."""
-        with (
-            session_context(ExpressStubSession()),
-            pytest.raises(RuntimeError, match="data_source must be set"),
-        ):
-            ExpressQueryChat(None, "users")
+    def test_express_allows_deferred_data_source_during_stub_session(self):
+        """Express should allow deferred initialization during the stub session."""
+        with session_context(ExpressStubSession()):
+            qc = ExpressQueryChat(None, "users")
+
+        assert qc is not None
 
     def test_server_client_override_does_not_mutate_shared_client_spec(
         self, sample_df, monkeypatch
     ):
-        """server(client=...) should keep the override session-local."""
+        """server(client=...) should stay lazy during the stub session."""
         init_client = ChatOpenAI(model="gpt-4.1")
         override_client = ChatOpenAI(model="gpt-4.1-mini")
         qc = QueryChat(None, "users", client=init_client)
@@ -94,10 +93,10 @@ class TestShinyDeferredDataSource:
         )
 
         with session_context(ExpressStubSession()):
-            qc.server(data_source=sample_df, client=override_client)
+            vals = qc.server(data_source=sample_df, client=override_client)
 
-        assert recorded_specs
-        assert recorded_specs[-1] is override_client
+        assert vals.client is None
+        assert recorded_specs == []
         assert qc._client_spec is init_client
 
     def test_multiple_server_overrides_do_not_leak_into_shared_state(self, sample_df):

@@ -109,6 +109,24 @@ def test_generate_greeting_uses_querychat_system_prompt(sample_df):
     assert "test_table" in seen["system_prompt"]
 
 
+def test_generate_greeting_does_not_register_querychat_tools(sample_df):
+    """generate_greeting() should use a plain chat client without dashboard/query tools."""
+    qc = QueryChat(
+        data_source=sample_df,
+        table_name="test_table",
+        greeting="Hello!",
+    )
+
+    with (
+        patch("chatlas.Chat.register_tool") as register_tool,
+        patch("chatlas.Chat.chat", return_value="Hello from querychat"),
+    ):
+        greeting = qc.generate_greeting()
+
+    assert greeting == "Hello from querychat"
+    register_tool.assert_not_called()
+
+
 def test_querychat_with_polars_lazyframe():
     """Test that QueryChat accepts a Polars LazyFrame."""
     lf = pl.LazyFrame(

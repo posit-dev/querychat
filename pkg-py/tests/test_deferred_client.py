@@ -5,6 +5,7 @@ import pytest
 from chatlas import ChatOpenAI
 from querychat._querychat_base import QueryChatBase
 
+
 @pytest.fixture
 def sample_df():
     """Create a sample pandas DataFrame for testing."""

@@ -16,6 +16,7 @@ from ._utils import MISSING, MISSING_TYPE
 from ._utils import as_narwhals
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from pathlib import Path
 
     import chatlas
@@ -23,6 +24,8 @@ if TYPE_CHECKING:
     import narwhals.stable.v1 as nw
     import sqlalchemy
     from narwhals.stable.v1.typing import IntoFrame
+
+    from .tools import UpdateDashboardData
 
 
 class QueryChat(QueryChatBase[IntoFrameT]):
@@ -443,11 +446,12 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         ```python
         from shiny import App, render, ui
         from seaborn import load_dataset
+        from chatlas import ChatOpenAI
         from querychat import QueryChat
 
         titanic = load_dataset("titanic")
 
-        qc = QueryChat(titanic, "titanic")
+        qc = QueryChat(titanic, "titanic", client=ChatOpenAI())
 
 
         def app_ui(request):

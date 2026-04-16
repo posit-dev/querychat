@@ -511,7 +511,19 @@ PROJECT TO polar SETTING inner => 0.5
     DRAW line MAPPING region AS color FILTER layer_type = 'summary'
     ```
 4. **String values use single quotes**: In SETTING, LABEL, and RENAMING clauses, always use single quotes for string values. Double quotes cause parse errors.
-5. **Column casing**: VISUALISE validates column references case-sensitively. The column name in VISUALISE/MAPPING must exactly match the column name from the SQL result. If a column is aliased as `MyCol`, reference it as `MyCol`, not `mycol` or `MYCOL`.
+5. **Column casing in VISUALISE**: DuckDB lowercases unquoted column names in query results, and VISUALISE validates column references **case-sensitively**. If your source table has uppercase column names (e.g., from Snowflake), you **must** alias them to lowercase in the SELECT clause:
+   ```sql
+   -- WRONG: VISUALISE references uppercase name, but DuckDB lowercases it in results
+   SELECT ROOM_TYPE, COUNT(*) AS listings FROM airbnb
+   VISUALISE ROOM_TYPE AS x, listings AS y
+   DRAW bar
+
+   -- CORRECT: Alias to lowercase, then reference the alias
+   SELECT ROOM_TYPE AS room_type, COUNT(*) AS listings FROM airbnb
+   VISUALISE room_type AS x, listings AS y
+   DRAW bar
+   ```
+   As a general rule, always use lowercase column names and aliases in both SELECT and VISUALISE clauses.
 6. **Charts vs Tables**: For visualizations use VISUALISE with DRAW. For tabular data use plain SQL without VISUALISE.
 7. **Statistical layers**: When using `histogram`, `bar` (without y), `density`, `smooth`, `violin`, or `boxplot`, the layer computes statistics. Use REMAPPING to access `density`, `intensity`, `proportion`, etc.
 8. **Bar position adjustments**: Bars stack automatically when `fill` is mapped. Use `SETTING position => 'dodge'` for side-by-side bars, or `position => 'fill'` for proportional stacking:

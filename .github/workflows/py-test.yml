@@ -7,12 +7,14 @@ on:
     paths:
       - 'pkg-py/**'
       - 'pyproject.toml'
+      - 'Makefile'
       - '.github/workflows/py-test.yml'
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - 'pkg-py/**'
       - 'pyproject.toml'
+      - 'Makefile'
       - '.github/workflows/py-test.yml'
   release:
     types: [published]

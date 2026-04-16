@@ -174,8 +174,10 @@ class Test07GradioCustom:
         page.wait_for_selector("gradio-app", timeout=30000)
         # Wait for load callback to populate SQL and data
         page.wait_for_selector(".cm-content", timeout=30000)
-        # Wait for data table to be populated (indicates load callback completed)
-        page.wait_for_selector("table tbody tr", timeout=30000)
+        # Wait for data table to be populated (indicates load callback completed).
+        # Gradio 6.11+ uses virtual scrolling: actual data rows are .virtual-row
+        # divs, not table tbody tr elements (those are hidden sizing rows).
+        page.wait_for_selector(".virtual-row", timeout=30000)
         self.page = page
 
     # ==================== Initial Load Tests ====================

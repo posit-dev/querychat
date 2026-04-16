@@ -1,4 +1,5 @@
 __pycache__/
+__version.py
 animation.screenflow/
 README_files/
 README.html
@@ -269,5 +270,8 @@ docs/plans/
 
 # Playwright MCP
 .playwright-mcp/
+
+# Git worktrees
+.worktrees/
 
 /.luarc.json

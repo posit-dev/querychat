@@ -257,3 +257,44 @@ class TestQueryChatSystemPromptRender:
 
         assert "Database Type:" in rendered
         assert sample_data_source.get_db_type() in rendered
+
+
+class TestSchemaInferenceSkip:
+    """Tests that schema inference is skipped when template doesn't reference {{schema}}."""
+
+    def test_schema_skipped_when_not_in_template(self, sample_data_source):
+        """Schema should be empty string when template doesn't use {{schema}}."""
+        prompt = QueryChatSystemPrompt(
+            prompt_template="No schema here: {{db_type}}",
+            data_source=sample_data_source,
+        )
+
+        assert prompt.schema == ""
+
+    def test_schema_computed_when_in_template(self, sample_data_source):
+        """Schema should be computed when template uses {{schema}}."""
+        prompt = QueryChatSystemPrompt(
+            prompt_template="Schema: {{schema}}",
+            data_source=sample_data_source,
+        )
+
+        assert prompt.schema != ""
+        assert "test_table" in prompt.schema
+
+    def test_schema_computed_for_triple_braces(self, sample_data_source):
+        """Schema should be computed for unescaped {{{schema}}} syntax."""
+        prompt = QueryChatSystemPrompt(
+            prompt_template="Schema: {{{schema}}}",
+            data_source=sample_data_source,
+        )
+
+        assert prompt.schema != ""
+
+    def test_schema_computed_for_conditional_section(self, sample_data_source):
+        """Schema should be computed for {{#schema}} conditional sections."""
+        prompt = QueryChatSystemPrompt(
+            prompt_template="{{#schema}}Has schema{{/schema}}",
+            data_source=sample_data_source,
+        )
+
+        assert prompt.schema != ""

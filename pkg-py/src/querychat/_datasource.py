@@ -214,6 +214,7 @@ class DataFrameSource(DataSource[IntoDataFrameT]):
         self._df_lib = native_namespace.__name__
 
         self._conn = duckdb.connect(database=":memory:")
+        # NOTE: if native representation is polars, pyarrow is required for registration
         self._conn.register(table_name, self._df.to_native())
         self._conn.execute("""
 -- extensions: lock down supply chain + auto behaviors

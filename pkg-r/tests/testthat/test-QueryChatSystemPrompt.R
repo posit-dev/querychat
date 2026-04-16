@@ -455,3 +455,60 @@ describe("QueryChatSystemPrompt with full prompt.md template", {
     expect_match(prompt_high, "Categorical values:")
   })
 })
+
+describe("Schema inference skip", {
+  skip_if_no_dataframe_engine()
+
+  it("skips schema when template doesn't reference {{schema}}", {
+    df <- new_test_df()
+    ds <- DataFrameSource$new(df, "test_table")
+    withr::defer(ds$cleanup())
+
+    sp <- QueryChatSystemPrompt$new(
+      prompt_template = "No schema here: {{db_type}}",
+      data_source = ds
+    )
+
+    expect_equal(sp$schema, "")
+  })
+
+  it("computes schema when template uses {{schema}}", {
+    df <- new_test_df()
+    ds <- DataFrameSource$new(df, "test_table")
+    withr::defer(ds$cleanup())
+
+    sp <- QueryChatSystemPrompt$new(
+      prompt_template = "Schema: {{schema}}",
+      data_source = ds
+    )
+
+    expect_true(nchar(sp$schema) > 0)
+    expect_match(sp$schema, "test_table")
+  })
+
+  it("computes schema for {{{schema}}} triple braces", {
+    df <- new_test_df()
+    ds <- DataFrameSource$new(df, "test_table")
+    withr::defer(ds$cleanup())
+
+    sp <- QueryChatSystemPrompt$new(
+      prompt_template = "Schema: {{{schema}}}",
+      data_source = ds
+    )
+
+    expect_true(nchar(sp$schema) > 0)
+  })
+
+  it("computes schema for {{#schema}} conditional sections", {
+    df <- new_test_df()
+    ds <- DataFrameSource$new(df, "test_table")
+    withr::defer(ds$cleanup())
+
+    sp <- QueryChatSystemPrompt$new(
+      prompt_template = "{{#schema}}Has schema{{/schema}}",
+      data_source = ds
+    )
+
+    expect_true(nchar(sp$schema) > 0)
+  })
+})

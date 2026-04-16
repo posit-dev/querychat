@@ -302,10 +302,7 @@ def df_to_html(df, maxrows: int = 5) -> str:
 
 def to_polars(data: IntoFrame) -> pl.DataFrame:
     """Convert any narwhals-compatible frame to a polars DataFrame."""
-    nw_df = nw.from_native(data)
-    if isinstance(nw_df, nw.LazyFrame):
-        nw_df = nw_df.collect()
-    return nw_df.to_polars()
+    return as_narwhals(data).to_polars()
 
 
 def read_prompt_template(filename: str, **kwargs: object) -> str:

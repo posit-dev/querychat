@@ -21,8 +21,8 @@ maintainers = [
 ]
 dependencies = [
     "duckdb",
-    "shiny @ git+https://github.com/posit-dev/py-shiny.git@feat/ggsql-language",
-    "shinychat @ git+https://github.com/posit-dev/shinychat.git@fix/simplify-message-storage-and-streaming-deps",
+    "shiny @ git+https://github.com/posit-dev/py-shiny.git",
+    "shinychat @ git+https://github.com/posit-dev/shinychat.git",
     "htmltools",
     "chatlas>=0.13.2",
     "narwhals",

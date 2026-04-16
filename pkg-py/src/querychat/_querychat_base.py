@@ -129,7 +129,6 @@ class QueryChatBase(Generic[IntoFrameT]):
         reset_dashboard: Callable[[], None] | None = None,
     ) -> chatlas.Chat:
         """Create a fresh, fully-configured Chat from the current spec."""
-        data_source = self._require_data_source("_create_session_client")
         chat = create_client(self._client_spec)
 
         resolved_tools = normalize_tools(tools, default=self.tools)
@@ -139,6 +138,8 @@ class QueryChatBase(Generic[IntoFrameT]):
 
         if resolved_tools is None:
             return chat
+
+        data_source = self._require_data_source("_create_session_client")
 
         if "update" in resolved_tools:
             update_fn = update_dashboard or (lambda _: None)
@@ -176,6 +177,7 @@ class QueryChatBase(Generic[IntoFrameT]):
             A configured chat client.
 
         """
+        self._require_data_source("client")
         return self._create_session_client(
             tools=tools,
             update_dashboard=update_dashboard,

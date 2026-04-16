@@ -133,7 +133,7 @@ def fit_chart_to_container(
     """
     import altair as alt
 
-    chart = copy.copy(chart)
+    chart = copy.deepcopy(chart)
 
     # Approximate padding; will be replaced when ggsql handles compound sizing
     # natively (https://github.com/posit-dev/ggsql/issues/238).

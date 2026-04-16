@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added support for Snowflake Semantic Views. When connected to Snowflake (via SQLAlchemy or Ibis), querychat automatically discovers available Semantic Views and includes their definitions in the system prompt. This helps the LLM generate correct queries using the `SEMANTIC_VIEW()` table function with certified business metrics and dimensions. (#200)
 
+* `QueryChat()` now supports deferred chat client initialization. Pass `client=` to `server()` to provide a session-scoped chat client, enabling use cases where API credentials are only available at session time (e.g., Posit Connect managed OAuth tokens). When no `client` is specified anywhere, querychat resolves a sensible default from the `QUERYCHAT_CLIENT` environment variable (or `"openai"`). (#205)
+
 ### Improvements
 
 * When a custom `prompt_template` is provided that doesn't contain Mustache references to `{{schema}}`, the expensive `get_schema()` call is now skipped entirely. This allows users with large databases to avoid slow startup by providing their own prompt that includes schema information inline (or omits it). (#208)

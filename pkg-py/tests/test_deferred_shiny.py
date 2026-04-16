@@ -2,9 +2,15 @@
 
 import os
 
+import chatlas
 import pandas as pd
 import pytest
+from chatlas import ChatOpenAI
 from querychat import QueryChat
+from querychat._querychat_base import create_client as _create_client
+from querychat.express import QueryChat as ExpressQueryChat
+from shiny.express._stub_session import ExpressStubSession
+from shiny.session import session_context
 
 
 @pytest.fixture(autouse=True)
@@ -61,3 +67,51 @@ class TestShinyDeferredDataSource:
         qc = QueryChat(None, "users")
         with pytest.raises(RuntimeError, match="data_source must be set"):
             qc.app()
+
+    def test_express_allows_deferred_data_source_during_stub_session(self):
+        """Express should allow deferred initialization during the stub session."""
+        with session_context(ExpressStubSession()):
+            qc = ExpressQueryChat(None, "users")
+
+        assert qc is not None
+
+    def test_server_client_override_does_not_mutate_shared_client_spec(
+        self, sample_df, monkeypatch
+    ):
+        """server(client=...) should stay lazy during the stub session."""
+        init_client = ChatOpenAI(model="gpt-4.1")
+        override_client = ChatOpenAI(model="gpt-4.1-mini")
+        qc = QueryChat(None, "users", client=init_client)
+        recorded_specs = []
+        real_create_client = _create_client
+
+        def spy_create_client(client_spec):
+            recorded_specs.append(client_spec)
+            return real_create_client(client_spec)
+
+        monkeypatch.setattr(
+            "querychat._querychat_base.create_client", spy_create_client
+        )
+
+        with session_context(ExpressStubSession()):
+            vals = qc.server(data_source=sample_df, client=override_client)
+
+        assert isinstance(vals.client, chatlas.Chat)
+        assert len(recorded_specs) == 1
+        assert recorded_specs[0] is override_client
+        assert qc._client_spec is init_client
+
+    def test_multiple_server_overrides_do_not_leak_into_shared_state(self, sample_df):
+        """Sequential overrides should not overwrite the instance-level client spec."""
+        init_client = ChatOpenAI(model="gpt-4.1")
+        first_override = ChatOpenAI(model="gpt-4.1-mini")
+        second_override = ChatOpenAI(model="gpt-4.1-nano")
+        qc = QueryChat(None, "users", client=init_client)
+
+        with session_context(ExpressStubSession()):
+            qc.server(data_source=sample_df, client=first_override)
+
+        with session_context(ExpressStubSession()):
+            qc.server(data_source=sample_df, client=second_override)
+
+        assert qc._client_spec is init_client

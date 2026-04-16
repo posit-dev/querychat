@@ -466,6 +466,7 @@ server <- function(input, output, session) \{
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{QueryChat$server(
   data_source = NULL,
+  client = NULL,
   enable_bookmarking = FALSE,
   ...,
   id = NULL,
@@ -481,6 +482,12 @@ data_source property before initializing server logic. This is useful
 for the deferred pattern where data_source is not known at
 initialization time (e.g., when the data source depends on session-
 specific authentication).}
+
+\item{\code{client}}{Optional chat client override for this session. Can be an
+\link[ellmer:Chat]{ellmer::Chat} object or a string (e.g., \code{"openai/gpt-4o"}). If provided,
+overrides the client set at initialization for this session only —
+other sessions are unaffected. This is useful when the client must be
+created within a session scope (e.g., Posit Connect managed credentials).}
 
 \item{\code{enable_bookmarking}}{Whether to enable bookmarking for the chat
 state. Default is \code{FALSE}. When enabled, the chat state (including

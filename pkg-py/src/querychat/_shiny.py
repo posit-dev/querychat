@@ -12,7 +12,7 @@ from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 from ._icons import bs_icon
 from ._querychat_base import DEFAULT_TOOLS, TOOL_GROUPS, QueryChatBase
 from ._shiny_module import ServerValues, mod_server, mod_ui
-from ._utils import as_narwhals
+from ._utils import MISSING, MISSING_TYPE, as_narwhals
 from ._viz_utils import has_viz_tool
 
 if TYPE_CHECKING:
@@ -301,7 +301,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 self.id,
                 data_source=data_source,
                 greeting=self.greeting,
-                client=self.client,
+                client=self._create_session_client,
                 enable_bookmarking=enable_bookmarking,
                 tools=self.tools,
             )
@@ -408,6 +408,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         self,
         *,
         data_source: Optional[IntoFrame | sqlalchemy.Engine | ibis.Table] = None,
+        client: str | chatlas.Chat | MISSING_TYPE = MISSING,
         enable_bookmarking: bool = False,
         id: Optional[str] = None,
     ) -> ServerValues[IntoFrameT]:
@@ -425,6 +426,12 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             Optional data source to use. If provided, sets the data_source property
             before initializing server logic. This is useful for the deferred pattern
             where data_source is not known at initialization time.
+        client
+            Optional chat client to use for this session. If provided, overrides
+            any client set at initialization time for this call only. This is useful
+            for the deferred pattern where the client cannot be created at
+            initialization time (e.g., when using Posit Connect managed OAuth
+            credentials that require session access).
         enable_bookmarking
             Whether to enable bookmarking for the querychat module.
         id
@@ -489,12 +496,18 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             self.data_source = data_source
 
         resolved_data_source = self._require_data_source("server")
+        resolved_client_spec = self._client_spec if isinstance(client, MISSING_TYPE) else client
+
+        def create_session_client(**kwargs) -> chatlas.Chat:
+            return self._create_session_client(
+                client_spec=resolved_client_spec, **kwargs
+            )
 
         return mod_server(
             id or self.id,
             data_source=resolved_data_source,
             greeting=self.greeting,
-            client=self.client,
+            client=create_session_client,
             enable_bookmarking=enable_bookmarking,
             tools=self.tools,
         )
@@ -739,7 +752,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             self.id,
             data_source=self._data_source,
             greeting=self.greeting,
-            client=self.client,
+            client=self._create_session_client,
             enable_bookmarking=enable,
             tools=self.tools,
         )

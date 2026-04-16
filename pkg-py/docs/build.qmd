@@ -154,6 +154,8 @@ app = App(app_ui, server)
 
 </details>
 
+If your chat client also depends on session-scoped credentials, you can defer that too by passing it to `qc.server(client=...)` alongside the `data_source`.
+
 :::
 
 :::

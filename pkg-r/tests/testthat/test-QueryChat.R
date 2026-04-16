@@ -101,6 +101,64 @@ describe("QueryChat$new()", {
   })
 })
 
+describe("QueryChat deferred client", {
+  it("accepts NULL data_source with table_name", {
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+    expect_null(qc$data_source)
+    expect_equal(qc$id, "querychat_users")
+  })
+
+  it("requires table_name when data_source is NULL", {
+    expect_error(
+      QueryChat$new(NULL),
+      "table_name.*required"
+    )
+  })
+
+  it("stores client spec without resolving it", {
+    withr::local_envvar(OPENAI_API_KEY = NA)
+    withr::local_options(querychat.client = NULL)
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+    expect_null(qc$data_source)
+  })
+
+  it("stores explicit client string as spec", {
+    withr::local_envvar(OPENAI_API_KEY = "boop")
+    qc <- QueryChat$new(NULL, "users", greeting = "Test", client = "openai")
+    expect_null(qc$data_source)
+  })
+
+  it("$client() errors when data_source is NULL", {
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+    expect_error(qc$client(), "data_source.*must be set")
+  })
+
+  it("$console() errors when data_source is NULL", {
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+    expect_error(qc$console(), "data_source.*must be set")
+  })
+
+  it("$generate_greeting() errors when data_source is NULL", {
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+    expect_error(qc$generate_greeting(), "data_source.*must be set")
+  })
+
+  it("$system_prompt errors when data_source is NULL", {
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+    expect_error(qc$system_prompt, "data_source.*must be set")
+  })
+
+  it("works after setting data_source later", {
+    skip_if_no_dataframe_engine()
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+    qc$data_source <- new_users_df()
+
+    expect_s3_class(qc$data_source, "DataFrameSource")
+    prompt <- qc$system_prompt
+    expect_match(prompt, "users")
+  })
+})
+
 describe("QueryChat integration with DBISource", {
   it("works with iris dataset queries", {
     skip_if_not_installed("RSQLite")
@@ -364,9 +422,13 @@ describe("QueryChat$client()", {
 
     # Find and call the update tool
     tools <- client$get_tools()
-    update_tool <- tools[[which(sapply(tools, function(t) {
-      t@name == "querychat_update_dashboard"
-    }))]]
+    update_tool <- tools[[
+      which(
+        sapply(tools, function(t) {
+          t@name == "querychat_update_dashboard"
+        })
+      )
+    ]]
 
     # Call the tool - it should execute the query and call the callback
     result <- update_tool(
@@ -396,9 +458,13 @@ describe("QueryChat$client()", {
 
     # Find and call the reset tool
     tools <- client$get_tools()
-    reset_tool <- tools[[which(sapply(tools, function(t) {
-      t@name == "querychat_reset_dashboard"
-    }))]]
+    reset_tool <- tools[[
+      which(
+        sapply(tools, function(t) {
+          t@name == "querychat_reset_dashboard"
+        })
+      )
+    ]]
 
     # Call the tool
     reset_tool()
@@ -420,6 +486,27 @@ describe("QueryChat$client()", {
     expect_false(identical(client1, client2))
 
     # Modifying one shouldn't affect the other
+    client1$set_turns(list(ellmer::Turn("user", "test message")))
+    expect_length(client1$get_turns(), 1)
+    expect_length(client2$get_turns(), 0)
+  })
+
+  it("returns independent instances when client spec is a Chat object", {
+    withr::local_envvar(OPENAI_API_KEY = "boop")
+    chat_spec <- ellmer::chat_openai()
+
+    qc <- QueryChat$new(
+      new_test_df(),
+      "test_df",
+      client = chat_spec
+    )
+    withr::defer(qc$cleanup())
+
+    client1 <- qc$client()
+    client2 <- qc$client()
+
+    expect_false(identical(client1, client2))
+
     client1$set_turns(list(ellmer::Turn("user", "test message")))
     expect_length(client1$get_turns(), 1)
     expect_length(client2$get_turns(), 0)
@@ -682,5 +769,40 @@ test_that("querychat_app() only cleans up data frame sources on exit", {
     querychat_app(test_ds)
     cleanup_result <- getOption(".test_cleanup")
     expect_false(cleanup_result)
+  })
+})
+
+describe("QueryChat$server() client override", {
+  it("accepts a client parameter", {
+    withr::local_envvar(OPENAI_API_KEY = "boop")
+    test_df <- new_test_df()
+    qc <- QueryChat$new(test_df, table_name = "test_df", greeting = "Test")
+    withr::defer(qc$cleanup())
+
+    expect_error(
+      qc$server(client = "openai"),
+      "must be called within a Shiny server function"
+    )
+  })
+})
+
+describe("QueryChat deferred client with $server()", {
+  it("$server() errors when data_source is NULL", {
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+    expect_error(
+      qc$server(),
+      "must be called within a Shiny server function"
+    )
+  })
+
+  it("$server(data_source=...) sets the data_source", {
+    skip_if_no_dataframe_engine()
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+    expect_null(qc$data_source)
+
+    expect_error(
+      qc$server(data_source = new_users_df()),
+      "must be called within a Shiny server function"
+    )
   })
 })

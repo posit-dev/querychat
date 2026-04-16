@@ -92,7 +92,7 @@ QueryChat <- R6::R6Class(
     server_values = NULL,
     .data_source = NULL,
     .table_name = NULL,
-    .client = NULL,
+    .client_spec = NULL,
     .client_console = NULL,
     .system_prompt = NULL,
     # Store init parameters for deferred system prompt building
@@ -132,6 +132,44 @@ QueryChat <- R6::R6Class(
         extra_instructions = private$.extra_instructions,
         categorical_threshold = private$.categorical_threshold
       )
+    },
+
+    create_session_client = function(
+      client_spec = NULL,
+      tools = NA,
+      update_dashboard = function(query, title) {},
+      reset_dashboard = function() {}
+    ) {
+      spec <- client_spec %||% private$.client_spec
+      chat <- as_querychat_client(spec)
+      chat <- chat$clone()
+      chat$set_turns(list())
+
+      if (is_na(tools)) {
+        tools <- self$tools
+      }
+
+      chat$set_system_prompt(private$.system_prompt$render(tools = tools))
+
+      if (is.null(tools)) {
+        return(chat)
+      }
+
+      if ("update" %in% tools) {
+        chat$register_tool(
+          tool_update_dashboard(
+            private$.data_source,
+            update_fn = update_dashboard
+          )
+        )
+        chat$register_tool(tool_reset_dashboard(reset_dashboard))
+      }
+
+      if ("query" %in% tools) {
+        chat$register_tool(tool_query(private$.data_source))
+      }
+
+      chat
     }
   ),
   public = list(
@@ -253,10 +291,7 @@ QueryChat <- R6::R6Class(
         private$build_system_prompt()
       }
 
-      # Fork and empty chat now so the per-session forks are fast
-      client <- as_querychat_client(client)
-      private$.client <- client$clone()
-      private$.client$set_turns(list())
+      private$.client_spec <- client
 
       # By default, only close automatically if a Shiny session is active
       if (is.na(cleanup)) {
@@ -290,10 +325,7 @@ QueryChat <- R6::R6Class(
     ) {
       private$require_data_source("$client")
 
-      if (is_na(tools)) {
-        tools <- self$tools
-      }
-      if (!is.null(tools)) {
+      if (!is_na(tools) && !is.null(tools)) {
         tools <- arg_match(
           tools,
           values = c("update", "query"),
@@ -301,28 +333,11 @@ QueryChat <- R6::R6Class(
         )
       }
 
-      chat <- private$.client$clone()
-      chat$set_system_prompt(private$.system_prompt$render(tools = tools))
-
-      if (is.null(tools)) {
-        return(chat)
-      }
-
-      if ("update" %in% tools) {
-        chat$register_tool(
-          tool_update_dashboard(
-            private$.data_source,
-            update_fn = update_dashboard
-          )
-        )
-        chat$register_tool(tool_reset_dashboard(reset_dashboard))
-      }
-
-      if ("query" %in% tools) {
-        chat$register_tool(tool_query(private$.data_source))
-      }
-
-      chat
+      private$create_session_client(
+        tools = tools,
+        update_dashboard = update_dashboard,
+        reset_dashboard = reset_dashboard
+      )
     },
 
     #' @description
@@ -409,10 +424,12 @@ QueryChat <- R6::R6Class(
 
       ui <- function(req) {
         bslib::page_sidebar(
-          title = shiny::HTML(sprintf(
-            "<span>querychat with <code>%s</code></span>",
-            table_name
-          )),
+          title = shiny::HTML(
+            sprintf(
+              "<span>querychat with <code>%s</code></span>",
+              table_name
+            )
+          ),
           class = "bslib-page-dashboard",
           sidebar = self$sidebar(),
           shiny::useBusyIndicators(pulse = TRUE, spinners = FALSE),
@@ -508,12 +525,14 @@ QueryChat <- R6::R6Class(
         })
 
         shiny::observeEvent(input$close_btn, label = "on_close_btn", {
-          shiny::stopApp(list(
-            df = qc_vals$df(),
-            sql = qc_vals$sql(),
-            title = qc_vals$title(),
-            client = qc_vals$client
-          ))
+          shiny::stopApp(
+            list(
+              df = qc_vals$df(),
+              sql = qc_vals$sql(),
+              title = qc_vals$title(),
+              client = qc_vals$client
+            )
+          )
         })
       }
 
@@ -623,6 +642,11 @@ QueryChat <- R6::R6Class(
     #'   for the deferred pattern where data_source is not known at
     #'   initialization time (e.g., when the data source depends on session-
     #'   specific authentication).
+    #' @param client Optional chat client override for this session. Can be an
+    #'   [ellmer::Chat] object or a string (e.g., `"openai/gpt-4o"`). If provided,
+    #'   overrides the client set at initialization for this session only —
+    #'   other sessions are unaffected. This is useful when the client must be
+    #'   created within a session scope (e.g., Posit Connect managed credentials).
     #' @param enable_bookmarking Whether to enable bookmarking for the chat
     #'   state. Default is `FALSE`. When enabled, the chat state (including
     #'   current query, title, and chat history) will be saved and restored
@@ -646,6 +670,7 @@ QueryChat <- R6::R6Class(
     #'
     server = function(
       data_source = NULL,
+      client = NULL,
       enable_bookmarking = FALSE,
       ...,
       id = NULL,
@@ -666,11 +691,20 @@ QueryChat <- R6::R6Class(
 
       private$require_data_source("$server")
 
+      resolved_client_spec <- client %||% private$.client_spec
+
+      create_session_client <- function(...) {
+        private$create_session_client(
+          client_spec = resolved_client_spec,
+          ...
+        )
+      }
+
       mod_server(
         id %||% self$id,
         data_source = private$.data_source,
         greeting = self$greeting,
-        client = self$client,
+        client = create_session_client,
         enable_bookmarking = enable_bookmarking
       )
     },
@@ -701,9 +735,7 @@ QueryChat <- R6::R6Class(
     #' @return The greeting string in Markdown format.
     generate_greeting = function(echo = c("none", "output")) {
       private$require_data_source("$generate_greeting")
-      chat <- self$client()
-      chat$set_turns(list())
-
+      chat <- private$create_session_client()
       as.character(chat$chat(GREETING_PROMPT, echo = echo))
     },
 
@@ -942,7 +974,6 @@ normalize_data_source <- function(data_source, table_name) {
     "{.arg data_source} must be a {.cls DataSource}, {.cls data.frame}, or {.cls DBIConnection}, not {.obj_type_friendly {data_source}}."
   )
 }
-
 
 namespaced_id <- function(id, session = shiny::getDefaultReactiveDomain()) {
   if (is.null(session)) {

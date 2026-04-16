@@ -1,5 +1,7 @@
 # querychat (development version)
 
+* `QueryChat$server()` now accepts a `client` parameter for session-scoped chat client overrides. This enables Posit Connect managed OAuth workflows where API credentials are only available inside the Shiny server function. The client spec is stored lazily at construction time and resolved only when needed, so `QueryChat$new(NULL, "table")` no longer requires an API key. (#205)
+
 * When a custom `prompt_template` is provided that doesn't contain Mustache references to `{{schema}}`, the expensive `get_schema()` call is now skipped entirely. This allows users with large databases to avoid slow startup by providing their own prompt that includes schema information inline (or omits it). (#208)
 
 * Added support for Snowflake Semantic Views. When connected to Snowflake via DBI, querychat automatically discovers available Semantic Views and includes their definitions in the system prompt. This helps the LLM generate correct queries using the `SEMANTIC_VIEW()` table function with certified business metrics and dimensions. (#200)

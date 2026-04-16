@@ -1,4 +1,5 @@
 import os
+from unittest.mock import patch
 
 import pandas as pd
 import polars as pl
@@ -86,10 +87,44 @@ def test_querychat_client_has_system_prompt(sample_df):
     # The system_prompt should contain the table name since it includes schema info
     assert "test_table" in client.system_prompt
 
-    # The internal _client should also have the system prompt set
-    # (needed for methods like generate_greeting() that use _client directly)
-    assert qc._client.system_prompt is not None
-    assert "test_table" in qc._client.system_prompt
+
+def test_generate_greeting_uses_querychat_system_prompt(sample_df):
+    """generate_greeting() should use the dataset-aware querychat system prompt."""
+    qc = QueryChat(
+        data_source=sample_df,
+        table_name="test_table",
+        greeting="Hello!",
+    )
+    seen: dict[str, str | None] = {}
+
+    def fake_chat(self, *args, **kwargs):
+        seen["system_prompt"] = self.system_prompt
+        return "Hello from querychat"
+
+    with patch("chatlas.Chat.chat", fake_chat):
+        greeting = qc.generate_greeting()
+
+    assert greeting == "Hello from querychat"
+    assert seen["system_prompt"] is not None
+    assert "test_table" in seen["system_prompt"]
+
+
+def test_generate_greeting_does_not_register_querychat_tools(sample_df):
+    """generate_greeting() should use a plain chat client without dashboard/query tools."""
+    qc = QueryChat(
+        data_source=sample_df,
+        table_name="test_table",
+        greeting="Hello!",
+    )
+
+    with (
+        patch("chatlas.Chat.register_tool") as register_tool,
+        patch("chatlas.Chat.chat", return_value="Hello from querychat"),
+    ):
+        greeting = qc.generate_greeting()
+
+    assert greeting == "Hello from querychat"
+    register_tool.assert_not_called()
 
 
 def test_querychat_with_polars_lazyframe():

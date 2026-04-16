@@ -101,6 +101,9 @@ class DummyProvider(chatlas.Provider):
     ):
         return () if stream else SimpleNamespace()
 
+    def stream_content(self, chunk):
+        return None
+
     def stream_text(self, chunk):
         return None
 

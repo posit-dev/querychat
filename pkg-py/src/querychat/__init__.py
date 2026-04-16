@@ -1,4 +1,4 @@
-from ._deprecated import greeting, init, sidebar, system_prompt
+from ._deprecated import greeting, init, sidebar, system_prompt  # noqa: F401
 from ._deprecated import mod_server as server
 from ._deprecated import mod_ui as ui
 from ._shiny import QueryChat

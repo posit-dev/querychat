@@ -12,6 +12,7 @@ from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 from ._icons import bs_icon
 from ._querychat_base import TOOL_GROUPS, QueryChatBase
 from ._shiny_module import ServerValues, mod_server, mod_ui
+from ._utils import MISSING, MISSING_TYPE
 from ._utils import as_narwhals
 
 if TYPE_CHECKING:
@@ -405,7 +406,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         self,
         *,
         data_source: Optional[IntoFrame | sqlalchemy.Engine | ibis.Table] = None,
-        client: str | chatlas.Chat | None = None,
+        client: str | chatlas.Chat | None | MISSING_TYPE = MISSING,
         enable_bookmarking: bool = False,
         id: Optional[str] = None,
     ) -> ServerValues[IntoFrameT]:
@@ -424,10 +425,11 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             before initializing server logic. This is useful for the deferred pattern
             where data_source is not known at initialization time.
         client
-            Optional chat client to use. If provided, sets the client_spec property
-            before initializing server logic. This is useful for the deferred pattern
-            where the client cannot be created at initialization time (e.g., when
-            using Posit Connect managed OAuth credentials that require session access).
+            Optional chat client to use. If provided, updates the deferred client
+            configuration before initializing server logic. This is useful for the
+            deferred pattern where the client cannot be created at initialization
+            time (e.g., when using Posit Connect managed OAuth credentials that
+            require session access).
         enable_bookmarking
             Whether to enable bookmarking for the querychat module.
         id
@@ -490,8 +492,8 @@ class QueryChat(QueryChatBase[IntoFrameT]):
 
         if data_source is not None:
             self.data_source = data_source
-        if client is not None:
-            self.client_spec = client
+        if not isinstance(client, MISSING_TYPE):
+            self._client_spec = client
 
         resolved_data_source = self._require_data_source("server")
 

@@ -190,7 +190,7 @@ class QueryChatBase(Generic[IntoFrameT]):
     def generate_greeting(self, *, echo: Literal["none", "output"] = "none") -> str:
         """Generate a welcome greeting for the chat."""
         self._require_data_source("generate_greeting")
-        chat = create_client(self._client_spec)
+        chat = self._create_session_client()
         return str(chat.chat(GREETING_PROMPT, echo=echo))
 
     def console(
@@ -224,16 +224,6 @@ class QueryChatBase(Generic[IntoFrameT]):
         """Set the data source, normalizing and rebuilding system prompt."""
         self._data_source = normalize_data_source(value, self._table_name)
         self._build_system_prompt()
-
-    @property
-    def client_spec(self) -> str | chatlas.Chat | None:
-        """Get the current client specification."""
-        return self._client_spec
-
-    @client_spec.setter
-    def client_spec(self, value: str | chatlas.Chat | None) -> None:
-        """Set the client specification."""
-        self._client_spec = value
 
     def cleanup(self) -> None:
         """Clean up resources associated with the data source."""

@@ -4,6 +4,7 @@ import os
 
 import pandas as pd
 import pytest
+from chatlas import ChatOpenAI
 from querychat import QueryChat
 from querychat.express import QueryChat as ExpressQueryChat
 from shiny.express._stub_session import ExpressStubSession
@@ -70,3 +71,12 @@ class TestShinyDeferredDataSource:
         with session_context(ExpressStubSession()):
             with pytest.raises(RuntimeError, match="data_source must be set"):
                 ExpressQueryChat(None, "users")
+
+    def test_server_can_clear_client_with_none(self, sample_df):
+        """server(client=None) should clear a previously configured client."""
+        qc = QueryChat(None, "users", client=ChatOpenAI())
+
+        with session_context(ExpressStubSession()):
+            qc.server(data_source=sample_df, client=None)
+
+        assert qc._client_spec is None

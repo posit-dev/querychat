@@ -80,3 +80,45 @@ class TestShinyDeferredDataSource:
             qc.server(data_source=sample_df, client=None)
 
         assert qc._client_spec is None
+
+    def test_server_client_override_does_not_mutate_shared_client_spec(self, sample_df):
+        """server(client=...) should keep the override session-local."""
+        init_client = ChatOpenAI(model="gpt-4.1")
+        override_client = ChatOpenAI(model="gpt-4.1-mini")
+        qc = QueryChat(None, "users", client=init_client)
+
+        with session_context(ExpressStubSession()):
+            qc.server(data_source=sample_df, client=override_client)
+
+        assert qc._client_spec is init_client
+
+    def test_server_without_init_or_override_client_raises_early(self, sample_df):
+        """Deferred Shiny setup should fail from server() when no client is available."""
+        qc = QueryChat(None, "users")
+
+        with session_context(ExpressStubSession()):
+            with pytest.raises(RuntimeError, match="client must be set"):
+                qc.server(data_source=sample_df)
+
+    def test_server_rejects_explicit_none_client(self, sample_df):
+        """server(client=None) is invalid because None is ambiguous in this API."""
+        qc = QueryChat(None, "users", client=ChatOpenAI())
+
+        with session_context(ExpressStubSession()):
+            with pytest.raises(RuntimeError, match="client must be set"):
+                qc.server(data_source=sample_df, client=None)
+
+    def test_multiple_server_overrides_do_not_leak_into_shared_state(self, sample_df):
+        """Sequential overrides should not overwrite the instance-level client spec."""
+        init_client = ChatOpenAI(model="gpt-4.1")
+        first_override = ChatOpenAI(model="gpt-4.1-mini")
+        second_override = ChatOpenAI(model="gpt-4.1-nano")
+        qc = QueryChat(None, "users", client=init_client)
+
+        with session_context(ExpressStubSession()):
+            qc.server(data_source=sample_df, client=first_override)
+
+        with session_context(ExpressStubSession()):
+            qc.server(data_source=sample_df, client=second_override)
+
+        assert qc._client_spec is init_client

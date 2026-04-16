@@ -137,8 +137,10 @@ QueryChat <- R6::R6Class(
     create_session_client = function(
       client_spec = NULL,
       tools = NA,
-      update_dashboard = function(query, title) {},
-      reset_dashboard = function() {}
+      update_dashboard = function(query, title) {
+      },
+      reset_dashboard = function() {
+      }
     ) {
       spec <- client_spec %||% private$.client_spec
       chat <- as_querychat_client(spec)
@@ -319,8 +321,10 @@ QueryChat <- R6::R6Class(
     #'   `reset_dashboard` tool is called.
     client = function(
       tools = NA,
-      update_dashboard = function(query, title) {},
-      reset_dashboard = function() {}
+      update_dashboard = function(query, title) {
+      },
+      reset_dashboard = function() {
+      }
     ) {
       private$require_data_source("$client")
 
@@ -423,10 +427,12 @@ QueryChat <- R6::R6Class(
 
       ui <- function(req) {
         bslib::page_sidebar(
-          title = shiny::HTML(sprintf(
-            "<span>querychat with <code>%s</code></span>",
-            table_name
-          )),
+          title = shiny::HTML(
+            sprintf(
+              "<span>querychat with <code>%s</code></span>",
+              table_name
+            )
+          ),
           class = "bslib-page-dashboard",
           sidebar = self$sidebar(),
           shiny::useBusyIndicators(pulse = TRUE, spinners = FALSE),
@@ -522,12 +528,14 @@ QueryChat <- R6::R6Class(
         })
 
         shiny::observeEvent(input$close_btn, label = "on_close_btn", {
-          shiny::stopApp(list(
-            df = qc_vals$df(),
-            sql = qc_vals$sql(),
-            title = qc_vals$title(),
-            client = qc_vals$client
-          ))
+          shiny::stopApp(
+            list(
+              df = qc_vals$df(),
+              sql = qc_vals$sql(),
+              title = qc_vals$title(),
+              client = qc_vals$client
+            )
+          )
         })
       }
 
@@ -969,7 +977,6 @@ normalize_data_source <- function(data_source, table_name) {
     "{.arg data_source} must be a {.cls DataSource}, {.cls data.frame}, or {.cls DBIConnection}, not {.obj_type_friendly {data_source}}."
   )
 }
-
 
 namespaced_id <- function(id, session = shiny::getDefaultReactiveDomain()) {
   if (is.null(session)) {

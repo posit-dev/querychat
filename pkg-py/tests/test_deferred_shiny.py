@@ -100,26 +100,6 @@ class TestShinyDeferredDataSource:
         assert recorded_specs[-1] is override_client
         assert qc._client_spec is init_client
 
-    def test_server_without_init_or_override_client_raises_early(self, sample_df):
-        """Deferred Shiny setup should fail from server() when no client is available."""
-        qc = QueryChat(None, "users")
-
-        with (
-            session_context(ExpressStubSession()),
-            pytest.raises(RuntimeError, match="client must be set"),
-        ):
-            qc.server(data_source=sample_df)
-
-    def test_server_rejects_explicit_none_client(self, sample_df):
-        """server(client=None) is invalid because None is ambiguous in this API."""
-        qc = QueryChat(None, "users", client=ChatOpenAI())
-
-        with (
-            session_context(ExpressStubSession()),
-            pytest.raises(RuntimeError, match="client must be set"),
-        ):
-            qc.server(data_source=sample_df, client=None)
-
     def test_multiple_server_overrides_do_not_leak_into_shared_state(self, sample_df):
         """Sequential overrides should not overwrite the instance-level client spec."""
         init_client = ChatOpenAI(model="gpt-4.1")

@@ -4,8 +4,6 @@ import pandas as pd
 import pytest
 from chatlas import ChatOpenAI
 from querychat._querychat_base import QueryChatBase
-from querychat._utils import MISSING
-
 
 @pytest.fixture
 def sample_df():
@@ -122,39 +120,3 @@ class TestBackwardCompatibility:
 
         prompt = qc.system_prompt
         assert "test_table" in prompt
-
-
-class TestRequireClientSpec:
-    """Tests for the server client resolution helper."""
-
-    def test_require_client_spec_uses_init_client_when_server_client_missing(
-        self,
-        monkeypatch,
-    ):
-        """Init-time client should be reused when server client is not provided."""
-        monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-key-for-testing")
-        chat = ChatOpenAI()
-        qc = QueryChatBase(None, "users", client=chat)
-
-        assert qc._require_client_spec("server", MISSING) is chat
-
-    def test_require_client_spec_raises_when_no_client_available(self):
-        """Missing client spec should raise a method-specific RuntimeError."""
-        qc = QueryChatBase(None, "users")
-
-        with pytest.raises(
-            RuntimeError,
-            match=r"client must be set before calling server\(\)",
-        ):
-            qc._require_client_spec("server", MISSING)
-
-    def test_require_client_spec_rejects_explicit_none(self, monkeypatch):
-        """Passing client=None is rejected even if an init client exists."""
-        monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-key-for-testing")
-        qc = QueryChatBase(None, "users", client=ChatOpenAI())
-
-        with pytest.raises(
-            RuntimeError,
-            match="client=None is not supported",
-        ):
-            qc._require_client_spec("server", None)

@@ -12,7 +12,7 @@ from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 from ._icons import bs_icon
 from ._querychat_base import TOOL_GROUPS, QueryChatBase
 from ._shiny_module import ServerValues, mod_server, mod_ui
-from ._utils import MISSING, MISSING_TYPE, as_narwhals
+from ._utils import as_narwhals
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -263,7 +263,6 @@ class QueryChat(QueryChatBase[IntoFrameT]):
 
         """
         data_source = self._require_data_source("app")
-        self._ensure_client(default=None)
         enable_bookmarking = bookmark_store != "disable"
         table_name = data_source.table_name
 
@@ -300,7 +299,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 self.id,
                 data_source=data_source,
                 greeting=self.greeting,
-                client=self.client,
+                client=self._create_session_client,
                 enable_bookmarking=enable_bookmarking,
             )
 
@@ -406,7 +405,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         self,
         *,
         data_source: Optional[IntoFrame | sqlalchemy.Engine | ibis.Table] = None,
-        client: str | chatlas.Chat | MISSING_TYPE = MISSING,
+        client: str | chatlas.Chat | None = None,
         enable_bookmarking: bool = False,
         id: Optional[str] = None,
     ) -> ServerValues[IntoFrameT]:
@@ -425,7 +424,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             before initializing server logic. This is useful for the deferred pattern
             where data_source is not known at initialization time.
         client
-            Optional chat client to use. If provided, sets the chat_client property
+            Optional chat client to use. If provided, sets the client_spec property
             before initializing server logic. This is useful for the deferred pattern
             where the client cannot be created at initialization time (e.g., when
             using Posit Connect managed OAuth credentials that require session access).
@@ -491,15 +490,16 @@ class QueryChat(QueryChatBase[IntoFrameT]):
 
         if data_source is not None:
             self.data_source = data_source
+        if client is not None:
+            self.client_spec = client
 
         resolved_data_source = self._require_data_source("server")
-        self._ensure_client(default=client)
 
         return mod_server(
             id or self.id,
             data_source=resolved_data_source,
             greeting=self.greeting,
-            client=self.client,
+            client=self._create_session_client,
             enable_bookmarking=enable_bookmarking,
         )
 
@@ -732,13 +732,11 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         else:
             enable = enable_bookmarking
 
-        self._ensure_client(default=None)
-
         self._vals = mod_server(
             self.id,
             data_source=self._data_source,
             greeting=self.greeting,
-            client=self.client,
+            client=self._create_session_client,
             enable_bookmarking=enable,
         )
 

@@ -86,11 +86,6 @@ def test_querychat_client_has_system_prompt(sample_df):
     # The system_prompt should contain the table name since it includes schema info
     assert "test_table" in client.system_prompt
 
-    # The internal _client should also have the system prompt set
-    # (needed for methods like generate_greeting() that use _client directly)
-    assert qc._client.system_prompt is not None
-    assert "test_table" in qc._client.system_prompt
-
 
 def test_querychat_with_polars_lazyframe():
     """Test that QueryChat accepts a Polars LazyFrame."""

@@ -141,13 +141,13 @@ class TestDeferredPatternIntegration:
         """Test setting data_source via property after init."""
         qc = QueryChatBase(None, "users")
         assert qc.data_source is None
-        assert qc.chat_client is None
+        assert qc.client_spec is None
 
         qc.data_source = sample_df
         assert qc.data_source is not None
 
-        qc.chat_client = "openai"
-        assert qc.chat_client is not None
+        qc.client_spec = "openai"
+        assert qc.client_spec == "openai"
 
         client = qc.client()
         assert client is not None

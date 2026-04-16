@@ -81,11 +81,8 @@ class QueryChatBase(Generic[IntoFrameT]):
         self._extra_instructions = extra_instructions
         self._categorical_threshold = categorical_threshold
 
+        self._client_spec: str | chatlas.Chat | None = client
         self._client_console = None
-        if client is not None:
-            self._client: chatlas.Chat | None = create_client(client)
-        else:
-            self._client = None
 
         # Initialize data source (may be None for deferred pattern)
         if data_source is not None:
@@ -113,8 +110,6 @@ class QueryChatBase(Generic[IntoFrameT]):
             extra_instructions=self._extra_instructions,
             categorical_threshold=self._categorical_threshold,
         )
-        if self._client is not None:
-            self._client.system_prompt = self._system_prompt.render(self.tools)
 
     def _require_data_source(self, method_name: str) -> DataSource[IntoFrameT]:
         """Raise if data_source is not set, otherwise return it for type narrowing."""
@@ -126,30 +121,35 @@ class QueryChatBase(Generic[IntoFrameT]):
             )
         return self._data_source
 
-    def _ensure_client(
+    def _create_session_client(
         self,
-        default: str | chatlas.Chat | None | MISSING_TYPE = MISSING,
+        *,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None | MISSING_TYPE = MISSING,
+        update_dashboard: Callable[[UpdateDashboardData], None] | None = None,
+        reset_dashboard: Callable[[], None] | None = None,
     ) -> chatlas.Chat:
-        """
-        Return the chat client, raising if none is available.
+        """Create a fresh, fully-configured Chat from the current spec."""
+        data_source = self._require_data_source("_create_session_client")
+        chat = create_client(self._client_spec)
 
-        Resolution order: ``self._client`` (if set at init) >
-        ``default`` (if provided) > ``RuntimeError``. When ``default``
-        resolves the lookup, it is stored on ``self._client`` for
-        subsequent use.
-        """
-        if self._client is None and not isinstance(default, MISSING_TYPE):
-            self._client = create_client(default)
-            if self._system_prompt is not None:
-                self._client.system_prompt = self._system_prompt.render(self.tools)
+        resolved_tools = normalize_tools(tools, default=self.tools)
 
-        if self._client is None:
-            raise RuntimeError(
-                "client must be set. "
-                "Either pass client to __init__(), set the chat_client property, "
-                "or pass client to server()."
-            )
-        return self._client
+        if self._system_prompt is not None:
+            chat.system_prompt = self._system_prompt.render(resolved_tools)
+
+        if resolved_tools is None:
+            return chat
+
+        if "update" in resolved_tools:
+            update_fn = update_dashboard or (lambda _: None)
+            reset_fn = reset_dashboard or (lambda: None)
+            chat.register_tool(tool_update_dashboard(data_source, update_fn))
+            chat.register_tool(tool_reset_dashboard(reset_fn))
+
+        if "query" in resolved_tools:
+            chat.register_tool(tool_query(data_source))
+
+        return chat
 
     def client(
         self,
@@ -176,35 +176,17 @@ class QueryChatBase(Generic[IntoFrameT]):
             A configured chat client.
 
         """
-        data_source = self._require_data_source("client")
-        base_client = self._ensure_client(default=None)
-        if self._system_prompt is None:
-            raise RuntimeError("System prompt not initialized")
-        tools = normalize_tools(tools, default=self.tools)
-
-        chat = create_client(base_client)
-        chat.system_prompt = self._system_prompt.render(tools)
-
-        if tools is None:
-            return chat
-
-        if "update" in tools:
-            update_fn = update_dashboard or (lambda _: None)
-            reset_fn = reset_dashboard or (lambda: None)
-            chat.register_tool(tool_update_dashboard(data_source, update_fn))
-            chat.register_tool(tool_reset_dashboard(reset_fn))
-
-        if "query" in tools:
-            chat.register_tool(tool_query(data_source))
-
-        return chat
+        return self._create_session_client(
+            tools=tools,
+            update_dashboard=update_dashboard,
+            reset_dashboard=reset_dashboard,
+        )
 
     def generate_greeting(self, *, echo: Literal["none", "output"] = "none") -> str:
         """Generate a welcome greeting for the chat."""
         self._require_data_source("generate_greeting")
-        base_client = self._ensure_client(default=None)
-        client = create_client(base_client)
-        return str(client.chat(GREETING_PROMPT, echo=echo))
+        chat = create_client(self._client_spec)
+        return str(chat.chat(GREETING_PROMPT, echo=echo))
 
     def console(
         self,
@@ -214,10 +196,6 @@ class QueryChatBase(Generic[IntoFrameT]):
         **kwargs,
     ) -> None:
         """Launch an interactive console chat with the data."""
-        self._require_data_source("console")
-        self._ensure_client(default=None)
-        tools = normalize_tools(tools, default=("query",))
-
         if new or self._client_console is None:
             self._client_console = self.client(tools=tools, **kwargs)
 
@@ -243,16 +221,14 @@ class QueryChatBase(Generic[IntoFrameT]):
         self._build_system_prompt()
 
     @property
-    def chat_client(self) -> chatlas.Chat | None:
-        """Get the current chat client."""
-        return self._client
+    def client_spec(self) -> str | chatlas.Chat | None:
+        """Get the current client specification."""
+        return self._client_spec
 
-    @chat_client.setter
-    def chat_client(self, value: str | chatlas.Chat) -> None:
-        """Set the chat client, normalizing and updating system prompt if needed."""
-        self._client = create_client(value)
-        if self._data_source is not None and self._system_prompt is not None:
-            self._client.system_prompt = self._system_prompt.render(self.tools)
+    @client_spec.setter
+    def client_spec(self, value: str | chatlas.Chat | None) -> None:
+        """Set the client specification."""
+        self._client_spec = value
 
     def cleanup(self) -> None:
         """Clean up resources associated with the data source."""

@@ -22,82 +22,71 @@ class TestDeferredClientInit:
     """Tests for initializing QueryChatBase with deferred client."""
 
     def test_init_with_none_data_source_defers_client(self):
-        """When data_source is None and client is not provided, client should be None."""
+        """When data_source is None and client is not provided, client_spec should be None."""
         qc = QueryChatBase(None, "users")
-        assert qc._client is None
-        assert qc.chat_client is None
+        assert qc.client_spec is None
 
-    def test_init_with_explicit_client_and_none_data_source(self, monkeypatch):
-        """When data_source is None but client is provided, client should be initialized."""
-        monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-key-for-testing")
+    def test_init_with_explicit_client_and_none_data_source(self):
+        """When data_source is None but client is provided, client_spec should be stored."""
         qc = QueryChatBase(None, "users", client="openai")
-        assert qc._client is not None
-        assert qc.chat_client is not None
+        assert qc.client_spec == "openai"
 
-    def test_init_with_data_source_defers_client(self, sample_df):
-        """When data_source is provided without client, client should be lazily initialized."""
-        qc = QueryChatBase(sample_df, "users")
-        assert qc._client is None
-        assert qc.chat_client is None
-
-
-class TestChatClientProperty:
-    """Tests for the chat_client property setter."""
-
-    def test_chat_client_setter(self, monkeypatch):
-        """Setting chat_client should normalize and store the client."""
+    def test_init_with_chat_object_stores_spec(self, monkeypatch):
+        """When a Chat object is passed, it should be stored as-is."""
         monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-key-for-testing")
-        qc = QueryChatBase(None, "users")
-        assert qc.chat_client is None
-
-        qc.chat_client = "openai"
-        assert qc.chat_client is not None
-
-    def test_chat_client_setter_with_chat_object(self, monkeypatch):
-        """Setting chat_client with a Chat object should work."""
-        monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-key-for-testing")
-        qc = QueryChatBase(None, "users")
-        assert qc.chat_client is None
-
         chat = ChatOpenAI()
-        qc.chat_client = chat
-        assert qc.chat_client is not None
+        qc = QueryChatBase(None, "users", client=chat)
+        assert qc.client_spec is chat
 
-    def test_chat_client_setter_updates_system_prompt(self, sample_df, monkeypatch):
-        """Setting chat_client should update system_prompt if data_source is set."""
+    def test_init_with_data_source_no_client(self, sample_df):
+        """When data_source is provided without client, client_spec should be None."""
+        qc = QueryChatBase(sample_df, "users")
+        assert qc.client_spec is None
+
+
+class TestClientSpecProperty:
+    """Tests for the client_spec property setter."""
+
+    def test_client_spec_setter_string(self):
+        """Setting client_spec with a string should store it."""
+        qc = QueryChatBase(None, "users")
+        qc.client_spec = "openai"
+        assert qc.client_spec == "openai"
+
+    def test_client_spec_setter_with_chat_object(self, monkeypatch):
+        """Setting client_spec with a Chat object should store it."""
         monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-key-for-testing")
+        chat = ChatOpenAI()
         qc = QueryChatBase(None, "users")
-        qc.data_source = sample_df
+        qc.client_spec = chat
+        assert qc.client_spec is chat
 
-        qc.chat_client = "openai"
-        assert qc._client is not None
-        assert qc._client.system_prompt is not None
-
-    def test_chat_client_getter_returns_none_when_not_set(self):
-        """chat_client property returns None when not set."""
-        qc = QueryChatBase(None, "users")
-        assert qc.chat_client is None
+    def test_client_spec_setter_none(self):
+        """Setting client_spec to None should reset to default behavior."""
+        qc = QueryChatBase(None, "users", client="openai")
+        qc.client_spec = None
+        assert qc.client_spec is None
 
 
 class TestClientMethodRequirements:
-    """Tests that methods properly require client or data_source to be set."""
+    """Tests that methods properly require data_source to be set."""
 
     def test_client_method_requires_data_source(self):
-        """client() should raise if neither client nor data_source is set."""
+        """client() should raise if data_source is not set."""
         qc = QueryChatBase(None, "users")
 
         with pytest.raises(RuntimeError, match="data_source must be set"):
             qc.client()
 
     def test_console_requires_data_source(self):
-        """console() should raise if neither client nor data_source is set."""
+        """console() should raise if data_source is not set."""
         qc = QueryChatBase(None, "users")
 
         with pytest.raises(RuntimeError, match="data_source must be set"):
             qc.console()
 
     def test_generate_greeting_requires_data_source(self):
-        """generate_greeting() should raise if neither client nor data_source is set."""
+        """generate_greeting() should raise if data_source is not set."""
         qc = QueryChatBase(None, "users")
 
         with pytest.raises(RuntimeError, match="data_source must be set"):
@@ -113,13 +102,10 @@ class TestDeferredClientIntegration:
 
         qc = QueryChatBase(None, "users")
         assert qc.data_source is None
-        assert qc.chat_client is None
+        assert qc.client_spec is None
 
         qc.data_source = sample_df
-        assert qc.data_source is not None
-
-        qc.chat_client = "openai"
-        assert qc.chat_client is not None
+        qc.client_spec = "openai"
 
         client = qc.client()
         assert client is not None
@@ -130,12 +116,8 @@ class TestDeferredClientIntegration:
         monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-key-for-testing")
 
         qc = QueryChatBase(None, "users")
-
-        qc.chat_client = "openai"
-        assert qc.chat_client is not None
-
+        qc.client_spec = "openai"
         qc.data_source = sample_df
-        assert qc.data_source is not None
 
         client = qc.client()
         assert client is not None
@@ -146,26 +128,23 @@ class TestDeferredClientIntegration:
         monkeypatch.delenv("QUERYCHAT_CLIENT", raising=False)
 
         qc = QueryChatBase(None, "users")
-        assert qc._client is None
-        assert qc.chat_client is None
+        assert qc.client_spec is None
 
 
 class TestBackwardCompatibility:
     """Tests that existing patterns continue to work."""
 
     def test_immediate_pattern_unchanged(self, sample_df, monkeypatch):
-        """Existing code with data_source continues to work (client lazily initialized)."""
+        """Existing code with data_source continues to work."""
         monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-key-for-testing")
         qc = QueryChatBase(sample_df, "test_table")
 
         assert qc.data_source is not None
-        # Client is lazily initialized, so chat_client is None until first use
-        assert qc.chat_client is None
+        # client_spec is None (will use env default at resolution time)
+        assert qc.client_spec is None
 
         client = qc.client()
         assert client is not None
-        # After first use, client is initialized
-        assert qc.chat_client is not None
 
         prompt = qc.system_prompt
         assert "test_table" in prompt

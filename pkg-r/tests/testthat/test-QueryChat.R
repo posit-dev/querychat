@@ -101,6 +101,64 @@ describe("QueryChat$new()", {
   })
 })
 
+describe("QueryChat deferred client", {
+  it("accepts NULL data_source with table_name", {
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+    expect_null(qc$data_source)
+    expect_equal(qc$id, "querychat_users")
+  })
+
+  it("requires table_name when data_source is NULL", {
+    expect_error(
+      QueryChat$new(NULL),
+      "table_name.*required"
+    )
+  })
+
+  it("stores client spec without resolving it", {
+    withr::local_envvar(OPENAI_API_KEY = NA)
+    withr::local_options(querychat.client = NULL)
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+    expect_null(qc$data_source)
+  })
+
+  it("stores explicit client string as spec", {
+    withr::local_envvar(OPENAI_API_KEY = "boop")
+    qc <- QueryChat$new(NULL, "users", greeting = "Test", client = "openai")
+    expect_null(qc$data_source)
+  })
+
+  it("$client() errors when data_source is NULL", {
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+    expect_error(qc$client(), "data_source.*must be set")
+  })
+
+  it("$console() errors when data_source is NULL", {
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+    expect_error(qc$console(), "data_source.*must be set")
+  })
+
+  it("$generate_greeting() errors when data_source is NULL", {
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+    expect_error(qc$generate_greeting(), "data_source.*must be set")
+  })
+
+  it("$system_prompt errors when data_source is NULL", {
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+    expect_error(qc$system_prompt, "data_source.*must be set")
+  })
+
+  it("works after setting data_source later", {
+    skip_if_no_dataframe_engine()
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+    qc$data_source <- new_users_df()
+
+    expect_s3_class(qc$data_source, "DataFrameSource")
+    prompt <- qc$system_prompt
+    expect_match(prompt, "users")
+  })
+})
+
 describe("QueryChat integration with DBISource", {
   it("works with iris dataset queries", {
     skip_if_not_installed("RSQLite")

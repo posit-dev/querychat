@@ -92,7 +92,7 @@ QueryChat <- R6::R6Class(
     server_values = NULL,
     .data_source = NULL,
     .table_name = NULL,
-    .client = NULL,
+    .client_spec = NULL,
     .client_console = NULL,
     .system_prompt = NULL,
     # Store init parameters for deferred system prompt building
@@ -132,6 +132,43 @@ QueryChat <- R6::R6Class(
         extra_instructions = private$.extra_instructions,
         categorical_threshold = private$.categorical_threshold
       )
+    },
+
+    create_session_client = function(
+      client_spec = NULL,
+      tools = NA,
+      update_dashboard = function(query, title) {},
+      reset_dashboard = function() {}
+    ) {
+      spec <- client_spec %||% private$.client_spec
+      chat <- as_querychat_client(spec)
+      chat$set_turns(list())
+
+      if (is_na(tools)) {
+        tools <- self$tools
+      }
+
+      chat$set_system_prompt(private$.system_prompt$render(tools = tools))
+
+      if (is.null(tools)) {
+        return(chat)
+      }
+
+      if ("update" %in% tools) {
+        chat$register_tool(
+          tool_update_dashboard(
+            private$.data_source,
+            update_fn = update_dashboard
+          )
+        )
+        chat$register_tool(tool_reset_dashboard(reset_dashboard))
+      }
+
+      if ("query" %in% tools) {
+        chat$register_tool(tool_query(private$.data_source))
+      }
+
+      chat
     }
   ),
   public = list(
@@ -253,10 +290,7 @@ QueryChat <- R6::R6Class(
         private$build_system_prompt()
       }
 
-      # Fork and empty chat now so the per-session forks are fast
-      client <- as_querychat_client(client)
-      private$.client <- client$clone()
-      private$.client$set_turns(list())
+      private$.client_spec <- client
 
       # By default, only close automatically if a Shiny session is active
       if (is.na(cleanup)) {
@@ -290,10 +324,7 @@ QueryChat <- R6::R6Class(
     ) {
       private$require_data_source("$client")
 
-      if (is_na(tools)) {
-        tools <- self$tools
-      }
-      if (!is.null(tools)) {
+      if (!is_na(tools) && !is.null(tools)) {
         tools <- arg_match(
           tools,
           values = c("update", "query"),
@@ -301,28 +332,11 @@ QueryChat <- R6::R6Class(
         )
       }
 
-      chat <- private$.client$clone()
-      chat$set_system_prompt(private$.system_prompt$render(tools = tools))
-
-      if (is.null(tools)) {
-        return(chat)
-      }
-
-      if ("update" %in% tools) {
-        chat$register_tool(
-          tool_update_dashboard(
-            private$.data_source,
-            update_fn = update_dashboard
-          )
-        )
-        chat$register_tool(tool_reset_dashboard(reset_dashboard))
-      }
-
-      if ("query" %in% tools) {
-        chat$register_tool(tool_query(private$.data_source))
-      }
-
-      chat
+      private$create_session_client(
+        tools = tools,
+        update_dashboard = update_dashboard,
+        reset_dashboard = reset_dashboard
+      )
     },
 
     #' @description
@@ -701,9 +715,7 @@ QueryChat <- R6::R6Class(
     #' @return The greeting string in Markdown format.
     generate_greeting = function(echo = c("none", "output")) {
       private$require_data_source("$generate_greeting")
-      chat <- self$client()
-      chat$set_turns(list())
-
+      chat <- private$create_session_client()
       as.character(chat$chat(GREETING_PROMPT, echo = echo))
     },
 

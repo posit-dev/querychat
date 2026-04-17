@@ -54,7 +54,16 @@ def discover_semantic_views(
     if os.environ.get("QUERYCHAT_DISABLE_SEMANTIC_VIEWS"):
         return []
 
-    rows = execute_raw_sql("SHOW SEMANTIC VIEWS", backend)
+    try:
+        rows = execute_raw_sql("SHOW SEMANTIC VIEWS", backend)
+    except Exception:
+        logger.warning(
+            "Failed to discover semantic views. "
+            "This usually means the current role lacks the required privileges. "
+            "Semantic view context will not be included in the system prompt.",
+            exc_info=True,
+        )
+        return []
 
     if not rows:
         logger.debug("No semantic views found in current schema")
@@ -83,7 +92,17 @@ def get_semantic_view_ddl(
 ) -> str | None:
     """Get DDL for a semantic view by fully qualified name."""
     safe_name = fq_name.replace("'", "''")
-    rows = execute_raw_sql(f"SELECT GET_DDL('SEMANTIC_VIEW', '{safe_name}')", backend)
+    try:
+        rows = execute_raw_sql(
+            f"SELECT GET_DDL('SEMANTIC_VIEW', '{safe_name}')", backend
+        )
+    except Exception:
+        logger.warning(
+            "Failed to get DDL for semantic view '%s'. Skipping this view.",
+            fq_name,
+            exc_info=True,
+        )
+        return None
     if rows:
         return str(next(iter(rows[0].values())))
     return None

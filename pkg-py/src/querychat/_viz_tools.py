@@ -16,7 +16,7 @@ from shiny import ui
 
 from .__version import __version__
 from ._icons import bs_icon
-from ._utils import querychat_tool_starts_open, read_prompt_template
+from ._utils import querychat_tool_starts_open, read_prompt_template, truncate_error
 from ._viz_altair_widget import AltairWidget, fit_chart_to_container
 from ._viz_ggsql import execute_ggsql
 
@@ -202,9 +202,9 @@ def visualize_query_impl(
             )
 
         except Exception as e:
-            error_msg = str(e)
+            error_msg = truncate_error(str(e))
             markdown += f"\n\n> Error: {error_msg}"
-            return ContentToolResult(value=markdown, error=e)
+            return ContentToolResult(value=markdown, error=Exception(error_msg))
 
     return visualize_query
 

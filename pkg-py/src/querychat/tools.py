@@ -11,6 +11,7 @@ from ._utils import (
     df_to_html,
     querychat_tool_starts_open,
     read_prompt_template,
+    truncate_error,
 )
 from ._viz_tools import tool_visualize_query
 
@@ -107,9 +108,9 @@ def _update_dashboard_impl(
             update_fn({"query": query, "title": title})
 
         except Exception as e:
-            error = str(e)
+            error = truncate_error(str(e))
             markdown += f"\n\n> Error: {error}"
-            return ContentToolResult(value=markdown, error=e)
+            return ContentToolResult(value=markdown, error=Exception(error))
 
         # Return ContentToolResult with display metadata
         return ContentToolResult(
@@ -247,9 +248,9 @@ def _query_impl(data_source: DataSource) -> Callable[..., ContentToolResult]:
             markdown += "\n\n" + str(tbl_html)
 
         except Exception as e:
-            error = str(e)
+            error = truncate_error(str(e))
             markdown += f"\n\n> Error: {error}"
-            return ContentToolResult(value=markdown, error=e)
+            return ContentToolResult(value=markdown, error=Exception(error))
 
         # Return ContentToolResult with display metadata
         return ContentToolResult(

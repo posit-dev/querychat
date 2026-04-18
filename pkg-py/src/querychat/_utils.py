@@ -20,6 +20,48 @@ if TYPE_CHECKING:
     from narwhals.stable.v1.typing import IntoFrame
 
 
+_SCHEMA_DUMP_PATTERN = re.compile(
+    r"^\s*[\{\[]|'additionalProperties'|\"additionalProperties\"",
+)
+
+
+def truncate_error(error_msg: str, max_chars: int = 500) -> str:
+    if len(error_msg) <= max_chars:
+        return error_msg
+
+    lines = error_msg.split("\n")
+    meaningful: list[str] = []
+    truncated_by_schema = False
+    for line in lines:
+        if not line.strip():
+            truncated_by_schema = True
+            break
+        if _SCHEMA_DUMP_PATTERN.search(line):
+            truncated_by_schema = True
+            break
+        meaningful.append(line)
+
+    if truncated_by_schema and meaningful:
+        prefix = "\n".join(meaningful)
+        if len(prefix) > max_chars:
+            cut = prefix[:max_chars]
+            last_space = cut.rfind(" ")
+            if last_space > max_chars // 2:
+                cut = cut[:last_space]
+            prefix = cut
+        return prefix.rstrip() + "\n\n(error truncated)"
+
+    # No schema markers found (or nothing before them) — apply hard cap if needed
+    if len(error_msg) <= max_chars:
+        return error_msg
+
+    truncated = error_msg[:max_chars]
+    last_space = truncated.rfind(" ")
+    if last_space > max_chars // 2:
+        truncated = truncated[:last_space]
+    return truncated.rstrip() + "\n\n(error truncated)"
+
+
 class MISSING_TYPE:  # noqa: N801
     """
     A singleton representing a missing value.

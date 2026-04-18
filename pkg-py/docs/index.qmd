@@ -75,6 +75,11 @@ querychat can also handle more general questions about the data that require cal
 
 ![](/images/quickstart-summary.png){fig-alt="Screenshot of the querychat's app with a summary statistic inlined in the chat." class="lightbox shadow rounded mb-3"}
 
+querychat can also create visualizations, powered by [ggsql](https://ggsql.org/) and [Altair](https://altair-viz.github.io/).
+With the [visualization tool](visualize.qmd) enabled, ask for a chart and it appears inline in the conversation:
+
+![](/images/viz-bar-chart.png){fig-alt="Screenshot of querychat with an inline bar chart showing survival rate by passenger class." class="lightbox shadow rounded mb-3"}
+
 ## Web frameworks
 
 While the examples above use [Shiny](https://shiny.posit.co/py/), querychat also supports [Streamlit](https://streamlit.io/), [Gradio](https://gradio.app/), and [Dash](https://dash.plotly.com/). Each framework has its own `QueryChat` class under the relevant sub-module, but the methods and properties are mostly consistent across all of them.

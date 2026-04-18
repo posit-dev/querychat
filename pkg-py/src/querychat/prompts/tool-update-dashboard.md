@@ -1,10 +1,4 @@
-Filter and sort the dashboard data
-
-This tool executes a {{db_type}} SQL SELECT query to filter or sort the data used in the dashboard.
-
-**When to use:** Call this tool whenever the user requests filtering, sorting, or data manipulation on the dashboard with questions like "Show me..." or "Which records have...". This tool is appropriate for any request that involves showing a subset of the data or reordering it.
-
-**When not to use:** Do NOT use this tool for general questions about the data that can be answered with a single value or summary statistic. For those questions, use the `querychat_query` tool instead.
+Filter and sort the dashboard data by executing a {{db_type}} SQL SELECT query.
 
 **Important constraints:**
 

@@ -1,14 +1,26 @@
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol, TypedDict, runtime_checkable
 
-import chevron
 from chatlas import ContentToolResult, Tool
 from shinychat.types import ToolResultDisplay
 
 from ._icons import bs_icon
-from ._utils import as_narwhals, df_to_html, querychat_tool_starts_open
+from ._utils import (
+    as_narwhals,
+    df_to_html,
+    querychat_tool_starts_open,
+    read_prompt_template,
+    truncate_error,
+)
+from ._viz_tools import tool_visualize_query
+
+__all__ = [
+    "tool_query",
+    "tool_reset_dashboard",
+    "tool_update_dashboard",
+    "tool_visualize_query",
+]
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -69,13 +81,6 @@ class UpdateDashboardData(TypedDict):
     title: str
 
 
-def _read_prompt_template(filename: str, **kwargs) -> str:
-    """Read and interpolate a prompt template file."""
-    template_path = Path(__file__).parent / "prompts" / filename
-    template = template_path.read_text()
-    return chevron.render(template, kwargs)
-
-
 def _update_dashboard_impl(
     data_source: DataSource,
     update_fn: Callable[[UpdateDashboardData], None],
@@ -103,9 +108,9 @@ def _update_dashboard_impl(
             update_fn({"query": query, "title": title})
 
         except Exception as e:
-            error = str(e)
+            error = truncate_error(str(e))
             markdown += f"\n\n> Error: {error}"
-            return ContentToolResult(value=markdown, error=e)
+            return ContentToolResult(value=markdown, error=Exception(error))
 
         # Return ContentToolResult with display metadata
         return ContentToolResult(
@@ -146,7 +151,7 @@ def tool_update_dashboard(
     """
     impl = _update_dashboard_impl(data_source, update_fn)
 
-    description = _read_prompt_template(
+    description = read_prompt_template(
         "tool-update-dashboard.md",
         db_type=data_source.get_db_type(),
     )
@@ -212,7 +217,7 @@ def tool_reset_dashboard(
     """
     impl = _reset_dashboard_impl(reset_fn)
 
-    description = _read_prompt_template("tool-reset-dashboard.md")
+    description = read_prompt_template("tool-reset-dashboard.md")
     impl.__doc__ = description
 
     return Tool.from_func(
@@ -222,10 +227,14 @@ def tool_reset_dashboard(
     )
 
 
-def _query_impl(data_source: DataSource) -> Callable[[str, str], ContentToolResult]:
+def _query_impl(data_source: DataSource) -> Callable[..., ContentToolResult]:
     """Create the implementation function for querying data."""
 
-    def query(query: str, _intent: str = "") -> ContentToolResult:
+    def query(
+        query: str,
+        collapsed: bool | None = None,  # noqa: FBT001 (LLM tool parameter)
+        _intent: str = "",
+    ) -> ContentToolResult:
         error = None
         markdown = f"```sql\n{query}\n```"
         value = None
@@ -239,9 +248,9 @@ def _query_impl(data_source: DataSource) -> Callable[[str, str], ContentToolResu
             markdown += "\n\n" + str(tbl_html)
 
         except Exception as e:
-            error = str(e)
+            error = truncate_error(str(e))
             markdown += f"\n\n> Error: {error}"
-            return ContentToolResult(value=markdown, error=e)
+            return ContentToolResult(value=markdown, error=Exception(error))
 
         # Return ContentToolResult with display metadata
         return ContentToolResult(
@@ -250,7 +259,9 @@ def _query_impl(data_source: DataSource) -> Callable[[str, str], ContentToolResu
                 "display": ToolResultDisplay(
                     markdown=markdown,
                     show_request=False,
-                    open=querychat_tool_starts_open("query"),
+                    open=(not collapsed)
+                    if collapsed is not None
+                    else querychat_tool_starts_open("query"),
                     icon=bs_icon("table"),
                 ),
             },
@@ -276,7 +287,7 @@ def tool_query(data_source: DataSource) -> Tool:
     """
     impl = _query_impl(data_source)
 
-    description = _read_prompt_template(
+    description = read_prompt_template(
         "tool-query.md", db_type=data_source.get_db_type()
     )
     impl.__doc__ = description

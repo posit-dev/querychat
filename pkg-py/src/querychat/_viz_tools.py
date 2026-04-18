@@ -179,7 +179,7 @@ def visualize_query_impl(
                     "Use querychat_query for queries without visualization."
                 )
 
-            spec = execute_ggsql(data_source, validated)
+            spec = execute_ggsql(data_source, ggsql, validated)
 
             raw_chart = VegaLiteWriter().render_chart(spec)
             altair_widget = AltairWidget(copy.deepcopy(raw_chart))

@@ -112,7 +112,7 @@ class TestExecuteGgsql:
         nw_df = nw.from_native(pl.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]}))
         ds = DataFrameSource(nw_df, "test_data")
         query = "SELECT * FROM test_data VISUALISE x, y DRAW point"
-        spec = execute_ggsql(ds, ggsql.validate(query))
+        spec = execute_ggsql(ds, query, ggsql.validate(query))
         altair_widget = AltairWidget.from_ggsql(spec)
         result = altair_widget.widget.chart.to_dict()
         assert "$schema" in result
@@ -124,7 +124,7 @@ class TestExecuteGgsql:
         )
         ds = DataFrameSource(nw_df, "test_data")
         query = "SELECT * FROM test_data WHERE x > 2 VISUALISE x, y DRAW point"
-        spec = execute_ggsql(ds, ggsql.validate(query))
+        spec = execute_ggsql(ds, query, ggsql.validate(query))
         assert spec.metadata()["rows"] == 3
 
     @pytest.mark.ggsql
@@ -132,7 +132,7 @@ class TestExecuteGgsql:
         nw_df = nw.from_native(pl.DataFrame({"x": [1, 2], "y": [3, 4]}))
         ds = DataFrameSource(nw_df, "test_data")
         query = "SELECT * FROM test_data VISUALISE x, y DRAW point"
-        spec = execute_ggsql(ds, ggsql.validate(query))
+        spec = execute_ggsql(ds, query, ggsql.validate(query))
         assert "VISUALISE" in spec.visual()
 
     @pytest.mark.ggsql
@@ -140,7 +140,7 @@ class TestExecuteGgsql:
         nw_df = nw.from_native(pl.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]}))
         ds = DataFrameSource(nw_df, "test_data")
         query = "VISUALISE x, y FROM test_data DRAW point"
-        spec = execute_ggsql(ds, ggsql.validate(query))
+        spec = execute_ggsql(ds, query, ggsql.validate(query))
         assert spec.metadata()["rows"] == 3
         assert "VISUALISE" in spec.visual()
 
@@ -151,7 +151,7 @@ class TestExecuteGgsql:
         nw_df = nw.from_native(pd.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]}))
         ds = DataFrameSource(nw_df, "test_data")
         query = "SELECT * FROM test_data VISUALISE x, y DRAW point"
-        spec = execute_ggsql(ds, ggsql.validate(query))
+        spec = execute_ggsql(ds, query, ggsql.validate(query))
         altair_widget = AltairWidget.from_ggsql(spec)
         result = altair_widget.widget.chart.to_dict()
         assert "$schema" in result
@@ -185,7 +185,7 @@ class TestExecuteGgsql:
             ValueError,
             match="Layer-specific sources are not currently supported",
         ):
-            execute_ggsql(ds, ggsql.validate(query))
+            execute_ggsql(ds, query, ggsql.validate(query))
 
     @pytest.mark.ggsql
     def test_supports_single_relation_raw_plus_summary_overlay(self):
@@ -229,6 +229,6 @@ class TestExecuteGgsql:
         DRAW line MAPPING category AS color FILTER layer_type = 'summary'
         """
 
-        spec = execute_ggsql(ds, ggsql.validate(query))
+        spec = execute_ggsql(ds, query, ggsql.validate(query))
         assert spec.metadata()["rows"] == 4
         assert "VISUALISE" in spec.visual()

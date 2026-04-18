@@ -156,7 +156,7 @@ When a dataset has many rows, plotting one mark per row creates clutter that obs
 
 **For two numeric variables with many rows:**
 
-Bin in SQL and use `DRAW rect` to create a heatmap:
+Bin in SQL and use `DRAW tile` to create a heatmap:
 
 ```sql
 WITH binned AS (
@@ -168,7 +168,7 @@ WITH binned AS (
 )
 SELECT * FROM binned
 VISUALISE x_bin AS x, y_bin AS y, n AS fill
-DRAW rect
+DRAW tile
 SCALE fill TO viridis
 ```
 

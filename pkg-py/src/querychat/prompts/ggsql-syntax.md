@@ -15,10 +15,9 @@ DRAW geom_type
     [ORDER BY col [ASC|DESC], ...]
 [SCALE [TYPE] aesthetic [FROM ...] [TO ...] [VIA ...] [SETTING ...] [RENAMING ...]]
 [PROJECT [aesthetics] TO coord_system [SETTING ...]]
-[FACET var | row_var BY col_var [SETTING free => 'x'|'y'|['x','y'], ncol => N, nrow => N]]
+[FACET var | row_var BY col_var [SETTING free => 'x'|'y'|('x','y'), ncol => N, nrow => N]]
 [PLACE geom_type SETTING param => value, ...]
 [LABEL x => '...', y => '...', ...]
-[THEME name [SETTING property => value, ...]]
 ```
 
 ### VISUALISE Clause
@@ -63,17 +62,17 @@ DRAW geom_type
 
 | Category | Types |
 |----------|-------|
-| Basic | `point`, `line`, `path`, `bar`, `area`, `rect`, `polygon`, `ribbon` |
+| Basic | `point`, `line`, `path`, `bar`, `area`, `tile`, `polygon`, `ribbon` |
 | Statistical | `histogram`, `density`, `smooth`, `boxplot`, `violin` |
-| Annotation | `text`, `segment`, `arrow`, `rule`, `linear`, `errorbar` |
+| Annotation | `text`, `label`, `segment`, `arrow`, `rule`, `errorbar` |
 
 - `path` is like `line` but preserves data order instead of sorting by x.
-- `rect` draws rectangles for heatmaps or range indicators. Map `x`/`y` for center (defaults to width/height of 1), or use `xmin`/`xmax`/`ymin`/`ymax` for explicit bounds.
+- `tile` draws rectangles for heatmaps or range indicators. Map `x`/`y` for center (defaults to width/height of 1), or use `xmin`/`xmax`/`ymin`/`ymax` for explicit bounds.
 - `smooth` fits a trendline to data. Settings: `method` (`'nw'` default for kernel regression, `'ols'` for linear, `'tls'` for total least squares), `bandwidth`, `adjust`, `kernel`.
-- `text` renders text labels. Map `label` for the text content. Settings: `format` (template string for label formatting), `offset` (pixel offset as `[x, y]`).
+- `text` (or `label`) renders text labels. Map `label` for the text content. Settings: `format` (template string for label formatting), `offset` (pixel offset as `(x, y)`). Labels containing `\n` are automatically split into multiple lines.
 - `arrow` draws arrows between two points. Requires `x`, `y`, `xend`, `yend` aesthetics.
-- `rule` draws full-span reference lines. Map a value to `y` for a horizontal line or `x` for a vertical line.
-- `linear` draws diagonal reference lines from `coef` (slope) and `intercept` aesthetics: y = intercept + coef * x.
+- `rule` draws full-span reference lines. Map a value to `y` for a horizontal line or `x` for a vertical line. Optionally map `slope` to create diagonal reference lines: `y = a + slope * x` (when `y` is mapped) or `x = a + slope * y` (when `x` is mapped).
+- `line` and `path` support continuously varying `linewidth`, `stroke`, and `opacity` aesthetics within groups.
 
 **Aesthetics (MAPPING):**
 
@@ -84,7 +83,7 @@ DRAW geom_type
 | Size/Shape | `size`, `shape`, `linewidth`, `linetype`, `width`, `height` |
 | Text | `label`, `typeface`, `fontweight`, `italic`, `fontsize`, `hjust`, `vjust`, `rotation` |
 | Aggregation | `weight` (for histogram/bar/density/violin) |
-| Linear | `coef`, `intercept` (for `linear` layer only) |
+| Rule | `slope` (for diagonal `rule` lines) |
 
 **PARTITION BY** groups data without visual encoding (useful for separate lines per group without color):
 
@@ -115,16 +114,16 @@ PLACE rule SETTING y => 100
 PLACE rule SETTING x => '2024-06-01'
 
 -- Multiple reference lines (array values)
-PLACE rule SETTING y => [50, 75, 100]
+PLACE rule SETTING y => (50, 75, 100)
 
 -- Text annotation
 PLACE text SETTING x => 10, y => 50, label => 'Threshold'
 
--- Diagonal reference line
-PLACE linear SETTING coef => 0.4, intercept => -1
+-- Diagonal reference line (y = -1 + 0.4 * x)
+PLACE rule SETTING slope => 0.4, y => -1
 ```
 
-`PLACE` supports any geom type but is most useful with `rule`, `linear`, `text`, `segment`, and `rect`. Use `PLACE` for fixed annotation values known at query time; use `DRAW` with `MAPPING` when values come from data columns. Unlike `DRAW`, `PLACE` has no `MAPPING`, `FILTER`, `PARTITION BY`, or `ORDER BY` sub-clauses.
+`PLACE` supports any geom type but is most useful with `rule`, `text`, `segment`, and `tile`. Use `PLACE` for fixed annotation values known at query time; use `DRAW` with `MAPPING` when values come from data columns. Unlike `DRAW`, `PLACE` has no `MAPPING`, `FILTER`, `PARTITION BY`, or `ORDER BY` sub-clauses. Array values in PLACE SETTING are recycled into multiple rows only for supported aesthetics; geom parameters (like `offset` on `text`) are passed through as-is.
 
 ### Statistical Layers and REMAPPING
 
@@ -143,9 +142,9 @@ Some layers compute statistics. Use REMAPPING to access computed values:
 
 `smooth` fits a trendline to data. Settings: `method` (`'nw'` or `'nadaraya-watson'` default kernel regression, `'ols'` for OLS linear, `'tls'` for total least squares). NW-only settings: `bandwidth` (numeric), `adjust` (multiplier, default 1), `kernel` (`'gaussian'` default, `'epanechnikov'`, `'triangular'`, `'rectangular'`, `'uniform'`, `'biweight'`, `'quartic'`, `'cosine'`).
 
-`density` computes a KDE from a continuous `x`. Settings: `bandwidth` (numeric), `adjust` (multiplier, default 1), `kernel` (`'gaussian'` default, `'epanechnikov'`, `'triangular'`, `'rectangular'`, `'uniform'`, `'biweight'`, `'quartic'`, `'cosine'`), `stacking` (`'off'` default, `'on'`, `'fill'`). Use `REMAPPING intensity AS y` to show unnormalized density that reflects group size differences.
+`density` computes a KDE from a continuous `x`. Settings: `bandwidth` (numeric), `adjust` (multiplier, default 1), `kernel` (`'gaussian'` default, `'epanechnikov'`, `'triangular'`, `'rectangular'`, `'uniform'`, `'biweight'`, `'quartic'`, `'cosine'`). Use `REMAPPING intensity AS y` to show unnormalized density that reflects group size differences. Use `SETTING position => 'stack'` for stacked densities.
 
-`violin` displays mirrored KDE curves for groups. Requires both `x` (categorical) and `y` (continuous). Accepts the same bandwidth/adjust/kernel settings as density. Use `REMAPPING intensity AS offset` to reflect group size differences.
+`violin` displays mirrored KDE curves for groups. Requires both `x` (categorical) and `y` (continuous). Accepts the same bandwidth/adjust/kernel settings as density. Use `REMAPPING intensity AS offset` to reflect group size differences. Additional settings: `side` (`'both'` default, `'left'`/`'bottom'`, `'right'`/`'top'` — for half-violin/ridgeline plots), `width` (any value > 0; values > 1 enable ridgeline-style overlapping).
 
 **Examples:**
 
@@ -193,9 +192,9 @@ SCALE [TYPE] aesthetic [FROM range] [TO output] [VIA transform] [SETTING prop =>
 
 **FROM** — input domain:
 ```sql
-SCALE x FROM [0, 100]           -- explicit min and max
-SCALE x FROM [0, null]          -- explicit min, auto max
-SCALE DISCRETE x FROM ['A', 'B', 'C']  -- explicit category order
+SCALE x FROM (0, 100)            -- explicit min and max
+SCALE x FROM (0, null)           -- explicit min, auto max
+SCALE DISCRETE x FROM ('A', 'B', 'C')  -- explicit category order
 ```
 
 **TO** — output range or palette:
@@ -204,8 +203,8 @@ SCALE color TO sequential         -- default continuous palette (derived from na
 SCALE color TO viridis           -- other continuous: viridis, plasma, inferno, magma, cividis, navia, batlow
 SCALE color TO vik               -- diverging: vik, rdbu, rdylbu, spectral, brbg, berlin, roma
 SCALE DISCRETE color TO ggsql10  -- discrete (default: ggsql10): tableau10, category10, set1, set2, set3, dark2, paired, kelly
-SCALE color TO ['red', 'blue']   -- explicit color array
-SCALE size TO [1, 10]            -- numeric output range
+SCALE color TO ('red', 'blue')   -- explicit color array
+SCALE size TO (1, 10)            -- numeric output range
 ```
 
 **VIA** — transformation:
@@ -298,7 +297,7 @@ Creates small multiples (subplots by category).
 FACET category                               -- Single variable, wrapped layout
 FACET row_var BY col_var                     -- Grid layout (rows x columns)
 FACET category SETTING free => 'y'           -- Independent y-axes
-FACET category SETTING free => ['x', 'y']   -- Independent both axes
+FACET category SETTING free => ('x', 'y')   -- Independent both axes
 FACET category SETTING ncol => 4             -- Control number of columns
 FACET category SETTING nrow => 2             -- Control number of rows (mutually exclusive with ncol)
 ```
@@ -311,20 +310,11 @@ SCALE panel RENAMING 'N' => 'North', 'S' => 'South'
 
 ### LABEL Clause
 
-Use LABEL for axis labels only. Do NOT use `LABEL title => ...` — the tool's `title` parameter handles chart titles.
+Use LABEL for axis labels only. Do NOT use `LABEL title => ...` — the tool's `title` parameter handles chart titles. Set a label to `null` to suppress it.
 
 ```sql
 LABEL x => 'X Axis Label', y => 'Y Axis Label'
-```
-
-### THEME Clause
-
-Available themes: `minimal`, `classic`, `gray`/`grey`, `bw`, `dark`, `light`, `void`
-
-```sql
-THEME minimal
-THEME dark
-THEME classic SETTING background => '#f5f5f5'
+LABEL x => null                                   -- suppress x-axis label
 ```
 
 ## Complete Examples
@@ -336,7 +326,6 @@ VISUALISE date AS x, revenue AS y, region AS color
 DRAW line
 SCALE x VIA date
 LABEL x => 'Date', y => 'Revenue ($)'
-THEME minimal
 ```
 
 **Bar chart (auto-count):**
@@ -374,11 +363,11 @@ VISUALISE FROM measurements
 DRAW density MAPPING value AS x, category AS color SETTING opacity => 0.7
 ```
 
-**Heatmap with rect:**
+**Heatmap with tile:**
 ```sql
 SELECT day, month, temperature FROM weather
 VISUALISE day AS x, month AS y, temperature AS color
-DRAW rect
+DRAW tile
 ```
 
 **Threshold reference lines (using PLACE):**
@@ -435,7 +424,7 @@ LABEL y => 'Temperature'
 SELECT region, COUNT(*) AS n FROM sales GROUP BY region
 VISUALISE region AS x, n AS y
 DRAW bar
-DRAW text MAPPING n AS label SETTING offset => [0, -11], fill => 'white'
+DRAW text MAPPING n AS label SETTING offset => (0, -11), fill => 'white'
 ```
 
 **Donut chart:**
@@ -526,8 +515,9 @@ PROJECT TO polar SETTING inner => 0.5
    As a general rule, always use lowercase column names and aliases in both SELECT and VISUALISE clauses.
 6. **Charts vs Tables**: For visualizations use VISUALISE with DRAW. For tabular data use plain SQL without VISUALISE.
 7. **Statistical layers**: When using `histogram`, `bar` (without y), `density`, `smooth`, `violin`, or `boxplot`, the layer computes statistics. Use REMAPPING to access `density`, `intensity`, `proportion`, etc.
-8. **Bar position adjustments**: Bars stack automatically when `fill` is mapped. Use `SETTING position => 'dodge'` for side-by-side bars, or `position => 'fill'` for proportional stacking:
+8. **Bar position adjustments**: Bars stack automatically when `fill` is mapped. Use `SETTING position => 'dodge'` for side-by-side bars, or `position => 'stack', total => 1` for proportional (100%) stacking:
    ```sql
-   DRAW bar MAPPING category AS x, subcategory AS fill                       -- stacked (default)
-   DRAW bar MAPPING category AS x, subcategory AS fill SETTING position => 'dodge'  -- side-by-side
+   DRAW bar MAPPING category AS x, subcategory AS fill                                          -- stacked (default)
+   DRAW bar MAPPING category AS x, subcategory AS fill SETTING position => 'dodge'              -- side-by-side
+   DRAW bar MAPPING category AS x, subcategory AS fill SETTING position => 'stack', total => 1  -- proportional
    ```

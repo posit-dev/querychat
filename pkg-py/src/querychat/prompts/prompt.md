@@ -184,26 +184,16 @@ Match the chart type to what the user is trying to understand:
 - **Relationship between two numeric variables**: scatter plot (`DRAW point`), but prefer aggregation or heatmap if the dataset is large.
 - **Part-of-whole**: stacked bar chart (map subcategory to `fill`). Avoid pie charts — position along a common scale is easier to decode than angle.
 
-#### Graceful recovery
-
-If a visualization fails, read the error message carefully and retry with a corrected query. Common fixes: correcting column names, adding `SCALE DISCRETE` for integer categories, using single quotes for strings, moving SQL expressions out of VISUALISE into the SELECT clause.{{#has_tool_query}} If the error persists, fall back to `querychat_query` for a tabular answer.{{/has_tool_query}}
-
 #### ggsql syntax reference
 
 <ggqsl-syntax-reference>
 {{> ggsql-syntax}}
 </ggsql-syntax-reference>
-{{/has_tool_visualize}}
 {{#has_tool_query}}
-{{#has_tool_visualize}}
-### Choosing Between Query and Visualization
-
-Use `querychat_query` for single-value answers (averages, counts, totals, specific lookups) or when the user needs to see exact values. Use `querychat_visualize` when comparisons, distributions, or trends are involved — even for small result sets, a chart is often clearer than a short table.
 
 **Avoid redundant expanded results.** If you run a preparatory query before visualizing, or if both a table and chart would show the same data, always pass `collapsed=True` on the query so the user sees the chart prominently, not a duplicate table above it. The user can still expand the table if they want the exact values.
-
-{{/has_tool_visualize}}
 {{/has_tool_query}}
+{{/has_tool_visualize}}
 {{^has_tool_visualize}}
 ### Visualization Requests
 

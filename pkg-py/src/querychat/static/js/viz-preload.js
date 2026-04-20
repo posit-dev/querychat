@@ -1,50 +1,52 @@
-(function () {
-  if (!window.Shiny) return;
+(() => {
+  // In Shiny apps, reveal the first `.querychat-viz-preload` element that appears
+  // and then stop watching the DOM. This is a one-time, page-level initialization:
+  // if a preload element already exists at startup, reveal it immediately; otherwise
+  // observe DOM mutations until one is added, then reveal it and disconnect.
 
-  var preloadObserver = null;
+  if (!window.Shiny || window.__querychatVizPreloaded) return;
 
-  function stopVizPreloadObserver() {
-    if (!preloadObserver) return;
-    preloadObserver.disconnect();
-    preloadObserver = null;
-  }
+  let preloadObserver;
 
-  function handleVizPreload(root) {
-    if (!root || !root.isConnected) return;
+  const stopVizPreloadObserver = () => {
+    preloadObserver?.disconnect();
+    preloadObserver = undefined;
+  };
 
-    if (window.__querychatVizPreloaded) {
-      root.remove();
-      stopVizPreloadObserver();
-      return;
-    }
+  const findVizPreload = (node) => {
+    if (!(node instanceof Element)) return null;
+    return node.matches(".querychat-viz-preload")
+      ? node
+      : node.querySelector(".querychat-viz-preload");
+  };
+
+  const revealVizPreload = (root) => {
+    if (!root?.isConnected || window.__querychatVizPreloaded) return false;
 
     window.__querychatVizPreloaded = true;
-    root.removeAttribute("hidden");
+    root.hidden = false;
     stopVizPreloadObserver();
-  }
+    return true;
+  };
 
-  function processVizPreloads(node) {
-    if (!(node instanceof Element)) return;
+  const processVizPreloads = (node) => {
+    const preloadRoot = findVizPreload(node);
+    if (!preloadRoot) return false;
+    return revealVizPreload(preloadRoot);
+  };
 
-    if (node.matches(".querychat-viz-preload")) {
-      handleVizPreload(node);
+  if (processVizPreloads(document.documentElement)) return;
+
+  preloadObserver = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      for (const node of mutation.addedNodes) {
+        if (processVizPreloads(node)) return;
+      }
     }
+  });
 
-    node.querySelectorAll(".querychat-viz-preload").forEach(handleVizPreload);
-  }
-
-  processVizPreloads(document.documentElement);
-
-  if (!window.__querychatVizPreloaded) {
-    preloadObserver = new MutationObserver(function (mutations) {
-      mutations.forEach(function (mutation) {
-        mutation.addedNodes.forEach(processVizPreloads);
-      });
-    });
-
-    preloadObserver.observe(document.documentElement, {
-      childList: true,
-      subtree: true,
-    });
-  }
+  preloadObserver.observe(document.documentElement, {
+    childList: true,
+    subtree: true,
+  });
 })();

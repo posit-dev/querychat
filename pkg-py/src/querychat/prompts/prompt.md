@@ -186,7 +186,7 @@ Match the chart type to what the user is trying to understand:
 
 #### ggsql syntax reference
 
-<ggqsl-syntax-reference>
+<ggsql-syntax-reference>
 {{> ggsql-syntax}}
 </ggsql-syntax-reference>
 {{#has_tool_query}}

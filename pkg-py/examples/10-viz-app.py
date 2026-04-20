@@ -1,25 +1,17 @@
-from querychat import QueryChat
+from querychat.express import QueryChat
 from querychat.data import titanic
 
-from shiny import App, ui
+from shiny.express import ui, app_opts
 
 # Omits "update" tool — this demo focuses on query + visualization only
 qc = QueryChat(
     titanic(),
     "titanic",
-    tools=("query", "visualize"),
+    tools=("query", "visualize")
 )
 
+qc.ui()
 
-# Minimal chat app with visualization support
-def app_ui(request):
-    return ui.page_fillable(
-        qc.ui(),
-    )
+ui.page_opts(fillable=True, title="QueryChat Visualization Demo")
 
-
-def server(input, output, session):
-    qc.server(enable_bookmarking=True)
-
-
-app = App(app_ui, server, bookmark_store="url")
+app_opts(bookmark_store="url")

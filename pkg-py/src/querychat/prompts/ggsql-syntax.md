@@ -43,6 +43,7 @@ DRAW bar MAPPING region AS x, total AS y
 | Implicit | `x` | Column name equals aesthetic name |
 | Wildcard | `*` | Map all matching columns automatically |
 | Literal | `'string' AS color` | Use a literal value (for legend labels in multi-layer plots) |
+| Null | `null AS color` | Suppress an inherited global mapping for this layer |
 
 ### DRAW Clause (Layers)
 
@@ -64,7 +65,7 @@ DRAW geom_type
 |----------|-------|
 | Basic | `point`, `line`, `path`, `bar`, `area`, `tile`, `polygon`, `ribbon` |
 | Statistical | `histogram`, `density`, `smooth`, `boxplot`, `violin` |
-| Annotation | `text`, `label`, `segment`, `arrow`, `rule`, `errorbar` |
+| Annotation | `text`, `label`, `segment`, `arrow`, `rule`, `rect`, `errorbar` |
 
 - `path` is like `line` but preserves data order instead of sorting by x.
 - `tile` draws rectangles for heatmaps or range indicators. Map `x`/`y` for center (defaults to width/height of 1), or use `xmin`/`xmax`/`ymin`/`ymax` for explicit bounds.
@@ -72,6 +73,8 @@ DRAW geom_type
 - `text` (or `label`) renders text labels. Map `label` for the text content. Settings: `format` (template string for label formatting), `offset` (pixel offset as `(x, y)`). Labels containing `\n` are automatically split into multiple lines.
 - `arrow` draws arrows between two points. Requires `x`, `y`, `xend`, `yend` aesthetics.
 - `rule` draws full-span reference lines. Map a value to `y` for a horizontal line or `x` for a vertical line. Optionally map `slope` to create diagonal reference lines: `y = a + slope * x` (when `y` is mapped) or `x = a + slope * y` (when `x` is mapped).
+- `rect` draws rectangles. Pick 2 per axis from center (`x`/`y`), min (`xmin`/`ymin`), max (`xmax`/`ymax`), `width`, `height`. Or just map center (defaults to width/height of 1).
+- `errorbar` displays interval marks. Requires `x`, `ymin`, `ymax`. Settings: `width` (hinge width in points, default 10; `null` to hide hinges).
 - `line` and `path` support continuously varying `linewidth`, `stroke`, and `opacity` aesthetics within groups.
 
 **Aesthetics (MAPPING):**
@@ -230,7 +233,10 @@ SCALE x SETTING breaks => 5                -- number of tick marks
 SCALE x SETTING breaks => '2 months'       -- interval-based breaks
 SCALE x SETTING expand => 0.05             -- expand scale range by 5%
 SCALE x SETTING reverse => true            -- reverse direction
+SCALE y FROM (0, 100) SETTING oob => 'squish'  -- squish out-of-bounds values to range boundary
 ```
+
+`oob` (out-of-bounds) controls data outside the scale range: `'keep'` (default for x/y), `'censor'` (remove, default for other aesthetics), `'squish'` (clamp to boundary).
 
 **RENAMING** — custom axis/legend labels:
 ```sql
@@ -308,13 +314,22 @@ FACET region
 SCALE panel RENAMING 'N' => 'North', 'S' => 'South'
 ```
 
+Filter to specific panels via SCALE FROM:
+```sql
+FACET island
+SCALE panel FROM ('Biscoe', 'Dream')
+```
+
 ### LABEL Clause
 
-Use LABEL for axis labels only. Do NOT use `LABEL title => ...` — the tool's `title` parameter handles chart titles. Set a label to `null` to suppress it.
+Use LABEL for axis labels, subtitles, and captions. Do NOT use `LABEL title => ...` — the tool's `title` parameter handles chart titles. Set a label to `null` to suppress it.
+
+Available labels: any aesthetic name (`x`, `y`, `fill`, `color`, etc.), `subtitle`, `caption`.
 
 ```sql
 LABEL x => 'X Axis Label', y => 'Y Axis Label'
 LABEL x => null                                   -- suppress x-axis label
+LABEL subtitle => 'Q4 2024 data', caption => 'Source: internal database'
 ```
 
 ## Complete Examples
@@ -425,6 +440,21 @@ SELECT region, COUNT(*) AS n FROM sales GROUP BY region
 VISUALISE region AS x, n AS y
 DRAW bar
 DRAW text MAPPING n AS label SETTING offset => (0, -11), fill => 'white'
+```
+
+**Lollipop chart:**
+```sql
+SELECT ROUND(bill_dep) AS bill_dep, COUNT(*) AS n FROM penguins GROUP BY 1
+VISUALISE bill_dep AS x, n AS y
+DRAW segment MAPPING 0 AS yend
+DRAW point
+```
+
+**Ridgeline / joy plot:**
+```sql
+VISUALISE temp AS x, month AS y FROM weather
+DRAW violin SETTING width => 4, side => 'top'
+SCALE ORDINAL y
 ```
 
 **Donut chart:**

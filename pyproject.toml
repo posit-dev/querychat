@@ -49,7 +49,7 @@ streamlit = ["streamlit>=1.30"]
 gradio = ["gradio>=6.0"]
 dash = ["dash-ag-grid>=31.0", "dash[async]>=3.1", "dash-bootstrap-components>=2.0", "pandas"]
 # Visualization with ggsql
-viz = ["ggsql>=0.2.4", "altair>=6.0", "shinywidgets>=0.8.0", "vl-convert-python>=1.9.0"]
+viz = ["ggsql>=0.2.4", "altair>=6.0", "shinywidgets>=0.8.0", "vl-convert-python>=1.9.0", "sqlglot>=26.0"]
 
 [project.urls]
 Homepage = "https://github.com/posit-dev/querychat" # TODO update when we have docs

@@ -328,12 +328,12 @@ class TestVizPromptConditionals:
 
         assert "fall back to" not in rendered
 
-    def test_graceful_recovery_fallback_included_with_query_tool(
+    def test_collapsed_guidance_included_with_both_tools(
         self, sample_data_source
     ):
         """
-        When both query and visualize are enabled, the fallback
-        to querychat_query should appear.
+        When both query and visualize are enabled, the collapsed query
+        guidance should appear in the system prompt.
         """
         from pathlib import Path
 
@@ -351,7 +351,7 @@ class TestVizPromptConditionals:
 
         rendered = prompt.render(tools=("update", "query", "visualize"))
 
-        assert "fall back to" in rendered
+        assert "Avoid redundant expanded results" in rendered
 
     def test_viz_only_has_no_cannot_query_message(self, sample_data_source):
         """
@@ -378,9 +378,9 @@ class TestVizPromptConditionals:
         assert "cannot query or analyze" not in rendered
         assert "Visualizing Data" in rendered
 
-    def test_choosing_section_only_with_both_tools(self, sample_data_source):
+    def test_collapsed_guidance_only_with_both_tools(self, sample_data_source):
         """
-        The "Choosing Between Query and Visualization" section should only appear
+        The "Avoid redundant expanded results" guidance should only appear
         when both query and visualize are enabled.
         """
         from pathlib import Path
@@ -401,6 +401,6 @@ class TestVizPromptConditionals:
         rendered_query_only = prompt.render(tools=("query",))
         rendered_viz_only = prompt.render(tools=("visualize",))
 
-        assert "Choosing Between Query and Visualization" in rendered_both
-        assert "Choosing Between Query and Visualization" not in rendered_query_only
-        assert "Choosing Between Query and Visualization" not in rendered_viz_only
+        assert "Avoid redundant expanded results" in rendered_both
+        assert "Avoid redundant expanded results" not in rendered_query_only
+        assert "Avoid redundant expanded results" not in rendered_viz_only

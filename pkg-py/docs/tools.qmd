@@ -99,4 +99,4 @@ If you'd like to better understand how the tools work and how the LLM is prompte
 - [`prompts/tool-update-dashboard.md`](https://github.com/posit-dev/querychat/blob/main/pkg-py/src/querychat/prompts/tool-update-dashboard.md)
 - [`prompts/tool-reset-dashboard.md`](https://github.com/posit-dev/querychat/blob/main/pkg-py/src/querychat/prompts/tool-reset-dashboard.md)
 - [`prompts/tool-query.md`](https://github.com/posit-dev/querychat/blob/main/pkg-py/src/querychat/prompts/tool-query.md)
-- [`prompts/tool-visualize-query.md`](https://github.com/posit-dev/querychat/blob/main/pkg-py/src/querychat/prompts/tool-visualize-query.md)
+- [`prompts/tool-visualize.md`](https://github.com/posit-dev/querychat/blob/main/pkg-py/src/querychat/prompts/tool-visualize.md)

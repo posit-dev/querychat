@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
     from ._datasource import DataSource
     from ._querychat_base import TOOL_GROUPS
-    from ._viz_tools import VisualizeQueryData
+    from ._viz_tools import VisualizeData
     from .types import UpdateDashboardData
 
 ReactiveString = reactive.Value[str]
@@ -143,14 +143,14 @@ def mod_server(
 
     viz_widgets: list[VizWidgetEntry] = []
 
-    def on_visualize(data: VisualizeQueryData):
+    def on_visualize(data: VisualizeData):
         viz_widgets.append({"widget_id": data["widget_id"], "ggsql": data["ggsql"]})
 
     def build_chat_client() -> chatlas.Chat:
         return client(
             update_dashboard=update_dashboard,
             reset_dashboard=reset_dashboard,
-            visualize_query=on_visualize,
+            visualize=on_visualize,
             tools=tools,
         )
 

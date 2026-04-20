@@ -98,10 +98,10 @@ class QueryChat(QueryChatBase[IntoFrameT]):
     tools
         Which querychat tools to include in the chat client by default. Can be:
         - A single tool string: `"update"` or `"query"`
-        - A tuple of tools: `("update", "query", "visualize_query")`
+        - A tuple of tools: `("update", "query", "visualize")`
         - `None` or `()` to disable all tools
 
-        Default is `("update", "query")`. The visualization tool (`"visualize_query"`)
+        Default is `("update", "query")`. The visualization tool (`"visualize"`)
         can be opted into by including it in the tuple.
 
         Set to `"update"` to prevent the LLM from accessing data values, only

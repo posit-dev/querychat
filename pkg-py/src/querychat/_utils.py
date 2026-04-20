@@ -219,7 +219,7 @@ def get_tool_details_setting() -> Optional[Literal["expanded", "collapsed", "def
 
 def querychat_tool_starts_open(
     action: Literal[
-        "update", "query", "reset", "visualize_query"
+        "update", "query", "reset", "visualize"
     ],
 ) -> bool:
     """
@@ -228,7 +228,7 @@ def querychat_tool_starts_open(
     Parameters
     ----------
     action : str
-        The action type ('update', 'query', 'reset', or 'visualize_query')
+        The action type ('update', 'query', 'reset', or 'visualize')
 
     Returns
     -------

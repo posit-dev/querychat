@@ -8,7 +8,7 @@ from shiny import App, ui
 qc = QueryChat(
     titanic(),
     "titanic",
-    tools=("query", "visualize_query"),
+    tools=("query", "visualize"),
 )
 
 

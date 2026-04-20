@@ -29,7 +29,7 @@ from .tools import (
     tool_query,
     tool_reset_dashboard,
     tool_update_dashboard,
-    tool_visualize_query,
+    tool_visualize,
 )
 
 if TYPE_CHECKING:
@@ -37,9 +37,9 @@ if TYPE_CHECKING:
 
     from narwhals.stable.v1.typing import IntoFrame
 
-    from ._viz_tools import VisualizeQueryData
+    from ._viz_tools import VisualizeData
 
-TOOL_GROUPS = Literal["update", "query", "visualize_query"]
+TOOL_GROUPS = Literal["update", "query", "visualize"]
 DEFAULT_TOOLS: tuple[TOOL_GROUPS, ...] = ("update", "query")
 
 class QueryChatBase(Generic[IntoFrameT]):
@@ -132,7 +132,7 @@ class QueryChatBase(Generic[IntoFrameT]):
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None | MISSING_TYPE = MISSING,
         update_dashboard: Callable[[UpdateDashboardData], None] | None = None,
         reset_dashboard: Callable[[], None] | None = None,
-        visualize_query: Callable[[VisualizeQueryData], None] | None = None,
+        visualize: Callable[[VisualizeData], None] | None = None,
     ) -> chatlas.Chat:
         """Create a fresh, fully-configured Chat."""
         spec = self._client_spec if isinstance(client_spec, MISSING_TYPE) else client_spec
@@ -157,9 +157,9 @@ class QueryChatBase(Generic[IntoFrameT]):
         if "query" in resolved_tools:
             chat.register_tool(tool_query(data_source))
 
-        if "visualize_query" in resolved_tools:
-            query_viz_fn = visualize_query or (lambda _: None)
-            chat.register_tool(tool_visualize_query(data_source, query_viz_fn))
+        if "visualize" in resolved_tools:
+            viz_fn = visualize or (lambda _: None)
+            chat.register_tool(tool_visualize(data_source, viz_fn))
 
         return chat
 
@@ -169,7 +169,7 @@ class QueryChatBase(Generic[IntoFrameT]):
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None | MISSING_TYPE = MISSING,
         update_dashboard: Callable[[UpdateDashboardData], None] | None = None,
         reset_dashboard: Callable[[], None] | None = None,
-        visualize_query: Callable[[VisualizeQueryData], None] | None = None,
+        visualize: Callable[[VisualizeData], None] | None = None,
     ) -> chatlas.Chat:
         """
         Create a chat client with registered tools.
@@ -177,14 +177,14 @@ class QueryChatBase(Generic[IntoFrameT]):
         Parameters
         ----------
         tools
-            Which tools to include: `"update"`, `"query"`, `"visualize_query"`,
+            Which tools to include: `"update"`, `"query"`, `"visualize"`,
             or a combination.
         update_dashboard
             Callback when update_dashboard tool succeeds.
         reset_dashboard
             Callback when reset_dashboard tool is invoked.
-        visualize_query
-            Callback when visualize_query tool succeeds.
+        visualize
+            Callback when visualize tool succeeds.
 
         Returns
         -------
@@ -197,7 +197,7 @@ class QueryChatBase(Generic[IntoFrameT]):
             tools=tools,
             update_dashboard=update_dashboard,
             reset_dashboard=reset_dashboard,
-            visualize_query=visualize_query,
+            visualize=visualize,
         )
 
     def generate_greeting(self, *, echo: Literal["none", "output"] = "none") -> str:

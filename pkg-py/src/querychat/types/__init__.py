@@ -9,7 +9,7 @@ from .._datasource import (
 from .._querychat_core import AppStateDict
 from .._shiny_module import ServerValues
 from .._utils import UnsafeQueryError
-from .._viz_tools import VisualizeQueryData, VisualizeQueryResult
+from .._viz_tools import VisualizeData, VisualizeResult
 from ..tools import UpdateDashboardData
 
 __all__ = (
@@ -23,6 +23,6 @@ __all__ = (
     "ServerValues",
     "UnsafeQueryError",
     "UpdateDashboardData",
-    "VisualizeQueryData",
-    "VisualizeQueryResult",
+    "VisualizeData",
+    "VisualizeResult",
 )

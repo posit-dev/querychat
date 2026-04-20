@@ -2,7 +2,7 @@
 Playwright tests for inline visualization and fullscreen behavior.
 
 These tests verify that:
-1. The visualize_query tool renders Altair charts inline in tool result cards
+1. The visualize tool renders Altair charts inline in tool result cards
 2. The fullscreen toggle button appears on visualization tool results
 3. Fullscreen mode works (expand and collapse via button and Escape key)
 """

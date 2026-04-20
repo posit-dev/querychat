@@ -133,7 +133,7 @@ class DummyProvider(chatlas.Provider):
 
 
 def test_app_passes_callable_client_to_mod_server(sample_df):
-    qc = QueryChat(sample_df, "tips", tools=("query", "visualize_query"))
+    qc = QueryChat(sample_df, "tips", tools=("query", "visualize"))
     app = qc.app()
     captured = {}
 
@@ -182,7 +182,7 @@ def test_express_passes_callable_client_to_mod_server(sample_df, monkeypatch):
     QueryChatExpress(
         sample_df,
         "tips",
-        tools=("query", "visualize_query"),
+        tools=("query", "visualize"),
         enable_bookmarking=False,
     )
 
@@ -191,7 +191,7 @@ def test_express_passes_callable_client_to_mod_server(sample_df, monkeypatch):
 
 
 def test_server_passes_callable_client_to_mod_server(sample_df, monkeypatch):
-    qc = QueryChat(sample_df, "tips", tools=("query", "visualize_query"))
+    qc = QueryChat(sample_df, "tips", tools=("query", "visualize"))
     captured = {}
 
     class CurrentSession:
@@ -210,7 +210,7 @@ def test_server_passes_callable_client_to_mod_server(sample_df, monkeypatch):
 
 
 def test_mod_server_rejects_raw_chat_instance(sample_df):
-    qc = QueryChat(sample_df, "tips", tools=("query", "visualize_query"))
+    qc = QueryChat(sample_df, "tips", tools=("query", "visualize"))
     raw_chat = chatlas.Chat(provider=DummyProvider(name="dummy", model="dummy"))
 
     with (
@@ -249,7 +249,7 @@ def test_mod_server_stub_session_deferred_client_factory_does_not_raise():
 
 
 def test_callable_mod_server_passes_visualize_callback_and_tools(sample_df):
-    qc = QueryChat(sample_df, "tips", tools=("query", "visualize_query"))
+    qc = QueryChat(sample_df, "tips", tools=("query", "visualize"))
     captured = {}
 
     def client_factory(**kwargs):
@@ -271,14 +271,14 @@ def test_callable_mod_server_passes_visualize_callback_and_tools(sample_df):
             tools=qc.tools,
         )
 
-    assert captured["tools"] == ("query", "visualize_query")
-    assert callable(captured["visualize_query"])
+    assert captured["tools"] == ("query", "visualize")
+    assert callable(captured["visualize"])
     assert callable(captured["update_dashboard"])
     assert callable(captured["reset_dashboard"])
 
 
 def test_mod_server_preloads_viz_for_each_real_session_instance(sample_df):
-    qc = QueryChat(sample_df, "tips", tools=("query", "visualize_query"))
+    qc = QueryChat(sample_df, "tips", tools=("query", "visualize"))
     session = DummySession()
     preload_calls = []
 
@@ -314,7 +314,7 @@ def test_mod_server_preloads_viz_for_each_real_session_instance(sample_df):
 
 
 def test_mod_server_stub_session_does_not_preload_viz(sample_df):
-    qc = QueryChat(sample_df, "tips", tools=("query", "visualize_query"))
+    qc = QueryChat(sample_df, "tips", tools=("query", "visualize"))
     preload_calls = []
 
     with (
@@ -339,7 +339,7 @@ def test_mod_server_stub_session_does_not_preload_viz(sample_df):
 
 
 def test_restored_viz_widgets_survive_second_bookmark_cycle(sample_df):
-    qc = QueryChat(sample_df, "tips", tools=("query", "visualize_query"))
+    qc = QueryChat(sample_df, "tips", tools=("query", "visualize"))
     callbacks = {}
     session = DummySession()
 
@@ -371,7 +371,7 @@ def test_restored_viz_widgets_survive_second_bookmark_cycle(sample_df):
                 "ggsql": "SELECT 1 VISUALISE 1 AS x DRAW point",
             }
         ]
-        callbacks["visualize_query"](saved[0])
+        callbacks["visualize"](saved[0])
 
         first_bookmark = SimpleNamespace(values={})
         with reactive.isolate():

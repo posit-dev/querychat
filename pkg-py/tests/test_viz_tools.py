@@ -6,8 +6,8 @@ import narwhals.stable.v1 as nw
 import polars as pl
 import pytest
 from querychat._datasource import DataFrameSource
-from querychat.tools import tool_visualize_query
-from querychat.types import VisualizeQueryData, VisualizeQueryResult
+from querychat.tools import tool_visualize
+from querychat.types import VisualizeData, VisualizeResult
 
 
 class TestVizDependencyCheck:
@@ -25,7 +25,7 @@ class TestVizDependencyCheck:
         from querychat._querychat_base import normalize_tools
 
         with pytest.raises(ImportError, match="pip install querychat\\[viz\\]"):
-            normalize_tools(("visualize_query",), default=None)
+            normalize_tools(("visualize",), default=None)
 
     def test_no_error_without_viz_tools(self):
         """Non-viz tool configs should not check for ggsql."""
@@ -44,8 +44,8 @@ class TestVizDependencyCheck:
         from querychat._querychat_base import normalize_tools
 
         # Should not raise even though find_spec returns None for everything
-        result = normalize_tools(("visualize_query",), default=None, check_deps=False)
-        assert result == ("visualize_query",)
+        result = normalize_tools(("visualize",), default=None, check_deps=False)
+        assert result == ("visualize",)
 
 
 @pytest.fixture
@@ -65,21 +65,21 @@ def data_source(sample_df):
     return DataFrameSource(nw_df, "test_data")
 
 
-class TestToolVisualizeQuery:
+class TestToolVisualize:
     def test_creates_tool(self, data_source):
         callback_data = {}
 
-        def update_fn(data: VisualizeQueryData):
+        def update_fn(data: VisualizeData):
             callback_data.update(data)
 
-        tool = tool_visualize_query(data_source, update_fn)
-        assert tool.name == "querychat_visualize_query"
+        tool = tool_visualize(data_source, update_fn)
+        assert tool.name == "querychat_visualize"
 
     @pytest.mark.ggsql
     def test_tool_executes_sql_and_renders(self, data_source, monkeypatch):
         callback_data = {}
 
-        def update_fn(data: VisualizeQueryData):
+        def update_fn(data: VisualizeData):
             callback_data.update(data)
 
         from unittest.mock import MagicMock
@@ -93,7 +93,7 @@ class TestToolVisualizeQuery:
         # Must be AFTER shinywidgets patches above (importing shinywidgets resets this)
         monkeypatch.setattr(Widget, "_widget_construction_callback", lambda _w: None)
 
-        tool = tool_visualize_query(data_source, update_fn)
+        tool = tool_visualize(data_source, update_fn)
         impl = tool.func
 
         result = impl(
@@ -105,7 +105,7 @@ class TestToolVisualizeQuery:
         assert "title" in callback_data
         assert callback_data["title"] == "Filtered Scatter"
 
-        assert isinstance(result, VisualizeQueryResult)
+        assert isinstance(result, VisualizeResult)
         display = result.extra["display"]
         assert display.full_screen is True
         assert display.open is True
@@ -114,10 +114,10 @@ class TestToolVisualizeQuery:
     def test_tool_handles_query_without_visualise(self, data_source):
         callback_data = {}
 
-        def update_fn(data: VisualizeQueryData):
+        def update_fn(data: VisualizeData):
             callback_data.update(data)
 
-        tool = tool_visualize_query(data_source, update_fn)
+        tool = tool_visualize(data_source, update_fn)
         impl = tool.func
 
         result = impl(ggsql="SELECT x, y FROM test_data", title="No Viz")
@@ -126,7 +126,7 @@ class TestToolVisualizeQuery:
         assert "VISUALISE" in str(result.error)
 
 
-class TestVisualizeQueryResultContent:
+class TestVisualizeResultContent:
     @pytest.mark.ggsql
     def test_result_value_contains_image(self, data_source, monkeypatch):
         from unittest.mock import MagicMock
@@ -141,16 +141,16 @@ class TestVisualizeQueryResultContent:
 
         callback_data = {}
 
-        def update_fn(data: VisualizeQueryData):
+        def update_fn(data: VisualizeData):
             callback_data.update(data)
 
-        tool = tool_visualize_query(data_source, update_fn)
+        tool = tool_visualize(data_source, update_fn)
         result = tool.func(
             ggsql="SELECT x, y FROM test_data VISUALISE x, y DRAW point",
             title="Test Chart",
         )
 
-        assert isinstance(result, VisualizeQueryResult)
+        assert isinstance(result, VisualizeResult)
         # value should be a list with [str, image content]
         assert isinstance(result.value, list)
         assert len(result.value) == 2
@@ -173,7 +173,7 @@ class TestVisualizeQueryResultContent:
         )
         monkeypatch.setattr(Widget, "_widget_construction_callback", lambda _w: None)
 
-        tool = tool_visualize_query(data_source, lambda _: None)
+        tool = tool_visualize(data_source, lambda _: None)
         result = tool.func(
             ggsql="SELECT x, y FROM test_data VISUALISE x, y DRAW point",
             title="Test Chart",
@@ -200,14 +200,14 @@ class TestVisualizeQueryResultContent:
 
         monkeypatch.setattr("querychat._viz_tools.render_chart_to_png", explode)
 
-        tool = tool_visualize_query(data_source, lambda _: None)
+        tool = tool_visualize(data_source, lambda _: None)
         result = tool.func(
             ggsql="SELECT x, y FROM test_data VISUALISE x, y DRAW point",
             title="Test Chart",
         )
 
         # Should still succeed, just text-only
-        assert isinstance(result, VisualizeQueryResult)
+        assert isinstance(result, VisualizeResult)
         assert isinstance(result.value, str)
         assert result.error is None
 

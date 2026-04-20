@@ -307,7 +307,7 @@ class TestVizPromptConditionals:
         self, sample_data_source
     ):
         """
-        When only visualize_query is enabled (no query tool), the fallback
+        When only visualize is enabled (no query tool), the fallback
         to querychat_query should not appear in the rendered prompt.
         """
         from pathlib import Path
@@ -324,7 +324,7 @@ class TestVizPromptConditionals:
             data_source=sample_data_source,
         )
 
-        rendered = prompt.render(tools=("update", "visualize_query"))
+        rendered = prompt.render(tools=("update", "visualize"))
 
         assert "fall back to" not in rendered
 
@@ -332,7 +332,7 @@ class TestVizPromptConditionals:
         self, sample_data_source
     ):
         """
-        When both query and visualize_query are enabled, the fallback
+        When both query and visualize are enabled, the fallback
         to querychat_query should appear.
         """
         from pathlib import Path
@@ -349,13 +349,13 @@ class TestVizPromptConditionals:
             data_source=sample_data_source,
         )
 
-        rendered = prompt.render(tools=("update", "query", "visualize_query"))
+        rendered = prompt.render(tools=("update", "query", "visualize"))
 
         assert "fall back to" in rendered
 
     def test_viz_only_has_no_cannot_query_message(self, sample_data_source):
         """
-        When only visualize_query is enabled (no query tool), the rendered prompt
+        When only visualize is enabled (no query tool), the rendered prompt
         should NOT contain "cannot query or analyze" and SHOULD contain
         "Visualizing Data".
         """
@@ -373,7 +373,7 @@ class TestVizPromptConditionals:
             data_source=sample_data_source,
         )
 
-        rendered = prompt.render(tools=("visualize_query",))
+        rendered = prompt.render(tools=("visualize",))
 
         assert "cannot query or analyze" not in rendered
         assert "Visualizing Data" in rendered
@@ -381,7 +381,7 @@ class TestVizPromptConditionals:
     def test_choosing_section_only_with_both_tools(self, sample_data_source):
         """
         The "Choosing Between Query and Visualization" section should only appear
-        when both query and visualize_query are enabled.
+        when both query and visualize are enabled.
         """
         from pathlib import Path
 
@@ -397,9 +397,9 @@ class TestVizPromptConditionals:
             data_source=sample_data_source,
         )
 
-        rendered_both = prompt.render(tools=("query", "visualize_query"))
+        rendered_both = prompt.render(tools=("query", "visualize"))
         rendered_query_only = prompt.render(tools=("query",))
-        rendered_viz_only = prompt.render(tools=("visualize_query",))
+        rendered_viz_only = prompt.render(tools=("visualize",))
 
         assert "Choosing Between Query and Visualization" in rendered_both
         assert "Choosing Between Query and Visualization" not in rendered_query_only

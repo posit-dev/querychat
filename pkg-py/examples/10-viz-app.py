@@ -7,20 +7,19 @@ from shiny import App, ui
 qc = QueryChat(
     titanic(),
     "titanic",
-    tools=("query", "visualize_query"),
+    tools=("query", "visualize"),
 )
 
-#def app_ui(request):
-#    return ui.page_fillable(
-#        qc.ui(),
-#    )
-#
-#
-#def server(input, output, session):
-#    qc.server(enable_bookmarking=True)
-#
-#
-#app = App(app_ui, server, bookmark_store="url")
+
+# Minimal chat app with visualization support
+def app_ui(request):
+    return ui.page_fillable(
+        qc.ui(),
+    )
 
 
-app = qc.app()
+def server(input, output, session):
+    qc.server(enable_bookmarking=True)
+
+
+app = App(app_ui, server, bookmark_store="url")

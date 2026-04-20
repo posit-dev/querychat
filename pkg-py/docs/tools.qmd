@@ -54,7 +54,7 @@ app = qc.app()
 
 ## Data visualization
 
-When a user asks for a chart or visualization, the LLM generates a [ggsql](https://ggsql.org/) query — standard SQL extended with a `VISUALISE` clause — and requests a call to the `visualize_query` tool.
+When a user asks for a chart or visualization, the LLM generates a [ggsql](https://ggsql.org/) query — standard SQL extended with a `VISUALISE` clause — and requests a call to the `visualize` tool.
 This tool:
 
 1. Executes the SQL portion of the query
@@ -72,13 +72,13 @@ To use the visualization tool, first install the `viz` extras:
 pip install "querychat[viz]"
 ```
 
-Then include `"visualize_query"` in the `tools` parameter (it is not enabled by default):
+Then include `"visualize"` in the `tools` parameter (it is not enabled by default):
 
 ```{.python filename="viz-app.py"}
 from querychat import QueryChat
 from querychat.data import titanic
 
-qc = QueryChat(titanic(), "titanic", tools=("query", "update", "visualize_query"))
+qc = QueryChat(titanic(), "titanic", tools=("query", "update", "visualize"))
 app = qc.app()
 ```
 

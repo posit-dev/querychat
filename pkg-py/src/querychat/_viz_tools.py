@@ -29,12 +29,12 @@ if TYPE_CHECKING:
     from ._datasource import DataSource
 
 
-class VisualizeQueryData(TypedDict):
+class VisualizeData(TypedDict):
     """
-    Data passed to visualize_query callback.
+    Data passed to visualize callback.
 
     This TypedDict defines the structure of data passed to the
-    `tool_visualize_query` callback function when the LLM creates an
+    `tool_visualize` callback function when the LLM creates an
     exploratory visualization from a ggsql query.
 
     Attributes
@@ -53,9 +53,9 @@ class VisualizeQueryData(TypedDict):
     widget_id: str
 
 
-def tool_visualize_query(
+def tool_visualize(
     data_source: DataSource,
-    update_fn: Callable[[VisualizeQueryData], None],
+    update_fn: Callable[[VisualizeData], None],
 ) -> Tool:
     """
     Create a tool that executes a ggsql query and renders the visualization.
@@ -65,7 +65,7 @@ def tool_visualize_query(
     data_source
         The data source to query against
     update_fn
-        Callback function to call with VisualizeQueryData when visualization succeeds
+        Callback function to call with VisualizeData when visualization succeeds
 
     Returns
     -------
@@ -73,20 +73,20 @@ def tool_visualize_query(
         A tool that can be registered with chatlas
 
     """
-    impl = visualize_query_impl(data_source, update_fn)
+    impl = visualize_impl(data_source, update_fn)
     impl.__doc__ = read_prompt_template(
-        "tool-visualize-query.md",
+        "tool-visualize.md",
         db_type=data_source.get_db_type(),
     )
 
     return Tool.from_func(
         impl,
-        name="querychat_visualize_query",
+        name="querychat_visualize",
         annotations={"title": "Query Visualization"},
     )
 
 
-class VisualizeQueryResult(ContentToolResult):
+class VisualizeResult(ContentToolResult):
     """Tool result that registers an ipywidget and embeds it inline via shinywidgets."""
 
     def __init__(
@@ -125,7 +125,7 @@ class VisualizeQueryResult(ContentToolResult):
                 html=widget_html,
                 title=title or "Query Visualization",
                 show_request=False,
-                open=querychat_tool_starts_open("visualize_query"),
+                open=querychat_tool_starts_open("visualize"),
                 full_screen=True,
                 icon=bs_icon("graph-up"),
                 footer=footer,
@@ -140,14 +140,14 @@ class VisualizeQueryResult(ContentToolResult):
 # ---------------------------------------------------------------------------
 
 
-def visualize_query_impl(
+def visualize_impl(
     data_source: DataSource,
-    update_fn: Callable[[VisualizeQueryData], None],
+    update_fn: Callable[[VisualizeData], None],
 ) -> Callable[[str, str], ContentToolResult]:
-    """Create the visualize_query implementation function."""
+    """Create the visualize implementation function."""
     from ggsql import VegaLiteWriter, validate
 
-    def visualize_query(
+    def visualize(
         ggsql: str,
         title: str,
     ) -> ContentToolResult:
@@ -193,7 +193,7 @@ def visualize_query_impl(
                 {"ggsql": ggsql, "title": title, "widget_id": altair_widget.widget_id}
             )
 
-            return VisualizeQueryResult(
+            return VisualizeResult(
                 widget_id=altair_widget.widget_id,
                 widget=altair_widget.widget,
                 ggsql_str=ggsql,
@@ -206,7 +206,7 @@ def visualize_query_impl(
             markdown += f"\n\n> Error: {error_msg}"
             return ContentToolResult(value=markdown, error=Exception(error_msg))
 
-    return visualize_query
+    return visualize
 
 
 PNG_WIDTH = 500

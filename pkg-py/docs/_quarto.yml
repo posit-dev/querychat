@@ -115,7 +115,7 @@ quartodoc:
           signature_name: short
         - name: tools.tool_reset_dashboard
           signature_name: short
-        - name: tools.tool_visualize_query
+        - name: tools.tool_visualize
           signature_name: short
 
 filters:

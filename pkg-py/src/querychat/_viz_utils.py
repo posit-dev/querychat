@@ -10,8 +10,8 @@ from .__version import __version__
 
 
 def has_viz_tool(tools: tuple[str, ...] | None) -> bool:
-    """Check if visualize_query is among the configured tools."""
-    return tools is not None and "visualize_query" in tools
+    """Check if visualize is among the configured tools."""
+    return tools is not None and "visualize" in tools
 
 
 def has_viz_deps() -> bool:

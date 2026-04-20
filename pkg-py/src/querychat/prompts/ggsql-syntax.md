@@ -515,7 +515,15 @@ PROJECT TO polar SETTING inner => 0.5
    As a general rule, always use lowercase column names and aliases in both SELECT and VISUALISE clauses.
 6. **Charts vs Tables**: For visualizations use VISUALISE with DRAW. For tabular data use plain SQL without VISUALISE.
 7. **Statistical layers**: When using `histogram`, `bar` (without y), `density`, `smooth`, `violin`, or `boxplot`, the layer computes statistics. Use REMAPPING to access `density`, `intensity`, `proportion`, etc.
-8. **Bar position adjustments**: Bars stack automatically when `fill` is mapped. Use `SETTING position => 'dodge'` for side-by-side bars, or `position => 'stack', total => 1` for proportional (100%) stacking:
+8. **No trailing commas**: SETTING, LABEL, MAPPING, and RENAMING clauses must not end with a trailing comma. A comma after the last item causes a parse error.
+   ```sql
+   -- WRONG: trailing comma after the last label
+   LABEL x => 'Gender', y => 'Count',
+
+   -- CORRECT
+   LABEL x => 'Gender', y => 'Count'
+   ```
+9. **Bar position adjustments**: Bars stack automatically when `fill` is mapped. Use `SETTING position => 'dodge'` for side-by-side bars, or `position => 'stack', total => 1` for proportional (100%) stacking:
    ```sql
    DRAW bar MAPPING category AS x, subcategory AS fill                                          -- stacked (default)
    DRAW bar MAPPING category AS x, subcategory AS fill SETTING position => 'dodge'              -- side-by-side

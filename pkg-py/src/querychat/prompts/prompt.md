@@ -190,9 +190,9 @@ If a visualization fails, read the error message carefully and retry with a corr
 
 #### ggsql syntax reference
 
-The syntax reference below covers all available clauses, geom types, scales, and examples.
-
+<ggqsl-syntax-reference>
 {{> ggsql-syntax}}
+</ggsql-syntax-reference>
 {{/has_tool_visualize}}
 {{#has_tool_query}}
 {{#has_tool_visualize}}

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import math
 from typing import TYPE_CHECKING, Any, cast
 from uuid import uuid4
 
@@ -145,10 +146,16 @@ def fit_chart_to_container(
     usable_h = max(container_height - padding_y, 100)
 
     if isinstance(chart, alt.FacetChart):
-        ncol = chart.columns if isinstance(chart.columns, int) else 1
+        grid = infer_grid_facet_dims(chart)
+        if grid is not None:
+            ncol, nrow = grid
+        else:
+            ncol = chart.columns if isinstance(chart.columns, int) else 1
+            nrow = infer_facet_rows(chart, ncol)
         cell_w = usable_w // max(ncol, 1)
+        cell_h = usable_h // max(nrow, 1)
         chart.spec.width = cell_w
-        chart.spec.height = usable_h
+        chart.spec.height = cell_h
     elif isinstance(chart, alt.HConcatChart):
         cell_w = usable_w // max(len(chart.hconcat), 1)
         for sub in chart.hconcat:
@@ -156,10 +163,12 @@ def fit_chart_to_container(
             sub.height = usable_h
     elif isinstance(chart, alt.ConcatChart):
         ncol = chart.columns if isinstance(chart.columns, int) else len(chart.concat)
+        nrow = math.ceil(len(chart.concat) / max(ncol, 1))
         cell_w = usable_w // max(ncol, 1)
+        cell_h = usable_h // max(nrow, 1)
         for sub in chart.concat:
             sub.width = cell_w
-            sub.height = usable_h
+            sub.height = cell_h
     elif isinstance(chart, alt.VConcatChart):
         cell_h = usable_h // max(len(chart.vconcat), 1)
         for sub in chart.vconcat:
@@ -167,6 +176,41 @@ def fit_chart_to_container(
             sub.height = cell_h
 
     return chart
+
+
+def infer_grid_facet_dims(chart: alt.FacetChart) -> tuple[int, int] | None:
+    """Return (ncol, nrow) for a row/column grid facet, or None for wrapping facets."""
+    import pandas as pd
+
+    facet_dict = chart.facet.to_dict()
+    row_field = facet_dict.get("row", {}).get("field") if isinstance(facet_dict.get("row"), dict) else None
+    col_field = facet_dict.get("column", {}).get("field") if isinstance(facet_dict.get("column"), dict) else None
+    if row_field is None and col_field is None:
+        return None
+    if not isinstance(chart.data, pd.DataFrame):
+        return None
+    ncol = int(chart.data[col_field].nunique()) if col_field and col_field in chart.data.columns else 1
+    nrow = int(chart.data[row_field].nunique()) if row_field and row_field in chart.data.columns else 1
+    return (max(ncol, 1), max(nrow, 1))
+
+
+def infer_facet_rows(chart: alt.FacetChart, columns: int) -> int:
+    """Estimate the number of facet rows from the chart's data."""
+    import pandas as pd
+
+    if not isinstance(chart.data, pd.DataFrame):
+        return 1
+    facet = chart.facet
+    shorthand = getattr(facet, "shorthand", None)
+    if not isinstance(shorthand, str) or not shorthand:
+        return 1
+    field = shorthand.split(":")[0]
+    if field not in chart.data.columns:
+        return 1
+    n = chart.data[field].nunique()
+    if n <= 0:
+        return 1
+    return math.ceil(n / max(columns, 1))
 
 
 def has_legend(vl: dict[str, object]) -> bool:

@@ -14,7 +14,6 @@ interpolate_package <- function(path, ..., .envir = parent.frame()) {
   ellmer::interpolate_file(path, ..., .envir = .envir)
 }
 
-
 as_querychat_client <- function(client = NULL) {
   if (is.null(client)) {
     client <- querychat_client_option()

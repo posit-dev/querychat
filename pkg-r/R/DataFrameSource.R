@@ -115,10 +115,12 @@ get_default_dataframe_engine <- function() {
   if (is_installed("RSQLite")) {
     return("sqlite")
   }
-  cli::cli_abort(c(
-    "No compatible database engine installed for DataFrameSource",
-    "i" = "Install either {.pkg duckdb} or {.pkg RSQLite}:",
-    " " = "{.run install.packages(\"duckdb\")}",
-    " " = "{.run install.packages(\"RSQLite\")}"
-  ))
+  cli::cli_abort(
+    c(
+      "No compatible database engine installed for DataFrameSource",
+      "i" = "Install either {.pkg duckdb} or {.pkg RSQLite}:",
+      " " = "{.run install.packages(\"duckdb\")}",
+      " " = "{.run install.packages(\"RSQLite\")}"
+    )
+  )
 }

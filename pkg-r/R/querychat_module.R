@@ -25,12 +25,14 @@ mod_server <- function(
   data_source,
   greeting,
   client,
+  tools = c("update", "query"),
   enable_bookmarking = FALSE
 ) {
   shiny::moduleServer(id, function(input, output, session) {
     current_title <- shiny::reactiveVal(NULL, label = "current_title")
     current_query <- shiny::reactiveVal(NULL, label = "current_query")
     has_greeted <- shiny::reactiveVal(FALSE, label = "has_greeted")
+    viz_widgets <- shiny::reactiveVal(list(), label = "viz_widgets")
     filtered_df <- shiny::reactive(label = "filtered_df", {
       data_source$execute_query(query = current_query())
     })
@@ -61,11 +63,29 @@ mod_server <- function(
       querychat_tool_result(action = "reset")
     }
 
+    on_visualize <- function(data) {
+      current <- shiny::isolate(viz_widgets())
+      viz_widgets(
+        c(
+          current,
+          list(
+            list(
+              widget_id = data$widget_id,
+              ggsql = data$ggsql
+            )
+          )
+        )
+      )
+    }
+
     # Set up the chat object for this session
     check_function(client)
     chat <- client(
       update_dashboard = update_dashboard,
-      reset_dashboard = reset_query
+      reset_dashboard = reset_query,
+      visualize = on_visualize,
+      tools = tools,
+      session = session
     )
 
     # Prepopulate the chat UI with a welcome message that appears to be from the
@@ -79,11 +99,13 @@ mod_server <- function(
       greeting_content <- if (!is.null(greeting) && any(nzchar(greeting))) {
         greeting
       } else {
-        cli::cli_warn(c(
-          "No {.arg greeting} provided to {.fn QueryChat}. Using the LLM {.arg client} to generate one now.",
-          "i" = "For faster startup, lower cost, and determinism, consider providing a {.arg greeting} to {.fn QueryChat}.",
-          "i" = "You can use your {.help querychat::QueryChat} object's {.fn $generate_greeting} method to generate a greeting."
-        ))
+        cli::cli_warn(
+          c(
+            "No {.arg greeting} provided to {.fn QueryChat}. Using the LLM {.arg client} to generate one now.",
+            "i" = "For faster startup, lower cost, and determinism, consider providing a {.arg greeting} to {.fn QueryChat}.",
+            "i" = "You can use your {.help querychat::QueryChat} object's {.fn $generate_greeting} method to generate a greeting."
+          )
+        )
         chat$stream_async(GREETING_PROMPT)
       }
 
@@ -121,6 +143,10 @@ mod_server <- function(
         state$values$querychat_sql <- current_query()
         state$values$querychat_title <- current_title()
         state$values$querychat_has_greeted <- has_greeted()
+        widgets <- viz_widgets()
+        if (length(widgets) > 0) {
+          state$values$querychat_viz_widgets <- widgets
+        }
       })
 
       shiny::onRestore(function(state) {
@@ -132,6 +158,14 @@ mod_server <- function(
         }
         if (!is.null(state$values$querychat_has_greeted)) {
           has_greeted(state$values$querychat_has_greeted)
+        }
+        if (!is.null(state$values$querychat_viz_widgets)) {
+          restored <- restore_viz_widgets(
+            data_source,
+            state$values$querychat_viz_widgets,
+            session
+          )
+          viz_widgets(restored)
         }
       })
     }
@@ -147,3 +181,29 @@ mod_server <- function(
 
 # TODO: Make this dependent on enabled tools
 GREETING_PROMPT <- "Please give me a friendly greeting. Include a few sample prompts in a two-level bulleted list."
+
+restore_viz_widgets <- function(data_source, saved_widgets, session) {
+  rlang::check_installed("ggsql", reason = "for visualization support.")
+
+  restored <- list()
+  for (entry in saved_widgets) {
+    tryCatch(
+      {
+        validated <- ggsql::ggsql_validate(entry$ggsql)
+        spec <- execute_ggsql(data_source, validated)
+        session$output[[entry$widget_id]] <- ggsql::renderGgsql(spec)
+        restored <- c(restored, list(entry))
+      },
+      error = function(e) {
+        warning(
+          sprintf(
+            "Failed to restore visualization widget '%s' on bookmark restore.",
+            entry$widget_id
+          ),
+          call. = FALSE
+        )
+      }
+    )
+  }
+  restored
+}

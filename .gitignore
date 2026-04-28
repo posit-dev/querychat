@@ -277,4 +277,7 @@ pkg-py/docs/_screenshots/
 # Git worktrees
 .worktrees/
 
+# Superpowers docs (local only)
+docs/superpowers/
+
 /.luarc.json

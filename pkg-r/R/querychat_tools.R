@@ -5,7 +5,8 @@
 #   summarizing the intent of the SQL query.
 tool_update_dashboard <- function(
   data_source,
-  update_fn = function(query, title) {}
+  update_fn = function(query, title) {
+  }
 ) {
   check_data_source(data_source)
 
@@ -67,7 +68,6 @@ tool_update_dashboard_impl <- function(data_source, update_fn) {
   }
 }
 
-
 tool_reset_dashboard <- function(reset_fn = identity) {
   check_function(reset_fn)
 
@@ -92,8 +92,13 @@ tool_query <- function(data_source) {
   db_type <- data_source$get_db_type()
 
   ellmer::tool(
-    function(query, `_intent` = "") {
-      querychat_tool_result(data_source, query, action = "query")
+    function(query, `_intent` = "", collapsed = FALSE) {
+      querychat_tool_result(
+        data_source,
+        query,
+        action = "query",
+        collapsed = collapsed
+      )
     },
     name = "querychat_query",
     description = interpolate_package("tool-query.md", db_type = db_type),
@@ -106,6 +111,10 @@ tool_query <- function(data_source) {
       ),
       `_intent` = ellmer::type_string(
         "A brief, user-friendly description of what this query calculates or retrieves."
+      ),
+      collapsed = ellmer::type_boolean(
+        "Optional (default: false). Set to true for exploratory or preparatory queries whose results aren't the primary answer. When true, the result card starts collapsed.",
+        required = FALSE
       )
     ),
     annotations = ellmer::tool_annotations(
@@ -132,10 +141,12 @@ querychat_tool_details_option <- function() {
   valid_settings <- c("expanded", "collapsed", "default")
 
   if (!setting %in% valid_settings) {
-    cli::cli_warn(c(
-      "Invalid value for {.code querychat.tool_details} option or {.envvar QUERYCHAT_TOOL_DETAILS} environment variable: {.val {setting}}",
-      "i" = "Must be one of: {.or {.val {valid_settings}}}"
-    ))
+    cli::cli_warn(
+      c(
+        "Invalid value for {.code querychat.tool_details} option or {.envvar QUERYCHAT_TOOL_DETAILS} environment variable: {.val {setting}}",
+        "i" = "Must be one of: {.or {.val {valid_settings}}}"
+      )
+    )
     return(NULL)
   }
 
@@ -157,11 +168,55 @@ querychat_tool_starts_open <- function(action) {
   )
 }
 
+truncate_error <- function(error_msg, max_chars = 500L) {
+  lines <- strsplit(error_msg, "\n", fixed = TRUE)[[1]]
+  schema_pattern <- "^\\s*[\\{\\[]|'additionalProperties'|\"additionalProperties\""
+  meaningful <- character()
+  truncated_by_schema <- FALSE
+
+  for (line in lines) {
+    if (!nzchar(trimws(line))) {
+      truncated_by_schema <- TRUE
+      break
+    }
+    if (grepl(schema_pattern, line, perl = TRUE)) {
+      truncated_by_schema <- TRUE
+      break
+    }
+    meaningful <- c(meaningful, line)
+  }
+
+  if (truncated_by_schema && length(meaningful) > 0) {
+    prefix <- paste(meaningful, collapse = "\n")
+    if (nchar(prefix) > max_chars) {
+      prefix <- hard_truncate(prefix, max_chars)
+    }
+    return(paste0(trimws(prefix, which = "right"), "\n\n(error truncated)"))
+  }
+
+  # No schema markers found — apply hard cap if needed
+  if (nchar(error_msg) <= max_chars) {
+    return(error_msg)
+  }
+
+  paste0(hard_truncate(error_msg, max_chars), "\n\n(error truncated)")
+}
+
+hard_truncate <- function(text, max_chars) {
+  cut <- substr(text, 1, max_chars)
+  last_space <- regexpr("\\s[^\\s]*$", cut, perl = TRUE)
+  if (last_space > max_chars %/% 2) {
+    cut <- substr(cut, 1, last_space - 1L)
+  }
+  trimws(cut, which = "right")
+}
+
 querychat_tool_result <- function(
   data_source,
   query,
   title = NULL,
-  action = "update"
+  action = "update",
+  collapsed = NULL
 ) {
   action <- arg_match(action, c("update", "query", "reset"))
 
@@ -231,7 +286,8 @@ querychat_tool_result <- function(
         title = if (action == "update" && !is.null(title)) title,
         show_request = is_error,
         markdown = display_md,
-        open = querychat_tool_starts_open(action)
+        open = if (!is.null(collapsed)) !collapsed else
+          querychat_tool_starts_open(action)
       )
     )
   )

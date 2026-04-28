@@ -42,13 +42,19 @@ Suggests:
     dplyr,
     DT,
     duckdb,
+    ggsql,
     knitr,
     palmerpenguins,
     rmarkdown,
+    rsvg,
     RSQLite,
     shinytest2,
     testthat (>= 3.0.0),
+    V8,
     withr
+Remotes:
+    posit-dev/ggsql-r,
+    rstudio/bslib
 VignetteBuilder:
     knitr
 Config/testthat/edition: 3

@@ -456,6 +456,77 @@ describe("QueryChatSystemPrompt with full prompt.md template", {
   })
 })
 
+describe("viz prompt conditionals", {
+  skip_if_no_dataframe_engine()
+
+  default_prompt <- function() {
+    system.file("prompts", "prompt.md", package = "querychat")
+  }
+
+  it("includes viz section when visualize tool is active", {
+    ds <- local_data_frame_source(new_test_df())
+    sp <- QueryChatSystemPrompt$new(
+      prompt_template = default_prompt(),
+      data_source = ds
+    )
+    rendered <- sp$render(tools = c("query", "visualize"))
+    expect_match(rendered, "querychat_visualize")
+    expect_match(rendered, "ggsql")
+    expect_match(rendered, "VISUALISE")
+  })
+
+  it("excludes viz section without visualize tool", {
+    ds <- local_data_frame_source(new_test_df())
+    sp <- QueryChatSystemPrompt$new(
+      prompt_template = default_prompt(),
+      data_source = ds
+    )
+    rendered <- sp$render(tools = c("query"))
+    expect_no_match(rendered, "querychat_visualize")
+  })
+
+  it("shows fallback message without visualize tool", {
+    ds <- local_data_frame_source(new_test_df())
+    sp <- QueryChatSystemPrompt$new(
+      prompt_template = default_prompt(),
+      data_source = ds
+    )
+    rendered <- sp$render(tools = c("query"))
+    expect_match(rendered, "visualization is not currently enabled")
+  })
+
+  it("includes ggsql syntax reference as partial", {
+    ds <- local_data_frame_source(new_test_df())
+    sp <- QueryChatSystemPrompt$new(
+      prompt_template = default_prompt(),
+      data_source = ds
+    )
+    rendered <- sp$render(tools = c("visualize"))
+    expect_match(rendered, "ggsql-syntax-reference")
+    expect_match(rendered, "DRAW point")
+  })
+
+  it("includes collapsed guidance when both query and visualize active", {
+    ds <- local_data_frame_source(new_test_df())
+    sp <- QueryChatSystemPrompt$new(
+      prompt_template = default_prompt(),
+      data_source = ds
+    )
+    rendered <- sp$render(tools = c("query", "visualize"))
+    expect_match(rendered, "Avoid redundant expanded results")
+  })
+
+  it("excludes collapsed guidance with visualize only", {
+    ds <- local_data_frame_source(new_test_df())
+    sp <- QueryChatSystemPrompt$new(
+      prompt_template = default_prompt(),
+      data_source = ds
+    )
+    rendered <- sp$render(tools = c("visualize"))
+    expect_no_match(rendered, "Avoid redundant expanded results")
+  })
+})
+
 describe("Schema inference skip", {
   skip_if_no_dataframe_engine()
 

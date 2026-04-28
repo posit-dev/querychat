@@ -11,16 +11,16 @@ from typing import TYPE_CHECKING, Generic, Literal, Optional
 import chatlas
 import narwhals.stable.v1 as nw
 import sqlalchemy
+from narwhals.stable.v1.typing import IntoFrameT
 
 from ._datasource import (
     DataFrameSource,
     DataSource,
     IbisSource,
-    IntoFrameT,
     PolarsLazySource,
     SQLAlchemySource,
 )
-from ._shiny_module import GREETING_PROMPT
+from ._querychat_core import GREETING_PROMPT
 from ._system_prompt import QueryChatSystemPrompt
 from ._utils import MISSING, MISSING_TYPE, is_ibis_table
 from ._viz_utils import has_viz_deps, has_viz_tool

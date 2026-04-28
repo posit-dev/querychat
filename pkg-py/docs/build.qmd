@@ -31,6 +31,14 @@ from querychat.data import titanic
 qc = QueryChat(titanic(), "titanic")
 ```
 
+::: {.callout-tip}
+### Visualization support
+
+querychat supports an optional visualization tool that lets the LLM create inline charts.
+Enable it by including `"visualize"` in the `tools` parameter.
+See [Visualizations](visualize.qmd) for details.
+:::
+
 ::: {.callout-note collapse="true"}
 
 ## Quick start with `.app()`

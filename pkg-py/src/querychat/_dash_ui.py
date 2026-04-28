@@ -149,7 +149,7 @@ def chat_messages_ui(state: AppState) -> list[Component]:
             html.Div(
                 [
                     html.Strong(msg["role"].title() + ": "),
-                    dcc.Markdown(content, dangerously_allow_html=True),
+                    dcc.Markdown(content, dangerously_allow_html=True),  # pyright: ignore[reportPrivateImportUsage]
                 ],
                 className=class_name,
             )

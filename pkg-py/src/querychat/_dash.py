@@ -287,7 +287,7 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
 
         return html.Div(
             [
-                dcc.Store(
+                dcc.Store(  # pyright: ignore[reportPrivateImportUsage]
                     id=self._ids.store,
                     data=cast("dict", initial_state.to_dict()),
                     storage_type=self._storage_type,
@@ -341,7 +341,7 @@ def app_layout(ids: IDs, table_name: str, chat_ui):
 
     # SQL card with dynamic title and reset button
     sql_card = card_ui(
-        body=dcc.Markdown(
+        body=dcc.Markdown(  # pyright: ignore[reportPrivateImportUsage]
             id=ids.sql_display,
             className="querychat-sql-display",
         ),
@@ -379,7 +379,7 @@ def app_layout(ids: IDs, table_name: str, chat_ui):
                 className="querychat-data-table-wrapper",
             ),
             html.P(id=ids.data_info, className="mt-2 mb-0 text-muted"),
-            dcc.Download(id=ids.download_csv),
+            dcc.Download(id=ids.download_csv),  # pyright: ignore[reportPrivateImportUsage]
         ],
         title="Data view",
         action_button=dbc.Button(

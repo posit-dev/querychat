@@ -2,6 +2,7 @@
 
 import os
 
+import chatlas
 import pandas as pd
 import pytest
 from chatlas import ChatOpenAI
@@ -95,8 +96,9 @@ class TestShinyDeferredDataSource:
         with session_context(ExpressStubSession()):
             vals = qc.server(data_source=sample_df, client=override_client)
 
-        assert vals.client is None
-        assert recorded_specs == []
+        assert isinstance(vals.client, chatlas.Chat)
+        assert len(recorded_specs) == 1
+        assert recorded_specs[0] is override_client
         assert qc._client_spec is init_client
 
     def test_multiple_server_overrides_do_not_leak_into_shared_state(self, sample_df):

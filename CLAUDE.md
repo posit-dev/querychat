@@ -69,13 +69,15 @@ make py-build
 make py-docs
 ```
 
-Before finishing your implementation or committing any code, you should run:
+Before committing any Python code, you must run all three checks and confirm they pass:
 
 ```bash
 uv run ruff check --fix pkg-py --config pyproject.toml
+make py-check-types
+make py-check-tests
 ```
 
-To get help with making sure code adheres to project standards.
+Do not commit or push until all three pass.
 
 ### R Package
 

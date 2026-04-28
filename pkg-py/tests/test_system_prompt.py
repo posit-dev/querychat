@@ -298,3 +298,109 @@ class TestSchemaInferenceSkip:
         )
 
         assert prompt.schema != ""
+
+
+class TestVizPromptConditionals:
+    """Tests for visualization-related conditional rendering in the real prompt."""
+
+    def test_graceful_recovery_fallback_excluded_without_query_tool(
+        self, sample_data_source
+    ):
+        """
+        When only visualize is enabled (no query tool), the fallback
+        to querychat_query should not appear in the rendered prompt.
+        """
+        from pathlib import Path
+
+        template_path = (
+            Path(__file__).parent.parent
+            / "src"
+            / "querychat"
+            / "prompts"
+            / "prompt.md"
+        )
+        prompt = QueryChatSystemPrompt(
+            prompt_template=template_path,
+            data_source=sample_data_source,
+        )
+
+        rendered = prompt.render(tools=("update", "visualize"))
+
+        assert "fall back to" not in rendered
+
+    def test_collapsed_guidance_included_with_both_tools(
+        self, sample_data_source
+    ):
+        """
+        When both query and visualize are enabled, the collapsed query
+        guidance should appear in the system prompt.
+        """
+        from pathlib import Path
+
+        template_path = (
+            Path(__file__).parent.parent
+            / "src"
+            / "querychat"
+            / "prompts"
+            / "prompt.md"
+        )
+        prompt = QueryChatSystemPrompt(
+            prompt_template=template_path,
+            data_source=sample_data_source,
+        )
+
+        rendered = prompt.render(tools=("update", "query", "visualize"))
+
+        assert "Avoid redundant expanded results" in rendered
+
+    def test_viz_only_has_no_cannot_query_message(self, sample_data_source):
+        """
+        When only visualize is enabled (no query tool), the rendered prompt
+        should NOT contain "cannot query or analyze" and SHOULD contain
+        "Visualizing Data".
+        """
+        from pathlib import Path
+
+        template_path = (
+            Path(__file__).parent.parent
+            / "src"
+            / "querychat"
+            / "prompts"
+            / "prompt.md"
+        )
+        prompt = QueryChatSystemPrompt(
+            prompt_template=template_path,
+            data_source=sample_data_source,
+        )
+
+        rendered = prompt.render(tools=("visualize",))
+
+        assert "cannot query or analyze" not in rendered
+        assert "Visualizing Data" in rendered
+
+    def test_collapsed_guidance_only_with_both_tools(self, sample_data_source):
+        """
+        The "Avoid redundant expanded results" guidance should only appear
+        when both query and visualize are enabled.
+        """
+        from pathlib import Path
+
+        template_path = (
+            Path(__file__).parent.parent
+            / "src"
+            / "querychat"
+            / "prompts"
+            / "prompt.md"
+        )
+        prompt = QueryChatSystemPrompt(
+            prompt_template=template_path,
+            data_source=sample_data_source,
+        )
+
+        rendered_both = prompt.render(tools=("query", "visualize"))
+        rendered_query_only = prompt.render(tools=("query",))
+        rendered_viz_only = prompt.render(tools=("visualize",))
+
+        assert "Avoid redundant expanded results" in rendered_both
+        assert "Avoid redundant expanded results" not in rendered_query_only
+        assert "Avoid redundant expanded results" not in rendered_viz_only

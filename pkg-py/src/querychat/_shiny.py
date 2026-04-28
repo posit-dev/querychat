@@ -10,9 +10,10 @@ from shinychat import output_markdown_stream
 from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 
 from ._icons import bs_icon
-from ._querychat_base import TOOL_GROUPS, QueryChatBase
+from ._querychat_base import DEFAULT_TOOLS, TOOL_GROUPS, QueryChatBase
 from ._shiny_module import ServerValues, mod_server, mod_ui
 from ._utils import MISSING, MISSING_TYPE, as_narwhals
+from ._viz_utils import has_viz_tool
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -97,10 +98,11 @@ class QueryChat(QueryChatBase[IntoFrameT]):
     tools
         Which querychat tools to include in the chat client by default. Can be:
         - A single tool string: `"update"` or `"query"`
-        - A tuple of tools: `("update", "query")`
+        - A tuple of tools: `("update", "query", "visualize")`
         - `None` or `()` to disable all tools
 
-        Default is `("update", "query")` (both tools enabled).
+        Default is `("update", "query")`. The visualization tool (`"visualize"`)
+        can be opted into by including it in the tuple.
 
         Set to `"update"` to prevent the LLM from accessing data values, only
         allowing dashboard filtering without answering questions.
@@ -156,7 +158,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
-        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -172,7 +174,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
-        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -188,7 +190,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
-        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -204,7 +206,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
-        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -219,7 +221,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
-        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -245,7 +247,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         """
         Quickly chat with a dataset.
 
-        Creates a Shiny app with a chat sidebar and data table view -- providing a
+        Creates a Shiny app with a chat sidebar and data view -- providing a
         quick-and-easy way to start chatting with your data.
 
         Parameters
@@ -301,6 +303,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 greeting=self.greeting,
                 client=self._create_session_client,
                 enable_bookmarking=enable_bookmarking,
+                tools=self.tools,
             )
 
             @render.text
@@ -399,7 +402,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             A UI component.
 
         """
-        return mod_ui(id or self.id, **kwargs)
+        return mod_ui(id or self.id, preload_viz=has_viz_tool(self.tools), **kwargs)
 
     def server(
         self,
@@ -506,6 +509,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             greeting=self.greeting,
             client=create_session_client,
             enable_bookmarking=enable_bookmarking,
+            tools=self.tools,
         )
 
 
@@ -616,6 +620,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -632,6 +637,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -648,6 +654,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -664,6 +671,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -680,6 +688,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -695,6 +704,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -714,6 +724,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             table_name,
             greeting=greeting,
             client=client,
+            tools=tools,
             data_description=data_description,
             categorical_threshold=categorical_threshold,
             extra_instructions=extra_instructions,
@@ -743,6 +754,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             greeting=self.greeting,
             client=self._create_session_client,
             enable_bookmarking=enable,
+            tools=self.tools,
         )
 
     def sidebar(
@@ -804,7 +816,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             A UI component.
 
         """
-        return mod_ui(id or self.id, **kwargs)
+        return mod_ui(id or self.id, preload_viz=has_viz_tool(self.tools), **kwargs)
 
     def df(self) -> IntoFrameT:
         """

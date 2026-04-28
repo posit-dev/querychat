@@ -4,8 +4,10 @@ import os
 import re
 import warnings
 from contextlib import contextmanager
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Optional, overload
 
+import chevron
 import narwhals.stable.v1 as nw
 from great_tables import GT
 
@@ -14,6 +16,50 @@ if TYPE_CHECKING:
 
     import ibis
     import pandas as pd
+    import polars as pl
+    from narwhals.stable.v1.typing import IntoFrame
+
+
+_SCHEMA_DUMP_PATTERN = re.compile(
+    r"^\s*[\{\[]|'additionalProperties'|\"additionalProperties\"",
+)
+
+
+def truncate_error(error_msg: str, max_chars: int = 500) -> str:
+    if len(error_msg) <= max_chars:
+        return error_msg
+
+    lines = error_msg.split("\n")
+    meaningful: list[str] = []
+    truncated_by_schema = False
+    for line in lines:
+        if not line.strip():
+            truncated_by_schema = True
+            break
+        if _SCHEMA_DUMP_PATTERN.search(line):
+            truncated_by_schema = True
+            break
+        meaningful.append(line)
+
+    if truncated_by_schema and meaningful:
+        prefix = "\n".join(meaningful)
+        if len(prefix) > max_chars:
+            cut = prefix[:max_chars]
+            last_space = cut.rfind(" ")
+            if last_space > max_chars // 2:
+                cut = cut[:last_space]
+            prefix = cut
+        return prefix.rstrip() + "\n\n(error truncated)"
+
+    # No schema markers found (or nothing before them) — apply hard cap if needed
+    if len(error_msg) <= max_chars:
+        return error_msg
+
+    truncated = error_msg[:max_chars]
+    last_space = truncated.rfind(" ")
+    if last_space > max_chars // 2:
+        truncated = truncated[:last_space]
+    return truncated.rstrip() + "\n\n(error truncated)"
 
 
 class MISSING_TYPE:  # noqa: N801
@@ -171,14 +217,18 @@ def get_tool_details_setting() -> Optional[Literal["expanded", "collapsed", "def
     return setting_lower
 
 
-def querychat_tool_starts_open(action: Literal["update", "query", "reset"]) -> bool:
+def querychat_tool_starts_open(
+    action: Literal[
+        "update", "query", "reset", "visualize"
+    ],
+) -> bool:
     """
     Determine whether a tool card should be open based on action and setting.
 
     Parameters
     ----------
     action : str
-        The action type ('update', 'query', or 'reset')
+        The action type ('update', 'query', 'reset', or 'visualize')
 
     Returns
     -------
@@ -290,3 +340,15 @@ def df_to_html(df, maxrows: int = 5) -> str:
         table_html += f"\n\n*(Showing {maxrows} of {nrow_full} rows)*\n"
 
     return table_html
+
+
+def to_polars(data: IntoFrame) -> pl.DataFrame:
+    """Convert any narwhals-compatible frame to a polars DataFrame."""
+    return as_narwhals(data).to_polars()
+
+
+def read_prompt_template(filename: str, **kwargs: object) -> str:
+    """Read and interpolate a prompt template file."""
+    template_path = Path(__file__).parent / "prompts" / filename
+    template = template_path.read_text()
+    return chevron.render(template, kwargs)

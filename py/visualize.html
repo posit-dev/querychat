@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>types.servervalues – querychat</title>
+<title>Visualizations – querychat</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -58,25 +58,28 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </style>
 
 
-<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
-<script src="../site_libs/quarto-nav/headroom.min.js"></script>
-<script src="../site_libs/clipboard/clipboard.min.js"></script>
-<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
-<script src="../site_libs/quarto-search/fuse.min.js"></script>
-<script src="../site_libs/quarto-search/quarto-search.js"></script>
-<meta name="quarto:offset" content="../">
-<link href="../reference/types.DataSource.html" rel="next">
-<link href="../reference/express.QueryChat.html" rel="prev">
-<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
-<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
-<script src="../site_libs/quarto-html/popper.min.js"></script>
-<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
-<script src="../site_libs/quarto-html/anchor.min.js"></script>
-<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
-<link href="../site_libs/quarto-html/quarto-syntax-highlighting-51e9ba6732aa6bc0134376f05742e55b.css" rel="stylesheet" id="quarto-text-highlighting-styles">
-<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
-<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-804bfa56bb9fe1fc515848c1467187c0.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<link href="./build-intro.html" rel="next">
+<link href="./context.html" rel="prev">
+<script src="site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-51e9ba6732aa6bc0134376f05742e55b.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-804bfa56bb9fe1fc515848c1467187c0.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script src="site_libs/quarto-contrib/glightbox/glightbox.min.js"></script>
+<link href="site_libs/quarto-contrib/glightbox/glightbox.min.css" rel="stylesheet">
+<link href="site_libs/quarto-contrib/glightbox/lightbox.css" rel="stylesheet">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -112,12 +115,20 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </script>
 
 
-<meta property="og:title" content="querychat">
+<meta property="og:title" content="Visualizations – querychat">
 <meta property="og:description" content="Explore data using natural language">
+<meta property="og:image" content="https://posit-dev.github.io/querychat/py/images/viz-bar-chart.png">
 <meta property="og:site_name" content="querychat">
-<meta name="twitter:title" content="querychat">
+<meta property="og:image:alt" content="Bar chart showing survival rate by passenger class.">
+<meta property="og:image:height" content="407">
+<meta property="og:image:width" content="624">
+<meta name="twitter:title" content="Visualizations – querychat">
 <meta name="twitter:description" content="Explore data using natural language">
-<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://posit-dev.github.io/querychat/py/images/viz-bar-chart.png">
+<meta name="twitter:image:alt" content="Bar chart showing survival rate by passenger class.">
+<meta name="twitter:image-height" content="407">
+<meta name="twitter:image-width" content="624">
+<meta name="twitter:card" content="summary_large_image">
 </head>
 
 <body class="nav-sidebar floating nav-fixed quarto-light">
@@ -127,7 +138,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container mx-auto">
-    <a class="navbar-brand" href="../index.html">
+    <a class="navbar-brand" href="./index.html">
     <span class="navbar-title"><span class="ms-3 fs-3 lead" style="vertical-align:middle;">QueryChat</span></span>
     </a>
   </div>
@@ -138,11 +149,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
           <div class="collapse navbar-collapse" id="navbarCollapse">
             <ul class="navbar-nav navbar-nav-scroll ms-auto">
   <li class="nav-item">
-    <a class="nav-link active" href="../reference/index.html" aria-current="page"> 
+    <a class="nav-link" href="./reference/index.html"> 
 <span class="menu-text">API Reference</span></a>
   </li>  
   <li class="nav-item">
-    <a class="nav-link" href="../CHANGELOG.html"> 
+    <a class="nav-link" href="./CHANGELOG.html"> 
 <span class="menu-text">Changelog</span></a>
   </li>  
   <li class="nav-item compact">
@@ -161,7 +172,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/types.ServerValues.html">Reactive values</a></li><li class="breadcrumb-item"><a href="../reference/types.ServerValues.html">types.ServerValues</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./models.html">Get started</a></li><li class="breadcrumb-item"><a href="./visualize.html">Visualizations</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
     </div>
@@ -175,14 +186,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <ul class="list-unstyled mt-1">
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/index.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">Function reference</span></a>
+  <a href="./index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Introduction</span></a>
   </div>
 </li>
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
             <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
- <span class="menu-text">The QueryChat class</span></a>
+ <span class="menu-text">Get started</span></a>
           <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
@@ -190,14 +201,26 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/QueryChat.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">QueryChat</span></a>
+  <a href="./models.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Models</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/express.QueryChat.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">express.QueryChat</span></a>
+  <a href="./data-sources.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Data Sources</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./context.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Provide context</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./visualize.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text">Visualizations</span></a>
   </div>
 </li>
       </ul>
@@ -205,7 +228,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
             <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
- <span class="menu-text">Reactive values</span></a>
+ <span class="menu-text">Build custom apps</span></a>
           <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
@@ -213,8 +236,32 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/types.ServerValues.html" class="sidebar-item-text sidebar-link active">
- <span class="menu-text">types.ServerValues</span></a>
+  <a href="./build-intro.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Intro</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./build.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Shiny</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./build-streamlit.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Streamlit</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./build-gradio.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Gradio</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./build-dash.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Dash</span></a>
   </div>
 </li>
       </ul>
@@ -222,7 +269,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
         <li class="sidebar-item sidebar-item-section">
       <div class="sidebar-item-container"> 
             <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
- <span class="menu-text">Data Sources</span></a>
+ <span class="menu-text">Optimize</span></a>
           <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
             <i class="bi bi-chevron-right ms-2"></i>
           </a> 
@@ -230,55 +277,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
       <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/types.DataSource.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">types.DataSource</span></a>
+  <a href="./greet.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Greet users</span></a>
   </div>
 </li>
           <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="../reference/types.DataFrameSource.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">types.DataFrameSource</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/types.SQLAlchemySource.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">types.SQLAlchemySource</span></a>
-  </div>
-</li>
-      </ul>
-  </li>
-        <li class="sidebar-item sidebar-item-section">
-      <div class="sidebar-item-container"> 
-            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+  <a href="./tools.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Tools</span></a>
-          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
-            <i class="bi bi-chevron-right ms-2"></i>
-          </a> 
-      </div>
-      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/tools.tool_query.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">tools.tool_query</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/tools.tool_update_dashboard.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">tools.tool_update_dashboard</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/tools.tool_reset_dashboard.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">tools.tool_reset_dashboard</span></a>
-  </div>
-</li>
-          <li class="sidebar-item">
-  <div class="sidebar-item-container"> 
-  <a href="../reference/tools.tool_visualize.html" class="sidebar-item-text sidebar-link">
- <span class="menu-text">tools.tool_visualize</span></a>
   </div>
 </li>
       </ul>
@@ -293,60 +299,147 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#querychat.types.ServerValues" id="toc-querychat.types.ServerValues" class="nav-link active" data-scroll-target="#querychat.types.ServerValues">types.ServerValues</a>
-  <ul class="collapse">
-  <li><a href="#attributes" id="toc-attributes" class="nav-link" data-scroll-target="#attributes">Attributes</a></li>
-  </ul></li>
+  <li><a href="#getting-started" id="toc-getting-started" class="nav-link active" data-scroll-target="#getting-started">Getting started</a></li>
+  <li><a href="#choosing-tools" id="toc-choosing-tools" class="nav-link" data-scroll-target="#choosing-tools">Choosing tools</a></li>
+  <li><a href="#custom-apps" id="toc-custom-apps" class="nav-link" data-scroll-target="#custom-apps">Custom apps</a></li>
+  <li><a href="#what-you-can-ask-for" id="toc-what-you-can-ask-for" class="nav-link" data-scroll-target="#what-you-can-ask-for">What you can ask for</a></li>
+  <li><a href="#chart-controls" id="toc-chart-controls" class="nav-link" data-scroll-target="#chart-controls">Chart controls</a></li>
+  <li><a href="#how-it-works" id="toc-how-it-works" class="nav-link" data-scroll-target="#how-it-works">How it works</a></li>
+  <li><a href="#see-also" id="toc-see-also" class="nav-link" data-scroll-target="#see-also">See also</a></li>
   </ul>
-<div class="toc-actions"><ul><li><a href="https://github.com/posit-dev/querychat/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li><li><a href="https://github.com/posit-dev/querychat/edit/main/pkg-py/docs/reference/types.ServerValues.qmd" class="toc-action"><i class="bi empty"></i>Edit this page</a></li></ul></div></nav>
+<div class="toc-actions"><ul><li><a href="https://github.com/posit-dev/querychat/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li><li><a href="https://github.com/posit-dev/querychat/edit/main/pkg-py/docs/visualize.qmd" class="toc-action"><i class="bi empty"></i>Edit this page</a></li></ul></div></nav>
     </div>
 <!-- main -->
-<main class="content" id="quarto-document-content"><header id="title-block-header" class="quarto-title-block"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../reference/types.ServerValues.html">Reactive values</a></li><li class="breadcrumb-item"><a href="../reference/types.ServerValues.html">types.ServerValues</a></li></ol></nav></header>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./models.html">Get started</a></li><li class="breadcrumb-item"><a href="./visualize.html">Visualizations</a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title">Visualizations</h1>
+</div>
 
 
 
+<div class="quarto-title-meta">
 
-<section id="querychat.types.ServerValues" class="level1">
-<h1>types.ServerValues</h1>
-<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>types.ServerValues(df, sql, title, client)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>Session-specific reactive values and client returned by QueryChat.server().</p>
-<p>This dataclass contains all the session-specific reactive state for a QueryChat instance. Each session gets its own ServerValues to ensure proper isolation between concurrent sessions.</p>
-<section id="attributes" class="level2 doc-section doc-section-attributes">
-<h2 class="doc-section doc-section-attributes anchored" data-anchor-id="attributes">Attributes</h2>
-<table class="caption-top table">
-<thead>
-<tr class="header">
-<th>Name</th>
-<th>Type</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>df</td>
-<td><a href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable">Callable</a>[[], <code>IntoFrameT</code>]</td>
-<td>A reactive Calc that returns the current filtered data frame or lazy frame. If the data source is lazy, returns a LazyFrame. If no SQL query has been set, this returns the unfiltered data from the data source. Call it like <code>.df()</code> to reactively read the current data.</td>
-</tr>
-<tr class="even">
-<td>sql</td>
-<td><code>ReactiveStringOrNone</code></td>
-<td>A reactive Value containing the current SQL query string. Access the value by calling <code>.sql()</code>, or set it with <code>.sql.set("SELECT ...")</code>. Returns <code>None</code> if no query has been set.</td>
-</tr>
-<tr class="odd">
-<td>title</td>
-<td><code>ReactiveStringOrNone</code></td>
-<td>A reactive Value containing the current title for the query. The LLM provides this title when generating a new SQL query. Access it with <code>.title()</code>, or set it with <code>.title.set("...")</code>. Returns <code>None</code> if no title has been set.</td>
-</tr>
-<tr class="even">
-<td>client</td>
-<td><code>ServerClient</code></td>
-<td>Session chat client value. For real sessions this is a <code>chatlas.Chat</code> created by the client factory. For deferred stub sessions (where <code>data_source</code> is not set yet), this is a placeholder client that raises when accessed.</td>
-</tr>
-</tbody>
-</table>
+    
+  
+    
+  </div>
+  
 
 
+</header>
+
+
+<p>querychat can create charts inline in the chat. When you ask a question that benefits from a visualization, the LLM writes a query using <a href="https://ggsql.org/">ggsql</a> — a SQL-like visualization grammar — and renders an <a href="https://altair-viz.github.io/">Altair</a> chart directly in the conversation.</p>
+<section id="getting-started" class="level2">
+<h2 class="anchored" data-anchor-id="getting-started">Getting started</h2>
+<p>Visualization requires two steps:</p>
+<ol type="1">
+<li><p><strong>Install the <code>viz</code> extras:</strong></p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode bash code-with-copy"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">pip</span> install <span class="st">"querychat[viz]"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div></li>
+<li><p><strong>Include <code>"visualize"</code> in the <code>tools</code> parameter:</strong></p>
+<div class="code-with-filename">
+<div class="code-with-filename-file">
+<pre><strong>app.py</strong></pre>
+</div>
+<div class="sourceCode" id="cb2" data-filename="app.py"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat <span class="im">import</span> QueryChat</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat.data <span class="im">import</span> titanic</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(titanic(), <span class="st">"titanic"</span>, tools<span class="op">=</span>(<span class="st">"query"</span>, <span class="st">"update"</span>, <span class="st">"visualize"</span>))</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>app <span class="op">=</span> qc.app()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div></li>
+</ol>
+<p>Ask something like “Show me survival rate by passenger class as a bar chart” and querychat will generate and display the chart inline:</p>
+<p><a href="./images/viz-bar-chart.png" class="lightbox" data-gallery="quarto-lightbox-gallery-1"><img src="./images/viz-bar-chart.png" class="shadow rounded mb-3 img-fluid" alt="Bar chart showing survival rate by passenger class."></a></p>
 </section>
+<section id="choosing-tools" class="level2">
+<h2 class="anchored" data-anchor-id="choosing-tools">Choosing tools</h2>
+<p>The <code>tools</code> parameter controls which capabilities the LLM has access to. By default, only <code>"query"</code> and <code>"update"</code> are enabled — visualization must be opted into explicitly.</p>
+<p>To enable only query and visualization (no dashboard filtering):</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(titanic(), <span class="st">"titanic"</span>, tools<span class="op">=</span>(<span class="st">"query"</span>, <span class="st">"visualize"</span>))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>See <a href="./tools.html">Tools</a> for a full reference on available tools and what each one does.</p>
+</section>
+<section id="custom-apps" class="level2">
+<h2 class="anchored" data-anchor-id="custom-apps">Custom apps</h2>
+<p>The example below shows a minimal custom Shiny app using only the <code>"query"</code> and <code>"visualize"</code> tools. It omits <code>"update"</code> to focus entirely on data analysis and visualization rather than dashboard filtering:</p>
+<div class="code-with-filename">
+<div class="code-with-filename-file">
+<pre><strong>app.py</strong></pre>
+</div>
+<div class="sourceCode" id="cb4" data-filename="app.py"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat.express <span class="im">import</span> QueryChat</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat.data <span class="im">import</span> titanic</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> shiny.express <span class="im">import</span> ui, app_opts</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co"># Omits "update" tool — this demo focuses on query + visualization only</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    titanic(),</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    <span class="st">"titanic"</span>,</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    tools<span class="op">=</span>(<span class="st">"query"</span>, <span class="st">"visualize"</span>)</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>qc.ui()</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>ui.page_opts(fillable<span class="op">=</span><span class="va">True</span>, title<span class="op">=</span><span class="st">"QueryChat Visualization Demo"</span>)</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>app_opts(bookmark_store<span class="op">=</span><span class="st">"url"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+</section>
+<section id="what-you-can-ask-for" class="level2">
+<h2 class="anchored" data-anchor-id="what-you-can-ask-for">What you can ask for</h2>
+<p>querychat can generate a wide range of chart types. Some example prompts:</p>
+<ul>
+<li>“Show me a bar chart of survival rate by passenger class”</li>
+<li>“Scatter plot of age vs fare, colored by survival”</li>
+<li>“Line chart of average fare over time”</li>
+<li>“Histogram of passenger ages”</li>
+<li>“Facet survival rate by class and sex”</li>
+</ul>
+<p>The LLM chooses an appropriate chart type based on your question, but you can always be specific. If you ask for a bar chart, you’ll get a bar chart.</p>
+<p><a href="./images/viz-scatter.png" class="lightbox" data-gallery="quarto-lightbox-gallery-2"><img src="./images/viz-scatter.png" class="shadow rounded mb-3 img-fluid" alt="Scatter plot of age vs fare colored by survival status."></a></p>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+Tip
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>If you don’t like the chart, ask the LLM to adjust it — for example, “make the dots bigger” or “use a log scale on the y-axis”.</p>
+</div>
+</div>
+</section>
+<section id="chart-controls" class="level2">
+<h2 class="anchored" data-anchor-id="chart-controls">Chart controls</h2>
+<p>Each chart has controls in its footer:</p>
+<p><strong>Fullscreen</strong> — Click the expand icon to view the chart in fullscreen mode.</p>
+<p><a href="./images/viz-fullscreen.png" class="lightbox" data-gallery="quarto-lightbox-gallery-3"><img src="./images/viz-fullscreen.png" class="shadow rounded mb-3 img-fluid" alt="A chart displayed in fullscreen mode."></a></p>
+<p><strong>Save</strong> — Download the chart as a PNG or SVG file.</p>
+<p><strong>Show Query</strong> — Expand the footer to see the ggsql query used to generate the chart.</p>
+<p><a href="./images/viz-show-query.png" class="lightbox" data-gallery="quarto-lightbox-gallery-4"><img src="./images/viz-show-query.png" class="shadow rounded mb-3 img-fluid" alt="A chart with the Show Query footer expanded, showing the ggsql query."></a></p>
+</section>
+<section id="how-it-works" class="level2">
+<h2 class="anchored" data-anchor-id="how-it-works">How it works</h2>
+<ol type="1">
+<li><strong>The LLM generates a ggsql query</strong> — a SQL-like grammar that describes both data transformation and visual encoding in a single statement.</li>
+<li><strong>The SQL is executed</strong> — querychat runs the data portion of the query against your data source locally.</li>
+<li><strong>The VISUALISE clause is rendered</strong> — the result is passed to Altair, which produces a Vega-Lite chart specification.</li>
+<li><strong>The chart appears inline</strong> — the chart is streamed back into the conversation as an interactive widget.</li>
+</ol>
+<p>Note that visualization queries are independent of any active dashboard filter set by the <code>update</code> tool. They always run against the full dataset.</p>
+<p>Learn more about the ggsql grammar at <a href="https://ggsql.org/">ggsql.org</a>.</p>
+</section>
+<section id="see-also" class="level2">
+<h2 class="anchored" data-anchor-id="see-also">See also</h2>
+<ul>
+<li><a href="./tools.html">Tools</a> — Understand what querychat can do under the hood</li>
+<li><a href="./context.html">Provide context</a> — Help the LLM understand your data better</li>
+</ul>
+
+
 </section>
 
 </main> <!-- /main -->
@@ -751,13 +844,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   </script>
 <nav class="page-navigation">
   <div class="nav-page nav-page-previous">
-      <a href="../reference/express.QueryChat.html" class="pagination-link" aria-label="express.QueryChat">
-        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">express.QueryChat</span>
+      <a href="./context.html" class="pagination-link" aria-label="Provide context">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">Provide context</span>
       </a>          
   </div>
   <div class="nav-page nav-page-next">
-      <a href="../reference/types.DataSource.html" class="pagination-link" aria-label="types.DataSource">
-        <span class="nav-page-text">types.DataSource</span> <i class="bi bi-arrow-right-short"></i>
+      <a href="./build-intro.html" class="pagination-link" aria-label="Intro">
+        <span class="nav-page-text">Intro</span> <i class="bi bi-arrow-right-short"></i>
       </a>
   </div>
 </nav>
@@ -769,12 +862,44 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>   
     <div class="nav-footer-center">
       &nbsp;
-    <div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/posit-dev/querychat/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li><li><a href="https://github.com/posit-dev/querychat/edit/main/pkg-py/docs/reference/types.ServerValues.qmd" class="toc-action"><i class="bi empty"></i>Edit this page</a></li></ul></div></div>
+    <div class="toc-actions d-sm-block d-md-none"><ul><li><a href="https://github.com/posit-dev/querychat/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li><li><a href="https://github.com/posit-dev/querychat/edit/main/pkg-py/docs/visualize.qmd" class="toc-action"><i class="bi empty"></i>Edit this page</a></li></ul></div></div>
     <div class="nav-footer-right">
       &nbsp;
     </div>
   </div>
 </footer>
+<script>var lightboxQuarto = GLightbox({"closeEffect":"zoom","descPosition":"bottom","loop":false,"openEffect":"zoom","selector":".lightbox"});
+(function() {
+  let previousOnload = window.onload;
+  window.onload = () => {
+    if (previousOnload) {
+      previousOnload();
+    }
+    lightboxQuarto.on('slide_before_load', (data) => {
+      const { slideIndex, slideNode, slideConfig, player, trigger } = data;
+      const href = trigger.getAttribute('href');
+      if (href !== null) {
+        const imgEl = window.document.querySelector(`a[href="${href}"] img`);
+        if (imgEl !== null) {
+          const srcAttr = imgEl.getAttribute("src");
+          if (srcAttr && srcAttr.startsWith("data:")) {
+            slideConfig.href = srcAttr;
+          }
+        }
+      } 
+    });
+  
+    lightboxQuarto.on('slide_after_load', (data) => {
+      const { slideIndex, slideNode, slideConfig, player, trigger } = data;
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(slideNode);
+      }
+    });
+  
+  };
+  
+})();
+          </script>
 
 
 

@@ -216,6 +216,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
  <span class="menu-text">Provide context</span></a>
   </div>
 </li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./visualize.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Visualizations</span></a>
+  </div>
+</li>
       </ul>
   </li>
         <li class="sidebar-item sidebar-item-section">
@@ -377,6 +383,8 @@ Prefer Streamlit, Gradio, or Dash?
 <p><a href="./images/quickstart-filter.png" class="lightbox" data-gallery="quarto-lightbox-gallery-2"><img src="./images/quickstart-filter.png" class="shadow rounded mb-3 img-fluid" alt="Screenshot of the querychat's app with the titanic dataset filtered to passengers who survived."></a></p>
 <p>querychat can also handle more general questions about the data that require calculations and aggregations. For example, we can ask “What is the average age of passengers who survived?”. The LLM will generate the SQL query to perform the calculation, querychat will execute it, and return the result in the chat:</p>
 <p><a href="./images/quickstart-summary.png" class="lightbox" data-gallery="quarto-lightbox-gallery-3"><img src="./images/quickstart-summary.png" class="shadow rounded mb-3 img-fluid" alt="Screenshot of the querychat's app with a summary statistic inlined in the chat."></a></p>
+<p>querychat can also create visualizations, powered by <a href="https://ggsql.org/">ggsql</a> and <a href="https://altair-viz.github.io/">Altair</a>. With the <a href="./visualize.html">visualization tool</a> enabled, ask for a chart and it appears inline in the conversation:</p>
+<p><a href="./images/viz-bar-chart.png" class="lightbox" data-gallery="quarto-lightbox-gallery-4"><img src="./images/viz-bar-chart.png" class="shadow rounded mb-3 img-fluid" alt="Screenshot of querychat with an inline bar chart showing survival rate by passenger class."></a></p>
 </section>
 <section id="web-frameworks" class="level2">
 <h2 class="anchored" data-anchor-id="web-frameworks">Web frameworks</h2>
@@ -413,7 +421,7 @@ Prefer Streamlit, Gradio, or Dash?
 <section id="build-custom-apps" class="level2">
 <h2 class="anchored" data-anchor-id="build-custom-apps">Build custom apps</h2>
 <p>querychat is designed to be highly extensible – it provides programmatic access to the chat interface, the filtered/sorted data frame, SQL queries, and more. This makes it easy to build custom web apps that leverage natural language interaction with your data. For example, <a href="https://github.com/posit-conf-2025/llm/blob/main/_solutions/25_querychat/25_querychat_02-end-app.R">here</a>’s a bespoke app for exploring Airbnb listings in Ashville, NC:</p>
-<p><a href="./images/airbnb.png" class="lightbox" data-gallery="quarto-lightbox-gallery-4"><img src="./images/airbnb.png" class="shadow rounded mb-3 img-fluid" alt="A custom app for exploring Airbnb listings, powered by querychat."></a></p>
+<p><a href="./images/airbnb.png" class="lightbox" data-gallery="quarto-lightbox-gallery-5"><img src="./images/airbnb.png" class="shadow rounded mb-3 img-fluid" alt="A custom app for exploring Airbnb listings, powered by querychat."></a></p>
 <p>To learn more, see the build guides for your framework: <a href="./build.html">Shiny</a>, <a href="./build-streamlit.html">Streamlit</a>, <a href="./build-gradio.html">Gradio</a>, or <a href="./build-dash.html">Dash</a>.</p>
 </section>
 <section id="how-it-works" class="level2">

@@ -157,27 +157,15 @@ def visualize_impl(
         try:
             validated = validate(ggsql)
             if not validated.has_visual():
-                # When VISUALISE contains SQL expressions (e.g., CAST()),
-                # ggsql silently treats the entire query as plain SQL:
-                # valid()=True, has_visual()=False, no errors. This
-                # heuristic catches that case so we can guide the LLM.
-                # Remove when ggsql reports this as a parse error:
-                # https://github.com/posit-dev/ggsql/issues/256
-                has_keyword = (
-                    "VISUALISE" in ggsql.upper() or "VISUALIZE" in ggsql.upper()
-                )
-                if has_keyword:
-                    raise ValueError(
-                        "VISUALISE clause was not recognized. "
-                        "VISUALISE and MAPPING accept column names only — "
-                        "no SQL expressions, CAST(), or functions. "
-                        "Move all data transformations to the SELECT clause, "
-                        "then reference the resulting column by name in VISUALISE."
-                    )
                 raise ValueError(
                     "Query must include a VISUALISE clause. "
                     "Use querychat_query for queries without visualization."
                 )
+
+            if not validated.valid():
+                errors = validated.errors()
+                if errors:
+                    raise ValueError(errors[0]["message"])
 
             spec = execute_ggsql(data_source, validated)
 

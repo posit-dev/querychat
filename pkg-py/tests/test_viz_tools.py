@@ -171,6 +171,32 @@ class TestToolVisualize:
         assert result.error is not None
         assert "VISUALISE" in str(result.error)
 
+    @pytest.mark.ggsql
+    def test_tool_surfaces_upstream_expression_in_visualise_error(self, data_source):
+        tool = tool_visualize(data_source, lambda _: None)
+        result = tool.func(
+            ggsql=(
+                "SELECT CAST(x AS DOUBLE) AS x2, y "
+                "FROM test_data "
+                "VISUALISE CAST(x2 AS DOUBLE) AS x, y "
+                "DRAW point"
+            ),
+            title="Bad Viz",
+        )
+
+        assert result.error is not None
+        assert "Mappings accept column names only" in str(result.error)
+        assert "Move data transformations to the SELECT clause" in str(result.error)
+
+    @pytest.mark.ggsql
+    def test_tool_still_rejects_query_without_visualise(self, data_source):
+        tool = tool_visualize(data_source, lambda _: None)
+        result = tool.func(ggsql="SELECT x, y FROM test_data", title="No Viz")
+
+        assert result.error is not None
+        assert "Query must include a VISUALISE clause" in str(result.error)
+        assert "Use querychat_query" in str(result.error)
+
 
 class TestVisualizeResultContent:
     @pytest.mark.ggsql

@@ -1,6 +1,7 @@
 """Tests for visualization tool functions."""
 
 import importlib.util
+from pathlib import Path
 
 import narwhals.stable.v1 as nw
 import polars as pl
@@ -47,6 +48,24 @@ class TestVizDependencyCheck:
         # Should not raise even though find_spec returns None for everything
         result = normalize_tools(("visualize",), default=None, check_deps=False)
         assert result == ("visualize",)
+
+
+def test_ggsql_syntax_reference_uses_range_not_errorbar():
+    syntax = Path("pkg-py/src/querychat/prompts/ggsql-syntax.md").read_text()
+    assert "`range`" in syntax
+    assert "`errorbar`" not in syntax
+
+
+def test_ggsql_syntax_reference_does_not_teach_one_ended_segment():
+    syntax = Path("pkg-py/src/querychat/prompts/ggsql-syntax.md").read_text()
+    assert "segment can omit one endpoint" not in syntax
+    assert "Requires `x`, `y`, `xend`, `yend`" in syntax or "Requires x, y, xend, yend" in syntax
+
+
+def test_main_prompt_still_embeds_ggsql_reference():
+    prompt = Path("pkg-py/src/querychat/prompts/prompt.md").read_text()
+    assert "{{> ggsql-syntax}}" in prompt
+    assert "querychat_visualize" in prompt
 
 
 @pytest.fixture

@@ -121,7 +121,7 @@ This simple response is sufficient, as the user can see the SQL query used.
 {{#has_tool_visualize}}
 ### Visualizing Data
 
-You can create visualizations using the `querychat_visualize` tool, which uses ggsql — a SQL extension for declarative data visualization. Write a ggsql query (SQL with a VISUALISE clause), and the tool executes the SQL, renders the VISUALISE clause as an Altair chart, and displays it inline in the chat.
+You can create visualizations using the `querychat_visualize` tool, which uses ggsql — a SQL extension for declarative data visualization. Write a ggsql query (SQL with a `VISUALISE` clause), and the tool executes the SQL, renders the `VISUALISE` clause as an Altair chart, and displays it inline in the chat.
 
 #### Visualization best practices
 

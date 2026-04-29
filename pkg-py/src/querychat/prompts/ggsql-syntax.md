@@ -33,6 +33,11 @@ DRAW line
 -- Shorthand with FROM (auto-generates SELECT * FROM)
 VISUALISE FROM sales
 DRAW bar MAPPING region AS x, total AS y
+
+-- FROM can also come first
+FROM sales
+VISUALISE date AS x, revenue AS y
+DRAW line
 ```
 
 ### Mapping Styles
@@ -65,7 +70,7 @@ DRAW geom_type
 |----------|-------|
 | Basic | `point`, `line`, `path`, `bar`, `area`, `tile`, `polygon`, `ribbon` |
 | Statistical | `histogram`, `density`, `smooth`, `boxplot`, `violin` |
-| Annotation | `text`, `label`, `segment`, `arrow`, `rule`, `rect`, `errorbar` |
+| Annotation | `text`, `label`, `segment`, `arrow`, `rule`, `rect`, `range` |
 
 - `path` is like `line` but preserves data order instead of sorting by x.
 - `tile` draws rectangles for heatmaps or range indicators. Map `x`/`y` for center (defaults to width/height of 1), or use `xmin`/`xmax`/`ymin`/`ymax` for explicit bounds.
@@ -74,7 +79,8 @@ DRAW geom_type
 - `arrow` draws arrows between two points. Requires `x`, `y`, `xend`, `yend` aesthetics.
 - `rule` draws full-span reference lines. Map a value to `y` for a horizontal line or `x` for a vertical line. Optionally map `slope` to create diagonal reference lines: `y = a + slope * x` (when `y` is mapped) or `x = a + slope * y` (when `x` is mapped).
 - `rect` draws rectangles. Pick 2 per axis from center (`x`/`y`), min (`xmin`/`ymin`), max (`xmax`/`ymax`), `width`, `height`. Or just map center (defaults to width/height of 1).
-- `errorbar` displays interval marks. Requires `x`, `ymin`, `ymax`. Settings: `width` (hinge width in points, default 10; `null` to hide hinges).
+- `range` displays interval marks. Requires `x`, `ymin`, `ymax` for vertical intervals, or `y`, `xmin`, `xmax` for horizontal intervals. Use it for confidence intervals, lollipops, and candlestick-style ranges. Setting `width => null` hides the hinges.
+- `segment` draws arbitrary connections between two points and requires `x`, `y`, `xend`, and `yend`.
 - `line` and `path` support continuously varying `linewidth`, `stroke`, and `opacity` aesthetics within groups.
 
 **Aesthetics (MAPPING):**
@@ -446,7 +452,7 @@ DRAW text MAPPING n AS label SETTING offset => (0, -11), fill => 'white'
 ```sql
 SELECT ROUND(bill_dep) AS bill_dep, COUNT(*) AS n FROM penguins GROUP BY 1
 VISUALISE bill_dep AS x, n AS y
-DRAW segment MAPPING 0 AS yend
+DRAW range MAPPING 0 AS ymin, n AS ymax SETTING width => null
 DRAW point
 ```
 

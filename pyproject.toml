@@ -51,7 +51,7 @@ dash = ["dash-ag-grid>=31.0", "dash[async]>=3.1", "dash-bootstrap-components>=2.
 # Visualization with ggsql
 viz = [
     # Temporary direct reference until ggsql 0.3.0 is available on the package index.
-    "ggsql @ git+https://github.com/cpsievert/ggsql-python.git@3a941bf5378cb3c12ac003fc92f2ff8e96ebb8dd",
+    "ggsql @ git+https://github.com/posit-dev/ggsql-python.git@refs/pull/5/head",
     "altair>=6.0",
     "shinywidgets>=0.8.0",
     "vl-convert-python>=1.9.0",
@@ -102,7 +102,7 @@ dev = [
     "pyarrow>=14.0.0",
     "ibis-framework[duckdb]>=9.0.0",
     # Temporary direct reference until ggsql 0.3.0 is available on the package index.
-    "ggsql @ git+https://github.com/cpsievert/ggsql-python.git@3a941bf5378cb3c12ac003fc92f2ff8e96ebb8dd",
+    "ggsql @ git+https://github.com/posit-dev/ggsql-python.git@refs/pull/5/head",
     "altair>=6.0",
     "shinywidgets>=0.8.0",
     "vl-convert-python>=1.9.0",

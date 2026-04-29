@@ -189,6 +189,18 @@ class TestToolVisualize:
         assert "Move data transformations to the SELECT clause" in str(result.error)
 
     @pytest.mark.ggsql
+    def test_tool_invalid_geom_uses_fallback_error(self, data_source):
+        tool = tool_visualize(data_source, lambda _: None)
+        result = tool.func(
+            ggsql="SELECT x FROM test_data VISUALISE x DRAW nope",
+            title="Bad Viz",
+        )
+
+        assert result.error is not None
+        assert "Mappings accept column names only" not in str(result.error)
+        assert "Parse error" in str(result.error)
+
+    @pytest.mark.ggsql
     def test_tool_still_rejects_query_without_visualise(self, data_source):
         tool = tool_visualize(data_source, lambda _: None)
         result = tool.func(ggsql="SELECT x, y FROM test_data", title="No Viz")

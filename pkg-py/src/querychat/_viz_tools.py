@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import copy
 import io
+import re
 from typing import TYPE_CHECKING, Any, TypedDict
 from uuid import uuid4
 
@@ -163,9 +164,9 @@ def visualize_impl(
                 )
 
             if not validated.valid():
-                errors = validated.errors()
-                if errors:
-                    raise ValueError(errors[0]["message"])
+                error_msg = safe_visual_validation_error(validated)
+                if error_msg is not None:
+                    raise ValueError(error_msg)
 
             spec = execute_ggsql(data_source, validated)
 
@@ -195,6 +196,44 @@ def visualize_impl(
             return ContentToolResult(value=markdown, error=Exception(error_msg))
 
     return visualize
+
+
+_VISUALISE_MESSAGE_ONLY_COLUMNS = "Mappings accept column names only"
+_VISUALISE_FUNCTION_CALL_RE = re.compile(r"\b[a-z_][a-z0-9_]*\s*\(", re.IGNORECASE)
+_VISUALISE_MAPPINGS_RE = re.compile(
+    r"^\s*VISUALISE\s+(.*?)(?=\b(?:DRAW|FROM|SCALE|PROJECT|FACET|PLACE|LABEL|THEME)\b|$)",
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+def safe_visual_validation_error(validated: Any) -> str | None:
+    """Return an upstream validation error only when it is specific enough."""
+    errors = validated.errors()
+    if not errors:
+        return None
+
+    message = errors[0]["message"]
+    if _VISUALISE_MESSAGE_ONLY_COLUMNS not in message:
+        return message
+
+    if visualise_clause_looks_expression_driven(validated.visual()):
+        return message
+
+    return None
+
+
+def visualise_clause_looks_expression_driven(visual: str) -> bool:
+    """Heuristically detect SQL-expression-like mappings in VISUALISE."""
+    mappings = extract_visualise_mappings(visual)
+    return bool(_VISUALISE_FUNCTION_CALL_RE.search(mappings))
+
+
+def extract_visualise_mappings(visual: str) -> str:
+    """Return the mappings portion of a VISUALISE clause."""
+    match = _VISUALISE_MAPPINGS_RE.search(visual)
+    if match is None:
+        return visual
+    return match.group(1)
 
 
 PNG_WIDTH = 500

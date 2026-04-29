@@ -1,13 +1,18 @@
 """Tests for visualization tool functions."""
 
 import importlib.util
+from pathlib import Path
 
 import narwhals.stable.v1 as nw
 import polars as pl
 import pytest
 from querychat._datasource import DataFrameSource
+from querychat._system_prompt import QueryChatSystemPrompt
+from querychat._utils import read_prompt_template
 from querychat.tools import tool_visualize
 from querychat.types import VisualizeData, VisualizeResult
+
+PROMPTS_DIR = Path(__file__).resolve().parents[1] / "src" / "querychat" / "prompts"
 
 
 class TestVizDependencyCheck:
@@ -48,6 +53,32 @@ class TestVizDependencyCheck:
         assert result == ("visualize",)
 
 
+def test_ggsql_syntax_reference_uses_range_not_errorbar():
+    syntax = (PROMPTS_DIR / "ggsql-syntax.md").read_text()
+    assert "`range`" in syntax
+    assert "`errorbar`" not in syntax
+
+
+def test_ggsql_syntax_reference_does_not_teach_one_ended_segment():
+    syntax = (PROMPTS_DIR / "ggsql-syntax.md").read_text()
+    assert "segment can omit one endpoint" not in syntax
+    assert "Requires `x`, `y`, `xend`, `yend`" in syntax or "Requires x, y, xend, yend" in syntax
+
+
+def test_main_prompt_render_includes_ggsql_reference(data_source):
+    system_prompt = QueryChatSystemPrompt(
+        PROMPTS_DIR / "prompt.md",
+        data_source=data_source,
+    )
+
+    prompt = system_prompt.render(("visualize",))
+
+    assert "querychat_visualize" in prompt
+    assert "## ggsql Syntax Reference" in prompt
+    assert "`range` displays interval marks." in prompt
+    assert "{{> ggsql-syntax}}" not in prompt
+
+
 @pytest.fixture
 def sample_df():
     return pl.DataFrame(
@@ -74,6 +105,21 @@ class TestToolVisualize:
 
         tool = tool_visualize(data_source, update_fn)
         assert tool.name == "querychat_visualize"
+
+    def test_visualize_tool_prompt_mentions_current_ggsql_rules(self):
+        doc = read_prompt_template("tool-visualize.md", db_type="DuckDB")
+
+        assert "All data transformations must happen in the `SELECT` clause." in doc
+        assert (
+            "`VISUALISE` and `MAPPING` accept column names only, not SQL expressions "
+            "or functions."
+        ) in doc
+        assert "Do NOT include `LABEL title => ...` in the query" in doc
+        assert "read the error message carefully and retry with a corrected query" in doc
+        assert (
+            "using `DRAW range` for interval-style marks instead of deprecated "
+            "`errorbar`"
+        ) in doc
 
     @pytest.mark.ggsql
     def test_tool_executes_sql_and_renders(self, data_source, monkeypatch):
@@ -124,6 +170,68 @@ class TestToolVisualize:
 
         assert result.error is not None
         assert "VISUALISE" in str(result.error)
+
+    @pytest.mark.ggsql
+    def test_tool_surfaces_upstream_expression_in_visualise_error(self, data_source):
+        tool = tool_visualize(data_source, lambda _: None)
+        result = tool.func(
+            ggsql=(
+                "SELECT CAST(x AS DOUBLE) AS x2, y "
+                "FROM test_data "
+                "VISUALISE CAST(x2 AS DOUBLE) AS x, y "
+                "DRAW point"
+            ),
+            title="Bad Viz",
+        )
+
+        assert result.error is not None
+        assert "Mappings accept column names only" in str(result.error)
+        assert "Move data transformations to the SELECT clause" in str(result.error)
+
+    @pytest.mark.ggsql
+    def test_tool_invalid_geom_passes_through_upstream_error(self, data_source):
+        tool = tool_visualize(data_source, lambda _: None)
+        result = tool.func(
+            ggsql="SELECT x FROM test_data VISUALISE x DRAW nope",
+            title="Bad Viz",
+        )
+
+        assert result.error is not None
+        assert "VISUALISE clause was not recognized" in str(result.error)
+        assert "Mappings accept column names only" in str(result.error)
+
+    def test_tool_joins_all_upstream_validation_errors(self, data_source, monkeypatch):
+        class FakeValidated:
+            def has_visual(self):
+                return True
+
+            def valid(self):
+                return False
+
+            def errors(self):
+                return [
+                    {"message": "first ggsql error"},
+                    {"message": "second ggsql error"},
+                ]
+
+        import ggsql
+
+        monkeypatch.setattr(ggsql, "validate", lambda _query: FakeValidated())
+
+        tool = tool_visualize(data_source, lambda _: None)
+        result = tool.func(ggsql="SELECT x VISUALISE x DRAW point", title="Bad Viz")
+
+        assert result.error is not None
+        assert str(result.error) == "first ggsql error\nsecond ggsql error"
+
+    @pytest.mark.ggsql
+    def test_tool_still_rejects_query_without_visualise(self, data_source):
+        tool = tool_visualize(data_source, lambda _: None)
+        result = tool.func(ggsql="SELECT x, y FROM test_data", title="No Viz")
+
+        assert result.error is not None
+        assert "Query must include a VISUALISE clause" in str(result.error)
+        assert "Use querychat_query" in str(result.error)
 
 
 class TestVisualizeResultContent:

@@ -1,5 +1,7 @@
-# Custom workflow (not shiny-workflows) because ggsql requires
-# Node.js + tree-sitter-cli + ODBC to build from source.
+# Workflow derived from https://github.com/rstudio/shiny-workflows
+#
+# NOTE: This Shiny team GHA workflow is overkill for most R packages.
+# For most R packages it is better to use https://github.com/r-lib/actions
 on:
   push:
     branches: [main, rc-**]
@@ -11,105 +13,28 @@ on:
       - 'pkg-r/**'
       - '.github/workflows/R-CMD-check.yml'
   schedule:
-    - cron: "0 8 * * 1"
+    - cron: "0 8 * * 1" # every monday
 
 name: Package checks
 
 jobs:
+  # website:
+  #   uses: rstudio/shiny-workflows/.github/workflows/website.yaml@v1
+  #   with:
+  #     working-directory: ./pkg-r
   routine:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    name: routine
-    env:
-      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
-
-      - name: Setup Git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-      - name: Format R code with air
-        uses: rstudio/shiny-workflows/format-r-code@v1
-        with:
-          working-directory: ./pkg-r
-
-      - name: Push formatting changes
-        run: git push || echo "Nothing to push"
-
+    uses: rstudio/shiny-workflows/.github/workflows/routine.yaml@v1
+    with:
+      format-r-code: true
+      working-directory: ./pkg-r
+      extra-packages: |
+        posit-dev/ggsql-r
+        rstudio/bslib
   R-CMD-check:
-    runs-on: ${{ matrix.config.os }}
-    name: ${{ matrix.config.os }} (${{ matrix.config.r }})
-
-    strategy:
-      fail-fast: false
-      matrix:
-        config:
-          - {os: macos-latest, r: 'release'}
-          - {os: windows-latest, r: 'release'}
-          - {os: ubuntu-latest, r: 'devel', http-user-agent: 'release'}
-          - {os: ubuntu-latest, r: 'release'}
-          - {os: ubuntu-latest, r: 'oldrel-1'}
-          - {os: ubuntu-latest, r: 'oldrel-2'}
-          - {os: ubuntu-latest, r: 'oldrel-3'}
-
-    env:
-      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
-      R_KEEP_PKG_SOURCE: yes
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install ODBC (Linux)
-        if: runner.os == 'Linux'
-        run: sudo apt-get install -y unixodbc-dev
-
-      - name: Install ODBC (macOS)
-        if: runner.os == 'macOS'
-        run: brew install unixodbc
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-
-      - name: Install tree-sitter-cli
-        run: npm install -g tree-sitter-cli
-
-      - uses: r-lib/actions/setup-pandoc@v2
-
-      - uses: r-lib/actions/setup-r@v2
-        with:
-          r-version: ${{ matrix.config.r }}
-          http-user-agent: ${{ matrix.config.http-user-agent }}
-          use-public-rspm: true
-
-      - uses: r-lib/actions/setup-r-dependencies@v2
-        with:
-          working-directory: ./pkg-r
-          extra-packages: |
-            any::rcmdcheck
-            posit-dev/ggsql-r
-            rstudio/bslib
-          needs: check
-
-      - uses: r-lib/actions/check-r-package@v2
-        with:
-          working-directory: ./pkg-r
-          upload-snapshots: true
-          build_args: 'c("--no-manual", "--compact-vignettes=gs+qpdf")'
-
-      - name: Show testthat output
-        if: always()
-        working-directory: ./pkg-r
-        run: find check -name 'testthat.Rout*' -exec cat '{}' \; || true
-        shell: bash
-
-      - name: Show install logs
-        if: always()
-        working-directory: ./pkg-r
-        run: find check -name '00install.out' -exec cat '{}' \; || true
-        shell: bash
+    uses: rstudio/shiny-workflows/.github/workflows/R-CMD-check.yaml@v1
+    with:
+      working-directory: ./pkg-r
+      check-depends-only: false
+      extra-packages: |
+        posit-dev/ggsql-r
+        rstudio/bslib

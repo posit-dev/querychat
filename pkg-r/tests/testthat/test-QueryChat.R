@@ -371,6 +371,70 @@ describe("QueryChat$client()", {
     expect_false("querychat_reset_dashboard" %in% tool_names)
   })
 
+  it("registers visualize tool when tools include 'visualize'", {
+    skip_if_not_installed("ggsql")
+    session <- structure(
+      list(
+        output = list(),
+        ns = identity
+      ),
+      class = "MockShinySession"
+    )
+
+    qc <- QueryChat$new(
+      new_test_df(),
+      "test_df",
+      tools = c("query", "visualize")
+    )
+    withr::defer(qc$cleanup())
+
+    client <- qc$client(tools = c("query", "visualize"), session = session)
+
+    tool_names <- sapply(client$get_tools(), function(t) t@name)
+    expect_contains(tool_names, "querychat_query")
+    expect_contains(tool_names, "querychat_visualize")
+    expect_false("querychat_update_dashboard" %in% tool_names)
+    expect_false("querychat_reset_dashboard" %in% tool_names)
+  })
+
+  it("errors when visualize tool is requested without a session", {
+    skip_if_not_installed("ggsql")
+
+    qc <- QueryChat$new(
+      new_test_df(),
+      "test_df"
+    )
+    withr::defer(qc$cleanup())
+
+    expect_error(
+      qc$client(tools = "visualize"),
+      "active Shiny",
+      fixed = TRUE
+    )
+  })
+
+  it("registers only visualize tool when tools = 'visualize'", {
+    skip_if_not_installed("ggsql")
+    session <- structure(
+      list(
+        output = list(),
+        ns = identity
+      ),
+      class = "MockShinySession"
+    )
+
+    qc <- QueryChat$new(
+      new_test_df(),
+      "test_df"
+    )
+    withr::defer(qc$cleanup())
+
+    client <- qc$client(tools = "visualize", session = session)
+
+    tool_names <- sapply(client$get_tools(), function(t) t@name)
+    expect_equal(unname(tool_names), "querychat_visualize")
+  })
+
   it("returns client with no tools when tools = NULL", {
     qc <- QueryChat$new(
       new_test_df(),

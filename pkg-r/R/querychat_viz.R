@@ -129,7 +129,7 @@ visualize_result <- function(
 
   update_fn(list(ggsql = ggsql_str, title = title, widget_id = widget_id))
 
-  extra <- NULL
+  extra <- list()
   if (!is.null(viz_container)) {
     footer <- build_viz_footer(ggsql_str, title, widget_id)
     extra <- list(

@@ -167,49 +167,6 @@ querychat_tool_starts_open <- function(action) {
   )
 }
 
-truncate_error <- function(error_msg, max_chars = 500L) {
-  lines <- strsplit(error_msg, "\n", fixed = TRUE)[[1]]
-  schema_pattern <- "^\\s*[\\{\\[]|'additionalProperties'|\"additionalProperties\""
-  meaningful <- character()
-  truncated_by_schema <- FALSE
-
-  for (line in lines) {
-    if (!nzchar(trimws(line))) {
-      truncated_by_schema <- TRUE
-      break
-    }
-    if (grepl(schema_pattern, line, perl = TRUE)) {
-      truncated_by_schema <- TRUE
-      break
-    }
-    meaningful <- c(meaningful, line)
-  }
-
-  if (truncated_by_schema && length(meaningful) > 0) {
-    prefix <- paste(meaningful, collapse = "\n")
-    if (nchar(prefix) > max_chars) {
-      prefix <- hard_truncate(prefix, max_chars)
-    }
-    return(paste0(trimws(prefix, which = "right"), "\n\n(error truncated)"))
-  }
-
-  # No schema markers found — apply hard cap if needed
-  if (nchar(error_msg) <= max_chars) {
-    return(error_msg)
-  }
-
-  paste0(hard_truncate(error_msg, max_chars), "\n\n(error truncated)")
-}
-
-hard_truncate <- function(text, max_chars) {
-  cut <- substr(text, 1, max_chars)
-  last_space <- regexpr("\\s[^\\s]*$", cut, perl = TRUE)
-  if (last_space > max_chars %/% 2) {
-    cut <- substr(cut, 1, last_space - 1L)
-  }
-  trimws(cut, which = "right")
-}
-
 querychat_tool_result <- function(
   data_source,
   query,

@@ -6,6 +6,7 @@ import narwhals.stable.v1 as nw
 import polars as pl
 import pytest
 from querychat._datasource import DataFrameSource
+from querychat._utils import read_prompt_template
 from querychat.tools import tool_visualize
 from querychat.types import VisualizeData, VisualizeResult
 
@@ -75,15 +76,20 @@ class TestToolVisualize:
         tool = tool_visualize(data_source, update_fn)
         assert tool.name == "querychat_visualize"
 
-    def test_visualize_tool_prompt_mentions_current_ggsql_rules(self, data_source):
-        tool = tool_visualize(data_source, lambda _: None)
-        doc = tool.func.__doc__
+    def test_visualize_tool_prompt_mentions_current_ggsql_rules(self):
+        doc = read_prompt_template("tool-visualize.md", db_type="DuckDB")
 
-        assert "DRAW range" in doc or "range" in doc
-        assert "read the error message carefully" in doc
-        assert "Do NOT include `LABEL title => ...`" in doc
-        assert "VISUALISE and MAPPING accept column names only" in doc
-        assert "querychat-specific parser compensation" not in doc
+        assert "All data transformations must happen in the `SELECT` clause." in doc
+        assert (
+            "`VISUALISE` and `MAPPING` accept column names only, not SQL expressions "
+            "or functions."
+        ) in doc
+        assert "Do NOT include `LABEL title => ...` in the query" in doc
+        assert "read the error message carefully and retry with a corrected query" in doc
+        assert (
+            "using `DRAW range` for interval-style marks instead of deprecated "
+            "`errorbar`"
+        ) in doc
 
     @pytest.mark.ggsql
     def test_tool_executes_sql_and_renders(self, data_source, monkeypatch):

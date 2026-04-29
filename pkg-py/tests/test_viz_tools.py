@@ -75,6 +75,16 @@ class TestToolVisualize:
         tool = tool_visualize(data_source, update_fn)
         assert tool.name == "querychat_visualize"
 
+    def test_visualize_tool_prompt_mentions_current_ggsql_rules(self, data_source):
+        tool = tool_visualize(data_source, lambda _: None)
+        doc = tool.func.__doc__
+
+        assert "DRAW range" in doc or "range" in doc
+        assert "read the error message carefully" in doc
+        assert "Do NOT include `LABEL title => ...`" in doc
+        assert "VISUALISE and MAPPING accept column names only" in doc
+        assert "querychat-specific parser compensation" not in doc
+
     @pytest.mark.ggsql
     def test_tool_executes_sql_and_renders(self, data_source, monkeypatch):
         callback_data = {}

@@ -11,11 +11,6 @@ tool_visualize_dashboard <- function(
 ) {
   check_data_source(data_source)
   check_function(update_fn)
-  if (is.null(session)) {
-    cli::cli_abort(
-      "{.fn tool_visualize_dashboard} requires an active Shiny {.arg session}."
-    )
-  }
 
   db_type <- data_source$get_db_type()
 
@@ -100,6 +95,18 @@ visualize_result <- function(
       ggsql::ggsqlOutput(session$ns(widget_id)),
       viz_dep()
     )
+  } else {
+    # In console/non-Shiny usage, printing a Spec displays the chart via the
+    # usual interactive viewer path. The tool result only needs to tell the
+    # model that the chart was displayed.
+    print(spec)
+    update_fn(list(ggsql = ggsql_str, title = title, widget_id = widget_id))
+    return(ellmer::ContentToolResult(
+      value = sprintf(
+        "Chart displayed%s.",
+        if (nzchar(title)) sprintf(" with title '%s'", title) else ""
+      )
+    ))
   }
 
   # PNG for LLM feedback (best-effort; requires V8 + rsvg)
@@ -129,21 +136,18 @@ visualize_result <- function(
 
   update_fn(list(ggsql = ggsql_str, title = title, widget_id = widget_id))
 
-  extra <- list()
-  if (!is.null(viz_container)) {
-    footer <- build_viz_footer(ggsql_str, title, widget_id)
-    extra <- list(
-      display = list(
-        html = viz_container,
-        title = if (nzchar(title)) title else "Query Visualization",
-        show_request = FALSE,
-        open = querychat_tool_starts_open("visualize"),
-        full_screen = TRUE,
-        icon = viz_icon(),
-        footer = footer
-      )
+  footer <- build_viz_footer(ggsql_str, title, widget_id)
+  extra <- list(
+    display = list(
+      html = viz_container,
+      title = if (nzchar(title)) title else "Query Visualization",
+      show_request = FALSE,
+      open = querychat_tool_starts_open("visualize"),
+      full_screen = TRUE,
+      icon = viz_icon(),
+      footer = footer
     )
-  }
+  )
 
   ellmer::ContentToolResult(value = value, extra = extra)
 }

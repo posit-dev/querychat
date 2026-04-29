@@ -50,18 +50,23 @@ describe("tool_visualize_dashboard()", {
     expect_no_match(without_query@description, "fall back to `querychat_query`", fixed = TRUE)
   })
 
-  it("errors when session is NULL", {
+  it("prints the spec and returns a simple result when session is NULL", {
     ds <- local_data_frame_source(new_test_df())
-    expect_error(
-      tool_visualize_dashboard(
-        ds,
-        session = NULL,
-        update_fn = function(data) {
-        }
-      ),
-      "active Shiny",
-      fixed = TRUE
+
+    tool <- tool_visualize_dashboard(
+      ds,
+      session = NULL,
+      update_fn = function(data) {
+      }
     )
+
+    result <- tool(
+      ggsql = "SELECT * FROM test_table VISUALISE value AS x DRAW histogram",
+      title = "Test"
+    )
+
+    expect_match(result@value, "Chart displayed with title 'Test'.", fixed = TRUE)
+    expect_equal(result@extra, list())
   })
 
   it("calls update_fn on success", {

@@ -397,7 +397,7 @@ describe("QueryChat$client()", {
     expect_false("querychat_reset_dashboard" %in% tool_names)
   })
 
-  it("errors when visualize tool is requested without a session", {
+  it("registers visualize tool without a session", {
     skip_if_not_installed("ggsql")
 
     qc <- QueryChat$new(
@@ -406,11 +406,10 @@ describe("QueryChat$client()", {
     )
     withr::defer(qc$cleanup())
 
-    expect_error(
-      qc$client(tools = "visualize"),
-      "active Shiny",
-      fixed = TRUE
-    )
+    client <- qc$client(tools = "visualize")
+
+    tool_names <- sapply(client$get_tools(), function(t) t@name)
+    expect_equal(unname(tool_names), "querychat_visualize")
   })
 
   it("registers only visualize tool when tools = 'visualize'", {

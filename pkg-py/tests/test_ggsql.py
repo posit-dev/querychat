@@ -50,6 +50,34 @@ class TestHasLayerLevelSource:
 class TestGgsqlValidate:
     """Tests for ggsql.validate() usage (split SQL and VISUALISE)."""
 
+    def test_accepts_from_before_visualise(self):
+        query = "FROM data VISUALISE x, y DRAW point"
+        validated = ggsql.validate(query)
+        assert validated.has_visual()
+        assert validated.sql() == "SELECT * FROM data"
+        assert validated.visual() == "VISUALISE x, y DRAW point"
+
+    def test_accepts_from_before_visualise_for_test_data(self):
+        query = "FROM test_data VISUALISE x, y DRAW point"
+        validated = ggsql.validate(query)
+        assert validated.has_visual()
+        assert validated.sql() == "SELECT * FROM test_data"
+        assert validated.visual() == "VISUALISE x, y DRAW point"
+
+    def test_reports_upstream_error_for_expression_in_visualise(self):
+        query = (
+            "SELECT CAST(x AS DOUBLE) AS x2 "
+            "FROM data "
+            "VISUALISE CAST(x2 AS DOUBLE) AS x "
+            "DRAW point"
+        )
+        validated = ggsql.validate(query)
+        assert not validated.valid()
+        assert any(
+            "Mappings accept column names only" in error["message"]
+            for error in validated.errors()
+        )
+
     def test_splits_query_with_visualise(self):
         query = "SELECT x, y FROM data VISUALISE x, y DRAW point"
         validated = ggsql.validate(query)

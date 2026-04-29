@@ -448,7 +448,6 @@ QueryChat <- R6::R6Class(
     app_obj = function(..., bookmark_store = "url") {
       private$require_data_source("$app_obj")
       check_installed("DT")
-      check_installed("bsicons")
       check_dots_empty()
 
       table_name <- private$.data_source$table_name

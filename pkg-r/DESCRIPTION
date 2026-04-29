@@ -22,6 +22,7 @@ BugReports: https://github.com/posit-dev/querychat/issues
 Depends:
     R (>= 4.1.0)
 Imports:
+    bsicons,
     bslib,
     cli,
     DBI,
@@ -37,7 +38,6 @@ Imports:
     utils,
     whisker
 Suggests:
-    bsicons,
     dbplyr,
     dplyr,
     DT,

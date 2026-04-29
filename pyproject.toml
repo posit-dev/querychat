@@ -49,7 +49,13 @@ streamlit = ["streamlit>=1.30"]
 gradio = ["gradio>=6.0"]
 dash = ["dash-ag-grid>=31.0", "dash[async]>=3.1", "dash-bootstrap-components>=2.0", "pandas"]
 # Visualization with ggsql
-viz = ["ggsql>=0.3.0", "altair>=6.0", "shinywidgets>=0.8.0", "vl-convert-python>=1.9.0"]
+viz = [
+    # Temporary direct reference until ggsql 0.3.0 is available on the package index.
+    "ggsql @ git+https://github.com/cpsievert/ggsql-python.git@3a941bf5378cb3c12ac003fc92f2ff8e96ebb8dd",
+    "altair>=6.0",
+    "shinywidgets>=0.8.0",
+    "vl-convert-python>=1.9.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/posit-dev/querychat" # TODO update when we have docs
@@ -87,7 +93,20 @@ git_describe_command = "git describe --dirty --tags --long --match 'py/v*'"
 version-file = "pkg-py/src/querychat/__version.py"
 
 [dependency-groups]
-dev = ["ruff>=0.6.5", "pyright>=1.1.401", "tox-uv>=1.11.4", "pytest>=8.4.0", "polars>=1.0.0", "pyarrow>=14.0.0", "ibis-framework[duckdb]>=9.0.0", "ggsql>=0.3.0", "altair>=6.0", "shinywidgets>=0.8.0", "vl-convert-python>=1.9.0"]
+dev = [
+    "ruff>=0.6.5",
+    "pyright>=1.1.401",
+    "tox-uv>=1.11.4",
+    "pytest>=8.4.0",
+    "polars>=1.0.0",
+    "pyarrow>=14.0.0",
+    "ibis-framework[duckdb]>=9.0.0",
+    # Temporary direct reference until ggsql 0.3.0 is available on the package index.
+    "ggsql @ git+https://github.com/cpsievert/ggsql-python.git@3a941bf5378cb3c12ac003fc92f2ff8e96ebb8dd",
+    "altair>=6.0",
+    "shinywidgets>=0.8.0",
+    "vl-convert-python>=1.9.0",
+]
 docs = ["quartodoc>=0.11.1", "griffe<2", "nbformat", "nbclient", "ipykernel"]
 examples = [
     "openai",

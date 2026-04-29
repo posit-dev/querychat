@@ -12,6 +12,29 @@ describe("tool_visualize_dashboard()", {
     expect_equal(tool@name, "querychat_visualize")
   })
 
+  it("renders query fallback guidance only when query tool is enabled", {
+    ds <- local_data_frame_source(new_test_df())
+
+    with_query <- tool_visualize_dashboard(
+      ds,
+      session = NULL,
+      update_fn = function(data) {
+      },
+      has_tool_query = TRUE
+    )
+    without_query <- tool_visualize_dashboard(
+      ds,
+      session = NULL,
+      update_fn = function(data) {
+      },
+      has_tool_query = FALSE
+    )
+
+    expect_match(with_query@description, "use `querychat_query` instead", fixed = TRUE)
+    expect_no_match(without_query@description, "use `querychat_query` instead", fixed = TRUE)
+    expect_no_match(without_query@description, "fall back to `querychat_query`", fixed = TRUE)
+  })
+
   it("executes and returns a ContentToolResult (no display without session)", {
     ds <- local_data_frame_source(new_test_df())
     callback_data <- NULL

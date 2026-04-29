@@ -5,17 +5,27 @@
 tool_visualize_dashboard <- function(
   data_source,
   session,
-  update_fn = function(data) {}
+  update_fn = function(data) {
+  },
+  has_tool_query = FALSE
 ) {
   check_data_source(data_source)
   check_function(update_fn)
+  if (is.null(session)) {
+    cli::cli_abort(
+      "{.fn tool_visualize_dashboard} requires an active Shiny {.arg session}."
+    )
+  }
 
   db_type <- data_source$get_db_type()
 
   ellmer::tool(
     tool_visualize_impl(data_source, session, update_fn),
     name = "querychat_visualize",
-    description = interpolate_viz_tool_description(db_type),
+    description = render_viz_tool_description(
+      db_type = db_type,
+      has_tool_query = has_tool_query
+    ),
     arguments = list(
       ggsql = ellmer::type_string(
         ellmer::interpolate(
@@ -40,14 +50,7 @@ tool_visualize_impl <- function(data_source, session, update_fn) {
   force(update_fn)
 
   function(ggsql, title) {
-    tryCatch(
-      visualize_result(data_source, session, update_fn, ggsql, title),
-      error = function(err) {
-        error_msg <- truncate_error(conditionMessage(err))
-        markdown <- sprintf("```sql\n%s\n```\n\n> Error: %s", ggsql, error_msg)
-        ellmer::ContentToolResult(value = markdown, error = err)
-      }
-    )
+    visualize_result(data_source, session, update_fn, ggsql, title)
   }
 }
 
@@ -236,16 +239,18 @@ viz_dep <- function() {
   )
 }
 
-# Load and interpolate the tool-visualize.md description, stripping Mustache
-# section tags ({{#tag}}, {{/tag}}) which are incompatible with glue syntax.
-interpolate_viz_tool_description <- function(db_type) {
+# Load and render the tool-visualize.md description with the available tools.
+render_viz_tool_description <- function(db_type, has_tool_query = FALSE) {
   path <- system.file("prompts", "tool-visualize.md", package = "querychat")
   stopifnot(nzchar(path), file.exists(path))
   template <- paste(readLines(path, warn = FALSE), collapse = "\n")
-  # Strip Mustache section open/close tags so glue doesn't choke on them.
-  # The inline text content is kept; only the tags themselves are removed.
-  template <- gsub("[{][{][#/][^}]+[}][}]", "", template, perl = TRUE)
-  ellmer::interpolate(template, db_type = db_type)
+  whisker::whisker.render(
+    template,
+    list(
+      db_type = db_type,
+      has_tool_query = if (isTRUE(has_tool_query)) "true"
+    )
+  )
 }
 
 #' Execute a pre-validated ggsql query against a DataSource

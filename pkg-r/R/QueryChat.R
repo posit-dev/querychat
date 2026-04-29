@@ -180,7 +180,8 @@ QueryChat <- R6::R6Class(
           tool_visualize_dashboard(
             private$.data_source,
             session = session,
-            update_fn = visualize
+            update_fn = visualize,
+            has_tool_query = "query" %in% tools
           )
         )
       }

@@ -200,6 +200,30 @@ class TestToolVisualize:
         assert "VISUALISE clause was not recognized" in str(result.error)
         assert "Mappings accept column names only" in str(result.error)
 
+    def test_tool_joins_all_upstream_validation_errors(self, data_source, monkeypatch):
+        class FakeValidated:
+            def has_visual(self):
+                return True
+
+            def valid(self):
+                return False
+
+            def errors(self):
+                return [
+                    {"message": "first ggsql error"},
+                    {"message": "second ggsql error"},
+                ]
+
+        import ggsql
+
+        monkeypatch.setattr(ggsql, "validate", lambda _query: FakeValidated())
+
+        tool = tool_visualize(data_source, lambda _: None)
+        result = tool.func(ggsql="SELECT x VISUALISE x DRAW point", title="Bad Viz")
+
+        assert result.error is not None
+        assert str(result.error) == "first ggsql error\nsecond ggsql error"
+
     @pytest.mark.ggsql
     def test_tool_still_rejects_query_without_visualise(self, data_source):
         tool = tool_visualize(data_source, lambda _: None)

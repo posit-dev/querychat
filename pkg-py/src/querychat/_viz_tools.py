@@ -163,7 +163,9 @@ def visualize_impl(
                 )
 
             if not validated.valid():
-                raise ValueError(validated.errors()[0]["message"])
+                raise ValueError(
+                    "\n".join(error["message"] for error in validated.errors())
+                )
 
             spec = execute_ggsql(data_source, validated)
 

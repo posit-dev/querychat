@@ -5,8 +5,7 @@
 #   summarizing the intent of the SQL query.
 tool_update_dashboard <- function(
   data_source,
-  update_fn = function(query, title) {
-  }
+  update_fn = function(query, title) {}
 ) {
   check_data_source(data_source)
 
@@ -286,8 +285,11 @@ querychat_tool_result <- function(
         title = if (action == "update" && !is.null(title)) title,
         show_request = is_error,
         markdown = display_md,
-        open = if (!is.null(collapsed)) !collapsed else
+        open = if (!is.null(collapsed)) {
+          !collapsed
+        } else {
           querychat_tool_starts_open(action)
+        }
       )
     )
   )

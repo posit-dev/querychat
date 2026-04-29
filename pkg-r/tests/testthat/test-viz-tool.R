@@ -7,8 +7,7 @@ describe("tool_visualize_dashboard()", {
     tool <- tool_visualize_dashboard(
       ds,
       session = NULL,
-      update_fn = function(data) {
-      }
+      update_fn = function(data) {}
     )
     expect_equal(tool@name, "querychat_visualize")
   })
@@ -55,8 +54,7 @@ describe("tool_visualize_dashboard()", {
     tool <- tool_visualize_dashboard(
       ds,
       session = NULL,
-      update_fn = function(data) {
-      }
+      update_fn = function(data) {}
     )
     result <- tool(
       ggsql = "SELECT * FROM test_table",
@@ -71,8 +69,7 @@ describe("tool_visualize_dashboard()", {
     tool <- tool_visualize_dashboard(
       ds,
       session = NULL,
-      update_fn = function(data) {
-      }
+      update_fn = function(data) {}
     )
     result <- tool(
       ggsql = "SELECT * FROM nonexistent_table VISUALISE x AS x DRAW point",

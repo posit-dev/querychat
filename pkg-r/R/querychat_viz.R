@@ -5,8 +5,7 @@
 tool_visualize_dashboard <- function(
   data_source,
   session,
-  update_fn = function(data) {
-  }
+  update_fn = function(data) {}
 ) {
   check_data_source(data_source)
   check_function(update_fn)
@@ -320,7 +319,9 @@ extract_visualise_table <- function(visual) {
       perl = TRUE
     )
   )
-  if (length(m) == 0 || !nzchar(m)) return(NULL)
+  if (length(m) == 0 || !nzchar(m)) {
+    return(NULL)
+  }
   sub("^(?i)FROM\\s+", "", m, perl = TRUE)
 }
 
@@ -343,7 +344,9 @@ has_layer_level_source <- function(visual) {
     perl = TRUE
   )[[1]]
   for (clause in clauses) {
-    if (!grepl("^\\s*DRAW\\b", clause, ignore.case = TRUE, perl = TRUE)) next
+    if (!grepl("^\\s*DRAW\\b", clause, ignore.case = TRUE, perl = TRUE)) {
+      next
+    }
     if (
       grepl(
         "\\bMAPPING\\b[\\s\\S]*?\\bFROM\\s+(\"[^\"]+?\"|\\S+)",

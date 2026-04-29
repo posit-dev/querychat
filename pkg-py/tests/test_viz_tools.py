@@ -7,9 +7,12 @@ import narwhals.stable.v1 as nw
 import polars as pl
 import pytest
 from querychat._datasource import DataFrameSource
+from querychat._system_prompt import QueryChatSystemPrompt
 from querychat._utils import read_prompt_template
 from querychat.tools import tool_visualize
 from querychat.types import VisualizeData, VisualizeResult
+
+PROMPTS_DIR = Path(__file__).resolve().parents[1] / "src" / "querychat" / "prompts"
 
 
 class TestVizDependencyCheck:
@@ -51,21 +54,29 @@ class TestVizDependencyCheck:
 
 
 def test_ggsql_syntax_reference_uses_range_not_errorbar():
-    syntax = Path("pkg-py/src/querychat/prompts/ggsql-syntax.md").read_text()
+    syntax = (PROMPTS_DIR / "ggsql-syntax.md").read_text()
     assert "`range`" in syntax
     assert "`errorbar`" not in syntax
 
 
 def test_ggsql_syntax_reference_does_not_teach_one_ended_segment():
-    syntax = Path("pkg-py/src/querychat/prompts/ggsql-syntax.md").read_text()
+    syntax = (PROMPTS_DIR / "ggsql-syntax.md").read_text()
     assert "segment can omit one endpoint" not in syntax
     assert "Requires `x`, `y`, `xend`, `yend`" in syntax or "Requires x, y, xend, yend" in syntax
 
 
-def test_main_prompt_still_embeds_ggsql_reference():
-    prompt = Path("pkg-py/src/querychat/prompts/prompt.md").read_text()
-    assert "{{> ggsql-syntax}}" in prompt
+def test_main_prompt_render_includes_ggsql_reference(data_source):
+    system_prompt = QueryChatSystemPrompt(
+        PROMPTS_DIR / "prompt.md",
+        data_source=data_source,
+    )
+
+    prompt = system_prompt.render(("visualize",))
+
     assert "querychat_visualize" in prompt
+    assert "## ggsql Syntax Reference" in prompt
+    assert "`range` displays interval marks." in prompt
+    assert "{{> ggsql-syntax}}" not in prompt
 
 
 @pytest.fixture

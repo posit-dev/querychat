@@ -53,6 +53,7 @@ class TestGgsqlValidate:
     def test_accepts_from_before_visualise(self):
         query = "FROM data VISUALISE x, y DRAW point"
         validated = ggsql.validate(query)
+        assert validated.valid()
         assert validated.has_visual()
         assert validated.sql() == "SELECT * FROM data"
         assert validated.visual() == "VISUALISE x, y DRAW point"
@@ -60,6 +61,7 @@ class TestGgsqlValidate:
     def test_accepts_from_before_visualise_for_test_data(self):
         query = "FROM test_data VISUALISE x, y DRAW point"
         validated = ggsql.validate(query)
+        assert validated.valid()
         assert validated.has_visual()
         assert validated.sql() == "SELECT * FROM test_data"
         assert validated.visual() == "VISUALISE x, y DRAW point"
@@ -73,9 +75,11 @@ class TestGgsqlValidate:
         )
         validated = ggsql.validate(query)
         assert not validated.valid()
+        messages = [error["message"] for error in validated.errors()]
         assert any(
-            "Mappings accept column names only" in error["message"]
-            for error in validated.errors()
+            "VISUALISE clause was not recognized" in message
+            and "column names only" in message
+            for message in messages
         )
 
     def test_splits_query_with_visualise(self):

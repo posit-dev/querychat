@@ -12,6 +12,7 @@ check_data_source <- function(
   }
 }
 
+
 # SQL table name validation ----------------------------------------------
 
 #' Check SQL table name validity
@@ -62,6 +63,7 @@ check_sql_table_name <- function(
 is_valid_sql_table_name <- function(x) {
   grepl("^[a-zA-Z][a-zA-Z0-9_]*$", x)
 }
+
 
 # SQL query validation --------------------------------------------------------
 

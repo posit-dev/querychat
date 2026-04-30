@@ -1,7 +1,3 @@
-# Create a visualization tool for the dashboard.
-# @param data_source A querychat DataSource R6 object.
-# @param update_fn A function that will be called with a list containing
-#   `ggsql`, `title`, and `widget_id` when a visualization succeeds.
 tool_visualize_dashboard <- function(
   data_source,
   session,
@@ -48,11 +44,6 @@ tool_visualize_impl <- function(data_source, session, update_fn) {
   }
 }
 
-# Execute a ggsql query and return a ContentToolResult with a visualization.
-# @param data_source A querychat DataSource R6 object.
-# @param update_fn Callback called with list(ggsql, title, widget_id) on success.
-# @param ggsql_str The full ggsql query string.
-# @param title A title for the visualization.
 visualize_result <- function(
   data_source,
   session,
@@ -77,13 +68,11 @@ visualize_result <- function(
 
   spec <- execute_ggsql(data_source, validated)
 
-  # Generate a unique widget ID without requiring the uuid package
   widget_id <- paste0(
     "querychat_viz_",
     format(as.hexmode(sample.int(.Machine$integer.max, 1)), width = 8)
   )
 
-  # Register a dynamic Shiny output via ggsql's official binding
   viz_container <- NULL
   if (!is.null(session)) {
     session$output[[widget_id]] <- ggsql::renderGgsql(spec)
@@ -93,9 +82,7 @@ visualize_result <- function(
       viz_dep()
     )
   } else {
-    # In console/non-Shiny usage, printing a Spec displays the chart via the
-    # usual interactive viewer path. The tool result only needs to tell the
-    # model that the chart was displayed.
+    # Non-Shiny usage: print the Spec to display via the interactive viewer
     print(spec)
     update_fn(list(ggsql = ggsql_str, title = title, widget_id = widget_id))
     return(ellmer::ContentToolResult(
@@ -106,7 +93,7 @@ visualize_result <- function(
     ))
   }
 
-  # PNG for LLM feedback (best-effort; requires V8 + rsvg)
+  # PNG snapshot for LLM feedback (best-effort; requires V8 + rsvg)
   png_file <- tempfile(fileext = ".png")
   on.exit(unlink(png_file), add = TRUE)
   png_content <- tryCatch(
@@ -165,10 +152,6 @@ collapse_validation_errors <- function(validated) {
   paste(messages, collapse = "\n")
 }
 
-# Build the footer HTML for a visualization tool result.
-# @param ggsql_str The full ggsql query string.
-# @param title The visualization title.
-# @param widget_id The unique widget ID for the visualization.
 build_viz_footer <- function(ggsql_str, title, widget_id) {
   footer_id <- paste0(
     "querychat_footer_",
@@ -239,12 +222,10 @@ build_viz_footer <- function(ggsql_str, title, widget_id) {
   htmltools::tagList(buttons_row, query_section)
 }
 
-# Returns the graph-up SVG icon string for the visualize tool.
 viz_icon <- function() {
   '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-graph-up" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M0 0h1v15h15v1H0zm14.817 3.113a.5.5 0 0 1 .07.704l-4.5 5.5a.5.5 0 0 1-.74.037L7.06 6.767l-3.656 5.027a.5.5 0 0 1-.808-.588l4-5.5a.5.5 0 0 1 .758-.06l2.609 2.61 4.15-5.073a.5.5 0 0 1 .704-.07"/></svg>'
 }
 
-# Returns the htmltools HTMLDependency for querychat viz assets.
 viz_dep <- function() {
   htmltools::htmlDependency(
     name = "querychat-viz",
@@ -256,7 +237,6 @@ viz_dep <- function() {
   )
 }
 
-# Load and render the tool-visualize.md description with the available tools.
 render_viz_tool_description <- function(db_type, has_tool_query = FALSE) {
   path <- system.file("prompts", "tool-visualize.md", package = "querychat")
   stopifnot(nzchar(path), file.exists(path))

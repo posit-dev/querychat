@@ -29,6 +29,7 @@ describe("DataSource base class", {
   })
 })
 
+
 describe("DataSource$get_schema()", {
   it("returns proper schema for DataFrameSource", {
     skip_if_no_dataframe_engine()
@@ -309,6 +310,7 @@ describe("DataSource$execute_query()", {
     expect_equal(ncol(result), 2)
   })
 })
+
 
 describe("test_query() column validation", {
   skip_if_no_dataframe_engine()

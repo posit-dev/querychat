@@ -55,7 +55,7 @@ docs: r-docs py-docs-render ## [docs] Build the documentation
 .PHONY: web-setup
 web-setup:  ## [js] Install shared web asset dependencies
 	@echo "🆙 Setup shared web asset dependencies"
-	cd $(PATH_PKG_JS) && npm install
+	cd $(PATH_PKG_JS) && npm ci
 
 .PHONY: web-build
 web-build:  ## [js] Build shared web assets

@@ -276,6 +276,7 @@ pkg-py/docs/_screenshots/
 
 # Git worktrees
 .worktrees/
+js/node_modules/
 
 # Superpowers docs (local only)
 docs/superpowers/

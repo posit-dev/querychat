@@ -32,7 +32,6 @@ mod_server <- function(
     current_title <- shiny::reactiveVal(NULL, label = "current_title")
     current_query <- shiny::reactiveVal(NULL, label = "current_query")
     has_greeted <- shiny::reactiveVal(FALSE, label = "has_greeted")
-    viz_widgets <- shiny::reactiveVal(list(), label = "viz_widgets")
     filtered_df <- shiny::reactive(label = "filtered_df", {
       data_source$execute_query(query = current_query())
     })
@@ -63,18 +62,13 @@ mod_server <- function(
       querychat_tool_result(action = "reset")
     }
 
+    # Non-reactive bookkeeping for bookmark save/restore of viz widgets
+    viz_widgets <- list()
+
     on_visualize <- function(data) {
-      current <- shiny::isolate(viz_widgets())
-      viz_widgets(
-        c(
-          current,
-          list(
-            list(
-              widget_id = data$widget_id,
-              ggsql = data$ggsql
-            )
-          )
-        )
+      viz_widgets[[length(viz_widgets) + 1L]] <<- list(
+        widget_id = data$widget_id,
+        ggsql = data$ggsql
       )
     }
 
@@ -143,9 +137,8 @@ mod_server <- function(
         state$values$querychat_sql <- current_query()
         state$values$querychat_title <- current_title()
         state$values$querychat_has_greeted <- has_greeted()
-        widgets <- viz_widgets()
-        if (length(widgets) > 0) {
-          state$values$querychat_viz_widgets <- widgets
+        if (length(viz_widgets) > 0) {
+          state$values$querychat_viz_widgets <- viz_widgets
         }
       })
 
@@ -165,7 +158,7 @@ mod_server <- function(
             state$values$querychat_viz_widgets,
             session
           )
-          viz_widgets(restored)
+          viz_widgets <<- restored
         }
       })
     }

@@ -1,10 +1,13 @@
 (function () {
-  // Helper: find the <ggsql-viz> web component inside a container div by ID.
-  // The container div is identified by the output element ID used in R/Shiny.
+  // Helper: find the ggsql widget element by the output element ID used in
+  // R/Shiny. The current widget is rendered as <ggsql-vega>, but older markup
+  // may still wrap a nested custom element.
   function findGgsqlVizElement(widgetId) {
     var container = document.getElementById(widgetId);
     if (!container) return null;
-    return container.querySelector("ggsql-viz");
+    var tagName = container.tagName && container.tagName.toLowerCase();
+    if (tagName === "ggsql-vega" || tagName === "ggsql-viz") return container;
+    return container.querySelector("ggsql-vega, ggsql-viz");
   }
 
   // Helper: download a chart from a <ggsql-viz> element using the Vega View API.

@@ -357,3 +357,18 @@ describe("collapse_validation_errors()", {
     )
   })
 })
+
+describe("resolve_viz_dom_id()", {
+  it("uses the session namespace when available", {
+    session <- structure(
+      list(ns = function(id) paste0("repro-", id)),
+      class = "MockShinySession"
+    )
+
+    expect_equal(resolve_viz_dom_id(session, "viz"), "repro-viz")
+  })
+
+  it("falls back to the raw widget id without a session", {
+    expect_equal(resolve_viz_dom_id(NULL, "viz"), "viz")
+  })
+})

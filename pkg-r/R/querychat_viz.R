@@ -121,7 +121,12 @@ visualize_result <- function(
 
   update_fn(list(ggsql = ggsql_str, title = title, widget_id = widget_id))
 
-  footer <- build_viz_footer(ggsql_str, title, widget_id)
+  footer <- build_viz_footer(
+    ggsql_str,
+    title,
+    widget_id,
+    dom_widget_id = resolve_viz_dom_id(session, widget_id)
+  )
   extra <- list(
     display = list(
       html = viz_container,
@@ -152,7 +157,12 @@ collapse_validation_errors <- function(validated) {
   paste(messages, collapse = "\n")
 }
 
-build_viz_footer <- function(ggsql_str, title, widget_id) {
+build_viz_footer <- function(
+  ggsql_str,
+  title,
+  widget_id,
+  dom_widget_id = widget_id
+) {
   footer_id <- paste0(
     "querychat_footer_",
     format(as.hexmode(sample.int(.Machine$integer.max, 1)), width = 8)
@@ -196,7 +206,7 @@ build_viz_footer <- function(ggsql_str, title, widget_id) {
         class = "querychat-save-dropdown",
         shiny::tags$button(
           class = "querychat-save-btn",
-          `data-widget-id` = widget_id,
+          `data-widget-id` = dom_widget_id,
           bsicons::bs_icon("download", class = "querychat-icon"),
           "Save",
           bsicons::bs_icon("chevron-down", class = "querychat-dropdown-chevron")
@@ -205,13 +215,13 @@ build_viz_footer <- function(ggsql_str, title, widget_id) {
           class = "querychat-save-menu",
           shiny::tags$button(
             class = "querychat-save-png-btn",
-            `data-widget-id` = widget_id,
+            `data-widget-id` = dom_widget_id,
             `data-title` = title,
             "Save as PNG"
           ),
           shiny::tags$button(
             class = "querychat-save-svg-btn",
-            `data-widget-id` = widget_id,
+            `data-widget-id` = dom_widget_id,
             `data-title` = title,
             "Save as SVG"
           )
@@ -221,6 +231,14 @@ build_viz_footer <- function(ggsql_str, title, widget_id) {
   )
 
   htmltools::tagList(buttons_row, query_section)
+}
+
+resolve_viz_dom_id <- function(session, widget_id) {
+  if (is.null(session)) {
+    return(widget_id)
+  }
+
+  session$ns(widget_id)
 }
 
 viz_icon <- function() {

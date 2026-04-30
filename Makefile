@@ -65,7 +65,7 @@ web-build:  ## [js] Build shared web assets
 .PHONY: web-check
 web-check:  ## [js] Check shared web assets
 	@echo "📐 Checking shared web assets"
-	cd $(PATH_PKG_JS) && npm run build
+	cd $(PATH_PKG_JS) && npm run check
 
 .PHONY: r-setup
 r-setup:  ## [r] Install R dependencies

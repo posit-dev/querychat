@@ -67,15 +67,13 @@ visualize_result <- function(
   has_visual <- ggsql::ggsql_has_visual(validated)
 
   if (!has_visual) {
-    has_keyword <- grepl("VISUALIS[EZ]", ggsql_str, ignore.case = TRUE)
-    if (has_keyword) {
-      rlang::abort(
-        "VISUALISE clause was not recognized. VISUALISE and MAPPING accept column names only — no SQL expressions, CAST(), or functions. Move all data transformations to the SELECT clause, then reference the resulting column by name in VISUALISE."
-      )
-    }
     rlang::abort(
       "Query must include a VISUALISE clause. Use querychat_query for queries without visualization."
     )
+  }
+
+  if (!isTRUE(validated$valid)) {
+    rlang::abort(collapse_validation_errors(validated))
   }
 
   spec <- execute_ggsql(data_source, validated)
@@ -150,6 +148,21 @@ visualize_result <- function(
   )
 
   ellmer::ContentToolResult(value = value, extra = extra)
+}
+
+collapse_validation_errors <- function(validated) {
+  errors <- validated$errors
+  if (is.null(errors) || !nrow(errors)) {
+    return("Invalid ggsql query.")
+  }
+
+  messages <- errors$message
+  messages <- messages[!is.na(messages) & nzchar(messages)]
+  if (!length(messages)) {
+    return("Invalid ggsql query.")
+  }
+
+  paste(messages, collapse = "\n")
 }
 
 # Build the footer HTML for a visualization tool result.

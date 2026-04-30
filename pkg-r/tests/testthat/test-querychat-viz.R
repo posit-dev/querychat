@@ -74,6 +74,20 @@ describe("execute_ggsql()", {
     expect_s3_class(spec, "Spec")
   })
 
+  it("supports FROM before VISUALISE", {
+    ds <- local_data_frame_source(new_test_df())
+    validated <- ggsql::ggsql_validate(
+      "FROM test_table VISUALISE value AS x DRAW histogram"
+    )
+    expect_true(validated$valid)
+    expect_true(validated$has_visual)
+    expect_equal(validated$sql, "SELECT * FROM test_table")
+    expect_equal(validated$visual, "VISUALISE value AS x DRAW histogram")
+
+    spec <- execute_ggsql(ds, validated)
+    expect_s3_class(spec, "Spec")
+  })
+
   it("rejects layer-level FROM sources", {
     ds <- local_data_frame_source(new_test_df())
     # This is a synthetic test — construct a validated object whose

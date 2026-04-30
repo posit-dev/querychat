@@ -503,7 +503,11 @@ describe("viz prompt conditionals", {
     )
     rendered <- sp$render(tools = c("visualize"))
     expect_match(rendered, "ggsql-syntax-reference")
-    expect_match(rendered, "DRAW point")
+    expect_match(rendered, "FROM sales")
+    expect_match(rendered, "DRAW range")
+    expect_match(rendered, "xend")
+    expect_no_match(rendered, "errorbar", ignore.case = TRUE)
+    expect_no_match(rendered, "DRAW segment MAPPING 0 AS yend", fixed = TRUE)
   })
 
   it("includes collapsed guidance when both query and visualize active", {

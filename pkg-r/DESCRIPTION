@@ -23,7 +23,7 @@ Depends:
     R (>= 4.1.0)
 Imports:
     bsicons,
-    bslib,
+    bslib (>= 0.10.0),
     cli,
     DBI,
     ellmer (>= 0.3.0),
@@ -55,8 +55,7 @@ Suggests:
 VignetteBuilder:
     knitr
 Remotes:
-    posit-dev/ggsql-r,
-    rstudio/bslib
+    posit-dev/ggsql-r
 Config/testthat/edition: 3
 Config/testthat/parallel: true
 Encoding: UTF-8

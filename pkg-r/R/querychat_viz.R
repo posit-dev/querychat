@@ -163,7 +163,8 @@ build_viz_footer <- function(ggsql_str, title, widget_id) {
   code_editor <- bslib::input_code_editor(
     id = code_editor_id,
     value = ggsql_str,
-    language = "ggsql",
+    # TODO: require bslib>0.10 for ggsql language support, then switch to "ggsql" here
+    language = if (packageVersion("bslib") > "0.10") "ggsql" else "sql",
     read_only = TRUE,
     line_numbers = FALSE,
     height = "auto",

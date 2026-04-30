@@ -27,14 +27,8 @@ jobs:
     with:
       format-r-code: true
       working-directory: ./pkg-r
-      extra-packages: |
-        posit-dev/ggsql-r
-        rstudio/bslib
   R-CMD-check:
     uses: rstudio/shiny-workflows/.github/workflows/R-CMD-check.yaml@v1
     with:
       working-directory: ./pkg-r
       check-depends-only: false
-      extra-packages: |
-        posit-dev/ggsql-r
-        rstudio/bslib

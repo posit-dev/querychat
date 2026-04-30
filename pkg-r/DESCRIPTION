@@ -46,17 +46,17 @@ Suggests:
     knitr,
     palmerpenguins,
     rmarkdown,
-    rsvg,
     RSQLite,
+    rsvg,
     shinytest2,
     testthat (>= 3.0.0),
     V8,
     withr
+VignetteBuilder:
+    knitr
 Remotes:
     posit-dev/ggsql-r,
     rstudio/bslib
-VignetteBuilder:
-    knitr
 Config/testthat/edition: 3
 Config/testthat/parallel: true
 Encoding: UTF-8

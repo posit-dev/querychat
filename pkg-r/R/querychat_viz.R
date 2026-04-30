@@ -5,8 +5,7 @@
 tool_visualize_dashboard <- function(
   data_source,
   session,
-  update_fn = function(data) {
-  },
+  update_fn = function(data) {},
   has_tool_query = FALSE
 ) {
   check_data_source(data_source)

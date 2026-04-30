@@ -14,8 +14,7 @@ describe("tool_visualize_dashboard()", {
     tool <- tool_visualize_dashboard(
       ds,
       session = session,
-      update_fn = function(data) {
-      }
+      update_fn = function(data) {}
     )
     expect_equal(tool@name, "querychat_visualize")
   })
@@ -33,21 +32,31 @@ describe("tool_visualize_dashboard()", {
     with_query <- tool_visualize_dashboard(
       ds,
       session = session,
-      update_fn = function(data) {
-      },
+      update_fn = function(data) {},
       has_tool_query = TRUE
     )
     without_query <- tool_visualize_dashboard(
       ds,
       session = session,
-      update_fn = function(data) {
-      },
+      update_fn = function(data) {},
       has_tool_query = FALSE
     )
 
-    expect_match(with_query@description, "use `querychat_query` instead", fixed = TRUE)
-    expect_no_match(without_query@description, "use `querychat_query` instead", fixed = TRUE)
-    expect_no_match(without_query@description, "fall back to `querychat_query`", fixed = TRUE)
+    expect_match(
+      with_query@description,
+      "use `querychat_query` instead",
+      fixed = TRUE
+    )
+    expect_no_match(
+      without_query@description,
+      "use `querychat_query` instead",
+      fixed = TRUE
+    )
+    expect_no_match(
+      without_query@description,
+      "fall back to `querychat_query`",
+      fixed = TRUE
+    )
   })
 
   it("describes current ggsql 0.3 visualization rules", {
@@ -62,8 +71,7 @@ describe("tool_visualize_dashboard()", {
     tool <- tool_visualize_dashboard(
       ds,
       session = session,
-      update_fn = function(data) {
-      }
+      update_fn = function(data) {}
     )
 
     expect_match(
@@ -72,7 +80,11 @@ describe("tool_visualize_dashboard()", {
       fixed = TRUE
     )
     expect_match(tool@description, "DRAW range", fixed = TRUE)
-    expect_no_match(tool@description, "using single quotes for strings", fixed = TRUE)
+    expect_no_match(
+      tool@description,
+      "using single quotes for strings",
+      fixed = TRUE
+    )
   })
 
   it("prints the spec and returns a simple result when session is NULL", {
@@ -81,8 +93,7 @@ describe("tool_visualize_dashboard()", {
     tool <- tool_visualize_dashboard(
       ds,
       session = NULL,
-      update_fn = function(data) {
-      }
+      update_fn = function(data) {}
     )
 
     result <- tool(
@@ -90,7 +101,11 @@ describe("tool_visualize_dashboard()", {
       title = "Test"
     )
 
-    expect_match(result@value, "Chart displayed with title 'Test'.", fixed = TRUE)
+    expect_match(
+      result@value,
+      "Chart displayed with title 'Test'.",
+      fixed = TRUE
+    )
     expect_equal(result@extra, list())
   })
 
@@ -137,8 +152,7 @@ describe("tool_visualize_dashboard()", {
     tool <- tool_visualize_dashboard(
       ds,
       session = session,
-      update_fn = function(data) {
-      }
+      update_fn = function(data) {}
     )
     expect_error(
       tool(
@@ -161,8 +175,7 @@ describe("tool_visualize_dashboard()", {
     tool <- tool_visualize_dashboard(
       ds,
       session = session,
-      update_fn = function(data) {
-      }
+      update_fn = function(data) {}
     )
     expect_error(
       tool(
@@ -212,8 +225,7 @@ describe("tool_visualize_dashboard()", {
     tool <- tool_visualize_dashboard(
       ds,
       session = session,
-      update_fn = function(data) {
-      }
+      update_fn = function(data) {}
     )
 
     expect_error(
@@ -253,8 +265,7 @@ describe("tool_visualize_dashboard()", {
     tool <- tool_visualize_dashboard(
       ds,
       session = session,
-      update_fn = function(data) {
-      }
+      update_fn = function(data) {}
     )
 
     err <- tryCatch(
@@ -269,7 +280,11 @@ describe("tool_visualize_dashboard()", {
     )
 
     expect_s3_class(err, "error")
-    expect_match(conditionMessage(err), "upstream validation failed", fixed = TRUE)
+    expect_match(
+      conditionMessage(err),
+      "upstream validation failed",
+      fixed = TRUE
+    )
     expect_no_match(
       conditionMessage(err),
       "VISUALISE clause was not recognized",
@@ -298,8 +313,7 @@ describe("tool_visualize_dashboard()", {
     impl <- tool_visualize_impl(
       ds,
       session = session,
-      update_fn = function(data) {
-      }
+      update_fn = function(data) {}
     )
     expect_error(
       impl(

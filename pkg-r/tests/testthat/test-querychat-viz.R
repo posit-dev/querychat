@@ -65,7 +65,10 @@ describe("execute_ggsql()", {
   })
 
   it("supports uppercase column references without renaming", {
-    df <- data.frame(ROOM_TYPE = c("Entire home", "Private room"), listings = c(10, 20))
+    df <- data.frame(
+      ROOM_TYPE = c("Entire home", "Private room"),
+      listings = c(10, 20)
+    )
     ds <- local_data_frame_source(df, table_name = "upper_table")
     validated <- ggsql::ggsql_validate(
       paste(
@@ -78,7 +81,10 @@ describe("execute_ggsql()", {
   })
 
   it("passes original column names through to ggsql", {
-    df <- data.frame(ROOM_TYPE = c("Entire home", "Private room"), listings = c(10, 20))
+    df <- data.frame(
+      ROOM_TYPE = c("Entire home", "Private room"),
+      listings = c(10, 20)
+    )
     ds <- local_data_frame_source(df, table_name = "upper_table")
     validated <- list(
       sql = "SELECT ROOM_TYPE, listings FROM upper_table",

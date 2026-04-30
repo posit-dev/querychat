@@ -545,7 +545,7 @@ PROJECT TO polar SETTING inner => 0.5
    -- CORRECT
    LABEL x => 'Gender', y => 'Count'
    ```
-9. **Bar position adjustments**: Bars stack automatically when `fill` is mapped. Use `SETTING position => 'dodge'` for side-by-side bars, or `position => 'stack', total => 1` for proportional (100%) stacking:
+7. **Bar position adjustments**: Bars stack automatically when `fill` is mapped. Use `SETTING position => 'dodge'` for side-by-side bars, or `position => 'stack', total => 1` for proportional (100%) stacking:
    ```sql
    DRAW bar MAPPING category AS x, subcategory AS fill                                          -- stacked (default)
    DRAW bar MAPPING category AS x, subcategory AS fill SETTING position => 'dodge'              -- side-by-side

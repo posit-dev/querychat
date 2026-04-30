@@ -42,9 +42,7 @@ class TestVizDependencyCheck:
 
     def test_check_deps_false_skips_check(self, monkeypatch):
         """check_deps=False should skip the dependency check."""
-        monkeypatch.setattr(
-            importlib.util, "find_spec", lambda name, *a, **kw: None
-        )
+        monkeypatch.setattr(importlib.util, "find_spec", lambda name, *a, **kw: None)
 
         from querychat._querychat_base import normalize_tools
 
@@ -62,7 +60,21 @@ def test_ggsql_syntax_reference_uses_range_not_errorbar():
 def test_ggsql_syntax_reference_does_not_teach_one_ended_segment():
     syntax = (PROMPTS_DIR / "ggsql-syntax.md").read_text()
     assert "segment can omit one endpoint" not in syntax
-    assert "Requires `x`, `y`, `xend`, `yend`" in syntax or "Requires x, y, xend, yend" in syntax
+    assert (
+        "Requires `x`, `y`, `xend`, `yend`" in syntax
+        or "Requires x, y, xend, yend" in syntax
+    )
+
+
+def test_ggsql_syntax_reference_does_not_teach_stale_column_casing_workaround():
+    syntax = (PROMPTS_DIR / "ggsql-syntax.md").read_text()
+    assert "Column casing in VISUALISE" not in syntax
+    assert "ROOM_TYPE" not in syntax
+
+
+def test_ggsql_syntax_reference_does_not_repeat_charts_vs_tables_note():
+    syntax = (PROMPTS_DIR / "ggsql-syntax.md").read_text()
+    assert "**Charts vs Tables**" not in syntax
 
 
 def test_main_prompt_render_includes_ggsql_reference(data_source):
@@ -76,6 +88,8 @@ def test_main_prompt_render_includes_ggsql_reference(data_source):
     assert "querychat_visualize" in prompt
     assert "## ggsql Syntax Reference" in prompt
     assert "`range` displays interval marks." in prompt
+    assert "Column casing in VISUALISE" not in prompt
+    assert "ROOM_TYPE" not in prompt
     assert "{{> ggsql-syntax}}" not in prompt
 
 
@@ -115,7 +129,9 @@ class TestToolVisualize:
             "or functions."
         ) in doc
         assert "Do NOT include `LABEL title => ...` in the query" in doc
-        assert "read the error message carefully and retry with a corrected query" in doc
+        assert (
+            "read the error message carefully and retry with a corrected query" in doc
+        )
         assert (
             "using `DRAW range` for interval-style marks instead of deprecated "
             "`errorbar`"
@@ -132,7 +148,9 @@ class TestToolVisualize:
 
         from ipywidgets.widgets.widget import Widget
 
-        monkeypatch.setattr("shinywidgets.register_widget", lambda _widget_id, _chart: None)
+        monkeypatch.setattr(
+            "shinywidgets.register_widget", lambda _widget_id, _chart: None
+        )
         monkeypatch.setattr(
             "shinywidgets.output_widget", lambda _widget_id, **_kwargs: MagicMock()
         )
@@ -325,8 +343,10 @@ class TestRenderChartToPng:
     def test_simple_chart_returns_bytes(self):
         import altair as alt
 
-        chart = alt.Chart({"values": [{"x": 1, "y": 2}]}).mark_point().encode(
-            x="x:Q", y="y:Q"
+        chart = (
+            alt.Chart({"values": [{"x": 1, "y": 2}]})
+            .mark_point()
+            .encode(x="x:Q", y="y:Q")
         )
         from querychat._viz_tools import render_chart_to_png
 

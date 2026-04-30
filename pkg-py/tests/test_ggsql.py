@@ -17,7 +17,10 @@ class TestExtractVisualiseTable:
     """Tests for extract_visualise_table() parsing."""
 
     def test_bare_identifier(self):
-        assert extract_visualise_table("VISUALISE x, y FROM mytable DRAW point") == "mytable"
+        assert (
+            extract_visualise_table("VISUALISE x, y FROM mytable DRAW point")
+            == "mytable"
+        )
 
     def test_quoted_identifier(self):
         assert (
@@ -112,7 +115,6 @@ class TestGgsqlValidate:
         assert "LABEL title" in validated.visual()
 
 
-
 @pytest.fixture(autouse=True)
 def _allow_widget_outside_session(monkeypatch):
     """Allow JupyterChart (an ipywidget) to be constructed without a Shiny session."""
@@ -187,6 +189,63 @@ class TestExecuteGgsql:
         altair_widget = AltairWidget.from_ggsql(spec)
         result = altair_widget.widget.chart.to_dict()
         assert "$schema" in result
+
+    @pytest.mark.ggsql
+    def test_supports_uppercase_column_references_without_renaming(self):
+        nw_df = nw.from_native(
+            pl.DataFrame(
+                {
+                    "ROOM_TYPE": ["Entire home", "Private room"],
+                    "listings": [10, 20],
+                }
+            )
+        )
+        ds = DataFrameSource(nw_df, "upper_table")
+        query = (
+            "SELECT ROOM_TYPE, listings FROM upper_table "
+            "VISUALISE ROOM_TYPE AS x, listings AS y "
+            "DRAW bar"
+        )
+        spec = execute_ggsql(ds, ggsql.validate(query))
+        assert "VISUALISE" in spec.visual()
+
+    def test_passes_original_column_names_through_to_ggsql(self, monkeypatch):
+        nw_df = nw.from_native(
+            pl.DataFrame(
+                {
+                    "ROOM_TYPE": ["Entire home", "Private room"],
+                    "listings": [10, 20],
+                }
+            )
+        )
+        ds = DataFrameSource(nw_df, "upper_table")
+        validated = type(
+            "Validated",
+            (),
+            {
+                "sql": lambda self: "SELECT ROOM_TYPE, listings FROM upper_table",
+                "visual": lambda self: (
+                    "VISUALISE ROOM_TYPE AS x, listings AS y DRAW bar"
+                ),
+            },
+        )()
+        captured_columns = None
+
+        class FakeReader:
+            def register(self, name, df):
+                nonlocal captured_columns
+                captured_columns = list(df.columns)
+
+            def execute(self, query):
+                return type("Spec", (), {"visual": lambda self: query})()
+
+        import ggsql
+
+        monkeypatch.setattr(ggsql, "DuckDBReader", lambda *_args: FakeReader())
+
+        spec = execute_ggsql(ds, validated)
+        assert "VISUALISE" in spec.visual()
+        assert captured_columns == ["ROOM_TYPE", "listings"]
 
     @pytest.mark.ggsql
     def test_rejects_layer_level_from_sources_with_clear_error(self):

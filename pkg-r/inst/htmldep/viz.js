@@ -1,117 +1,156 @@
-(function () {
-  // Helper: find the ggsql widget element by the output element ID used in
-  // R/Shiny. The current widget is rendered as <ggsql-vega>, but older markup
-  // may still wrap a nested custom element.
-  function findGgsqlVizElement(widgetId) {
-    var container = document.getElementById(widgetId);
-    if (!container) return null;
-    var tagName = container.tagName && container.tagName.toLowerCase();
-    if (tagName === "ggsql-vega" || tagName === "ggsql-viz") return container;
-    return container.querySelector("ggsql-vega, ggsql-viz");
-  }
+/* Generated file. Source: js/src/viz-r.ts. Do not edit directly. */
 
-  // Helper: download a chart from a <ggsql-viz> element using the Vega View API.
-  // <ggsql-viz> stores the Vega View instance as `._view` after vegaEmbed renders.
-  function downloadFromView(vizEl, format, filename) {
-    if (!vizEl || !vizEl._view) return;
-    var view = vizEl._view;
-
-    if (format === "png") {
-      view.toImageURL("png").then(function (url) {
-        triggerDownload(url, filename + ".png");
-      }).catch(function (err) {
-        console.error("querychat: failed to export PNG:", err);
-      });
-    } else if (format === "svg") {
-      view.toSVG().then(function (svg) {
-        var blob = new Blob([svg], { type: "image/svg+xml" });
-        var url = URL.createObjectURL(blob);
-        triggerDownload(url, filename + ".svg");
-        URL.revokeObjectURL(url);
-      }).catch(function (err) {
-        console.error("querychat: failed to export SVG:", err);
-      });
-    }
-  }
-
-  function triggerDownload(url, filename) {
-    var a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  }
-
+"use strict";
+(() => {
+  // src/viz-core.ts
   function closeAllSaveMenus() {
-    document.querySelectorAll(".querychat-save-menu--visible").forEach(function (menu) {
+    document.querySelectorAll(".querychat-save-menu--visible").forEach((menu) => {
       menu.classList.remove("querychat-save-menu--visible");
     });
   }
-
-  function handleShowQuery(event, btn) {
+  function handleShowQuery(event, button) {
     event.stopPropagation();
-    var targetId = btn.dataset.target;
-    var section = document.getElementById(targetId);
-    if (!section) return;
-    var isVisible = section.classList.toggle("querychat-query-section--visible");
-    var label = btn.querySelector(".querychat-query-label");
-    var chevron = btn.querySelector(".querychat-query-chevron");
-    if (label) label.textContent = isVisible ? "Hide Query" : "Show Query";
-    if (chevron) chevron.classList.toggle("querychat-query-chevron--expanded", isVisible);
+    const targetId = button.dataset.target;
+    if (!targetId) {
+      return;
+    }
+    const section = document.getElementById(targetId);
+    if (!section) {
+      return;
+    }
+    const isVisible = section.classList.toggle("querychat-query-section--visible");
+    const label = button.querySelector(".querychat-query-label");
+    const chevron = button.querySelector(".querychat-query-chevron");
+    if (label) {
+      label.textContent = isVisible ? "Hide Query" : "Show Query";
+    }
+    if (chevron) {
+      chevron.classList.toggle("querychat-query-chevron--expanded", isVisible);
+    }
   }
-
-  function handleSaveToggle(event, btn) {
+  function handleSaveToggle(event, button) {
     event.stopPropagation();
-    var menu = btn.parentElement.querySelector(".querychat-save-menu");
-    if (menu) menu.classList.toggle("querychat-save-menu--visible");
+    const menu = button.parentElement?.querySelector(
+      ".querychat-save-menu"
+    );
+    if (menu) {
+      menu.classList.toggle("querychat-save-menu--visible");
+    }
   }
-
-  function handleSaveExport(event, btn, format) {
+  function handleSaveExport(event, button, format, adapter) {
     event.stopPropagation();
-    var widgetId = btn.dataset.widgetId;
-    var title = btn.dataset.title || "chart";
-    var menu = btn.closest(".querychat-save-menu");
-    if (menu) menu.classList.remove("querychat-save-menu--visible");
-
-    var vizEl = findGgsqlVizElement(widgetId);
-    if (!vizEl) return;
-    downloadFromView(vizEl, format, title);
+    const widgetId = button.dataset.widgetId;
+    if (!widgetId) {
+      return;
+    }
+    const filename = button.dataset.title || "chart";
+    const menu = button.closest(".querychat-save-menu");
+    if (menu) {
+      menu.classList.remove("querychat-save-menu--visible");
+    }
+    adapter.exportPlot(widgetId, format, filename);
   }
-
-  function handleCopy(event, btn) {
+  function handleCopy(event, button) {
     event.stopPropagation();
-    var query = btn.dataset.query;
-    if (!query) return;
-    navigator.clipboard.writeText(query).then(function () {
-      var original = btn.textContent;
-      btn.textContent = "Copied!";
-      setTimeout(function () { btn.textContent = original; }, 2000);
-    }).catch(function (err) {
-      console.error("Failed to copy:", err);
+    const query = button.dataset.query;
+    if (!query) {
+      return;
+    }
+    navigator.clipboard.writeText(query).then(() => {
+      const original = button.textContent;
+      button.textContent = "Copied!";
+      setTimeout(() => {
+        button.textContent = original;
+      }, 2e3);
+    }).catch((error) => {
+      console.error("Failed to copy:", error);
+    });
+  }
+  function installVizFooter(adapter) {
+    window.addEventListener("click", (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) {
+        closeAllSaveMenus();
+        return;
+      }
+      const showQueryButton = target.closest(".querychat-show-query-btn");
+      if (showQueryButton) {
+        handleShowQuery(event, showQueryButton);
+        return;
+      }
+      const savePngButton = target.closest(".querychat-save-png-btn");
+      if (savePngButton) {
+        handleSaveExport(event, savePngButton, "png", adapter);
+        return;
+      }
+      const saveSvgButton = target.closest(".querychat-save-svg-btn");
+      if (saveSvgButton) {
+        handleSaveExport(event, saveSvgButton, "svg", adapter);
+        return;
+      }
+      const copyButton = target.closest(".querychat-copy-btn");
+      if (copyButton) {
+        handleCopy(event, copyButton);
+        return;
+      }
+      const saveButton = target.closest(".querychat-save-btn");
+      if (saveButton) {
+        handleSaveToggle(event, saveButton);
+        return;
+      }
+      closeAllSaveMenus();
     });
   }
 
-  // Single delegated click handler for all querychat viz footer buttons.
-  window.addEventListener("click", function (event) {
-    var target = event.target;
-
-    var btn = target.closest(".querychat-show-query-btn");
-    if (btn) { handleShowQuery(event, btn); return; }
-
-    btn = target.closest(".querychat-save-png-btn");
-    if (btn) { handleSaveExport(event, btn, "png"); return; }
-
-    btn = target.closest(".querychat-save-svg-btn");
-    if (btn) { handleSaveExport(event, btn, "svg"); return; }
-
-    btn = target.closest(".querychat-copy-btn");
-    if (btn) { handleCopy(event, btn); return; }
-
-    btn = target.closest(".querychat-save-btn");
-    if (btn) { handleSaveToggle(event, btn); return; }
-
-    // Click outside any button — close open save menus
-    closeAllSaveMenus();
+  // src/viz-r.ts
+  function findGgsqlVizElement(widgetId) {
+    const container = document.getElementById(widgetId);
+    if (!container) {
+      return null;
+    }
+    const tagName = container.tagName.toLowerCase();
+    if (tagName === "ggsql-vega" || tagName === "ggsql-viz") {
+      return container;
+    }
+    return container.querySelector("ggsql-vega, ggsql-viz");
+  }
+  function triggerDownload(url, filename) {
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+  }
+  function exportFromView(vizElement, format, filename) {
+    const view = vizElement._view;
+    if (!view) {
+      return;
+    }
+    if (format === "png") {
+      view.toImageURL("png").then((url) => {
+        triggerDownload(url, `${filename}.png`);
+      }).catch((error) => {
+        console.error("querychat: failed to export PNG:", error);
+      });
+      return;
+    }
+    view.toSVG().then((svg) => {
+      const blob = new Blob([svg], { type: "image/svg+xml" });
+      const url = URL.createObjectURL(blob);
+      triggerDownload(url, `${filename}.svg`);
+      URL.revokeObjectURL(url);
+    }).catch((error) => {
+      console.error("querychat: failed to export SVG:", error);
+    });
+  }
+  installVizFooter({
+    exportPlot(widgetId, format, filename) {
+      const vizElement = findGgsqlVizElement(widgetId);
+      if (!vizElement) {
+        return;
+      }
+      exportFromView(vizElement, format, filename);
+    }
   });
 })();

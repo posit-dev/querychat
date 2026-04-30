@@ -1,4 +1,3 @@
-/* Generated file. Source: js/src/viz.css. Do not edit directly. */
 /* Hide Vega's built-in action dropdown (we have our own save button) */
 .querychat-viz-container details:has(> .vega-actions) {
   display: none !important;

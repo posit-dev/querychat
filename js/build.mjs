@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 
-const targets = [
+const jsTargets = [
   {
     source: "src/viz-r.ts",
     output: "../pkg-r/inst/htmldep/viz.js",
@@ -36,26 +36,47 @@ const ensureParentDir = async (relativePath) => {
 const banner = (source) =>
   `/* Generated file. Source: js/${source}. Do not edit directly. */\n`;
 
-const requiredSources = [...new Set([...targets, ...cssTargets].map((target) => target.source))];
-const missingSources = [];
+const uniqueSources = (targets) => [...new Set(targets.map((target) => target.source))];
 
-for (const target of [...targets, ...cssTargets]) {
+const findMissingSources = async (targets) => {
+  const missingSources = [];
+
+  for (const source of uniqueSources(targets)) {
+    try {
+      await access(path.resolve(rootDir, source));
+    } catch {
+      missingSources.push(`js/${source}`);
+    }
+  }
+
+  return missingSources;
+};
+
+for (const target of [...jsTargets, ...cssTargets]) {
   await ensureParentDir(target.output);
 }
 
-for (const source of requiredSources) {
-  try {
-    await access(path.resolve(rootDir, source));
-  } catch {
-    missingSources.push(`js/${source}`);
-  }
+const missingCssSources = await findMissingSources(cssTargets);
+
+if (missingCssSources.length > 0) {
+  throw new Error(`Missing CSS source files:\n- ${missingCssSources.join("\n- ")}`);
 }
 
-if (missingSources.length > 0) {
-  throw new Error(`Missing source files:\n- ${missingSources.join("\n- ")}`);
+const cssSourcePath = path.resolve(rootDir, "src/viz.css");
+const cssSource = await readFile(cssSourcePath, "utf8");
+
+for (const target of cssTargets) {
+  const outputPath = path.resolve(rootDir, target.output);
+  await writeFile(outputPath, `${banner(target.source)}${cssSource}`, "utf8");
 }
 
-for (const target of targets) {
+const missingJsSources = await findMissingSources(jsTargets);
+
+if (missingJsSources.length > 0) {
+  throw new Error(`Missing JS source files:\n- ${missingJsSources.join("\n- ")}`);
+}
+
+for (const target of jsTargets) {
   await build({
     bundle: true,
     entryPoints: [path.resolve(rootDir, target.source)],
@@ -68,12 +89,4 @@ for (const target of targets) {
       js: banner(target.source),
     },
   });
-}
-
-const cssSourcePath = path.resolve(rootDir, "src/viz.css");
-const cssSource = await readFile(cssSourcePath, "utf8");
-
-for (const target of cssTargets) {
-  const outputPath = path.resolve(rootDir, target.output);
-  await writeFile(outputPath, `${banner(target.source)}${cssSource}`, "utf8");
 }

@@ -107,9 +107,10 @@ visualize_result <- function(
   }
 
   # PNG for LLM feedback (best-effort; requires V8 + rsvg)
+  png_file <- tempfile(fileext = ".png")
+  on.exit(unlink(png_file), add = TRUE)
   png_content <- tryCatch(
     {
-      png_file <- tempfile(fileext = ".png")
       ggsql::ggsql_save(spec, png_file, width = 500, height = 300)
       ellmer::content_image_file(png_file)
     },

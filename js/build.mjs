@@ -13,7 +13,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
-const repoDir = path.resolve(rootDir, "..");
+export const repoDir = path.resolve(rootDir, "..");
 
 const jsTargets = [
   {
@@ -43,7 +43,9 @@ const ensureParentDir = async (relativePath) => {
   return absolutePath;
 };
 
-const resolveOutputPath = (baseDir, relativePath) =>
+export const assetTargets = [...cssTargets, ...jsTargets];
+
+export const resolveOutputPath = (baseDir, relativePath) =>
   path.resolve(baseDir, path.relative(repoDir, path.resolve(rootDir, relativePath)));
 
 const banner = (source) =>
@@ -86,7 +88,7 @@ const reportMissingSources = async () => {
   throw new Error(messages.join("\n\n"));
 };
 
-const stageBuildOutputs = async (stageDir) => {
+export const stageBuildOutputs = async (stageDir) => {
   const cssSourcePath = path.resolve(rootDir, "src/viz.css");
   const cssSource = await readFile(cssSourcePath, "utf8");
 
@@ -114,21 +116,34 @@ const stageBuildOutputs = async (stageDir) => {
   }
 };
 
-const commitBuildOutputs = async (stageDir) => {
-  for (const target of [...cssTargets, ...jsTargets]) {
+export const commitBuildOutputs = async (stageDir) => {
+  for (const target of assetTargets) {
     const stagedOutputPath = resolveOutputPath(stageDir, target.output);
     await ensureParentDir(target.output);
     await copyFile(stagedOutputPath, path.resolve(rootDir, target.output));
   }
 };
 
-await reportMissingSources();
+export async function withStagedBuild(callback) {
+  await reportMissingSources();
 
-const stageDir = await mkdtemp(path.join(os.tmpdir(), "querychat-build-"));
+  const stageDir = await mkdtemp(path.join(os.tmpdir(), "querychat-build-"));
 
-try {
-  await stageBuildOutputs(stageDir);
-  await commitBuildOutputs(stageDir);
-} finally {
-  await rm(stageDir, { force: true, recursive: true });
+  try {
+    await stageBuildOutputs(stageDir);
+    return await callback(stageDir);
+  } finally {
+    await rm(stageDir, { force: true, recursive: true });
+  }
+}
+
+export async function buildOutputs() {
+  await withStagedBuild(commitBuildOutputs);
+}
+
+const isEntrypoint =
+  process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (isEntrypoint) {
+  await buildOutputs();
 }

@@ -9,6 +9,7 @@ These tests verify the client-side JS behavior in viz.js:
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
@@ -21,6 +22,19 @@ if TYPE_CHECKING:
 
 VIZ_PROMPT = "Use the visualize tool to create a scatter plot of age vs fare"
 TOOL_RESULT_TIMEOUT = 90_000
+
+
+def _download_from_save_menu(page: Page, format: str):
+    """Open the save menu, click the requested format, and capture the download."""
+    page.locator(".querychat-save-btn").click()
+
+    option = page.locator(f".querychat-save-{format}-btn")
+    title = option.get_attribute("data-title") or "chart"
+
+    with page.expect_download(timeout=30_000) as download_info:
+        option.click()
+
+    return download_info.value, title
 
 
 @pytest.fixture(autouse=True)
@@ -152,3 +166,29 @@ class TestSaveDropdown:
 
         btn.click()
         expect(menu).not_to_have_class("querychat-save-menu--visible")
+
+    def test_save_as_png_downloads_png(self, page: Page) -> None:
+        """Clicking 'Save as PNG' should download a PNG file."""
+        download, title = _download_from_save_menu(page, "png")
+
+        assert download.suggested_filename == f"{title}.png"
+
+        download_path = download.path()
+        assert download_path is not None
+
+        content = Path(download_path).read_bytes()
+        assert content.startswith(b"\x89PNG\r\n\x1a\n")
+        assert len(content) > 100
+
+    def test_save_as_svg_downloads_svg(self, page: Page) -> None:
+        """Clicking 'Save as SVG' should download an SVG file."""
+        download, title = _download_from_save_menu(page, "svg")
+
+        assert download.suggested_filename == f"{title}.svg"
+
+        download_path = download.path()
+        assert download_path is not None
+
+        content = Path(download_path).read_text(encoding="utf-8")
+        assert "<svg" in content
+        assert "</svg>" in content

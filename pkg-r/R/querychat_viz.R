@@ -294,10 +294,6 @@ execute_ggsql <- function(data_source, validated) {
   }
 
   df <- data_source$execute_query(validated$sql)
-  # Snowflake (and some other backends) uppercase unquoted identifiers,
-  # but the LLM writes lowercase aliases in the VISUALISE clause.
-  # DuckDB is case-insensitive, so lowercasing here lets both match.
-  names(df) <- tolower(names(df))
 
   reader <- ggsql::duckdb_reader()
   table <- extract_visualise_table(visual)

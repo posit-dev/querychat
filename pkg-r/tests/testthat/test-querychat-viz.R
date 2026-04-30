@@ -64,14 +64,43 @@ describe("execute_ggsql()", {
     expect_s3_class(spec, "Spec")
   })
 
-  it("lowercases column names", {
-    df <- data.frame(ID = 1:3, VALUE = c(10, 20, 30))
+  it("supports uppercase column references without renaming", {
+    df <- data.frame(ROOM_TYPE = c("Entire home", "Private room"), listings = c(10, 20))
     ds <- local_data_frame_source(df, table_name = "upper_table")
     validated <- ggsql::ggsql_validate(
-      "SELECT id, value FROM upper_table VISUALISE value AS x DRAW histogram"
+      paste(
+        "SELECT ROOM_TYPE, listings FROM upper_table",
+        "VISUALISE ROOM_TYPE AS x, listings AS y DRAW bar"
+      )
     )
     spec <- execute_ggsql(ds, validated)
     expect_s3_class(spec, "Spec")
+  })
+
+  it("passes original column names through to ggsql", {
+    df <- data.frame(ROOM_TYPE = c("Entire home", "Private room"), listings = c(10, 20))
+    ds <- local_data_frame_source(df, table_name = "upper_table")
+    validated <- list(
+      sql = "SELECT ROOM_TYPE, listings FROM upper_table",
+      visual = "VISUALISE ROOM_TYPE AS x, listings AS y DRAW bar"
+    )
+    captured_names <- NULL
+
+    local_mocked_bindings(
+      duckdb_reader = function(...) "reader",
+      ggsql_register = function(reader, df, name) {
+        captured_names <<- names(df)
+        invisible(NULL)
+      },
+      ggsql_execute = function(reader, query) {
+        structure(list(), class = "Spec")
+      },
+      .package = "ggsql"
+    )
+
+    spec <- execute_ggsql(ds, validated)
+    expect_s3_class(spec, "Spec")
+    expect_equal(captured_names, c("ROOM_TYPE", "listings"))
   })
 
   it("supports FROM before VISUALISE", {

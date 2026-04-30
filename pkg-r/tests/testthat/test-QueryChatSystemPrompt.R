@@ -508,6 +508,8 @@ describe("viz prompt conditionals", {
     expect_match(rendered, "xend")
     expect_no_match(rendered, "errorbar", ignore.case = TRUE)
     expect_no_match(rendered, "DRAW segment MAPPING 0 AS yend", fixed = TRUE)
+    expect_no_match(rendered, "Column casing in VISUALISE", fixed = TRUE)
+    expect_no_match(rendered, "ROOM_TYPE", fixed = TRUE)
   })
 
   it("includes collapsed guidance when both query and visualize active", {

@@ -1,9 +1,19 @@
 import { build } from "esbuild";
-import { access, mkdir, readFile, writeFile } from "node:fs/promises";
+import {
+  access,
+  copyFile,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  writeFile,
+} from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
+const repoDir = path.resolve(rootDir, "..");
 
 const jsTargets = [
   {
@@ -33,6 +43,9 @@ const ensureParentDir = async (relativePath) => {
   return absolutePath;
 };
 
+const resolveOutputPath = (baseDir, relativePath) =>
+  path.resolve(baseDir, path.relative(repoDir, path.resolve(rootDir, relativePath)));
+
 const banner = (source) =>
   `/* Generated file. Source: js/${source}. Do not edit directly. */\n`;
 
@@ -52,41 +65,70 @@ const findMissingSources = async (targets) => {
   return missingSources;
 };
 
-for (const target of [...jsTargets, ...cssTargets]) {
-  await ensureParentDir(target.output);
-}
+const reportMissingSources = async () => {
+  const missingCssSources = await findMissingSources(cssTargets);
+  const missingJsSources = await findMissingSources(jsTargets);
 
-const missingCssSources = await findMissingSources(cssTargets);
+  if (missingCssSources.length === 0 && missingJsSources.length === 0) {
+    return;
+  }
 
-if (missingCssSources.length > 0) {
-  throw new Error(`Missing CSS source files:\n- ${missingCssSources.join("\n- ")}`);
-}
+  const messages = [];
 
-const cssSourcePath = path.resolve(rootDir, "src/viz.css");
-const cssSource = await readFile(cssSourcePath, "utf8");
+  if (missingCssSources.length > 0) {
+    messages.push(`Missing CSS source files:\n- ${missingCssSources.join("\n- ")}`);
+  }
 
-for (const target of cssTargets) {
-  const outputPath = path.resolve(rootDir, target.output);
-  await writeFile(outputPath, `${banner(target.source)}${cssSource}`, "utf8");
-}
+  if (missingJsSources.length > 0) {
+    messages.push(`Missing JS source files:\n- ${missingJsSources.join("\n- ")}`);
+  }
 
-const missingJsSources = await findMissingSources(jsTargets);
+  throw new Error(messages.join("\n\n"));
+};
 
-if (missingJsSources.length > 0) {
-  throw new Error(`Missing JS source files:\n- ${missingJsSources.join("\n- ")}`);
-}
+const stageBuildOutputs = async (stageDir) => {
+  const cssSourcePath = path.resolve(rootDir, "src/viz.css");
+  const cssSource = await readFile(cssSourcePath, "utf8");
 
-for (const target of jsTargets) {
-  await build({
-    bundle: true,
-    entryPoints: [path.resolve(rootDir, target.source)],
-    format: "iife",
-    logLevel: "info",
-    outfile: path.resolve(rootDir, target.output),
-    platform: "browser",
-    target: "es2020",
-    banner: {
-      js: banner(target.source),
-    },
-  });
+  for (const target of cssTargets) {
+    const outputPath = resolveOutputPath(stageDir, target.output);
+    await mkdir(path.dirname(outputPath), { recursive: true });
+    await writeFile(outputPath, `${banner(target.source)}${cssSource}`, "utf8");
+  }
+
+  for (const target of jsTargets) {
+    const outputPath = resolveOutputPath(stageDir, target.output);
+    await mkdir(path.dirname(outputPath), { recursive: true });
+    await build({
+      bundle: true,
+      entryPoints: [path.resolve(rootDir, target.source)],
+      format: "iife",
+      logLevel: "info",
+      outfile: outputPath,
+      platform: "browser",
+      target: "es2020",
+      banner: {
+        js: banner(target.source),
+      },
+    });
+  }
+};
+
+const commitBuildOutputs = async (stageDir) => {
+  for (const target of [...cssTargets, ...jsTargets]) {
+    const stagedOutputPath = resolveOutputPath(stageDir, target.output);
+    await ensureParentDir(target.output);
+    await copyFile(stagedOutputPath, path.resolve(rootDir, target.output));
+  }
+};
+
+await reportMissingSources();
+
+const stageDir = await mkdtemp(path.join(os.tmpdir(), "querychat-build-"));
+
+try {
+  await stageBuildOutputs(stageDir);
+  await commitBuildOutputs(stageDir);
+} finally {
+  await rm(stageDir, { force: true, recursive: true });
 }

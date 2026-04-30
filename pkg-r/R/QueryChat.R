@@ -174,7 +174,7 @@ QueryChat <- R6::R6Class(
       if ("visualize" %in% tools) {
         rlang::check_installed(
           "ggsql",
-          reason = "for visualization support. Install with: pak::pak('posit-dev/ggsql-r')"
+          reason = "for visualization support."
         )
         chat$register_tool(
           tool_visualize_dashboard(

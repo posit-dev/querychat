@@ -75,7 +75,7 @@ await withStagedBuild(async (stageDir) => {
 });
 
 if (staleOutputs.length > 0) {
-  console.error("Generated web assets are out of sync. Run `make web-build`.");
+  console.error("Generated web assets are out of sync. Run `make js-build`.");
   for (const outputPath of staleOutputs) {
     console.error(`- ${outputPath}`);
   }

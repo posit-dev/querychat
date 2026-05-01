@@ -1,4 +1,4 @@
-/* Generated file. Source: js/src/viz-py.ts. Do not edit directly. */
+/* Generated file. Source: js/src/viz.ts. Do not edit directly. */
 
 "use strict";
 (() => {
@@ -161,6 +161,6 @@
     };
   }
 
-  // src/viz-py.ts
+  // src/viz.ts
   installVizFooter(createVegaActionAdapter());
 })();

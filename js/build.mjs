@@ -17,20 +17,12 @@ export const repoDir = path.resolve(rootDir, "..");
 
 const jsTargets = [
   {
-    source: "src/viz-r.ts",
-    output: "../pkg-r/inst/htmldep/viz.js",
-  },
-  {
-    source: "src/viz-py.ts",
+    source: "src/viz.ts",
     output: "../pkg-py/src/querychat/static/js/viz.js",
   },
 ];
 
 const cssTargets = [
-  {
-    source: "src/viz.css",
-    output: "../pkg-r/inst/htmldep/viz.css",
-  },
   {
     source: "src/viz.css",
     output: "../pkg-py/src/querychat/static/css/viz.css",

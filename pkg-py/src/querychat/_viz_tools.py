@@ -276,6 +276,7 @@ def build_viz_footer(
             tags.button(
                 {
                     "class": "querychat-show-query-btn",
+                    "data-querychat-action": "show-query",
                     "data-target": query_section_id,
                 },
                 tags.span({"class": "querychat-query-chevron"}, "\u25b6"),
@@ -290,6 +291,7 @@ def build_viz_footer(
                 tags.button(
                         {
                             "class": "querychat-save-btn",
+                            "data-querychat-action": "save-toggle",
                             "data-widget-id": dom_widget_id or widget_id,
                         },
                     bs_icon("download", cls="querychat-icon"),
@@ -301,6 +303,7 @@ def build_viz_footer(
                     tags.button(
                         {
                             "class": "querychat-save-png-btn",
+                            "data-querychat-action": "save-png",
                             "data-widget-id": dom_widget_id or widget_id,
                             "data-title": title,
                         },
@@ -309,6 +312,7 @@ def build_viz_footer(
                     tags.button(
                         {
                             "class": "querychat-save-svg-btn",
+                            "data-querychat-action": "save-svg",
                             "data-widget-id": dom_widget_id or widget_id,
                             "data-title": title,
                         },

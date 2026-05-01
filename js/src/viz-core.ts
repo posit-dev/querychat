@@ -1,4 +1,10 @@
 type ExportFormat = "png" | "svg";
+type QuerychatAction =
+  | "show-query"
+  | "save-toggle"
+  | "save-png"
+  | "save-svg"
+  | "copy";
 
 export interface VizRuntimeAdapter {
   exportPlot(widgetId: string, format: ExportFormat, filename: string): void;
@@ -46,12 +52,20 @@ function triggerVegaAction(link: HTMLAnchorElement, filename: string): void {
   link.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
 }
 
-function closeAllSaveMenus(): void {
-  document
-    .querySelectorAll<HTMLElement>(".querychat-save-menu--visible")
-    .forEach((menu) => {
-      menu.classList.remove("querychat-save-menu--visible");
-    });
+let openSaveMenu: HTMLElement | null = null;
+
+function closeSaveMenu(menu: HTMLElement): void {
+  menu.classList.remove("querychat-save-menu--visible");
+
+  if (openSaveMenu === menu) {
+    openSaveMenu = null;
+  }
+}
+
+function closeOpenSaveMenu(): void {
+  if (openSaveMenu) {
+    closeSaveMenu(openSaveMenu);
+  }
 }
 
 function handleShowQuery(event: MouseEvent, button: HTMLElement): void {
@@ -87,8 +101,19 @@ function handleSaveToggle(event: MouseEvent, button: HTMLElement): void {
     ".querychat-save-menu",
   );
 
-  if (menu) {
-    menu.classList.toggle("querychat-save-menu--visible");
+  if (!menu) {
+    return;
+  }
+
+  if (openSaveMenu && openSaveMenu !== menu) {
+    closeSaveMenu(openSaveMenu);
+  }
+
+  if (menu.classList.contains("querychat-save-menu--visible")) {
+    closeSaveMenu(menu);
+  } else {
+    menu.classList.add("querychat-save-menu--visible");
+    openSaveMenu = menu;
   }
 }
 
@@ -108,7 +133,7 @@ function handleSaveExport(
   const filename = button.dataset.title || "chart";
   const menu = button.closest<HTMLElement>(".querychat-save-menu");
   if (menu) {
-    menu.classList.remove("querychat-save-menu--visible");
+    closeSaveMenu(menu);
   }
 
   adapter.exportPlot(widgetId, format, filename);
@@ -141,41 +166,37 @@ export function installVizFooter(adapter: VizRuntimeAdapter): void {
     const target = event.target;
 
     if (!(target instanceof Element)) {
-      closeAllSaveMenus();
+      closeOpenSaveMenu();
       return;
     }
 
-    const showQueryButton = target.closest<HTMLElement>(".querychat-show-query-btn");
-    if (showQueryButton) {
-      handleShowQuery(event, showQueryButton);
+    const actionElement = target.closest<HTMLElement>("[data-querychat-action]");
+    const action = actionElement?.dataset.querychatAction as
+      | QuerychatAction
+      | undefined;
+
+    if (!action || !actionElement) {
+      closeOpenSaveMenu();
       return;
     }
 
-    const savePngButton = target.closest<HTMLElement>(".querychat-save-png-btn");
-    if (savePngButton) {
-      handleSaveExport(event, savePngButton, "png", adapter);
-      return;
+    switch (action) {
+      case "show-query":
+        handleShowQuery(event, actionElement);
+        return;
+      case "save-toggle":
+        handleSaveToggle(event, actionElement);
+        return;
+      case "save-png":
+        handleSaveExport(event, actionElement, "png", adapter);
+        return;
+      case "save-svg":
+        handleSaveExport(event, actionElement, "svg", adapter);
+        return;
+      case "copy":
+        handleCopy(event, actionElement);
+        return;
     }
-
-    const saveSvgButton = target.closest<HTMLElement>(".querychat-save-svg-btn");
-    if (saveSvgButton) {
-      handleSaveExport(event, saveSvgButton, "svg", adapter);
-      return;
-    }
-
-    const copyButton = target.closest<HTMLElement>(".querychat-copy-btn");
-    if (copyButton) {
-      handleCopy(event, copyButton);
-      return;
-    }
-
-    const saveButton = target.closest<HTMLElement>(".querychat-save-btn");
-    if (saveButton) {
-      handleSaveToggle(event, saveButton);
-      return;
-    }
-
-    closeAllSaveMenus();
   });
 }
 

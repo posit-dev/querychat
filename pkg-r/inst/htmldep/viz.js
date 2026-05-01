@@ -34,10 +34,17 @@
     }, 5e3);
     link.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
   }
-  function closeAllSaveMenus() {
-    document.querySelectorAll(".querychat-save-menu--visible").forEach((menu) => {
-      menu.classList.remove("querychat-save-menu--visible");
-    });
+  var openSaveMenu = null;
+  function closeSaveMenu(menu) {
+    menu.classList.remove("querychat-save-menu--visible");
+    if (openSaveMenu === menu) {
+      openSaveMenu = null;
+    }
+  }
+  function closeOpenSaveMenu() {
+    if (openSaveMenu) {
+      closeSaveMenu(openSaveMenu);
+    }
   }
   function handleShowQuery(event, button) {
     event.stopPropagation();
@@ -64,8 +71,17 @@
     const menu = button.parentElement?.querySelector(
       ".querychat-save-menu"
     );
-    if (menu) {
-      menu.classList.toggle("querychat-save-menu--visible");
+    if (!menu) {
+      return;
+    }
+    if (openSaveMenu && openSaveMenu !== menu) {
+      closeSaveMenu(openSaveMenu);
+    }
+    if (menu.classList.contains("querychat-save-menu--visible")) {
+      closeSaveMenu(menu);
+    } else {
+      menu.classList.add("querychat-save-menu--visible");
+      openSaveMenu = menu;
     }
   }
   function handleSaveExport(event, button, format, adapter) {
@@ -77,7 +93,7 @@
     const filename = button.dataset.title || "chart";
     const menu = button.closest(".querychat-save-menu");
     if (menu) {
-      menu.classList.remove("querychat-save-menu--visible");
+      closeSaveMenu(menu);
     }
     adapter.exportPlot(widgetId, format, filename);
   }
@@ -101,35 +117,32 @@
     window.addEventListener("click", (event) => {
       const target = event.target;
       if (!(target instanceof Element)) {
-        closeAllSaveMenus();
+        closeOpenSaveMenu();
         return;
       }
-      const showQueryButton = target.closest(".querychat-show-query-btn");
-      if (showQueryButton) {
-        handleShowQuery(event, showQueryButton);
+      const actionElement = target.closest("[data-querychat-action]");
+      const action = actionElement?.dataset.querychatAction;
+      if (!action || !actionElement) {
+        closeOpenSaveMenu();
         return;
       }
-      const savePngButton = target.closest(".querychat-save-png-btn");
-      if (savePngButton) {
-        handleSaveExport(event, savePngButton, "png", adapter);
-        return;
+      switch (action) {
+        case "show-query":
+          handleShowQuery(event, actionElement);
+          return;
+        case "save-toggle":
+          handleSaveToggle(event, actionElement);
+          return;
+        case "save-png":
+          handleSaveExport(event, actionElement, "png", adapter);
+          return;
+        case "save-svg":
+          handleSaveExport(event, actionElement, "svg", adapter);
+          return;
+        case "copy":
+          handleCopy(event, actionElement);
+          return;
       }
-      const saveSvgButton = target.closest(".querychat-save-svg-btn");
-      if (saveSvgButton) {
-        handleSaveExport(event, saveSvgButton, "svg", adapter);
-        return;
-      }
-      const copyButton = target.closest(".querychat-copy-btn");
-      if (copyButton) {
-        handleCopy(event, copyButton);
-        return;
-      }
-      const saveButton = target.closest(".querychat-save-btn");
-      if (saveButton) {
-        handleSaveToggle(event, saveButton);
-        return;
-      }
-      closeAllSaveMenus();
     });
   }
   function createVegaActionAdapter() {

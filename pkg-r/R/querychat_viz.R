@@ -194,6 +194,7 @@ build_viz_footer <- function(
       class = "querychat-footer-left",
       shiny::tags$button(
         class = "querychat-show-query-btn",
+        `data-querychat-action` = "show-query",
         `data-target` = query_section_id,
         shiny::tags$span(class = "querychat-query-chevron", "\u25b6"),
         shiny::tags$span(class = "querychat-query-label", "Show Query")
@@ -206,6 +207,7 @@ build_viz_footer <- function(
         class = "querychat-save-dropdown",
         shiny::tags$button(
           class = "querychat-save-btn",
+          `data-querychat-action` = "save-toggle",
           `data-widget-id` = dom_widget_id,
           bsicons::bs_icon("download", class = "querychat-icon"),
           "Save",
@@ -215,12 +217,14 @@ build_viz_footer <- function(
           class = "querychat-save-menu",
           shiny::tags$button(
             class = "querychat-save-png-btn",
+            `data-querychat-action` = "save-png",
             `data-widget-id` = dom_widget_id,
             `data-title` = title,
             "Save as PNG"
           ),
           shiny::tags$button(
             class = "querychat-save-svg-btn",
+            `data-querychat-action` = "save-svg",
             `data-widget-id` = dom_widget_id,
             `data-title` = title,
             "Save as SVG"

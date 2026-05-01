@@ -98,14 +98,16 @@ class TestShowQueryToggle:
     def test_toggle_hides_section_again(self, page: Page) -> None:
         """Clicking the button a second time should hide the query section."""
         btn = page.locator(".querychat-show-query-btn")
-        btn.click()  # show
-        btn.click()  # hide
-
-        section = page.locator(".querychat-query-section")
-        expect(section).not_to_have_class("querychat-query-section--visible")
-
         label = btn.locator(".querychat-query-label")
+
+        btn.click()  # show
+        expect(label).to_have_text("Hide Query")
+
+        btn.click()  # hide
         expect(label).to_have_text("Show Query")
+
+        section = page.locator(".querychat-query-section--visible")
+        expect(section).not_to_be_attached()
 
     def test_query_section_contains_code(self, page: Page) -> None:
         """The revealed query section should contain the ggsql code."""

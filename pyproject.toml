@@ -21,8 +21,8 @@ maintainers = [
 ]
 dependencies = [
     "duckdb",
-    "shiny @ git+https://github.com/posit-dev/py-shiny.git",
-    "shinychat @ git+https://github.com/posit-dev/shinychat.git",
+    "shiny>=1.6.1",
+    "shinychat>=0.3.1",
     "htmltools",
     "chatlas>=0.13.2",
     "narwhals>=2.2.0",
@@ -50,8 +50,7 @@ gradio = ["gradio>=6.0"]
 dash = ["dash-ag-grid>=31.0", "dash[async]>=3.1", "dash-bootstrap-components>=2.0", "pandas"]
 # Visualization with ggsql
 viz = [
-    # Temporary direct reference until ggsql 0.3.0 is available on the package index.
-    "ggsql @ git+https://github.com/posit-dev/ggsql-python.git@refs/pull/5/head",
+    "ggsql>=0.3.1",
     "altair>=6.0",
     "shinywidgets>=0.8.0",
     "vl-convert-python>=1.9.0",
@@ -71,9 +70,6 @@ required-environments = [
     "sys_platform == 'linux' and platform_machine == 'x86_64'",
     "sys_platform == 'darwin'",
 ]
-
-[tool.hatch.metadata]
-allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["pkg-py/src/querychat"]
@@ -101,8 +97,7 @@ dev = [
     "polars>=1.0.0",
     "pyarrow>=14.0.0",
     "ibis-framework[duckdb]>=9.0.0",
-    # Temporary direct reference until ggsql 0.3.0 is available on the package index.
-    "ggsql @ git+https://github.com/posit-dev/ggsql-python.git@refs/pull/5/head",
+    "ggsql>=0.3.1",
     "altair>=6.0",
     "shinywidgets>=0.8.0",
     "vl-convert-python>=1.9.0",

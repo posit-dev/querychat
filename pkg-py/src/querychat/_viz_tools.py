@@ -10,10 +10,10 @@ from uuid import uuid4
 
 from chatlas import ContentToolResult, Tool, content_image_url
 from htmltools import HTMLDependency, TagList, tags
+from shiny.module import resolve_id
 from shinychat.types import ToolResultDisplay
 
 from shiny import ui
-from shiny.module import resolve_id
 
 from .__version import __version__
 from ._icons import bs_icon

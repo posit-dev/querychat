@@ -4,8 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "node build.mjs",
-    "check": "node check.mjs && node --test tests/*.test.mjs",
-    "test": "node --test tests/*.test.mjs"
+    "check": "node check.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.21.5",

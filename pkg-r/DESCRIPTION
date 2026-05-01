@@ -22,7 +22,8 @@ BugReports: https://github.com/posit-dev/querychat/issues
 Depends:
     R (>= 4.1.0)
 Imports:
-    bslib,
+    bsicons,
+    bslib (>= 0.10.0),
     cli,
     DBI,
     ellmer (>= 0.3.0),
@@ -37,20 +38,24 @@ Imports:
     utils,
     whisker
 Suggests:
-    bsicons,
     dbplyr,
     dplyr,
     DT,
     duckdb,
+    ggsql,
     knitr,
     palmerpenguins,
     rmarkdown,
     RSQLite,
+    rsvg,
     shinytest2,
     testthat (>= 3.0.0),
+    V8,
     withr
 VignetteBuilder:
     knitr
+Remotes:
+    posit-dev/ggsql-r
 Config/testthat/edition: 3
 Config/testthat/parallel: true
 Encoding: UTF-8

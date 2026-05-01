@@ -20,12 +20,20 @@ const jsTargets = [
     source: "src/viz.ts",
     output: "../pkg-py/src/querychat/static/js/viz.js",
   },
+  {
+    source: "src/viz.ts",
+    output: "../pkg-r/inst/htmldep/viz.js",
+  },
 ];
 
 const cssTargets = [
   {
     source: "src/viz.css",
     output: "../pkg-py/src/querychat/static/css/viz.css",
+  },
+  {
+    source: "src/viz.css",
+    output: "../pkg-r/inst/htmldep/viz.css",
   },
 ];
 
@@ -81,10 +89,9 @@ const reportMissingSources = async () => {
 };
 
 export const stageBuildOutputs = async (stageDir) => {
-  const cssSourcePath = path.resolve(rootDir, "src/viz.css");
-  const cssSource = await readFile(cssSourcePath, "utf8");
-
   for (const target of cssTargets) {
+    const cssSourcePath = path.resolve(rootDir, target.source);
+    const cssSource = await readFile(cssSourcePath, "utf8");
     const outputPath = resolveOutputPath(stageDir, target.output);
     await mkdir(path.dirname(outputPath), { recursive: true });
     await writeFile(outputPath, `${banner(target.source)}${cssSource}`, "utf8");

@@ -107,3 +107,19 @@ class TestVizPreloadMarkup:
         assert "hidden" in rendered["html"]
         assert "<script" not in rendered["html"]
         assert preload_dep.script == [{"src": "js/viz-preload.js"}]
+
+
+class TestVizFooterDomIds:
+    def test_build_viz_footer_uses_resolved_dom_widget_id(self):
+        from querychat._viz_tools import build_viz_footer
+
+        rendered = TagList(
+            build_viz_footer(
+                "SELECT * FROM test_data VISUALISE x, y DRAW point",
+                "Chart",
+                dom_widget_id="module-querychat_viz_raw",
+            )
+        ).render()["html"]
+
+        assert 'data-widget-id="module-querychat_viz_raw"' in rendered
+        assert 'data-widget-id="querychat_viz_raw"' not in rendered

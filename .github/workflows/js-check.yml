@@ -1,0 +1,43 @@
+name: Check - Shared Viz Assets
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main", "rc-*"]
+    paths:
+      - "js/**"
+      - "pkg-py/src/querychat/static/css/viz.css"
+      - "pkg-py/src/querychat/static/js/viz.js"
+      - "Makefile"
+      - ".github/workflows/js-check.yml"
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - "js/**"
+      - "pkg-py/src/querychat/static/css/viz.css"
+      - "pkg-py/src/querychat/static/js/viz.js"
+      - "Makefile"
+      - ".github/workflows/js-check.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  js-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: js/package-lock.json
+
+      - name: Install shared asset dependencies
+        run: make js-setup
+
+      - name: Check shared assets
+        run: make js-check

@@ -298,6 +298,11 @@ execute_ggsql <- function(data_source, validated) {
 
   df <- data_source$execute_query(validated$sql)
 
+  if (inherits(df, "tbl_sql")) {
+    # Materialize the query for ggsql, {dplyr} guaranteed by TblSqlSource
+    df <- dplyr::collect(df)
+  }
+
   reader <- ggsql::duckdb_reader()
   table <- extract_visualise_table(visual)
 

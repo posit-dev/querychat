@@ -118,7 +118,6 @@ class VisualizeResult(ContentToolResult):
         footer = build_viz_footer(
             ggsql_str,
             title,
-            widget_id,
             dom_widget_id=str(resolve_id(widget_id)),
         )
 
@@ -242,7 +241,6 @@ def viz_dep() -> HTMLDependency:
 def build_viz_footer(
     ggsql_str: str,
     title: str,
-    widget_id: str,
     dom_widget_id: str,
 ) -> TagList:
     """Build footer HTML for visualization tool results."""

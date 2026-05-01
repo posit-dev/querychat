@@ -117,7 +117,6 @@ class TestVizFooterDomIds:
             build_viz_footer(
                 "SELECT * FROM test_data VISUALISE x, y DRAW point",
                 "Chart",
-                "querychat_viz_raw",
                 dom_widget_id="module-querychat_viz_raw",
             )
         ).render()["html"]

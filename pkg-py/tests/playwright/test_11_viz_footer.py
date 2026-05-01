@@ -16,7 +16,7 @@ import pytest
 from playwright.sync_api import expect
 
 if TYPE_CHECKING:
-    from playwright.sync_api import Page
+    from playwright.sync_api import Download, Page
     from shinychat.playwright import ChatController
 
 
@@ -24,11 +24,13 @@ VIZ_PROMPT = "Use the visualize tool to create a scatter plot of age vs fare"
 TOOL_RESULT_TIMEOUT = 90_000
 
 
-def _download_from_save_menu(page: Page, format: str):
+def _download_from_save_menu(
+    page: Page, export_format: str
+) -> tuple[Download, str]:
     """Open the save menu, click the requested format, and capture the download."""
     page.locator(".querychat-save-btn").click()
 
-    option = page.locator(f".querychat-save-{format}-btn")
+    option = page.locator(f".querychat-save-{export_format}-btn")
     title = option.get_attribute("data-title") or "chart"
 
     with page.expect_download(timeout=30_000) as download_info:

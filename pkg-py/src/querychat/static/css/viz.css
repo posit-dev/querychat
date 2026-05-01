@@ -54,9 +54,9 @@
 }
 
 .querychat-query-chevron {
-  display: inline-block;
   font-size: 0.625rem;
   transition: transform 150ms;
+  display: inline-block;
 }
 
 .querychat-query-chevron--expanded {
@@ -83,14 +83,14 @@
   position: absolute;
   right: 0;
   bottom: 100%;
-  z-index: 20;
-  min-width: 120px;
   margin-bottom: 4px;
-  padding: 4px 0;
+  z-index: 20;
+  background: var(--bs-body-bg, #fff);
   border: 1px solid var(--bs-border-color, #dee2e6);
   border-radius: var(--bs-border-radius, 4px);
-  background: var(--bs-body-bg, #fff);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  padding: 4px 0;
+  min-width: 120px;
 }
 
 .querychat-save-menu--visible {
@@ -116,13 +116,14 @@
 .querychat-query-section {
   display: none;
   position: relative;
-  margin: 8px -16px -8px;
   border-top: 1px solid var(--bs-border-color, #dee2e6);
+  margin: 8px -16px -8px;
 }
 
 .querychat-query-section--visible {
   display: block;
 }
+
 
 /* shinychat sets max-height:500px on all cards, which is too small for viz+editor */
 .shiny-tool-card:has(.querychat-viz-container) {
@@ -135,7 +136,7 @@
 }
 
 .querychat-query-section bslib-code-editor .prism-code-editor {
+  background-color: var(--bs-light, #f8f8f8);
   max-height: 200px;
   overflow-y: auto;
-  background-color: var(--bs-light, #f8f8f8);
 }

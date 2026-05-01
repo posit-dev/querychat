@@ -1,0 +1,150 @@
+/* Generated file. Source: js/src/viz.css. Do not edit directly. */
+/* Hide Vega's built-in action dropdown (we have our own save button) */
+.querychat-viz-container details:has(> .vega-actions) {
+  display: none !important;
+}
+
+/* ---- Visualization container ---- */
+
+.querychat-viz-container {
+  aspect-ratio: 4 / 2;
+  width: 100%;
+}
+
+/* In full-screen mode, let the chart fill the available space */
+.shiny-tool-card[fullscreen] .querychat-viz-container {
+  aspect-ratio: unset;
+}
+
+/* ---- Visualization footer ---- */
+
+.querychat-footer-buttons {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.querychat-footer-left,
+.querychat-footer-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.querychat-show-query-btn,
+.querychat-save-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  height: 28px;
+  border: none;
+  border-radius: var(--bs-border-radius, 4px);
+  background: transparent;
+  color: var(--bs-secondary-color, #6c757d);
+  font-size: 0.75rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.querychat-show-query-btn:hover,
+.querychat-save-btn:hover {
+  color: var(--bs-body-color, #212529);
+  background-color: rgba(var(--bs-emphasis-color-rgb, 0, 0, 0), 0.05);
+}
+
+.querychat-query-chevron {
+  font-size: 0.625rem;
+  transition: transform 150ms;
+  display: inline-block;
+}
+
+.querychat-query-chevron--expanded {
+  transform: rotate(90deg);
+}
+
+.querychat-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.querychat-dropdown-chevron {
+  width: 12px;
+  height: 12px;
+  margin-left: 2px;
+}
+
+.querychat-save-dropdown {
+  position: relative;
+}
+
+.querychat-save-menu {
+  display: none;
+  position: absolute;
+  right: 0;
+  bottom: 100%;
+  margin-bottom: 4px;
+  z-index: 20;
+  background: var(--bs-body-bg, #fff);
+  border: 1px solid var(--bs-border-color, #dee2e6);
+  border-radius: var(--bs-border-radius, 4px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  padding: 4px 0;
+  min-width: 120px;
+}
+
+.querychat-save-menu--visible {
+  display: block;
+}
+
+.querychat-save-menu button {
+  display: block;
+  width: 100%;
+  padding: 6px 12px;
+  border: none;
+  background: transparent;
+  color: var(--bs-body-color, #212529);
+  font-size: 0.75rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.querychat-save-menu button:hover {
+  background-color: rgba(var(--bs-emphasis-color-rgb, 0, 0, 0), 0.05);
+}
+
+.querychat-query-section {
+  display: none;
+  position: relative;
+  border-top: 1px solid var(--bs-border-color, #dee2e6);
+  margin: 8px -16px -8px;
+}
+
+.querychat-query-section--visible {
+  display: block;
+}
+
+
+/* shinychat sets max-height:500px on all cards, which is too small for viz+editor */
+.shiny-tool-card:has(.querychat-viz-container) {
+  max-height: 700px;
+  overflow: hidden;
+}
+
+.shiny-tool-card:has(.querychat-viz-container) > .card-footer {
+  flex: 0 0 auto;
+}
+
+.shiny-tool-card[fullscreen]:has(.querychat-viz-container) {
+  max-height: none;
+}
+
+.querychat-query-section bslib-code-editor .code-editor {
+  margin: 1em;
+}
+
+.querychat-query-section bslib-code-editor .prism-code-editor {
+  background-color: var(--bs-light, #f8f8f8);
+  max-height: 200px;
+  overflow-y: auto;
+}

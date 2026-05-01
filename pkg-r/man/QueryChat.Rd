@@ -232,7 +232,10 @@ data source.
   update_dashboard = function(query, title) {
  },
   reset_dashboard = function() {
- }
+ },
+  visualize = function(data) {
+ },
+  session = NULL
 )}\if{html}{\out{</div>}}
 }
 
@@ -249,6 +252,14 @@ when \code{tools = NA}, the values provided at initialization are used.}
 
 \item{\code{reset_dashboard}}{Optional function to call when the
 \code{reset_dashboard} tool is called.}
+
+\item{\code{visualize}}{Optional function to call with a list containing
+\code{ggsql}, \code{title}, and \code{widget_id} when a visualization succeeds.}
+
+\item{\code{session}}{A Shiny session object. Required when \code{"visualize"} is
+in \code{tools} and you want interactive chart rendering. When \code{NULL}
+(the default), visualizations still execute but are not rendered
+as Shiny outputs.}
 }
 \if{html}{\out{</div>}}
 }

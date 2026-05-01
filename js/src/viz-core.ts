@@ -1,3 +1,7 @@
+// Browser runtime for the Visualize tool card display footer. This powers the
+// "Show Query" toggle, the custom "Save" menu, and the PNG/SVG export buttons.
+// The export path is slightly hacky because Vega owns the real download links,
+// so this file proxies those downloads through the footer buttons we control.
 type ExportFormat = "png" | "svg";
 type QuerychatAction =
   | "show-query"
@@ -5,7 +9,6 @@ type QuerychatAction =
   | "save-png"
   | "save-svg"
   | "copy";
-
 export interface VizRuntimeAdapter {
   exportPlot(widgetId: string, format: ExportFormat, filename: string): void;
 }

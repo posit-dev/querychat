@@ -3,6 +3,37 @@
 "use strict";
 (() => {
   // src/viz-core.ts
+  function findWidgetContainer(widgetId) {
+    return document.getElementById(widgetId);
+  }
+  function findVegaAction(container, format) {
+    return container.querySelector(
+      `.vega-actions a[download$=".${format}"]`
+    );
+  }
+  function triggerVegaAction(link, filename) {
+    link.download = filename;
+    if (link.href && link.href !== "#" && !link.href.endsWith("#")) {
+      link.click();
+      return;
+    }
+    const observer = new MutationObserver(() => {
+      if (link.href && link.href !== "#" && !link.href.endsWith("#")) {
+        observer.disconnect();
+        clearTimeout(timeoutId);
+        link.click();
+      }
+    });
+    observer.observe(link, {
+      attributes: true,
+      attributeFilter: ["href"]
+    });
+    const timeoutId = window.setTimeout(() => {
+      observer.disconnect();
+      console.error("Timed out waiting for vega-embed to generate image");
+    }, 5e3);
+    link.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+  }
   function closeAllSaveMenus() {
     document.querySelectorAll(".querychat-save-menu--visible").forEach((menu) => {
       menu.classList.remove("querychat-save-menu--visible");
@@ -101,50 +132,22 @@
       closeAllSaveMenus();
     });
   }
+  function createVegaActionAdapter() {
+    return {
+      exportPlot(widgetId, format, filename) {
+        const container = findWidgetContainer(widgetId);
+        if (!container) {
+          return;
+        }
+        const link = findVegaAction(container, format);
+        if (!link) {
+          return;
+        }
+        triggerVegaAction(link, `${filename}.${format}`);
+      }
+    };
+  }
 
   // src/viz-py.ts
-  function findVegaAction(container, extension) {
-    return container.querySelector(
-      `.vega-actions a[download$=".${extension}"]`
-    );
-  }
-  function findWidgetContainer(widgetId) {
-    return document.getElementById(widgetId) || document.querySelector(`[id$="${CSS.escape(widgetId)}"]`);
-  }
-  function triggerVegaAction(link, filename) {
-    link.download = filename;
-    if (link.href && link.href !== "#" && !link.href.endsWith("#")) {
-      link.click();
-      return;
-    }
-    const observer = new MutationObserver(() => {
-      if (link.href && link.href !== "#" && !link.href.endsWith("#")) {
-        observer.disconnect();
-        clearTimeout(timeoutId);
-        link.click();
-      }
-    });
-    observer.observe(link, {
-      attributes: true,
-      attributeFilter: ["href"]
-    });
-    const timeoutId = window.setTimeout(() => {
-      observer.disconnect();
-      console.error("Timed out waiting for vega-embed to generate image");
-    }, 5e3);
-    link.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
-  }
-  installVizFooter({
-    exportPlot(widgetId, format, filename) {
-      const container = findWidgetContainer(widgetId);
-      if (!container) {
-        return;
-      }
-      const link = findVegaAction(container, format);
-      if (!link) {
-        return;
-      }
-      triggerVegaAction(link, `${filename}.${format}`);
-    }
-  });
+  installVizFooter(createVegaActionAdapter());
 })();

@@ -3,6 +3,37 @@
 "use strict";
 (() => {
   // src/viz-core.ts
+  function findWidgetContainer(widgetId) {
+    return document.getElementById(widgetId);
+  }
+  function findVegaAction(container, format) {
+    return container.querySelector(
+      `.vega-actions a[download$=".${format}"]`
+    );
+  }
+  function triggerVegaAction(link, filename) {
+    link.download = filename;
+    if (link.href && link.href !== "#" && !link.href.endsWith("#")) {
+      link.click();
+      return;
+    }
+    const observer = new MutationObserver(() => {
+      if (link.href && link.href !== "#" && !link.href.endsWith("#")) {
+        observer.disconnect();
+        clearTimeout(timeoutId);
+        link.click();
+      }
+    });
+    observer.observe(link, {
+      attributes: true,
+      attributeFilter: ["href"]
+    });
+    const timeoutId = window.setTimeout(() => {
+      observer.disconnect();
+      console.error("Timed out waiting for vega-embed to generate image");
+    }, 5e3);
+    link.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+  }
   function closeAllSaveMenus() {
     document.querySelectorAll(".querychat-save-menu--visible").forEach((menu) => {
       menu.classList.remove("querychat-save-menu--visible");
@@ -101,56 +132,22 @@
       closeAllSaveMenus();
     });
   }
+  function createVegaActionAdapter() {
+    return {
+      exportPlot(widgetId, format, filename) {
+        const container = findWidgetContainer(widgetId);
+        if (!container) {
+          return;
+        }
+        const link = findVegaAction(container, format);
+        if (!link) {
+          return;
+        }
+        triggerVegaAction(link, `${filename}.${format}`);
+      }
+    };
+  }
 
   // src/viz-r.ts
-  function findGgsqlVizElement(widgetId) {
-    const container = document.getElementById(widgetId);
-    if (!container) {
-      return null;
-    }
-    const tagName = container.tagName.toLowerCase();
-    if (tagName === "ggsql-vega" || tagName === "ggsql-viz") {
-      return container;
-    }
-    return container.querySelector("ggsql-vega, ggsql-viz");
-  }
-  function triggerDownload(url, filename) {
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = filename;
-    document.body.appendChild(anchor);
-    anchor.click();
-    document.body.removeChild(anchor);
-  }
-  function exportFromView(vizElement, format, filename) {
-    const view = vizElement._view;
-    if (!view) {
-      return;
-    }
-    if (format === "png") {
-      view.toImageURL("png").then((url) => {
-        triggerDownload(url, `${filename}.png`);
-      }).catch((error) => {
-        console.error("querychat: failed to export PNG:", error);
-      });
-      return;
-    }
-    view.toSVG().then((svg) => {
-      const blob = new Blob([svg], { type: "image/svg+xml" });
-      const url = URL.createObjectURL(blob);
-      triggerDownload(url, `${filename}.svg`);
-      URL.revokeObjectURL(url);
-    }).catch((error) => {
-      console.error("querychat: failed to export SVG:", error);
-    });
-  }
-  installVizFooter({
-    exportPlot(widgetId, format, filename) {
-      const vizElement = findGgsqlVizElement(widgetId);
-      if (!vizElement) {
-        return;
-      }
-      exportFromView(vizElement, format, filename);
-    }
-  });
+  installVizFooter(createVegaActionAdapter());
 })();

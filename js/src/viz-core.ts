@@ -4,6 +4,48 @@ export interface VizRuntimeAdapter {
   exportPlot(widgetId: string, format: ExportFormat, filename: string): void;
 }
 
+function findWidgetContainer(widgetId: string): HTMLElement | null {
+  return document.getElementById(widgetId);
+}
+
+function findVegaAction(
+  container: HTMLElement,
+  format: ExportFormat,
+): HTMLAnchorElement | null {
+  return container.querySelector<HTMLAnchorElement>(
+    `.vega-actions a[download$=".${format}"]`,
+  );
+}
+
+function triggerVegaAction(link: HTMLAnchorElement, filename: string): void {
+  link.download = filename;
+
+  if (link.href && link.href !== "#" && !link.href.endsWith("#")) {
+    link.click();
+    return;
+  }
+
+  const observer = new MutationObserver(() => {
+    if (link.href && link.href !== "#" && !link.href.endsWith("#")) {
+      observer.disconnect();
+      clearTimeout(timeoutId);
+      link.click();
+    }
+  });
+
+  observer.observe(link, {
+    attributes: true,
+    attributeFilter: ["href"],
+  });
+
+  const timeoutId = window.setTimeout(() => {
+    observer.disconnect();
+    console.error("Timed out waiting for vega-embed to generate image");
+  }, 5000);
+
+  link.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+}
+
 function closeAllSaveMenus(): void {
   document
     .querySelectorAll<HTMLElement>(".querychat-save-menu--visible")
@@ -135,4 +177,22 @@ export function installVizFooter(adapter: VizRuntimeAdapter): void {
 
     closeAllSaveMenus();
   });
+}
+
+export function createVegaActionAdapter(): VizRuntimeAdapter {
+  return {
+    exportPlot(widgetId, format, filename) {
+      const container = findWidgetContainer(widgetId);
+      if (!container) {
+        return;
+      }
+
+      const link = findVegaAction(container, format);
+      if (!link) {
+        return;
+      }
+
+      triggerVegaAction(link, `${filename}.${format}`);
+    },
+  };
 }

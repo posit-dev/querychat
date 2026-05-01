@@ -13,6 +13,7 @@ from htmltools import HTMLDependency, TagList, tags
 from shinychat.types import ToolResultDisplay
 
 from shiny import ui
+from shiny.module import resolve_id
 
 from .__version import __version__
 from ._icons import bs_icon
@@ -114,7 +115,12 @@ class VisualizeResult(ContentToolResult):
         else:
             value = text
 
-        footer = build_viz_footer(ggsql_str, title, widget_id)
+        footer = build_viz_footer(
+            ggsql_str,
+            title,
+            widget_id,
+            dom_widget_id=resolve_viz_dom_id(widget_id),
+        )
 
         widget_html = output_widget(widget_id, fill=True, fillable=True)
         widget_html.add_class("querychat-viz-container")
@@ -237,6 +243,7 @@ def build_viz_footer(
     ggsql_str: str,
     title: str,
     widget_id: str,
+    dom_widget_id: str = "",
 ) -> TagList:
     """Build footer HTML for visualization tool results."""
     footer_id = f"querychat_footer_{uuid4().hex[:8]}"
@@ -281,10 +288,10 @@ def build_viz_footer(
             tags.div(
                 {"class": "querychat-save-dropdown"},
                 tags.button(
-                    {
-                        "class": "querychat-save-btn",
-                        "data-widget-id": widget_id,
-                    },
+                        {
+                            "class": "querychat-save-btn",
+                            "data-widget-id": dom_widget_id or widget_id,
+                        },
                     bs_icon("download", cls="querychat-icon"),
                     "Save",
                     bs_icon("chevron-down", cls="querychat-dropdown-chevron"),
@@ -294,7 +301,7 @@ def build_viz_footer(
                     tags.button(
                         {
                             "class": "querychat-save-png-btn",
-                            "data-widget-id": widget_id,
+                            "data-widget-id": dom_widget_id or widget_id,
                             "data-title": title,
                         },
                         "Save as PNG",
@@ -302,7 +309,7 @@ def build_viz_footer(
                     tags.button(
                         {
                             "class": "querychat-save-svg-btn",
-                            "data-widget-id": widget_id,
+                            "data-widget-id": dom_widget_id or widget_id,
                             "data-title": title,
                         },
                         "Save as SVG",
@@ -313,3 +320,8 @@ def build_viz_footer(
     )
 
     return TagList(buttons_row, query_section)
+
+
+def resolve_viz_dom_id(widget_id: str) -> str:
+    """Resolve a widget id to the final DOM id rendered by Shiny."""
+    return str(resolve_id(widget_id))

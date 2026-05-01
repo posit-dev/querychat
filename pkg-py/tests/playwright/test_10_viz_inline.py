@@ -105,6 +105,59 @@ class TestInlineVisualization:
         # Fullscreen should be removed
         expect(card).not_to_be_visible()
 
+    def test_fullscreen_uses_available_height_in_tall_viewport(self) -> None:
+        """VIZ-FS-HEIGHT: Fullscreen viz cards should fill tall, narrow viewports."""
+        self.page.set_viewport_size({"width": 900, "height": 1600})
+
+        self.chat.set_user_input(
+            "Make a bar chart showing count of passengers by class and age group"
+        )
+        self.chat.send_user_input(method="click")
+
+        tool_result = self.page.locator(".shiny-tool-result:has(.tool-fullscreen-toggle)")
+        expect(tool_result).to_be_visible(timeout=90000)
+
+        tool_result.locator(".tool-fullscreen-toggle").click()
+
+        card = tool_result.locator(".shiny-tool-card[fullscreen]")
+        expect(card).to_be_visible()
+
+        viz_container = card.locator(".querychat-viz-container")
+        expect(viz_container).to_be_visible(timeout=10000)
+
+        viewport_height = self.page.viewport_size["height"]
+        card_box = card.bounding_box()
+        viz_box = viz_container.bounding_box()
+
+        assert card_box is not None
+        assert viz_box is not None
+        assert card_box["height"] > viewport_height * 0.9
+        assert viz_box["height"] > viewport_height * 0.5
+
+    def test_fullscreen_footer_does_not_stretch(self) -> None:
+        """VIZ-FS-FOOTER: Fullscreen viz footers should remain content-height."""
+        self.page.set_viewport_size({"width": 1600, "height": 1336})
+
+        self.chat.set_user_input(
+            "Create a stacked bar chart of number of passengers by sex and class"
+        )
+        self.chat.send_user_input(method="click")
+
+        tool_result = self.page.locator(".shiny-tool-result:has(.tool-fullscreen-toggle)")
+        expect(tool_result).to_be_visible(timeout=90000)
+
+        tool_result.locator(".tool-fullscreen-toggle").click()
+
+        card = tool_result.locator(".shiny-tool-card[fullscreen]")
+        expect(card).to_be_visible()
+
+        footer = card.locator(":scope > .card-footer")
+        expect(footer).to_be_visible(timeout=10000)
+
+        footer_box = footer.bounding_box()
+        assert footer_box is not None
+        assert footer_box["height"] < 100
+
     def test_non_viz_tool_results_have_no_fullscreen(self) -> None:
         """VIZ-NO-FS: Non-visualization tool results don't have fullscreen."""
         self.chat.set_user_input("Show me passengers who survived")

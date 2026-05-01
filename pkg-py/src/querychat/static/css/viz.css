@@ -12,7 +12,7 @@
 }
 
 /* In full-screen mode, let the chart fill the available space */
-.bslib-full-screen-container .querychat-viz-container {
+.shiny-tool-card[fullscreen] .querychat-viz-container {
   aspect-ratio: unset;
 }
 
@@ -129,6 +129,14 @@
 .shiny-tool-card:has(.querychat-viz-container) {
   max-height: 700px;
   overflow: hidden;
+}
+
+.shiny-tool-card:has(.querychat-viz-container) > .card-footer {
+  flex: 0 0 auto;
+}
+
+.shiny-tool-card[fullscreen]:has(.querychat-viz-container) {
+  max-height: none;
 }
 
 .querychat-query-section bslib-code-editor .code-editor {

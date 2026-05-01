@@ -25,6 +25,8 @@ _SCHEMA_DUMP_PATTERN = re.compile(
 )
 
 
+# Altair/Vega validation errors can append the entire Vega schema after the
+# useful first lines, which overwhelms the tool result shown to the model.
 def truncate_error(error_msg: str, max_chars: int = 500) -> str:
     if len(error_msg) <= max_chars:
         return error_msg

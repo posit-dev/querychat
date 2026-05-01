@@ -52,6 +52,21 @@ docs: r-docs py-docs-render ## [docs] Build the documentation
 # 	@echo "🧳 Building JS code in watch mode"
 # 	cd $(PATH_PKG_JS) && npm run watch
 
+.PHONY: js-setup
+js-setup:  ## [js] Install shared web asset dependencies
+	@echo "🆙 Setup shared web asset dependencies"
+	cd $(PATH_PKG_JS) && npm ci
+
+.PHONY: js-build
+js-build:  ## [js] Build shared web assets
+	@echo "🧳 Building shared web assets"
+	cd $(PATH_PKG_JS) && npm run build
+
+.PHONY: js-check
+js-check:  ## [js] Check shared web assets
+	@echo "📐 Checking shared web assets"
+	cd $(PATH_PKG_JS) && npm run check
+
 .PHONY: r-setup
 r-setup:  ## [r] Install R dependencies
 	@echo "🆙 Updating R dependencies"

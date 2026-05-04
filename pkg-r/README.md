@@ -52,6 +52,9 @@ querychat can also handle more general questions about the data that require cal
 
 ![](man/figures/quickstart-summary.png){alt="Screenshot of the querychat's app with a summary statistic inlined in the chat." class="rounded shadow"}
 
+querychat can also create visualizations, powered by [ggsql](https://ggsql.org/).
+With the [visualization tool](https://posit-dev.github.io/querychat/r/articles/visualize.html) enabled, ask for a chart and it appears inline in the conversation.
+
 ## Custom apps
 
 querychat is designed to be highly extensible -- it provides programmatic access to the chat interface, the filtered/sorted data frame, SQL queries, and more.
@@ -93,6 +96,7 @@ From here, you might want to learn more about:
 - [Models](https://posit-dev.github.io/querychat/r/articles/models.html): customize the LLM behind querychat.
 - [Data sources](https://posit-dev.github.io/querychat/r/articles/data-sources.html): different data sources you can use with querychat.
 - [Provide context](https://posit-dev.github.io/querychat/r/articles/context.html): provide the LLM with the context it needs to work well.
+- [Visualizations](https://posit-dev.github.io/querychat/r/articles/visualize.html): create inline charts powered by ggsql.
 - [Build an app](https://posit-dev.github.io/querychat/r/articles/build.html): design a custom Shiny app around querychat.
 - [Greet users](https://posit-dev.github.io/querychat/r/articles/greet.html): create welcoming onboarding experiences.
 - [Tools](https://posit-dev.github.io/querychat/r/articles/tools.html): understand what querychat can do under the hood.

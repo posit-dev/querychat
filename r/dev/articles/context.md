@@ -23,6 +23,7 @@ three ways:
     see any literal values from your data)
 
 ``` r
+
 library(querychat)
 library(palmerpenguins)
 ```
@@ -34,6 +35,7 @@ the LLM, you can inspect the `system_prompt` field. This is useful for
 debugging and understanding exactly what context the LLM is using:
 
 ``` r
+
 qc <- querychat(penguins)
 cat(qc$system_prompt)
 ```
@@ -64,6 +66,7 @@ without additional context. However, if your columns are named `x`,
 `data_description` parameter for this:
 
 ``` r
+
 qc <- querychat(
   penguins,
   data_description = "data_description.md"
@@ -97,6 +100,7 @@ You can add custom instructions to guide the LLM’s behavior using the
 `extra_instructions` parameter:
 
 ``` r
+
 qc <- querychat(
   penguins,
   extra_instructions = "instructions.md"
@@ -108,6 +112,7 @@ cat(qc$system_prompt)
 Or as a string:
 
 ``` r
+
 instructions <- "
 - Use British spelling conventions
 - Stay on topic and only discuss the data dashboard

@@ -8,6 +8,7 @@ here](https://ellmer.tidyverse.org/reference/index.html#chat-constructors)
 for a full list.
 
 ``` r
+
 library(querychat)
 library(palmerpenguins)
 library(ellmer)
@@ -20,6 +21,7 @@ To use a particular model, pass a `"{provider}/{model}"` string to the
 [`ellmer::chat()`](https://ellmer.tidyverse.org/reference/chat-any.html):
 
 ``` r
+
 qc <- querychat(penguins, client = "anthropic/claude-sonnet-4-5")
 qc$app()  # Launch the app
 ```
@@ -29,6 +31,7 @@ the `querychat.client` R option or the `QUERYCHAT_CLIENT` environment
 variable.
 
 ``` r
+
 # In your .Rprofile
 options(querychat.client = "anthropic/claude-sonnet-4-5")
 ```
@@ -38,6 +41,7 @@ Note that it can also be useful to pass a full `Chat` object to the
 tools, etc):
 
 ``` r
+
 client <- chat_anthropic(model = "claude-sonnet-4-5")
 qc <- querychat(penguins, client = client)
 qc$app()  # Launch the app
@@ -59,6 +63,7 @@ easy way to get started. See
 details on how to get setup.
 
 ``` r
+
 library(ellmer)
 
 # Just works if GITHUB_TOKEN is set in your environment
@@ -78,6 +83,7 @@ OPENAI_API_KEY="your_api_key_here"
 Then, you can edit your `.Renviron` file using:
 
 ``` r
+
 usethis::edit_r_environ()
 ```
 

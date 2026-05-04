@@ -1,6 +1,7 @@
 # Greet Users
 
 ``` r
+
 library(querychat)
 library(palmerpenguins)
 ```
@@ -16,6 +17,7 @@ Instead, you should create a greeting file and pass it when creating
 your `QueryChat` object:
 
 ``` r
+
 qc <- querychat(
   penguins,
   greeting = "greeting.md"
@@ -47,6 +49,7 @@ If you need help coming up with a greeting, you can use the
 `$generate_greeting()` method:
 
 ``` r
+
 library(querychat)
 
 # Create QueryChat object with your dataset
@@ -66,6 +69,7 @@ This approach generates a greeting once and saves it for reuse, avoiding
 the latency and cost of generating it for every user.
 
 ``` r
+
 # Then use the saved greeting in your app
 querychat_app(
   penguins,

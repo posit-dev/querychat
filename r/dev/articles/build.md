@@ -49,6 +49,7 @@ Integrating querychat into a Shiny app requires just three steps:
 Here’s a starter template demonstrating these steps:
 
 ``` r
+
 library(shiny)
 library(bslib)
 library(querychat)
@@ -100,6 +101,7 @@ this, `QueryChat` allows you to initialize without a data source and
 provide it later, like this:
 
 ``` r
+
 library(shiny)
 library(bslib)
 library(querychat)
@@ -148,6 +150,7 @@ updating](https://posit-dev.github.io/querychat/dev/articles/tools.html#data-upd
 for details).
 
 ``` r
+
 qc_vals <- qc$server()
 
 output$table <- renderDataTable({
@@ -167,6 +170,7 @@ useful for displaying the query to users for transparency and
 reproducibility:
 
 ``` r
+
 qc_vals <- qc$server()
 
 output$current_query <- renderText({
@@ -184,6 +188,7 @@ provided by the LLM when it generates a query. For example, if a user
 asks to “show Adelie penguins”, the title might be “Adelie penguins”.
 
 ``` r
+
 qc_vals <- qc$server()
 
 output$card_title <- renderText({
@@ -206,6 +211,7 @@ For example, you might want to create some additional controls to [reset
 filters](#programmatic-filtering) alongside the chat UI:
 
 ``` r
+
 library(querychat)
 library(palmerpenguins)
 
@@ -239,6 +245,7 @@ same data:
 `app.R `
 
 ``` r
+
 library(shiny)
 library(bslib)
 library(querychat)
@@ -287,6 +294,7 @@ key statistics about the filtered data.
 `app.R `
 
 ``` r
+
 library(shiny)
 library(bslib)
 library(DT)
@@ -424,6 +432,7 @@ This way you don’t have to rely on both the user and LLM to send the
 right prompt.
 
 ``` r
+
 ui <- page_sidebar(
   sidebar = sidebar(
     qc$ui(),
@@ -474,6 +483,7 @@ issue](https://github.com/posit-dev/querychat/issues/6)
 `app.R `
 
 ``` r
+
 library(shiny)
 library(bslib)
 library(palmerpenguins)

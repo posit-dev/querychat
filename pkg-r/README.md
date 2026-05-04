@@ -53,7 +53,9 @@ querychat can also handle more general questions about the data that require cal
 ![](man/figures/quickstart-summary.png){alt="Screenshot of the querychat's app with a summary statistic inlined in the chat." class="rounded shadow"}
 
 querychat can also create visualizations, powered by [ggsql](https://ggsql.org/).
-With the [visualization tool](https://posit-dev.github.io/querychat/r/articles/visualize.html) enabled, ask for a chart and it appears inline in the conversation.
+With the [visualization tool](https://posit-dev.github.io/querychat/r/articles/visualize.html) enabled, ask for a chart and it appears inline in the conversation:
+
+![](man/figures/viz-bar-chart.png){alt="Bar chart showing average body mass by penguin species." class="rounded shadow"}
 
 ## Custom apps
 

@@ -41,7 +41,9 @@ Visualization requires two steps:
     qc$app()
     ```
 
-Ask something like "Show me body mass by species as a bar chart" and querychat will generate and display the chart inline.
+Ask something like "Show me body mass by species as a bar chart" and querychat will generate and display the chart inline:
+
+![](../reference/figures/viz-bar-chart.png){alt="Bar chart showing average body mass by penguin species." class="shadow rounded mb-3"}
 
 ## Choosing tools
 
@@ -112,6 +114,8 @@ Some example prompts:
 The LLM chooses an appropriate chart type based on your question, but you can always be specific.
 If you ask for a bar chart, you'll get a bar chart.
 
+![](../reference/figures/viz-scatter.png){alt="Scatter plot of bill length vs flipper length colored by species." class="shadow rounded mb-3"}
+
 ::: {.alert .alert-info}
 If you don't like the chart, ask the LLM to adjust it — for example, "make the dots bigger" or "use a log scale on the y-axis".
 :::
@@ -122,9 +126,13 @@ Each chart has controls in its footer:
 
 **Fullscreen** — Click the expand icon to view the chart in fullscreen mode.
 
+![](../reference/figures/viz-fullscreen.png){alt="A chart displayed in fullscreen mode." class="shadow rounded mb-3"}
+
 **Save** — Download the chart as a PNG or SVG file.
 
 **Show Query** — Expand the footer to see the ggsql query used to generate the chart.
+
+![](../reference/figures/viz-show-query.png){alt="A chart with the Show Query footer expanded, showing the ggsql query." class="shadow rounded mb-3"}
 
 ## How it works
 

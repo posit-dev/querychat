@@ -33,7 +33,7 @@ class AltairWidget:
 
     def __init__(
         self,
-        chart: alt.TopLevelMixin,
+        chart: ggsql.AltairChart,
         *,
         widget_id: str | None = None,
     ) -> None:
@@ -55,7 +55,7 @@ class AltairWidget:
         else:
             chart = chart.properties(width="container", height="container")
 
-        self.widget = alt.JupyterChart(cast(alt.TopLevelSpec, chart))
+        self.widget = alt.JupyterChart(chart)
         self.widget_id = widget_id or f"querychat_viz_{uuid4().hex[:8]}"
 
         # Reactively update compound cell sizes when the container resizes.
@@ -87,8 +87,9 @@ class AltairWidget:
             chart = widget.chart
             if chart is None:
                 return
-            chart = cast("alt.Chart", chart)
-            chart2 = fit_chart_to_container(chart, int(width), int(height))
+            chart2 = fit_chart_to_container(
+                cast("ggsql.AltairChart", chart), int(width), int(height)
+            )
             # Must set widget.spec (a new dict) rather than widget.chart,
             # because traitlets won't fire change events when the same
             # chart object is assigned back after in-place mutation.
@@ -116,10 +117,10 @@ LEGEND_WIDTH = 120  # approximate space for a right-side legend
 
 
 def fit_chart_to_container(
-    chart: alt.TopLevelMixin,
+    chart: ggsql.AltairChart,
     container_width: int,
     container_height: int,
-) -> alt.TopLevelMixin:
+) -> ggsql.AltairChart:
     """
     Return a copy of ``chart`` with cell ``width``/``height`` set.
 

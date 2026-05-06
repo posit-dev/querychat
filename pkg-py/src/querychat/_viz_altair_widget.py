@@ -55,7 +55,7 @@ class AltairWidget:
         else:
             chart = chart.properties(width="container", height="container")
 
-        self.widget = alt.JupyterChart(chart)
+        self.widget = alt.JupyterChart(cast(alt.TopLevelSpec, chart))
         self.widget_id = widget_id or f"querychat_viz_{uuid4().hex[:8]}"
 
         # Reactively update compound cell sizes when the container resizes.

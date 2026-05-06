@@ -117,7 +117,8 @@ local_tbl_sql_source <- function(
 
   DBI::dbWriteTable(conn, table_name, data, overwrite = TRUE)
   tbl <- dplyr::tbl(conn, table_name)
-  tbl <- tbl_transform(tbl)
+  tbl <- tbl_transform(tbl) |>
+    dplyr::compute("test_table")
 
   TblSqlSource$new(tbl, table_name)
 }

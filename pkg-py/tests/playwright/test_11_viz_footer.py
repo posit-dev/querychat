@@ -102,12 +102,15 @@ class TestShowQueryToggle:
 
         btn.click()  # show
         expect(label).to_have_text("Hide Query")
+        # Wait for the code editor to fully initialize before clicking again,
+        # otherwise the layout shift can cause the second click to misfire.
+        section = page.locator(".querychat-query-section--visible")
+        expect(section.locator(".code-editor")).to_be_visible()
 
         btn.click()  # hide
         expect(label).to_have_text("Show Query")
 
-        section = page.locator(".querychat-query-section--visible")
-        expect(section).not_to_be_attached()
+        expect(page.locator(".querychat-query-section--visible")).not_to_be_attached()
 
     def test_query_section_contains_code(self, page: Page) -> None:
         """The revealed query section should contain the ggsql code."""

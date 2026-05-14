@@ -144,14 +144,15 @@ Use `<span class="suggestion">` tags to create clickable prompt buttons in the U
 You might want to <span class="suggestion">explore the advanced features</span> or <span class="suggestion">show me a practical example</span>.
 ```
 
-**Nested lists:**
+**Grouped suggestions:**
 ```md
-* Analyze the data
-  * <span class="suggestion">What's the average …?</span>
-  * <span class="suggestion">How many …?</span>
-* Filter and sort
-  * <span class="suggestion">Show records from the year …</span>
-  * <span class="suggestion">Sort the ____ by ____ …</span>
+##### Analyze the data
+* <span class="suggestion">What's the average …?</span>
+* <span class="suggestion">How many …?</span>
+
+##### Filter and sort
+* <span class="suggestion">Show records from the year …</span>
+* <span class="suggestion">Sort the ____ by ____ …</span>
 ```
 
 #### When to Include Suggestions
@@ -173,6 +174,7 @@ You might want to <span class="suggestion">explore the advanced features</span> 
 
 - Suggestions can appear **anywhere** in your response—not just at the end
 - Use list format at the end for 2-4 follow-up options (most common pattern)
+- Never use nested lists for suggestions — group them under headings instead
 - Use inline suggestions within prose when contextually appropriate
 - Write suggestions as complete, natural prompts (not fragments)
 - Only suggest actions you can perform with your tools and capabilities

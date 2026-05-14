@@ -39,76 +39,76 @@ df_sqlite$cleanup()
 \dontshow{\}) # examplesIf}
 }
 \section{Super classes}{
-\code{\link[querychat:DataSource]{querychat::DataSource}} -> \code{\link[querychat:DBISource]{querychat::DBISource}} -> \code{DataFrameSource}
+\code{\link[querychat:DataSource]{DataSource}} -> \code{\link[querychat:DBISource]{DBISource}} -> \code{DataFrameSource}
 }
 \section{Methods}{
 \subsection{Public methods}{
-\itemize{
-\item \href{#method-DataFrameSource-new}{\code{DataFrameSource$new()}}
-\item \href{#method-DataFrameSource-clone}{\code{DataFrameSource$clone()}}
+  \itemize{
+    \item \href{#method-DataFrameSource-initialize}{\code{DataFrameSource$new()}}
+    \item \href{#method-DataFrameSource-clone}{\code{DataFrameSource$clone()}}
+  }
 }
-}
-\if{html}{\out{
-<details><summary>Inherited methods</summary>
+\if{html}{\out{<details><summary>Inherited methods</summary>
 <ul>
-<li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="cleanup"><a href='../../querychat/html/DBISource.html#method-DBISource-cleanup'><code>querychat::DBISource$cleanup()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="execute_query"><a href='../../querychat/html/DBISource.html#method-DBISource-execute_query'><code>querychat::DBISource$execute_query()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_data"><a href='../../querychat/html/DBISource.html#method-DBISource-get_data'><code>querychat::DBISource$get_data()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_db_type"><a href='../../querychat/html/DBISource.html#method-DBISource-get_db_type'><code>querychat::DBISource$get_db_type()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_schema"><a href='../../querychat/html/DBISource.html#method-DBISource-get_schema'><code>querychat::DBISource$get_schema()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_semantic_views_description"><a href='../../querychat/html/DBISource.html#method-DBISource-get_semantic_views_description'><code>querychat::DBISource$get_semantic_views_description()</code></a></span></li>
-<li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="test_query"><a href='../../querychat/html/DBISource.html#method-DBISource-test_query'><code>querychat::DBISource$test_query()</code></a></span></li>
+  <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="cleanup"><a href='../../querychat/html/DBISource.html#method-DBISource-cleanup'><code>DBISource$cleanup()</code></a></span></li>
+  <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="execute_query"><a href='../../querychat/html/DBISource.html#method-DBISource-execute_query'><code>DBISource$execute_query()</code></a></span></li>
+  <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_data"><a href='../../querychat/html/DBISource.html#method-DBISource-get_data'><code>DBISource$get_data()</code></a></span></li>
+  <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_db_type"><a href='../../querychat/html/DBISource.html#method-DBISource-get_db_type'><code>DBISource$get_db_type()</code></a></span></li>
+  <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_schema"><a href='../../querychat/html/DBISource.html#method-DBISource-get_schema'><code>DBISource$get_schema()</code></a></span></li>
+  <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_semantic_views_description"><a href='../../querychat/html/DBISource.html#method-DBISource-get_semantic_views_description'><code>DBISource$get_semantic_views_description()</code></a></span></li>
+  <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="test_query"><a href='../../querychat/html/DBISource.html#method-DBISource-test_query'><code>DBISource$test_query()</code></a></span></li>
 </ul>
-</details>
-}}
+</details>}}
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-DataFrameSource-new"></a>}}
-\if{latex}{\out{\hypertarget{method-DataFrameSource-new}{}}}
-\subsection{Method \code{new()}}{
-Create a new DataFrameSource
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{DataFrameSource$new(
+\if{html}{\out{<a id="method-DataFrameSource-initialize"></a>}}
+\if{latex}{\out{\hypertarget{method-DataFrameSource-initialize}{}}}
+\subsection{\code{DataFrameSource$new()}}{
+  Create a new DataFrameSource
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{DataFrameSource$new(
   df,
   table_name,
   engine = getOption("querychat.DataFrameSource.engine", NULL)
-)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{df}}{A data frame.}
-
-\item{\code{table_name}}{Name to use for the table in SQL queries. Must be a
+)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{df}}{A data frame.}
+      \item{\code{table_name}}{Name to use for the table in SQL queries. Must be a
 valid table name (start with letter, contain only letters, numbers,
 and underscores)}
-
-\item{\code{engine}}{Database engine to use: "duckdb" or "sqlite". Set the
+      \item{\code{engine}}{Database engine to use: "duckdb" or "sqlite". Set the
 global option \code{querychat.DataFrameSource.engine} to specify the default
 engine for all instances. If NULL (default), uses the first available
 engine from duckdb or RSQLite (in that order).}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    A new DataFrameSource object
+  }
 }
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-A new DataFrameSource object
-}
-}
+
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-DataFrameSource-clone"></a>}}
 \if{latex}{\out{\hypertarget{method-DataFrameSource-clone}{}}}
-\subsection{Method \code{clone()}}{
-The objects of this class are cloneable with this method.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{DataFrameSource$clone(deep = FALSE)}\if{html}{\out{</div>}}
+\subsection{\code{DataFrameSource$clone()}}{
+  The objects of this class are cloneable with this method.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{DataFrameSource$clone(deep = FALSE)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{deep}}{Whether to make a deep clone.}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{deep}}{Whether to make a deep clone.}
-}
-\if{html}{\out{</div>}}
-}
-}
 }

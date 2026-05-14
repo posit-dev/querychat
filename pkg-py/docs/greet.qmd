@@ -21,15 +21,15 @@ app = qc.app()
 You can provide suggestions to the user by using the `<span class="suggestion"> </span>` tag:
 
 ```markdown
-* **Filter and sort the data:**
-  * <span class="suggestion">Show only survivors</span>
-  * <span class="suggestion">Filter to first class passengers under 30</span>
-  * <span class="suggestion">Sort by fare from highest to lowest</span>
+##### Filter and sort the data
+* <span class="suggestion">Show only survivors</span>
+* <span class="suggestion">Filter to first class passengers under 30</span>
+* <span class="suggestion">Sort by fare from highest to lowest</span>
 
-* **Answer questions about the data:**
-  * <span class="suggestion">What was the survival rate by gender?</span>
-  * <span class="suggestion">What's the average age of children who survived?</span>
-  * <span class="suggestion">How many passengers were traveling alone?</span>
+##### Answer questions about the data
+* <span class="suggestion">What was the survival rate by gender?</span>
+* <span class="suggestion">What's the average age of children who survived?</span>
+* <span class="suggestion">How many passengers were traveling alone?</span>
 ```
 
 These suggestions appear in the greeting and automatically populate the chat text box when clicked.

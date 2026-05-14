@@ -85,6 +85,7 @@ Useful links:
 
 Authors:
 \itemize{
+  \item Garrick Aden-Buie \email{garrick@posit.co} (\href{https://orcid.org/0000-0002-7111-0077}{ORCID})
   \item Joe Cheng \email{joe@posit.co} [conceptor]
   \item Carson Sievert \email{carson@posit.co} (\href{https://orcid.org/0000-0002-4958-2844}{ORCID})
 }

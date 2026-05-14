@@ -12,7 +12,7 @@ from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 from ._icons import bs_icon
 from ._querychat_base import DEFAULT_TOOLS, TOOL_GROUPS, QueryChatBase
 from ._shiny_module import ServerValues, mod_server, mod_ui
-from ._utils import MISSING, MISSING_TYPE, as_narwhals
+from ._utils import MISSING, MISSING_TYPE, maybe_truncate
 from ._viz_utils import has_viz_tool
 
 if TYPE_CHECKING:
@@ -242,7 +242,10 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         self.id = id or f"querychat_{table_name}"
 
     def app(
-        self, *, bookmark_store: Literal["url", "server", "disable"] = "url"
+        self,
+        *,
+        max_rows: Optional[int] = 1000,
+        bookmark_store: Literal["url", "server", "disable"] = "url",
     ) -> App:
         """
         Quickly chat with a dataset.
@@ -252,6 +255,10 @@ class QueryChat(QueryChatBase[IntoFrameT]):
 
         Parameters
         ----------
+        max_rows
+            Maximum number of rows to display in the data table. This does not
+            affect the number of rows that the LLM can query against. Default
+            is 1000. Set to ``None`` to disable row limit.
         bookmark_store
             The bookmarking store to use for the Shiny app. Options are:
                 - `"url"`: Store bookmarks in the URL (default).
@@ -290,6 +297,10 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 ui.card(
                     ui.card_header(bs_icon("table"), " Data"),
                     ui.output_data_frame("dt"),
+                    ui.card_footer(
+                        ui.output_text("data_info"),
+                        class_="text-muted small",
+                    ),
                 ),
                 title=ui.span("querychat with ", ui.code(table_name)),
                 class_="bslib-page-dashboard",
@@ -325,10 +336,17 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 vals.sql.set(None)
                 vals.title.set(None)
 
+            @reactive.calc
+            def truncated():
+                return maybe_truncate(vals.df(), max_rows)
+
             @render.data_frame
             def dt():
-                # Collect lazy sources (LazyFrame, Ibis Table) to eager DataFrame
-                return as_narwhals(vals.df())
+                return truncated().df
+
+            @render.text
+            def data_info():
+                return truncated().info_message
 
             @render.ui
             def sql_output():

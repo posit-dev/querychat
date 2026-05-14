@@ -4,6 +4,7 @@ import os
 import re
 import warnings
 from contextlib import contextmanager
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal, Optional, overload
 
@@ -354,3 +355,68 @@ def read_prompt_template(filename: str, **kwargs: object) -> str:
     template_path = Path(__file__).parent / "prompts" / filename
     template = template_path.read_text()
     return chevron.render(template, kwargs)
+
+
+@dataclass
+class TruncationResult:
+    """Result of maybe_truncate(), holding the (possibly truncated) DataFrame and metadata."""
+
+    df: nw.DataFrame
+    total_rows: int
+    total_cols: int
+    truncated: bool
+
+    @property
+    def info_message(self) -> str:
+        """User-facing message describing the data dimensions and any truncation."""
+        if self.truncated:
+            return f"Showing first {len(self.df)} of {self.total_rows} rows ({self.total_cols} columns)."
+        return f"Data has {self.total_rows} rows and {self.total_cols} columns."
+
+
+def maybe_truncate(
+    df: Any,
+    max_rows: int | None,
+    *,
+    warn: bool = True,
+) -> TruncationResult:
+    """
+    Collect and optionally truncate data for display.
+
+    Accepts any type that :func:`as_narwhals` understands (native DataFrame,
+    narwhals frame, Polars LazyFrame, Ibis Table). For lazy sources, truncation
+    is applied before collection so the backend only transfers *max_rows* rows.
+
+    Parameters
+    ----------
+    df
+        Raw data from a data source.
+    max_rows
+        Maximum rows to display. ``None`` disables truncation.
+    warn
+        If True and truncation occurs, emit a warning for the developer.
+
+    """
+    if max_rows is None:
+        nw_df = as_narwhals(df)
+        total_rows, total_cols = nw_df.shape
+    else:
+        nw_lazy = as_narwhals(df, lazy=True)
+        total_rows = int(nw_lazy.select(nw.len()).collect().item())
+        total_cols = len(nw_lazy.collect_schema())
+        nw_df = nw_lazy.head(max_rows).collect() if total_rows > max_rows else nw_lazy.collect()
+
+    truncated = max_rows is not None and total_rows > max_rows
+    if truncated and warn:
+        warnings.warn(
+            f"querychat: Displaying {max_rows} of {total_rows} rows. "
+            "Set `max_rows` to increase or `None` to disable.",
+            stacklevel=2,
+        )
+
+    return TruncationResult(
+        df=nw_df,
+        total_rows=int(total_rows),
+        total_cols=int(total_cols),
+        truncated=truncated,
+    )

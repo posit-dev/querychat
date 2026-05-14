@@ -4,11 +4,6 @@
 \alias{DBISource}
 \title{DBI Source}
 \description{
-DBI Source
-
-DBI Source
-}
-\details{
 A DataSource implementation for DBI database connections (SQLite, PostgreSQL,
 MySQL, etc.). This class wraps a DBI connection and provides SQL query
 execution against a single table in the database.
@@ -34,176 +29,192 @@ db_source$cleanup()
 \dontshow{\}) # examplesIf}
 }
 \section{Super class}{
-\code{\link[querychat:DataSource]{querychat::DataSource}} -> \code{DBISource}
+\code{\link[querychat:DataSource]{DataSource}} -> \code{DBISource}
 }
 \section{Methods}{
 \subsection{Public methods}{
-\itemize{
-\item \href{#method-DBISource-new}{\code{DBISource$new()}}
-\item \href{#method-DBISource-get_db_type}{\code{DBISource$get_db_type()}}
-\item \href{#method-DBISource-get_schema}{\code{DBISource$get_schema()}}
-\item \href{#method-DBISource-get_semantic_views_description}{\code{DBISource$get_semantic_views_description()}}
-\item \href{#method-DBISource-execute_query}{\code{DBISource$execute_query()}}
-\item \href{#method-DBISource-test_query}{\code{DBISource$test_query()}}
-\item \href{#method-DBISource-get_data}{\code{DBISource$get_data()}}
-\item \href{#method-DBISource-cleanup}{\code{DBISource$cleanup()}}
-\item \href{#method-DBISource-clone}{\code{DBISource$clone()}}
-}
+  \itemize{
+    \item \href{#method-DBISource-initialize}{\code{DBISource$new()}}
+    \item \href{#method-DBISource-get_db_type}{\code{DBISource$get_db_type()}}
+    \item \href{#method-DBISource-get_schema}{\code{DBISource$get_schema()}}
+    \item \href{#method-DBISource-get_semantic_views_description}{\code{DBISource$get_semantic_views_description()}}
+    \item \href{#method-DBISource-execute_query}{\code{DBISource$execute_query()}}
+    \item \href{#method-DBISource-test_query}{\code{DBISource$test_query()}}
+    \item \href{#method-DBISource-get_data}{\code{DBISource$get_data()}}
+    \item \href{#method-DBISource-cleanup}{\code{DBISource$cleanup()}}
+    \item \href{#method-DBISource-clone}{\code{DBISource$clone()}}
+  }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-DBISource-new"></a>}}
-\if{latex}{\out{\hypertarget{method-DBISource-new}{}}}
-\subsection{Method \code{new()}}{
-Create a new DBISource
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{DBISource$new(conn, table_name)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{conn}}{A DBI connection object}
-
-\item{\code{table_name}}{Name of the table in the database. Can be a character
+\if{html}{\out{<a id="method-DBISource-initialize"></a>}}
+\if{latex}{\out{\hypertarget{method-DBISource-initialize}{}}}
+\subsection{\code{DBISource$new()}}{
+  Create a new DBISource
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{DBISource$new(conn, table_name)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{conn}}{A DBI connection object}
+      \item{\code{table_name}}{Name of the table in the database. Can be a character
 string or a \code{\link[DBI:Id]{DBI::Id()}} object for tables in catalogs/schemas}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    A new DBISource object
+  }
 }
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-A new DBISource object
-}
-}
+
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-DBISource-get_db_type"></a>}}
 \if{latex}{\out{\hypertarget{method-DBISource-get_db_type}{}}}
-\subsection{Method \code{get_db_type()}}{
-Get the database type
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{DBISource$get_db_type()}\if{html}{\out{</div>}}
+\subsection{\code{DBISource$get_db_type()}}{
+  Get the database type
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{DBISource$get_db_type()}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    A string identifying the database type
+  }
 }
 
-\subsection{Returns}{
-A string identifying the database type
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-DBISource-get_schema"></a>}}
 \if{latex}{\out{\hypertarget{method-DBISource-get_schema}{}}}
-\subsection{Method \code{get_schema()}}{
-Get schema information for the database table
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{DBISource$get_schema(categorical_threshold = 20)}\if{html}{\out{</div>}}
+\subsection{\code{DBISource$get_schema()}}{
+  Get schema information for the database table
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{DBISource$get_schema(categorical_threshold = 20)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{categorical_threshold}}{Maximum number of unique values for a text
+column to be considered categorical (default: 20)}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    A string describing the schema
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{categorical_threshold}}{Maximum number of unique values for a text
-column to be considered categorical (default: 20)}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-A string describing the schema
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-DBISource-get_semantic_views_description"></a>}}
 \if{latex}{\out{\hypertarget{method-DBISource-get_semantic_views_description}{}}}
-\subsection{Method \code{get_semantic_views_description()}}{
-Get information about semantic views (if any) for the system prompt.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{DBISource$get_semantic_views_description()}\if{html}{\out{</div>}}
+\subsection{\code{DBISource$get_semantic_views_description()}}{
+  Get information about semantic views (if any) for the system prompt.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{DBISource$get_semantic_views_description()}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    A string with semantic view information, or empty string if none
+  }
 }
 
-\subsection{Returns}{
-A string with semantic view information, or empty string if none
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-DBISource-execute_query"></a>}}
 \if{latex}{\out{\hypertarget{method-DBISource-execute_query}{}}}
-\subsection{Method \code{execute_query()}}{
-Execute a SQL query
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{DBISource$execute_query(query)}\if{html}{\out{</div>}}
+\subsection{\code{DBISource$execute_query()}}{
+  Execute a SQL query
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{DBISource$execute_query(query)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{query}}{SQL query string. If NULL or empty, returns all data}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    A data frame with query results
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{query}}{SQL query string. If NULL or empty, returns all data}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-A data frame with query results
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-DBISource-test_query"></a>}}
 \if{latex}{\out{\hypertarget{method-DBISource-test_query}{}}}
-\subsection{Method \code{test_query()}}{
-Test a SQL query by fetching only one row
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{DBISource$test_query(query, require_all_columns = FALSE)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{query}}{SQL query string}
-
-\item{\code{require_all_columns}}{If \code{TRUE}, validates that the result includes
+\subsection{\code{DBISource$test_query()}}{
+  Test a SQL query by fetching only one row
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{DBISource$test_query(query, require_all_columns = FALSE)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{query}}{SQL query string}
+      \item{\code{require_all_columns}}{If \code{TRUE}, validates that the result includes
 all original table columns (default: \code{FALSE})}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    A data frame with one row of results
+  }
 }
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-A data frame with one row of results
-}
-}
+
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-DBISource-get_data"></a>}}
 \if{latex}{\out{\hypertarget{method-DBISource-get_data}{}}}
-\subsection{Method \code{get_data()}}{
-Get all data from the table
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{DBISource$get_data()}\if{html}{\out{</div>}}
+\subsection{\code{DBISource$get_data()}}{
+  Get all data from the table
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{DBISource$get_data()}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    A data frame containing all data
+  }
 }
 
-\subsection{Returns}{
-A data frame containing all data
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-DBISource-cleanup"></a>}}
 \if{latex}{\out{\hypertarget{method-DBISource-cleanup}{}}}
-\subsection{Method \code{cleanup()}}{
-Disconnect from the database
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{DBISource$cleanup()}\if{html}{\out{</div>}}
+\subsection{\code{DBISource$cleanup()}}{
+  Disconnect from the database
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{DBISource$cleanup()}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    NULL (invisibly)
+  }
 }
 
-\subsection{Returns}{
-NULL (invisibly)
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-DBISource-clone"></a>}}
 \if{latex}{\out{\hypertarget{method-DBISource-clone}{}}}
-\subsection{Method \code{clone()}}{
-The objects of this class are cloneable with this method.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{DBISource$clone(deep = FALSE)}\if{html}{\out{</div>}}
+\subsection{\code{DBISource$clone()}}{
+  The objects of this class are cloneable with this method.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{DBISource$clone(deep = FALSE)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{deep}}{Whether to make a deep clone.}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{deep}}{Whether to make a deep clone.}
-}
-\if{html}{\out{</div>}}
-}
-}
 }

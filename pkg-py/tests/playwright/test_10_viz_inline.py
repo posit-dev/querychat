@@ -168,5 +168,7 @@ class TestInlineVisualization:
         expect(tool_result).to_be_visible(timeout=90000)
 
         # Non-viz tool results should NOT have fullscreen toggle
-        fs_results = self.page.locator(".shiny-tool-result:has(.tool-fullscreen-toggle)")
+        fs_results = self.page.locator(
+            ".shiny-tool-result:has(.tool-fullscreen-toggle)"
+        )
         expect(fs_results).to_have_count(0)

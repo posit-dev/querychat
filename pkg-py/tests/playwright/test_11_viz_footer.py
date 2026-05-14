@@ -58,6 +58,10 @@ def _send_viz_prompt(
     page.locator(".querychat-footer-buttons").wait_for(
         state="visible", timeout=10_000
     )
+    # Wait for the chat input to re-enable — this signals the LLM turn is
+    # complete and shinychat has finished its final re-render of the tool
+    # result card.
+    expect(chat_10_viz.loc_input).to_be_enabled(timeout=30_000)
 
 
 class TestShowQueryToggle:
@@ -104,6 +108,7 @@ class TestShowQueryToggle:
         expect(label).to_have_text("Hide Query")
 
         btn.click()  # hide
+
         expect(label).to_have_text("Show Query")
 
         section = page.locator(".querychat-query-section--visible")

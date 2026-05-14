@@ -61,7 +61,7 @@ a greeting to save and reuse.}
 \item{client}{Optional chat client. Can be:
 \itemize{
 \item An \link[ellmer:Chat]{ellmer::Chat} object
-\item A string to pass to \code{\link[ellmer:chat-any]{ellmer::chat()}} (e.g., \code{"openai/gpt-4o"})
+\item A string to pass to \code{\link[ellmer:chat]{ellmer::chat()}} (e.g., \code{"openai/gpt-4o"})
 \item \code{NULL} (default): Uses the \code{querychat.client} option, the
 \code{QUERYCHAT_CLIENT} environment variable, or defaults to
 \code{\link[ellmer:chat_openai]{ellmer::chat_openai()}}

@@ -29,15 +29,15 @@ You can provide suggestions to the user by using the
 `<span class="suggestion"> </span>` tag:
 
 ``` markdown
-* **Filter and sort the data:**
-  * <span class="suggestion">Show only Adelie penguins</span>
-  * <span class="suggestion">Filter to penguins with body mass over 4000g</span>
-  * <span class="suggestion">Sort by flipper length from longest to shortest</span>
+##### Filter and sort the data
+* <span class="suggestion">Show only Adelie penguins</span>
+* <span class="suggestion">Filter to penguins with body mass over 4000g</span>
+* <span class="suggestion">Sort by flipper length from longest to shortest</span>
 
-* **Answer questions about the data:**
-  * <span class="suggestion">What is the average bill length by species?</span>
-  * <span class="suggestion">How many penguins are in each island?</span>
-  * <span class="suggestion">Which species has the largest average body mass?</span>
+##### Answer questions about the data
+* <span class="suggestion">What is the average bill length by species?</span>
+* <span class="suggestion">How many penguins are in each island?</span>
+* <span class="suggestion">Which species has the largest average body mass?</span>
 ```
 
 These suggestions appear in the greeting and automatically populate the

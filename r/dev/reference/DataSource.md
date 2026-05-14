@@ -33,7 +33,7 @@ or
 
 ------------------------------------------------------------------------
 
-### Method `get_db_type()`
+### `DataSource$get_db_type()`
 
 Get the database type
 
@@ -47,7 +47,7 @@ A string describing the database type (e.g., "DuckDB", "SQLite")
 
 ------------------------------------------------------------------------
 
-### Method `get_schema()`
+### `DataSource$get_schema()`
 
 Get schema information about the table
 
@@ -68,7 +68,7 @@ A string containing schema information formatted for LLM prompts
 
 ------------------------------------------------------------------------
 
-### Method `execute_query()`
+### `DataSource$execute_query()`
 
 Execute a SQL query and return results
 
@@ -88,7 +88,7 @@ A data frame containing query results
 
 ------------------------------------------------------------------------
 
-### Method `test_query()`
+### `DataSource$test_query()`
 
 Test a SQL query by fetching only one row
 
@@ -113,7 +113,7 @@ A data frame containing one row of results (or empty if no matches)
 
 ------------------------------------------------------------------------
 
-### Method `get_data()`
+### `DataSource$get_data()`
 
 Get the unfiltered data as a data frame
 
@@ -127,7 +127,7 @@ A data frame containing all data from the table
 
 ------------------------------------------------------------------------
 
-### Method `cleanup()`
+### `DataSource$cleanup()`
 
 Clean up resources (close connections, etc.)
 
@@ -141,7 +141,7 @@ NULL (invisibly)
 
 ------------------------------------------------------------------------
 
-### Method `clone()`
+### `DataSource$clone()`
 
 The objects of this class are cloneable with this method.
 

@@ -51,7 +51,6 @@ values
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/models.html">Models</a></li>
     <li><a class="dropdown-item" href="../articles/data-sources.html">Data Sources</a></li>
     <li><a class="dropdown-item" href="../articles/context.html">Provide context</a></li>
-    <li><a class="dropdown-item" href="../articles/visualize.html">Visualizations</a></li>
     <li><a class="dropdown-item" href="../articles/build.html">Build an app</a></li>
     <li><a class="dropdown-item" href="../articles/greet.html">Greet users</a></li>
     <li><a class="dropdown-item" href="../articles/tools.html">Tools</a></li>
@@ -130,11 +129,11 @@ values</p></li>
 <dd><p>The greeting message displayed to users.</p></dd>
 
 
-<dt><code>id</code></dt>
+    <dt><code>id</code></dt>
 <dd><p>ID for the QueryChat instance.</p></dd>
 
 
-<dt><code>tools</code></dt>
+    <dt><code>tools</code></dt>
 <dd><p>The allowed tools for the chat client.</p></dd>
 
 
@@ -146,7 +145,7 @@ values</p></li>
 <dd><p>Get the system prompt.</p></dd>
 
 
-<dt><code>data_source</code></dt>
+    <dt><code>data_source</code></dt>
 <dd><p>Get or set the current data source. When setting,
 the value is normalized and the system prompt is rebuilt.</p></dd>
 
@@ -158,8 +157,7 @@ the value is normalized and the system prompt is rebuilt.</p></dd>
 
 <div class="section">
 <h3 id="public-methods">Public methods<a class="anchor" aria-label="anchor" href="#public-methods"></a></h3>
-
-<ul><li><p><a href="#method-QueryChat-new"><code>QueryChat$new()</code></a></p></li>
+<p></p><ul><li><p><a href="#method-QueryChat-initialize"><code>QueryChat$new()</code></a></p></li>
 <li><p><a href="#method-QueryChat-client"><code>QueryChat$client()</code></a></p></li>
 <li><p><a href="#method-QueryChat-console"><code>QueryChat$console()</code></a></p></li>
 <li><p><a href="#method-QueryChat-app"><code>QueryChat$app()</code></a></p></li>
@@ -170,8 +168,8 @@ the value is normalized and the system prompt is rebuilt.</p></dd>
 <li><p><a href="#method-QueryChat-generate_greeting"><code>QueryChat$generate_greeting()</code></a></p></li>
 <li><p><a href="#method-QueryChat-cleanup"><code>QueryChat$cleanup()</code></a></p></li>
 <li><p><a href="#method-QueryChat-clone"><code>QueryChat$clone()</code></a></p></li>
-</ul></div><p></p><hr><a id="method-QueryChat-new"></a><div class="section">
-<h3 id="method-new-">Method <code>new()</code><a class="anchor" aria-label="anchor" href="#method-new-"></a></h3>
+</ul></div><p></p><hr><a id="method-QueryChat-initialize"></a><div class="section">
+<h3 id="querychat-new-"><code>QueryChat$new()</code><a class="anchor" aria-label="anchor" href="#querychat-new-"></a></h3>
 <p>Create a new QueryChat object.</p><div class="section">
 <h4 id="usage">Usage<a class="anchor" aria-label="anchor" href="#usage"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va"><a href="../reference/QueryChat.html">QueryChat</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span></span>
@@ -188,9 +186,7 @@ the value is normalized and the system prompt is rebuilt.</p></dd>
 <span>  prompt_template <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  cleanup <span class="op">=</span> <span class="cn">NA</span></span>
 <span><span class="op">)</span></span></code></pre></div><p></p></div>
-</div>
-
-<div class="section">
+</div><p></p><div class="section">
 <h4 id="arguments">Arguments<a class="anchor" aria-label="anchor" href="#arguments"></a></h4>
 <p></p><div class="arguments"><dl><dt><code>data_source</code></dt>
 <dd><p>Either a data.frame, a database connection (e.g., DBI
@@ -198,34 +194,29 @@ connection), or <code>NULL</code> to defer setting the data source until later.
 When <code>NULL</code>, the data source must be set via the <code>$data_source</code> property
 or passed to <code>$server()</code> before calling methods that require data access.</p></dd>
 
-
-<dt><code>table_name</code></dt>
+      <dt><code>table_name</code></dt>
 <dd><p>A string specifying the table name to use in SQL
 queries. If <code>data_source</code> is a data.frame, this is the name to refer to
 it by in queries (typically the variable name). If not provided, will
 be inferred from the variable name for data.frame inputs. For database
 connections or <code>NULL</code> data sources, this parameter is required.</p></dd>
 
-
-<dt><code>...</code></dt>
+      <dt><code>...</code></dt>
 <dd><p>Additional arguments (currently unused).</p></dd>
 
-
-<dt><code>id</code></dt>
+      <dt><code>id</code></dt>
 <dd><p>Optional module ID for the QueryChat instance. If not provided,
 will be auto-generated from <code>table_name</code>. The ID is used to namespace
 the Shiny module.</p></dd>
 
-
-<dt><code>greeting</code></dt>
+      <dt><code>greeting</code></dt>
 <dd><p>Optional initial message to display to users. Can be a
 character string (in Markdown format) or a file path. If not provided,
 a greeting will be generated at the start of each conversation using
 the LLM, which adds latency and cost. Use <code>$generate_greeting()</code> to
 create a greeting to save and reuse.</p></dd>
 
-
-<dt><code>client</code></dt>
+      <dt><code>client</code></dt>
 <dd><p>Optional chat client. Can be:</p><ul><li><p>An <a href="https://ellmer.tidyverse.org/reference/Chat.html" class="external-link">ellmer::Chat</a> object</p></li>
 <li><p>A string to pass to <code><a href="https://ellmer.tidyverse.org/reference/chat-any.html" class="external-link">ellmer::chat()</a></code> (e.g., <code>"openai/gpt-4o"</code>)</p></li>
 <li><p><code>NULL</code> (default): Uses the <code>querychat.client</code> option, the
@@ -233,8 +224,7 @@ create a greeting to save and reuse.</p></dd>
 <code><a href="https://ellmer.tidyverse.org/reference/chat_openai.html" class="external-link">ellmer::chat_openai()</a></code></p></li>
 </ul></dd>
 
-
-<dt><code>tools</code></dt>
+      <dt><code>tools</code></dt>
 <dd><p>Which querychat tools to include in the chat client, by
 default. <code>"update"</code> includes the tools for updating and resetting the
 dashboard and <code>"query"</code> includes the tool for executing SQL queries.
@@ -242,31 +232,26 @@ Use <code>tools = "update"</code> when you only want the dashboard updating tool
 or when you want to disable the querying tool entirely to prevent the
 LLM from seeing any of the data in your dataset.</p></dd>
 
-
-<dt><code>data_description</code></dt>
+      <dt><code>data_description</code></dt>
 <dd><p>Optional description of the data in plain text or
 Markdown. Can be a string or a file path. This provides context to the
 LLM about what the data represents.</p></dd>
 
-
-<dt><code>categorical_threshold</code></dt>
+      <dt><code>categorical_threshold</code></dt>
 <dd><p>For text columns, the maximum number of
 unique values to consider as a categorical variable. Default is 20.</p></dd>
 
-
-<dt><code>extra_instructions</code></dt>
+      <dt><code>extra_instructions</code></dt>
 <dd><p>Optional additional instructions for the chat
 model in plain text or Markdown. Can be a string or a file path.</p></dd>
 
-
-<dt><code>prompt_template</code></dt>
+      <dt><code>prompt_template</code></dt>
 <dd><p>Optional path to or string of a custom prompt
 template file. If not provided, the default querychat template will be
 used. See the package prompts directory for the default template
 format.</p></dd>
 
-
-<dt><code>cleanup</code></dt>
+      <dt><code>cleanup</code></dt>
 <dd><p>Whether or not to automatically run <code>$cleanup()</code> when the
 Shiny session/app stops. By default, cleanup only occurs if <code>QueryChat</code>
 gets created within a Shiny session. Set to <code>TRUE</code> to always clean up,
@@ -274,14 +259,15 @@ or <code>FALSE</code> to never clean up automatically.</p></dd>
 
 
 </dl><p></p></div>
-</div>
-<div class="section">
+</div><p></p><div class="section">
 <h4 id="returns">Returns<a class="anchor" aria-label="anchor" href="#returns"></a></h4>
 <p>A new <code>QueryChat</code> object.</p>
 </div>
 
-</div><p></p><hr><a id="method-QueryChat-client"></a><div class="section">
-<h3 id="method-client-">Method <code>client()</code><a class="anchor" aria-label="anchor" href="#method-client-"></a></h3>
+</div>
+
+<p></p><hr><a id="method-QueryChat-client"></a><div class="section">
+<h3 id="querychat-client-"><code>QueryChat$client()</code><a class="anchor" aria-label="anchor" href="#querychat-client-"></a></h3>
 <p>Create a chat client, complete with registered tools, for the current
 data source.</p><div class="section">
 <h4 id="usage-1">Usage<a class="anchor" aria-label="anchor" href="#usage-1"></a></h4>
@@ -292,9 +278,7 @@ data source.</p><div class="section">
 <span>  reset_dashboard <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="op">{</span></span>
 <span> <span class="op">}</span></span>
 <span><span class="op">)</span></span></code></pre></div><p></p></div>
-</div>
-
-<div class="section">
+</div><p></p><div class="section">
 <h4 id="arguments-1">Arguments<a class="anchor" aria-label="anchor" href="#arguments-1"></a></h4>
 <p></p><div class="arguments"><dl><dt><code>tools</code></dt>
 <dd><p>Which querychat tools to include in the chat client.
@@ -302,13 +286,11 @@ data source.</p><div class="section">
 and <code>"query"</code> includes the tool for executing SQL queries. By default,
 when <code>tools = NA</code>, the values provided at initialization are used.</p></dd>
 
-
-<dt><code>update_dashboard</code></dt>
+      <dt><code>update_dashboard</code></dt>
 <dd><p>Optional function to call with the <code>query</code> and
 <code>title</code> generated by the LLM for the <code>update_dashboard</code> tool.</p></dd>
 
-
-<dt><code>reset_dashboard</code></dt>
+      <dt><code>reset_dashboard</code></dt>
 <dd><p>Optional function to call when the
 <code>reset_dashboard</code> tool is called.</p></dd>
 
@@ -316,25 +298,23 @@ when <code>tools = NA</code>, the values provided at initialization are used.</p
 </dl><p></p></div>
 </div>
 
-</div><p></p><hr><a id="method-QueryChat-console"></a><div class="section">
-<h3 id="method-console-">Method <code>console()</code><a class="anchor" aria-label="anchor" href="#method-console-"></a></h3>
+</div>
+
+<p></p><hr><a id="method-QueryChat-console"></a><div class="section">
+<h3 id="querychat-console-"><code>QueryChat$console()</code><a class="anchor" aria-label="anchor" href="#querychat-console-"></a></h3>
 <p>Launch a console-based chat interface with the data source.</p><div class="section">
 <h4 id="usage-2">Usage<a class="anchor" aria-label="anchor" href="#usage-2"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">QueryChat</span><span class="op">$</span><span class="fu">console</span><span class="op">(</span>new <span class="op">=</span> <span class="cn">FALSE</span>, <span class="va">...</span>, tools <span class="op">=</span> <span class="st">"query"</span><span class="op">)</span></span></code></pre></div><p></p></div>
-</div>
-
-<div class="section">
+</div><p></p><div class="section">
 <h4 id="arguments-2">Arguments<a class="anchor" aria-label="anchor" href="#arguments-2"></a></h4>
 <p></p><div class="arguments"><dl><dt><code>new</code></dt>
 <dd><p>Whether to create a new chat client instance or continue the
 conversation from the last console chat session (the default).</p></dd>
 
-
-<dt><code>...</code></dt>
+      <dt><code>...</code></dt>
 <dd><p>Additional arguments passed to the <code>$client()</code> method.</p></dd>
 
-
-<dt><code>tools</code></dt>
+      <dt><code>tools</code></dt>
 <dd><p>Which querychat tools to include in the chat client. See
 <code>$client()</code> for details. Ignored when not creating a new chat client.
 By default, only the <code>"query"</code> tool is included, regardless of the
@@ -344,8 +324,10 @@ By default, only the <code>"query"</code> tool is included, regardless of the
 </dl><p></p></div>
 </div>
 
-</div><p></p><hr><a id="method-QueryChat-app"></a><div class="section">
-<h3 id="method-app-">Method <code>app()</code><a class="anchor" aria-label="anchor" href="#method-app-"></a></h3>
+</div>
+
+<p></p><hr><a id="method-QueryChat-app"></a><div class="section">
+<h3 id="querychat-app-"><code>QueryChat$app()</code><a class="anchor" aria-label="anchor" href="#querychat-app-"></a></h3>
 <p>Create and run a Shiny gadget for chatting with data</p>
 <p>Runs a Shiny gadget (designed for interactive use) that provides a
 complete interface for chatting with your data using natural language. If
@@ -357,32 +339,31 @@ you're looking to deploy this app or run it through some other means, see
 <span><span class="va">qc</span><span class="op">$</span><span class="fu">app</span><span class="op">(</span><span class="op">)</span></span></code></pre><p></p></div><div class="section">
 <h4 id="usage-3">Usage<a class="anchor" aria-label="anchor" href="#usage-3"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">QueryChat</span><span class="op">$</span><span class="fu">app</span><span class="op">(</span><span class="va">...</span>, bookmark_store <span class="op">=</span> <span class="st">"url"</span><span class="op">)</span></span></code></pre></div><p></p></div>
-</div>
-
-<div class="section">
+</div><p></p><div class="section">
 <h4 id="arguments-3">Arguments<a class="anchor" aria-label="anchor" href="#arguments-3"></a></h4>
 <p></p><div class="arguments"><dl><dt><code>...</code></dt>
 <dd><p>Arguments passed to <code>$app_obj()</code>.</p></dd>
 
-
-<dt><code>bookmark_store</code></dt>
+      <dt><code>bookmark_store</code></dt>
 <dd><p>The bookmarking storage method. Passed to
 <code><a href="https://rdrr.io/pkg/shiny/man/enableBookmarking.html" class="external-link">shiny::enableBookmarking()</a></code>. If <code>"url"</code> or <code>"server"</code>, the chat state
 (including current query) will be bookmarked. Default is <code>"url"</code>.</p></dd>
 
 
 </dl><p></p></div>
-</div>
-<div class="section">
+</div><p></p><div class="section">
 <h4 id="returns-1">Returns<a class="anchor" aria-label="anchor" href="#returns-1"></a></h4>
 <p>Invisibly returns a list of session-specific values:</p><ul><li><p><code>df</code>: The final filtered data frame</p></li>
 <li><p><code>sql</code>: The final SQL query string</p></li>
 <li><p><code>title</code>: The final title</p></li>
 <li><p><code>client</code>: The session-specific chat client instance</p></li>
-</ul></div>
+</ul><p></p>
+</div>
 
-</div><p></p><hr><a id="method-QueryChat-app_obj"></a><div class="section">
-<h3 id="method-app-obj-">Method <code>app_obj()</code><a class="anchor" aria-label="anchor" href="#method-app-obj-"></a></h3>
+</div>
+
+<p></p><hr><a id="method-QueryChat-app_obj"></a><div class="section">
+<h3 id="querychat-app-obj-"><code>QueryChat$app_obj()</code><a class="anchor" aria-label="anchor" href="#querychat-app-obj-"></a></h3>
 <p>A streamlined Shiny app for chatting with data</p>
 <p>Creates a Shiny app designed for chatting with data, with:</p><ul><li><p>A sidebar containing the chat interface</p></li>
 <li><p>A card displaying the current SQL query</p></li>
@@ -395,29 +376,27 @@ you're looking to deploy this app or run it through some other means, see
 <span><span class="fu">shiny</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/shiny/man/runApp.html" class="external-link">runApp</a></span><span class="op">(</span><span class="va">app</span><span class="op">)</span></span></code></pre><p></p></div><div class="section">
 <h4 id="usage-4">Usage<a class="anchor" aria-label="anchor" href="#usage-4"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">QueryChat</span><span class="op">$</span><span class="fu">app_obj</span><span class="op">(</span><span class="va">...</span>, bookmark_store <span class="op">=</span> <span class="st">"url"</span><span class="op">)</span></span></code></pre></div><p></p></div>
-</div>
-
-<div class="section">
+</div><p></p><div class="section">
 <h4 id="arguments-4">Arguments<a class="anchor" aria-label="anchor" href="#arguments-4"></a></h4>
 <p></p><div class="arguments"><dl><dt><code>...</code></dt>
 <dd><p>Additional arguments (currently unused).</p></dd>
 
-
-<dt><code>bookmark_store</code></dt>
+      <dt><code>bookmark_store</code></dt>
 <dd><p>The bookmarking storage method. Passed to
 <code><a href="https://rdrr.io/pkg/shiny/man/enableBookmarking.html" class="external-link">shiny::enableBookmarking()</a></code>. If <code>"url"</code> or <code>"server"</code>, the chat state
 (including current query) will be bookmarked. Default is <code>"url"</code>.</p></dd>
 
 
 </dl><p></p></div>
-</div>
-<div class="section">
+</div><p></p><div class="section">
 <h4 id="returns-2">Returns<a class="anchor" aria-label="anchor" href="#returns-2"></a></h4>
 <p>A Shiny app object that can be run with <code><a href="https://rdrr.io/pkg/shiny/man/runApp.html" class="external-link">shiny::runApp()</a></code>.</p>
 </div>
 
-</div><p></p><hr><a id="method-QueryChat-sidebar"></a><div class="section">
-<h3 id="method-sidebar-">Method <code>sidebar()</code><a class="anchor" aria-label="anchor" href="#method-sidebar-"></a></h3>
+</div>
+
+<p></p><hr><a id="method-QueryChat-sidebar"></a><div class="section">
+<h3 id="querychat-sidebar-"><code>QueryChat$sidebar()</code><a class="anchor" aria-label="anchor" href="#querychat-sidebar-"></a></h3>
 <p>Create a sidebar containing the querychat UI.</p>
 <p>This method generates a <code><a href="https://rstudio.github.io/bslib/reference/sidebar.html" class="external-link">bslib::sidebar()</a></code> component containing the chat
 interface, suitable for use with <code><a href="https://rstudio.github.io/bslib/reference/page_sidebar.html" class="external-link">bslib::page_sidebar()</a></code> or similar
@@ -436,28 +415,22 @@ layouts.</p>
 <span>  fillable <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  id <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div><p></p></div>
-</div>
-
-<div class="section">
+</div><p></p><div class="section">
 <h4 id="arguments-5">Arguments<a class="anchor" aria-label="anchor" href="#arguments-5"></a></h4>
 <p></p><div class="arguments"><dl><dt><code>...</code></dt>
 <dd><p>Additional arguments passed to <code><a href="https://rstudio.github.io/bslib/reference/sidebar.html" class="external-link">bslib::sidebar()</a></code>.</p></dd>
 
-
-<dt><code>width</code></dt>
+      <dt><code>width</code></dt>
 <dd><p>Width of the sidebar in pixels. Default is 400.</p></dd>
 
-
-<dt><code>height</code></dt>
+      <dt><code>height</code></dt>
 <dd><p>Height of the sidebar. Default is "100%".</p></dd>
 
-
-<dt><code>fillable</code></dt>
+      <dt><code>fillable</code></dt>
 <dd><p>Whether the sidebar should be fillable. Default is
 <code>TRUE</code>.</p></dd>
 
-
-<dt><code>id</code></dt>
+      <dt><code>id</code></dt>
 <dd><p>Optional ID for the QueryChat instance. If not provided, will
 use the ID provided at initialization. If using <code>$sidebar()</code> in a Shiny
 module, you'll need to provide <code>id = ns("your_id")</code> where <code>ns</code> is the
@@ -465,14 +438,15 @@ namespacing function from <code><a href="https://rdrr.io/pkg/shiny/man/NS.html" 
 
 
 </dl><p></p></div>
-</div>
-<div class="section">
+</div><p></p><div class="section">
 <h4 id="returns-3">Returns<a class="anchor" aria-label="anchor" href="#returns-3"></a></h4>
 <p>A <code><a href="https://rstudio.github.io/bslib/reference/sidebar.html" class="external-link">bslib::sidebar()</a></code> UI component.</p>
 </div>
 
-</div><p></p><hr><a id="method-QueryChat-ui"></a><div class="section">
-<h3 id="method-ui-">Method <code>ui()</code><a class="anchor" aria-label="anchor" href="#method-ui-"></a></h3>
+</div>
+
+<p></p><hr><a id="method-QueryChat-ui"></a><div class="section">
+<h3 id="querychat-ui-"><code>QueryChat$ui()</code><a class="anchor" aria-label="anchor" href="#querychat-ui-"></a></h3>
 <p>Create the UI for the querychat chat interface.</p>
 <p>This method generates the chat UI component. Typically you'll use
 <code>$sidebar()</code> instead, which wraps this in a sidebar layout.</p>
@@ -483,15 +457,12 @@ namespacing function from <code><a href="https://rdrr.io/pkg/shiny/man/NS.html" 
 <span><span class="op">)</span></span></code></pre><p></p></div><div class="section">
 <h4 id="usage-6">Usage<a class="anchor" aria-label="anchor" href="#usage-6"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">QueryChat</span><span class="op">$</span><span class="fu">ui</span><span class="op">(</span><span class="va">...</span>, id <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div><p></p></div>
-</div>
-
-<div class="section">
+</div><p></p><div class="section">
 <h4 id="arguments-6">Arguments<a class="anchor" aria-label="anchor" href="#arguments-6"></a></h4>
 <p></p><div class="arguments"><dl><dt><code>...</code></dt>
 <dd><p>Additional arguments passed to <code><a href="https://posit-dev.github.io/shinychat/r/reference/chat_ui.html" class="external-link">shinychat::chat_ui()</a></code>.</p></dd>
 
-
-<dt><code>id</code></dt>
+      <dt><code>id</code></dt>
 <dd><p>Optional ID for the QueryChat instance. If not provided,
 will use the ID provided at initialization. If using <code>$ui()</code> in a Shiny
 module, you'll need to provide <code>id = ns("your_id")</code> where <code>ns</code> is the
@@ -499,14 +470,15 @@ namespacing function from <code><a href="https://rdrr.io/pkg/shiny/man/NS.html" 
 
 
 </dl><p></p></div>
-</div>
-<div class="section">
+</div><p></p><div class="section">
 <h4 id="returns-4">Returns<a class="anchor" aria-label="anchor" href="#returns-4"></a></h4>
 <p>A UI component containing the chat interface.</p>
 </div>
 
-</div><p></p><hr><a id="method-QueryChat-server"></a><div class="section">
-<h3 id="method-server-">Method <code>server()</code><a class="anchor" aria-label="anchor" href="#method-server-"></a></h3>
+</div>
+
+<p></p><hr><a id="method-QueryChat-server"></a><div class="section">
+<h3 id="querychat-server-"><code>QueryChat$server()</code><a class="anchor" aria-label="anchor" href="#querychat-server-"></a></h3>
 <p>Initialize the querychat server logic.</p>
 <p>This method must be called within a Shiny server function. It sets up the
 reactive logic for the chat interface and returns session-specific
@@ -529,9 +501,7 @@ reactive values.</p>
 <span>  id <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  session <span class="op">=</span> <span class="fu">shiny</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/shiny/man/domains.html" class="external-link">getDefaultReactiveDomain</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div><p></p></div>
-</div>
-
-<div class="section">
+</div><p></p><div class="section">
 <h4 id="arguments-7">Arguments<a class="anchor" aria-label="anchor" href="#arguments-7"></a></h4>
 <p></p><div class="arguments"><dl><dt><code>data_source</code></dt>
 <dd><p>Optional data source to use. If provided, sets the
@@ -540,16 +510,14 @@ for the deferred pattern where data_source is not known at
 initialization time (e.g., when the data source depends on session-
 specific authentication).</p></dd>
 
-
-<dt><code>client</code></dt>
+      <dt><code>client</code></dt>
 <dd><p>Optional chat client override for this session. Can be an
 <a href="https://ellmer.tidyverse.org/reference/Chat.html" class="external-link">ellmer::Chat</a> object or a string (e.g., <code>"openai/gpt-4o"</code>). If provided,
 overrides the client set at initialization for this session only —
 other sessions are unaffected. This is useful when the client must be
 created within a session scope (e.g., Posit Connect managed credentials).</p></dd>
 
-
-<dt><code>enable_bookmarking</code></dt>
+      <dt><code>enable_bookmarking</code></dt>
 <dd><p>Whether to enable bookmarking for the chat
 state. Default is <code>FALSE</code>. When enabled, the chat state (including
 current query, title, and chat history) will be saved and restored
@@ -557,35 +525,34 @@ with Shiny bookmarks. This requires that the Shiny app has bookmarking
 enabled via <code><a href="https://rdrr.io/pkg/shiny/man/enableBookmarking.html" class="external-link">shiny::enableBookmarking()</a></code> or the <code>enableBookmarking</code>
 parameter of <code><a href="https://rdrr.io/pkg/shiny/man/shinyApp.html" class="external-link">shiny::shinyApp()</a></code>.</p></dd>
 
-
-<dt><code>...</code></dt>
+      <dt><code>...</code></dt>
 <dd><p>Ignored.</p></dd>
 
-
-<dt><code>id</code></dt>
+      <dt><code>id</code></dt>
 <dd><p>Optional module ID for the QueryChat instance. If not provided,
 will use the ID provided at initialization. When used in Shiny modules,
 this <code>id</code> should match the <code>id</code> used in the corresponding UI function
 (i.e., <code>qc$ui(id = ns("your_id"))</code> pairs with <code>qc$server(id = "your_id")</code>).</p></dd>
 
-
-<dt><code>session</code></dt>
+      <dt><code>session</code></dt>
 <dd><p>The Shiny session object.</p></dd>
 
 
 </dl><p></p></div>
-</div>
-<div class="section">
+</div><p></p><div class="section">
 <h4 id="returns-5">Returns<a class="anchor" aria-label="anchor" href="#returns-5"></a></h4>
 <p>A list containing session-specific reactive values and the chat
 client with the following elements:</p><ul><li><p><code>df</code>: Reactive expression returning the current filtered data frame</p></li>
 <li><p><code>sql</code>: Reactive value for the current SQL query string</p></li>
 <li><p><code>title</code>: Reactive value for the current title</p></li>
 <li><p><code>client</code>: The session-specific chat client instance</p></li>
-</ul></div>
+</ul><p></p>
+</div>
 
-</div><p></p><hr><a id="method-QueryChat-generate_greeting"></a><div class="section">
-<h3 id="method-generate-greeting-">Method <code>generate_greeting()</code><a class="anchor" aria-label="anchor" href="#method-generate-greeting-"></a></h3>
+</div>
+
+<p></p><hr><a id="method-QueryChat-generate_greeting"></a><div class="section">
+<h3 id="querychat-generate-greeting-"><code>QueryChat$generate_greeting()</code><a class="anchor" aria-label="anchor" href="#querychat-generate-greeting-"></a></h3>
 <p>Generate a welcome greeting for the chat.</p>
 <p>By default, <code>QueryChat$new()</code> generates a greeting at the start of every
 new conversation, which is convenient for getting started and
@@ -602,9 +569,7 @@ method to generate a greeting once and save it for reuse.</p>
 <span><span class="va">qc2</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/QueryChat.html">QueryChat</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">mtcars</span>, greeting <span class="op">=</span> <span class="st">"mtcars_greeting.md"</span><span class="op">)</span></span></code></pre><p></p></div><div class="section">
 <h4 id="usage-8">Usage<a class="anchor" aria-label="anchor" href="#usage-8"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">QueryChat</span><span class="op">$</span><span class="fu">generate_greeting</span><span class="op">(</span>echo <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"none"</span>, <span class="st">"output"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div><p></p></div>
-</div>
-
-<div class="section">
+</div><p></p><div class="section">
 <h4 id="arguments-8">Arguments<a class="anchor" aria-label="anchor" href="#arguments-8"></a></h4>
 <p></p><div class="arguments"><dl><dt><code>echo</code></dt>
 <dd><p>Whether to print the greeting to the console. Options are
@@ -612,14 +577,15 @@ method to generate a greeting once and save it for reuse.</p>
 
 
 </dl><p></p></div>
-</div>
-<div class="section">
+</div><p></p><div class="section">
 <h4 id="returns-6">Returns<a class="anchor" aria-label="anchor" href="#returns-6"></a></h4>
 <p>The greeting string in Markdown format.</p>
 </div>
 
-</div><p></p><hr><a id="method-QueryChat-cleanup"></a><div class="section">
-<h3 id="method-cleanup-">Method <code>cleanup()</code><a class="anchor" aria-label="anchor" href="#method-cleanup-"></a></h3>
+</div>
+
+<p></p><hr><a id="method-QueryChat-cleanup"></a><div class="section">
+<h3 id="querychat-cleanup-"><code>QueryChat$cleanup()</code><a class="anchor" aria-label="anchor" href="#querychat-cleanup-"></a></h3>
 <p>Clean up resources associated with the data source.</p>
 <p>This method releases any resources (e.g., database connections)
 associated with the data source. Call this when you are done using the
@@ -628,21 +594,19 @@ QueryChat object to avoid resource leaks.</p>
 be called automatically when the Shiny app stops.</p><div class="section">
 <h4 id="usage-9">Usage<a class="anchor" aria-label="anchor" href="#usage-9"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">QueryChat</span><span class="op">$</span><span class="fu">cleanup</span><span class="op">(</span><span class="op">)</span></span></code></pre></div><p></p></div>
-</div>
-
-<div class="section">
+</div><p></p><div class="section">
 <h4 id="returns-7">Returns<a class="anchor" aria-label="anchor" href="#returns-7"></a></h4>
 <p>Invisibly returns <code>NULL</code>. Resources are cleaned up internally.</p>
 </div>
 
-</div><p></p><hr><a id="method-QueryChat-clone"></a><div class="section">
-<h3 id="method-clone-">Method <code>clone()</code><a class="anchor" aria-label="anchor" href="#method-clone-"></a></h3>
+</div>
+
+<p></p><hr><a id="method-QueryChat-clone"></a><div class="section">
+<h3 id="querychat-clone-"><code>QueryChat$clone()</code><a class="anchor" aria-label="anchor" href="#querychat-clone-"></a></h3>
 <p>The objects of this class are cloneable with this method.</p><div class="section">
 <h4 id="usage-10">Usage<a class="anchor" aria-label="anchor" href="#usage-10"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">QueryChat</span><span class="op">$</span><span class="fu">clone</span><span class="op">(</span>deep <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div><p></p></div>
-</div>
-
-<div class="section">
+</div><p></p><div class="section">
 <h4 id="arguments-9">Arguments<a class="anchor" aria-label="anchor" href="#arguments-9"></a></h4>
 <p></p><div class="arguments"><dl><dt><code>deep</code></dt>
 <dd><p>Whether to make a deep clone.</p></dd>
@@ -652,6 +616,7 @@ be called automatically when the Shiny app stops.</p><div class="section">
 </div>
 
 </div>
+
 
     </div>
 

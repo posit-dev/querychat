@@ -73,7 +73,7 @@ connection) as input and provides methods to:
 
 ### Public methods
 
-- [`QueryChat$new()`](#method-QueryChat-new)
+- [`QueryChat$new()`](#method-QueryChat-initialize)
 
 - [`QueryChat$client()`](#method-QueryChat-client)
 
@@ -97,7 +97,7 @@ connection) as input and provides methods to:
 
 ------------------------------------------------------------------------
 
-### Method `new()`
+### `QueryChat$new()`
 
 Create a new QueryChat object.
 
@@ -212,7 +212,7 @@ A new `QueryChat` object.
 
 ------------------------------------------------------------------------
 
-### Method `client()`
+### `QueryChat$client()`
 
 Create a chat client, complete with registered tools, for the current
 data source.
@@ -247,7 +247,7 @@ data source.
 
 ------------------------------------------------------------------------
 
-### Method `console()`
+### `QueryChat$console()`
 
 Launch a console-based chat interface with the data source.
 
@@ -275,7 +275,7 @@ Launch a console-based chat interface with the data source.
 
 ------------------------------------------------------------------------
 
-### Method `app()`
+### `QueryChat$app()`
 
 Create and run a Shiny gadget for chatting with data
 
@@ -320,7 +320,7 @@ Invisibly returns a list of session-specific values:
 
 ------------------------------------------------------------------------
 
-### Method `app_obj()`
+### `QueryChat$app_obj()`
 
 A streamlined Shiny app for chatting with data
 
@@ -364,7 +364,7 @@ A Shiny app object that can be run with
 
 ------------------------------------------------------------------------
 
-### Method `sidebar()`
+### `QueryChat$sidebar()`
 
 Create a sidebar containing the querychat UI.
 
@@ -426,7 +426,7 @@ UI component.
 
 ------------------------------------------------------------------------
 
-### Method `ui()`
+### `QueryChat$ui()`
 
 Create the UI for the querychat chat interface.
 
@@ -464,7 +464,7 @@ A UI component containing the chat interface.
 
 ------------------------------------------------------------------------
 
-### Method `server()`
+### `QueryChat$server()`
 
 Initialize the querychat server logic.
 
@@ -554,7 +554,7 @@ with the following elements:
 
 ------------------------------------------------------------------------
 
-### Method `generate_greeting()`
+### `QueryChat$generate_greeting()`
 
 Generate a welcome greeting for the chat.
 
@@ -590,7 +590,7 @@ The greeting string in Markdown format.
 
 ------------------------------------------------------------------------
 
-### Method `cleanup()`
+### `QueryChat$cleanup()`
 
 Clean up resources associated with the data source.
 
@@ -611,7 +611,7 @@ Invisibly returns `NULL`. Resources are cleaned up internally.
 
 ------------------------------------------------------------------------
 
-### Method `clone()`
+### `QueryChat$clone()`
 
 The objects of this class are cloneable with this method.
 

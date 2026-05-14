@@ -87,6 +87,9 @@ Useful links:
 
 Authors:
 
+- Garrick Aden-Buie <garrick@posit.co>
+  ([ORCID](https://orcid.org/0000-0002-7111-0077))
+
 - Joe Cheng <joe@posit.co> \[conceptor\]
 
 - Carson Sievert <carson@posit.co>

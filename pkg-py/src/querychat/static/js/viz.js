@@ -113,7 +113,10 @@
       console.error("Failed to copy:", error);
     });
   }
+  var installed = false;
   function installVizFooter(adapter) {
+    if (installed) return;
+    installed = true;
     window.addEventListener("click", (event) => {
       const target = event.target;
       if (!(target instanceof Element)) {

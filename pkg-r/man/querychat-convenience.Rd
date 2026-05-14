@@ -12,7 +12,7 @@ querychat(
   id = NULL,
   greeting = NULL,
   client = NULL,
-  tools = c("update", "query"),
+  tools = c("filter", "query"),
   data_description = NULL,
   categorical_threshold = 20,
   extra_instructions = NULL,
@@ -27,7 +27,7 @@ querychat_app(
   id = NULL,
   greeting = NULL,
   client = NULL,
-  tools = c("update", "query"),
+  tools = c("filter", "query"),
   data_description = NULL,
   categorical_threshold = 20,
   extra_instructions = NULL,
@@ -61,18 +61,19 @@ a greeting to save and reuse.}
 \item{client}{Optional chat client. Can be:
 \itemize{
 \item An \link[ellmer:Chat]{ellmer::Chat} object
-\item A string to pass to \code{\link[ellmer:chat-any]{ellmer::chat()}} (e.g., \code{"openai/gpt-4o"})
+\item A string to pass to \code{\link[ellmer:chat]{ellmer::chat()}} (e.g., \code{"openai/gpt-4o"})
 \item \code{NULL} (default): Uses the \code{querychat.client} option, the
 \code{QUERYCHAT_CLIENT} environment variable, or defaults to
 \code{\link[ellmer:chat_openai]{ellmer::chat_openai()}}
 }}
 
 \item{tools}{Which querychat tools to include in the chat client, by
-default. \code{"update"} includes the tools for updating and resetting the
+default. \code{"filter"} includes the tools for filtering and resetting the
 dashboard and \code{"query"} includes the tool for executing SQL queries.
-Use \code{tools = "update"} when you only want the dashboard updating tools,
+Use \code{tools = "filter"} when you only want the dashboard filtering tools,
 or when you want to disable the querying tool entirely to prevent the
-LLM from seeing any of the data in your dataset.}
+LLM from seeing any of the data in your dataset. The legacy name
+\code{"update"} is still accepted as an alias for \code{"filter"}.}
 
 \item{data_description}{Optional description of the data in plain text or
 Markdown. Can be a string or a file path. This provides context to the

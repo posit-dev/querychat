@@ -23,143 +23,156 @@ MyDataSource <- R6::R6Class(
 
 }
 \section{Public fields}{
-\if{html}{\out{<div class="r6-fields">}}
-\describe{
-\item{\code{table_name}}{Name of the table to be used in SQL queries}
-}
-\if{html}{\out{</div>}}
+  \if{html}{\out{<div class="r6-fields">}}
+  \describe{
+    \item{\code{table_name}}{Name of the table to be used in SQL queries}
+  }
+  \if{html}{\out{</div>}}
 }
 \section{Methods}{
 \subsection{Public methods}{
-\itemize{
-\item \href{#method-DataSource-get_db_type}{\code{DataSource$get_db_type()}}
-\item \href{#method-DataSource-get_schema}{\code{DataSource$get_schema()}}
-\item \href{#method-DataSource-execute_query}{\code{DataSource$execute_query()}}
-\item \href{#method-DataSource-test_query}{\code{DataSource$test_query()}}
-\item \href{#method-DataSource-get_data}{\code{DataSource$get_data()}}
-\item \href{#method-DataSource-cleanup}{\code{DataSource$cleanup()}}
-\item \href{#method-DataSource-clone}{\code{DataSource$clone()}}
-}
+  \itemize{
+    \item \href{#method-DataSource-get_db_type}{\code{DataSource$get_db_type()}}
+    \item \href{#method-DataSource-get_schema}{\code{DataSource$get_schema()}}
+    \item \href{#method-DataSource-execute_query}{\code{DataSource$execute_query()}}
+    \item \href{#method-DataSource-test_query}{\code{DataSource$test_query()}}
+    \item \href{#method-DataSource-get_data}{\code{DataSource$get_data()}}
+    \item \href{#method-DataSource-cleanup}{\code{DataSource$cleanup()}}
+    \item \href{#method-DataSource-clone}{\code{DataSource$clone()}}
+  }
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-DataSource-get_db_type"></a>}}
 \if{latex}{\out{\hypertarget{method-DataSource-get_db_type}{}}}
-\subsection{Method \code{get_db_type()}}{
-Get the database type
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{DataSource$get_db_type()}\if{html}{\out{</div>}}
+\subsection{\code{DataSource$get_db_type()}}{
+  Get the database type
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{DataSource$get_db_type()}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    A string describing the database type (e.g., "DuckDB", "SQLite")
+  }
 }
 
-\subsection{Returns}{
-A string describing the database type (e.g., "DuckDB", "SQLite")
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-DataSource-get_schema"></a>}}
 \if{latex}{\out{\hypertarget{method-DataSource-get_schema}{}}}
-\subsection{Method \code{get_schema()}}{
-Get schema information about the table
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{DataSource$get_schema(categorical_threshold = 20)}\if{html}{\out{</div>}}
+\subsection{\code{DataSource$get_schema()}}{
+  Get schema information about the table
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{DataSource$get_schema(categorical_threshold = 20)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{categorical_threshold}}{Maximum number of unique values for a text
+column to be considered categorical}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    A string containing schema information formatted for LLM prompts
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{categorical_threshold}}{Maximum number of unique values for a text
-column to be considered categorical}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-A string containing schema information formatted for LLM prompts
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-DataSource-execute_query"></a>}}
 \if{latex}{\out{\hypertarget{method-DataSource-execute_query}{}}}
-\subsection{Method \code{execute_query()}}{
-Execute a SQL query and return results
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{DataSource$execute_query(query)}\if{html}{\out{</div>}}
+\subsection{\code{DataSource$execute_query()}}{
+  Execute a SQL query and return results
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{DataSource$execute_query(query)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{query}}{SQL query string to execute}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    A data frame containing query results
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{query}}{SQL query string to execute}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-A data frame containing query results
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-DataSource-test_query"></a>}}
 \if{latex}{\out{\hypertarget{method-DataSource-test_query}{}}}
-\subsection{Method \code{test_query()}}{
-Test a SQL query by fetching only one row
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{DataSource$test_query(query, require_all_columns = FALSE)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{query}}{SQL query string to test}
-
-\item{\code{require_all_columns}}{If \code{TRUE}, validates that the result includes
+\subsection{\code{DataSource$test_query()}}{
+  Test a SQL query by fetching only one row
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{DataSource$test_query(query, require_all_columns = FALSE)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{query}}{SQL query string to test}
+      \item{\code{require_all_columns}}{If \code{TRUE}, validates that the result includes
 all original table columns (default: \code{FALSE})}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-A data frame containing one row of results (or empty if no
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    A data frame containing one row of results (or empty if no
 matches)
+  }
 }
-}
+
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-DataSource-get_data"></a>}}
 \if{latex}{\out{\hypertarget{method-DataSource-get_data}{}}}
-\subsection{Method \code{get_data()}}{
-Get the unfiltered data as a data frame
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{DataSource$get_data()}\if{html}{\out{</div>}}
+\subsection{\code{DataSource$get_data()}}{
+  Get the unfiltered data as a data frame
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{DataSource$get_data()}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    A data frame containing all data from the table
+  }
 }
 
-\subsection{Returns}{
-A data frame containing all data from the table
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-DataSource-cleanup"></a>}}
 \if{latex}{\out{\hypertarget{method-DataSource-cleanup}{}}}
-\subsection{Method \code{cleanup()}}{
-Clean up resources (close connections, etc.)
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{DataSource$cleanup()}\if{html}{\out{</div>}}
+\subsection{\code{DataSource$cleanup()}}{
+  Clean up resources (close connections, etc.)
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{DataSource$cleanup()}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    NULL (invisibly)
+  }
 }
 
-\subsection{Returns}{
-NULL (invisibly)
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-DataSource-clone"></a>}}
 \if{latex}{\out{\hypertarget{method-DataSource-clone}{}}}
-\subsection{Method \code{clone()}}{
-The objects of this class are cloneable with this method.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{DataSource$clone(deep = FALSE)}\if{html}{\out{</div>}}
+\subsection{\code{DataSource$clone()}}{
+  The objects of this class are cloneable with this method.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{DataSource$clone(deep = FALSE)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{deep}}{Whether to make a deep clone.}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{deep}}{Whether to make a deep clone.}
-}
-\if{html}{\out{</div>}}
-}
-}
 }

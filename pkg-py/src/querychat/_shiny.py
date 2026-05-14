@@ -12,7 +12,7 @@ from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 from ._icons import bs_icon
 from ._querychat_base import DEFAULT_TOOLS, TOOL_GROUPS, QueryChatBase
 from ._shiny_module import ServerValues, mod_server, mod_ui
-from ._utils import MISSING, MISSING_TYPE, as_narwhals, maybe_truncate
+from ._utils import MISSING, MISSING_TYPE, maybe_truncate
 from ._viz_utils import has_viz_tool
 
 if TYPE_CHECKING:
@@ -336,17 +336,17 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 vals.sql.set(None)
                 vals.title.set(None)
 
+            @reactive.calc
+            def truncated():
+                return maybe_truncate(vals.df(), max_rows)
+
             @render.data_frame
             def dt():
-                df = as_narwhals(vals.df())
-                result = maybe_truncate(df, max_rows)
-                return result.df
+                return truncated().df
 
             @render.text
             def data_info():
-                df = as_narwhals(vals.df())
-                result = maybe_truncate(df, max_rows, warn=False)
-                return result.info_message
+                return truncated().info_message
 
             @render.ui
             def sql_output():

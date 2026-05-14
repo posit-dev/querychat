@@ -19,7 +19,7 @@ from ._querychat_core import (
     stream_response,
 )
 from ._ui_assets import GRADIO_CSS, GRADIO_JS, SUGGESTION_CSS
-from ._utils import as_narwhals, maybe_truncate
+from ._utils import maybe_truncate
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -386,8 +386,7 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
                 )
 
                 df = self.df(state_dict)
-                nw_df = as_narwhals(df)
-                result = maybe_truncate(nw_df, max_rows)
+                result = maybe_truncate(df, max_rows)
                 native_df = result.df.to_native()
 
                 data_info_parts = []

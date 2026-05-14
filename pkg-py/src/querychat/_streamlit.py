@@ -14,7 +14,7 @@ from ._querychat_core import (
     stream_response,
 )
 from ._ui_assets import STREAMLIT_JS, SUGGESTION_CSS
-from ._utils import as_narwhals, maybe_truncate
+from ._utils import maybe_truncate
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -332,10 +332,9 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 st.rerun()
 
         st.subheader("Data view")
-        df = as_narwhals(state.get_current_data())
         if state.error:
             st.error(state.error)
-        result = maybe_truncate(df, max_rows)
+        result = maybe_truncate(state.get_current_data(), max_rows)
         st.dataframe(
             result.df.to_native(),
             use_container_width=True,

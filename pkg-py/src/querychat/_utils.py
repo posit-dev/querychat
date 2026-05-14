@@ -375,33 +375,57 @@ class TruncationResult:
 
 
 def maybe_truncate(
-    df: nw.DataFrame,
+    df: Any,
     max_rows: int | None,
     *,
     warn: bool = True,
 ) -> TruncationResult:
     """
-    Truncate a DataFrame if it exceeds max_rows, with optional developer warning.
+    Truncate data if it exceeds max_rows, preserving lazy semantics where possible.
+
+    For lazy sources (Polars LazyFrame, Ibis Table), truncation is applied before
+    collection so the backend only transfers ``max_rows`` rows.
 
     Parameters
     ----------
     df
-        An eager narwhals DataFrame.
+        Raw data from a data source — can be a native DataFrame, narwhals
+        DataFrame/LazyFrame, Polars LazyFrame, or Ibis Table.
     max_rows
-        Maximum rows to keep. None disables truncation.
+        Maximum rows to keep. ``None`` disables truncation.
     warn
         If True and truncation occurs, emit a warnings.warn() for the developer.
 
     Returns
     -------
     :
-        A TruncationResult with the (possibly truncated) df and metadata.
+        A TruncationResult with the (possibly truncated) eager df and metadata.
 
     """
-    total_rows, total_cols = df.shape
-    truncated = max_rows is not None and total_rows > max_rows
-    if max_rows is not None and truncated:
-        display_df = df.head(max_rows)
+    # Ibis tables must be handled before as_narwhals, which eagerly executes them
+    if is_ibis_table(df):
+        return _truncate_ibis(df, max_rows, warn=warn)
+
+    if max_rows is None:
+        nw_df = as_narwhals(df)
+        total_rows, total_cols = nw_df.shape
+        return TruncationResult(
+            df=nw_df,
+            total_rows=int(total_rows),
+            total_cols=int(total_cols),
+            truncated=False,
+        )
+
+    # Convert to lazy narwhals frame — for truly lazy sources (Polars LazyFrame)
+    # this preserves laziness; for eager sources (pandas, polars DataFrame) the
+    # overhead is negligible
+    nw_lazy = as_narwhals(df, lazy=True)
+    total_rows = int(nw_lazy.select(nw.len()).collect().item())
+    total_cols = len(nw_lazy.collect_schema())
+    truncated = total_rows > max_rows
+
+    if truncated:
+        display_df = nw_lazy.head(max_rows).collect()
         if warn:
             warnings.warn(
                 f"querychat: Displaying {max_rows} of {total_rows} rows. "
@@ -409,7 +433,47 @@ def maybe_truncate(
                 stacklevel=2,
             )
     else:
-        display_df = df
+        display_df = nw_lazy.collect()
+
+    return TruncationResult(
+        df=display_df,
+        total_rows=total_rows,
+        total_cols=total_cols,
+        truncated=truncated,
+    )
+
+
+def _truncate_ibis(
+    df: ibis.Table,
+    max_rows: int | None,
+    *,
+    warn: bool = True,
+) -> TruncationResult:
+    if max_rows is None:
+        nw_df = as_narwhals(df)
+        total_rows, total_cols = nw_df.shape
+        return TruncationResult(
+            df=nw_df,
+            total_rows=int(total_rows),
+            total_cols=int(total_cols),
+            truncated=False,
+        )
+
+    total_rows = int(df.count().execute())
+    total_cols = len(df.columns)
+    truncated = total_rows > max_rows
+
+    if truncated:
+        display_df = as_narwhals(df.head(max_rows))
+        if warn:
+            warnings.warn(
+                f"querychat: Displaying {max_rows} of {total_rows} rows. "
+                "Set `max_rows` to increase or `None` to disable.",
+                stacklevel=2,
+            )
+    else:
+        display_df = as_narwhals(df)
+
     return TruncationResult(
         df=display_df,
         total_rows=total_rows,

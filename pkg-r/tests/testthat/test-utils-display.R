@@ -41,6 +41,83 @@ describe("maybe_truncate()", {
   })
 })
 
+describe("maybe_truncate() with tbl_sql", {
+  it("truncates lazily via LIMIT", {
+    skip_if_not_installed("duckdb")
+    skip_if_not_installed("dbplyr")
+    skip_if_not_installed("dplyr")
+
+    conn <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
+    withr::defer(DBI::dbDisconnect(conn, shutdown = TRUE))
+
+    large_data <- data.frame(x = seq_len(200), y = seq_len(200))
+    DBI::dbWriteTable(conn, "test_data", large_data)
+    tbl <- dplyr::tbl(conn, "test_data")
+
+    result <- suppressWarnings(maybe_truncate(tbl, max_rows = 50))
+    expect_equal(nrow(result$df), 50)
+    expect_equal(result$total_rows, 200)
+    expect_equal(result$total_cols, 2)
+    expect_true(result$truncated)
+    expect_true(is.data.frame(result$df))
+  })
+
+  it("collects fully when under max_rows", {
+    skip_if_not_installed("duckdb")
+    skip_if_not_installed("dbplyr")
+    skip_if_not_installed("dplyr")
+
+    conn <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
+    withr::defer(DBI::dbDisconnect(conn, shutdown = TRUE))
+
+    small_data <- data.frame(x = seq_len(5), y = seq_len(5))
+    DBI::dbWriteTable(conn, "test_data", small_data)
+    tbl <- dplyr::tbl(conn, "test_data")
+
+    result <- maybe_truncate(tbl, max_rows = 50)
+    expect_equal(nrow(result$df), 5)
+    expect_equal(result$total_rows, 5)
+    expect_false(result$truncated)
+    expect_true(is.data.frame(result$df))
+  })
+
+  it("collects fully when max_rows is NULL", {
+    skip_if_not_installed("duckdb")
+    skip_if_not_installed("dbplyr")
+    skip_if_not_installed("dplyr")
+
+    conn <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
+    withr::defer(DBI::dbDisconnect(conn, shutdown = TRUE))
+
+    large_data <- data.frame(x = seq_len(200), y = seq_len(200))
+    DBI::dbWriteTable(conn, "test_data", large_data)
+    tbl <- dplyr::tbl(conn, "test_data")
+
+    result <- maybe_truncate(tbl, max_rows = NULL)
+    expect_equal(nrow(result$df), 200)
+    expect_false(result$truncated)
+    expect_true(is.data.frame(result$df))
+  })
+
+  it("emits warning when truncated", {
+    skip_if_not_installed("duckdb")
+    skip_if_not_installed("dbplyr")
+    skip_if_not_installed("dplyr")
+
+    conn <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
+    withr::defer(DBI::dbDisconnect(conn, shutdown = TRUE))
+
+    large_data <- data.frame(x = seq_len(200), y = seq_len(200))
+    DBI::dbWriteTable(conn, "test_data", large_data)
+    tbl <- dplyr::tbl(conn, "test_data")
+
+    expect_warning(
+      maybe_truncate(tbl, max_rows = 50),
+      "Displaying 50 of 200 rows"
+    )
+  })
+})
+
 describe("truncation_info_message()", {
   it("shows truncation message when truncated", {
     result <- suppressWarnings(

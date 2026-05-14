@@ -513,11 +513,7 @@ QueryChat <- R6::R6Class(
         })
 
         truncated_df <- shiny::reactive({
-          df <- qc_vals$df()
-          if (inherits(df, "tbl_sql")) {
-            df <- dplyr::collect(df)
-          }
-          maybe_truncate(df, max_rows)
+          maybe_truncate(qc_vals$df(), max_rows)
         })
 
         output$dt <- DT::renderDT({

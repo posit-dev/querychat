@@ -469,8 +469,7 @@ def register_app_callbacks(
         sql_title = state.title or "SQL Query"
         sql_code = f"```sql\n{state.get_display_sql()}\n```"
 
-        nw_df = as_narwhals(state.get_current_data())
-        result = maybe_truncate(nw_df, max_rows)
+        result = maybe_truncate(state.get_current_data(), max_rows)
 
         display_df = result.df.to_pandas()
         table_data = display_df.to_dict("records")

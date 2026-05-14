@@ -33,6 +33,7 @@ querychat_app(
   extra_instructions = NULL,
   prompt_template = NULL,
   cleanup = NA,
+  max_rows = 1000L,
   bookmark_store = "url"
 )
 }
@@ -61,7 +62,7 @@ a greeting to save and reuse.}
 \item{client}{Optional chat client. Can be:
 \itemize{
 \item An \link[ellmer:Chat]{ellmer::Chat} object
-\item A string to pass to \code{\link[ellmer:chat-any]{ellmer::chat()}} (e.g., \code{"openai/gpt-4o"})
+\item A string to pass to \code{\link[ellmer:chat]{ellmer::chat()}} (e.g., \code{"openai/gpt-4o"})
 \item \code{NULL} (default): Uses the \code{querychat.client} option, the
 \code{QUERYCHAT_CLIENT} environment variable, or defaults to
 \code{\link[ellmer:chat_openai]{ellmer::chat_openai()}}
@@ -95,6 +96,10 @@ is created within a Shiny app. Set to \code{TRUE} to always clean up, or
 
 In \code{querychat_app()}, in-memory databases created for data frames are
 always cleaned up.}
+
+\item{max_rows}{Maximum number of rows to display in the data table.
+This does not affect the number of rows that the LLM can query
+against. Default is 1000. Set to \code{NULL} to disable row limit.}
 
 \item{bookmark_store}{The bookmarking storage method. Passed to
 \code{\link[shiny:enableBookmarking]{shiny::enableBookmarking()}}. If \code{"url"} or \code{"server"}, the chat state

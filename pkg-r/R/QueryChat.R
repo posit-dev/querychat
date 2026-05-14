@@ -137,8 +137,10 @@ QueryChat <- R6::R6Class(
     create_session_client = function(
       client_spec = NULL,
       tools = NA,
-      update_dashboard = function(query, title) {},
-      reset_dashboard = function() {}
+      update_dashboard = function(query, title) {
+      },
+      reset_dashboard = function() {
+      }
     ) {
       spec <- client_spec %||% private$.client_spec
       chat <- as_querychat_client(spec)
@@ -320,8 +322,10 @@ QueryChat <- R6::R6Class(
     #'   `reset_dashboard` tool is called.
     client = function(
       tools = NA,
-      update_dashboard = function(query, title) {},
-      reset_dashboard = function() {}
+      update_dashboard = function(query, title) {
+      },
+      reset_dashboard = function() {
+      }
     ) {
       private$require_data_source("$client")
 
@@ -376,6 +380,9 @@ QueryChat <- R6::R6Class(
     #' ```
     #'
     #' @param ... Arguments passed to `$app_obj()`.
+    #' @param max_rows Maximum number of rows to display in the data table.
+    #'   This does not affect the number of rows that the LLM can query
+    #'   against. Default is 1000. Set to `NULL` to disable row limit.
     #' @param bookmark_store The bookmarking storage method. Passed to
     #'   [shiny::enableBookmarking()]. If `"url"` or `"server"`, the chat state
     #'   (including current query) will be bookmarked. Default is `"url"`.
@@ -385,8 +392,12 @@ QueryChat <- R6::R6Class(
     #'  - `sql`: The final SQL query string
     #'  - `title`: The final title
     #'  - `client`: The session-specific chat client instance
-    app = function(..., bookmark_store = "url") {
-      app <- self$app_obj(..., bookmark_store = bookmark_store)
+    app = function(..., max_rows = 1000L, bookmark_store = "url") {
+      app <- self$app_obj(
+        ...,
+        max_rows = max_rows,
+        bookmark_store = bookmark_store
+      )
       vals <- tryCatch(shiny::runGadget(app), interrupt = function(cnd) NULL)
       invisible(vals)
     },
@@ -409,16 +420,20 @@ QueryChat <- R6::R6Class(
     #' ```
     #'
     #' @param ... Additional arguments (currently unused).
+    #' @param max_rows Maximum number of rows to display in the data table.
+    #'   This does not affect the number of rows that the LLM can query
+    #'   against. Default is 1000. Set to `NULL` to disable row limit.
     #' @param bookmark_store The bookmarking storage method. Passed to
     #'  [shiny::enableBookmarking()]. If `"url"` or `"server"`, the chat state
     #'  (including current query) will be bookmarked. Default is `"url"`.
     #'
     #' @return A Shiny app object that can be run with `shiny::runApp()`.
-    app_obj = function(..., bookmark_store = "url") {
+    app_obj = function(..., max_rows = 1000L, bookmark_store = "url") {
       private$require_data_source("$app_obj")
       check_installed("DT")
       check_installed("bsicons")
       check_dots_empty()
+      check_number_whole(max_rows, min = 1, allow_null = TRUE)
 
       table_name <- private$.data_source$table_name
 
@@ -454,7 +469,11 @@ QueryChat <- R6::R6Class(
           bslib::card(
             full_screen = TRUE,
             bslib::card_header(bsicons::bs_icon("table"), "Data"),
-            DT::DTOutput("dt")
+            DT::DTOutput("dt"),
+            bslib::card_footer(
+              class = "text-muted small",
+              shiny::textOutput("data_info")
+            )
           ),
           shiny::actionButton(
             "close_btn",
@@ -493,18 +512,24 @@ QueryChat <- R6::R6Class(
           qc_vals$title(NULL)
         })
 
-        output$dt <- DT::renderDT({
+        truncated_df <- shiny::reactive({
           df <- qc_vals$df()
           if (inherits(df, "tbl_sql")) {
-            # Materialize the query for DT, {dplyr} guaranteed by TblSqlSource
             df <- dplyr::collect(df)
           }
+          maybe_truncate(df, max_rows)
+        })
 
+        output$dt <- DT::renderDT({
           DT::datatable(
-            df,
+            truncated_df()$df,
             fillContainer = TRUE,
             options = list(pageLength = 25, scrollX = TRUE)
           )
+        })
+
+        output$data_info <- shiny::renderText({
+          truncation_info_message(truncated_df())
         })
 
         output$sql_output <- shiny::renderUI({
@@ -895,6 +920,9 @@ querychat <- function(
 }
 
 #' @rdname querychat-convenience
+#' @param max_rows Maximum number of rows to display in the data table.
+#'   This does not affect the number of rows that the LLM can query
+#'   against. Default is 1000. Set to `NULL` to disable row limit.
 #' @param bookmark_store The bookmarking storage method. Passed to
 #'   [shiny::enableBookmarking()]. If `"url"` or `"server"`, the chat state
 #'   (including current query) will be bookmarked. Default is `"url"`.
@@ -914,6 +942,7 @@ querychat_app <- function(
   extra_instructions = NULL,
   prompt_template = NULL,
   cleanup = NA,
+  max_rows = 1000L,
   bookmark_store = "url"
 ) {
   if (shiny::isRunning()) {
@@ -948,7 +977,7 @@ querychat_app <- function(
     cleanup = cleanup
   )
 
-  qc$app(bookmark_store = bookmark_store)
+  qc$app(max_rows = max_rows, bookmark_store = bookmark_store)
 }
 
 normalize_data_source <- function(data_source, table_name) {

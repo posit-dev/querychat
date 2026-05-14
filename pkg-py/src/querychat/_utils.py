@@ -400,8 +400,7 @@ def maybe_truncate(
     """
     total_rows, total_cols = df.shape
     truncated = max_rows is not None and total_rows > max_rows
-    if truncated:
-        assert max_rows is not None  # for type narrowing
+    if max_rows is not None and truncated:
         display_df = df.head(max_rows)
         if warn:
             warnings.warn(

@@ -58,6 +58,10 @@ def _send_viz_prompt(
     page.locator(".querychat-footer-buttons").wait_for(
         state="visible", timeout=10_000
     )
+    # Wait for the chat input to re-enable — this signals the LLM turn is
+    # complete and shinychat has finished its final re-render of the tool
+    # result card.
+    expect(chat_10_viz.loc_input).to_be_enabled(timeout=30_000)
 
 
 class TestShowQueryToggle:
@@ -102,15 +106,13 @@ class TestShowQueryToggle:
 
         btn.click()  # show
         expect(label).to_have_text("Hide Query")
-        # Wait for the code editor to fully initialize before clicking again,
-        # otherwise the layout shift can cause the second click to misfire.
-        section = page.locator(".querychat-query-section--visible")
-        expect(section.locator(".code-editor")).to_be_visible()
 
         btn.click()  # hide
+
         expect(label).to_have_text("Show Query")
 
-        expect(page.locator(".querychat-query-section--visible")).not_to_be_attached()
+        section = page.locator(".querychat-query-section--visible")
+        expect(section).not_to_be_attached()
 
     def test_query_section_contains_code(self, page: Page) -> None:
         """The revealed query section should contain the ggsql code."""

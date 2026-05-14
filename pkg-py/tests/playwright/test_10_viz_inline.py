@@ -163,16 +163,12 @@ class TestInlineVisualization:
         self.chat.set_user_input("Show me passengers who survived")
         self.chat.send_user_input(method="click")
 
-        # Wait for the assistant to respond (tool result or text message)
-        assistant_msg = self.page.locator(
-            ".shiny-chat-messages > .shiny-chat-message-assistant"
-        )
-        expect(assistant_msg.first).to_be_visible(timeout=90000)
+        # Wait for a tool result (any)
+        tool_result = self.page.locator(".shiny-tool-result").first
+        expect(tool_result).to_be_visible(timeout=90000)
 
-        # If the LLM used a tool, the result must NOT have fullscreen toggle
-        tool_results = self.page.locator(".shiny-tool-result")
-        if tool_results.count() > 0:
-            fs_results = self.page.locator(
-                ".shiny-tool-result:has(.tool-fullscreen-toggle)"
-            )
-            expect(fs_results).to_have_count(0)
+        # Non-viz tool results should NOT have fullscreen toggle
+        fs_results = self.page.locator(
+            ".shiny-tool-result:has(.tool-fullscreen-toggle)"
+        )
+        expect(fs_results).to_have_count(0)

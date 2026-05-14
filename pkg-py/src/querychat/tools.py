@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Protocol, TypedDict, runtime_checkable
+import inspect
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, Protocol, TypedDict, cast, runtime_checkable
 
 from chatlas import ContentToolResult, Tool
 from shinychat.types import ToolResultDisplay
@@ -23,9 +25,10 @@ __all__ = [
 ]
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from ._query_executor import QueryExecutor
 
-    from ._datasource import DataSource
+
+ResetDashboardCallback = Callable[[], None] | Callable[[str], None]
 
 
 @runtime_checkable
@@ -52,6 +55,8 @@ class UpdateDashboardData(TypedDict):
 
     Attributes
     ----------
+    table
+        The name of the table being filtered.
     query
         The SQL query string to execute for filtering/sorting the dashboard.
     title
@@ -66,6 +71,7 @@ class UpdateDashboardData(TypedDict):
 
 
     def log_update(data: UpdateDashboardData):
+        print(f"Table: {data['table']}")
         print(f"Executing: {data['query']}")
         print(f"Title: {data['title']}")
 
@@ -77,35 +83,45 @@ class UpdateDashboardData(TypedDict):
 
     """
 
+    table: str
     query: str
     title: str
 
 
 def _update_dashboard_impl(
-    data_source: DataSource,
+    executor: QueryExecutor,
+    table_names: list[str],
     update_fn: Callable[[UpdateDashboardData], None],
-) -> Callable[[str, str], ContentToolResult]:
+) -> Callable[[str, str, str], ContentToolResult]:
     """Create the implementation function for updating the dashboard."""
 
-    def update_dashboard(query: str, title: str) -> ContentToolResult:
+    def update_dashboard(table: str, query: str, title: str) -> ContentToolResult:
         error = None
         markdown = f"```sql\n{query}\n```"
         value = "Dashboard updated. Use `query` tool to review results, if needed."
 
+        # Validate table exists
+        if table not in table_names:
+            available = ", ".join(table_names)
+            error = f"Table '{table}' not found. Available: {available}"
+            markdown += f"\n\n> Error: {error}"
+            return ContentToolResult(value=markdown, error=Exception(error))
+
         try:
             # Test the query but don't execute it yet
-            data_source.test_query(query, require_all_columns=True)
+            executor.test_query(query, table_name=table, require_all_columns=True)
 
             # Add Apply Filter button
             button_html = f"""<button
                 class="btn btn-outline-primary btn-sm float-end mt-3 querychat-update-dashboard-btn"
+                data-table="{table}"
                 data-query="{query}"
                 data-title="{title}">
                 Apply Filter
             </button>"""
 
             # Call the callback with TypedDict data on success
-            update_fn({"query": query, "title": title})
+            update_fn({"table": table, "query": query, "title": title})
 
         except Exception as e:
             error = truncate_error(str(e))
@@ -130,30 +146,33 @@ def _update_dashboard_impl(
 
 
 def tool_update_dashboard(
-    data_source: DataSource,
+    executor: QueryExecutor,
+    table_names: list[str],
     update_fn: Callable[[UpdateDashboardData], None],
 ) -> Tool:
     """
-    Create a tool that modifies the data presented in the dashboard based on the SQL query.
+    Create a tool that modifies the data presented in the dashboard.
 
     Parameters
     ----------
-    data_source
-        The data source to query against
+    executor
+        The query executor to validate queries against.
+    table_names
+        List of valid table names for validation.
     update_fn
-        Callback function to call with UpdateDashboardData when update succeeds
+        Callback function to call with UpdateDashboardData when update succeeds.
 
     Returns
     -------
     Tool
-        A tool that can be registered with chatlas
+        A tool that can be registered with chatlas.
 
     """
-    impl = _update_dashboard_impl(data_source, update_fn)
+    impl = _update_dashboard_impl(executor, table_names, update_fn)
 
     description = read_prompt_template(
         "tool-update-dashboard.md",
-        db_type=data_source.get_db_type(),
+        db_type=executor.get_db_type(),
     )
     impl.__doc__ = description
 
@@ -165,17 +184,27 @@ def tool_update_dashboard(
 
 
 def _reset_dashboard_impl(
-    reset_fn: Callable[[], None],
-) -> Callable[[], ContentToolResult]:
+    reset_fn: ResetDashboardCallback,
+    table_names: list[str] | None,
+) -> Callable[[str], ContentToolResult]:
     """Create the implementation function for resetting the dashboard."""
 
-    def reset_dashboard() -> ContentToolResult:
+    def reset_dashboard(table: str) -> ContentToolResult:
+        if table_names is not None and table not in table_names:
+            available = ", ".join(table_names)
+            error = f"Table '{table}' not found. Available: {available}"
+            return ContentToolResult(
+                value=error,
+                error=Exception(error),
+            )
+
         # Call the callback to reset
-        reset_fn()
+        _call_reset_dashboard(reset_fn, table)
 
         # Add Reset Filter button
-        button_html = """<button
+        button_html = f"""<button
             class="btn btn-outline-primary btn-sm float-end mt-3 querychat-update-dashboard-btn"
+            data-table="{table}"
             data-query=""
             data-title="">
             Reset Filter
@@ -199,7 +228,8 @@ def _reset_dashboard_impl(
 
 
 def tool_reset_dashboard(
-    reset_fn: Callable[[], None],
+    reset_fn: ResetDashboardCallback,
+    table_names: list[str] | None = None,
 ) -> Tool:
     """
     Create a tool that resets the dashboard to show all data.
@@ -207,15 +237,17 @@ def tool_reset_dashboard(
     Parameters
     ----------
     reset_fn
-        Callback function to call when reset is invoked
+        Callback function to call with table name when reset is requested.
+    table_names
+        Optional list of valid table names for validation.
 
     Returns
     -------
     Tool
-        A tool that can be registered with chatlas
+        A tool that can be registered with chatlas.
 
     """
-    impl = _reset_dashboard_impl(reset_fn)
+    impl = _reset_dashboard_impl(reset_fn, table_names)
 
     description = read_prompt_template("tool-reset-dashboard.md")
     impl.__doc__ = description
@@ -227,7 +259,29 @@ def tool_reset_dashboard(
     )
 
 
-def _query_impl(data_source: DataSource) -> Callable[..., ContentToolResult]:
+def _call_reset_dashboard(reset_fn: ResetDashboardCallback, table: str) -> None:
+    """Invoke legacy zero-arg and current table-aware reset callbacks safely."""
+    try:
+        signature = inspect.signature(reset_fn)
+    except (TypeError, ValueError):
+        cast("Callable[[str], None]", reset_fn)(table)
+        return
+
+    try:
+        signature.bind(table)
+    except TypeError:
+        try:
+            signature.bind(table=table)
+        except TypeError:
+            signature.bind()
+            cast("Callable[[], None]", reset_fn)()
+        else:
+            cast("Callable[..., None]", reset_fn)(table=table)
+    else:
+        cast("Callable[[str], None]", reset_fn)(table)
+
+
+def _query_impl(executor: QueryExecutor) -> Callable[..., ContentToolResult]:
     """Create the implementation function for querying data."""
 
     def query(
@@ -240,7 +294,7 @@ def _query_impl(data_source: DataSource) -> Callable[..., ContentToolResult]:
         value = None
 
         try:
-            result_df = data_source.execute_query(query)
+            result_df = executor.execute_query(query)
             nw_df = as_narwhals(result_df)
             value = nw_df.rows(named=True)
 
@@ -270,25 +324,25 @@ def _query_impl(data_source: DataSource) -> Callable[..., ContentToolResult]:
     return query
 
 
-def tool_query(data_source: DataSource) -> Tool:
+def tool_query(executor: QueryExecutor) -> Tool:
     """
     Create a tool that performs a SQL query on the data.
 
     Parameters
     ----------
-    data_source
-        The data source to query against
+    executor
+        The query executor to use for running queries.
 
     Returns
     -------
     Tool
-        A tool that can be registered with chatlas
+        A tool that can be registered with chatlas.
 
     """
-    impl = _query_impl(data_source)
+    impl = _query_impl(executor)
 
     description = read_prompt_template(
-        "tool-query.md", db_type=data_source.get_db_type()
+        "tool-query.md", db_type=executor.get_db_type()
     )
     impl.__doc__ = description
 

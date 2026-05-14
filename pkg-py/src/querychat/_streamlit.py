@@ -172,6 +172,8 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                     reset_dashboard=reset_cb,
                 ),
                 self.greeting,
+                data_sources=dict(self._data_sources),
+                query_executor=self._require_query_executor("_get_state"),
             )
         return st.session_state[self._state_key]
 

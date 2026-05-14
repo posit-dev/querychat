@@ -7,9 +7,11 @@ from unittest.mock import MagicMock
 import narwhals.stable.v1 as nw
 import pandas as pd
 import pytest
+from querychat import QueryChat
 from querychat._datasource import DataFrameSource
 from querychat._querychat_core import (
     AppState,
+    StateDictAccessorMixin,
     create_app_state,
     stream_response,
 )
@@ -54,6 +56,7 @@ class TestAppState:
         assert state.data_source is data_source
         assert state.client is mock_client
         assert state.greeting is None
+        assert state.active_table == "test_table"
         assert state.sql is None
         assert state.title is None
 
@@ -66,8 +69,13 @@ class TestAppState:
     def test_update_dashboard(self, data_source, mock_client):
         state = AppState(data_source=data_source, client=mock_client)
         state.update_dashboard(
-            {"query": "SELECT * FROM test_table", "title": "All Data"}
+            {
+                "table": "test_table",
+                "query": "SELECT * FROM test_table",
+                "title": "All Data",
+            }
         )
+        assert state.active_table == "test_table"
         assert state.sql == "SELECT * FROM test_table"
         assert state.title == "All Data"
 
@@ -76,6 +84,7 @@ class TestAppState:
         state.sql = "SELECT * FROM test_table"
         state.title = "Test"
         state.reset_dashboard()
+        assert state.active_table == "test_table"
         assert state.sql is None
         assert state.title is None
 
@@ -115,11 +124,112 @@ class TestAppState:
         assert len(result) == 2
         assert state.error is None
 
+    def test_get_current_data_without_sql_preserves_existing_error(
+        self, data_source, mock_client, sample_df
+    ):
+        state = AppState(data_source=data_source, client=mock_client)
+        state.error = "Previous error"
+
+        result = state.get_current_data()
+
+        pd.testing.assert_frame_equal(result, sample_df.to_pandas())
+        assert state.error == "Previous error"
+
     def test_error_cleared_on_update_dashboard(self, data_source, mock_client):
         state = AppState(data_source=data_source, client=mock_client)
         state.error = "Previous error"
-        state.update_dashboard({"query": "SELECT * FROM test_table", "title": "Test"})
+        state.update_dashboard(
+            {
+                "table": "test_table",
+                "query": "SELECT * FROM test_table",
+                "title": "Test",
+            }
+        )
         assert state.error is None
+
+    def test_get_current_data_uses_query_executor_for_multi_table_dashboard_sql(
+        self, mock_client
+    ):
+        orders = pd.DataFrame(
+            {
+                "id": [1, 2, 3],
+                "customer_id": [101, 102, 101],
+                "amount": [100.0, 200.0, 150.0],
+            }
+        )
+        customers = pd.DataFrame(
+            {
+                "id": [101, 102],
+                "state": ["CA", "NY"],
+            }
+        )
+        qc = QueryChat(orders, "orders")
+        qc.add_table(customers, "customers")
+
+        state = AppState(
+            data_source=qc._data_sources["orders"],
+            client=mock_client,
+            query_executor=qc._query_executor,
+        )
+        state.update_dashboard(
+            {
+                "table": "orders",
+                "query": (
+                    "SELECT orders.* "
+                    "FROM orders "
+                    "JOIN customers ON orders.customer_id = customers.id "
+                    "WHERE customers.state = 'CA'"
+                ),
+                "title": "California orders",
+            }
+        )
+
+        result = state.get_current_data()
+
+        assert result["id"].tolist() == [1, 3]
+        assert state.error is None
+
+    def test_get_current_data_with_invalid_sql_falls_back_to_active_table(
+        self, mock_client
+    ):
+        orders = pd.DataFrame(
+            {
+                "id": [1, 2, 3],
+                "customer_id": [101, 102, 101],
+                "amount": [100.0, 200.0, 150.0],
+            }
+        )
+        customers = pd.DataFrame(
+            {
+                "id": [101, 102],
+                "state": ["CA", "NY"],
+            }
+        )
+        qc = QueryChat(orders, "orders")
+        qc.add_table(customers, "customers")
+
+        state = AppState(
+            data_source=qc._data_sources["orders"],
+            data_sources=dict(qc._data_sources),
+            client=mock_client,
+            query_executor=qc._query_executor,
+        )
+        state.update_dashboard(
+            {
+                "table": "customers",
+                "query": "SELECT missing_column FROM customers",
+                "title": "Broken customer query",
+            }
+        )
+
+        result = state.get_current_data()
+
+        assert result["id"].tolist() == [101, 102]
+        assert result["state"].tolist() == ["CA", "NY"]
+        assert state.active_table == "customers"
+        assert state.sql is None
+        assert state.title is None
+        assert state.error is not None
 
     def test_error_cleared_on_reset_dashboard(self, data_source, mock_client):
         state = AppState(data_source=data_source, client=mock_client)
@@ -152,14 +262,110 @@ class TestCreateAppState:
         assert state.data_source is data_source
 
         # Test that the update callback works
-        callback_data["update_callback"]({"query": "SELECT 1", "title": "Test"})
+        callback_data["update_callback"](
+            {"table": "test_table", "query": "SELECT 1", "title": "Test"}
+        )
         assert state.sql == "SELECT 1"
         assert state.title == "Test"
 
         # Test that the reset callback works
-        callback_data["reset_callback"]()
+        callback_data["reset_callback"]("test_table")
+        assert state.active_table == "test_table"
         assert state.sql is None
         assert state.title is None
+
+
+class DummyStateAccessor(StateDictAccessorMixin[pd.DataFrame]):
+    def __init__(self, qc: QueryChat):
+        self._data_source = qc._data_sources["orders"]
+        self._data_sources = dict(qc._data_sources)
+        self._query_executor = qc._query_executor
+        self.greeting = None
+
+    def _require_data_source(self, _method_name: str):
+        return self._data_source
+
+    def _require_query_executor(self, _method_name: str):
+        return self._query_executor
+
+    def client(self, **_kwargs):
+        return MagicMock()
+
+
+class TestStateDictAccessorMixin:
+    def test_df_uses_query_executor_for_multi_table_dashboard_sql(self):
+        orders = pd.DataFrame(
+            {
+                "id": [1, 2, 3],
+                "customer_id": [101, 102, 101],
+                "amount": [100.0, 200.0, 150.0],
+            }
+        )
+        customers = pd.DataFrame(
+            {
+                "id": [101, 102],
+                "state": ["CA", "NY"],
+            }
+        )
+        qc = QueryChat(orders, "orders")
+        qc.add_table(customers, "customers")
+        accessor = DummyStateAccessor(qc)
+
+        result = accessor.df(
+            {
+                "sql": (
+                    "SELECT orders.* "
+                    "FROM orders "
+                    "JOIN customers ON orders.customer_id = customers.id "
+                    "WHERE customers.state = 'CA'"
+                ),
+                "title": "California orders",
+                "error": None,
+                "turns": [],
+            }
+        )
+
+        assert result["id"].tolist() == [1, 3]
+
+    def test_df_uses_active_table_for_full_data_and_error_fallback(self):
+        orders = pd.DataFrame(
+            {
+                "id": [1, 2, 3],
+                "customer_id": [101, 102, 101],
+                "amount": [100.0, 200.0, 150.0],
+            }
+        )
+        customers = pd.DataFrame(
+            {
+                "id": [101, 102],
+                "state": ["CA", "NY"],
+            }
+        )
+        qc = QueryChat(orders, "orders")
+        qc.add_table(customers, "customers")
+        accessor = DummyStateAccessor(qc)
+
+        full_result = accessor.df(
+            {
+                "table": "customers",
+                "sql": None,
+                "title": None,
+                "error": None,
+                "turns": [],
+            }
+        )
+        error_result = accessor.df(
+            {
+                "table": "customers",
+                "sql": "SELECT missing_column FROM customers",
+                "title": "Broken customer query",
+                "error": None,
+                "turns": [],
+            }
+        )
+
+        assert full_result["id"].tolist() == [101, 102]
+        assert error_result["id"].tolist() == [101, 102]
 
 
 class TestStreamResponse:
@@ -260,6 +466,7 @@ class TestTypedDicts:
         from querychat._querychat_core import AppStateDict
 
         state: AppStateDict = {
+            "table": "test",
             "sql": "SELECT * FROM test",
             "title": "Test",
             "error": None,
@@ -285,6 +492,7 @@ class TestAppStateSerialization:
 
         result = state.to_dict()
 
+        assert result["table"] == "test_table"
         assert result["sql"] == "SELECT * FROM test"
         assert result["title"] == "Test"
         assert "turns" in result
@@ -306,6 +514,7 @@ class TestAppStateDeserialization:
 
         state.update_from_dict(
             {
+                "table": "test_table",
                 "sql": "SELECT name FROM test",
                 "title": "Names Only",
                 "error": None,
@@ -324,6 +533,7 @@ class TestAppStateDeserialization:
             }
         )
 
+        assert state.active_table == "test_table"
         assert state.sql == "SELECT name FROM test"
         assert state.title == "Names Only"
         mock_client.set_turns.assert_called_once()
@@ -334,5 +544,13 @@ class TestAppStateDeserialization:
 
     def test_update_from_dict_empty_turns(self, data_source, mock_client):
         state = AppState(data_source=data_source, client=mock_client)
-        state.update_from_dict({"sql": None, "title": None, "error": None, "turns": []})
+        state.update_from_dict(
+            {
+                "table": "test_table",
+                "sql": None,
+                "title": None,
+                "error": None,
+                "turns": [],
+            }
+        )
         mock_client.set_turns.assert_called_with([])

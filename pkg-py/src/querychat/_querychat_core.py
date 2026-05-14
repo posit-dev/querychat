@@ -14,8 +14,8 @@ __all__ = [
 ]
 
 from collections.abc import Callable
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Generic, Optional, TypedDict, Union
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Generic, NotRequired, Optional, TypedDict, Union
 
 from chatlas import Chat, ContentToolRequest, ContentToolResult
 from chatlas.types import Content
@@ -36,10 +36,11 @@ if TYPE_CHECKING:
     from narwhals.stable.v1.typing import IntoFrame
 
     from ._datasource import DataSource
+    from ._query_executor import QueryExecutor
 
 
 ClientFactory = Callable[
-    [Callable[[UpdateDashboardData], None], Callable[[], None]],
+    [Callable[[UpdateDashboardData], None], Callable[[str], None]],
     Chat,
 ]
 """Factory that creates a Chat client with update_dashboard and reset_dashboard callbacks."""
@@ -48,6 +49,7 @@ ClientFactory = Callable[
 class AppStateDict(TypedDict):
     """Serialized AppState for framework state stores."""
 
+    table: NotRequired[str | None]
     sql: str | None
     title: str | None
     error: str | None
@@ -65,11 +67,13 @@ class StateDictAccessorMixin(Generic[IntoFrameT]):
     """Mixin providing df/sql/title accessors for frameworks using serialized state dicts."""
 
     _data_source: DataSource[IntoFrameT] | None
+    _data_sources: dict[str, DataSource[IntoFrameT]]
+    _query_executor: QueryExecutor | None
 
     def _client_factory(
         self,
         update_cb: Callable[[UpdateDashboardData], None],
-        reset_cb: Callable[[], None],
+        reset_cb: Callable[[str], None],
     ) -> Chat:
         """Create a chat client with dashboard callbacks."""
         return self.client(update_dashboard=update_cb, reset_dashboard=reset_cb)  # type: ignore[attr-defined]
@@ -90,14 +94,32 @@ class StateDictAccessorMixin(Generic[IntoFrameT]):
             Returns a LazyFrame if the data source is lazy.
 
         """
-        data_source = self._require_data_source("df")  # type: ignore[attr-defined]
+        data_source = self._get_state_data_source(state)  # type: ignore[attr-defined]
         sql = state.get("sql") if state else None
         if sql:
             try:
-                return data_source.execute_query(sql)
+                query_executor = self._require_query_executor("df")  # type: ignore[attr-defined]
+                return query_executor.execute_query(sql)
             except Exception:
                 return data_source.get_data()
         return data_source.get_data()
+
+    def _get_state_data_source(
+        self, state: AppStateDict | None
+    ) -> DataSource[IntoFrameT]:
+        """Resolve the full-data source for a serialized state payload."""
+        default_source = self._require_data_source("_get_state_data_source")  # type: ignore[attr-defined]
+        if not state:
+            return default_source
+
+        table_name = state.get("table")
+        if table_name is None:
+            return default_source
+
+        if table_name in self._data_sources:
+            return self._data_sources[table_name]
+
+        return default_source
 
     def sql(self, state: AppStateDict | None) -> str | None:
         """
@@ -140,6 +162,8 @@ class StateDictAccessorMixin(Generic[IntoFrameT]):
             data_source,
             self._client_factory,
             self.greeting,  # type: ignore[attr-defined]
+            data_sources=dict(self._data_sources),  # type: ignore[attr-defined]
+            query_executor=self._require_query_executor("_deserialize_state"),  # type: ignore[attr-defined]
         )
         if state_data:
             state.update_from_dict(state_data)
@@ -201,39 +225,59 @@ class AppState:
 
     data_source: DataSource
     client: Chat
+    query_executor: QueryExecutor | None = None
+    data_sources: dict[str, DataSource] = field(default_factory=dict)
     greeting: Optional[str] = None
 
+    active_table: str | None = None
     sql: Optional[str] = None
     title: Optional[str] = None
     error: Optional[str] = None
 
+    def __post_init__(self) -> None:
+        if not self.data_sources:
+            self.data_sources = {self.data_source.table_name: self.data_source}
+        if self.active_table is None:
+            self.active_table = self.data_source.table_name
+
     def update_dashboard(self, data: UpdateDashboardData) -> None:
+        self.active_table = data["table"]
         self.sql = data["query"]
         self.title = data["title"]
         self.error = None  # Clear any previous error on successful update
 
-    def reset_dashboard(self) -> None:
+    def reset_dashboard(self, table: str | None = None) -> None:
+        if table is not None:
+            self.active_table = table
         self.sql = None
         self.title = None
         self.error = None
 
+    def get_active_data_source(self) -> DataSource:
+        """Return the current full-data source for the active table."""
+        if self.active_table is None:
+            return self.data_source
+        return self.data_sources.get(self.active_table, self.data_source)
+
     def get_current_data(self) -> IntoFrame:
         """Get current data, falling back to default if query fails."""
+        data_source = self.get_active_data_source()
         if self.sql:
             try:
-                result = self.data_source.execute_query(self.sql)
+                query_runner = self.query_executor or data_source
+                result = query_runner.execute_query(self.sql)
                 self.error = None  # Clear error on success
                 return result
             except Exception as e:
                 self.error = format_query_error(e)
                 self.sql = None
                 self.title = None
-                return self.data_source.get_data()
-        self.error = None
-        return self.data_source.get_data()
+                return data_source.get_data()
+        return data_source.get_data()
 
     def get_display_sql(self) -> str:
-        return self.sql or f"SELECT * FROM {self.data_source.table_name}"
+        table_name = self.active_table or self.data_source.table_name
+        return self.sql or f"SELECT * FROM {table_name}"
 
     def get_display_messages(self) -> list[DisplayMessage]:
         """
@@ -280,6 +324,7 @@ class AppState:
     def to_dict(self) -> AppStateDict:
         """Serialize state to dict for framework state stores."""
         return {
+            "table": self.active_table,
             "sql": self.sql,
             "title": self.title,
             "error": self.error,
@@ -290,6 +335,7 @@ class AppState:
         """Restore state from serialized dict."""
         from chatlas import Turn
 
+        self.active_table = data.get("table", self.data_source.table_name)
         self.sql = data["sql"]
         self.title = data["title"]
         self.error = data["error"]
@@ -303,6 +349,9 @@ def create_app_state(
     data_source: DataSource,
     client_factory: ClientFactory,
     greeting: Optional[str] = None,
+    *,
+    data_sources: dict[str, DataSource] | None = None,
+    query_executor: QueryExecutor | None = None,
 ) -> AppState:
     """Create AppState with callbacks connected via holder pattern."""
     state_holder: dict[str, AppState | None] = {"state": None}
@@ -313,16 +362,22 @@ def create_app_state(
             raise RuntimeError("Callback invoked before state initialization")
         state.update_dashboard(data)
 
-    def reset_callback() -> None:
+    def reset_callback(_table: str) -> None:
         state = state_holder["state"]
         if state is None:
             raise RuntimeError("Callback invoked before state initialization")
-        state.reset_dashboard()
+        state.reset_dashboard(_table)
 
     client = client_factory(update_callback, reset_callback)
     state = AppState(
         data_source=data_source,
         client=client,
+        query_executor=query_executor,
+        data_sources=(
+            dict(data_sources)
+            if data_sources is not None
+            else {data_source.table_name: data_source}
+        ),
         greeting=greeting,
     )
     state_holder["state"] = state

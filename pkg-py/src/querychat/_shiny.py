@@ -300,9 +300,11 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             )
 
         def app_server(input: Inputs, output: Outputs, session: Session):
+            self._mark_server_initialized()
             vals = mod_server(
                 self.id,
-                data_source=data_source,
+                data_sources=dict(self._data_sources),
+                executor=self._query_executor,
                 greeting=self.greeting,
                 client=self._create_session_client,
                 enable_bookmarking=enable_bookmarking,
@@ -498,7 +500,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         if data_source is not None:
             self.data_source = data_source
 
-        resolved_data_source = self._require_data_source("server")
+        self._require_data_source("server")
         resolved_client_spec = self._client_spec if isinstance(client, MISSING_TYPE) else client
 
         def create_session_client(**kwargs) -> chatlas.Chat:
@@ -506,9 +508,11 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 client_spec=resolved_client_spec, **kwargs
             )
 
+        self._mark_server_initialized()
         return mod_server(
             id or self.id,
-            data_source=resolved_data_source,
+            data_sources=dict(self._data_sources),
+            executor=self._query_executor,
             greeting=self.greeting,
             client=create_session_client,
             enable_bookmarking=enable_bookmarking,
@@ -751,9 +755,15 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         else:
             enable = enable_bookmarking
 
+        if self._data_source is None and isinstance(session, ExpressStubSession):
+            return
+
+        self._require_data_source("__init__")
+        self._mark_server_initialized()
         self._vals = mod_server(
             self.id,
-            data_source=self._data_source,
+            data_sources=dict(self._data_sources),
+            executor=self._query_executor,
             greeting=self.greeting,
             client=self._create_session_client,
             enable_bookmarking=enable,

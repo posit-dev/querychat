@@ -56,6 +56,35 @@ class TestGradioQueryChat:
             result = qc.ui()
         assert isinstance(result, gr.State)
 
+    def test_app_uses_active_table_for_fallback_sql_display(self):
+        import pandas as pd
+        from querychat.gradio import QueryChat
+
+        qc = QueryChat(pd.DataFrame({"id": [1, 2], "amount": [10, 20]}), "orders")
+        qc.add_table(pd.DataFrame({"id": [101, 102], "state": ["CA", "NY"]}), "customers")
+
+        app = qc.app()._blocks
+        update_displays = next(
+            block_fn.fn
+            for block_fn in app.fns.values()
+            if getattr(block_fn.fn, "__name__", "") == "update_displays"
+        )
+
+        _, sql_code, native_df, data_info_text = update_displays(
+            {
+                "table": "customers",
+                "sql": None,
+                "title": None,
+                "error": "Query syntax error: missing column",
+                "turns": [],
+            }
+        )
+
+        assert sql_code == "SELECT * FROM customers"
+        assert native_df["id"].tolist() == [101, 102]
+        assert native_df["state"].tolist() == ["CA", "NY"]
+        assert "⚠️ Query syntax error: missing column" in data_info_text
+
 
 class TestDashQueryChat:
     @pytest.fixture(autouse=True)

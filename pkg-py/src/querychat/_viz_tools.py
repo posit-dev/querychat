@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     import altair as alt
     from ipywidgets.widgets.widget import Widget
 
-    from ._datasource import DataSource
+    from ._query_executor import QueryExecutor
 
 
 class VisualizeData(TypedDict):
@@ -55,7 +55,7 @@ class VisualizeData(TypedDict):
 
 
 def tool_visualize(
-    data_source: DataSource,
+    executor: QueryExecutor,
     update_fn: Callable[[VisualizeData], None],
 ) -> Tool:
     """
@@ -63,8 +63,8 @@ def tool_visualize(
 
     Parameters
     ----------
-    data_source
-        The data source to query against
+    executor
+        The query executor to query against
     update_fn
         Callback function to call with VisualizeData when visualization succeeds
 
@@ -74,10 +74,10 @@ def tool_visualize(
         A tool that can be registered with chatlas
 
     """
-    impl = visualize_impl(data_source, update_fn)
+    impl = visualize_impl(executor, update_fn)
     impl.__doc__ = read_prompt_template(
         "tool-visualize.md",
-        db_type=data_source.get_db_type(),
+        db_type=executor.get_db_type(),
     )
 
     return Tool.from_func(
@@ -146,7 +146,7 @@ class VisualizeResult(ContentToolResult):
 
 
 def visualize_impl(
-    data_source: DataSource,
+    executor: QueryExecutor,
     update_fn: Callable[[VisualizeData], None],
 ) -> Callable[[str, str], ContentToolResult]:
     """Create the visualize implementation function."""
@@ -172,7 +172,7 @@ def visualize_impl(
                     "\n".join(error["message"] for error in validated.errors())
                 )
 
-            spec = execute_ggsql(data_source, validated)
+            spec = execute_ggsql(executor, validated)
 
             raw_chart = VegaLiteWriter().render_chart(spec)
             altair_widget = AltairWidget(copy.deepcopy(raw_chart))

@@ -21,11 +21,21 @@ from ._datasource import (
     SQLAlchemySource,
 )
 from ._pin_source import PinSource, is_pins_board
+from ._query_executor import (
+    DataSourceExecutor,
+    DuckDBExecutor,
+    PolarsSQLExecutor,
+    QueryExecutor,
+    check_source_compatibility,
+    validate_source_group_compatibility,
+)
 from ._querychat_core import GREETING_PROMPT
 from ._system_prompt import QueryChatSystemPrompt
+from ._table_accessor import TableAccessor
 from ._utils import MISSING, MISSING_TYPE, is_ibis_table
 from ._viz_utils import has_viz_deps, has_viz_tool
 from .tools import (
+    ResetDashboardCallback,
     UpdateDashboardData,
     tool_query,
     tool_reset_dashboard,
@@ -90,6 +100,16 @@ class QueryChatBase(Generic[IntoFrameT]):
                 "Table name must begin with a letter and contain only letters, numbers, and underscores",
             )
 
+        # Multi-table storage: dict of data sources keyed by table name
+        self._data_sources: dict[str, DataSource] = {}
+
+        # Track server initialization state for add/remove table validation
+        self._server_initialized = False
+
+        # Store metadata for multi-table support
+        self._table_relationships: dict[str, dict[str, str]] = {}
+        self._table_descriptions: dict[str, str] = {}
+
         self.tools = normalize_tools(tools, default=DEFAULT_TOOLS)
         self.greeting = greeting.read_text() if isinstance(greeting, Path) else greeting
 
@@ -113,11 +133,13 @@ class QueryChatBase(Generic[IntoFrameT]):
                 data_source, table_name
             )
             self._table_name = self._data_source.table_name
+            self._data_sources[table_name] = self._data_source
             self._auto_fill_data_description()
             self._build_system_prompt()
         else:
             self._data_source = None
             self._system_prompt = None
+            self._query_executor = None
 
     def _auto_fill_data_description(self) -> None:
         """Auto-populate data_description from data source metadata if not user-supplied."""
@@ -130,22 +152,73 @@ class QueryChatBase(Generic[IntoFrameT]):
                 self._data_description = desc
                 self._data_description_mode = "inferred"
 
-    def _build_system_prompt(self) -> None:
-        """Build/rebuild the system prompt from current data source."""
-        if self._data_source is None:
+    def _build_system_prompt(
+        self,
+        *,
+        data_sources: dict[str, DataSource] | None = None,
+        relationships: dict[str, dict[str, str]] | None = None,
+        table_descriptions: dict[str, str] | None = None,
+    ) -> None:
+        """Build/rebuild the system prompt from current or staged data sources."""
+        next_data_sources = self._data_sources if data_sources is None else data_sources
+
+        if not next_data_sources:
             raise RuntimeError("Cannot build system prompt without data_source")
 
         prompt_template = self._prompt_template
         if prompt_template is None:
             prompt_template = Path(__file__).parent / "prompts" / "prompt.md"
 
-        self._system_prompt = QueryChatSystemPrompt(
+        next_relationships = (
+            self._table_relationships if relationships is None else relationships
+        )
+        next_table_descriptions = (
+            self._table_descriptions
+            if table_descriptions is None
+            else table_descriptions
+        )
+
+        replacement_prompt = QueryChatSystemPrompt(
             prompt_template=prompt_template,
-            data_source=self._data_source,
+            data_sources=next_data_sources,
             data_description=self._data_description,
             extra_instructions=self._extra_instructions,
             categorical_threshold=self._categorical_threshold,
+            relationships=next_relationships,
+            table_descriptions=next_table_descriptions,
         )
+        replacement_executor = self._build_query_executor(data_sources=next_data_sources)
+        previous_executor = getattr(self, "_query_executor", None)
+
+        self._system_prompt = replacement_prompt
+        self._query_executor = replacement_executor
+
+        if previous_executor is not None:
+            previous_executor.cleanup()
+
+    def _build_query_executor(
+        self, *, data_sources: dict[str, DataSource] | None = None
+    ) -> QueryExecutor:
+        """Build a query executor from current or staged data sources."""
+        sources = self._data_sources if data_sources is None else data_sources
+
+        validate_source_group_compatibility(sources)
+
+        if len(sources) == 1:
+            return DataSourceExecutor(dict(sources))
+
+        first_source = next(iter(sources.values()))
+
+        if isinstance(first_source, DataFrameSource):
+            return DuckDBExecutor(
+                {n: s for n, s in sources.items() if isinstance(s, DataFrameSource)}
+            )
+        if isinstance(first_source, PolarsLazySource):
+            return PolarsSQLExecutor(
+                {n: s for n, s in sources.items() if isinstance(s, PolarsLazySource)}
+            )
+
+        return DataSourceExecutor(dict(sources))
 
     def _require_data_source(self, method_name: str) -> DataSource[IntoFrameT]:
         """Raise if data_source is not set, otherwise return it for type narrowing."""
@@ -157,13 +230,22 @@ class QueryChatBase(Generic[IntoFrameT]):
             )
         return self._data_source
 
+    def _require_query_executor(self, method_name: str) -> QueryExecutor:
+        """Raise if query executor is not initialized, otherwise return it."""
+        if self._query_executor is None:
+            raise RuntimeError(
+                f"query executor must be set before calling {method_name}(). "
+                "Set the data_source first so querychat can build an executor."
+            )
+        return self._query_executor
+
     def _create_session_client(
         self,
         *,
         client_spec: str | chatlas.Chat | None | MISSING_TYPE = MISSING,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None | MISSING_TYPE = MISSING,
         update_dashboard: Callable[[UpdateDashboardData], None] | None = None,
-        reset_dashboard: Callable[[], None] | None = None,
+        reset_dashboard: ResetDashboardCallback | None = None,
         visualize: Callable[[VisualizeData], None] | None = None,
     ) -> chatlas.Chat:
         """Create a fresh, fully-configured Chat."""
@@ -178,20 +260,30 @@ class QueryChatBase(Generic[IntoFrameT]):
         if resolved_tools is None:
             return chat
 
-        data_source = self._require_data_source("_create_session_client")
+        self._require_data_source("_create_session_client")
+        assert self._query_executor is not None  # noqa: S101
 
         if "update" in resolved_tools:
             update_fn = update_dashboard or (lambda _: None)
-            reset_fn = reset_dashboard or (lambda: None)
-            chat.register_tool(tool_update_dashboard(data_source, update_fn))
-            chat.register_tool(tool_reset_dashboard(reset_fn))
+            user_reset = reset_dashboard or (lambda _table: None)
+
+            chat.register_tool(
+                tool_update_dashboard(
+                    self._query_executor,
+                    list(self._data_sources.keys()),
+                    update_fn,
+                )
+            )
+            chat.register_tool(
+                tool_reset_dashboard(user_reset, list(self._data_sources.keys()))
+            )
 
         if "query" in resolved_tools:
-            chat.register_tool(tool_query(data_source))
+            chat.register_tool(tool_query(self._query_executor))
 
         if "visualize" in resolved_tools:
             viz_fn = visualize or (lambda _: None)
-            chat.register_tool(tool_visualize(data_source, viz_fn))
+            chat.register_tool(tool_visualize(self._query_executor, viz_fn))
 
         return chat
 
@@ -200,7 +292,7 @@ class QueryChatBase(Generic[IntoFrameT]):
         *,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None | MISSING_TYPE = MISSING,
         update_dashboard: Callable[[UpdateDashboardData], None] | None = None,
-        reset_dashboard: Callable[[], None] | None = None,
+        reset_dashboard: ResetDashboardCallback | None = None,
         visualize: Callable[[VisualizeData], None] | None = None,
     ) -> chatlas.Chat:
         """
@@ -265,25 +357,221 @@ class QueryChatBase(Generic[IntoFrameT]):
 
     @property
     def data_source(self) -> DataSource | None:
-        """Get the current data source."""
-        return self._data_source
+        """
+        Get the data source (for single-table backwards compatibility).
+
+        Returns None if no data source is set. Raises ValueError if multiple
+        tables are present - use .table("name").data_source instead.
+        """
+        if not self._data_sources:
+            return None
+        if len(self._data_sources) == 1:
+            return next(iter(self._data_sources.values()))
+        raise ValueError(
+            f"Multiple tables present ({', '.join(self._data_sources.keys())}). "
+            "Use qc.table('name').data_source instead."
+        )
 
     @data_source.setter
     def data_source(self, value: IntoFrame | sqlalchemy.Engine | BaseBoard) -> None:
         """Set the data source, normalizing and rebuilding system prompt."""
-        old_source = self._data_source
-        if self._table_name is None:
-            raise ValueError("table_name must be set before assigning a data source")
-        self._data_source = normalize_data_source(value, self._table_name)
-        if old_source is not None and old_source is not self._data_source:
-            old_source.cleanup()
-        self._auto_fill_data_description()
-        self._build_system_prompt()
+        normalized = normalize_data_source(value, self._table_name)
+        try:
+            other_sources = {
+                name: source
+                for name, source in self._data_sources.items()
+                if name != self._table_name
+            }
+            check_source_compatibility(other_sources, normalized, self._table_name)
+
+            next_data_sources = dict(self._data_sources)
+            next_data_sources[self._table_name] = normalized
+            self._data_source = normalized
+            self._auto_fill_data_description()
+            self._build_system_prompt(data_sources=next_data_sources)
+        except Exception:
+            cleanup_failed_staged_source(value, normalized)
+            raise
+
+        self._data_sources = next_data_sources
+
+    def table_names(self) -> list[str]:
+        """
+        Return the names of all registered tables.
+
+        Returns
+        -------
+        list[str]
+            List of table names in the order they were added.
+
+        """
+        return list(self._data_sources.keys())
+
+    def table(self, name: str) -> TableAccessor:
+        """
+        Get an accessor for a specific table.
+
+        Parameters
+        ----------
+        name
+            The name of the table to access.
+
+        Returns
+        -------
+        TableAccessor
+            An accessor object with df(), sql(), title() methods.
+
+        Raises
+        ------
+        ValueError
+            If the table doesn't exist.
+
+        """
+        if name not in self._data_sources:
+            available = ", ".join(self._data_sources.keys())
+            raise ValueError(f"Table '{name}' not found. Available: {available}")
+
+        return TableAccessor(self, name)
+
+    def add_table(
+        self,
+        data_source: IntoFrame | sqlalchemy.Engine,
+        table_name: str,
+        *,
+        relationships: dict[str, str] | None = None,
+        description: str | None = None,
+    ) -> None:
+        """
+        Add an additional table to the QueryChat instance.
+
+        Parameters
+        ----------
+        data_source
+            The data source (DataFrame, LazyFrame, or database connection).
+        table_name
+            Name for the table (must be unique within this QueryChat).
+        relationships
+            Optional dict mapping local columns to "other_table.column" for JOINs.
+            Example: {"customer_id": "customers.id"}
+        description
+            Optional free-text description of the table for the LLM.
+
+        Raises
+        ------
+        ValueError
+            If table_name already exists or is invalid.
+        RuntimeError
+            If called after server() has been invoked.
+
+        """
+        # Check if server already initialized
+        if self._server_initialized:
+            raise RuntimeError(
+                "Cannot add tables after server initialization. "
+                "Add all tables before calling .server() or .app()."
+            )
+
+        # Validate table name format
+        if not re.match(r"^[a-zA-Z][a-zA-Z0-9_]*$", table_name):
+            raise ValueError(
+                "Table name must begin with a letter and contain only "
+                "letters, numbers, and underscores"
+            )
+
+        # Check for duplicates
+        if table_name in self._data_sources:
+            raise ValueError(f"Table '{table_name}' already exists")
+
+        # Normalize and validate compatibility with existing sources
+        normalized = normalize_data_source(data_source, table_name)
+        try:
+            check_source_compatibility(self._data_sources, normalized, table_name)
+            next_data_sources = dict(self._data_sources)
+            next_data_sources[table_name] = normalized
+            next_relationships = dict(self._table_relationships)
+            next_table_descriptions = dict(self._table_descriptions)
+
+            # Store relationship and description metadata
+            if relationships:
+                next_relationships[table_name] = relationships
+            if description:
+                next_table_descriptions[table_name] = description
+
+            # Rebuild system prompt with new table
+            self._build_system_prompt(
+                data_sources=next_data_sources,
+                relationships=next_relationships,
+                table_descriptions=next_table_descriptions,
+            )
+        except Exception:
+            cleanup_failed_staged_source(data_source, normalized)
+            raise
+
+        self._data_sources = next_data_sources
+        self._table_relationships = next_relationships
+        self._table_descriptions = next_table_descriptions
+
+    def remove_table(self, table_name: str) -> None:
+        """
+        Remove a table from the QueryChat instance.
+
+        Parameters
+        ----------
+        table_name
+            Name of the table to remove.
+
+        Raises
+        ------
+        ValueError
+            If table doesn't exist or is the last remaining table.
+        RuntimeError
+            If called after server() has been invoked.
+
+        """
+        if self._server_initialized:
+            raise RuntimeError(
+                "Cannot remove tables after server initialization. "
+                "Configure all tables before calling .server() or .app()."
+            )
+
+        if table_name not in self._data_sources:
+            available = ", ".join(self._data_sources.keys())
+            raise ValueError(f"Table '{table_name}' not found. Available: {available}")
+
+        if len(self._data_sources) == 1:
+            raise ValueError(
+                "Cannot remove last table. At least one table is required."
+            )
+
+        removed_source = self._data_sources[table_name]
+        next_data_sources = dict(self._data_sources)
+        del next_data_sources[table_name]
+        next_relationships = dict(self._table_relationships)
+        next_relationships.pop(table_name, None)
+        next_table_descriptions = dict(self._table_descriptions)
+        next_table_descriptions.pop(table_name, None)
+
+        # Rebuild system prompt without removed table
+        self._build_system_prompt(
+            data_sources=next_data_sources,
+            relationships=next_relationships,
+            table_descriptions=next_table_descriptions,
+        )
+        self._data_sources = next_data_sources
+        self._table_relationships = next_relationships
+        self._table_descriptions = next_table_descriptions
+        removed_source.cleanup()
+
+    def _mark_server_initialized(self) -> None:
+        """Mark that the server has been initialized. Prevents add/remove_table."""
+        self._server_initialized = True
 
     def cleanup(self) -> None:
-        """Clean up resources associated with the data source."""
-        if self._data_source is not None:
-            self._data_source.cleanup()
+        """Clean up resources associated with all data sources."""
+        if hasattr(self, "_query_executor") and self._query_executor is not None:
+            self._query_executor.cleanup()
+        for source in self._data_sources.values():
+            source.cleanup()
 
 
 def normalize_data_source(
@@ -328,6 +616,24 @@ def normalize_data_source(
         "If you believe this type should be supported, please open an issue at "
         "https://github.com/posit-dev/querychat/issues"
     )
+
+
+def cleanup_failed_staged_source(
+    original_source: IntoFrame | sqlalchemy.Engine | DataSource,
+    normalized_source: DataSource,
+) -> None:
+    """
+    Clean up transient resources created during a failed staged rebuild.
+
+    Only DataFrameSource owns a fresh disposable connection created during
+    normalization. SQLAlchemySource wraps a caller-owned engine, while
+    PolarsLazySource and IbisSource do not allocate disposable resources here.
+    """
+    if isinstance(original_source, (DataSource, sqlalchemy.Engine)):
+        return
+
+    if isinstance(normalized_source, DataFrameSource):
+        normalized_source.cleanup()
 
 
 def create_client(client: str | chatlas.Chat | None) -> chatlas.Chat:

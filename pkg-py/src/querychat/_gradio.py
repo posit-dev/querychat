@@ -251,7 +251,11 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
         import gradio as gr
 
         initial_state = create_app_state(
-            data_source, self._client_factory, self.greeting
+            data_source,
+            self._client_factory,
+            self.greeting,
+            data_sources=dict(self._data_sources),
+            query_executor=self._require_query_executor("ui"),
         )
 
         state_holder = gr.State(value=initial_state.to_dict())
@@ -368,17 +372,14 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
 
             def update_displays(state_dict: AppStateDict):
                 """Update SQL and data displays based on state."""
-                title = state_dict.get("title") if state_dict else None
-                error = state_dict.get("error") if state_dict else None
+                state = self._deserialize_state(state_dict)
+                df = state.get_current_data()
+                title = state.title
+                error = state.error
 
                 sql_title_text = f"### {title or 'SQL Query'}"
-                sql_code = (
-                    state_dict.get("sql")
-                    if state_dict and state_dict.get("sql")
-                    else f"SELECT * FROM {table_name}"
-                )
+                sql_code = state.get_display_sql()
 
-                df = self.df(state_dict)
                 nw_df = as_narwhals(df)
                 nrow, ncol = nw_df.shape
                 native_df = nw_df.to_native()

@@ -283,6 +283,8 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
             data_source,
             self._client_factory,
             self.greeting,
+            data_sources=dict(self._data_sources),
+            query_executor=self._require_query_executor("ui"),
         )
 
         return html.Div(

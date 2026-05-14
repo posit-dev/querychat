@@ -62,7 +62,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
     **Privacy-focused mode:** Only allow dashboard filtering, ensuring the LLM
     can't see any raw data.
     ```python
-    qc = QueryChat(df, "my_data", tools="update")
+    qc = QueryChat(df, "my_data", tools="filter")
     qc.app()
     ```
 
@@ -97,15 +97,17 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         defaults to `"openai"`.
     tools
         Which querychat tools to include in the chat client by default. Can be:
-        - A single tool string: `"update"` or `"query"`
-        - A tuple of tools: `("update", "query", "visualize")`
+        - A single tool string: `"filter"` or `"query"`
+        - A tuple of tools: `("filter", "query", "visualize")`
         - `None` or `()` to disable all tools
 
-        Default is `("update", "query")`. The visualization tool (`"visualize"`)
+        Default is `("filter", "query")`. The visualization tool (`"visualize"`)
         can be opted into by including it in the tuple.
 
-        Set to `"update"` to prevent the LLM from accessing data values, only
+        Set to `"filter"` to prevent the LLM from accessing data values, only
         allowing dashboard filtering without answering questions.
+
+        The legacy name `"update"` is still accepted as an alias for `"filter"`.
 
         The tools can be overridden per-client by passing a different `tools`
         parameter to the `.client()` method.
@@ -142,7 +144,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
-        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("filter", "query"),
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
@@ -620,7 +622,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
-        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("update", "query"),
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("filter", "query"),
         data_description: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,

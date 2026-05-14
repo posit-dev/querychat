@@ -6,7 +6,7 @@ import copy
 import os
 import re
 from pathlib import Path
-from typing import TYPE_CHECKING, Generic, Literal, Optional
+from typing import TYPE_CHECKING, Generic, Literal, Optional, cast
 
 import chatlas
 import narwhals.stable.v1 as nw
@@ -39,8 +39,8 @@ if TYPE_CHECKING:
 
     from ._viz_tools import VisualizeData
 
-TOOL_GROUPS = Literal["update", "query", "visualize"]
-DEFAULT_TOOLS: tuple[TOOL_GROUPS, ...] = ("update", "query")
+TOOL_GROUPS = Literal["filter", "update", "query", "visualize"]
+DEFAULT_TOOLS: tuple[TOOL_GROUPS, ...] = ("filter", "query")
 
 class QueryChatBase(Generic[IntoFrameT]):
     """
@@ -177,8 +177,9 @@ class QueryChatBase(Generic[IntoFrameT]):
         Parameters
         ----------
         tools
-            Which tools to include: `"update"`, `"query"`, `"visualize"`,
-            or a combination.
+            Which tools to include: `"filter"`, `"query"`, `"visualize"`,
+            or a combination. The legacy name `"update"` is still accepted
+            as an alias for `"filter"`.
         update_dashboard
             Callback when update_dashboard tool succeeds.
         reset_dashboard
@@ -320,6 +321,11 @@ def normalize_tools(
         result = tools
     else:
         result = tuple(tools)
+    if result is not None:
+        result = cast(
+            tuple[TOOL_GROUPS, ...],
+            tuple("update" if t == "filter" else t for t in result),
+        )
     if not check_deps:
         return result
     if has_viz_tool(result) and not has_viz_deps():

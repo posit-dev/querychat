@@ -961,7 +961,7 @@ normalize_tools <- function(tools) {
     return(NULL)
   }
   tools[tools == "filter"] <- "update"
-  tools
+  unique(tools)
 }
 
 normalize_data_source <- function(data_source, table_name) {

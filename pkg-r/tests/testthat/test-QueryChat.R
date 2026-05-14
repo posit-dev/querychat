@@ -356,6 +356,48 @@ describe("QueryChat$client()", {
     expect_false("querychat_query" %in% tool_names)
   })
 
+  it("treats 'filter' as an alias for 'update'", {
+    qc <- QueryChat$new(
+      new_test_df(),
+      "test_df"
+    )
+    withr::defer(qc$cleanup())
+
+    client <- qc$client(tools = "filter")
+
+    tool_names <- sapply(client$get_tools(), function(t) t@name)
+    expect_contains(tool_names, "querychat_update_dashboard")
+    expect_contains(tool_names, "querychat_reset_dashboard")
+    expect_false("querychat_query" %in% tool_names)
+  })
+
+  it("normalizes c('filter', 'query') to update + query tools", {
+    qc <- QueryChat$new(
+      new_test_df(),
+      "test_df",
+      tools = c("filter", "query")
+    )
+    withr::defer(qc$cleanup())
+
+    client <- qc$client(tools = NA)
+
+    tool_names <- sapply(client$get_tools(), function(t) t@name)
+    expect_contains(tool_names, "querychat_update_dashboard")
+    expect_contains(tool_names, "querychat_reset_dashboard")
+    expect_contains(tool_names, "querychat_query")
+  })
+
+  it("deduplicates when both 'filter' and 'update' are provided", {
+    qc <- QueryChat$new(
+      new_test_df(),
+      "test_df",
+      tools = c("filter", "update", "query")
+    )
+    withr::defer(qc$cleanup())
+
+    expect_equal(qc$tools, c("update", "query"))
+  })
+
   it("registers only query tool when tools = 'query'", {
     qc <- QueryChat$new(
       new_test_df(),

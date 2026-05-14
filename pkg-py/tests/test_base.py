@@ -156,6 +156,18 @@ class TestNormalizeTools:
         result = normalize_tools(tools_list, default=None)
         assert result == ("update", "query")
 
+    def test_filter_normalized_to_update(self):
+        result = normalize_tools("filter", default=None)
+        assert result == ("update",)
+
+    def test_filter_query_normalized(self):
+        result = normalize_tools(("filter", "query"), default=None)
+        assert result == ("update", "query")
+
+    def test_filter_and_update_deduplicated(self):
+        result = normalize_tools(("filter", "update", "query"), default=None)
+        assert result == ("update", "query")
+
 
 class TestQueryChatBase:
     def test_init_with_dataframe(self, sample_df):

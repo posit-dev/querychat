@@ -2,7 +2,9 @@ maybe_truncate <- function(df, max_rows) {
   is_lazy <- inherits(df, "tbl_sql")
 
   if (is.null(max_rows)) {
-    if (is_lazy) df <- dplyr::collect(df)
+    if (is_lazy) {
+      df <- dplyr::collect(df)
+    }
     total_rows <- nrow(df)
     total_cols <- ncol(df)
   } else if (is_lazy) {

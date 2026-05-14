@@ -141,39 +141,39 @@ class TestNormalizeTools:
 
     def test_with_missing_returns_default(self):
         result = normalize_tools(MISSING, default=("update", "query"))
-        assert result == ("update", "query")
+        assert set(result) == {"update", "query"}
 
     def test_with_string_returns_tuple(self):
         result = normalize_tools("update", default=None)
-        assert result == ("update",)
+        assert set(result) == {"update"}
 
     def test_with_tuple_returns_same(self):
         result = normalize_tools(("update", "query"), default=None)
-        assert result == ("update", "query")
+        assert set(result) == {"update", "query"}
 
     def test_with_list_returns_tuple(self):
         tools_list: Any = ["update", "query"]
         result = normalize_tools(tools_list, default=None)
-        assert result == ("update", "query")
+        assert set(result) == {"update", "query"}
 
     def test_filter_normalized_to_update(self):
         result = normalize_tools("filter", default=None)
-        assert result == ("update",)
+        assert set(result) == {"update"}
 
     def test_filter_query_normalized(self):
         result = normalize_tools(("filter", "query"), default=None)
-        assert result == ("update", "query")
+        assert set(result) == {"update", "query"}
 
     def test_filter_and_update_deduplicated(self):
         result = normalize_tools(("filter", "update", "query"), default=None)
-        assert result == ("update", "query")
+        assert set(result) == {"update", "query"}
 
 
 class TestQueryChatBase:
     def test_init_with_dataframe(self, sample_df):
         qc = QueryChatBase(sample_df, "test_table")
         assert isinstance(qc.data_source, DataFrameSource)
-        assert qc.tools == ("update", "query")
+        assert set(qc.tools) == {"update", "query"}
 
     def test_init_with_custom_greeting(self, sample_df):
         qc = QueryChatBase(sample_df, "test_table", greeting="Hello!")

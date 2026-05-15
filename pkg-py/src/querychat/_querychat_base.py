@@ -323,7 +323,7 @@ def normalize_tools(
         result = tuple(tools)
     if result is not None:
         result = cast(
-            tuple[TOOL_GROUPS, ...],
+            "tuple[TOOL_GROUPS, ...]",
             tuple(dict.fromkeys("update" if t == "filter" else t for t in result)),
         )
     if not check_deps:

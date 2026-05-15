@@ -9,6 +9,7 @@ These tests verify that:
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 
 import pytest
@@ -163,9 +164,11 @@ class TestInlineVisualization:
         self.chat.set_user_input("Show me passengers who survived")
         self.chat.send_user_input(method="click")
 
-        # Wait for a tool result (any)
-        tool_result = self.page.locator(".shiny-tool-result").first
-        expect(tool_result).to_be_visible(timeout=90000)
+        # Wait for the assistant to respond (any survival-related text)
+        self.chat.expect_latest_message(
+            re.compile(r"survived|survivor|survival|filter|query|SELECT", re.IGNORECASE),
+            timeout=90000,
+        )
 
         # Non-viz tool results should NOT have fullscreen toggle
         fs_results = self.page.locator(

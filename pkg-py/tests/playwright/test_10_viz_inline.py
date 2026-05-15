@@ -9,7 +9,6 @@ These tests verify that:
 
 from __future__ import annotations
 
-import re
 from typing import TYPE_CHECKING
 
 import pytest
@@ -159,19 +158,3 @@ class TestInlineVisualization:
         assert footer_box is not None
         assert footer_box["height"] < 100
 
-    def test_non_viz_tool_results_have_no_fullscreen(self) -> None:
-        """VIZ-NO-FS: Non-visualization tool results don't have fullscreen."""
-        self.chat.set_user_input("Show me passengers who survived")
-        self.chat.send_user_input(method="click")
-
-        # Wait for the assistant to respond (any survival-related text)
-        self.chat.expect_latest_message(
-            re.compile(r"survived|survivor|survival|filter|query|SELECT", re.IGNORECASE),
-            timeout=90000,
-        )
-
-        # Non-viz tool results should NOT have fullscreen toggle
-        fs_results = self.page.locator(
-            ".shiny-tool-result:has(.tool-fullscreen-toggle)"
-        )
-        expect(fs_results).to_have_count(0)

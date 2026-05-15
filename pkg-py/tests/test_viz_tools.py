@@ -48,7 +48,7 @@ class TestVizDependencyCheck:
 
         # Should not raise even though find_spec returns None for everything
         result = normalize_tools(("visualize",), default=None, check_deps=False)
-        assert result == ("visualize",)
+        assert result == {"visualize"}
 
 
 def test_ggsql_syntax_reference_uses_range_not_errorbar():

@@ -6,7 +6,7 @@ import copy
 import os
 import re
 from pathlib import Path
-from typing import TYPE_CHECKING, Generic, Literal, Optional, cast
+from typing import TYPE_CHECKING, Generic, Literal, Optional
 
 import chatlas
 import narwhals.stable.v1 as nw
@@ -307,30 +307,25 @@ def create_client(client: str | chatlas.Chat | None) -> chatlas.Chat:
 
 def normalize_tools(
     tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None | MISSING_TYPE,
-    default: tuple[TOOL_GROUPS, ...] | None,
+    default: tuple[TOOL_GROUPS, ...] | set[str] | None,
     *,
     check_deps: bool = True,
-) -> tuple[TOOL_GROUPS, ...] | None:
+) -> set[str] | None:
     if tools is None or tools == ():
-        result = None
+        resolved = None
     elif isinstance(tools, MISSING_TYPE):
-        result = default
+        resolved = set(default) if default is not None else None
     elif isinstance(tools, str):
-        result = (tools,)
-    elif isinstance(tools, tuple):
-        result = tools
+        resolved = {tools}
     else:
-        result = tuple(tools)
-    if result is not None:
-        result = cast(
-            "tuple[TOOL_GROUPS, ...]",
-            tuple(dict.fromkeys("update" if t == "filter" else t for t in result)),
-        )
+        resolved = set(tools)
+    if resolved is not None:
+        resolved = {"update" if t == "filter" else t for t in resolved}
     if not check_deps:
-        return result
-    if has_viz_tool(result) and not has_viz_deps():
+        return resolved
+    if has_viz_tool(resolved) and not has_viz_deps():
         raise ImportError(
             "Visualization tools require ggsql, altair, shinywidgets, and "
             "vl-convert-python. Install them with: pip install querychat[viz]"
         )
-    return result
+    return resolved

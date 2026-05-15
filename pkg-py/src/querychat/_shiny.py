@@ -104,8 +104,9 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         Default is `("filter", "query")`. The visualization tool (`"visualize"`)
         can be opted into by including it in the tuple.
 
-        Set to `"filter"` to prevent the LLM from accessing data values, only
-        allowing dashboard filtering without answering questions.
+        Pass only `"filter"` to restrict the LLM to dashboard filtering,
+        omitting both the `"query"` and `"visualize"` tools so the LLM
+        cannot access or display any raw data values.
 
         The legacy name `"update"` is still accepted as an alias for `"filter"`.
 

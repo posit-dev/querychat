@@ -12,7 +12,6 @@ _SCHEMA_TAG_RE = re.compile(r"\{\{[{#^/]?\s*schema\b")
 
 if TYPE_CHECKING:
     from ._datasource import DataSource
-    from ._querychat_base import TOOL_GROUPS
 
 
 class QueryChatSystemPrompt:
@@ -62,12 +61,12 @@ class QueryChatSystemPrompt:
         self.categorical_threshold = categorical_threshold
         self.data_source = data_source
 
-    def render(self, tools: tuple[TOOL_GROUPS, ...] | None) -> str:
+    def render(self, tools: set[str] | None) -> str:
         """
         Render system prompt with tool configuration.
 
         Args:
-            tools: Normalized tuple of tool groups to enable (already normalized by caller)
+            tools: Normalized set of tool groups to enable (already normalized by caller)
 
         Returns:
             Fully rendered system prompt string

@@ -255,10 +255,10 @@ dplyr::count(result, cyl, gear)
 #>     cyl  gear     n
 #>   <dbl> <dbl> <dbl>
 #> 1     6     3     2
-#> 2     6     5     1
-#> 3     8     5     2
-#> 4     6     4     4
-#> 5     8     3    12
+#> 2     6     4     4
+#> 3     8     3    12
+#> 4     6     5     1
+#> 5     8     5     2
 
 # Or collect the entire data frame into local memory
 dplyr::collect(result)

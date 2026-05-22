@@ -2,6 +2,12 @@
 
 ## querychat (development version)
 
+- The `tools` parameter now uses `"filter"` as the preferred name
+  (instead of `"update"`) for the dashboard-filtering tool group. The
+  default is now `c("filter", "query")`. The legacy name `"update"` is
+  still accepted everywhere.
+  ([\#222](https://github.com/posit-dev/querychat/issues/222))
+
 - `QueryChat$server()` now accepts a `client` parameter for
   session-scoped chat client overrides. This enables Posit Connect
   managed OAuth workflows where API credentials are only available

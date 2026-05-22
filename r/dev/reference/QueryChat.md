@@ -110,7 +110,7 @@ Create a new QueryChat object.
       id = NULL,
       greeting = NULL,
       client = NULL,
-      tools = c("update", "query"),
+      tools = c("filter", "query"),
       data_description = NULL,
       categorical_threshold = 20,
       extra_instructions = NULL,
@@ -171,11 +171,12 @@ Create a new QueryChat object.
 - `tools`:
 
   Which querychat tools to include in the chat client, by default.
-  `"update"` includes the tools for updating and resetting the dashboard
-  and `"query"` includes the tool for executing SQL queries. Use
-  `tools = "update"` when you only want the dashboard updating tools, or
-  when you want to disable the querying tool entirely to prevent the LLM
-  from seeing any of the data in your dataset.
+  `"filter"` includes the tools for filtering and resetting the
+  dashboard and `"query"` includes the tool for executing SQL queries.
+  Use `tools = "filter"` when you only want the dashboard filtering
+  tools, or when you want to disable the querying tool entirely to
+  prevent the LLM from seeing any of the data in your dataset. The
+  legacy name `"update"` is still accepted as an alias for `"filter"`.
 
 - `data_description`:
 
@@ -231,10 +232,11 @@ data source.
 
 - `tools`:
 
-  Which querychat tools to include in the chat client. `"update"`
-  includes the tools for updating and resetting the dashboard and
+  Which querychat tools to include in the chat client. `"filter"`
+  includes the tools for filtering and resetting the dashboard and
   `"query"` includes the tool for executing SQL queries. By default,
-  when `tools = NA`, the values provided at initialization are used.
+  when `tools = NA`, the values provided at initialization are used. The
+  legacy name `"update"` is still accepted as an alias for `"filter"`.
 
 - `update_dashboard`:
 

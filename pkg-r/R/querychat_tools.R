@@ -93,7 +93,12 @@ tool_query <- function(data_source) {
 
   ellmer::tool(
     function(query, collapsed = NULL, `_intent` = "") {
-      querychat_tool_result(data_source, query, action = "query", collapsed = collapsed)
+      querychat_tool_result(
+        data_source,
+        query,
+        action = "query",
+        collapsed = collapsed
+      )
     },
     name = "querychat_query",
     description = interpolate_package("tool-query.md", db_type = db_type),
@@ -236,7 +241,11 @@ querychat_tool_result <- function(
         title = if (action == "update" && !is.null(title)) title,
         show_request = is_error,
         markdown = display_md,
-        open = if (!is.null(collapsed)) !collapsed else querychat_tool_starts_open(action)
+        open = if (!is.null(collapsed)) {
+          !collapsed
+        } else {
+          querychat_tool_starts_open(action)
+        }
       )
     )
   )

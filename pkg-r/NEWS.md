@@ -1,5 +1,11 @@
 # querychat (development version)
 
+* Tool result cards now start collapsed by default for query, filter, and reset tools. Only the visualize tool starts expanded (where the chart is the primary content). Users can still click to expand any collapsed card to see the SQL query and raw results. The `QUERYCHAT_TOOL_DETAILS` option / `QUERYCHAT_TOOL_DETAILS` environment variable override still works as before. (#239)
+
+* The query tool now accepts an optional `collapsed` parameter, allowing the LLM to explicitly control whether the result card starts expanded or collapsed on a per-call basis. (#239)
+
+* Prompt instructions have been updated so the LLM presents key findings in its response text rather than assuming the user has seen the raw tool result. (#239)
+
 * The `tools` parameter now uses `"filter"` as the preferred name (instead of `"update"`) for the dashboard-filtering tool group. The default is now `c("filter", "query")`. The legacy name `"update"` is still accepted everywhere. (#222)
 
 * `QueryChat$server()` now accepts a `client` parameter for session-scoped chat client overrides. This enables Posit Connect managed OAuth workflows where API credentials are only available inside the Shiny server function. The client spec is stored lazily at construction time and resolved only when needed, so `QueryChat$new(NULL, "table")` no longer requires an API key. (#205)

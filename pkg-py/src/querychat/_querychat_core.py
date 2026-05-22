@@ -25,7 +25,8 @@ from .tools import UpdateDashboardData
 
 GREETING_PROMPT: str = (
     "Please give me a friendly greeting. "
-    "Include a few sample prompts grouped under headings."
+    "Include a few sample suggestions grouped under ##### headings, "
+    "using the suggestion card format from your instructions."
 )
 """Prompt used to generate the initial greeting message."""
 

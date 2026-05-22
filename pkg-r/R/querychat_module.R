@@ -146,4 +146,8 @@ mod_server <- function(
 }
 
 # TODO: Make this dependent on enabled tools
-GREETING_PROMPT <- "Please give me a friendly greeting. Include a few sample prompts grouped under headings."
+GREETING_PROMPT <- paste(
+  "Please give me a friendly greeting.",
+  "Include a few sample suggestions grouped under ##### headings,",
+  "using the suggestion card format from your instructions."
+)

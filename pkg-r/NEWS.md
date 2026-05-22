@@ -1,10 +1,6 @@
 # querychat (development version)
 
-* Tool result cards now start collapsed by default for query and reset tools. Filter and visualize tools remain expanded (filter shows an action button; visualize shows the chart). Users can still click to expand any collapsed card to see the SQL query and raw results. The `QUERYCHAT_TOOL_DETAILS` option / `QUERYCHAT_TOOL_DETAILS` environment variable override still works as before. (#239)
-
-* The query tool now accepts an optional `collapsed` parameter, allowing the LLM to explicitly control whether the result card starts expanded or collapsed on a per-call basis. (#239)
-
-* Prompt instructions have been updated so the LLM presents key findings in its response text rather than assuming the user has seen the raw tool result. (#239)
+* The query tool result card now starts collapsed by default. Users can still expand it to see the SQL query and results. (#239)
 
 * The `tools` parameter now uses `"filter"` as the preferred name (instead of `"update"`) for the dashboard-filtering tool group. The default is now `c("filter", "query")`. The legacy name `"update"` is still accepted everywhere. (#222)
 

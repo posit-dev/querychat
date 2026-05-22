@@ -1,6 +1,6 @@
 # querychat (development version)
 
-* The query tool result card now starts collapsed by default. Users can still expand it to see the SQL query and results. (#239)
+* The query tool result card now starts collapsed by default. Users can still expand it to see the SQL query and results. Set `QUERYCHAT_TOOL_DETAILS=expanded` (or `options(querychat.tool_details = "expanded")`) to restore the previous behavior. (#239)
 
 * The `tools` parameter now uses `"filter"` as the preferred name (instead of `"update"`) for the dashboard-filtering tool group. The default is now `c("filter", "query")`. The legacy name `"update"` is still accepted everywhere. (#222)
 

@@ -24,7 +24,6 @@ if TYPE_CHECKING:
     from shiny import Inputs, Outputs, Session
 
     from ._datasource import DataSource
-    from ._querychat_base import TOOL_GROUPS
     from ._viz_tools import VisualizeData
     from .types import UpdateDashboardData
 
@@ -123,7 +122,7 @@ def mod_server(
     greeting: str | None,
     client: Callable[..., chatlas.Chat],
     enable_bookmarking: bool,
-    tools: tuple[TOOL_GROUPS, ...] | None = None,
+    tools: set[str] | None = None,
 ) -> ServerValues[IntoFrameT]:
     # Reactive values to store state
     sql = ReactiveStringOrNone(None)

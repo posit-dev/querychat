@@ -271,7 +271,7 @@ def test_callable_mod_server_passes_visualize_callback_and_tools(sample_df):
             tools=qc.tools,
         )
 
-    assert captured["tools"] == ("query", "visualize")
+    assert captured["tools"] == {"query", "visualize"}
     assert callable(captured["visualize"])
     assert callable(captured["update_dashboard"])
     assert callable(captured["reset_dashboard"])

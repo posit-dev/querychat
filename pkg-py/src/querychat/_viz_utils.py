@@ -9,7 +9,7 @@ from htmltools import HTMLDependency, tags
 from .__version import __version__
 
 
-def has_viz_tool(tools: tuple[str, ...] | None) -> bool:
+def has_viz_tool(tools: set[str] | None) -> bool:
     """Check if visualize is among the configured tools."""
     return tools is not None and "visualize" in tools
 

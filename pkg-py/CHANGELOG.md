@@ -7,19 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Improvements
+
+* The `tools` parameter now uses `"filter"` as the preferred name (instead of `"update"`) for the dashboard-filtering tool group. The default is now `("filter", "query")`. The legacy name `"update"` is still accepted everywhere. (#222)
+* When a custom `prompt_template` is provided that doesn't contain Mustache references to `{{schema}}`, the expensive `get_schema()` call is now skipped entirely. This allows users with large databases to avoid slow startup by providing their own prompt that includes schema information inline (or omits it). (#208)
+
 ### New features
 
-* Added a `"visualize"` tool that lets the LLM create inline Altair charts from natural language requests using [ggsql](https://github.com/posit-dev/ggsql) — a SQL extension for declarative data visualization. Include it via `tools=("query", "visualize")` (or alongside `"update"`). Charts render inline in the chat with fullscreen support, a "Show Query" toggle, and Save as PNG/SVG. Install the optional dependencies with `pip install querychat[viz]`. (#219)
+* Added a `"visualize"` tool that lets the LLM create inline Altair charts from natural language requests using [ggsql](https://github.com/posit-dev/ggsql) — a SQL extension for declarative data visualization. Include it via `tools=("query", "visualize")` (or alongside `"filter"`; `"update"` remains a legacy alias). Charts render inline in the chat with fullscreen support, a "Show Query" toggle, and Save as PNG/SVG. Install the optional dependencies with `pip install querychat[viz]`. (#219)
 
 * `QueryChat()` now supports deferred chat client initialization. Pass `client=` to `server()` to provide a session-scoped chat client, enabling use cases where API credentials are only available at session time (e.g., Posit Connect managed OAuth tokens). When no `client` is specified anywhere, querychat resolves a sensible default from the `QUERYCHAT_CLIENT` environment variable (or `"openai"`). (#205)
 
 * Added support for Snowflake Semantic Views. When connected to Snowflake (via SQLAlchemy or Ibis), querychat automatically discovers available Semantic Views and includes their definitions in the system prompt. This helps the LLM generate correct queries using the `SEMANTIC_VIEW()` table function with certified business metrics and dimensions. (#200)
 
 * The `querychat_query` tool now accepts an optional `collapsed` parameter. When `collapsed=True`, the result card starts collapsed so preparatory or exploratory queries don't clutter the conversation. The LLM is guided to use this automatically when running queries before a visualization.
-
-### Improvements
-
-* When a custom `prompt_template` is provided that doesn't contain Mustache references to `{{schema}}`, the expensive `get_schema()` call is now skipped entirely. This allows users with large databases to avoid slow startup by providing their own prompt that includes schema information inline (or omits it). (#208)
 
 ## [0.5.1] - 2026-01-23
 

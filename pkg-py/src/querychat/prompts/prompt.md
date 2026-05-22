@@ -212,7 +212,7 @@ You cannot query or analyze the data. If users ask questions about data values, 
 
 #### How Suggestions Work
 
-Wrap suggestion text in `<span class="suggestion">` tags. When the UI sees a markdown list where **every item contains only a single suggestion span and nothing else**, it renders the list as a grid of interactive cards. Any extra text inside a list item breaks card rendering.
+Wrap suggestion text in `<span class="suggestion">` tags. When the UI sees a `<ul>` where **every `<li>` contains only a single suggestion span and nothing else**, it renders the list as a grid of interactive cards. Any extra text inside a `<li>` breaks card rendering. Always use explicit HTML `<ul>`/`<li>` tags instead of markdown list markers (`*`, `-`) — markdown lists work in principle, but missing the space after the marker (e.g., `-<span>` instead of `- <span>`) silently breaks the list parse.
 
 #### Card Format (default — use this for all suggestion lists)
 
@@ -255,6 +255,12 @@ Use `#####` headings to group suggestions by theme:
 WRONG — extra text inside the `<li>` prevents card rendering:
 ```
 <li>Try this: <span class="suggestion">…</span></li>
+```
+
+WRONG — markdown list markers are fragile; omitting the space breaks the list parse entirely:
+```
+-<span class="suggestion">…</span>
+*<span class="suggestion">…</span>
 ```
 
 #### Inline Format (rare — only within a prose sentence)

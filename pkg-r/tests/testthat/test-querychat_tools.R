@@ -25,7 +25,7 @@ describe("querychat_tool_starts_open()", {
     withr::local_envvar(QUERYCHAT_TOOL_DETAILS = NA)
 
     expect_false(querychat_tool_starts_open("query"))
-    expect_false(querychat_tool_starts_open("update"))
+    expect_true(querychat_tool_starts_open("update"))
     expect_false(querychat_tool_starts_open("reset"))
   })
 
@@ -34,7 +34,7 @@ describe("querychat_tool_starts_open()", {
     withr::local_envvar(QUERYCHAT_TOOL_DETAILS = "default")
 
     expect_false(querychat_tool_starts_open("query"))
-    expect_false(querychat_tool_starts_open("update"))
+    expect_true(querychat_tool_starts_open("update"))
     expect_false(querychat_tool_starts_open("reset"))
   })
 
@@ -42,7 +42,7 @@ describe("querychat_tool_starts_open()", {
     withr::local_options(querychat.tool_details = "default")
 
     expect_false(querychat_tool_starts_open("query"))
-    expect_false(querychat_tool_starts_open("update"))
+    expect_true(querychat_tool_starts_open("update"))
     expect_false(querychat_tool_starts_open("reset"))
   })
 

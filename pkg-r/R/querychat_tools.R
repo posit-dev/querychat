@@ -155,14 +155,14 @@ querychat_tool_starts_open <- function(action) {
   setting <- querychat_tool_details_option()
 
   if (is.null(setting)) {
-    return(action == "visualize")
+    return(action %in% c("update", "visualize"))
   }
 
   switch(
     setting,
     "expanded" = TRUE,
     "collapsed" = FALSE,
-    action == "visualize"
+    action %in% c("update", "visualize")
   )
 }
 

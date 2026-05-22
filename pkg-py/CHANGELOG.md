@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Improvements
 
-* Tool result cards now start collapsed by default for query, filter, and reset tools. Only the visualize tool starts expanded (where the chart is the primary content). Users can still click to expand any collapsed card to see the SQL query and raw results. The `QUERYCHAT_TOOL_DETAILS` environment variable override still works as before. Prompt instructions have also been updated so the LLM presents key findings in its response text rather than assuming the user has seen the raw tool result. (#239)
+* Tool result cards now start collapsed by default for query and reset tools. Filter and visualize tools remain expanded (filter shows an action button; visualize shows the chart). Users can still click to expand any collapsed card to see the SQL query and raw results. The `QUERYCHAT_TOOL_DETAILS` environment variable override still works as before. Prompt instructions have also been updated so the LLM presents key findings in its response text rather than assuming the user has seen the raw tool result. (#239)
 
 * The `tools` parameter now uses `"filter"` as the preferred name (instead of `"update"`) for the dashboard-filtering tool group. The default is now `("filter", "query")`. The legacy name `"update"` is still accepted everywhere. (#222)
 * When a custom `prompt_template` is provided that doesn't contain Mustache references to `{{schema}}`, the expensive `get_schema()` call is now skipped entirely. This allows users with large databases to avoid slow startup by providing their own prompt that includes schema information inline (or omits it). (#208)

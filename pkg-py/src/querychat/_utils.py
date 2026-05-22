@@ -241,14 +241,14 @@ def querychat_tool_starts_open(
     setting = get_tool_details_setting()
 
     if setting is None:
-        return action == "visualize"
+        return action in ("update", "visualize")
 
     if setting == "expanded":
         return True
     elif setting == "collapsed":
         return False
     else:  # setting == "default"
-        return action == "visualize"
+        return action in ("update", "visualize")
 
 
 def is_ibis_table(obj: Any) -> TypeGuard[ibis.Table]:

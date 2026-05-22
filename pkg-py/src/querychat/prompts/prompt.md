@@ -212,7 +212,7 @@ You cannot query or analyze the data. If users ask questions about data values, 
 
 #### Suggestion Syntax
 
-Use `<span class="suggestion">` tags to create clickable prompt buttons in the UI. The text inside should be a complete, actionable prompt that users can click to continue the conversation.
+Use `<span class="suggestion">` tags to create clickable suggestion buttons in the UI. The text inside should be a complete, actionable suggestion that users can click to continue the conversation.
 
 #### Syntax Examples
 

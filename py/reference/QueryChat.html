@@ -357,7 +357,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Start an interactive console chat</span></span>
 <span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>qc.console()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p><strong>Privacy-focused mode:</strong> Only allow dashboard filtering, ensuring the LLM can’t see any raw data.</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(df, <span class="st">"my_data"</span>, tools<span class="op">=</span><span class="st">"update"</span>)</span>
+<div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(df, <span class="st">"my_data"</span>, tools<span class="op">=</span><span class="st">"filter"</span>)</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>qc.app()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
 <section id="parameters" class="level2 doc-section doc-section-parameters">
@@ -405,7 +405,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr class="even">
 <td>tools</td>
 <td><code>TOOL_GROUPS</code> | <a href="https://docs.python.org/3/library/stdtypes.html#tuple">tuple</a>[<code>TOOL_GROUPS</code>, …] | None</td>
-<td>Which querychat tools to include in the chat client by default. Can be: - A single tool string: <code>"update"</code> or <code>"query"</code> - A tuple of tools: <code>("update", "query", "visualize")</code> - <code>None</code> or <code>()</code> to disable all tools Default is <code>("update", "query")</code>. The visualization tool (<code>"visualize"</code>) can be opted into by including it in the tuple. Set to <code>"update"</code> to prevent the LLM from accessing data values, only allowing dashboard filtering without answering questions. The tools can be overridden per-client by passing a different <code>tools</code> parameter to the <code>.client()</code> method.</td>
+<td>Which querychat tools to include in the chat client by default. Can be: - A single tool string: <code>"filter"</code> or <code>"query"</code> - A tuple of tools: <code>("filter", "query", "visualize")</code> - <code>None</code> or <code>()</code> to disable all tools Default is <code>("filter", "query")</code>. The visualization tool (<code>"visualize"</code>) can be opted into by including it in the tuple. Pass only <code>"filter"</code> to restrict the LLM to dashboard filtering, omitting both the <code>"query"</code> and <code>"visualize"</code> tools so the LLM cannot access or display any raw data values. The legacy name <code>"update"</code> is still accepted as an alias for <code>"filter"</code>. The tools can be overridden per-client by passing a different <code>tools</code> parameter to the <code>.client()</code> method.</td>
 <td><code>DEFAULT_TOOLS</code></td>
 </tr>
 <tr class="odd">
@@ -580,7 +580,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr class="odd">
 <td>tools</td>
 <td><code>TOOL_GROUPS</code> | <a href="https://docs.python.org/3/library/stdtypes.html#tuple">tuple</a>[<code>TOOL_GROUPS</code>, …] | None | <code>MISSING_TYPE</code></td>
-<td>Which tools to include: <code>"update"</code>, <code>"query"</code>, <code>"visualize"</code>, or a combination.</td>
+<td>Which tools to include: <code>"filter"</code>, <code>"query"</code>, <code>"visualize"</code>, or a combination. The legacy name <code>"update"</code> is still accepted as an alias for <code>"filter"</code>.</td>
 <td><code>MISSING</code></td>
 </tr>
 <tr class="even">

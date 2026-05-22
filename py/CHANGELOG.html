@@ -133,8 +133,8 @@ ul.task-list li input[type="checkbox"] {
   <ul class="collapse">
   <li><a href="#unreleased" id="toc-unreleased" class="nav-link" data-scroll-target="#unreleased">[Unreleased]</a>
   <ul class="collapse">
-  <li><a href="#new-features" id="toc-new-features" class="nav-link" data-scroll-target="#new-features">New features</a></li>
   <li><a href="#improvements" id="toc-improvements" class="nav-link" data-scroll-target="#improvements">Improvements</a></li>
+  <li><a href="#new-features" id="toc-new-features" class="nav-link" data-scroll-target="#new-features">New features</a></li>
   </ul></li>
   <li><a href="#section" id="toc-section" class="nav-link" data-scroll-target="#section">[0.5.1] - 2026-01-23</a>
   <ul class="collapse">
@@ -178,19 +178,20 @@ ul.task-list li input[type="checkbox"] {
 <p>The format is based on <a href="https://keepachangelog.com/en/1.1.0/">Keep a Changelog</a>, and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
 <section id="unreleased" class="level2">
 <h2 class="anchored" data-anchor-id="unreleased">[Unreleased]</h2>
-<section id="new-features" class="level3">
-<h3 class="anchored" data-anchor-id="new-features">New features</h3>
-<ul>
-<li><p>Added a <code>"visualize"</code> tool that lets the LLM create inline Altair charts from natural language requests using <a href="https://github.com/posit-dev/ggsql">ggsql</a> — a SQL extension for declarative data visualization. Include it via <code>tools=("query", "visualize")</code> (or alongside <code>"update"</code>). Charts render inline in the chat with fullscreen support, a “Show Query” toggle, and Save as PNG/SVG. Install the optional dependencies with <code>pip install querychat[viz]</code>. (#219)</p></li>
-<li><p><code>QueryChat()</code> now supports deferred chat client initialization. Pass <code>client=</code> to <code>server()</code> to provide a session-scoped chat client, enabling use cases where API credentials are only available at session time (e.g., Posit Connect managed OAuth tokens). When no <code>client</code> is specified anywhere, querychat resolves a sensible default from the <code>QUERYCHAT_CLIENT</code> environment variable (or <code>"openai"</code>). (#205)</p></li>
-<li><p>Added support for Snowflake Semantic Views. When connected to Snowflake (via SQLAlchemy or Ibis), querychat automatically discovers available Semantic Views and includes their definitions in the system prompt. This helps the LLM generate correct queries using the <code>SEMANTIC_VIEW()</code> table function with certified business metrics and dimensions. (#200)</p></li>
-<li><p>The <code>querychat_query</code> tool now accepts an optional <code>collapsed</code> parameter. When <code>collapsed=True</code>, the result card starts collapsed so preparatory or exploratory queries don’t clutter the conversation. The LLM is guided to use this automatically when running queries before a visualization.</p></li>
-</ul>
-</section>
 <section id="improvements" class="level3">
 <h3 class="anchored" data-anchor-id="improvements">Improvements</h3>
 <ul>
+<li>The <code>tools</code> parameter now uses <code>"filter"</code> as the preferred name (instead of <code>"update"</code>) for the dashboard-filtering tool group. The default is now <code>("filter", "query")</code>. The legacy name <code>"update"</code> is still accepted everywhere. (#222)</li>
 <li>When a custom <code>prompt_template</code> is provided that doesn’t contain Mustache references to <code>{schema}</code>, the expensive <code>get_schema()</code> call is now skipped entirely. This allows users with large databases to avoid slow startup by providing their own prompt that includes schema information inline (or omits it). (#208)</li>
+</ul>
+</section>
+<section id="new-features" class="level3">
+<h3 class="anchored" data-anchor-id="new-features">New features</h3>
+<ul>
+<li><p>Added a <code>"visualize"</code> tool that lets the LLM create inline Altair charts from natural language requests using <a href="https://github.com/posit-dev/ggsql">ggsql</a> — a SQL extension for declarative data visualization. Include it via <code>tools=("query", "visualize")</code> (or alongside <code>"filter"</code>; <code>"update"</code> remains a legacy alias). Charts render inline in the chat with fullscreen support, a “Show Query” toggle, and Save as PNG/SVG. Install the optional dependencies with <code>pip install querychat[viz]</code>. (#219)</p></li>
+<li><p><code>QueryChat()</code> now supports deferred chat client initialization. Pass <code>client=</code> to <code>server()</code> to provide a session-scoped chat client, enabling use cases where API credentials are only available at session time (e.g., Posit Connect managed OAuth tokens). When no <code>client</code> is specified anywhere, querychat resolves a sensible default from the <code>QUERYCHAT_CLIENT</code> environment variable (or <code>"openai"</code>). (#205)</p></li>
+<li><p>Added support for Snowflake Semantic Views. When connected to Snowflake (via SQLAlchemy or Ibis), querychat automatically discovers available Semantic Views and includes their definitions in the system prompt. This helps the LLM generate correct queries using the <code>SEMANTIC_VIEW()</code> table function with certified business metrics and dimensions. (#200)</p></li>
+<li><p>The <code>querychat_query</code> tool now accepts an optional <code>collapsed</code> parameter. When <code>collapsed=True</code>, the result card starts collapsed so preparatory or exploratory queries don’t clutter the conversation. The LLM is guided to use this automatically when running queries before a visualization.</p></li>
 </ul>
 </section>
 </section>

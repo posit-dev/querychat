@@ -2,8 +2,6 @@ Execute a SQL query and return the results
 
 This tool executes a {{db_type}} SQL SELECT query against the database and returns the raw result data for analysis.
 
-**Returns:** The tabular data results from executing the SQL query. The query results will be visible to the user in the interface, so you must interpret and explain the data in natural language after receiving it.
-
 **When to use:** Call this tool whenever the user asks a question that requires data analysis, aggregation, or calculations. Use this for questions like:
 - "What is the average...?"
 - "How many records...?"
@@ -20,5 +18,6 @@ Always use SQL for counting, averaging, summing, and other calculations—NEVER 
 - Queries must be valid {{db_type}} SQL SELECT statements
 - Optimize for readability over efficiency—use clear column aliases and SQL comments to explain complex logic
 - Subqueries and CTEs are acceptable and encouraged for complex calculations
-- After receiving results, provide an explanation of the answer and an overview of how you arrived at it, if not already explained in SQL comments
-- The user can see your SQL query, they will follow up with detailed explanations if needed
+- After receiving results, always present the key findings in your response text — the tool result starts collapsed by default, so don't assume the user has seen the raw data
+- When the result is a single value or small summary, state it directly in prose. When the result is a table that IS the answer, either use a Markdown table in your response or set `collapsed` to `false` — not both
+- Do not reproduce large result sets in your response — summarize the key takeaways instead

@@ -92,8 +92,8 @@ tool_query <- function(data_source) {
   db_type <- data_source$get_db_type()
 
   ellmer::tool(
-    function(query, `_intent` = "") {
-      querychat_tool_result(data_source, query, action = "query")
+    function(query, collapsed = NULL, `_intent` = "") {
+      querychat_tool_result(data_source, query, action = "query", collapsed = collapsed)
     },
     name = "querychat_query",
     description = interpolate_package("tool-query.md", db_type = db_type),
@@ -103,6 +103,10 @@ tool_query <- function(data_source) {
           "A valid {{db_type}} SQL SELECT statement. Must follow the database schema provided in the system prompt. Use clear column aliases (e.g., 'AVG(price) AS avg_price') and include SQL comments for complex logic. Subqueries and CTEs are encouraged for readability.",
           db_type = db_type
         )
+      ),
+      collapsed = ellmer::type_boolean(
+        "Optional (default: true). The result card starts collapsed by default; the user can expand it to see the query and results. Set to false when the query result table is the primary answer to the user's question and should be immediately visible without expanding.",
+        required = FALSE
       ),
       `_intent` = ellmer::type_string(
         "A brief, user-friendly description of what this query calculates or retrieves."
@@ -146,14 +150,14 @@ querychat_tool_starts_open <- function(action) {
   setting <- querychat_tool_details_option()
 
   if (is.null(setting)) {
-    return(action != "reset")
+    return(action == "visualize")
   }
 
   switch(
     setting,
     "expanded" = TRUE,
     "collapsed" = FALSE,
-    action != "reset"
+    action == "visualize"
   )
 }
 
@@ -161,7 +165,8 @@ querychat_tool_result <- function(
   data_source,
   query,
   title = NULL,
-  action = "update"
+  action = "update",
+  collapsed = NULL
 ) {
   action <- arg_match(action, c("update", "query", "reset"))
 
@@ -231,7 +236,7 @@ querychat_tool_result <- function(
         title = if (action == "update" && !is.null(title)) title,
         show_request = is_error,
         markdown = display_md,
-        open = querychat_tool_starts_open(action)
+        open = if (!is.null(collapsed)) !collapsed else querychat_tool_starts_open(action)
       )
     )
   )

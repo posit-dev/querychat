@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Improvements
 
 * The `tools` parameter now uses `"filter"` as the preferred name (instead of `"update"`) for the dashboard-filtering tool group. The default is now `("filter", "query")`. The legacy name `"update"` is still accepted everywhere. (#222)
+* Suggestion prompts now render more reliably as interactive cards across LLM providers. (#236, #238)
+* Bumped minimum `ggsql` version to >=0.3.2. (#233)
 
 ## [0.6.0] - 2026-05-06
 

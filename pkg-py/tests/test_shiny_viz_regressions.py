@@ -31,6 +31,11 @@ def sample_df():
     return tips()
 
 
+class DummyInput(SimpleNamespace):
+    def __getitem__(self, key):
+        return getattr(self, key, lambda: None)
+
+
 def _identity(fn):
     return fn
 
@@ -219,7 +224,7 @@ def test_mod_server_rejects_raw_chat_instance(sample_df):
         pytest.raises(TypeError, match="callable"),
     ):
         _raw_mod_server()(
-            SimpleNamespace(chat_update=lambda: None, chat_cancel=lambda: None),
+            DummyInput(chat_update=lambda: None),
             SimpleNamespace(),
             DummySession(),
             data_source=qc.data_source,
@@ -234,7 +239,7 @@ def test_mod_server_stub_session_deferred_client_factory_does_not_raise():
     qc = QueryChat(None, "users")
 
     vals = _raw_mod_server()(
-        SimpleNamespace(chat_update=lambda: None, chat_cancel=lambda: None),
+        DummyInput(chat_update=lambda: None),
         SimpleNamespace(),
         DummyStubSession(),
         data_source=None,
@@ -261,7 +266,7 @@ def test_callable_mod_server_passes_visualize_callback_and_tools(sample_df):
         patch("querychat._shiny_module.shinychat.Chat", DummyChatUi),
     ):
         _raw_mod_server()(
-            SimpleNamespace(chat_update=lambda: None, chat_cancel=lambda: None),
+            DummyInput(chat_update=lambda: None),
             SimpleNamespace(),
             DummySession(),
             data_source=qc.data_source,
@@ -290,7 +295,7 @@ def test_mod_server_preloads_viz_for_each_real_session_instance(sample_df):
         patch("querychat._shiny_module.shinychat.Chat", DummyChatUi),
     ):
         _raw_mod_server()(
-            SimpleNamespace(chat_update=lambda: None, chat_cancel=lambda: None),
+            DummyInput(chat_update=lambda: None),
             SimpleNamespace(),
             session,
             data_source=qc.data_source,
@@ -300,7 +305,7 @@ def test_mod_server_preloads_viz_for_each_real_session_instance(sample_df):
             tools=qc.tools,
         )
         _raw_mod_server()(
-            SimpleNamespace(chat_update=lambda: None, chat_cancel=lambda: None),
+            DummyInput(chat_update=lambda: None),
             SimpleNamespace(),
             session,
             data_source=qc.data_source,
@@ -325,7 +330,7 @@ def test_mod_server_stub_session_does_not_preload_viz(sample_df):
         patch("querychat._shiny_module.shinychat.Chat", DummyChatUi),
     ):
         _raw_mod_server()(
-            SimpleNamespace(chat_update=lambda: None, chat_cancel=lambda: None),
+            DummyInput(chat_update=lambda: None),
             SimpleNamespace(),
             DummyStubSession(),
             data_source=qc.data_source,
@@ -356,7 +361,7 @@ def test_restored_viz_widgets_survive_second_bookmark_cycle(sample_df):
         ),
     ):
         _raw_mod_server()(
-            SimpleNamespace(chat_update=lambda: None, chat_cancel=lambda: None),
+            DummyInput(chat_update=lambda: None),
             SimpleNamespace(),
             session,
             data_source=qc.data_source,

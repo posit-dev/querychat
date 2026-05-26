@@ -202,7 +202,7 @@ def mod_server(
         await chat_ui.append_message_stream(stream)
 
     @reactive.effect
-    @reactive.event(input.chat_cancel)
+    @reactive.event(input[f"{CHAT_ID}_cancel"])
     def _handle_cancel():
         ctrl.cancel()
 

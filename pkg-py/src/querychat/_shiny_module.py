@@ -60,7 +60,8 @@ def mod_ui(*, preload_viz: bool = False, **kwargs):
     css_path = Path(__file__).parent / "static" / "css" / "styles.css"
     js_path = Path(__file__).parent / "static" / "js" / "querychat.js"
 
-    tag = shinychat.chat_ui(CHAT_ID, enable_cancel=True, **kwargs)
+    kwargs.setdefault("enable_cancel", True)
+    tag = shinychat.chat_ui(CHAT_ID, **kwargs)
     tag.add_class("querychat")
 
     return ui.TagList(

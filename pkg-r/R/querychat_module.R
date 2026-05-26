@@ -1,5 +1,5 @@
 # Main module UI function
-mod_ui <- function(id, ...) {
+mod_ui <- function(id, ..., enable_cancel = TRUE) {
   ns <- shiny::NS(id)
   htmltools::tagList(
     htmltools::htmlDependency(
@@ -14,7 +14,7 @@ mod_ui <- function(id, ...) {
       ns("chat"),
       height = "100%",
       class = "querychat",
-      enable_cancel = TRUE,
+      enable_cancel = enable_cancel,
       ...
     )
   )

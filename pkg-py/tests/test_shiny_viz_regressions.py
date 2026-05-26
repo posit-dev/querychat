@@ -32,7 +32,7 @@ def sample_df():
 
 
 class DummyInput(SimpleNamespace):
-    def __getitem__(self, key):
+    def __getitem__(self, key):  # noqa: D105
         return getattr(self, key, lambda: None)
 
 

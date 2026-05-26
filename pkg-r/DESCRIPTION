@@ -54,5 +54,7 @@ VignetteBuilder:
 Config/roxygen2/version: 8.0.0
 Config/testthat/edition: 3
 Config/testthat/parallel: true
+Remotes:
+    posit-dev/shinychat/pkg-r
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

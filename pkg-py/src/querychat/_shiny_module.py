@@ -60,7 +60,7 @@ def mod_ui(*, preload_viz: bool = False, **kwargs):
     css_path = Path(__file__).parent / "static" / "css" / "styles.css"
     js_path = Path(__file__).parent / "static" / "js" / "querychat.js"
 
-    tag = shinychat.chat_ui(CHAT_ID, **kwargs)
+    tag = shinychat.chat_ui(CHAT_ID, enable_cancel=True, **kwargs)
     tag.add_class("querychat")
 
     return ui.TagList(
@@ -193,12 +193,18 @@ def mod_server(
 
     # Chat UI logic
     chat_ui = shinychat.Chat(CHAT_ID)
+    ctrl = chatlas.StreamController()
 
     # Handle user input
     @chat_ui.on_user_submit
     async def _(user_input: str):
-        stream = await chat.stream_async(user_input, echo="none", content="all")
+        stream = await chat.stream_async(user_input, echo="none", content="all", controller=ctrl)
         await chat_ui.append_message_stream(stream)
+
+    @reactive.effect
+    @reactive.event(input.chat_cancel)
+    def _handle_cancel():
+        ctrl.cancel()
 
     @reactive.effect
     async def greet_on_startup():

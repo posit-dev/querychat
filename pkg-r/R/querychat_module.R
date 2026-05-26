@@ -14,6 +14,7 @@ mod_ui <- function(id, ...) {
       ns("chat"),
       height = "100%",
       class = "querychat",
+      enable_cancel = TRUE,
       ...
     )
   )
@@ -91,11 +92,14 @@ mod_server <- function(
       has_greeted(TRUE)
     })
 
+    ctrl <- ellmer::stream_controller()
+
     append_stream_task <- shiny::ExtendedTask$new(
-      function(client, user_input) {
+      function(client, user_input, controller = NULL) {
         stream <- client$stream_async(
           user_input,
-          stream = "content"
+          stream = "content",
+          controller = controller
         )
 
         p <- promises::promise_resolve(stream)
@@ -106,7 +110,11 @@ mod_server <- function(
     )
 
     shiny::observeEvent(input$chat_user_input, label = "on_chat_user_input", {
-      append_stream_task$invoke(chat, input$chat_user_input)
+      append_stream_task$invoke(chat, input$chat_user_input, controller = ctrl)
+    })
+
+    shiny::observeEvent(input$chat_cancel, label = "on_chat_cancel", {
+      ctrl$cancel()
     })
 
     shiny::observeEvent(input$chat_update, label = "on_chat_update", {

@@ -1,5 +1,7 @@
 # querychat (development version)
 
+* Added stream cancellation support. A stop button now appears during LLM streaming, allowing users to cancel in-progress responses by clicking it or pressing Escape. Cancellation is enabled by default and can be disabled via `enable_cancel = FALSE` in the UI. (#241)
+
 * The `tools` parameter now uses `"filter"` as the preferred name (instead of `"update"`) for the dashboard-filtering tool group. The default is now `c("filter", "query")`. The legacy name `"update"` is still accepted everywhere. (#222)
 
 * `QueryChat$server()` now accepts a `client` parameter for session-scoped chat client overrides. This enables Posit Connect managed OAuth workflows where API credentials are only available inside the Shiny server function. The client spec is stored lazily at construction time and resolved only when needed, so `QueryChat$new(NULL, "table")` no longer requires an API key. (#205)

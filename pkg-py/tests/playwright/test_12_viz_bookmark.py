@@ -78,14 +78,11 @@ class TestVizBookmarkRestore:
 
         page.goto(app_viz_bookmark)
         page.wait_for_selector("shiny-chat-container", timeout=30_000)
-
-        # Wait for the greeting bookmark URL to be set first
-        # (bookmark_on="response" auto-bookmarks after greeting)
-        page.wait_for_function(
-            "() => window.location.search.includes('_state_id_=')",
-            timeout=30_000,
+        expect(chat_viz_bookmark.loc_latest_message).to_contain_text(
+            "Welcome", timeout=30_000
         )
-        self.greeting_url = page.url
+
+        self.pre_viz_url = page.url
 
         # Create a visualization
         chat_viz_bookmark.set_user_input(VIZ_PROMPT)
@@ -100,11 +97,11 @@ class TestVizBookmarkRestore:
         )
 
     def _wait_for_viz_bookmark_url(self) -> str:
-        """Wait for the URL to update from the greeting bookmark to the viz bookmark."""
-        greeting_search = self.greeting_url.split("?", 1)[1] if "?" in self.greeting_url else ""
+        """Wait for the bookmark URL to include the viz state."""
+        pre_search = self.pre_viz_url.split("?", 1)[1] if "?" in self.pre_viz_url else ""
         self.page.wait_for_function(
-            "(greetingSearch) => window.location.search.includes('_state_id_=') && window.location.search !== '?' + greetingSearch",
-            arg=greeting_search,
+            "(preSearch) => window.location.search.includes('_state_id_=') && window.location.search !== '?' + preSearch",
+            arg=pre_search,
             timeout=30_000,
         )
         return self.page.url
@@ -112,7 +109,7 @@ class TestVizBookmarkRestore:
     def test_bookmark_url_updates_after_viz(self) -> None:
         """BOOKMARK-VIZ-URL: URL should update with new state ID after viz is created."""
         url = self._wait_for_viz_bookmark_url()
-        assert url != self.greeting_url, "URL should have changed after viz bookmarking"
+        assert url != self.pre_viz_url, "URL should have changed after viz bookmarking"
 
     def test_viz_widget_renders_on_bookmark_restore(self, context: BrowserContext) -> None:
         """BOOKMARK-VIZ-RESTORE: Restored bookmark should re-render the chart widget, not just the HTML shell."""

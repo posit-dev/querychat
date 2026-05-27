@@ -45,7 +45,10 @@ tool_visualize_impl <- function(data_source, session, update_fn) {
 }
 
 random_hex <- function(n_bytes = 8) {
-  paste0(format(as.hexmode(sample(256, n_bytes, replace = TRUE) - 1L), width = 2), collapse = "")
+  paste0(
+    format(as.hexmode(sample(256, n_bytes, replace = TRUE) - 1L), width = 2),
+    collapse = ""
+  )
 }
 
 visualize_result <- function(

@@ -229,12 +229,22 @@ Use explicit HTML `<ul>`/`<li>` tags instead of markdown list markers (`*`, `-`)
 
 **Grouped suggestions:**
 ```
+{{#has_tool_query}}
 ##### Analyze the data
 <ul>
 <li><span class="suggestion">What's the average …?</span></li>
 <li><span class="suggestion">How many …?</span></li>
 </ul>
 
+{{/has_tool_query}}
+{{#has_tool_visualize}}
+##### Visualize the data
+<ul>
+<li><span class="suggestion">Show a bar chart of …</span></li>
+<li><span class="suggestion">Plot the trend of … over time</span></li>
+</ul>
+
+{{/has_tool_visualize}}
 ##### Filter and sort
 <ul>
 <li><span class="suggestion">Show records from the year …</span></li>

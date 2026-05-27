@@ -44,6 +44,10 @@ tool_visualize_impl <- function(data_source, session, update_fn) {
   }
 }
 
+random_hex <- function(n_bytes = 8) {
+  paste0(format(as.hexmode(sample(256, n_bytes, replace = TRUE) - 1L), width = 2), collapse = "")
+}
+
 visualize_result <- function(
   data_source,
   session,
@@ -68,10 +72,7 @@ visualize_result <- function(
 
   spec <- execute_ggsql(data_source, validated)
 
-  widget_id <- paste0(
-    "querychat_viz_",
-    format(as.hexmode(sample.int(.Machine$integer.max, 1)), width = 8)
-  )
+  widget_id <- paste0("querychat_viz_", random_hex())
 
   viz_container <- NULL
   if (!is.null(session)) {
@@ -171,10 +172,7 @@ build_viz_footer <- function(
   widget_id,
   dom_widget_id
 ) {
-  footer_id <- paste0(
-    "querychat_footer_",
-    format(as.hexmode(sample.int(.Machine$integer.max, 1)), width = 8)
-  )
+  footer_id <- paste0("querychat_footer_", random_hex())
   query_section_id <- paste0(footer_id, "_query")
   code_editor_id <- paste0(footer_id, "_code")
 

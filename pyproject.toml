@@ -71,9 +71,6 @@ required-environments = [
     "sys_platform == 'darwin'",
 ]
 
-[tool.uv.sources]
-shinychat = { git = "https://github.com/posit-dev/shinychat" }
-
 [tool.hatch.build.targets.wheel]
 packages = ["pkg-py/src/querychat"]
 include = ["py.typed"]

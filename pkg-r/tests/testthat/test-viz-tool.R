@@ -342,6 +342,40 @@ describe("tool_visualize_dashboard()", {
     )
   })
 
+  it("passes the namespaced DOM id into the footer", {
+    ds <- local_data_frame_source(new_test_df())
+    session <- structure(
+      list(
+        output = list(),
+        ns = function(id) paste0("repro-", id)
+      ),
+      class = "MockShinySession"
+    )
+    footer_data <- NULL
+    local_mocked_bindings(
+      build_viz_footer = function(...) {
+        footer_data <<- list(...)
+        htmltools::tagList()
+      },
+      .package = "querychat"
+    )
+    tool <- tool_visualize_dashboard(
+      ds,
+      session = session,
+      update_fn = function(data) {}
+    )
+
+    tool(
+      ggsql = "SELECT * FROM test_table VISUALISE value AS x DRAW histogram",
+      title = "Test"
+    )
+
+    expect_identical(
+      footer_data$dom_widget_id,
+      paste0("repro-", footer_data[[3]])
+    )
+  })
+
   it("lets visualize_result() errors bubble up unchanged", {
     ds <- local_data_frame_source(new_test_df())
     long_msg <- paste(rep("word", 200), collapse = " ")
@@ -404,39 +438,6 @@ describe("collapse_validation_errors()", {
     expect_equal(
       collapse_validation_errors(validated),
       "Invalid ggsql query."
-    )
-  })
-  it("passes the namespaced DOM id into the footer", {
-    ds <- local_data_frame_source(new_test_df())
-    session <- structure(
-      list(
-        output = list(),
-        ns = function(id) paste0("repro-", id)
-      ),
-      class = "MockShinySession"
-    )
-    footer_data <- NULL
-    local_mocked_bindings(
-      build_viz_footer = function(...) {
-        footer_data <<- list(...)
-        htmltools::tagList()
-      },
-      .package = "querychat"
-    )
-    tool <- tool_visualize_dashboard(
-      ds,
-      session = session,
-      update_fn = function(data) {}
-    )
-
-    tool(
-      ggsql = "SELECT * FROM test_table VISUALISE value AS x DRAW histogram",
-      title = "Test"
-    )
-
-    expect_identical(
-      footer_data$dom_widget_id,
-      paste0("repro-", footer_data[[3]])
     )
   })
 })

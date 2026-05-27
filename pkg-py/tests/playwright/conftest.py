@@ -622,32 +622,3 @@ def chat_10_viz(page: Page) -> ChatControllerType:
     return _create_chat_controller(page, "titanic")
 
 
-APPS_DIR = Path(__file__).parent / "apps"
-
-
-@pytest.fixture(scope="module")
-def app_cancel() -> Generator[str, None, None]:
-    """Start the cancel_app.py Shiny server for testing."""
-    app_path = str(APPS_DIR / "cancel_app.py")
-
-    def start_factory():
-        port = _find_free_port()
-        url = f"http://localhost:{port}"
-        return url, lambda: _start_shiny_app_threaded(app_path, port)
-
-    def shiny_cleanup(_thread, server):
-        _stop_shiny_server(server)
-
-    url, _thread, server = _start_server_with_retry(
-        start_factory, shiny_cleanup, timeout=30.0
-    )
-    try:
-        yield url
-    finally:
-        _stop_shiny_server(server)
-
-
-@pytest.fixture
-def chat_cancel(page: Page) -> ChatControllerType:
-    """Create a ChatController for the cancel_app chat component."""
-    return _create_chat_controller(page, "titanic")

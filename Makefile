@@ -153,7 +153,7 @@ py-e2e-setup:  ## [py] Install Playwright browsers for e2e tests
 py-e2e-tests:  ## [py] Run Playwright e2e tests (requires OPENAI_API_KEY)
 	@echo ""
 	@echo "🧪 Running Playwright e2e tests"
-	uv run pytest pkg-py/tests/playwright -v -n auto --reruns 2 --reruns-delay 5
+	uv run pytest pkg-py/tests/playwright -v -n auto --reruns 4 --reruns-delay 5
 
 .PHONY: py-check-types
 py-check-types:  ## [py] Run python type checks

@@ -19,7 +19,7 @@ tool_visualize_dashboard <- function(
     arguments = list(
       ggsql = ellmer::type_string(
         ellmer::interpolate(
-          "A full ggsql query. Must include a VISUALISE clause and at least one DRAW clause. The SELECT portion uses {{db_type}} SQL; VISUALISE and MAPPING accept column names only, not expressions. Do NOT include `LABEL title => ...` in the query — use the `title` parameter instead.",
+          "A full ggsql query. Must include a VISUALISE clause and at least one DRAW clause. The SELECT portion uses {{db_type}} SQL; VISUALISE and MAPPING accept column names only, not expressions. Do NOT include `LABEL title => ...` in the query -- use the `title` parameter instead.",
           db_type = db_type
         )
       ),

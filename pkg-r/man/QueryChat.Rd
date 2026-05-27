@@ -94,140 +94,133 @@ qc <- QueryChat$new(con, "mtcars")
 \dontshow{\}) # examplesIf}
 }
 \section{Public fields}{
-\if{html}{\out{<div class="r6-fields">}}
-\describe{
-\item{\code{greeting}}{The greeting message displayed to users.}
+  \if{html}{\out{<div class="r6-fields">}}
+  \describe{
+    \item{\code{greeting}}{The greeting message displayed to users.}
 
-\item{\code{id}}{ID for the QueryChat instance.}
+    \item{\code{id}}{ID for the QueryChat instance.}
 
-\item{\code{tools}}{The allowed tools for the chat client.}
-}
-\if{html}{\out{</div>}}
+    \item{\code{tools}}{The allowed tools for the chat client.}
+  }
+  \if{html}{\out{</div>}}
 }
 \section{Active bindings}{
-\if{html}{\out{<div class="r6-active-bindings">}}
-\describe{
-\item{\code{system_prompt}}{Get the system prompt.}
+  \if{html}{\out{<div class="r6-active-bindings">}}
+  \describe{
+    \item{\code{system_prompt}}{Get the system prompt.}
 
-\item{\code{data_source}}{Get or set the current data source. When setting,
+    \item{\code{data_source}}{Get or set the current data source. When setting,
 the value is normalized and the system prompt is rebuilt.}
-}
-\if{html}{\out{</div>}}
+  }
+  \if{html}{\out{</div>}}
 }
 \section{Methods}{
 \subsection{Public methods}{
-\itemize{
-\item \href{#method-QueryChat-new}{\code{QueryChat$new()}}
-\item \href{#method-QueryChat-client}{\code{QueryChat$client()}}
-\item \href{#method-QueryChat-console}{\code{QueryChat$console()}}
-\item \href{#method-QueryChat-app}{\code{QueryChat$app()}}
-\item \href{#method-QueryChat-app_obj}{\code{QueryChat$app_obj()}}
-\item \href{#method-QueryChat-sidebar}{\code{QueryChat$sidebar()}}
-\item \href{#method-QueryChat-ui}{\code{QueryChat$ui()}}
-\item \href{#method-QueryChat-server}{\code{QueryChat$server()}}
-\item \href{#method-QueryChat-generate_greeting}{\code{QueryChat$generate_greeting()}}
-\item \href{#method-QueryChat-cleanup}{\code{QueryChat$cleanup()}}
-\item \href{#method-QueryChat-clone}{\code{QueryChat$clone()}}
-}
+  \itemize{
+    \item \href{#method-QueryChat-initialize}{\code{QueryChat$new()}}
+    \item \href{#method-QueryChat-client}{\code{QueryChat$client()}}
+    \item \href{#method-QueryChat-console}{\code{QueryChat$console()}}
+    \item \href{#method-QueryChat-app}{\code{QueryChat$app()}}
+    \item \href{#method-QueryChat-app_obj}{\code{QueryChat$app_obj()}}
+    \item \href{#method-QueryChat-sidebar}{\code{QueryChat$sidebar()}}
+    \item \href{#method-QueryChat-ui}{\code{QueryChat$ui()}}
+    \item \href{#method-QueryChat-server}{\code{QueryChat$server()}}
+    \item \href{#method-QueryChat-generate_greeting}{\code{QueryChat$generate_greeting()}}
+    \item \href{#method-QueryChat-cleanup}{\code{QueryChat$cleanup()}}
+    \item \href{#method-QueryChat-clone}{\code{QueryChat$clone()}}
+  }
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-QueryChat-new"></a>}}
-\if{latex}{\out{\hypertarget{method-QueryChat-new}{}}}
-\subsection{Method \code{new()}}{
-Create a new QueryChat object.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{QueryChat$new(
+\if{html}{\out{<a id="method-QueryChat-initialize"></a>}}
+\if{latex}{\out{\hypertarget{method-QueryChat-initialize}{}}}
+\subsection{\code{QueryChat$new()}}{
+  Create a new QueryChat object.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{QueryChat$new(
   data_source,
   table_name = missing_arg(),
   ...,
   id = NULL,
   greeting = NULL,
   client = NULL,
-  tools = c("update", "query"),
+  tools = c("filter", "query"),
   data_description = NULL,
   categorical_threshold = 20,
   extra_instructions = NULL,
   prompt_template = NULL,
   cleanup = NA
-)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{data_source}}{Either a data.frame, a database connection (e.g., DBI
+)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{data_source}}{Either a data.frame, a database connection (e.g., DBI
 connection), or \code{NULL} to defer setting the data source until later.
 When \code{NULL}, the data source must be set via the \verb{$data_source} property
 or passed to \verb{$server()} before calling methods that require data access.}
-
-\item{\code{table_name}}{A string specifying the table name to use in SQL
+      \item{\code{table_name}}{A string specifying the table name to use in SQL
 queries. If \code{data_source} is a data.frame, this is the name to refer to
 it by in queries (typically the variable name). If not provided, will
 be inferred from the variable name for data.frame inputs. For database
 connections or \code{NULL} data sources, this parameter is required.}
-
-\item{\code{...}}{Additional arguments (currently unused).}
-
-\item{\code{id}}{Optional module ID for the QueryChat instance. If not provided,
+      \item{\code{...}}{Additional arguments (currently unused).}
+      \item{\code{id}}{Optional module ID for the QueryChat instance. If not provided,
 will be auto-generated from \code{table_name}. The ID is used to namespace
 the Shiny module.}
-
-\item{\code{greeting}}{Optional initial message to display to users. Can be a
+      \item{\code{greeting}}{Optional initial message to display to users. Can be a
 character string (in Markdown format) or a file path. If not provided,
 a greeting will be generated at the start of each conversation using
 the LLM, which adds latency and cost. Use \verb{$generate_greeting()} to
 create a greeting to save and reuse.}
-
-\item{\code{client}}{Optional chat client. Can be:
+      \item{\code{client}}{Optional chat client. Can be:
 \itemize{
 \item An \link[ellmer:Chat]{ellmer::Chat} object
-\item A string to pass to \code{\link[ellmer:chat-any]{ellmer::chat()}} (e.g., \code{"openai/gpt-4o"})
+\item A string to pass to \code{\link[ellmer:chat]{ellmer::chat()}} (e.g., \code{"openai/gpt-4o"})
 \item \code{NULL} (default): Uses the \code{querychat.client} option, the
 \code{QUERYCHAT_CLIENT} environment variable, or defaults to
 \code{\link[ellmer:chat_openai]{ellmer::chat_openai()}}
 }}
-
-\item{\code{tools}}{Which querychat tools to include in the chat client, by
-default. \code{"update"} includes the tools for updating and resetting the
+      \item{\code{tools}}{Which querychat tools to include in the chat client, by
+default. \code{"filter"} includes the tools for filtering and resetting the
 dashboard and \code{"query"} includes the tool for executing SQL queries.
-Use \code{tools = "update"} when you only want the dashboard updating tools,
+Use \code{tools = "filter"} when you only want the dashboard filtering tools,
 or when you want to disable the querying tool entirely to prevent the
-LLM from seeing any of the data in your dataset.}
-
-\item{\code{data_description}}{Optional description of the data in plain text or
+LLM from seeing any of the data in your dataset. The legacy name
+\code{"update"} is still accepted as an alias for \code{"filter"}.}
+      \item{\code{data_description}}{Optional description of the data in plain text or
 Markdown. Can be a string or a file path. This provides context to the
 LLM about what the data represents.}
-
-\item{\code{categorical_threshold}}{For text columns, the maximum number of
+      \item{\code{categorical_threshold}}{For text columns, the maximum number of
 unique values to consider as a categorical variable. Default is 20.}
-
-\item{\code{extra_instructions}}{Optional additional instructions for the chat
+      \item{\code{extra_instructions}}{Optional additional instructions for the chat
 model in plain text or Markdown. Can be a string or a file path.}
-
-\item{\code{prompt_template}}{Optional path to or string of a custom prompt
+      \item{\code{prompt_template}}{Optional path to or string of a custom prompt
 template file. If not provided, the default querychat template will be
 used. See the package prompts directory for the default template
 format.}
-
-\item{\code{cleanup}}{Whether or not to automatically run \verb{$cleanup()} when the
+      \item{\code{cleanup}}{Whether or not to automatically run \verb{$cleanup()} when the
 Shiny session/app stops. By default, cleanup only occurs if \code{QueryChat}
 gets created within a Shiny session. Set to \code{TRUE} to always clean up,
 or \code{FALSE} to never clean up automatically.}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    A new \code{QueryChat} object.
+  }
 }
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-A new \code{QueryChat} object.
-}
-}
+
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-QueryChat-client"></a>}}
 \if{latex}{\out{\hypertarget{method-QueryChat-client}{}}}
-\subsection{Method \code{client()}}{
-Create a chat client, complete with registered tools, for the current
+\subsection{\code{QueryChat$client()}}{
+  Create a chat client, complete with registered tools, for the current
 data source.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{QueryChat$client(
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{QueryChat$client(
   tools = NA,
   update_dashboard = function(query, title) {
  },
@@ -236,64 +229,62 @@ data source.
   visualize = function(data) {
  },
   session = NULL
-)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{tools}}{Which querychat tools to include in the chat client.
-\code{"update"} includes the tools for updating and resetting the dashboard
+)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{tools}}{Which querychat tools to include in the chat client.
+\code{"filter"} includes the tools for filtering and resetting the dashboard
 and \code{"query"} includes the tool for executing SQL queries. By default,
-when \code{tools = NA}, the values provided at initialization are used.}
-
-\item{\code{update_dashboard}}{Optional function to call with the \code{query} and
+when \code{tools = NA}, the values provided at initialization are used.
+The legacy name \code{"update"} is still accepted as an alias for \code{"filter"}.}
+      \item{\code{update_dashboard}}{Optional function to call with the \code{query} and
 \code{title} generated by the LLM for the \code{update_dashboard} tool.}
-
-\item{\code{reset_dashboard}}{Optional function to call when the
+      \item{\code{reset_dashboard}}{Optional function to call when the
 \code{reset_dashboard} tool is called.}
-
-\item{\code{visualize}}{Optional function to call with a list containing
+      \item{\code{visualize}}{Optional function to call with a list containing
 \code{ggsql}, \code{title}, and \code{widget_id} when a visualization succeeds.}
-
-\item{\code{session}}{A Shiny session object. Required when \code{"visualize"} is
+      \item{\code{session}}{A Shiny session object. Required when \code{"visualize"} is
 in \code{tools} and you want interactive chart rendering. When \code{NULL}
 (the default), visualizations still execute but are not rendered
 as Shiny outputs.}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
-\if{html}{\out{</div>}}
-}
-}
+
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-QueryChat-console"></a>}}
 \if{latex}{\out{\hypertarget{method-QueryChat-console}{}}}
-\subsection{Method \code{console()}}{
-Launch a console-based chat interface with the data source.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{QueryChat$console(new = FALSE, ..., tools = "query")}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{new}}{Whether to create a new chat client instance or continue the
+\subsection{\code{QueryChat$console()}}{
+  Launch a console-based chat interface with the data source.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{QueryChat$console(new = FALSE, ..., tools = "query")}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{new}}{Whether to create a new chat client instance or continue the
 conversation from the last console chat session (the default).}
-
-\item{\code{...}}{Additional arguments passed to the \verb{$client()} method.}
-
-\item{\code{tools}}{Which querychat tools to include in the chat client. See
+      \item{\code{...}}{Additional arguments passed to the \verb{$client()} method.}
+      \item{\code{tools}}{Which querychat tools to include in the chat client. See
 \verb{$client()} for details. Ignored when not creating a new chat client.
 By default, only the \code{"query"} tool is included, regardless of the
 \code{tools} set at initialization.}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
-\if{html}{\out{</div>}}
-}
-}
+
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-QueryChat-app"></a>}}
 \if{latex}{\out{\hypertarget{method-QueryChat-app}{}}}
-\subsection{Method \code{app()}}{
-Create and run a Shiny gadget for chatting with data
+\subsection{\code{QueryChat$app()}}{
+  Create and run a Shiny gadget for chatting with data
 
 Runs a Shiny gadget (designed for interactive use) that provides a
 complete interface for chatting with your data using natural language. If
@@ -305,36 +296,37 @@ you're looking to deploy this app or run it through some other means, see
 qc <- QueryChat$new(mtcars)
 qc$app()
 }\if{html}{\out{</div>}}
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{QueryChat$app(..., bookmark_store = "url")}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{...}}{Arguments passed to \verb{$app_obj()}.}
-
-\item{\code{bookmark_store}}{The bookmarking storage method. Passed to
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{QueryChat$app(..., bookmark_store = "url")}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{...}}{Arguments passed to \verb{$app_obj()}.}
+      \item{\code{bookmark_store}}{The bookmarking storage method. Passed to
 \code{\link[shiny:enableBookmarking]{shiny::enableBookmarking()}}. If \code{"url"} or \code{"server"}, the chat state
 (including current query) will be bookmarked. Default is \code{"url"}.}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-Invisibly returns a list of session-specific values:
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    Invisibly returns a list of session-specific values:
 \itemize{
 \item \code{df}: The final filtered data frame
 \item \code{sql}: The final SQL query string
 \item \code{title}: The final title
 \item \code{client}: The session-specific chat client instance
 }
+  }
 }
-}
+
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-QueryChat-app_obj"></a>}}
 \if{latex}{\out{\hypertarget{method-QueryChat-app_obj}{}}}
-\subsection{Method \code{app_obj()}}{
-A streamlined Shiny app for chatting with data
+\subsection{\code{QueryChat$app_obj()}}{
+  A streamlined Shiny app for chatting with data
 
 Creates a Shiny app designed for chatting with data, with:
 \itemize{
@@ -350,30 +342,31 @@ qc <- QueryChat$new(mtcars)
 app <- qc$app_obj()
 shiny::runApp(app)
 }\if{html}{\out{</div>}}
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{QueryChat$app_obj(..., bookmark_store = "url")}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{...}}{Additional arguments (currently unused).}
-
-\item{\code{bookmark_store}}{The bookmarking storage method. Passed to
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{QueryChat$app_obj(..., bookmark_store = "url")}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{...}}{Additional arguments (currently unused).}
+      \item{\code{bookmark_store}}{The bookmarking storage method. Passed to
 \code{\link[shiny:enableBookmarking]{shiny::enableBookmarking()}}. If \code{"url"} or \code{"server"}, the chat state
 (including current query) will be bookmarked. Default is \code{"url"}.}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    A Shiny app object that can be run with \code{shiny::runApp()}.
+  }
 }
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-A Shiny app object that can be run with \code{shiny::runApp()}.
-}
-}
+
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-QueryChat-sidebar"></a>}}
 \if{latex}{\out{\hypertarget{method-QueryChat-sidebar}{}}}
-\subsection{Method \code{sidebar()}}{
-Create a sidebar containing the querychat UI.
+\subsection{\code{QueryChat$sidebar()}}{
+  Create a sidebar containing the querychat UI.
 
 This method generates a \code{\link[bslib:sidebar]{bslib::sidebar()}} component containing the chat
 interface, suitable for use with \code{\link[bslib:page_sidebar]{bslib::page_sidebar()}} or similar
@@ -386,44 +379,42 @@ ui <- page_sidebar(
   # Main content here
 )
 }\if{html}{\out{</div>}}
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{QueryChat$sidebar(
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{QueryChat$sidebar(
   ...,
   width = 400,
   height = "100\%",
   fillable = TRUE,
   id = NULL
-)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{...}}{Additional arguments passed to \code{\link[bslib:sidebar]{bslib::sidebar()}}.}
-
-\item{\code{width}}{Width of the sidebar in pixels. Default is 400.}
-
-\item{\code{height}}{Height of the sidebar. Default is "100\%".}
-
-\item{\code{fillable}}{Whether the sidebar should be fillable. Default is
+)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{...}}{Additional arguments passed to \code{\link[bslib:sidebar]{bslib::sidebar()}}.}
+      \item{\code{width}}{Width of the sidebar in pixels. Default is 400.}
+      \item{\code{height}}{Height of the sidebar. Default is "100\%".}
+      \item{\code{fillable}}{Whether the sidebar should be fillable. Default is
 \code{TRUE}.}
-
-\item{\code{id}}{Optional ID for the QueryChat instance. If not provided, will
+      \item{\code{id}}{Optional ID for the QueryChat instance. If not provided, will
 use the ID provided at initialization. If using \verb{$sidebar()} in a Shiny
 module, you'll need to provide \code{id = ns("your_id")} where \code{ns} is the
 namespacing function from \code{\link[shiny:NS]{shiny::NS()}}.}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    A \code{\link[bslib:sidebar]{bslib::sidebar()}} UI component.
+  }
 }
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-A \code{\link[bslib:sidebar]{bslib::sidebar()}} UI component.
-}
-}
+
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-QueryChat-ui"></a>}}
 \if{latex}{\out{\hypertarget{method-QueryChat-ui}{}}}
-\subsection{Method \code{ui()}}{
-Create the UI for the querychat chat interface.
+\subsection{\code{QueryChat$ui()}}{
+  Create the UI for the querychat chat interface.
 
 This method generates the chat UI component. Typically you'll use
 \verb{$sidebar()} instead, which wraps this in a sidebar layout.
@@ -434,31 +425,32 @@ ui <- fluidPage(
   qc$ui()
 )
 }\if{html}{\out{</div>}}
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{QueryChat$ui(..., id = NULL)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{...}}{Additional arguments passed to \code{\link[shinychat:chat_ui]{shinychat::chat_ui()}}.}
-
-\item{\code{id}}{Optional ID for the QueryChat instance. If not provided,
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{QueryChat$ui(..., id = NULL)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{...}}{Additional arguments passed to \code{\link[shinychat:chat_ui]{shinychat::chat_ui()}}.}
+      \item{\code{id}}{Optional ID for the QueryChat instance. If not provided,
 will use the ID provided at initialization. If using \verb{$ui()} in a Shiny
 module, you'll need to provide \code{id = ns("your_id")} where \code{ns} is the
 namespacing function from \code{\link[shiny:NS]{shiny::NS()}}.}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    A UI component containing the chat interface.
+  }
 }
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-A UI component containing the chat interface.
-}
-}
+
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-QueryChat-server"></a>}}
 \if{latex}{\out{\hypertarget{method-QueryChat-server}{}}}
-\subsection{Method \code{server()}}{
-Initialize the querychat server logic.
+\subsection{\code{QueryChat$server()}}{
+  Initialize the querychat server logic.
 
 This method must be called within a Shiny server function. It sets up the
 reactive logic for the chat interface and returns session-specific
@@ -474,52 +466,48 @@ server <- function(input, output, session) \{
   output$title <- renderText(qc_vals$title() \%||\% "No Query")
 \}
 }\if{html}{\out{</div>}}
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{QueryChat$server(
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{QueryChat$server(
   data_source = NULL,
   client = NULL,
   enable_bookmarking = FALSE,
   ...,
   id = NULL,
   session = shiny::getDefaultReactiveDomain()
-)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{data_source}}{Optional data source to use. If provided, sets the
+)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{data_source}}{Optional data source to use. If provided, sets the
 data_source property before initializing server logic. This is useful
 for the deferred pattern where data_source is not known at
 initialization time (e.g., when the data source depends on session-
 specific authentication).}
-
-\item{\code{client}}{Optional chat client override for this session. Can be an
+      \item{\code{client}}{Optional chat client override for this session. Can be an
 \link[ellmer:Chat]{ellmer::Chat} object or a string (e.g., \code{"openai/gpt-4o"}). If provided,
 overrides the client set at initialization for this session only —
 other sessions are unaffected. This is useful when the client must be
 created within a session scope (e.g., Posit Connect managed credentials).}
-
-\item{\code{enable_bookmarking}}{Whether to enable bookmarking for the chat
+      \item{\code{enable_bookmarking}}{Whether to enable bookmarking for the chat
 state. Default is \code{FALSE}. When enabled, the chat state (including
 current query, title, and chat history) will be saved and restored
 with Shiny bookmarks. This requires that the Shiny app has bookmarking
 enabled via \code{shiny::enableBookmarking()} or the \code{enableBookmarking}
 parameter of \code{shiny::shinyApp()}.}
-
-\item{\code{...}}{Ignored.}
-
-\item{\code{id}}{Optional module ID for the QueryChat instance. If not provided,
+      \item{\code{...}}{Ignored.}
+      \item{\code{id}}{Optional module ID for the QueryChat instance. If not provided,
 will use the ID provided at initialization. When used in Shiny modules,
 this \code{id} should match the \code{id} used in the corresponding UI function
 (i.e., \code{qc$ui(id = ns("your_id"))} pairs with \code{qc$server(id = "your_id")}).}
-
-\item{\code{session}}{The Shiny session object.}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-A list containing session-specific reactive values and the chat
+      \item{\code{session}}{The Shiny session object.}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    A list containing session-specific reactive values and the chat
 client with the following elements:
 \itemize{
 \item \code{df}: Reactive expression returning the current filtered data frame
@@ -527,13 +515,14 @@ client with the following elements:
 \item \code{title}: Reactive value for the current title
 \item \code{client}: The session-specific chat client instance
 }
+  }
 }
-}
+
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-QueryChat-generate_greeting"></a>}}
 \if{latex}{\out{\hypertarget{method-QueryChat-generate_greeting}{}}}
-\subsection{Method \code{generate_greeting()}}{
-Generate a welcome greeting for the chat.
+\subsection{\code{QueryChat$generate_greeting()}}{
+  Generate a welcome greeting for the chat.
 
 By default, \code{QueryChat$new()} generates a greeting at the start of every
 new conversation, which is convenient for getting started and
@@ -550,27 +539,29 @@ writeLines(greeting, "mtcars_greeting.md")
 # Later, use the saved greeting
 qc2 <- QueryChat$new(mtcars, greeting = "mtcars_greeting.md")
 }\if{html}{\out{</div>}}
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{QueryChat$generate_greeting(echo = c("none", "output"))}\if{html}{\out{</div>}}
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{QueryChat$generate_greeting(echo = c("none", "output"))}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{echo}}{Whether to print the greeting to the console. Options are
+\code{"none"} (default, no output) or \code{"output"} (print to console).}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    The greeting string in Markdown format.
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{echo}}{Whether to print the greeting to the console. Options are
-\code{"none"} (default, no output) or \code{"output"} (print to console).}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-The greeting string in Markdown format.
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-QueryChat-cleanup"></a>}}
 \if{latex}{\out{\hypertarget{method-QueryChat-cleanup}{}}}
-\subsection{Method \code{cleanup()}}{
-Clean up resources associated with the data source.
+\subsection{\code{QueryChat$cleanup()}}{
+  Clean up resources associated with the data source.
 
 This method releases any resources (e.g., database connections)
 associated with the data source. Call this when you are done using the
@@ -578,29 +569,33 @@ QueryChat object to avoid resource leaks.
 
 Note: If \code{auto_cleanup} was set to \code{TRUE} in the constructor, this will
 be called automatically when the Shiny app stops.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{QueryChat$cleanup()}\if{html}{\out{</div>}}
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{QueryChat$cleanup()}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    Invisibly returns \code{NULL}. Resources are cleaned up internally.
+  }
 }
 
-\subsection{Returns}{
-Invisibly returns \code{NULL}. Resources are cleaned up internally.
-}
-}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-QueryChat-clone"></a>}}
 \if{latex}{\out{\hypertarget{method-QueryChat-clone}{}}}
-\subsection{Method \code{clone()}}{
-The objects of this class are cloneable with this method.
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{QueryChat$clone(deep = FALSE)}\if{html}{\out{</div>}}
+\subsection{\code{QueryChat$clone()}}{
+  The objects of this class are cloneable with this method.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{QueryChat$clone(deep = FALSE)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{deep}}{Whether to make a deep clone.}
+    }
+    \if{html}{\out{</div>}}
+  }
 }
 
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{deep}}{Whether to make a deep clone.}
-}
-\if{html}{\out{</div>}}
-}
-}
 }

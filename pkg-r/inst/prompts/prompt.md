@@ -212,37 +212,40 @@ You cannot query or analyze the data. If users ask questions about data values, 
 
 #### Suggestion Syntax
 
-Use `<span class="suggestion">` tags to create clickable prompt buttons in the UI. The text inside should be a complete, actionable prompt that users can click to continue the conversation.
+Use `<span class="suggestion">` tags to create clickable suggestion buttons in the UI. The text inside should be a complete, actionable suggestion that users can click to continue the conversation.
 
 #### Syntax Examples
 
 **List format (most common):**
-```md
-* <span class="suggestion">Show me examples of …</span>
-* <span class="suggestion">What are the key differences between …</span>
-* <span class="suggestion">Explain how …</span>
+```
+<ul>
+<li><span class="suggestion">Show me examples of …</span></li>
+<li><span class="suggestion">What are the key differences between …</span></li>
+<li><span class="suggestion">Explain how …</span></li>
+</ul>
 ```
 
-**Inline in prose:**
+Use explicit HTML `<ul>`/`<li>` tags instead of markdown list markers (`*`, `-`). Markdown lists work when formatted correctly, but omitting the space after the marker (e.g., `-<span>` instead of `- <span>`) silently breaks the list parse, so HTML tags are more reliable.
+
+**Grouped suggestions:**
+```
+##### Analyze the data
+<ul>
+<li><span class="suggestion">What's the average …?</span></li>
+<li><span class="suggestion">How many …?</span></li>
+</ul>
+
+##### Filter and sort
+<ul>
+<li><span class="suggestion">Show records from the year …</span></li>
+<li><span class="suggestion">Sort the ____ by ____ …</span></li>
+</ul>
+```
+
+**Inline in prose (secondary format):**
+Inline suggestions render as clickable text links within a sentence, not as cards.
 ```md
 You might want to <span class="suggestion">explore the advanced features</span> or <span class="suggestion">show me a practical example</span>.
-```
-
-**Nested lists:**
-```md
-{{#has_tool_query}}
-* Analyze the data
-  * <span class="suggestion">What's the average …?</span>
-  * <span class="suggestion">How many …?</span>
-{{/has_tool_query}}
-{{#has_tool_visualize}}
-* Visualize the data
-  * <span class="suggestion">Show a bar chart of …</span>
-  * <span class="suggestion">Plot the trend of … over time</span>
-{{/has_tool_visualize}}
-* Filter and sort
-  * <span class="suggestion">Show records from the year …</span>
-  * <span class="suggestion">Sort the ____ by ____ …</span>
 ```
 
 #### When to Include Suggestions
@@ -264,6 +267,7 @@ You might want to <span class="suggestion">explore the advanced features</span> 
 
 - Suggestions can appear **anywhere** in your response—not just at the end
 - Use list format at the end for 2-4 follow-up options (most common pattern)
+- Never use nested lists for suggestions — group them under headings instead
 - Use inline suggestions within prose when contextually appropriate
 - Write suggestions as complete, natural prompts (not fragments)
 - Only suggest actions you can perform with your tools and capabilities

@@ -33,7 +33,7 @@ class AltairWidget:
 
     def __init__(
         self,
-        chart: alt.TopLevelMixin,
+        chart: ggsql.AltairChart,
         *,
         widget_id: str | None = None,
     ) -> None:
@@ -87,8 +87,9 @@ class AltairWidget:
             chart = widget.chart
             if chart is None:
                 return
-            chart = cast("alt.Chart", chart)
-            chart2 = fit_chart_to_container(chart, int(width), int(height))
+            chart2 = fit_chart_to_container(
+                cast("ggsql.AltairChart", chart), int(width), int(height)
+            )
             # Must set widget.spec (a new dict) rather than widget.chart,
             # because traitlets won't fire change events when the same
             # chart object is assigned back after in-place mutation.
@@ -116,10 +117,10 @@ LEGEND_WIDTH = 120  # approximate space for a right-side legend
 
 
 def fit_chart_to_container(
-    chart: alt.TopLevelMixin,
+    chart: ggsql.AltairChart,
     container_width: int,
     container_height: int,
-) -> alt.TopLevelMixin:
+) -> ggsql.AltairChart:
     """
     Return a copy of ``chart`` with cell ``width``/``height`` set.
 

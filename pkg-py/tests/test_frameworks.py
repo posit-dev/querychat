@@ -133,7 +133,7 @@ class TestDashQueryChat:
         from querychat.dash import QueryChat
 
         qc = QueryChat(sample_df, "tips", tools="query")
-        assert qc.tools == ("query",)
+        assert qc.tools == {"query"}
 
         qc_none = QueryChat(sample_df, "tips", tools=None)
         assert qc_none.tools is None
@@ -175,7 +175,7 @@ class TestStreamlitQueryChat:
         from querychat.streamlit import QueryChat
 
         qc = QueryChat(sample_df, "tips", tools="query")
-        assert qc.tools == ("query",)
+        assert qc.tools == {"query"}
 
         qc_none = QueryChat(sample_df, "tips", tools=None)
         assert qc_none.tools is None

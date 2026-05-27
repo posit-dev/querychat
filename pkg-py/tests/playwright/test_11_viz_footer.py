@@ -46,6 +46,7 @@ def _send_viz_prompt(
     """Navigate to the viz app and trigger a visualization before each test."""
     page.goto(app_10_viz)
     page.wait_for_selector("shiny-chat-container", timeout=30_000)
+    expect(chat_10_viz.loc_latest_message).to_contain_text("Welcome", timeout=30_000)
 
     chat_10_viz.set_user_input(VIZ_PROMPT)
     chat_10_viz.send_user_input(method="click")
@@ -58,6 +59,10 @@ def _send_viz_prompt(
     page.locator(".querychat-footer-buttons").wait_for(
         state="visible", timeout=10_000
     )
+    # Wait for the chat input to re-enable — this signals the LLM turn is
+    # complete and shinychat has finished its final re-render of the tool
+    # result card.
+    expect(chat_10_viz.loc_input).to_be_enabled(timeout=30_000)
 
 
 class TestShowQueryToggle:
@@ -104,6 +109,7 @@ class TestShowQueryToggle:
         expect(label).to_have_text("Hide Query")
 
         btn.click()  # hide
+
         expect(label).to_have_text("Show Query")
 
         section = page.locator(".querychat-query-section--visible")

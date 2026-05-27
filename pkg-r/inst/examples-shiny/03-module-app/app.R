@@ -10,7 +10,7 @@ greeting <- r"(
 I can help you explore and analyze the Palmer Penguins dataset. Ask me questions
 about the penguins, and I'll generate SQL queries to get the answers.
 
-Try asking:
+##### Explore the data
 - <span class="suggestion">Show me the first 10 rows of the penguins dataset</span>
 - <span class="suggestion">What's the average bill length by species?</span>
 - <span class="suggestion">Which species has the largest body mass?</span>

@@ -26,7 +26,7 @@ Imports:
     bslib (>= 0.10.0),
     cli,
     DBI,
-    ellmer (>= 0.3.0),
+    ellmer (>= 0.4.1),
     htmltools,
     lifecycle,
     promises,
@@ -34,7 +34,7 @@ Imports:
     rlang (>= 1.1.0),
     S7,
     shiny,
-    shinychat (>= 0.3.0),
+    shinychat (> 0.3.0),
     utils,
     whisker
 Suggests:
@@ -55,9 +55,10 @@ Suggests:
 VignetteBuilder:
     knitr
 Remotes:
-    posit-dev/ggsql-r
+    posit-dev/ggsql-r,
+    posit-dev/shinychat/pkg-r
+Config/roxygen2/version: 8.0.0
 Config/testthat/edition: 3
 Config/testthat/parallel: true
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.3

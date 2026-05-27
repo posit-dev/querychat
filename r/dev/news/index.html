@@ -23,6 +23,7 @@
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/models.html">Models</a></li>
     <li><a class="dropdown-item" href="../articles/data-sources.html">Data Sources</a></li>
     <li><a class="dropdown-item" href="../articles/context.html">Provide context</a></li>
+    <li><a class="dropdown-item" href="../articles/visualize.html">Visualizations</a></li>
     <li><a class="dropdown-item" href="../articles/build.html">Build an app</a></li>
     <li><a class="dropdown-item" href="../articles/greet.html">Greet users</a></li>
     <li><a class="dropdown-item" href="../articles/tools.html">Tools</a></li>
@@ -51,7 +52,8 @@
 
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="development version" id="querychat-development-version">querychat (development version)<a class="anchor" aria-label="anchor" href="#querychat-development-version"></a></h2>
-<ul><li><p>The <code>tools</code> parameter now uses <code>"filter"</code> as the preferred name (instead of <code>"update"</code>) for the dashboard-filtering tool group. The default is now <code>c("filter", "query")</code>. The legacy name <code>"update"</code> is still accepted everywhere. (<a href="https://github.com/posit-dev/querychat/issues/222" class="external-link">#222</a>)</p></li>
+<ul><li><p>Added stream cancellation support. A stop button now appears during LLM streaming, allowing users to cancel in-progress responses by clicking it or pressing Escape. Cancellation is enabled by default and can be disabled via <code>enable_cancel = FALSE</code> in the UI. (<a href="https://github.com/posit-dev/querychat/issues/241" class="external-link">#241</a>)</p></li>
+<li><p>The <code>tools</code> parameter now uses <code>"filter"</code> as the preferred name (instead of <code>"update"</code>) for the dashboard-filtering tool group. The default is now <code>c("filter", "query")</code>. The legacy name <code>"update"</code> is still accepted everywhere. (<a href="https://github.com/posit-dev/querychat/issues/222" class="external-link">#222</a>)</p></li>
 <li><p><code>QueryChat$server()</code> now accepts a <code>client</code> parameter for session-scoped chat client overrides. This enables Posit Connect managed OAuth workflows where API credentials are only available inside the Shiny server function. The client spec is stored lazily at construction time and resolved only when needed, so <code>QueryChat$new(NULL, "table")</code> no longer requires an API key. (<a href="https://github.com/posit-dev/querychat/issues/205" class="external-link">#205</a>)</p></li>
 <li><p>When a custom <code>prompt_template</code> is provided that doesn’t contain Mustache references to <code>{{schema}}</code>, the expensive <code>get_schema()</code> call is now skipped entirely. This allows users with large databases to avoid slow startup by providing their own prompt that includes schema information inline (or omits it). (<a href="https://github.com/posit-dev/querychat/issues/208" class="external-link">#208</a>)</p></li>
 <li><p>Added support for Snowflake Semantic Views. When connected to Snowflake via DBI, querychat automatically discovers available Semantic Views and includes their definitions in the system prompt. This helps the LLM generate correct queries using the <code>SEMANTIC_VIEW()</code> table function with certified business metrics and dimensions. (<a href="https://github.com/posit-dev/querychat/issues/200" class="external-link">#200</a>)</p></li>

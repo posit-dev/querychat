@@ -13,7 +13,7 @@ Visualization requires two steps:
 
     ``` r
 
-    pak::pak("posit-dev/ggsql-r")
+    install.packages("ggsql")
     ```
 
 2.  **Include `"visualize"` in the `tools` parameter:**
@@ -31,7 +31,10 @@ Visualization requires two steps:
     ```
 
 Ask something like “Show me body mass by species as a bar chart” and
-querychat will generate and display the chart inline.
+querychat will generate and display the chart inline:
+
+![Bar chart showing average body mass by penguin
+species.](../reference/figures/viz-bar-chart.png)
 
 ## Choosing tools
 
@@ -107,6 +110,9 @@ The LLM chooses an appropriate chart type based on your question, but
 you can always be specific. If you ask for a bar chart, you’ll get a bar
 chart.
 
+![Scatter plot of bill length vs flipper length colored by
+species.](../reference/figures/viz-scatter.png)
+
 If you don’t like the chart, ask the LLM to adjust it — for example,
 “make the dots bigger” or “use a log scale on the y-axis”.
 
@@ -117,10 +123,16 @@ Each chart has controls in its footer:
 **Fullscreen** — Click the expand icon to view the chart in fullscreen
 mode.
 
+![A chart displayed in fullscreen
+mode.](../reference/figures/viz-fullscreen.png)
+
 **Save** — Download the chart as a PNG or SVG file.
 
 **Show Query** — Expand the footer to see the ggsql query used to
 generate the chart.
+
+![A chart with the Show Query footer expanded, showing the ggsql
+query.](../reference/figures/viz-show-query.png)
 
 ## How it works
 

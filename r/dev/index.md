@@ -70,6 +70,14 @@ the result in the chat:
 ![Screenshot of the querychat's app with a summary statistic inlined in
 the chat.](reference/figures/quickstart-summary.png)
 
+querychat can also create visualizations, powered by
+[ggsql](https://ggsql.org/). With the [visualization
+tool](https://posit-dev.github.io/querychat/r/articles/visualize.html)
+enabled, ask for a chart and it appears inline in the conversation:
+
+![Bar chart showing average body mass by penguin
+species.](reference/figures/viz-bar-chart.png)
+
 ## Custom apps
 
 querychat is designed to be highly extensible – it provides programmatic
@@ -132,6 +140,8 @@ From here, you might want to learn more about:
 - [Provide
   context](https://posit-dev.github.io/querychat/r/articles/context.html):
   provide the LLM with the context it needs to work well.
+- [Visualizations](https://posit-dev.github.io/querychat/r/articles/visualize.html):
+  create inline charts powered by ggsql.
 - [Build an
   app](https://posit-dev.github.io/querychat/r/articles/build.html):
   design a custom Shiny app around querychat.

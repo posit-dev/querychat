@@ -12,3 +12,4 @@
   Users](https://posit-dev.github.io/querychat/dev/articles/greet.md):
 - [Models](https://posit-dev.github.io/querychat/dev/articles/models.md):
 - [Tools](https://posit-dev.github.io/querychat/dev/articles/tools.md):
+- [Visualizations](https://posit-dev.github.io/querychat/dev/articles/visualize.md):

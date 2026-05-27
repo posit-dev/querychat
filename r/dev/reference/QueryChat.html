@@ -51,6 +51,7 @@ values
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/models.html">Models</a></li>
     <li><a class="dropdown-item" href="../articles/data-sources.html">Data Sources</a></li>
     <li><a class="dropdown-item" href="../articles/context.html">Provide context</a></li>
+    <li><a class="dropdown-item" href="../articles/visualize.html">Visualizations</a></li>
     <li><a class="dropdown-item" href="../articles/build.html">Build an app</a></li>
     <li><a class="dropdown-item" href="../articles/greet.html">Greet users</a></li>
     <li><a class="dropdown-item" href="../articles/tools.html">Tools</a></li>
@@ -277,7 +278,10 @@ data source.</p><div class="section">
 <span>  update_dashboard <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">query</span>, <span class="va">title</span><span class="op">)</span> <span class="op">{</span></span>
 <span> <span class="op">}</span>,</span>
 <span>  reset_dashboard <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="op">{</span></span>
-<span> <span class="op">}</span></span>
+<span> <span class="op">}</span>,</span>
+<span>  visualize <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">data</span><span class="op">)</span> <span class="op">{</span></span>
+<span> <span class="op">}</span>,</span>
+<span>  session <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div><p></p><div class="section">
 <h4 id="arguments-1">Arguments<a class="anchor" aria-label="anchor" href="#arguments-1"></a></h4>
@@ -295,6 +299,16 @@ The legacy name <code>"update"</code> is still accepted as an alias for <code>"f
       <dt><code>reset_dashboard</code></dt>
 <dd><p>Optional function to call when the
 <code>reset_dashboard</code> tool is called.</p></dd>
+
+      <dt><code>visualize</code></dt>
+<dd><p>Optional function to call with a list containing
+<code>ggsql</code>, <code>title</code>, and <code>widget_id</code> when a visualization succeeds.</p></dd>
+
+      <dt><code>session</code></dt>
+<dd><p>A Shiny session object. Required when <code>"visualize"</code> is
+in <code>tools</code> and you want interactive chart rendering. When <code>NULL</code>
+(the default), visualizations still execute but are not rendered
+as Shiny outputs.</p></dd>
 
 
 </dl><p></p></div>

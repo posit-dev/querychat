@@ -12,8 +12,8 @@
 <link rel="icon" sizes="any" href="../favicon.ico">
 <link rel="manifest" href="../site.webmanifest">
 <script src="../lightswitch.js"></script><script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
-<script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="https://fonts.bunny.net/css?family=Open%20Sans:100,200,300,400,500,600,700,800,900,100i,200i,300i,400i,500i,600i,700i,800i,900i&amp;display=auto" rel="stylesheet">
+<link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
+<script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="https://fonts.bunny.net/css?family=Open%20Sans:100,200,300,400,500,600,700,800,900,100i,200i,300i,400i,500i,600i,700i,800i,900i&amp;display=auto" rel="stylesheet">
 <link href="https://fonts.bunny.net/css?family=Hubot%20Sans:100,200,300,400,500,600,700,800,900,100i,200i,300i,400i,500i,600i,700i,800i,900i&amp;display=auto" rel="stylesheet">
 <link href="https://fonts.bunny.net/css?family=Source%20Code%20Pro:100,200,300,400,500,600,700,800,900,100i,200i,300i,400i,500i,600i,700i,800i,900i&amp;display=auto" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
@@ -104,7 +104,7 @@ conversation.</p>
 <li>
 <p><strong>Install the ggsql package:</strong></p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"posit-dev/ggsql-r"</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"ggsql"</span><span class="op">)</span></span></code></pre></div>
 </li>
 <li>
 <p><strong>Include <code>"visualize"</code> in the
@@ -121,7 +121,8 @@ conversation.</p>
 </li>
 </ol>
 <p>Ask something like “Show me body mass by species as a bar chart” and
-querychat will generate and display the chart inline.</p>
+querychat will generate and display the chart inline:</p>
+<p><img src="../reference/figures/viz-bar-chart.png" class="shadow rounded mb-3" alt="Bar chart showing average body mass by penguin species."></p>
 </div>
 <div class="section level2">
 <h2 id="choosing-tools">Choosing tools<a class="anchor" aria-label="anchor" href="#choosing-tools"></a>
@@ -194,6 +195,7 @@ species”</li>
 <p>The LLM chooses an appropriate chart type based on your question, but
 you can always be specific. If you ask for a bar chart, you’ll get a bar
 chart.</p>
+<p><img src="../reference/figures/viz-scatter.png" class="shadow rounded mb-3" alt="Scatter plot of bill length vs flipper length colored by species."></p>
 <div class="alert alert-info">
 <p>If you don’t like the chart, ask the LLM to adjust it — for example,
 “make the dots bigger” or “use a log scale on the y-axis”.</p>
@@ -205,9 +207,11 @@ chart.</p>
 <p>Each chart has controls in its footer:</p>
 <p><strong>Fullscreen</strong> — Click the expand icon to view the chart
 in fullscreen mode.</p>
+<p><img src="../reference/figures/viz-fullscreen.png" class="shadow rounded mb-3" alt="A chart displayed in fullscreen mode."></p>
 <p><strong>Save</strong> — Download the chart as a PNG or SVG file.</p>
 <p><strong>Show Query</strong> — Expand the footer to see the ggsql
 query used to generate the chart.</p>
+<p><img src="../reference/figures/viz-show-query.png" class="shadow rounded mb-3" alt="A chart with the Show Query footer expanded, showing the ggsql query."></p>
 </div>
 <div class="section level2">
 <h2 id="how-it-works">How it works<a class="anchor" aria-label="anchor" href="#how-it-works"></a>

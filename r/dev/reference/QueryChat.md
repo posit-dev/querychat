@@ -225,7 +225,10 @@ data source.
       update_dashboard = function(query, title) {
      },
       reset_dashboard = function() {
-     }
+     },
+      visualize = function(data) {
+     },
+      session = NULL
     )
 
 #### Arguments
@@ -246,6 +249,17 @@ data source.
 - `reset_dashboard`:
 
   Optional function to call when the `reset_dashboard` tool is called.
+
+- `visualize`:
+
+  Optional function to call with a list containing `ggsql`, `title`, and
+  `widget_id` when a visualization succeeds.
+
+- `session`:
+
+  A Shiny session object. Required when `"visualize"` is in `tools` and
+  you want interactive chart rendering. When `NULL` (the default),
+  visualizations still execute but are not rendered as Shiny outputs.
 
 ------------------------------------------------------------------------
 

@@ -159,7 +159,9 @@ describe("tool_visualize_dashboard()", {
       .package = "querychat"
     )
     local_mocked_bindings(
-      ggsql_validate = function(...) structure(list(valid = TRUE), class = "ggsql_validated"),
+      ggsql_validate = function(...) {
+        structure(list(valid = TRUE), class = "ggsql_validated")
+      },
       ggsql_has_visual = function(...) TRUE,
       renderGgsql = function(...) shiny::renderText("ok"),
       ggsqlOutput = function(id) htmltools::div(id = id),
@@ -432,6 +434,9 @@ describe("collapse_validation_errors()", {
       title = "Test"
     )
 
-    expect_identical(footer_data$dom_widget_id, paste0("repro-", footer_data[[3]]))
+    expect_identical(
+      footer_data$dom_widget_id,
+      paste0("repro-", footer_data[[3]])
+    )
   })
 })

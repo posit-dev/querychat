@@ -26,7 +26,7 @@ mod_server <- function(
   data_source,
   greeting,
   client,
-  tools = c("update", "query"),
+  tools,
   enable_bookmarking = FALSE
 ) {
   shiny::moduleServer(id, function(input, output, session) {
@@ -186,7 +186,13 @@ GREETING_PROMPT <- paste(
 )
 
 restore_viz_widgets <- function(data_source, saved_widgets, session) {
-  rlang::check_installed("ggsql", reason = "for visualization support.")
+  if (!rlang::is_installed("ggsql")) {
+    warning(
+      "ggsql is not installed; skipping restoration of visualization widgets.",
+      call. = FALSE
+    )
+    return(list())
+  }
 
   restored <- list()
   for (entry in saved_widgets) {

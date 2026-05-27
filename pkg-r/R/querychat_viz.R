@@ -79,6 +79,7 @@ visualize_result <- function(
     session$output[[widget_id]] <- ggsql::renderGgsql(spec)
     viz_container <- htmltools::div(
       class = "querychat-viz-container",
+      bslib::as_fill_carrier(),
       ggsql::ggsqlOutput(session$ns(widget_id)),
       viz_dep()
     )

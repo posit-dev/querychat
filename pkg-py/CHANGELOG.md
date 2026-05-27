@@ -5,14 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.6.1] - 2026-05-26
+
+### New features
+
+* Added stream cancellation support. A stop button now appears during LLM streaming, allowing users to cancel in-progress responses by clicking it or pressing Escape. Cancellation is enabled by default and can be disabled via `enable_cancel=False` in the UI. (#241)
 
 ### Improvements
 
 * The query tool result card now starts collapsed by default. Users can still expand it to see the SQL query and results. Set `QUERYCHAT_TOOL_DETAILS=expanded` to restore the previous behavior. (#239)
 
 * The `tools` parameter now uses `"filter"` as the preferred name (instead of `"update"`) for the dashboard-filtering tool group. The default is now `("filter", "query")`. The legacy name `"update"` is still accepted everywhere. (#222)
-* When a custom `prompt_template` is provided that doesn't contain Mustache references to `{{schema}}`, the expensive `get_schema()` call is now skipped entirely. This allows users with large databases to avoid slow startup by providing their own prompt that includes schema information inline (or omits it). (#208)
+* Suggestion prompts now render more reliably as interactive cards across LLM providers. (#236, #238)
+* Bumped minimum `ggsql` version to >=0.3.2. (#233)
+
+## [0.6.0] - 2026-05-06
 
 ### New features
 
@@ -23,6 +30,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Added support for Snowflake Semantic Views. When connected to Snowflake (via SQLAlchemy or Ibis), querychat automatically discovers available Semantic Views and includes their definitions in the system prompt. This helps the LLM generate correct queries using the `SEMANTIC_VIEW()` table function with certified business metrics and dimensions. (#200)
 
 * The `querychat_query` tool now accepts an optional `collapsed` parameter. When `collapsed=True`, the result card starts collapsed so preparatory or exploratory queries don't clutter the conversation. The LLM is guided to use this automatically when running queries before a visualization.
+
+### Improvements
+
+* When a custom `prompt_template` is provided that doesn't contain Mustache references to `{{schema}}`, the expensive `get_schema()` call is now skipped entirely. This allows users with large databases to avoid slow startup by providing their own prompt that includes schema information inline (or omits it). (#208)
 
 ## [0.5.1] - 2026-01-23
 

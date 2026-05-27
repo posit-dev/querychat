@@ -29,6 +29,9 @@ class TestInlineVisualization:
         """Navigate to the viz app before each test."""
         page.goto(app_10_viz)
         page.wait_for_selector("shiny-chat-container", timeout=30000)
+        expect(chat_10_viz.loc_latest_message).to_contain_text(
+            "Welcome", timeout=30000
+        )
         self.page = page
         self.chat = chat_10_viz
 

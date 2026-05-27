@@ -1,13 +1,18 @@
 """Test app for viz bookmark restore: uses server-side bookmarking to avoid URL length limits."""
 
+from pathlib import Path
+
 from querychat import QueryChat
 from querychat.data import titanic
 
 from shiny import App, ui
 
+greeting = Path(__file__).parents[3] / "examples" / "greeting-viz.md"
+
 qc = QueryChat(
     titanic(),
     "titanic",
+    greeting=greeting,
     tools=("query", "visualize"),
 )
 

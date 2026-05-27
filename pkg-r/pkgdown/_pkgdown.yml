@@ -51,6 +51,8 @@ navbar:
         href: articles/data-sources.html
       - text: Provide context
         href: articles/context.html
+      - text: Visualizations
+        href: articles/visualize.html
       - text: Build an app
         href: articles/build.html
       - text: Greet users

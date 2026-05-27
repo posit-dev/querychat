@@ -22,10 +22,11 @@ BugReports: https://github.com/posit-dev/querychat/issues
 Depends:
     R (>= 4.1.0)
 Imports:
-    bslib,
+    bsicons,
+    bslib (>= 0.11.0),
     cli,
     DBI,
-    ellmer (>= 0.3.0),
+    ellmer (>= 0.4.1),
     htmltools,
     lifecycle,
     promises,
@@ -33,24 +34,28 @@ Imports:
     rlang (>= 1.1.0),
     S7,
     shiny,
-    shinychat (>= 0.3.0),
+    shinychat (> 0.3.0),
     utils,
     whisker
 Suggests:
-    bsicons,
     dbplyr,
     dplyr,
     DT,
     duckdb,
+    ggsql,
     knitr,
     palmerpenguins,
     rmarkdown,
     RSQLite,
+    rsvg,
     shinytest2,
     testthat (>= 3.0.0),
+    V8,
     withr
 VignetteBuilder:
     knitr
+Remotes:
+    posit-dev/shinychat/pkg-r
 Config/roxygen2/version: 8.0.0
 Config/testthat/edition: 3
 Config/testthat/parallel: true

@@ -101,10 +101,24 @@ QueryChatSystemPrompt <- R6::R6Class(
         extra_instructions = self$extra_instructions,
         has_tool_update = if ("update" %in% tools) "true",
         has_tool_query = if ("query" %in% tools) "true",
+        has_tool_visualize = if ("visualize" %in% tools) "true",
         include_query_guidelines = if (length(tools) > 0) "true"
       )
 
-      whisker::whisker.render(self$template, context)
+      partials <- list()
+      syntax_path <- system.file(
+        "prompts",
+        "ggsql-syntax.md",
+        package = "querychat"
+      )
+      if (nzchar(syntax_path)) {
+        partials[["ggsql-syntax"]] <- paste(
+          readLines(syntax_path),
+          collapse = "\n"
+        )
+      }
+
+      whisker::whisker.render(self$template, context, partials = partials)
     }
   )
 )

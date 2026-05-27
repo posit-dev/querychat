@@ -26,6 +26,7 @@ mod_server <- function(
   data_source,
   greeting,
   client,
+  tools,
   enable_bookmarking = FALSE
 ) {
   shiny::moduleServer(id, function(input, output, session) {
@@ -62,11 +63,24 @@ mod_server <- function(
       querychat_tool_result(action = "reset")
     }
 
+    # Non-reactive bookkeeping for bookmark save/restore of viz widgets
+    viz_widgets <- list()
+
+    on_visualize <- function(data) {
+      viz_widgets[[length(viz_widgets) + 1L]] <<- list(
+        widget_id = data$widget_id,
+        ggsql = data$ggsql
+      )
+    }
+
     # Set up the chat object for this session
     check_function(client)
     chat <- client(
       update_dashboard = update_dashboard,
-      reset_dashboard = reset_query
+      reset_dashboard = reset_query,
+      visualize = on_visualize,
+      tools = tools,
+      session = session
     )
 
     # Prepopulate the chat UI with a welcome message that appears to be from the
@@ -129,6 +143,9 @@ mod_server <- function(
         state$values$querychat_sql <- current_query()
         state$values$querychat_title <- current_title()
         state$values$querychat_has_greeted <- has_greeted()
+        if (length(viz_widgets) > 0) {
+          state$values$querychat_viz_widgets <- viz_widgets
+        }
       })
 
       shiny::onRestore(function(state) {
@@ -140,6 +157,14 @@ mod_server <- function(
         }
         if (!is.null(state$values$querychat_has_greeted)) {
           has_greeted(state$values$querychat_has_greeted)
+        }
+        if (!is.null(state$values$querychat_viz_widgets)) {
+          restored <- restore_viz_widgets(
+            data_source,
+            state$values$querychat_viz_widgets,
+            session
+          )
+          viz_widgets <<- restored
         }
       })
     }
@@ -159,3 +184,35 @@ GREETING_PROMPT <- paste(
   "Include a few sample suggestions grouped under ##### headings,",
   "using the suggestion card format from your instructions."
 )
+
+restore_viz_widgets <- function(data_source, saved_widgets, session) {
+  if (!rlang::is_installed("ggsql")) {
+    warning(
+      "ggsql is not installed; skipping restoration of visualization widgets.",
+      call. = FALSE
+    )
+    return(list())
+  }
+
+  restored <- list()
+  for (entry in saved_widgets) {
+    tryCatch(
+      {
+        validated <- ggsql::ggsql_validate(entry$ggsql)
+        spec <- execute_ggsql(data_source, validated)
+        session$output[[entry$widget_id]] <- ggsql::renderGgsql(spec)
+        restored <- c(restored, list(entry))
+      },
+      error = function(e) {
+        warning(
+          sprintf(
+            "Failed to restore visualization widget '%s' on bookmark restore.",
+            entry$widget_id
+          ),
+          call. = FALSE
+        )
+      }
+    )
+  }
+  restored
+}

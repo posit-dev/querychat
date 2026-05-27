@@ -92,8 +92,13 @@ tool_query <- function(data_source) {
   db_type <- data_source$get_db_type()
 
   ellmer::tool(
-    function(query, `_intent` = "") {
-      querychat_tool_result(data_source, query, action = "query")
+    function(query, `_intent` = "", collapsed = FALSE) {
+      querychat_tool_result(
+        data_source,
+        query,
+        action = "query",
+        collapsed = collapsed
+      )
     },
     name = "querychat_query",
     description = interpolate_package("tool-query.md", db_type = db_type),
@@ -106,6 +111,10 @@ tool_query <- function(data_source) {
       ),
       `_intent` = ellmer::type_string(
         "A brief, user-friendly description of what this query calculates or retrieves."
+      ),
+      collapsed = ellmer::type_boolean(
+        "Optional (default: false). Set to true for exploratory or preparatory queries whose results aren't the primary answer. When true, the result card starts collapsed.",
+        required = FALSE
       )
     ),
     annotations = ellmer::tool_annotations(
@@ -161,7 +170,8 @@ querychat_tool_result <- function(
   data_source,
   query,
   title = NULL,
-  action = "update"
+  action = "update",
+  collapsed = NULL
 ) {
   action <- arg_match(action, c("update", "query", "reset"))
 
@@ -231,7 +241,11 @@ querychat_tool_result <- function(
         title = if (action == "update" && !is.null(title)) title,
         show_request = is_error,
         markdown = display_md,
-        open = querychat_tool_starts_open(action)
+        open = if (!is.null(collapsed)) {
+          !collapsed
+        } else {
+          querychat_tool_starts_open(action)
+        }
       )
     )
   )

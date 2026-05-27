@@ -620,5 +620,3 @@ def app_10_viz() -> Generator[str, None, None]:
 def chat_10_viz(page: Page) -> ChatControllerType:
     """Create a ChatController for the 10-viz-app chat component."""
     return _create_chat_controller(page, "titanic")
-
-

@@ -55,7 +55,6 @@ Suggests:
 VignetteBuilder:
     knitr
 Remotes:
-    posit-dev/ggsql-r,
     posit-dev/shinychat/pkg-r
 Config/roxygen2/version: 8.0.0
 Config/testthat/edition: 3

@@ -79,7 +79,7 @@ The inline chart includes controls for fullscreen viewing, saving as PNG/SVG, an
 To use the visualization tool, first install the ggsql package:
 
 ```r
-pak::pak("posit-dev/ggsql-r")
+install.packages("ggsql")
 ```
 
 Then include `"visualize"` in the `tools` parameter (it is not enabled by default):

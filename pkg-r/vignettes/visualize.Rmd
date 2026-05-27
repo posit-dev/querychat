@@ -25,7 +25,7 @@ Visualization requires two steps:
 1. **Install the ggsql package:**
 
     ```r
-    pak::pak("posit-dev/ggsql-r")
+    install.packages("ggsql")
     ```
 
 2. **Include `"visualize"` in the `tools` parameter:**

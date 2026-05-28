@@ -35,7 +35,7 @@ class TestQueryCollapsedParameter:
         monkeypatch.delenv("QUERYCHAT_TOOL_DETAILS", raising=False)
         query_fn = _query_impl(data_source)
         result = query_fn("SELECT * FROM test_table")
-        assert result.extra["display"].open is True  # default for query
+        assert result.extra["display"].open is False  # default for query
 
     def test_collapsed_overrides_env_expanded(self, data_source, monkeypatch):
         monkeypatch.setenv("QUERYCHAT_TOOL_DETAILS", "expanded")
@@ -54,7 +54,7 @@ def test_querychat_tool_starts_open_default_behavior(monkeypatch):
     """Test default behavior when no setting is provided."""
     monkeypatch.delenv("QUERYCHAT_TOOL_DETAILS", raising=False)
 
-    assert querychat_tool_starts_open("query") is True
+    assert querychat_tool_starts_open("query") is False
     assert querychat_tool_starts_open("update") is True
     assert querychat_tool_starts_open("reset") is False
     assert querychat_tool_starts_open("visualize") is True
@@ -84,7 +84,7 @@ def test_querychat_tool_starts_open_default_setting(monkeypatch):
     """Test 'default' setting."""
     monkeypatch.setenv("QUERYCHAT_TOOL_DETAILS", "default")
 
-    assert querychat_tool_starts_open("query") is True
+    assert querychat_tool_starts_open("query") is False
     assert querychat_tool_starts_open("update") is True
     assert querychat_tool_starts_open("reset") is False
     assert querychat_tool_starts_open("visualize") is True
@@ -99,7 +99,7 @@ def test_querychat_tool_starts_open_case_insensitive(monkeypatch):
     assert querychat_tool_starts_open("query") is False
 
     monkeypatch.setenv("QUERYCHAT_TOOL_DETAILS", "DeFaUlT")
-    assert querychat_tool_starts_open("query") is True
+    assert querychat_tool_starts_open("query") is False
 
 
 def test_querychat_tool_starts_open_invalid_setting(monkeypatch):
@@ -112,4 +112,4 @@ def test_querychat_tool_starts_open_invalid_setting(monkeypatch):
 
         assert len(w) == 1
         assert "Invalid value" in str(w[0].message)
-        assert result is True  # Falls back to default behavior
+        assert result is False  # Falls back to default behavior

@@ -23,11 +23,11 @@ describe("query tool collapsed parameter", {
     expect_true(result@extra$display$open)
   })
 
-  it("collapsed defaults to FALSE (open=TRUE for query)", {
+  it("collapsed defaults to TRUE (open=FALSE for query)", {
     ds <- local_data_frame_source(new_test_df())
     tool <- tool_query(ds)
     result <- tool(query = "SELECT * FROM test_table", `_intent` = "")
-    expect_true(result@extra$display$open)
+    expect_false(result@extra$display$open)
   })
 
   it("collapsed=TRUE overrides QUERYCHAT_TOOL_DETAILS=expanded", {

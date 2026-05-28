@@ -24,7 +24,7 @@ describe("querychat_tool_starts_open()", {
     withr::local_options(querychat.tool_details = NULL)
     withr::local_envvar(QUERYCHAT_TOOL_DETAILS = NA)
 
-    expect_true(querychat_tool_starts_open("query"))
+    expect_false(querychat_tool_starts_open("query"))
     expect_true(querychat_tool_starts_open("update"))
     expect_false(querychat_tool_starts_open("reset"))
   })
@@ -33,7 +33,7 @@ describe("querychat_tool_starts_open()", {
     withr::local_options(querychat.tool_details = NULL)
     withr::local_envvar(QUERYCHAT_TOOL_DETAILS = "default")
 
-    expect_true(querychat_tool_starts_open("query"))
+    expect_false(querychat_tool_starts_open("query"))
     expect_true(querychat_tool_starts_open("update"))
     expect_false(querychat_tool_starts_open("reset"))
   })
@@ -41,7 +41,7 @@ describe("querychat_tool_starts_open()", {
   it("uses the tool default when option is 'default'", {
     withr::local_options(querychat.tool_details = "default")
 
-    expect_true(querychat_tool_starts_open("query"))
+    expect_false(querychat_tool_starts_open("query"))
     expect_true(querychat_tool_starts_open("update"))
     expect_false(querychat_tool_starts_open("reset"))
   })
@@ -251,7 +251,7 @@ describe("querychat_tool_result()", {
       query = "SELECT * FROM test_table",
       action = "query"
     )
-    expect_true(query_result@extra$display$open)
+    expect_false(query_result@extra$display$open)
 
     reset_result <- querychat_tool_result(
       df_source,

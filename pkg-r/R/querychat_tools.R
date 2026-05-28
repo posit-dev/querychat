@@ -92,7 +92,7 @@ tool_query <- function(data_source) {
   db_type <- data_source$get_db_type()
 
   ellmer::tool(
-    function(query, `_intent` = "", collapsed = FALSE) {
+    function(query, collapsed = NULL, `_intent` = "") {
       querychat_tool_result(
         data_source,
         query,
@@ -109,12 +109,12 @@ tool_query <- function(data_source) {
           db_type = db_type
         )
       ),
+      collapsed = ellmer::type_boolean(
+        "Optional (default: true). The result card starts collapsed by default; the user can expand it to see the query and results. Set to false when the query result table is the primary answer to the user's question and should be immediately visible without expanding.",
+        required = FALSE
+      ),
       `_intent` = ellmer::type_string(
         "A brief, user-friendly description of what this query calculates or retrieves."
-      ),
-      collapsed = ellmer::type_boolean(
-        "Optional (default: false). Set to true for exploratory or preparatory queries whose results aren't the primary answer. When true, the result card starts collapsed.",
-        required = FALSE
       )
     ),
     annotations = ellmer::tool_annotations(
@@ -155,14 +155,14 @@ querychat_tool_starts_open <- function(action) {
   setting <- querychat_tool_details_option()
 
   if (is.null(setting)) {
-    return(action != "reset")
+    return(action %in% c("update", "visualize"))
   }
 
   switch(
     setting,
     "expanded" = TRUE,
     "collapsed" = FALSE,
-    action != "reset"
+    action %in% c("update", "visualize")
   )
 }
 

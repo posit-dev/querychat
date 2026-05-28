@@ -1,5 +1,7 @@
 # querychat (development version)
 
+* The query tool result card now starts collapsed by default. Users can still expand it to see the SQL query and results. Set `QUERYCHAT_TOOL_DETAILS=expanded` (or `options(querychat.tool_details = "expanded")`) to restore the previous behavior. (#239)
+
 * Added stream cancellation support. A stop button now appears during LLM streaming, allowing users to cancel in-progress responses by clicking it or pressing Escape. Cancellation is enabled by default and can be disabled via `enable_cancel = FALSE` in the UI. (#241)
 
 * The `tools` parameter now uses `"filter"` as the preferred name (instead of `"update"`) for the dashboard-filtering tool group. The default is now `c("filter", "query")`. The legacy name `"update"` is still accepted everywhere. (#222)

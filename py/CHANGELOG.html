@@ -131,15 +131,19 @@ ul.task-list li input[type="checkbox"] {
   <ul>
   <li><a href="#changelog" id="toc-changelog" class="nav-link active" data-scroll-target="#changelog">Changelog</a>
   <ul class="collapse">
+  <li><a href="#unreleased" id="toc-unreleased" class="nav-link" data-scroll-target="#unreleased">Unreleased</a>
+  <ul class="collapse">
+  <li><a href="#improvements" id="toc-improvements" class="nav-link" data-scroll-target="#improvements">Improvements</a></li>
+  </ul></li>
   <li><a href="#section" id="toc-section" class="nav-link" data-scroll-target="#section">[0.6.1] - 2026-05-26</a>
   <ul class="collapse">
   <li><a href="#new-features" id="toc-new-features" class="nav-link" data-scroll-target="#new-features">New features</a></li>
-  <li><a href="#improvements" id="toc-improvements" class="nav-link" data-scroll-target="#improvements">Improvements</a></li>
+  <li><a href="#improvements-1" id="toc-improvements-1" class="nav-link" data-scroll-target="#improvements-1">Improvements</a></li>
   </ul></li>
   <li><a href="#section-1" id="toc-section-1" class="nav-link" data-scroll-target="#section-1">[0.6.0] - 2026-05-06</a>
   <ul class="collapse">
   <li><a href="#new-features-1" id="toc-new-features-1" class="nav-link" data-scroll-target="#new-features-1">New features</a></li>
-  <li><a href="#improvements-1" id="toc-improvements-1" class="nav-link" data-scroll-target="#improvements-1">Improvements</a></li>
+  <li><a href="#improvements-2" id="toc-improvements-2" class="nav-link" data-scroll-target="#improvements-2">Improvements</a></li>
   </ul></li>
   <li><a href="#section-2" id="toc-section-2" class="nav-link" data-scroll-target="#section-2">[0.5.1] - 2026-01-23</a>
   <ul class="collapse">
@@ -148,20 +152,20 @@ ul.task-list li input[type="checkbox"] {
   <li><a href="#section-3" id="toc-section-3" class="nav-link" data-scroll-target="#section-3">[0.5.0] - 2026-01-16</a>
   <ul class="collapse">
   <li><a href="#new-features-3" id="toc-new-features-3" class="nav-link" data-scroll-target="#new-features-3">New features</a></li>
-  <li><a href="#improvements-2" id="toc-improvements-2" class="nav-link" data-scroll-target="#improvements-2">Improvements</a></li>
+  <li><a href="#improvements-3" id="toc-improvements-3" class="nav-link" data-scroll-target="#improvements-3">Improvements</a></li>
   <li><a href="#changes" id="toc-changes" class="nav-link" data-scroll-target="#changes">Changes</a></li>
   </ul></li>
   <li><a href="#section-4" id="toc-section-4" class="nav-link" data-scroll-target="#section-4">[0.4.0] - 2026-01-14</a>
   <ul class="collapse">
   <li><a href="#breaking-changes" id="toc-breaking-changes" class="nav-link" data-scroll-target="#breaking-changes">Breaking Changes</a></li>
   <li><a href="#new-features-4" id="toc-new-features-4" class="nav-link" data-scroll-target="#new-features-4">New features</a></li>
-  <li><a href="#improvements-3" id="toc-improvements-3" class="nav-link" data-scroll-target="#improvements-3">Improvements</a></li>
+  <li><a href="#improvements-4" id="toc-improvements-4" class="nav-link" data-scroll-target="#improvements-4">Improvements</a></li>
   </ul></li>
   <li><a href="#section-5" id="toc-section-5" class="nav-link" data-scroll-target="#section-5">[0.3.0] - 2025-12-10</a>
   <ul class="collapse">
   <li><a href="#breaking-changes-1" id="toc-breaking-changes-1" class="nav-link" data-scroll-target="#breaking-changes-1">Breaking Changes</a></li>
   <li><a href="#new-features-5" id="toc-new-features-5" class="nav-link" data-scroll-target="#new-features-5">New features</a></li>
-  <li><a href="#improvements-4" id="toc-improvements-4" class="nav-link" data-scroll-target="#improvements-4">Improvements</a></li>
+  <li><a href="#improvements-5" id="toc-improvements-5" class="nav-link" data-scroll-target="#improvements-5">Improvements</a></li>
   </ul></li>
   <li><a href="#section-6" id="toc-section-6" class="nav-link" data-scroll-target="#section-6">[0.2.2] - 2025-09-04</a></li>
   <li><a href="#section-7" id="toc-section-7" class="nav-link" data-scroll-target="#section-7">[0.2.1] - 2025-09-04</a></li>
@@ -181,6 +185,15 @@ ul.task-list li input[type="checkbox"] {
 <h1>Changelog</h1>
 <p>All notable changes to this project will be documented in this file.</p>
 <p>The format is based on <a href="https://keepachangelog.com/en/1.1.0/">Keep a Changelog</a>, and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
+<section id="unreleased" class="level2">
+<h2 class="anchored" data-anchor-id="unreleased">Unreleased</h2>
+<section id="improvements" class="level3">
+<h3 class="anchored" data-anchor-id="improvements">Improvements</h3>
+<ul>
+<li>The query tool result card now starts collapsed by default. Users can still expand it to see the SQL query and results. Set <code>QUERYCHAT_TOOL_DETAILS=expanded</code> to restore the previous behavior. (#239)</li>
+</ul>
+</section>
+</section>
 <section id="section" class="level2">
 <h2 class="anchored" data-anchor-id="section">[0.6.1] - 2026-05-26</h2>
 <section id="new-features" class="level3">
@@ -189,8 +202,8 @@ ul.task-list li input[type="checkbox"] {
 <li>Added stream cancellation support. A stop button now appears during LLM streaming, allowing users to cancel in-progress responses by clicking it or pressing Escape. Cancellation is enabled by default and can be disabled via <code>enable_cancel=False</code> in the UI. (#241)</li>
 </ul>
 </section>
-<section id="improvements" class="level3">
-<h3 class="anchored" data-anchor-id="improvements">Improvements</h3>
+<section id="improvements-1" class="level3">
+<h3 class="anchored" data-anchor-id="improvements-1">Improvements</h3>
 <ul>
 <li>The <code>tools</code> parameter now uses <code>"filter"</code> as the preferred name (instead of <code>"update"</code>) for the dashboard-filtering tool group. The default is now <code>("filter", "query")</code>. The legacy name <code>"update"</code> is still accepted everywhere. (#222)</li>
 <li>Suggestion prompts now render more reliably as interactive cards across LLM providers. (#236, #238)</li>
@@ -209,8 +222,8 @@ ul.task-list li input[type="checkbox"] {
 <li><p>The <code>querychat_query</code> tool now accepts an optional <code>collapsed</code> parameter. When <code>collapsed=True</code>, the result card starts collapsed so preparatory or exploratory queries don’t clutter the conversation. The LLM is guided to use this automatically when running queries before a visualization.</p></li>
 </ul>
 </section>
-<section id="improvements-1" class="level3">
-<h3 class="anchored" data-anchor-id="improvements-1">Improvements</h3>
+<section id="improvements-2" class="level3">
+<h3 class="anchored" data-anchor-id="improvements-2">Improvements</h3>
 <ul>
 <li>When a custom <code>prompt_template</code> is provided that doesn’t contain Mustache references to <code>{schema}</code>, the expensive <code>get_schema()</code> call is now skipped entirely. This allows users with large databases to avoid slow startup by providing their own prompt that includes schema information inline (or omits it). (#208)</li>
 </ul>
@@ -247,8 +260,8 @@ ul.task-list li input[type="checkbox"] {
 </ul></li>
 </ul>
 </section>
-<section id="improvements-2" class="level3">
-<h3 class="anchored" data-anchor-id="improvements-2">Improvements</h3>
+<section id="improvements-3" class="level3">
+<h3 class="anchored" data-anchor-id="improvements-3">Improvements</h3>
 <ul>
 <li>Improved typing support for return types on <code>.df()</code> et al.&nbsp;(#196)</li>
 </ul>
@@ -281,8 +294,8 @@ ul.task-list li input[type="checkbox"] {
 <li><p><code>QueryChat.sidebar()</code>, <code>QueryChat.ui()</code>, and <code>QueryChat.server()</code> now support an optional <code>id</code> parameter to create multiple chat instances from a single <code>QueryChat</code> object. (#172)</p></li>
 </ul>
 </section>
-<section id="improvements-3" class="level3">
-<h3 class="anchored" data-anchor-id="improvements-3">Improvements</h3>
+<section id="improvements-4" class="level3">
+<h3 class="anchored" data-anchor-id="improvements-4">Improvements</h3>
 <ul>
 <li><p>The update tool now requires that the SQL query returns all columns from the original data source, ensuring that the dashboard can display the complete data frame after filtering or sorting. If the query does not return all columns, an informative error message will be provided. (#180)</p></li>
 <li><p>Obvious SQL keywords that lead to data modification (e.g., <code>INSERT</code>, <code>UPDATE</code>, <code>DELETE</code>, <code>DROP</code>, etc.) are now prohibited in queries run via the query tool or update tool, to prevent accidental data changes. If such keywords are detected, an informative error message will be provided. (#180)</p></li>
@@ -309,8 +322,8 @@ ul.task-list li input[type="checkbox"] {
 <li><p>Added <code>querychat_reset_dashboard()</code> tool for easily resetting the dashboard filters when asked by the user. (#81)</p></li>
 </ul>
 </section>
-<section id="improvements-4" class="level3">
-<h3 class="anchored" data-anchor-id="improvements-4">Improvements</h3>
+<section id="improvements-5" class="level3">
+<h3 class="anchored" data-anchor-id="improvements-5">Improvements</h3>
 <ul>
 <li><p>Added rich tool UI support using shinychat development version and chatlas &gt;= 0.11.1. (#67)</p></li>
 <li><p>querychat’s system prompt and tool descriptions were rewritten for clarity and future extensibility. (#90)</p></li>

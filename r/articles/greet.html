@@ -12,13 +12,17 @@
 <link rel="icon" sizes="any" href="../favicon.ico">
 <link rel="manifest" href="../site.webmanifest">
 <script src="../lightswitch.js"></script><script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
-<script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="https://fonts.bunny.net/css?family=Open%20Sans:100,200,300,400,500,600,700,800,900,100i,200i,300i,400i,500i,600i,700i,800i,900i&amp;display=auto" rel="stylesheet">
+<link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
+<script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="https://fonts.bunny.net/css?family=Open%20Sans:100,200,300,400,500,600,700,800,900,100i,200i,300i,400i,500i,600i,700i,800i,900i&amp;display=auto" rel="stylesheet">
 <link href="https://fonts.bunny.net/css?family=Hubot%20Sans:100,200,300,400,500,600,700,800,900,100i,200i,300i,400i,500i,600i,700i,800i,900i&amp;display=auto" rel="stylesheet">
 <link href="https://fonts.bunny.net/css?family=Source%20Code%20Pro:100,200,300,400,500,600,700,800,900,100i,200i,300i,400i,500i,600i,700i,800i,900i&amp;display=auto" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Greet Users">
+<!-- Privacy-friendly analytics by Plausible --><script async src="https://plausible.io/js/pa-wgo-tEXQwSOuN51WDI0ry.js"></script><script>
+  window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};
+  plausible.init()
+</script>
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -28,7 +32,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">querychat</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.3.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -43,6 +47,7 @@
 <li><a class="dropdown-item" href="../articles/models.html">Models</a></li>
     <li><a class="dropdown-item" href="../articles/data-sources.html">Data Sources</a></li>
     <li><a class="dropdown-item" href="../articles/context.html">Provide context</a></li>
+    <li><a class="dropdown-item" href="../articles/visualize.html">Visualizations</a></li>
     <li><a class="dropdown-item" href="../articles/build.html">Build an app</a></li>
     <li><a class="dropdown-item" href="../articles/greet.html">Greet users</a></li>
     <li><a class="dropdown-item" href="../articles/tools.html">Tools</a></li>
@@ -79,7 +84,7 @@
       <img src="../logo.png" class="logo" alt=""><h1>Greet Users</h1>
             
       
-      <small class="dont-index">Source: <a href="https://github.com/posit-dev/querychat/blob/r/v0.2.0/vignettes/greet.Rmd" class="external-link"><code>vignettes/greet.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/posit-dev/querychat/blob/r/v0.3.0/vignettes/greet.Rmd" class="external-link"><code>vignettes/greet.Rmd</code></a></small>
       <div class="d-none name"><code>greet.Rmd</code></div>
     </div>
 
@@ -106,15 +111,15 @@ it when creating your <code>QueryChat</code> object:</p>
 <span><span class="va">qc</span><span class="op">$</span><span class="fu">app</span><span class="op">(</span><span class="op">)</span>  <span class="co"># Launch the app</span></span></code></pre></div>
 <p>You can provide suggestions to the user by using the
 <code>&lt;span class="suggestion"&gt; &lt;/span&gt;</code> tag:</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode markdown"><code class="sourceCode markdown"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="ss">* </span>**Filter and sort the data:**</span>
-<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="ss">  * </span><span class="dt">&lt;</span><span class="kw">span</span><span class="ot"> class</span><span class="op">=</span><span class="st">"suggestion"</span><span class="dt">&gt;</span>Show only Adelie penguins<span class="dt">&lt;/</span><span class="kw">span</span><span class="dt">&gt;</span></span>
-<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="ss">  * </span><span class="dt">&lt;</span><span class="kw">span</span><span class="ot"> class</span><span class="op">=</span><span class="st">"suggestion"</span><span class="dt">&gt;</span>Filter to penguins with body mass over 4000g<span class="dt">&lt;/</span><span class="kw">span</span><span class="dt">&gt;</span></span>
-<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="ss">  * </span><span class="dt">&lt;</span><span class="kw">span</span><span class="ot"> class</span><span class="op">=</span><span class="st">"suggestion"</span><span class="dt">&gt;</span>Sort by flipper length from longest to shortest<span class="dt">&lt;/</span><span class="kw">span</span><span class="dt">&gt;</span></span>
+<div class="sourceCode" id="cb3"><pre class="sourceCode markdown"><code class="sourceCode markdown"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="fu">##### Filter and sort the data</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="ss">* </span><span class="dt">&lt;</span><span class="kw">span</span><span class="ot"> class</span><span class="op">=</span><span class="st">"suggestion"</span><span class="dt">&gt;</span>Show only Adelie penguins<span class="dt">&lt;/</span><span class="kw">span</span><span class="dt">&gt;</span></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="ss">* </span><span class="dt">&lt;</span><span class="kw">span</span><span class="ot"> class</span><span class="op">=</span><span class="st">"suggestion"</span><span class="dt">&gt;</span>Filter to penguins with body mass over 4000g<span class="dt">&lt;/</span><span class="kw">span</span><span class="dt">&gt;</span></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="ss">* </span><span class="dt">&lt;</span><span class="kw">span</span><span class="ot"> class</span><span class="op">=</span><span class="st">"suggestion"</span><span class="dt">&gt;</span>Sort by flipper length from longest to shortest<span class="dt">&lt;/</span><span class="kw">span</span><span class="dt">&gt;</span></span>
 <span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a></span>
-<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="ss">* </span>**Answer questions about the data:**</span>
-<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="ss">  * </span><span class="dt">&lt;</span><span class="kw">span</span><span class="ot"> class</span><span class="op">=</span><span class="st">"suggestion"</span><span class="dt">&gt;</span>What is the average bill length by species?<span class="dt">&lt;/</span><span class="kw">span</span><span class="dt">&gt;</span></span>
-<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="ss">  * </span><span class="dt">&lt;</span><span class="kw">span</span><span class="ot"> class</span><span class="op">=</span><span class="st">"suggestion"</span><span class="dt">&gt;</span>How many penguins are in each island?<span class="dt">&lt;/</span><span class="kw">span</span><span class="dt">&gt;</span></span>
-<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a><span class="ss">  * </span><span class="dt">&lt;</span><span class="kw">span</span><span class="ot"> class</span><span class="op">=</span><span class="st">"suggestion"</span><span class="dt">&gt;</span>Which species has the largest average body mass?<span class="dt">&lt;/</span><span class="kw">span</span><span class="dt">&gt;</span></span></code></pre></div>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="fu">##### Answer questions about the data</span></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="ss">* </span><span class="dt">&lt;</span><span class="kw">span</span><span class="ot"> class</span><span class="op">=</span><span class="st">"suggestion"</span><span class="dt">&gt;</span>What is the average bill length by species?<span class="dt">&lt;/</span><span class="kw">span</span><span class="dt">&gt;</span></span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="ss">* </span><span class="dt">&lt;</span><span class="kw">span</span><span class="ot"> class</span><span class="op">=</span><span class="st">"suggestion"</span><span class="dt">&gt;</span>How many penguins are in each island?<span class="dt">&lt;/</span><span class="kw">span</span><span class="dt">&gt;</span></span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a><span class="ss">* </span><span class="dt">&lt;</span><span class="kw">span</span><span class="ot"> class</span><span class="op">=</span><span class="st">"suggestion"</span><span class="dt">&gt;</span>Which species has the largest average body mass?<span class="dt">&lt;/</span><span class="kw">span</span><span class="dt">&gt;</span></span></code></pre></div>
 <p>These suggestions appear in the greeting and automatically populate
 the chat text box when clicked.</p>
 </div>

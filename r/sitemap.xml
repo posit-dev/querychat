@@ -9,6 +9,7 @@
 <url><loc>https://posit-dev.github.io/querychat/articles/index.html</loc></url>
 <url><loc>https://posit-dev.github.io/querychat/articles/models.html</loc></url>
 <url><loc>https://posit-dev.github.io/querychat/articles/tools.html</loc></url>
+<url><loc>https://posit-dev.github.io/querychat/articles/visualize.html</loc></url>
 <url><loc>https://posit-dev.github.io/querychat/authors.html</loc></url>
 <url><loc>https://posit-dev.github.io/querychat/index.html</loc></url>
 <url><loc>https://posit-dev.github.io/querychat/news/index.html</loc></url>
@@ -18,6 +19,9 @@
 <url><loc>https://posit-dev.github.io/querychat/reference/QueryChat.html</loc></url>
 <url><loc>https://posit-dev.github.io/querychat/reference/TblSqlSource.html</loc></url>
 <url><loc>https://posit-dev.github.io/querychat/reference/deprecated.html</loc></url>
+<url><loc>https://posit-dev.github.io/querychat/reference/execute_ggsql.html</loc></url>
+<url><loc>https://posit-dev.github.io/querychat/reference/extract_visualise_table.html</loc></url>
+<url><loc>https://posit-dev.github.io/querychat/reference/has_layer_level_source.html</loc></url>
 <url><loc>https://posit-dev.github.io/querychat/reference/index.html</loc></url>
 <url><loc>https://posit-dev.github.io/querychat/reference/querychat-convenience.html</loc></url>
 <url><loc>https://posit-dev.github.io/querychat/reference/querychat-package.html</loc></url>

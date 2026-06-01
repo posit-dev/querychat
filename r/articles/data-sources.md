@@ -16,6 +16,7 @@ it to
 [`querychat()`](https://posit-dev.github.io/querychat/reference/querychat-convenience.md):
 
 ``` r
+
 library(querychat)
 library(palmerpenguins)
 
@@ -40,6 +41,7 @@ Below are some examples for common databases.
 ### DuckDB
 
 ``` r
+
 library(DBI)
 library(duckdb)
 library(querychat)
@@ -57,6 +59,7 @@ qc$app()  # Launch the app
 ### SQLite
 
 ``` r
+
 library(DBI)
 library(RSQLite)
 library(querychat)
@@ -74,6 +77,7 @@ qc$app()  # Launch the app
 ### PostgreSQL
 
 ``` r
+
 library(DBI)
 library(RPostgres)
 library(querychat)
@@ -98,6 +102,7 @@ qc$app()  # Launch the app
 ### MySQL
 
 ``` r
+
 library(DBI)
 library(RMariaDB)
 library(querychat)
@@ -125,6 +130,7 @@ If you don’t have a database set up, you can easily create a local
 DuckDB database from a data frame:
 
 ``` r
+
 library(DBI)
 library(duckdb)
 

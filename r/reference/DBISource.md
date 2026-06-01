@@ -1,29 +1,25 @@
 # DBI Source
 
-DBI Source
-
-DBI Source
-
-## Details
-
 A DataSource implementation for DBI database connections (SQLite,
 PostgreSQL, MySQL, etc.). This class wraps a DBI connection and provides
 SQL query execution against a single table in the database.
 
 ## Super class
 
-[`querychat::DataSource`](https://posit-dev.github.io/querychat/reference/DataSource.md)
+[`DataSource`](https://posit-dev.github.io/querychat/reference/DataSource.md)
 -\> `DBISource`
 
 ## Methods
 
 ### Public methods
 
-- [`DBISource$new()`](#method-DBISource-new)
+- [`DBISource$new()`](#method-DBISource-initialize)
 
 - [`DBISource$get_db_type()`](#method-DBISource-get_db_type)
 
 - [`DBISource$get_schema()`](#method-DBISource-get_schema)
+
+- [`DBISource$get_semantic_views_description()`](#method-DBISource-get_semantic_views_description)
 
 - [`DBISource$execute_query()`](#method-DBISource-execute_query)
 
@@ -37,7 +33,7 @@ SQL query execution against a single table in the database.
 
 ------------------------------------------------------------------------
 
-### Method `new()`
+### `DBISource$new()`
 
 Create a new DBISource
 
@@ -63,7 +59,7 @@ A new DBISource object
 
 ------------------------------------------------------------------------
 
-### Method `get_db_type()`
+### `DBISource$get_db_type()`
 
 Get the database type
 
@@ -77,7 +73,7 @@ A string identifying the database type
 
 ------------------------------------------------------------------------
 
-### Method `get_schema()`
+### `DBISource$get_schema()`
 
 Get schema information for the database table
 
@@ -98,7 +94,21 @@ A string describing the schema
 
 ------------------------------------------------------------------------
 
-### Method `execute_query()`
+### `DBISource$get_semantic_views_description()`
+
+Get information about semantic views (if any) for the system prompt.
+
+#### Usage
+
+    DBISource$get_semantic_views_description()
+
+#### Returns
+
+A string with semantic view information, or empty string if none
+
+------------------------------------------------------------------------
+
+### `DBISource$execute_query()`
 
 Execute a SQL query
 
@@ -118,7 +128,7 @@ A data frame with query results
 
 ------------------------------------------------------------------------
 
-### Method `test_query()`
+### `DBISource$test_query()`
 
 Test a SQL query by fetching only one row
 
@@ -143,7 +153,7 @@ A data frame with one row of results
 
 ------------------------------------------------------------------------
 
-### Method `get_data()`
+### `DBISource$get_data()`
 
 Get all data from the table
 
@@ -157,7 +167,7 @@ A data frame containing all data
 
 ------------------------------------------------------------------------
 
-### Method `cleanup()`
+### `DBISource$cleanup()`
 
 Disconnect from the database
 
@@ -171,7 +181,7 @@ NULL (invisibly)
 
 ------------------------------------------------------------------------
 
-### Method `clone()`
+### `DBISource$clone()`
 
 The objects of this class are cloneable with this method.
 

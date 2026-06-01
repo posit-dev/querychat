@@ -13,12 +13,14 @@ language querying into your data workflows.
 Install the stable release from CRAN:
 
 ``` r
+
 install.packages("querychat")
 ```
 
 Or the development version from GitHub:
 
 ``` r
+
 # install.packages("pak")
 pak::pak("posit-dev/querychat/pkg-r")
 ```
@@ -34,13 +36,14 @@ parameters (e.g. the LLM `client`
 [model](https://posit-dev.github.io/querychat/r/articles/models.html)).
 
 ``` r
+
 library(querychat)
 library(palmerpenguins)
 
 querychat_app(penguins, client = "openai/gpt-4.1")
 ```
 
-Once running (which requires an API key[¹](#fn1)), you’ll notice 3 main
+Once running (which requires an API key[^1]), you’ll notice 3 main
 views:
 
 1.  A sidebar chat with suggestions on where to start exploring.
@@ -66,6 +69,14 @@ the result in the chat:
 
 ![Screenshot of the querychat's app with a summary statistic inlined in
 the chat.](reference/figures/quickstart-summary.png)
+
+querychat can also create visualizations, powered by
+[ggsql](https://ggsql.org/). With the [visualization
+tool](https://posit-dev.github.io/querychat/r/articles/visualize.html)
+enabled, ask for a chart and it appears inline in the conversation:
+
+![Bar chart showing average body mass by penguin
+species.](reference/figures/viz-bar-chart.png)
 
 ## Custom apps
 
@@ -97,15 +108,15 @@ prompt](https://posit-dev.github.io/querychat/r/articles/context.html).
 Importantly, querychat **does not** send raw data to the LLM; it shares
 only enough structural information for the model to generate accurate
 queries. When the LLM produces a query, querychat executes it in a SQL
-database (DuckDB[²](#fn2), by default) to obtain precise results.
+database (DuckDB[^2], by default) to obtain precise results.
 
 This design makes querychat reliable, safe, and reproducible:
 
 - **Reliable**: query results come from a real database, not
   LLM-generated summaries – so outputs are precise, verifiable, and less
-  vulnerable to hallucination[³](#fn3).
+  vulnerable to hallucination[^3].
 - **Safe**: querychat’s tools are read-only by design, avoiding
-  destructive actions on your data.[⁴](#fn4)
+  destructive actions on your data.[^4]
 - **Reproducible**: generated SQL can be exported and re-run in other
   environments, so your analysis isn’t locked into a single tool.
 
@@ -129,6 +140,8 @@ From here, you might want to learn more about:
 - [Provide
   context](https://posit-dev.github.io/querychat/r/articles/context.html):
   provide the LLM with the context it needs to work well.
+- [Visualizations](https://posit-dev.github.io/querychat/r/articles/visualize.html):
+  create inline charts powered by ggsql.
 - [Build an
   app](https://posit-dev.github.io/querychat/r/articles/build.html):
   design a custom Shiny app around querychat.
@@ -138,25 +151,24 @@ From here, you might want to learn more about:
 - [Tools](https://posit-dev.github.io/querychat/r/articles/tools.html):
   understand what querychat can do under the hood.
 
-------------------------------------------------------------------------
-
-1.  By default, querychat uses OpenAI to power the chat experience. So,
-    for this example to work, you’ll need [an OpenAI API
+[^1]: By default, querychat uses OpenAI to power the chat experience.
+    So, for this example to work, you’ll need [an OpenAI API
     key](https://platform.openai.com/). See the
     [Models](https://posit-dev.github.io/querychat/r/articles/models.html)
     article for details on how to set up credentials for other model
     providers.
 
-2.  DuckDB is extremely fast and has a surprising number of [statistical
+[^2]: DuckDB is extremely fast and has a surprising number of
+    [statistical
     functions](https://duckdb.org/docs/stable/sql/functions/aggregates.html#statistical-aggregates).
 
-3.  The [query
+[^3]: The [query
     tool](https://posit-dev.github.io/querychat/r/articles/tools.html)
     gives query results to the model for context and interpretation.
     Thus, there is *some* potential that the model to mis-interpret
     those results.
 
-4.  To fully guarantee no destructive actions on your production
+[^4]: To fully guarantee no destructive actions on your production
     database, ensure querychat’s database permissions are read-only.
 
 # Package index
@@ -206,3 +218,4 @@ From here, you might want to learn more about:
   Users](https://posit-dev.github.io/querychat/articles/greet.md):
 - [Models](https://posit-dev.github.io/querychat/articles/models.md):
 - [Tools](https://posit-dev.github.io/querychat/articles/tools.md):
+- [Visualizations](https://posit-dev.github.io/querychat/articles/visualize.md):

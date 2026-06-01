@@ -12,16 +12,20 @@
 <link rel="icon" sizes="any" href="favicon.ico">
 <link rel="manifest" href="site.webmanifest">
 <script src="lightswitch.js"></script><script src="deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<link href="deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
-<script src="deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="https://fonts.bunny.net/css?family=Open%20Sans:100,200,300,400,500,600,700,800,900,100i,200i,300i,400i,500i,600i,700i,800i,900i&amp;display=auto" rel="stylesheet">
+<link href="deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
+<script src="deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="https://fonts.bunny.net/css?family=Open%20Sans:100,200,300,400,500,600,700,800,900,100i,200i,300i,400i,500i,600i,700i,800i,900i&amp;display=auto" rel="stylesheet">
 <link href="https://fonts.bunny.net/css?family=Hubot%20Sans:100,200,300,400,500,600,700,800,900,100i,200i,300i,400i,500i,600i,700i,800i,900i&amp;display=auto" rel="stylesheet">
 <link href="https://fonts.bunny.net/css?family=Source%20Code%20Pro:100,200,300,400,500,600,700,800,900,100i,200i,300i,400i,500i,600i,700i,800i,900i&amp;display=auto" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Filter and Query Data Frames in shiny Using an LLM Chat Interface">
-<meta name="description" content="Adds an LLM-powered chatbot to your shiny app, that can turn your users' natural language questions into SQL queries that run against your data, and return the result as a reactive data frame. Use it to drive reactive calculations, visualizations, downloads, and more.">
-<meta property="og:description" content="Adds an LLM-powered chatbot to your shiny app, that can turn your users' natural language questions into SQL queries that run against your data, and return the result as a reactive data frame. Use it to drive reactive calculations, visualizations, downloads, and more.">
+<meta name="description" content="Adds an LLM-powered chatbot to your shiny app, that can turn your users natural language questions into SQL' queries that run against your data, and return the result as a reactive data frame. Use it to drive reactive calculations, visualizations, downloads, and more.">
+<meta property="og:description" content="Adds an LLM-powered chatbot to your shiny app, that can turn your users natural language questions into SQL' queries that run against your data, and return the result as a reactive data frame. Use it to drive reactive calculations, visualizations, downloads, and more.">
 <meta property="og:image" content="https://posit-dev.github.io/querychat/logo.png">
+<!-- Privacy-friendly analytics by Plausible --><script async src="https://plausible.io/js/pa-wgo-tEXQwSOuN51WDI0ry.js"></script><script>
+  window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};
+  plausible.init()
+</script>
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -31,7 +35,7 @@
 
     <a class="navbar-brand me-2" href="index.html">querychat</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.3.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -46,6 +50,7 @@
 <li><a class="dropdown-item" href="articles/models.html">Models</a></li>
     <li><a class="dropdown-item" href="articles/data-sources.html">Data Sources</a></li>
     <li><a class="dropdown-item" href="articles/context.html">Provide context</a></li>
+    <li><a class="dropdown-item" href="articles/visualize.html">Visualizations</a></li>
     <li><a class="dropdown-item" href="articles/build.html">Build an app</a></li>
     <li><a class="dropdown-item" href="articles/greet.html">Greet users</a></li>
     <li><a class="dropdown-item" href="articles/tools.html">Tools</a></li>
@@ -114,6 +119,8 @@
 <p><img src="reference/figures/quickstart-filter.png" class="rounded shadow" alt="Screenshot of the querychat's app with the penguins dataset filtered."></p>
 <p>querychat can also handle more general questions about the data that require calculations and aggregations. For example, we can ask “What is the average bill length by species?”. The LLM will generate the SQL query to perform the calculation, querychat will execute it, and return the result in the chat:</p>
 <p><img src="reference/figures/quickstart-summary.png" class="rounded shadow" alt="Screenshot of the querychat's app with a summary statistic inlined in the chat."></p>
+<p>querychat can also create visualizations, powered by <a href="https://ggsql.org/" class="external-link">ggsql</a>. With the <a href="https://posit-dev.github.io/querychat/r/articles/visualize.html">visualization tool</a> enabled, ask for a chart and it appears inline in the conversation:</p>
+<p><img src="reference/figures/viz-bar-chart.png" class="rounded shadow" alt="Bar chart showing average body mass by penguin species."></p>
 </div>
 <div class="section level2">
 <h2 id="custom-apps">Custom apps<a class="anchor" aria-label="anchor" href="#custom-apps"></a>
@@ -154,6 +161,8 @@
 <li>
 <a href="https://posit-dev.github.io/querychat/r/articles/context.html">Provide context</a>: provide the LLM with the context it needs to work well.</li>
 <li>
+<a href="https://posit-dev.github.io/querychat/r/articles/visualize.html">Visualizations</a>: create inline charts powered by ggsql.</li>
+<li>
 <a href="https://posit-dev.github.io/querychat/r/articles/build.html">Build an app</a>: design a custom Shiny app around querychat.</li>
 <li>
 <a href="https://posit-dev.github.io/querychat/r/articles/greet.html">Greet users</a>: create welcoming onboarding experiences.</li>
@@ -167,6 +176,7 @@
   </main><aside class="col-md-3"><div class="links">
 <h2 data-toc-skip>Links</h2>
 <ul class="list-unstyled">
+<li><a href="https://cloud.r-project.org/package=querychat" class="external-link">View on CRAN</a></li>
 <li><a href="https://github.com/posit-dev/querychat/" class="external-link">Browse source code</a></li>
 <li><a href="https://github.com/posit-dev/querychat/issues" class="external-link">Report a bug</a></li>
 </ul>

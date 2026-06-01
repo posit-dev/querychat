@@ -16,16 +16,16 @@
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/posit-dev/querychat/blob/r/v0.2.0/DESCRIPTION)
+[`DESCRIPTION`](https://github.com/posit-dev/querychat/blob/r/v0.3.0/DESCRIPTION)
 
 Aden-Buie G, Cheng J, Sievert C (2026). *querychat: Filter and Query
 Data Frames in 'shiny' Using an LLM Chat Interface*. R package version
-0.2.0, <https://posit-dev.github.io/querychat/r/>.
+0.3.0, <https://posit-dev.github.io/querychat/r/>.
 
     @Manual{,
       title = {querychat: Filter and Query Data Frames in 'shiny' Using an LLM Chat Interface},
       author = {Garrick Aden-Buie and Joe Cheng and Carson Sievert},
       year = {2026},
-      note = {R package version 0.2.0},
+      note = {R package version 0.3.0},
       url = {https://posit-dev.github.io/querychat/r/},
     }

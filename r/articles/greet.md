@@ -1,6 +1,7 @@
 # Greet Users
 
 ``` r
+
 library(querychat)
 library(palmerpenguins)
 ```
@@ -16,6 +17,7 @@ Instead, you should create a greeting file and pass it when creating
 your `QueryChat` object:
 
 ``` r
+
 qc <- querychat(
   penguins,
   greeting = "greeting.md"
@@ -27,15 +29,15 @@ You can provide suggestions to the user by using the
 `<span class="suggestion"> </span>` tag:
 
 ``` markdown
-* **Filter and sort the data:**
-  * <span class="suggestion">Show only Adelie penguins</span>
-  * <span class="suggestion">Filter to penguins with body mass over 4000g</span>
-  * <span class="suggestion">Sort by flipper length from longest to shortest</span>
+##### Filter and sort the data
+* <span class="suggestion">Show only Adelie penguins</span>
+* <span class="suggestion">Filter to penguins with body mass over 4000g</span>
+* <span class="suggestion">Sort by flipper length from longest to shortest</span>
 
-* **Answer questions about the data:**
-  * <span class="suggestion">What is the average bill length by species?</span>
-  * <span class="suggestion">How many penguins are in each island?</span>
-  * <span class="suggestion">Which species has the largest average body mass?</span>
+##### Answer questions about the data
+* <span class="suggestion">What is the average bill length by species?</span>
+* <span class="suggestion">How many penguins are in each island?</span>
+* <span class="suggestion">Which species has the largest average body mass?</span>
 ```
 
 These suggestions appear in the greeting and automatically populate the
@@ -47,6 +49,7 @@ If you need help coming up with a greeting, you can use the
 `$generate_greeting()` method:
 
 ``` r
+
 library(querychat)
 
 # Create QueryChat object with your dataset
@@ -66,6 +69,7 @@ This approach generates a greeting once and saves it for reuse, avoiding
 the latency and cost of generating it for every user.
 
 ``` r
+
 # Then use the saved greeting in your app
 querychat_app(
   penguins,

@@ -20,31 +20,32 @@ be installed.
 
 ## Super classes
 
-[`querychat::DataSource`](https://posit-dev.github.io/querychat/reference/DataSource.md)
+[`DataSource`](https://posit-dev.github.io/querychat/reference/DataSource.md)
 -\>
-[`querychat::DBISource`](https://posit-dev.github.io/querychat/reference/DBISource.md)
+[`DBISource`](https://posit-dev.github.io/querychat/reference/DBISource.md)
 -\> `DataFrameSource`
 
 ## Methods
 
 ### Public methods
 
-- [`DataFrameSource$new()`](#method-DataFrameSource-new)
+- [`DataFrameSource$new()`](#method-DataFrameSource-initialize)
 
 - [`DataFrameSource$clone()`](#method-DataFrameSource-clone)
 
 Inherited methods
 
-- [`querychat::DBISource$cleanup()`](https://posit-dev.github.io/querychat/reference/DBISource.html#method-cleanup)
-- [`querychat::DBISource$execute_query()`](https://posit-dev.github.io/querychat/reference/DBISource.html#method-execute_query)
-- [`querychat::DBISource$get_data()`](https://posit-dev.github.io/querychat/reference/DBISource.html#method-get_data)
-- [`querychat::DBISource$get_db_type()`](https://posit-dev.github.io/querychat/reference/DBISource.html#method-get_db_type)
-- [`querychat::DBISource$get_schema()`](https://posit-dev.github.io/querychat/reference/DBISource.html#method-get_schema)
-- [`querychat::DBISource$test_query()`](https://posit-dev.github.io/querychat/reference/DBISource.html#method-test_query)
+- [`DBISource$cleanup()`](https://posit-dev.github.io/querychat/reference/DBISource.html#method-cleanup)
+- [`DBISource$execute_query()`](https://posit-dev.github.io/querychat/reference/DBISource.html#method-execute_query)
+- [`DBISource$get_data()`](https://posit-dev.github.io/querychat/reference/DBISource.html#method-get_data)
+- [`DBISource$get_db_type()`](https://posit-dev.github.io/querychat/reference/DBISource.html#method-get_db_type)
+- [`DBISource$get_schema()`](https://posit-dev.github.io/querychat/reference/DBISource.html#method-get_schema)
+- [`DBISource$get_semantic_views_description()`](https://posit-dev.github.io/querychat/reference/DBISource.html#method-get_semantic_views_description)
+- [`DBISource$test_query()`](https://posit-dev.github.io/querychat/reference/DBISource.html#method-test_query)
 
 ------------------------------------------------------------------------
 
-### Method `new()`
+### `DataFrameSource$new()`
 
 Create a new DataFrameSource
 
@@ -80,7 +81,7 @@ A new DataFrameSource object
 
 ------------------------------------------------------------------------
 
-### Method `clone()`
+### `DataFrameSource$clone()`
 
 The objects of this class are cloneable with this method.
 

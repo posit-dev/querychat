@@ -66,13 +66,14 @@ connection) as input and provides methods to:
 
 - `data_source`:
 
-  Get the current data source.
+  Get or set the current data source. When setting, the value is
+  normalized and the system prompt is rebuilt.
 
 ## Methods
 
 ### Public methods
 
-- [`QueryChat$new()`](#method-QueryChat-new)
+- [`QueryChat$new()`](#method-QueryChat-initialize)
 
 - [`QueryChat$client()`](#method-QueryChat-client)
 
@@ -96,7 +97,7 @@ connection) as input and provides methods to:
 
 ------------------------------------------------------------------------
 
-### Method `new()`
+### `QueryChat$new()`
 
 Create a new QueryChat object.
 
@@ -109,7 +110,7 @@ Create a new QueryChat object.
       id = NULL,
       greeting = NULL,
       client = NULL,
-      tools = c("update", "query"),
+      tools = c("filter", "query"),
       data_description = NULL,
       categorical_threshold = 20,
       extra_instructions = NULL,
@@ -121,7 +122,10 @@ Create a new QueryChat object.
 
 - `data_source`:
 
-  Either a data.frame or a database connection (e.g., DBI connection).
+  Either a data.frame, a database connection (e.g., DBI connection), or
+  `NULL` to defer setting the data source until later. When `NULL`, the
+  data source must be set via the `$data_source` property or passed to
+  `$server()` before calling methods that require data access.
 
 - `table_name`:
 
@@ -129,7 +133,7 @@ Create a new QueryChat object.
   `data_source` is a data.frame, this is the name to refer to it by in
   queries (typically the variable name). If not provided, will be
   inferred from the variable name for data.frame inputs. For database
-  connections, this parameter is required.
+  connections or `NULL` data sources, this parameter is required.
 
 - `...`:
 
@@ -167,11 +171,12 @@ Create a new QueryChat object.
 - `tools`:
 
   Which querychat tools to include in the chat client, by default.
-  `"update"` includes the tools for updating and resetting the dashboard
-  and `"query"` includes the tool for executing SQL queries. Use
-  `tools = "update"` when you only want the dashboard updating tools, or
-  when you want to disable the querying tool entirely to prevent the LLM
-  from seeing any of the data in your dataset.
+  `"filter"` includes the tools for filtering and resetting the
+  dashboard and `"query"` includes the tool for executing SQL queries.
+  Use `tools = "filter"` when you only want the dashboard filtering
+  tools, or when you want to disable the querying tool entirely to
+  prevent the LLM from seeing any of the data in your dataset. The
+  legacy name `"update"` is still accepted as an alias for `"filter"`.
 
 - `data_description`:
 
@@ -208,7 +213,7 @@ A new `QueryChat` object.
 
 ------------------------------------------------------------------------
 
-### Method `client()`
+### `QueryChat$client()`
 
 Create a chat client, complete with registered tools, for the current
 data source.
@@ -220,17 +225,21 @@ data source.
       update_dashboard = function(query, title) {
      },
       reset_dashboard = function() {
-     }
+     },
+      visualize = function(data) {
+     },
+      session = NULL
     )
 
 #### Arguments
 
 - `tools`:
 
-  Which querychat tools to include in the chat client. `"update"`
-  includes the tools for updating and resetting the dashboard and
+  Which querychat tools to include in the chat client. `"filter"`
+  includes the tools for filtering and resetting the dashboard and
   `"query"` includes the tool for executing SQL queries. By default,
-  when `tools = NA`, the values provided at initialization are used.
+  when `tools = NA`, the values provided at initialization are used. The
+  legacy name `"update"` is still accepted as an alias for `"filter"`.
 
 - `update_dashboard`:
 
@@ -241,9 +250,20 @@ data source.
 
   Optional function to call when the `reset_dashboard` tool is called.
 
+- `visualize`:
+
+  Optional function to call with a list containing `ggsql`, `title`, and
+  `widget_id` when a visualization succeeds.
+
+- `session`:
+
+  A Shiny session object. Required when `"visualize"` is in `tools` and
+  you want interactive chart rendering. When `NULL` (the default),
+  visualizations still execute but are not rendered as Shiny outputs.
+
 ------------------------------------------------------------------------
 
-### Method `console()`
+### `QueryChat$console()`
 
 Launch a console-based chat interface with the data source.
 
@@ -271,7 +291,7 @@ Launch a console-based chat interface with the data source.
 
 ------------------------------------------------------------------------
 
-### Method `app()`
+### `QueryChat$app()`
 
 Create and run a Shiny gadget for chatting with data
 
@@ -316,7 +336,7 @@ Invisibly returns a list of session-specific values:
 
 ------------------------------------------------------------------------
 
-### Method `app_obj()`
+### `QueryChat$app_obj()`
 
 A streamlined Shiny app for chatting with data
 
@@ -360,7 +380,7 @@ A Shiny app object that can be run with
 
 ------------------------------------------------------------------------
 
-### Method `sidebar()`
+### `QueryChat$sidebar()`
 
 Create a sidebar containing the querychat UI.
 
@@ -422,7 +442,7 @@ UI component.
 
 ------------------------------------------------------------------------
 
-### Method `ui()`
+### `QueryChat$ui()`
 
 Create the UI for the querychat chat interface.
 
@@ -460,7 +480,7 @@ A UI component containing the chat interface.
 
 ------------------------------------------------------------------------
 
-### Method `server()`
+### `QueryChat$server()`
 
 Initialize the querychat server logic.
 
@@ -481,6 +501,8 @@ reactive values.
 #### Usage
 
     QueryChat$server(
+      data_source = NULL,
+      client = NULL,
       enable_bookmarking = FALSE,
       ...,
       id = NULL,
@@ -488,6 +510,24 @@ reactive values.
     )
 
 #### Arguments
+
+- `data_source`:
+
+  Optional data source to use. If provided, sets the data_source
+  property before initializing server logic. This is useful for the
+  deferred pattern where data_source is not known at initialization time
+  (e.g., when the data source depends on session- specific
+  authentication).
+
+- `client`:
+
+  Optional chat client override for this session. Can be an
+  [ellmer::Chat](https://ellmer.tidyverse.org/reference/Chat.html)
+  object or a string (e.g., `"openai/gpt-4o"`). If provided, overrides
+  the client set at initialization for this session only — other
+  sessions are unaffected. This is useful when the client must be
+  created within a session scope (e.g., Posit Connect managed
+  credentials).
 
 - `enable_bookmarking`:
 
@@ -530,7 +570,7 @@ with the following elements:
 
 ------------------------------------------------------------------------
 
-### Method `generate_greeting()`
+### `QueryChat$generate_greeting()`
 
 Generate a welcome greeting for the chat.
 
@@ -566,7 +606,7 @@ The greeting string in Markdown format.
 
 ------------------------------------------------------------------------
 
-### Method `cleanup()`
+### `QueryChat$cleanup()`
 
 Clean up resources associated with the data source.
 
@@ -587,7 +627,7 @@ Invisibly returns `NULL`. Resources are cleaned up internally.
 
 ------------------------------------------------------------------------
 
-### Method `clone()`
+### `QueryChat$clone()`
 
 The objects of this class are cloneable with this method.
 
@@ -606,7 +646,6 @@ The objects of this class are cloneable with this method.
 ``` r
 # Basic usage with a data frame
 qc <- QueryChat$new(mtcars)
-#> Using model = "gpt-4.1".
 if (FALSE) { # \dontrun{
 app <- qc$app()
 } # }
@@ -614,7 +653,6 @@ app <- qc$app()
 # With a custom greeting
 greeting <- "Welcome! Ask me about the mtcars dataset."
 qc <- QueryChat$new(mtcars, greeting = greeting)
-#> Using model = "gpt-4.1".
 
 # With a specific LLM provider
 qc <- QueryChat$new(mtcars, client = "anthropic/claude-sonnet-4-5")
@@ -643,5 +681,4 @@ DBI::dbWriteTable(con, "mtcars", mtcars)
 
 # 3. Pass the connection and table name to `QueryChat`
 qc <- QueryChat$new(con, "mtcars")
-#> Using model = "gpt-4.1".
 ```

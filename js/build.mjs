@@ -24,6 +24,10 @@ const jsTargets = [
     source: "src/viz.ts",
     output: "../pkg-r/inst/htmldep/viz.js",
   },
+  {
+    source: "src/artifact.ts",
+    output: "../pkg-py/src/querychat/static/js/artifact.js",
+  },
 ];
 
 const cssTargets = [
@@ -34,6 +38,10 @@ const cssTargets = [
   {
     source: "src/viz.css",
     output: "../pkg-r/inst/htmldep/viz.css",
+  },
+  {
+    source: "src/artifact.css",
+    output: "../pkg-py/src/querychat/static/css/artifact.css",
   },
 ];
 

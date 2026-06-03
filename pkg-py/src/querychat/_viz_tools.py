@@ -17,6 +17,7 @@ from shiny import ui
 
 from .__version import __version__
 from ._icons import bs_icon
+from ._tool_names import TOOL_VISUALIZE
 from ._utils import querychat_tool_starts_open, read_prompt_template, truncate_error
 from ._viz_altair_widget import AltairWidget, fit_chart_to_container
 from ._viz_ggsql import execute_ggsql
@@ -82,7 +83,7 @@ def tool_visualize(
 
     return Tool.from_func(
         impl,
-        name="querychat_visualize",
+        name=TOOL_VISUALIZE,
         annotations={"title": "Query Visualization"},
     )
 

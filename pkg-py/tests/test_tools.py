@@ -5,9 +5,25 @@ import warnings
 import narwhals.stable.v1 as nw
 import pandas as pd
 import pytest
+from chatlas import ContentToolResult, Tool
 from querychat._datasource import DataFrameSource
+from querychat._tool_names import (
+    TOOL_QUERY,
+    TOOL_REQUEST_ARTIFACT,
+    TOOL_RESET_DASHBOARD,
+    TOOL_UPDATE_DASHBOARD,
+    TOOL_VISUALIZE,
+)
 from querychat._utils import querychat_tool_starts_open
-from querychat.tools import _query_impl
+from querychat.tools import (
+    _query_impl,
+    _request_artifact_impl,
+    tool_query,
+    tool_request_artifact,
+    tool_reset_dashboard,
+    tool_update_dashboard,
+    tool_visualize,
+)
 
 
 @pytest.fixture
@@ -113,3 +129,50 @@ def test_querychat_tool_starts_open_invalid_setting(monkeypatch):
         assert len(w) == 1
         assert "Invalid value" in str(w[0].message)
         assert result is False  # Falls back to default behavior
+
+
+def test_request_artifact_impl_invokes_callback():
+    called = []
+    impl = _request_artifact_impl(lambda: called.append(True))
+    result = impl()
+    assert called == [True]
+    assert isinstance(result, ContentToolResult)
+    assert "artifact" in str(result.value).lower()
+
+
+def test_request_artifact_impl_result_has_no_error():
+    impl = _request_artifact_impl(lambda: None)
+    result = impl()
+    assert result.error is None
+    assert "artifact creator" in str(result.value).lower()
+
+
+def test_tool_request_artifact_has_expected_name():
+    tool = tool_request_artifact(lambda: None)
+    assert isinstance(tool, Tool)
+    assert tool.name == TOOL_REQUEST_ARTIFACT
+
+
+class TestToolNameContract:
+    """
+    The tool-name constants are the single source of truth shared between tool
+    registration and gallery extraction; pin their values and verify each tool
+    registers under its constant.
+    """
+
+    def test_constants_have_expected_values(self):
+        assert TOOL_QUERY == "querychat_query"
+        assert TOOL_VISUALIZE == "querychat_visualize"
+        assert TOOL_UPDATE_DASHBOARD == "querychat_update_dashboard"
+        assert TOOL_RESET_DASHBOARD == "querychat_reset_dashboard"
+        assert TOOL_REQUEST_ARTIFACT == "querychat_request_artifact"
+
+    def test_tools_register_under_their_constants(self, data_source):
+        assert tool_query(data_source).name == TOOL_QUERY
+        assert tool_visualize(data_source, lambda _: None).name == TOOL_VISUALIZE
+        assert (
+            tool_update_dashboard(data_source, lambda _: None).name
+            == TOOL_UPDATE_DASHBOARD
+        )
+        assert tool_reset_dashboard(lambda: None).name == TOOL_RESET_DASHBOARD
+        assert tool_request_artifact(lambda: None).name == TOOL_REQUEST_ARTIFACT

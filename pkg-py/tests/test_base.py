@@ -234,3 +234,14 @@ class TestQueryChatBase:
     def test_cleanup(self, sample_df):
         qc = QueryChatBase(sample_df, "test_table")
         qc.cleanup()
+
+    def test_request_artifact_always_registered(self, sample_df):
+        qc = QueryChatBase(sample_df, "test_table")
+        for client in (qc.client(tools="query"), qc.client(tools=None)):
+            names = [t.name for t in client.get_tools()]
+            assert "querychat_request_artifact" in names
+
+    def test_client_accepts_request_artifact_callback(self, sample_df):
+        qc = QueryChatBase(sample_df, "test_table")
+        client = qc.client(request_artifact=lambda: None)
+        assert isinstance(client, chatlas.Chat)

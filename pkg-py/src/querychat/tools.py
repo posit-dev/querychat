@@ -6,6 +6,12 @@ from chatlas import ContentToolResult, Tool
 from shinychat.types import ToolResultDisplay
 
 from ._icons import bs_icon
+from ._tool_names import (
+    TOOL_QUERY,
+    TOOL_REQUEST_ARTIFACT,
+    TOOL_RESET_DASHBOARD,
+    TOOL_UPDATE_DASHBOARD,
+)
 from ._utils import (
     as_narwhals,
     df_to_html,
@@ -17,6 +23,7 @@ from ._viz_tools import tool_visualize
 
 __all__ = [
     "tool_query",
+    "tool_request_artifact",
     "tool_reset_dashboard",
     "tool_update_dashboard",
     "tool_visualize",
@@ -159,7 +166,7 @@ def tool_update_dashboard(
 
     return Tool.from_func(
         impl,
-        name="querychat_update_dashboard",
+        name=TOOL_UPDATE_DASHBOARD,
         annotations={"title": "Update Dashboard"},
     )
 
@@ -222,8 +229,54 @@ def tool_reset_dashboard(
 
     return Tool.from_func(
         impl,
-        name="querychat_reset_dashboard",
+        name=TOOL_RESET_DASHBOARD,
         annotations={"title": "Reset Dashboard"},
+    )
+
+
+def _request_artifact_impl(
+    request_fn: Callable[[], None],
+) -> Callable[[], ContentToolResult]:
+    """Create the implementation function for opening the artifact creator."""
+
+    def request_artifact() -> ContentToolResult:
+        request_fn()
+        return ContentToolResult(
+            value=(
+                "Opening the artifact creator. The user will choose which "
+                "results to include and the output format there."
+            ),
+        )
+
+    return request_artifact
+
+
+def tool_request_artifact(
+    request_fn: Callable[[], None],
+) -> Tool:
+    """
+    Create a tool that opens the artifact creator modal.
+
+    Parameters
+    ----------
+    request_fn
+        Callback invoked when the LLM requests opening the artifact creator.
+
+    Returns
+    -------
+    Tool
+        A tool that can be registered with chatlas.
+
+    """
+    impl = _request_artifact_impl(request_fn)
+
+    description = read_prompt_template("tool-request-artifact.md")
+    impl.__doc__ = description
+
+    return Tool.from_func(
+        impl,
+        name=TOOL_REQUEST_ARTIFACT,
+        annotations={"title": "Open Artifact Creator"},
     )
 
 
@@ -294,6 +347,6 @@ def tool_query(data_source: DataSource) -> Tool:
 
     return Tool.from_func(
         impl,
-        name="querychat_query",
+        name=TOOL_QUERY,
         annotations={"title": "Query Data"},
     )

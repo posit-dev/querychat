@@ -3,7 +3,7 @@ from __future__ import annotations
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Generic, TypedDict, Union
+from typing import TYPE_CHECKING, Generic, Literal, TypedDict, Union
 
 import chatlas
 import shinychat
@@ -11,6 +11,8 @@ from narwhals.stable.v1.typing import IntoFrameT
 
 from shiny import module, reactive, ui
 
+from ._artifact_panel import artifact_panel_ui
+from ._artifact_server import artifact_server
 from ._querychat_core import GREETING_PROMPT
 from ._viz_altair_widget import AltairWidget
 from ._viz_ggsql import execute_ggsql
@@ -26,6 +28,9 @@ if TYPE_CHECKING:
     from ._datasource import DataSource
     from ._viz_tools import VisualizeData
     from .types import UpdateDashboardData
+
+StreamStatus = Literal["initial", "running", "success", "error", "cancelled"]
+"""Possible values of shinychat's `latest_message_stream.status()`."""
 
 ReactiveString = reactive.Value[str]
 """A reactive string value."""
@@ -70,6 +75,7 @@ def mod_ui(*, preload_viz: bool = False, **kwargs):
             ui.include_js(js_path),
         ),
         tag,
+        artifact_panel_ui(),
         preload_viz_deps_ui() if preload_viz else None,
     )
 
@@ -129,6 +135,12 @@ def mod_server(
     sql = ReactiveStringOrNone(None)
     title = ReactiveStringOrNone(None)
     has_greeted = reactive.value[bool](False)  # noqa: FBT003
+    artifact_requested = reactive.value[bool](False)  # noqa: FBT003
+
+    def on_request_artifact() -> None:
+        # Fires mid-stream, outside any reactive context. Setting a constant
+        # needs no context (only reading a reactive value would).
+        artifact_requested.set(True)
 
     if not callable(client):
         raise TypeError("mod_server() requires a callable client factory.")
@@ -151,6 +163,7 @@ def mod_server(
             update_dashboard=update_dashboard,
             reset_dashboard=reset_dashboard,
             visualize=on_visualize,
+            request_artifact=on_request_artifact,
             tools=tools,
         )
 
@@ -195,6 +208,38 @@ def mod_server(
     # Chat UI logic
     chat_ui = shinychat.Chat(CHAT_ID)
     ctrl = chatlas.StreamController()
+
+    artifact_server(
+        input,
+        session,
+        chat,
+        data_source,
+        chat_ui,
+        enable_bookmarking=enable_bookmarking,
+    )
+
+    @reactive.effect
+    # The lambda is required: it defers the reactive read into the event
+    # context. Inlining the bound method reads latest_message_stream (a reactive
+    # calc) at module load, where there is no reactive context.
+    @reactive.event(lambda: chat_ui.latest_message_stream.status())  # noqa: PLW0108
+    def _open_artifact_when_ready():
+        # The request_artifact tool fires mid-stream while the chat input is
+        # disabled, so opening the modal must wait until the turn settles. Gate
+        # on the stream-status event, then consume the pending request so it
+        # opens once and a stale request can't fire on a later turn.
+        action = artifact_action_for_status(chat_ui.latest_message_stream.status())
+        if action == "wait":
+            return
+        with reactive.isolate():
+            if not artifact_requested():
+                return
+            artifact_requested.set(False)
+        if action == "open":
+            # The two ways to start an artifact converge here: the LLM's
+            # request_artifact tool funnels into the same "/artifact" slash
+            # command a user types, so both share one modal-opening path.
+            chat_ui.update_user_input(value="/artifact", submit=True)
 
     # Handle user input
     @chat_ui.on_user_submit
@@ -306,3 +351,19 @@ def restore_viz_widgets(
             )
 
     return restored
+
+
+def artifact_action_for_status(
+    stream_status: StreamStatus,
+) -> Literal["wait", "open", "drop"]:
+    """
+    Decide what to do with a pending request_artifact call given the stream state.
+
+    - ``"wait"``: the turn is still in progress.
+    - ``"open"``: the turn finished successfully; open the modal.
+    - ``"drop"``: the turn was cancelled or errored; consume the request
+      without opening so a stale request can't fire on a later turn.
+    """
+    if stream_status not in ("success", "error", "cancelled"):
+        return "wait"
+    return "open" if stream_status == "success" else "drop"

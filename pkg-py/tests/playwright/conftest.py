@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import logging
+import re
 import socket
 import subprocess
 import threading
@@ -14,6 +15,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from playwright.sync_api import expect
 
 # Configure logging for test debugging
 logger = logging.getLogger(__name__)
@@ -22,6 +24,7 @@ logger = logging.getLogger(__name__)
 # Tests run from pkg-py/ but paths need to resolve correctly
 REPO_ROOT = Path(__file__).parent.parent.parent.parent
 EXAMPLES_DIR = REPO_ROOT / "pkg-py" / "examples"
+APPS_DIR = Path(__file__).parent / "apps"
 
 
 if TYPE_CHECKING:
@@ -620,3 +623,59 @@ def app_10_viz() -> Generator[str, None, None]:
 def chat_10_viz(page: Page) -> ChatControllerType:
     """Create a ChatController for the 10-viz-app chat component."""
     return _create_chat_controller(page, "titanic")
+
+
+@pytest.fixture(scope="module")
+def app_artifact() -> Generator[str, None, None]:
+    """Start the artifact_app.py Shiny server for testing."""
+    app_path = str(APPS_DIR / "artifact_app.py")
+
+    def start_factory():
+        port = _find_free_port()
+        url = f"http://localhost:{port}"
+        return url, lambda: _start_shiny_app_threaded(app_path, port)
+
+    def shiny_cleanup(_thread, server):
+        _stop_shiny_server(server)
+
+    url, _thread, server = _start_server_with_retry(
+        start_factory, shiny_cleanup, timeout=30.0
+    )
+    try:
+        yield url
+    finally:
+        _stop_shiny_server(server)
+
+
+@pytest.fixture
+def chat_artifact(page: Page) -> ChatControllerType:
+    """Create a ChatController for the artifact_app chat component."""
+    return _create_chat_controller(page, "titanic")
+
+
+class ArtifactModalActions:
+    """
+    Shared modal/query helpers for artifact test classes.
+
+    Subclasses set ``page`` and ``chat`` in an autouse setup fixture.
+    """
+
+    page: Page
+    chat: ChatControllerType
+
+    def _open_artifact_modal(self) -> None:
+        # Trailing space closes the slash-command palette dropdown so that
+        # Enter actually submits the command rather than selecting a palette entry.
+        self.chat.set_user_input("/artifact ")
+        self.chat.send_user_input(method="enter")
+        self.page.wait_for_selector(".modal", timeout=15000)
+
+    def _send_query_and_wait(self, query: str, timeout: int = 60000) -> None:
+        self.chat.set_user_input(query)
+        self.chat.send_user_input(method="click")
+        sql_code = self.page.locator("pre code").first
+        expect(sql_code).to_contain_text(
+            re.compile(r"WHERE|SELECT", re.IGNORECASE), timeout=timeout
+        )
+        # Wait for the stream to finish so the slash command handler won't refuse
+        expect(self.chat.loc_input).to_be_editable(timeout=timeout)

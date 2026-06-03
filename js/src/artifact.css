@@ -1,0 +1,579 @@
+/* Backdrop */
+.querychat-artifact-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.12);
+  z-index: 1069;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.querychat-artifact-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Off-canvas panel */
+.querychat-artifact-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 50vw;
+  max-width: 700px;
+  height: 100vh;
+  background: var(--bs-body-bg, #fff);
+  border-left: 1px solid var(--bs-border-color, #dee2e6);
+  box-shadow: -4px 0 12px rgba(0, 0, 0, 0.1);
+  /* Above Bootstrap modals (1050–1060) so the panel isn't obscured */
+  z-index: 1070;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
+}
+
+.querychat-artifact-panel.open {
+  transform: translateX(0);
+}
+
+/* Single-row panel header */
+.querychat-artifact-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.7rem;
+  border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+  flex-shrink: 0;
+}
+
+.querychat-artifact-panel-header h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.querychat-artifact-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* Spinner shown next to the title only while source is streaming in. */
+.querychat-artifact-header-spinner {
+  display: none;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--bs-border-color, #dee2e6);
+  border-top-color: var(--bs-primary, #0d6efd);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  flex-shrink: 0;
+}
+
+.querychat-artifact-panel.streaming .querychat-artifact-header-spinner {
+  display: inline-block;
+}
+
+.querychat-artifact-header-spacer {
+  flex: 1;
+}
+
+.querychat-artifact-header-divider {
+  width: 1px;
+  align-self: stretch;
+  background: var(--bs-border-color, #dee2e6);
+  margin: 0.1rem 0.15rem;
+}
+
+/* Scoped under the header so these beat Bootstrap's .btn-default border/bg
+   that Shiny's input_action_button adds. */
+.querychat-artifact-panel-header .querychat-artifact-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.34rem;
+  line-height: 0;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--bs-secondary-color, #5c636a);
+  border-radius: 6px;
+}
+
+.querychat-artifact-panel-header .querychat-artifact-icon-btn:hover {
+  background: var(--bs-secondary-bg, #eef0f2);
+  color: var(--bs-body-color, #212529);
+}
+
+.querychat-artifact-icon-btn .bi {
+  vertical-align: -0.125em;
+}
+
+.querychat-artifact-panel-header .querychat-artifact-download-btn,
+.querychat-artifact-panel-header .querychat-artifact-download-btn:hover {
+  background: var(--bs-primary, #0d6efd);
+  border-color: var(--bs-primary, #0d6efd);
+  color: #fff;
+}
+
+.querychat-artifact-revise-drawer {
+  display: none;
+  flex-direction: column;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+  flex-shrink: 0;
+}
+
+.querychat-artifact-revise-drawer.open {
+  display: flex;
+}
+
+.querychat-artifact-revise-toggle.active {
+  background: var(--bs-primary, #0d6efd);
+  border-color: var(--bs-primary, #0d6efd);
+  color: #fff;
+}
+
+.querychat-artifact-panel-body {
+  flex: 1;
+  overflow: auto;
+  padding: 0;
+}
+
+.querychat-artifact-panel-body .ace_editor {
+  height: 100% !important;
+}
+
+.querychat-artifact-panel-error {
+  padding: 0.75rem 1rem;
+  background: var(--bs-danger-bg-subtle, #f8d7da);
+  color: var(--bs-danger-text-emphasis, #842029);
+  border-bottom: 1px solid var(--bs-danger-border-subtle, #f5c2c7);
+}
+
+/* Chat pill */
+.querychat-artifact-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.7rem;
+  margin-bottom: 0.5rem;
+  border-radius: 0.5rem;
+  background: var(--bs-primary-bg-subtle, #cfe2ff);
+  color: var(--bs-primary-text-emphasis, #052c65);
+  border: 1px solid var(--bs-primary-border-subtle, #9ec5fe);
+  cursor: pointer;
+  font-size: 0.875rem;
+  text-align: left;
+  max-width: 340px;
+  transition: background 0.15s;
+}
+
+.querychat-artifact-pill:hover {
+  background: var(--bs-primary-border-subtle, #9ec5fe);
+}
+
+.querychat-artifact-pill-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 0.4rem;
+  background: var(--bs-primary-border-subtle, #9ec5fe);
+  font-size: 1.15rem; /* drives the 1em icon SVG */
+  flex-shrink: 0;
+}
+
+.querychat-artifact-pill-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.querychat-artifact-pill-title {
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.querychat-artifact-pill-subtitle {
+  font-weight: 400;
+  font-size: 0.8rem;
+  color: var(--bs-secondary-text-emphasis, #41464b);
+  line-height: 1.25;
+}
+
+.querychat-artifact-pill-open {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  font-size: 0.9rem; /* drives the 1em icon SVG */
+  opacity: 0.65;
+}
+
+/* Modal: artifact type pill selector */
+.querychat-artifact-type-selector {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.querychat-artifact-type-pill {
+  padding: 0.375rem 1rem;
+  border-radius: 999px;
+  border: 1px solid var(--bs-border-color, #dee2e6);
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: all 0.15s;
+}
+
+.querychat-artifact-type-pill:hover {
+  border-color: var(--bs-primary, #0d6efd);
+}
+
+.querychat-artifact-type-pill.active {
+  background: var(--bs-primary, #0d6efd);
+  color: white;
+  border-color: var(--bs-primary, #0d6efd);
+}
+
+.querychat-artifact-language-selector {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.querychat-artifact-language-pill {
+  padding: 0.375rem 1rem;
+  border-radius: 999px;
+  border: 1px solid var(--bs-border-color, #dee2e6);
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: all 0.15s;
+}
+
+.querychat-artifact-language-pill:hover:not(.disabled) {
+  border-color: var(--bs-primary, #0d6efd);
+}
+
+.querychat-artifact-language-pill.active {
+  background: var(--bs-primary, #0d6efd);
+  color: white;
+  border-color: var(--bs-primary, #0d6efd);
+}
+
+.querychat-artifact-language-pill.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  text-decoration: line-through;
+  pointer-events: none;
+}
+
+/* Modal: gallery scroll container */
+.querychat-artifact-gallery-scroll {
+  max-height: 300px;
+  overflow-y: auto;
+  margin-bottom: 0.5rem;
+}
+
+/* Modal: gallery grid */
+.querychat-artifact-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+
+.querychat-artifact-gallery-item {
+  border: 2px solid var(--bs-border-color, #dee2e6);
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.querychat-artifact-gallery-item:hover {
+  border-color: var(--bs-primary, #0d6efd);
+}
+
+.querychat-artifact-gallery-item.selected {
+  border-color: var(--bs-primary, #0d6efd);
+  background: var(--bs-primary-bg-subtle, #cfe2ff);
+}
+
+.querychat-artifact-gallery-item .preview-container img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 0.25rem;
+}
+
+.querychat-artifact-gallery-item .placeholder-icon {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bs-secondary-bg, #e9ecef);
+  border-radius: 0.25rem;
+  color: var(--bs-secondary-color, #6c757d);
+}
+
+.querychat-artifact-gallery-item .title {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.querychat-artifact-gallery-item .preview-container {
+  height: 120px;
+  overflow: hidden;
+  margin-bottom: 0.25rem;
+  border-radius: 0.25rem;
+}
+
+.querychat-artifact-gallery-item .sql-snippet {
+  font-size: 0.75rem;
+  color: var(--bs-secondary-color, #6c757d);
+  font-family: var(--bs-font-monospace);
+  padding: 0.375rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.querychat-preview-table {
+  width: 100%;
+  font-size: 0.6875rem;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.querychat-preview-table th,
+.querychat-preview-table td {
+  padding: 0.125rem 0.375rem;
+  border-bottom: 1px solid var(--bs-border-color, #dee2e6);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 0;
+}
+
+.querychat-preview-table th {
+  background: var(--bs-secondary-bg, #e9ecef);
+  font-weight: 600;
+}
+
+.querychat-artifact-gallery-empty {
+  text-align: center;
+  padding: 2rem;
+  color: var(--bs-secondary-color, #6c757d);
+}
+
+/* Checkbox overlay */
+.querychat-artifact-gallery-item {
+  position: relative;
+}
+
+.querychat-artifact-gallery-item .gallery-checkbox {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--bs-border-color, #dee2e6);
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  z-index: 1;
+}
+
+.querychat-artifact-gallery-item.selected .gallery-checkbox {
+  background: var(--bs-primary, #0d6efd);
+  border-color: var(--bs-primary, #0d6efd);
+}
+
+.querychat-artifact-gallery-item .gallery-checkbox svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: white;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.querychat-artifact-gallery-item.selected .gallery-checkbox svg {
+  opacity: 1;
+}
+
+/* Shimmer loading animation */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.querychat-artifact-gallery.loading .querychat-artifact-gallery-item {
+  pointer-events: none;
+}
+
+.querychat-artifact-gallery.loading .querychat-artifact-gallery-item .preview-container,
+.querychat-artifact-gallery.loading .querychat-artifact-gallery-item .title {
+  background: linear-gradient(
+    90deg,
+    var(--bs-secondary-bg, #e9ecef) 25%,
+    var(--bs-tertiary-bg, #f8f9fa) 50%,
+    var(--bs-secondary-bg, #e9ecef) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  color: transparent;
+  border-radius: 0.25rem;
+}
+
+.querychat-artifact-gallery.loading .querychat-artifact-gallery-item .gallery-checkbox {
+  display: none;
+}
+
+.querychat-artifact-gallery.loading .querychat-artifact-gallery-item .preview-container img,
+.querychat-artifact-gallery.loading .querychat-artifact-gallery-item .preview-container table,
+.querychat-artifact-gallery.loading .querychat-artifact-gallery-item .preview-container .sql-snippet {
+  visibility: hidden;
+}
+
+/* Loading status line */
+.querychat-artifact-loading-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--bs-secondary-color, #6c757d);
+  margin-bottom: 0.75rem;
+}
+
+.querychat-artifact-loading-status.hidden {
+  display: none;
+}
+
+.querychat-artifact-loading-status.error {
+  color: var(--bs-danger-text-emphasis, #842029);
+}
+
+.querychat-artifact-loading-status .spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--bs-border-color, #dee2e6);
+  border-top-color: var(--bs-primary, #0d6efd);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Directions textarea loading state */
+.querychat-artifact-directions-wrapper.loading textarea {
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    var(--bs-secondary-bg, #e9ecef) 25%,
+    var(--bs-tertiary-bg, #f8f9fa) 50%,
+    var(--bs-secondary-bg, #e9ecef) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.querychat-artifact-directions-wrapper textarea {
+  max-height: 150px;
+}
+
+.querychat-artifact-directions-subtitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2em;
+  margin-left: auto;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--bs-primary, #0d6efd);
+}
+
+.querychat-artifact-directions-subtitle.hidden {
+  display: none;
+}
+
+.querychat-artifact-freeform-input.hidden {
+  display: none;
+}
+
+/* Modal: intro lead-in */
+.modal-content:has(.querychat-artifact-modal-intro) .modal-header {
+  padding-bottom: 0.25rem;
+}
+
+.modal-body:has(> .querychat-artifact-modal-intro) {
+  padding-top: 0;
+}
+
+.querychat-artifact-modal-intro {
+  font-size: 0.8125rem;
+  color: var(--bs-secondary-color, #6c757d);
+  margin-bottom: 1rem;
+}
+
+/* Section labels */
+.querychat-artifact-section-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--bs-body-color, #212529);
+  margin-bottom: 0.375rem;
+}
+
+.querychat-artifact-section-label-row {
+  display: flex;
+  align-items: baseline;
+  margin-bottom: 0.375rem;
+}
+
+.querychat-artifact-section-label-row .querychat-artifact-section-label {
+  margin-bottom: 0;
+}
+
+.querychat-artifact-info-icon {
+  color: var(--bs-secondary-color, #6c757d);
+  cursor: help;
+}
+
+/* Hidden until there are 2+ versions (JS adds .show); this also keeps the
+   nav out of view during streaming, before any version label exists. */
+.querychat-artifact-version-nav {
+  display: none;
+  align-items: center;
+  gap: 0.1rem;
+}
+
+.querychat-artifact-version-nav.show {
+  display: flex;
+}
+
+.querychat-artifact-version-label {
+  font-size: 0.8rem;
+  color: var(--bs-secondary-color, #6c757d);
+  white-space: nowrap;
+  padding: 0 0.15rem;
+}
+

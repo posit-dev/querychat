@@ -48,7 +48,7 @@ class TestBuildCanvasContext:
     def test_contains_json_ascii_and_hidden_list(self):
         ctx = build_canvas_context(spec_with_two_cards())
         assert "AAAABBBBBBBB" in ctx
-        assert '"name": "kpi"' in ctx.replace("'", '"')
+        assert '"name": "kpi"' in ctx
         assert "hidden" in ctx  # off-canvas cards listed so LLM can restore them
         assert ctx.startswith("<dashboard-canvas-state>")
         assert ctx.rstrip().endswith("</dashboard-canvas-state>")

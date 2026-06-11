@@ -26,6 +26,8 @@ def render_grid_ascii(spec: DashboardSpec) -> str:
     grid = [["." for _ in range(GRID_COLUMNS)] for _ in range(rows)]
     legend: list[str] = []
 
+    # Letters cycle at 26: cards beyond that alias in the grid/legend, which
+    # is acceptable for typical dashboard sizes.
     letters = string.ascii_uppercase
     for i, card in enumerate(placed):
         mark = letters[i % len(letters)]

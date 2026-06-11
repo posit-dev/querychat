@@ -60,6 +60,12 @@ class TestCardLayout:
         with pytest.raises(ValidationError):
             CardLayout(x=0, y=0, w=0, h=1)
 
+    def test_overflow_rejected(self):
+        with pytest.raises(ValidationError):
+            CardLayout(x=10, y=0, w=4, h=1)  # 10 + 4 = 14 > 12
+        with pytest.raises(ValidationError):
+            Placement(name="a", x=10, y=0, w=4, h=1)
+
 
 class TestDashboardSpec:
     def test_upsert_appends_then_replaces(self):
@@ -103,3 +109,20 @@ class TestDashboardSpec:
         spec = DashboardSpec()
         with pytest.raises(KeyError, match="nope"):
             spec.apply_placements([Placement(name="nope", x=0, y=0, w=1, h=1)])
+
+    def test_apply_placements_is_atomic(self):
+        spec = DashboardSpec(cards=[chart_card("a")])
+        with pytest.raises(KeyError):
+            spec.apply_placements([
+                Placement(name="a", x=3, y=1, w=4, h=2),
+                Placement(name="nope", x=0, y=0, w=1, h=1),
+            ])
+        assert spec.get_card("a").layout is None  # nothing applied
+
+    def test_next_free_y_multiple_and_hidden_cards(self):
+        spec = DashboardSpec(cards=[
+            chart_card("a", layout=CardLayout(x=0, y=0, w=6, h=2)),
+            chart_card("b", layout=CardLayout(x=6, y=3, w=6, h=4)),
+            chart_card("c"),  # hidden, ignored
+        ])
+        assert spec.next_free_y() == 7

@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 CardType = Literal["chart", "table", "value_box", "markdown"]
 
@@ -35,6 +35,14 @@ class CardLayout(BaseModel):
     w: int = Field(ge=1, le=GRID_COLUMNS)
     h: int = Field(ge=1)
 
+    @model_validator(mode="after")
+    def fits_within_grid(self) -> CardLayout:
+        if self.x + self.w > GRID_COLUMNS:
+            raise ValueError(
+                f"Card extends beyond grid: x={self.x} + w={self.w} > {GRID_COLUMNS}"
+            )
+        return self
+
 
 class Placement(BaseModel):
     """A named layout update, as sent by the LLM arrange tool or browser drags."""
@@ -45,11 +53,21 @@ class Placement(BaseModel):
     w: int = Field(ge=1, le=GRID_COLUMNS)
     h: int = Field(ge=1)
 
+    @model_validator(mode="after")
+    def fits_within_grid(self) -> Placement:
+        if self.x + self.w > GRID_COLUMNS:
+            raise ValueError(
+                f"Card extends beyond grid: x={self.x} + w={self.w} > {GRID_COLUMNS}"
+            )
+        return self
+
     def layout(self) -> CardLayout:
         return CardLayout(x=self.x, y=self.y, w=self.w, h=self.h)
 
 
 class CardSpec(BaseModel):
+    model_config = ConfigDict(validate_assignment=True)
+
     name: str = Field(pattern=r"^[a-z][a-z0-9_]*$", max_length=40)
     type: CardType
     title: str = ""
@@ -81,6 +99,8 @@ class CardSpec(BaseModel):
 
 
 class DashboardSpec(BaseModel):
+    model_config = ConfigDict(validate_assignment=True)
+
     title: str = "My dashboard"
     cards: list[CardSpec] = Field(default_factory=list)
 
@@ -116,8 +136,11 @@ class DashboardSpec(BaseModel):
         return max(c.layout.y + c.layout.h for c in placed if c.layout is not None)
 
     def apply_placements(self, placements: list[Placement]) -> None:
+        cards: list[tuple[CardSpec, Placement]] = []
         for p in placements:
             card = self.get_card(p.name)
             if card is None:
                 raise KeyError(p.name)
+            cards.append((card, p))
+        for card, p in cards:
             card.layout = p.layout()

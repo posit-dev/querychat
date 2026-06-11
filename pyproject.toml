@@ -22,7 +22,8 @@ maintainers = [
 dependencies = [
     "duckdb",
     "shiny @ git+https://github.com/posit-dev/py-shiny.git@main",
-    "shinychat @ git+https://github.com/posit-dev/shinychat.git@worktree-feat+slash-commands",
+    # Pinned to a commit SHA: the worktree-feat+slash-commands branch was deleted upstream
+    "shinychat @ git+https://github.com/posit-dev/shinychat.git@4a03415129890cc8eb47463e93a4e46bff21a950",
     "htmltools",
     "chatlas>=0.18.0",
     "narwhals>=2.2.0",

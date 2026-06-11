@@ -209,7 +209,10 @@ SET lock_configuration = true;
         self, query: str, *, require_all_columns: bool = False
     ) -> pd.DataFrame:
         check_query(query)
-        result = self._conn.execute(f"{query} LIMIT 1").df()
+        normalized = query.rstrip().removesuffix(";")
+        result = self._conn.execute(
+            f"SELECT * FROM ({normalized}) AS subquery LIMIT 1"
+        ).df()
 
         if require_all_columns:
             result_columns = set(result.columns)

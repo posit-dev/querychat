@@ -60,11 +60,18 @@ class PinSource(DataSource["pd.DataFrame"]):
         if pin_type in DUCKDB_FILE_TYPES:
             paths = board.pin_download(name, version=version)
             reader_fn = DUCKDB_READER_FN[pin_type]
-            self._conn.execute(
-                f'CREATE TABLE "{effective_table_name}" AS '
-                f"SELECT * FROM {reader_fn}(?)",
-                [paths[0]],
-            )
+            if len(paths) == 1:
+                self._conn.execute(
+                    f'CREATE TABLE "{effective_table_name}" AS '
+                    f"SELECT * FROM {reader_fn}(?)",
+                    [paths[0]],
+                )
+            else:
+                self._conn.execute(
+                    f'CREATE TABLE "{effective_table_name}" AS '
+                    f"SELECT * FROM {reader_fn}(?)",
+                    [paths],
+                )
         else:
             import pandas as pd
 

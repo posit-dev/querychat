@@ -63,12 +63,14 @@ PinSource <- R6::R6Class(
           csv = "read_csv_auto",
           json = "read_json_auto"
         )
-        quoted_path <- DBI::dbQuoteLiteral(con, paths[[1]])
+        quoted_paths <- vapply(paths, function(p) DBI::dbQuoteLiteral(con, p), character(1))
+        path_arg <- paste(quoted_paths, collapse = ", ")
+        if (length(paths) > 1) path_arg <- paste0("[", path_arg, "]")
         sql <- sprintf(
           "CREATE TABLE %s AS SELECT * FROM %s(%s)",
           DBI::dbQuoteIdentifier(con, table_name),
           reader_fn,
-          quoted_path
+          path_arg
         )
         DBI::dbExecute(con, sql)
       } else {

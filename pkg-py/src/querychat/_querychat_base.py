@@ -20,6 +20,7 @@ from ._datasource import (
     PolarsLazySource,
     SQLAlchemySource,
 )
+from ._pin_source import PinSource
 from ._querychat_core import GREETING_PROMPT
 from ._system_prompt import QueryChatSystemPrompt
 from ._utils import MISSING, MISSING_TYPE, is_ibis_table
@@ -93,6 +94,10 @@ class QueryChatBase(Generic[IntoFrameT]):
             self._data_source: DataSource | None = normalize_data_source(
                 data_source, table_name
             )
+            if self._data_description is None and isinstance(self._data_source, PinSource):
+                desc = self._data_source.get_data_description()
+                if desc:
+                    self._data_description = desc
             self._build_system_prompt()
         else:
             self._data_source = None
@@ -240,6 +245,10 @@ class QueryChatBase(Generic[IntoFrameT]):
     def data_source(self, value: IntoFrame | sqlalchemy.Engine) -> None:
         """Set the data source, normalizing and rebuilding system prompt."""
         self._data_source = normalize_data_source(value, self._table_name)
+        if self._data_description is None and isinstance(self._data_source, PinSource):
+            desc = self._data_source.get_data_description()
+            if desc:
+                self._data_description = desc
         self._build_system_prompt()
 
     def cleanup(self) -> None:

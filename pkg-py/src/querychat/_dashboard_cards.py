@@ -120,7 +120,7 @@ def render_body(data_source: DataSource, card: CardSpec) -> str:
             # is safe — bs_icon will raise at runtime if an invalid name slips
             # through.
             icon_html = str(
-                bs_icon(cast(ICON_NAMES, card.icon), cls="querychat-dash-vb-icon")
+                bs_icon(cast("ICON_NAMES", card.icon), cls="querychat-dash-vb-icon")
             )
         theme_cls = f" querychat-dash-vb-{card.theme}" if card.theme else ""
         return (

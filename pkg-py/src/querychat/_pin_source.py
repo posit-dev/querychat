@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 import duckdb
 
@@ -54,10 +54,10 @@ class PinSource(DataSource["pd.DataFrame"]):
                 [paths[0]],
             )
         else:
-            import pandas as pd_mod
+            import pandas as pd
 
             data = board.pin_read(name, version=version)
-            if not isinstance(data, pd_mod.DataFrame):
+            if not isinstance(data, pd.DataFrame):
                 self._conn.close()
                 raise TypeError(
                     f"Pin '{name}' contains {type(data).__name__}, not a DataFrame. "
@@ -104,35 +104,29 @@ SET lock_configuration = true;
         return format_schema(self.table_name, columns)
 
     @staticmethod
-    def _make_column_meta(name: str, duckdb_type: str) -> ColumnMeta:
+    def _make_column_meta(name: str, duckdb_type: Any) -> ColumnMeta:
         """Create ColumnMeta from a DuckDB type string."""
-        duckdb_type_upper = duckdb_type.upper()
+        t = str(duckdb_type).upper()
 
-        if "INT" in duckdb_type_upper:
-            return ColumnMeta(name=name, sql_type="INTEGER", kind="numeric")
-        elif (
-            "FLOAT" in duckdb_type_upper
-            or "DOUBLE" in duckdb_type_upper
-            or "DECIMAL" in duckdb_type_upper
-            or "NUMERIC" in duckdb_type_upper
-        ):
-            return ColumnMeta(name=name, sql_type="FLOAT", kind="numeric")
-        elif "BOOL" in duckdb_type_upper:
-            return ColumnMeta(name=name, sql_type="BOOLEAN", kind="other")
-        elif duckdb_type_upper == "DATE":
-            return ColumnMeta(name=name, sql_type="DATE", kind="date")
-        elif "TIMESTAMP" in duckdb_type_upper:
-            return ColumnMeta(name=name, sql_type="TIMESTAMP", kind="date")
-        elif duckdb_type_upper == "TIME":
-            return ColumnMeta(name=name, sql_type="TIME", kind="other")
-        elif (
-            "VARCHAR" in duckdb_type_upper
-            or "TEXT" in duckdb_type_upper
-            or "STRING" in duckdb_type_upper
-        ):
-            return ColumnMeta(name=name, sql_type="TEXT", kind="text")
+        kind: Literal["numeric", "text", "date", "other"]
+        if "INT" in t:
+            kind, sql_type = "numeric", "INTEGER"
+        elif any(s in t for s in ("FLOAT", "DOUBLE", "DECIMAL", "NUMERIC")):
+            kind, sql_type = "numeric", "FLOAT"
+        elif "BOOL" in t:
+            kind, sql_type = "other", "BOOLEAN"
+        elif t == "DATE":
+            kind, sql_type = "date", "DATE"
+        elif "TIMESTAMP" in t:
+            kind, sql_type = "date", "TIMESTAMP"
+        elif t == "TIME":
+            kind, sql_type = "other", "TIME"
+        elif any(s in t for s in ("VARCHAR", "TEXT", "STRING")):
+            kind, sql_type = "text", "TEXT"
         else:
-            return ColumnMeta(name=name, sql_type=duckdb_type_upper, kind="other")
+            kind, sql_type = "other", t
+
+        return ColumnMeta(name=name, sql_type=sql_type, kind=kind)
 
     def _add_column_stats(
         self,
@@ -155,9 +149,7 @@ SET lock_configuration = true;
             return
 
         try:
-            stats_query = (
-                f'SELECT {", ".join(select_parts)} FROM "{self.table_name}"'
-            )
+            stats_query = f'SELECT {", ".join(select_parts)} FROM "{self.table_name}"'
             result = self._conn.execute(stats_query).fetchone()
             if not result:
                 return
@@ -179,15 +171,15 @@ SET lock_configuration = true;
             and nunique <= categorical_threshold
         ]
 
-        for col in categorical_cols:
-            try:
+        try:
+            for col in categorical_cols:
                 cat_result = self._conn.execute(
                     f'SELECT DISTINCT "{col.name}" FROM "{self.table_name}" '
                     f'WHERE "{col.name}" IS NOT NULL ORDER BY "{col.name}"'
                 ).fetchall()
                 col.categories = [str(row[0]) for row in cat_result]
-            except Exception:
-                pass
+        except Exception:  # noqa: S110
+            pass
 
     def execute_query(self, query: str) -> pd.DataFrame:
         check_query(query)

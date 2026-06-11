@@ -263,3 +263,74 @@ describe("PinSource DuckDB security lockdown", {
     )
   })
 })
+
+describe("QueryChat + PinSource integration", {
+  skip_if_not_installed("pins")
+  skip_if_not_installed("duckdb")
+
+  it("auto-fills data_description from pin metadata", {
+    board <- pins::board_temp()
+    suppressMessages(
+      pins::pin_write(
+        board, mtcars[1:5, ], "cars",
+        type = "parquet",
+        title = "Motor Trend Cars",
+        description = "Road test data"
+      )
+    )
+    ps <- PinSource$new(board, "cars")
+    qc <- QueryChat$new(data_source = ps, table_name = "cars", greeting = "Hi")
+    withr::defer(qc$cleanup())
+
+    prompt <- qc$system_prompt
+    expect_match(prompt, "Motor Trend Cars")
+    expect_match(prompt, "Road test data")
+  })
+
+  it("explicit data_description overrides pin metadata", {
+    board <- pins::board_temp()
+    suppressMessages(
+      pins::pin_write(
+        board, mtcars[1:5, ], "cars",
+        type = "parquet",
+        title = "Motor Trend Cars"
+      )
+    )
+    ps <- PinSource$new(board, "cars")
+    qc <- QueryChat$new(
+      data_source = ps,
+      table_name = "cars",
+      greeting = "Hi",
+      data_description = "Custom description"
+    )
+    withr::defer(qc$cleanup())
+
+    prompt <- qc$system_prompt
+    expect_match(prompt, "Custom description")
+    expect_no_match(prompt, "Motor Trend Cars")
+  })
+
+  it("clears auto-filled description when switching data source", {
+    skip_if_no_dataframe_engine()
+
+    board <- pins::board_temp()
+    suppressMessages(
+      pins::pin_write(
+        board, mtcars[1:5, ], "cars",
+        type = "parquet",
+        title = "Motor Trend Cars"
+      )
+    )
+    ps <- PinSource$new(board, "cars")
+    qc <- QueryChat$new(data_source = ps, table_name = "cars", greeting = "Hi")
+
+    prompt_before <- qc$system_prompt
+    expect_match(prompt_before, "Motor Trend Cars")
+
+    qc$data_source <- new_test_df()
+    prompt_after <- qc$system_prompt
+    expect_no_match(prompt_after, "Motor Trend Cars")
+
+    qc$cleanup()
+  })
+})

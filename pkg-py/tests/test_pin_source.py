@@ -216,3 +216,54 @@ class TestPinSourceSecurity:
         with pytest.raises(UnsafeQueryError):
             ps.execute_query("DROP TABLE unsafe_test")
         ps.cleanup()
+
+
+class TestQueryChatPinSourceIntegration:
+    def test_auto_fills_data_description(self, board, sample_df):
+        from querychat import QueryChat
+
+        board.pin_write(
+            sample_df, "cars", type="parquet",
+            title="Motor Trend Cars", description="Road test data",
+        )
+        ps = PinSource(board, "cars")
+        qc = QueryChat(data_source=ps, table_name="cars", greeting="Hi")
+
+        prompt = qc._system_prompt.render(qc.tools)
+        assert "Motor Trend Cars" in prompt
+        assert "Road test data" in prompt
+        qc.cleanup()
+
+    def test_explicit_description_overrides_pin_metadata(self, board, sample_df):
+        from querychat import QueryChat
+
+        board.pin_write(
+            sample_df, "cars", type="parquet", title="Motor Trend Cars",
+        )
+        ps = PinSource(board, "cars")
+        qc = QueryChat(
+            data_source=ps, table_name="cars", greeting="Hi",
+            data_description="Custom description",
+        )
+
+        prompt = qc._system_prompt.render(qc.tools)
+        assert "Custom description" in prompt
+        assert "Motor Trend Cars" not in prompt
+        qc.cleanup()
+
+    def test_clears_auto_description_on_source_change(self, board, sample_df):
+        from querychat import QueryChat
+
+        board.pin_write(
+            sample_df, "cars", type="parquet", title="Motor Trend Cars",
+        )
+        ps = PinSource(board, "cars")
+        qc = QueryChat(data_source=ps, table_name="cars", greeting="Hi")
+
+        prompt_before = qc._system_prompt.render(qc.tools)
+        assert "Motor Trend Cars" in prompt_before
+
+        qc.data_source = sample_df
+        prompt_after = qc._system_prompt.render(qc.tools)
+        assert "Motor Trend Cars" not in prompt_after
+        qc.cleanup()

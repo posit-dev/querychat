@@ -243,6 +243,27 @@ describe("PinSource$get_data_description()", {
   })
 })
 
+describe("PinSource$new() — error paths", {
+  skip_if_not_installed("pins")
+  skip_if_not_installed("duckdb")
+
+  it("rejects multi-file pins", {
+    board <- pins::board_temp()
+    suppressMessages(
+      pins::pin_write(board, mtcars[1:5, ], "multi_pin", type = "parquet")
+    )
+
+    local_mocked_bindings(
+      pin_download = function(...) c("/fake/a.parquet", "/fake/b.parquet"),
+      .package = "pins"
+    )
+    expect_error(
+      PinSource$new(board, "multi_pin"),
+      "contains 2 files"
+    )
+  })
+})
+
 describe("PinSource DuckDB security lockdown", {
   skip_if_not_installed("pins")
   skip_if_not_installed("duckdb")

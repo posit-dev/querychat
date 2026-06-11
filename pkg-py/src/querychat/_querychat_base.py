@@ -253,7 +253,10 @@ class QueryChatBase(Generic[IntoFrameT]):
     @data_source.setter
     def data_source(self, value: IntoFrame | sqlalchemy.Engine) -> None:
         """Set the data source, normalizing and rebuilding system prompt."""
+        old_source = self._data_source
         self._data_source = normalize_data_source(value, self._table_name)
+        if old_source is not None:
+            old_source.cleanup()
         self._auto_fill_data_description()
         self._build_system_prompt()
 

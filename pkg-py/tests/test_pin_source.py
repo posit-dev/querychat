@@ -124,6 +124,14 @@ class TestPinSourceSchema:
         assert len(result) == 1
         ps.cleanup()
 
+    def test_test_query_trailing_semicolon(self, board, sample_df):
+        board.pin_write(sample_df, "tq_semi", type="parquet")
+        ps = PinSource(board, "tq_semi")
+
+        result = ps.test_query("SELECT * FROM tq_semi;")
+        assert len(result) == 1
+        ps.cleanup()
+
 
 class TestPinSourceMetadata:
     def test_get_data_description_with_title_and_description(self, board, sample_df):
@@ -194,6 +202,20 @@ class TestPinSourceTableName:
         assert "my_table" in schema
         assert "schema_pin" not in schema
         ps.cleanup()
+
+
+class TestPinSourceErrors:
+    def test_rejects_multi_file_pin(self, board, sample_df, tmp_path):
+        from unittest.mock import patch
+
+        board.pin_write(sample_df, "multi_pin", type="parquet")
+
+        fake_paths = [str(tmp_path / "a.parquet"), str(tmp_path / "b.parquet")]
+        with (
+            patch.object(board, "pin_download", return_value=fake_paths),
+            pytest.raises(ValueError, match="contains 2 files"),
+        ):
+            PinSource(board, "multi_pin")
 
 
 class TestPinSourceSecurity:

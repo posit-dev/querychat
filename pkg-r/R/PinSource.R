@@ -63,7 +63,8 @@ PinSource <- R6::R6Class(
             "Pin {.val {name}} contains {length(paths)} files, but PinSource requires a single-file pin (as created by {.fn pins::pin_write})."
           )
         }
-        reader_fn <- switch(pin_type,
+        reader_fn <- switch(
+          pin_type,
           parquet = "read_parquet",
           csv = "read_csv_auto",
           json = "read_json_auto"
@@ -116,8 +117,12 @@ SET lock_configuration = true;
     get_data_description = function() {
       meta <- private$.pin_meta
       parts <- character()
-      if (nzchar(meta$title %||% "")) parts <- c(parts, meta$title)
-      if (nzchar(meta$description %||% "")) parts <- c(parts, meta$description)
+      if (nzchar(meta$title %||% "")) {
+        parts <- c(parts, meta$title)
+      }
+      if (nzchar(meta$description %||% "")) {
+        parts <- c(parts, meta$description)
+      }
       if (length(meta$tags) > 0) {
         parts <- c(parts, paste("Tags:", paste(meta$tags, collapse = ", ")))
       }

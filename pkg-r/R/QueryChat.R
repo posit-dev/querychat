@@ -303,7 +303,9 @@ QueryChat <- R6::R6Class(
         }
         if (inherits(data_source, "DataSource")) {
           table_name <- data_source$table_name
-        } else if (is.data.frame(data_source) || inherits(data_source, "tbl_sql")) {
+        } else if (
+          is.data.frame(data_source) || inherits(data_source, "tbl_sql")
+        ) {
           table_name <- deparse1(substitute(data_source))
         }
       }
@@ -1033,7 +1035,10 @@ normalize_data_source <- function(data_source, table_name) {
   }
 
   if (inherits(data_source, "pins_board")) {
-    rlang::check_installed("pins", reason = "to use a pins board as a data source.")
+    rlang::check_installed(
+      "pins",
+      reason = "to use a pins board as a data source."
+    )
     return(PinSource$new(data_source, table_name))
   }
 

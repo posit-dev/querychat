@@ -65,9 +65,13 @@ is_valid_sql_table_name <- function(x) {
 }
 
 sanitize_table_name <- function(x) {
-  if (is_valid_sql_table_name(x)) return(x)
+  if (is_valid_sql_table_name(x)) {
+    return(x)
+  }
   out <- gsub("[^a-zA-Z0-9_]", "_", x)
-  if (!grepl("^[a-zA-Z]", out)) out <- paste0("t_", out)
+  if (!grepl("^[a-zA-Z]", out)) {
+    out <- paste0("t_", out)
+  }
   out <- gsub("_+", "_", out)
   out <- sub("_+$", "", out)
   out

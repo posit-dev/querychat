@@ -293,7 +293,9 @@ describe("QueryChat + PinSource integration", {
     board <- pins::board_temp()
     suppressMessages(
       pins::pin_write(
-        board, mtcars[1:5, ], "cars",
+        board,
+        mtcars[1:5, ],
+        "cars",
         type = "parquet",
         title = "Motor Trend Cars",
         description = "Road test data"
@@ -312,7 +314,9 @@ describe("QueryChat + PinSource integration", {
     board <- pins::board_temp()
     suppressMessages(
       pins::pin_write(
-        board, mtcars[1:5, ], "cars",
+        board,
+        mtcars[1:5, ],
+        "cars",
         type = "parquet",
         title = "Motor Trend Cars"
       )
@@ -337,7 +341,9 @@ describe("QueryChat + PinSource integration", {
     board <- pins::board_temp()
     suppressMessages(
       pins::pin_write(
-        board, mtcars[1:5, ], "cars",
+        board,
+        mtcars[1:5, ],
+        "cars",
         type = "parquet",
         title = "Motor Trend Cars"
       )

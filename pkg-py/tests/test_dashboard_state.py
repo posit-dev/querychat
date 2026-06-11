@@ -5,6 +5,7 @@ from pydantic import ValidationError
 from querychat._dashboard_state import (
     CardLayout,
     CardSpec,
+    DashboardHistory,
     DashboardSpec,
     Placement,
 )
@@ -126,3 +127,61 @@ class TestDashboardSpec:
             chart_card("c"),  # hidden, ignored
         ])
         assert spec.next_free_y() == 7
+
+
+class TestDashboardHistory:
+    def make(self) -> tuple[DashboardHistory, DashboardSpec]:
+        spec = DashboardSpec()
+        return DashboardHistory(spec), spec
+
+    def test_initial_state_cannot_undo(self):
+        history, _ = self.make()
+        assert not history.can_undo()
+        assert not history.can_redo()
+        assert history.undo() is None
+
+    def test_record_then_undo_returns_previous_snapshot(self):
+        history, spec = self.make()
+        spec.upsert_card(chart_card())
+        history.record(spec)
+        assert history.can_undo()
+        restored = history.undo()
+        assert restored is not None
+        assert restored.cards == []
+
+    def test_redo_after_undo(self):
+        history, spec = self.make()
+        spec.upsert_card(chart_card())
+        history.record(spec)
+        history.undo()
+        assert history.can_redo()
+        redone = history.redo()
+        assert redone is not None
+        assert len(redone.cards) == 1
+
+    def test_record_truncates_redo_branch(self):
+        history, spec = self.make()
+        spec.upsert_card(chart_card("a"))
+        history.record(spec)
+        history.undo()
+        spec2 = DashboardSpec(cards=[chart_card("b")])
+        history.record(spec2)
+        assert not history.can_redo()
+
+    def test_snapshots_are_isolated_copies(self):
+        history, spec = self.make()
+        spec.upsert_card(chart_card())
+        history.record(spec)
+        spec.cards[0].title = "mutated after record"
+        restored = history.undo()
+        assert restored is not None
+        redone = history.redo()
+        assert redone is not None
+        assert redone.cards[0].title == "Trend"
+
+    def test_capped_at_max_snapshots(self):
+        history, spec = self.make()
+        for i in range(60):
+            spec.upsert_card(chart_card(f"c{i}"))
+            history.record(spec)
+        assert len(history.snapshots) <= DashboardHistory.MAX_SNAPSHOTS

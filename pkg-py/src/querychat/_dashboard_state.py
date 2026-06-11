@@ -144,3 +144,44 @@ class DashboardSpec(BaseModel):
             cards.append((card, p))
         for card, p in cards:
             card.layout = p.layout()
+
+
+class DashboardHistory:
+    """
+    Undo/redo over JSON snapshots of the spec.
+
+    Snapshots are serialized strings (not object references) so later
+    mutations of the live spec can't corrupt history. Both LLM tool calls and
+    browser drags record here — one timeline for both editors.
+    """
+
+    MAX_SNAPSHOTS = 50
+
+    def __init__(self, initial: DashboardSpec) -> None:
+        self.snapshots: list[str] = [initial.model_dump_json()]
+        self.index = 0
+
+    def record(self, spec: DashboardSpec) -> None:
+        del self.snapshots[self.index + 1 :]
+        self.snapshots.append(spec.model_dump_json())
+        if len(self.snapshots) > self.MAX_SNAPSHOTS:
+            del self.snapshots[0]
+        self.index = len(self.snapshots) - 1
+
+    def can_undo(self) -> bool:
+        return self.index > 0
+
+    def can_redo(self) -> bool:
+        return self.index < len(self.snapshots) - 1
+
+    def undo(self) -> DashboardSpec | None:
+        if not self.can_undo():
+            return None
+        self.index -= 1
+        return DashboardSpec.model_validate_json(self.snapshots[self.index])
+
+    def redo(self) -> DashboardSpec | None:
+        if not self.can_redo():
+            return None
+        self.index += 1
+        return DashboardSpec.model_validate_json(self.snapshots[self.index])

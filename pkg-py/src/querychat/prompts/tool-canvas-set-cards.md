@@ -20,7 +20,10 @@ Each card is a JSON object with these fields:
     (a second scalar SQL shown as a comparison line).
   - `markdown` → `text`: markdown narrative (e.g. key takeaways).
 
-All cards are validated and executed before they appear; if any card fails,
-NOTHING is applied and you get the errors back — fix and retry.
+All cards are validated before they appear; tables and value boxes are
+test-executed against the database, while chart ggsql is validated for
+syntax only (execution errors, e.g. unknown columns, surface at render
+time). If any validation fails, NOTHING is applied and you get the errors
+back — fix and retry.
 
 Typical heights: value_box h=2, chart h=4, table h=4, markdown h=2.

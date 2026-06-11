@@ -57,6 +57,13 @@ class TestSetCards:
         assert result.error is not None
         assert received == []  # nothing applied
 
+    def test_empty_cards_is_error(self, source):
+        received: list[list[CardSpec]] = []
+        tool = tool_canvas_set_cards(source, lambda cards: received.append(cards))
+        result = tool.func(cards=[])
+        assert result.error is not None
+        assert received == []
+
     def test_tool_name_and_description(self, source):
         tool = tool_canvas_set_cards(source, lambda cards: None)
         assert tool.name == TOOL_CANVAS_SET_CARDS
@@ -94,3 +101,12 @@ class TestRemoveCard:
         assert result.error is None
         assert received == ["trend"]
         assert tool.name == TOOL_CANVAS_REMOVE_CARD
+
+    def test_unknown_card_returns_error(self):
+        def boom(name: str) -> None:
+            raise KeyError(name)
+
+        tool = tool_canvas_remove_card(boom)
+        result = tool.func(name="ghost")
+        assert result.error is not None
+        assert "ghost" in str(result.value)

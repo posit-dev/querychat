@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from ._datasource import DataSource
 
 
-def canvas_display(markdown: str, title: str) -> dict:
+def canvas_display(markdown: str, title: str) -> dict[str, ToolResultDisplay]:
     return {
         "display": ToolResultDisplay(
             markdown=markdown,
@@ -40,6 +40,9 @@ def tool_canvas_set_cards(
     set_fn: Callable[[list[CardSpec]], None],
 ) -> Tool:
     def canvas_set_cards(cards: list[dict]) -> ContentToolResult:
+        if not cards:
+            msg = "No cards provided; canvas unchanged."
+            return ContentToolResult(value=msg, error=Exception(msg))
         parsed: list[CardSpec] = []
         errors: list[str] = []
         for i, raw in enumerate(cards):
@@ -81,7 +84,7 @@ def tool_canvas_arrange(
             parsed = [Placement.model_validate(p) for p in placements]
             arrange_fn(parsed)
         except KeyError as e:
-            msg = f"Unknown card name: {e}. Nothing was moved."
+            msg = f"Unknown card name: {e.args[0]}. Nothing was moved."
             return ContentToolResult(value=msg, error=Exception(msg))
         except Exception as e:
             msg = truncate_error(str(e))
@@ -102,6 +105,7 @@ def tool_canvas_arrange(
 def tool_canvas_remove_card(
     remove_fn: Callable[[str], None],
 ) -> Tool:
+    """Build the remove-card tool. `remove_fn` must raise KeyError for unknown names."""
     def canvas_remove_card(name: str) -> ContentToolResult:
         try:
             remove_fn(name)

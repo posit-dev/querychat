@@ -28,7 +28,9 @@ class PaletteItem:
 def palette_from_gallery(
     items: list[GalleryItem], spec: DashboardSpec
 ) -> list[PaletteItem]:
-    canvas_sources = {c.source for c in spec.on_canvas()}
+    # Strip when comparing: LLM tool calls sometimes carry stray whitespace,
+    # which would otherwise leave a placed item looking "not on canvas".
+    canvas_sources = {c.source.strip() for c in spec.on_canvas()}
     out: list[PaletteItem] = []
     for item in items:
         if isinstance(item, VizGalleryItem):
@@ -36,7 +38,8 @@ def palette_from_gallery(
                 PaletteItem(
                     id=item.id, kind="chart", title=item.title,
                     source=item.ggsql, thumbnail=item.thumbnail,
-                    preview_html=None, on_canvas=item.ggsql in canvas_sources,
+                    preview_html=None,
+                    on_canvas=item.ggsql.strip() in canvas_sources,
                 )
             )
         elif isinstance(item, QueryGalleryItem):
@@ -45,17 +48,10 @@ def palette_from_gallery(
                     id=item.id, kind="table", title=item.title,
                     source=item.sql, thumbnail=None,
                     preview_html=item.preview_html,
-                    on_canvas=item.sql in canvas_sources,
+                    on_canvas=item.sql.strip() in canvas_sources,
                 )
             )
     return out
-
-
-def slugify(title: str) -> str:
-    slug = re.sub(r"[^a-z0-9]+", "_", title.lower()).strip("_")
-    # Remove any leading non-alpha characters (pattern requires first char to be [a-z])
-    slug = re.sub(r"^[^a-z]+", "", slug) or "card"
-    return slug[:40]
 
 
 def card_for_palette_item(item: PaletteItem, taken_names: set[str]) -> CardSpec:
@@ -71,3 +67,10 @@ def card_for_palette_item(item: PaletteItem, taken_names: set[str]) -> CardSpec:
     if item.kind == "chart":
         return CardSpec(name=name, type="chart", title=item.title, ggsql=item.source)
     return CardSpec(name=name, type="table", title=item.title, sql=item.source)
+
+
+def slugify(title: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "_", title.lower()).strip("_")
+    # Remove any leading non-alpha characters (pattern requires first char to be [a-z])
+    slug = re.sub(r"^[^a-z]+", "", slug) or "card"
+    return slug[:40]

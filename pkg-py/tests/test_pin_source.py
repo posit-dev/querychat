@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import duckdb
 import pandas as pd
 import pytest
 
@@ -200,7 +201,9 @@ class TestPinSourceSecurity:
         board.pin_write(sample_df, "secure_test", type="parquet")
         ps = PinSource(board, "secure_test")
 
-        with pytest.raises(Exception):
+        with pytest.raises(
+            duckdb.PermissionException, match="has been disabled"
+        ):
             ps.execute_query("SELECT * FROM read_csv_auto('/etc/passwd')")
         ps.cleanup()
 

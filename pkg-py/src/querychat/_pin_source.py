@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, Any, Literal
 
 import duckdb
@@ -16,6 +17,17 @@ DUCKDB_READER_FN = {
     "csv": "read_csv_auto",
     "json": "read_json_auto",
 }
+
+
+def _sanitize_table_name(name: str) -> str:
+    if re.match(r"^[a-zA-Z][a-zA-Z0-9_]*$", name):
+        return name
+    out = re.sub(r"[^a-zA-Z0-9_]", "_", name)
+    if not re.match(r"^[a-zA-Z]", out):
+        out = "t_" + out
+    out = re.sub(r"_+", "_", out)
+    out = out.rstrip("_")
+    return out
 
 
 class PinSource(DataSource["pd.DataFrame"]):
@@ -37,7 +49,7 @@ class PinSource(DataSource["pd.DataFrame"]):
                 "Install it with: pip install querychat[pins]"
             ) from None
 
-        effective_table_name = table_name or name
+        effective_table_name = _sanitize_table_name(table_name or name)
         self.table_name = effective_table_name
 
         self._pin_meta_obj = board.pin_meta(name, version=version)

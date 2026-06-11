@@ -83,6 +83,7 @@ class QueryChatBase(Generic[IntoFrameT]):
         # Store init parameters for deferred system prompt building
         self._prompt_template = prompt_template
         self._data_description = data_description
+        self._data_description_auto = False
         self._extra_instructions = extra_instructions
         self._categorical_threshold = categorical_threshold
 
@@ -94,14 +95,22 @@ class QueryChatBase(Generic[IntoFrameT]):
             self._data_source: DataSource | None = normalize_data_source(
                 data_source, table_name
             )
-            if self._data_description is None and isinstance(self._data_source, PinSource):
-                desc = self._data_source.get_data_description()
-                if desc:
-                    self._data_description = desc
+            self._auto_fill_data_description()
             self._build_system_prompt()
         else:
             self._data_source = None
             self._system_prompt = None
+
+    def _auto_fill_data_description(self) -> None:
+        """Auto-populate data_description from PinSource metadata if not user-supplied."""
+        if self._data_description_auto:
+            self._data_description = None
+            self._data_description_auto = False
+        if self._data_description is None and isinstance(self._data_source, PinSource):
+            desc = self._data_source.get_data_description()
+            if desc:
+                self._data_description = desc
+                self._data_description_auto = True
 
     def _build_system_prompt(self) -> None:
         """Build/rebuild the system prompt from current data source."""
@@ -245,10 +254,7 @@ class QueryChatBase(Generic[IntoFrameT]):
     def data_source(self, value: IntoFrame | sqlalchemy.Engine) -> None:
         """Set the data source, normalizing and rebuilding system prompt."""
         self._data_source = normalize_data_source(value, self._table_name)
-        if self._data_description is None and isinstance(self._data_source, PinSource):
-            desc = self._data_source.get_data_description()
-            if desc:
-                self._data_description = desc
+        self._auto_fill_data_description()
         self._build_system_prompt()
 
     def cleanup(self) -> None:

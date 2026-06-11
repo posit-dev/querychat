@@ -98,6 +98,7 @@ QueryChat <- R6::R6Class(
     # Store init parameters for deferred system prompt building
     .prompt_template = NULL,
     .data_description = NULL,
+    .data_description_auto = FALSE,
     .extra_instructions = NULL,
     .categorical_threshold = NULL,
 
@@ -108,6 +109,20 @@ QueryChat <- R6::R6Class(
            Either pass {.arg data_source} to {.fn $new}, set the
            {.field $data_source} property, or pass {.arg data_source} to {.fn $server}."
         )
+      }
+    },
+
+    auto_fill_data_description = function() {
+      if (private$.data_description_auto) {
+        private$.data_description <- NULL
+        private$.data_description_auto <- FALSE
+      }
+      if (is.null(private$.data_description) && inherits(private$.data_source, "PinSource")) {
+        desc <- private$.data_source$get_data_description()
+        if (nzchar(desc)) {
+          private$.data_description <- desc
+          private$.data_description_auto <- TRUE
+        }
       }
     },
 
@@ -297,6 +312,7 @@ QueryChat <- R6::R6Class(
       # Store init parameters for deferred system prompt building
       private$.prompt_template <- prompt_template
       private$.data_description <- data_description
+      private$.data_description_auto <- FALSE
       private$.extra_instructions <- extra_instructions
       private$.categorical_threshold <- categorical_threshold
 
@@ -311,12 +327,7 @@ QueryChat <- R6::R6Class(
       # Initialize data source (may be NULL for deferred pattern)
       if (!is.null(data_source)) {
         private$.data_source <- normalize_data_source(data_source, table_name)
-        if (is.null(private$.data_description) && inherits(private$.data_source, "PinSource")) {
-          desc <- private$.data_source$get_data_description()
-          if (nzchar(desc)) {
-            private$.data_description <- desc
-          }
-        }
+        private$auto_fill_data_description()
         private$build_system_prompt()
       }
 
@@ -815,12 +826,7 @@ QueryChat <- R6::R6Class(
           value,
           private$.table_name
         )
-        if (is.null(private$.data_description) && inherits(private$.data_source, "PinSource")) {
-          desc <- private$.data_source$get_data_description()
-          if (nzchar(desc)) {
-            private$.data_description <- desc
-          }
-        }
+        private$auto_fill_data_description()
         private$build_system_prompt()
         invisible(self)
       }

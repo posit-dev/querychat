@@ -45,6 +45,7 @@ PinSource <- R6::R6Class(
       rlang::check_installed("duckdb", reason = "to use PinSource.")
       rlang::check_dots_empty()
 
+      table_name <- sanitize_table_name(table_name)
       private$.pin_meta <- pins::pin_meta(board, name, version = version)
       private$.board <- board
       private$.pin_name <- name

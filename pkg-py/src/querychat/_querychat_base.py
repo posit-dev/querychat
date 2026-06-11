@@ -112,6 +112,7 @@ class QueryChatBase(Generic[IntoFrameT]):
 
         # Initialize data source (may be None for deferred pattern)
         if data_source is not None:
+            assert table_name is not None
             self._data_source: DataSource | None = normalize_data_source(
                 data_source, table_name
             )
@@ -127,7 +128,7 @@ class QueryChatBase(Generic[IntoFrameT]):
         if self._data_description_auto:
             self._data_description = None
             self._data_description_auto = False
-        if self._data_description is None:
+        if self._data_description is None and self._data_source is not None:
             desc = self._data_source.get_data_description()
             if desc:
                 self._data_description = desc
@@ -275,6 +276,7 @@ class QueryChatBase(Generic[IntoFrameT]):
     def data_source(self, value: IntoFrame | sqlalchemy.Engine) -> None:
         """Set the data source, normalizing and rebuilding system prompt."""
         old_source = self._data_source
+        assert self._table_name is not None
         self._data_source = normalize_data_source(value, self._table_name)
         if old_source is not None:
             old_source.cleanup()

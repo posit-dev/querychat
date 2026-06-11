@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any
 
 import duckdb
 
-from ._datasource import ColumnMeta, DataSource, MissingColumnsError, format_schema
+from ._datasource import DataSource, MissingColumnsError, duckdb_get_schema
 from ._utils import check_query
 
 if TYPE_CHECKING:
@@ -110,93 +110,7 @@ SET lock_configuration = true;
         return "DuckDB"
 
     def get_schema(self, *, categorical_threshold: int) -> str:
-        result = self._conn.execute(f'SELECT * FROM "{self.table_name}" LIMIT 0')
-        col_types = {desc[0]: desc[1] for desc in result.description}
-
-        columns = [
-            self._make_column_meta(name, type_name)
-            for name, type_name in col_types.items()
-        ]
-        self._add_column_stats(columns, categorical_threshold)
-        return format_schema(self.table_name, columns)
-
-    @staticmethod
-    def _make_column_meta(name: str, duckdb_type: Any) -> ColumnMeta:
-        """Create ColumnMeta from a DuckDB type string."""
-        t = str(duckdb_type).upper()
-
-        kind: Literal["numeric", "text", "date", "other"]
-        if "INT" in t:
-            kind, sql_type = "numeric", "INTEGER"
-        elif any(s in t for s in ("FLOAT", "DOUBLE", "DECIMAL", "NUMERIC")):
-            kind, sql_type = "numeric", "FLOAT"
-        elif "BOOL" in t:
-            kind, sql_type = "other", "BOOLEAN"
-        elif t == "DATE":
-            kind, sql_type = "date", "DATE"
-        elif "TIMESTAMP" in t:
-            kind, sql_type = "date", "TIMESTAMP"
-        elif t == "TIME":
-            kind, sql_type = "other", "TIME"
-        elif any(s in t for s in ("VARCHAR", "TEXT", "STRING")):
-            kind, sql_type = "text", "TEXT"
-        else:
-            kind, sql_type = "other", t
-
-        return ColumnMeta(name=name, sql_type=sql_type, kind=kind)
-
-    def _add_column_stats(
-        self,
-        columns: list[ColumnMeta],
-        categorical_threshold: int,
-    ) -> None:
-        """Add min/max/categories using DuckDB SQL queries."""
-        select_parts = []
-        for col in columns:
-            quoted = f'"{col.name}"'
-            if col.kind in ("numeric", "date"):
-                select_parts.append(f'MIN({quoted}) as "{col.name}__min"')
-                select_parts.append(f'MAX({quoted}) as "{col.name}__max"')
-            elif col.kind == "text":
-                select_parts.append(
-                    f'COUNT(DISTINCT {quoted}) as "{col.name}__nunique"'
-                )
-
-        if not select_parts:
-            return
-
-        try:
-            stats_query = f'SELECT {", ".join(select_parts)} FROM "{self.table_name}"'
-            result = self._conn.execute(stats_query).fetchone()
-            if not result:
-                return
-            col_names_list = [desc[0] for desc in self._conn.description]
-            stats = dict(zip(col_names_list, result, strict=False))
-        except Exception:
-            return
-
-        for col in columns:
-            if col.kind in ("numeric", "date"):
-                col.min_val = stats.get(f"{col.name}__min")
-                col.max_val = stats.get(f"{col.name}__max")
-
-        categorical_cols = [
-            col
-            for col in columns
-            if col.kind == "text"
-            and (nunique := stats.get(f"{col.name}__nunique"))
-            and nunique <= categorical_threshold
-        ]
-
-        try:
-            for col in categorical_cols:
-                cat_result = self._conn.execute(
-                    f'SELECT DISTINCT "{col.name}" FROM "{self.table_name}" '
-                    f'WHERE "{col.name}" IS NOT NULL ORDER BY "{col.name}"'
-                ).fetchall()
-                col.categories = [str(row[0]) for row in cat_result]
-        except Exception:  # noqa: S110
-            pass
+        return duckdb_get_schema(self._conn, self.table_name, categorical_threshold)
 
     def execute_query(self, query: str) -> pd.DataFrame:
         check_query(query)

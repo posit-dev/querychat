@@ -22,7 +22,6 @@ if TYPE_CHECKING:
     import polars as pl
     from ibis.backends.sql import SQLBackend
     from ibis.expr.datatypes import DataType as IbisDataType
-    from narwhals.dtypes import DType
     from sqlalchemy.engine import Connection, Engine
 
 
@@ -67,6 +66,104 @@ def format_schema(table_name: str, columns: list[ColumnMeta]) -> str:
             lines.append(f"  Categorical values: {cats}")
 
     return "\n".join(lines)
+
+
+# -- Shared DuckDB schema helpers ------------------------------------------------
+# Used by DataFrameSource and PinSource (both backed by DuckDB connections).
+
+
+def duckdb_column_meta(name: str, duckdb_type: Any) -> ColumnMeta:
+    """Create ColumnMeta from a DuckDB type descriptor."""
+    t = str(duckdb_type).upper()
+
+    kind: Literal["numeric", "text", "date", "other"]
+    if "INT" in t:
+        kind, sql_type = "numeric", "INTEGER"
+    elif any(s in t for s in ("FLOAT", "DOUBLE", "DECIMAL", "NUMERIC")):
+        kind, sql_type = "numeric", "FLOAT"
+    elif "BOOL" in t:
+        kind, sql_type = "other", "BOOLEAN"
+    elif t == "DATE":
+        kind, sql_type = "date", "DATE"
+    elif "TIMESTAMP" in t:
+        kind, sql_type = "date", "TIMESTAMP"
+    elif t == "TIME":
+        kind, sql_type = "other", "TIME"
+    elif any(s in t for s in ("VARCHAR", "TEXT", "STRING")):
+        kind, sql_type = "text", "TEXT"
+    else:
+        kind, sql_type = "other", t
+
+    return ColumnMeta(name=name, sql_type=sql_type, kind=kind)
+
+
+def duckdb_column_stats(
+    conn: duckdb.DuckDBPyConnection,
+    table_name: str,
+    columns: list[ColumnMeta],
+    categorical_threshold: int,
+) -> None:
+    """Populate min/max/categories on ColumnMeta list using DuckDB SQL."""
+    select_parts = []
+    for col in columns:
+        quoted = f'"{col.name}"'
+        if col.kind in ("numeric", "date"):
+            select_parts.append(f'MIN({quoted}) as "{col.name}__min"')
+            select_parts.append(f'MAX({quoted}) as "{col.name}__max"')
+        elif col.kind == "text":
+            select_parts.append(
+                f'COUNT(DISTINCT {quoted}) as "{col.name}__nunique"'
+            )
+
+    if not select_parts:
+        return
+
+    try:
+        stats_query = f'SELECT {", ".join(select_parts)} FROM "{table_name}"'
+        result = conn.execute(stats_query).fetchone()
+        if not result:
+            return
+        col_names_list = [desc[0] for desc in conn.description]
+        stats = dict(zip(col_names_list, result, strict=False))
+    except Exception:
+        return
+
+    for col in columns:
+        if col.kind in ("numeric", "date"):
+            col.min_val = stats.get(f"{col.name}__min")
+            col.max_val = stats.get(f"{col.name}__max")
+
+    categorical_cols = [
+        col
+        for col in columns
+        if col.kind == "text"
+        and (nunique := stats.get(f"{col.name}__nunique"))
+        and nunique <= categorical_threshold
+    ]
+
+    try:
+        for col in categorical_cols:
+            cat_result = conn.execute(
+                f'SELECT DISTINCT "{col.name}" FROM "{table_name}" '
+                f'WHERE "{col.name}" IS NOT NULL ORDER BY "{col.name}"'
+            ).fetchall()
+            col.categories = [str(row[0]) for row in cat_result]
+    except Exception:  # noqa: S110
+        pass
+
+
+def duckdb_get_schema(
+    conn: duckdb.DuckDBPyConnection,
+    table_name: str,
+    categorical_threshold: int,
+) -> str:
+    """Generate schema string from a DuckDB connection and table name."""
+    result = conn.execute(f'SELECT * FROM "{table_name}" LIMIT 0')
+    columns = [
+        duckdb_column_meta(desc[0], desc[1]) for desc in result.description
+    ]
+    duckdb_column_stats(conn, table_name, columns, categorical_threshold)
+    return format_schema(table_name, columns)
 
 
 class DataSource(ABC, Generic[IntoFrameT]):
@@ -184,7 +281,8 @@ class DataSource(ABC, Generic[IntoFrameT]):
         """
 
     def get_data_description(self) -> str:
-        """Get a human-readable data description for the system prompt.
+        """
+        Get a human-readable data description for the system prompt.
 
         Subclasses may override this to provide metadata-derived descriptions
         (e.g., pin title/description). The default returns an empty string.
@@ -270,52 +368,7 @@ SET lock_configuration = true;
             String describing the schema
 
         """
-        columns = [
-            self._make_column_meta(col, self._df[col].dtype) for col in self._df.columns
-        ]
-        self._add_column_stats(columns, self._df, categorical_threshold)
-        return format_schema(self.table_name, columns)
-
-    @staticmethod
-    def _make_column_meta(name: str, dtype: DType) -> ColumnMeta:
-        """Create ColumnMeta from a narwhals dtype."""
-        kind: Literal["numeric", "text", "date", "other"]
-        if dtype.is_integer():
-            kind = "numeric"
-            sql_type = "INTEGER"
-        elif dtype.is_float():
-            kind = "numeric"
-            sql_type = "FLOAT"
-        elif dtype == nw.Boolean:
-            kind = "other"
-            sql_type = "BOOLEAN"
-        elif dtype == nw.Datetime:
-            kind = "date"
-            sql_type = "TIME"
-        elif dtype == nw.Date:
-            kind = "date"
-            sql_type = "DATE"
-        else:
-            kind = "text"
-            sql_type = "TEXT"
-
-        return ColumnMeta(name=name, sql_type=sql_type, kind=kind)
-
-    @staticmethod
-    def _add_column_stats(
-        columns: list[ColumnMeta],
-        df: nw.DataFrame,
-        categorical_threshold: int,
-    ) -> None:
-        """Add min/max/categories to column metadata."""
-        for col in columns:
-            if col.kind in ("numeric", "date"):
-                col.min_val = df[col.name].min()
-                col.max_val = df[col.name].max()
-            elif col.kind == "text":
-                unique_values = df[col.name].drop_nulls().unique()
-                if unique_values.len() <= categorical_threshold:
-                    col.categories = unique_values.to_list()
+        return duckdb_get_schema(self._conn, self.table_name, categorical_threshold)
 
     def execute_query(self, query: str) -> IntoDataFrameT:
         """

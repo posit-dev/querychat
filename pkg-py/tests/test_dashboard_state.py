@@ -50,6 +50,13 @@ class TestCardSpec:
         restored = CardSpec.model_validate_json(card.model_dump_json())
         assert restored == card
 
+    def test_theme_must_be_known(self):
+        with pytest.raises(ValidationError):
+            CardSpec(
+                name="v", type="value_box", title="t", sql="SELECT 1",
+                theme='danger" onclick="evil()',
+            )
+
 
 class TestCardLayout:
     def test_bounds(self):

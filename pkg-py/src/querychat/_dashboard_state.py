@@ -79,7 +79,7 @@ class CardSpec(BaseModel):
     # value_box options:
     format: str = ""  # Python format spec, optional leading currency symbol
     icon: str | None = None
-    theme: str | None = None
+    theme: Literal["primary", "success", "danger", "warning"] | None = None
     delta_sql: str | None = None
     # table options:
     page_size: int = Field(default=10, ge=1, le=100)

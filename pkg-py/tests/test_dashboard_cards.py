@@ -53,6 +53,11 @@ class TestValidateCard:
         card = CardSpec(name="m", type="markdown", title="", text="hi")
         validate_card(source, card)
 
+    def test_value_box_with_bad_sql_raises_valueerror(self, source):
+        card = CardSpec(name="v", type="value_box", title="v", sql="SELECT nope FROM nada")
+        with pytest.raises(ValueError, match=r"nope|nada|not exist|column|table|Catalog"):
+            validate_card(source, card)
+
 
 @pytest.mark.ggsql
 class TestValidateCardChart:
@@ -109,3 +114,12 @@ class TestCardHtml:
     def test_markdown_has_no_query_footer(self, source):
         card = CardSpec(name="m", type="markdown", title="Notes", text="x")
         assert "<details" not in card_html(source, card)
+
+    def test_title_is_html_escaped(self, source):
+        card = CardSpec(
+            name="v", type="value_box", title="<b>XSS</b>",
+            sql="SELECT AVG(mpg) FROM mtcars",
+        )
+        html = card_html(source, card)
+        assert "<b>XSS</b>" not in html
+        assert "&lt;b&gt;XSS&lt;/b&gt;" in html

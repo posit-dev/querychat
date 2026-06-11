@@ -39,16 +39,25 @@ def validate_card(data_source: DataSource, card: CardSpec) -> None:
             raise ValueError(
                 "\n".join(e["message"] for e in validated.errors())
             )
+        # ggsql execution errors (e.g. unknown columns) surface at render time, not here.
         return
     # table / value_box
+    if card.type == "table":
+        try:
+            data_source.test_query(card.sql)
+        except Exception as e:
+            raise ValueError(str(e)) from e
+        return
+    # value_box: scalar_value executes the query, which both validates the SQL
+    # and checks the 1x1 shape (re-executed at render time; KPI queries are cheap)
     try:
-        data_source.test_query(card.sql)
-    except Exception as e:
-        raise ValueError(str(e)) from e
-    if card.type == "value_box":
-        scalar_value(data_source, card.sql)  # raises if not 1x1
+        scalar_value(data_source, card.sql)
         if card.delta_sql:
             scalar_value(data_source, card.delta_sql)
+    except ValueError:
+        raise
+    except Exception as e:
+        raise ValueError(str(e)) from e
 
 
 def scalar_value(data_source: DataSource, sql: str) -> object:
@@ -64,7 +73,11 @@ def scalar_value(data_source: DataSource, sql: str) -> object:
 
 
 def format_value(value: object, fmt: str) -> str:
-    """Format a scalar value using a Python format spec, with optional currency prefix."""
+    """
+    Format a scalar value using a Python format spec, with optional currency prefix.
+
+    Falls back to ``str(value)`` if the format spec raises.
+    """
     if fmt:
         prefix = ""
         if fmt[0] in CURRENCY_PREFIXES:
@@ -107,9 +120,10 @@ def render_body(data_source: DataSource, card: CardSpec) -> str:
         if card.delta_sql:
             delta = scalar_value(data_source, card.delta_sql)
             arrow = "▲" if isinstance(delta, (int, float)) and delta >= 0 else "▼"
+            delta_str = format_value(delta, card.format)
             delta_html = (
                 f'<div class="querychat-dash-delta">{arrow} '
-                f"{format_value(delta, card.format)}</div>"
+                f"{html_mod.escape(delta_str)}</div>"
             )
         icon_html = ""
         if card.icon:

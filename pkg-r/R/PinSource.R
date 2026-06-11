@@ -53,30 +53,33 @@ PinSource <- R6::R6Class(
 
       pin_type <- private$.pin_meta$type
       con <- DBI::dbConnect(duckdb::duckdb())
+      on.exit(DBI::dbDisconnect(con), add = TRUE)
 
       duckdb_file_types <- c("parquet", "csv", "json")
 
       if (pin_type %in% duckdb_file_types) {
         paths <- pins::pin_download(board, name, version = version)
+        if (length(paths) != 1) {
+          cli::cli_abort(
+            "Pin {.val {name}} contains {length(paths)} files, but PinSource requires a single-file pin (as created by {.fn pins::pin_write})."
+          )
+        }
         reader_fn <- switch(pin_type,
           parquet = "read_parquet",
           csv = "read_csv_auto",
           json = "read_json_auto"
         )
-        quoted_paths <- vapply(paths, function(p) DBI::dbQuoteLiteral(con, p), character(1))
-        path_arg <- paste(quoted_paths, collapse = ", ")
-        if (length(paths) > 1) path_arg <- paste0("[", path_arg, "]")
+        quoted_path <- DBI::dbQuoteLiteral(con, paths[[1]])
         sql <- sprintf(
           "CREATE TABLE %s AS SELECT * FROM %s(%s)",
           DBI::dbQuoteIdentifier(con, table_name),
           reader_fn,
-          path_arg
+          quoted_path
         )
         DBI::dbExecute(con, sql)
       } else {
         data <- pins::pin_read(board, name, version = version)
         if (!is.data.frame(data)) {
-          DBI::dbDisconnect(con)
           cli::cli_abort(
             "Pin {.val {name}} contains {.obj_type_friendly {data}}, not a data frame."
           )
@@ -102,6 +105,7 @@ SET lock_configuration = true;
         )"
       )
 
+      on.exit() # disarm — super$initialize() takes ownership of con
       super$initialize(con, table_name)
     },
 

@@ -55,46 +55,42 @@ class PinSource(DataSource["pd.DataFrame"]):
         self._pin_meta_obj = board.pin_meta(name, version=version)
         pin_type = self._pin_meta_obj.type
 
-        self._conn = duckdb.connect()
-
-        if pin_type in DUCKDB_FILE_TYPES:
-            paths = board.pin_download(name, version=version)
-            reader_fn = DUCKDB_READER_FN[pin_type]
-            if len(paths) == 1:
-                self._conn.execute(
+        conn = duckdb.connect()
+        try:
+            if pin_type in DUCKDB_FILE_TYPES:
+                paths = board.pin_download(name, version=version)
+                if len(paths) != 1:
+                    raise ValueError(
+                        f"Pin '{name}' contains {len(paths)} files, but PinSource "
+                        "requires a single-file pin (as created by pin_write())."
+                    )
+                reader_fn = DUCKDB_READER_FN[pin_type]
+                conn.execute(
                     f'CREATE TABLE "{effective_table_name}" AS '
                     f"SELECT * FROM {reader_fn}(?)",
                     [paths[0]],
                 )
             else:
-                self._conn.execute(
-                    f'CREATE TABLE "{effective_table_name}" AS '
-                    f"SELECT * FROM {reader_fn}(?)",
-                    [paths],
-                )
-        else:
-            import pandas as pd
+                import pandas as pd
 
-            data = board.pin_read(name, version=version)
-            if not isinstance(data, pd.DataFrame):
-                self._conn.close()
-                raise TypeError(
-                    f"Pin '{name}' contains {type(data).__name__}, not a DataFrame. "
-                    "PinSource requires the pin to contain a pandas DataFrame."
+                data = board.pin_read(name, version=version)
+                if not isinstance(data, pd.DataFrame):
+                    raise TypeError(
+                        f"Pin '{name}' contains {type(data).__name__}, not a DataFrame. "
+                        "PinSource requires the pin to contain a pandas DataFrame."
+                    )
+                conn.register(effective_table_name, data)
+                conn.execute(
+                    f'CREATE TABLE "{effective_table_name}_tmp" AS '
+                    f'SELECT * FROM "{effective_table_name}"'
                 )
-            self._conn.register(effective_table_name, data)
-            # Materialize to a real table so DuckDB owns the data, then we
-            # can safely lock down external access without breaking the view.
-            self._conn.execute(
-                f'CREATE TABLE "{effective_table_name}_tmp" AS SELECT * FROM "{effective_table_name}"'
-            )
-            self._conn.unregister(effective_table_name)
-            self._conn.execute(
-                f'ALTER TABLE "{effective_table_name}_tmp" RENAME TO "{effective_table_name}"'
-            )
+                conn.unregister(effective_table_name)
+                conn.execute(
+                    f'ALTER TABLE "{effective_table_name}_tmp" RENAME TO '
+                    f'"{effective_table_name}"'
+                )
 
-        # Lock down DuckDB security AFTER data is loaded
-        self._conn.execute("""
+            conn.execute("""
 SET allow_community_extensions = false;
 SET allow_unsigned_extensions = false;
 SET autoinstall_known_extensions = false;
@@ -102,7 +98,12 @@ SET autoload_known_extensions = false;
 SET enable_external_access = false;
 SET disabled_filesystems = 'LocalFileSystem';
 SET lock_configuration = true;
-        """)
+            """)
+        except Exception:
+            conn.close()
+            raise
+
+        self._conn = conn
 
         # Store column names for validation
         result = self._conn.execute(f'SELECT * FROM "{effective_table_name}" LIMIT 0')

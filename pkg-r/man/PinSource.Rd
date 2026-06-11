@@ -8,7 +8,8 @@ A DataSource implementation that reads data from a
 \href{https://pins.rstudio.com/}{pins} board. For pin types that DuckDB can read
 natively (parquet, CSV, JSON), the data is loaded directly from the cached
 pin files into DuckDB without deserializing into R. For other pin types
-(RDS, Arrow, etc.), the data is read into R and then registered with DuckDB.
+(e.g. RDS), the data is deserialized via \code{pin_read()} and must produce
+a data frame (or tibble) to be registered with DuckDB.
 }
 \examples{
 if (rlang::is_installed(c("pins", "duckdb"))) {

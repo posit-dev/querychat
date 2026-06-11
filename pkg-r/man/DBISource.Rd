@@ -45,6 +45,11 @@ db_source$cleanup()
     \item \href{#method-DBISource-clone}{\code{DBISource$clone()}}
   }
 }
+\if{html}{\out{<details open><summary>Inherited methods</summary>
+<ul>
+  <li><span class="pkg-link" data-pkg="querychat" data-topic="DataSource" data-id="get_data_description"><a href='../../querychat/html/DataSource.html#method-DataSource-get_data_description'><code>DataSource$get_data_description()</code></a></span></li>
+</ul>
+</details>}}
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-DBISource-initialize"></a>}}
 \if{latex}{\out{\hypertarget{method-DBISource-initialize}{}}}

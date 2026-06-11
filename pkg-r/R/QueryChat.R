@@ -117,9 +117,9 @@ QueryChat <- R6::R6Class(
         private$.data_description <- NULL
         private$.data_description_auto <- FALSE
       }
-      if (is.null(private$.data_description) && inherits(private$.data_source, "PinSource")) {
+      if (is.null(private$.data_description)) {
         desc <- private$.data_source$get_data_description()
-        if (nzchar(desc)) {
+        if (nzchar(desc %||% "")) {
           private$.data_description <- desc
           private$.data_description_auto <- TRUE
         }
@@ -301,7 +301,9 @@ QueryChat <- R6::R6Class(
             "{.arg table_name} is required when {.arg data_source} is {.val NULL}."
           )
         }
-        if (is.data.frame(data_source) || inherits(data_source, "tbl_sql")) {
+        if (inherits(data_source, "DataSource")) {
+          table_name <- data_source$table_name
+        } else if (is.data.frame(data_source) || inherits(data_source, "tbl_sql")) {
           table_name <- deparse1(substitute(data_source))
         }
       }
@@ -327,6 +329,8 @@ QueryChat <- R6::R6Class(
       # Initialize data source (may be NULL for deferred pattern)
       if (!is.null(data_source)) {
         private$.data_source <- normalize_data_source(data_source, table_name)
+        private$.table_name <- private$.data_source$table_name
+        self$id <- id %||% sprintf("querychat_%s", private$.table_name)
         private$auto_fill_data_description()
         private$build_system_prompt()
       }
@@ -931,7 +935,9 @@ querychat <- function(
   cleanup = NA
 ) {
   if (is_missing(table_name)) {
-    if (is.data.frame(data_source) || inherits(data_source, "tbl_sql")) {
+    if (inherits(data_source, "DataSource")) {
+      table_name <- data_source$table_name
+    } else if (is.data.frame(data_source) || inherits(data_source, "tbl_sql")) {
       table_name <- deparse1(substitute(data_source))
     }
   }
@@ -980,8 +986,12 @@ querychat_app <- function(
     )
   }
 
-  if (is_missing(table_name) && is.data.frame(data_source)) {
-    table_name <- deparse1(substitute(data_source))
+  if (is_missing(table_name)) {
+    if (inherits(data_source, "DataSource")) {
+      table_name <- data_source$table_name
+    } else if (is.data.frame(data_source)) {
+      table_name <- deparse1(substitute(data_source))
+    }
   }
 
   check_bool(cleanup, allow_na = TRUE)
@@ -1020,6 +1030,11 @@ normalize_tools <- function(tools) {
 normalize_data_source <- function(data_source, table_name) {
   if (is_data_source(data_source)) {
     return(data_source)
+  }
+
+  if (inherits(data_source, "pins_board")) {
+    rlang::check_installed("pins", reason = "to use a pins board as a data source.")
+    return(PinSource$new(data_source, table_name))
   }
 
   check_sql_table_name(table_name, call = caller_env())

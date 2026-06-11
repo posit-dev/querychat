@@ -25,112 +25,93 @@ def sample_df():
     )
 
 
-class TestPinSourceLazyPath:
-    def test_parquet_pin(self, board, sample_df):
-        board.pin_write(sample_df, "test_data", type="parquet")
-        ps = PinSource(board, "test_data")
+@pytest.fixture
+def parquet_source(board, sample_df):
+    board.pin_write(sample_df, "test_data", type="parquet")
+    ps = PinSource(board, "test_data")
+    yield ps
+    ps.cleanup()
 
-        result = ps.execute_query("SELECT * FROM test_data")
+
+class TestPinSourceLazyPath:
+    def test_parquet_pin(self, parquet_source):
+        result = parquet_source.execute_query("SELECT * FROM test_data")
         assert isinstance(result, pd.DataFrame)
         assert len(result) == 4
         assert list(result.columns) == ["name", "age", "score"]
-        ps.cleanup()
 
     def test_csv_pin(self, board, sample_df):
         board.pin_write(sample_df, "csv_data", type="csv")
         ps = PinSource(board, "csv_data")
-
-        result = ps.execute_query("SELECT * FROM csv_data WHERE age > 28")
-        assert isinstance(result, pd.DataFrame)
-        assert all(result["age"] > 28)
-        ps.cleanup()
+        try:
+            result = ps.execute_query("SELECT * FROM csv_data WHERE age > 28")
+            assert isinstance(result, pd.DataFrame)
+            assert all(result["age"] > 28)
+        finally:
+            ps.cleanup()
 
     def test_json_pin(self, board, sample_df):
         board.pin_write(sample_df, "json_data", type="json")
         ps = PinSource(board, "json_data")
+        try:
+            result = ps.get_data()
+            assert isinstance(result, pd.DataFrame)
+            assert len(result) == 4
+        finally:
+            ps.cleanup()
 
-        result = ps.get_data()
-        assert isinstance(result, pd.DataFrame)
-        assert len(result) == 4
-        ps.cleanup()
-
-    def test_parquet_pin_filtered_query(self, board, sample_df):
-        board.pin_write(sample_df, "filtered_data", type="parquet")
-        ps = PinSource(board, "filtered_data")
-
-        result = ps.execute_query("SELECT name FROM filtered_data WHERE score > 90")
+    def test_parquet_pin_filtered_query(self, parquet_source, sample_df):
+        result = parquet_source.execute_query(
+            "SELECT name FROM test_data WHERE score > 90"
+        )
         assert isinstance(result, pd.DataFrame)
         assert list(result.columns) == ["name"]
         assert len(result) == 2
-        ps.cleanup()
 
 
 class TestPinSourceSchema:
-    def test_get_schema(self, board, sample_df):
-        board.pin_write(sample_df, "schema_test", type="parquet")
-        ps = PinSource(board, "schema_test")
-
-        schema = ps.get_schema(categorical_threshold=20)
-        assert "schema_test" in schema
+    def test_get_schema(self, parquet_source):
+        schema = parquet_source.get_schema(categorical_threshold=20)
+        assert "test_data" in schema
         assert "name" in schema
         assert "age" in schema
         assert "score" in schema
-        ps.cleanup()
 
-    def test_get_schema_table_header(self, board, sample_df):
-        board.pin_write(sample_df, "header_test", type="parquet")
-        ps = PinSource(board, "header_test")
-
-        schema = ps.get_schema(categorical_threshold=20)
+    def test_get_schema_table_header(self, parquet_source):
+        schema = parquet_source.get_schema(categorical_threshold=20)
         lines = schema.split("\n")
-        assert lines[0] == "Table: header_test"
+        assert lines[0] == "Table: test_data"
         assert lines[1] == "Columns:"
-        ps.cleanup()
 
     def test_get_schema_categorical_values(self, board):
         df = pd.DataFrame({"category": ["A", "B", "A", "C", "B"], "value": [1, 2, 3, 4, 5]})
         board.pin_write(df, "cat_test", type="parquet")
         ps = PinSource(board, "cat_test")
+        try:
+            schema = ps.get_schema(categorical_threshold=5)
+            assert "Categorical values:" in schema
+            assert "'A'" in schema
+            assert "'B'" in schema
+            assert "'C'" in schema
+        finally:
+            ps.cleanup()
 
-        schema = ps.get_schema(categorical_threshold=5)
-        assert "Categorical values:" in schema
-        assert "'A'" in schema
-        assert "'B'" in schema
-        assert "'C'" in schema
-        ps.cleanup()
-
-    def test_get_schema_numeric_range(self, board, sample_df):
-        board.pin_write(sample_df, "range_test", type="parquet")
-        ps = PinSource(board, "range_test")
-
-        schema = ps.get_schema(categorical_threshold=20)
+    def test_get_schema_numeric_range(self, parquet_source):
+        schema = parquet_source.get_schema(categorical_threshold=20)
         assert "Range:" in schema
         assert "25" in schema
         assert "35" in schema
-        ps.cleanup()
 
-    def test_get_db_type(self, board, sample_df):
-        board.pin_write(sample_df, "db_type_test", type="parquet")
-        ps = PinSource(board, "db_type_test")
+    def test_get_db_type(self, parquet_source):
+        assert parquet_source.get_db_type() == "DuckDB"
 
-        assert ps.get_db_type() == "DuckDB"
-        ps.cleanup()
-
-    def test_test_query(self, board, sample_df):
-        board.pin_write(sample_df, "tq_test", type="parquet")
-        ps = PinSource(board, "tq_test")
-
-        result = ps.test_query("SELECT * FROM tq_test")
+    def test_test_query(self, parquet_source):
+        result = parquet_source.test_query("SELECT * FROM test_data")
         assert len(result) == 1
-        ps.cleanup()
 
-    def test_test_query_trailing_semicolon(self, board, sample_df):
-        board.pin_write(sample_df, "tq_semi", type="parquet")
-        ps = PinSource(board, "tq_semi")
-
-        result = ps.test_query("SELECT * FROM tq_semi;")
+    def test_test_query_trailing_semicolon(self, parquet_source):
+        result = parquet_source.test_query("SELECT * FROM test_data;")
         assert len(result) == 1
-        ps.cleanup()
 
 
 class TestPinSourceMetadata:
@@ -143,65 +124,52 @@ class TestPinSourceMetadata:
             description="A sample dataset for testing",
         )
         ps = PinSource(board, "described_pin")
+        try:
+            desc = ps.get_data_description()
+            assert "Test Dataset" in desc
+            assert "A sample dataset for testing" in desc
+        finally:
+            ps.cleanup()
 
-        desc = ps.get_data_description()
-        assert "Test Dataset" in desc
-        assert "A sample dataset for testing" in desc
-        ps.cleanup()
-
-    def test_get_data_description_minimal(self, board, sample_df):
-        board.pin_write(sample_df, "minimal_pin", type="parquet")
-        ps = PinSource(board, "minimal_pin")
-
-        desc = ps.get_data_description()
+    def test_get_data_description_minimal(self, parquet_source):
+        desc = parquet_source.get_data_description()
         assert isinstance(desc, str)
-        assert "minimal_pin" in desc
-        ps.cleanup()
+        assert "test_data" in desc
 
-    def test_pin_meta_property(self, board, sample_df):
-        board.pin_write(sample_df, "meta_test", type="parquet")
-        ps = PinSource(board, "meta_test")
-
-        meta = ps.pin_meta
+    def test_pin_meta_property(self, parquet_source):
+        meta = parquet_source.pin_meta
         assert meta is not None
-        assert meta.name == "meta_test"
-        ps.cleanup()
+        assert meta.name == "test_data"
 
-    def test_pin_meta_type(self, board, sample_df):
-        board.pin_write(sample_df, "type_test", type="parquet")
-        ps = PinSource(board, "type_test")
-
-        assert ps.pin_meta.type == "parquet"
-        ps.cleanup()
+    def test_pin_meta_type(self, parquet_source):
+        assert parquet_source.pin_meta.type == "parquet"
 
 
 class TestPinSourceTableName:
-    def test_defaults_to_pin_name(self, board, sample_df):
-        board.pin_write(sample_df, "my_pin", type="parquet")
-        ps = PinSource(board, "my_pin")
-
-        assert ps.table_name == "my_pin"
-        result = ps.execute_query("SELECT * FROM my_pin")
+    def test_defaults_to_pin_name(self, parquet_source):
+        assert parquet_source.table_name == "test_data"
+        result = parquet_source.execute_query("SELECT * FROM test_data")
         assert len(result) == 4
-        ps.cleanup()
 
     def test_custom_table_name(self, board, sample_df):
         board.pin_write(sample_df, "my_pin", type="parquet")
         ps = PinSource(board, "my_pin", table_name="custom_table")
-
-        assert ps.table_name == "custom_table"
-        result = ps.execute_query("SELECT * FROM custom_table")
-        assert len(result) == 4
-        ps.cleanup()
+        try:
+            assert ps.table_name == "custom_table"
+            result = ps.execute_query("SELECT * FROM custom_table")
+            assert len(result) == 4
+        finally:
+            ps.cleanup()
 
     def test_custom_table_name_in_schema(self, board, sample_df):
         board.pin_write(sample_df, "schema_pin", type="parquet")
         ps = PinSource(board, "schema_pin", table_name="my_table")
-
-        schema = ps.get_schema(categorical_threshold=10)
-        assert "my_table" in schema
-        assert "schema_pin" not in schema
-        ps.cleanup()
+        try:
+            schema = ps.get_schema(categorical_threshold=10)
+            assert "my_table" in schema
+            assert "schema_pin" not in schema
+        finally:
+            ps.cleanup()
 
 
 class TestPinSourceErrors:
@@ -219,25 +187,17 @@ class TestPinSourceErrors:
 
 
 class TestPinSourceSecurity:
-    def test_duckdb_locked_down(self, board, sample_df):
-        board.pin_write(sample_df, "secure_test", type="parquet")
-        ps = PinSource(board, "secure_test")
-
+    def test_duckdb_locked_down(self, parquet_source):
         with pytest.raises(
             duckdb.PermissionException, match="has been disabled"
         ):
-            ps.execute_query("SELECT * FROM read_csv_auto('/etc/passwd')")
-        ps.cleanup()
+            parquet_source.execute_query("SELECT * FROM read_csv_auto('/etc/passwd')")
 
-    def test_blocks_unsafe_queries(self, board, sample_df):
+    def test_blocks_unsafe_queries(self, parquet_source):
         from querychat._utils import UnsafeQueryError
 
-        board.pin_write(sample_df, "unsafe_test", type="parquet")
-        ps = PinSource(board, "unsafe_test")
-
         with pytest.raises(UnsafeQueryError):
-            ps.execute_query("DROP TABLE unsafe_test")
-        ps.cleanup()
+            parquet_source.execute_query("DROP TABLE test_data")
 
 
 class TestQueryChatPinSourceIntegration:
@@ -250,11 +210,12 @@ class TestQueryChatPinSourceIntegration:
         )
         ps = PinSource(board, "cars")
         qc = QueryChat(data_source=ps, table_name="cars", greeting="Hi")
-
-        prompt = qc._system_prompt.render(qc.tools)
-        assert "Motor Trend Cars" in prompt
-        assert "Road test data" in prompt
-        qc.cleanup()
+        try:
+            prompt = qc._system_prompt.render(qc.tools)
+            assert "Motor Trend Cars" in prompt
+            assert "Road test data" in prompt
+        finally:
+            qc.cleanup()
 
     def test_explicit_description_overrides_pin_metadata(self, board, sample_df):
         from querychat import QueryChat
@@ -267,11 +228,12 @@ class TestQueryChatPinSourceIntegration:
             data_source=ps, table_name="cars", greeting="Hi",
             data_description="Custom description",
         )
-
-        prompt = qc._system_prompt.render(qc.tools)
-        assert "Custom description" in prompt
-        assert "Motor Trend Cars" not in prompt
-        qc.cleanup()
+        try:
+            prompt = qc._system_prompt.render(qc.tools)
+            assert "Custom description" in prompt
+            assert "Motor Trend Cars" not in prompt
+        finally:
+            qc.cleanup()
 
     def test_clears_auto_description_on_source_change(self, board, sample_df):
         from querychat import QueryChat
@@ -281,11 +243,12 @@ class TestQueryChatPinSourceIntegration:
         )
         ps = PinSource(board, "cars")
         qc = QueryChat(data_source=ps, table_name="cars", greeting="Hi")
+        try:
+            prompt_before = qc._system_prompt.render(qc.tools)
+            assert "Motor Trend Cars" in prompt_before
 
-        prompt_before = qc._system_prompt.render(qc.tools)
-        assert "Motor Trend Cars" in prompt_before
-
-        qc.data_source = sample_df
-        prompt_after = qc._system_prompt.render(qc.tools)
-        assert "Motor Trend Cars" not in prompt_after
-        qc.cleanup()
+            qc.data_source = sample_df
+            prompt_after = qc._system_prompt.render(qc.tools)
+            assert "Motor Trend Cars" not in prompt_after
+        finally:
+            qc.cleanup()

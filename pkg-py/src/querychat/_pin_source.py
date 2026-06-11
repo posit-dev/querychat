@@ -79,16 +79,13 @@ class PinSource(DataSource["pd.DataFrame"]):
                         f"Pin '{name}' contains {type(data).__name__}, not a DataFrame. "
                         "PinSource requires the pin to contain a pandas DataFrame."
                     )
-                conn.register(effective_table_name, data)
+                vname = f"__pin_staging_{effective_table_name}"
+                conn.register(vname, data)
                 conn.execute(
-                    f'CREATE TABLE "{effective_table_name}_tmp" AS '
-                    f'SELECT * FROM "{effective_table_name}"'
+                    f'CREATE TABLE "{effective_table_name}" AS '
+                    f'SELECT * FROM "{vname}"'
                 )
-                conn.unregister(effective_table_name)
-                conn.execute(
-                    f'ALTER TABLE "{effective_table_name}_tmp" RENAME TO '
-                    f'"{effective_table_name}"'
-                )
+                conn.unregister(vname)
 
             conn.execute("""
 SET allow_community_extensions = false;

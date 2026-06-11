@@ -183,6 +183,14 @@ class DataSource(ABC, Generic[IntoFrameT]):
 
         """
 
+    def get_data_description(self) -> str:
+        """Get a human-readable data description for the system prompt.
+
+        Subclasses may override this to provide metadata-derived descriptions
+        (e.g., pin title/description). The default returns an empty string.
+        """
+        return ""
+
     def get_semantic_views_description(self) -> str:
         """Get information about semantic views (if any) for the system prompt."""
         return ""

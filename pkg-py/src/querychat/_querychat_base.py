@@ -59,7 +59,7 @@ class QueryChatBase(Generic[IntoFrameT]):
     def __init__(
         self,
         data_source: IntoFrame | sqlalchemy.Engine | None,
-        table_name: str,
+        table_name: str | None = None,
         *,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
@@ -69,10 +69,30 @@ class QueryChatBase(Generic[IntoFrameT]):
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
     ):
+        if table_name is None:
+            if isinstance(data_source, DataSource):
+                table_name = data_source.table_name
+            elif data_source is not None:
+                raise ValueError(
+                    "table_name is required when data_source is not a DataSource"
+                )
+
         # Store table_name for later normalization
         self._table_name = table_name
 
-        if not re.match(r"^[a-zA-Z][a-zA-Z0-9_]*$", table_name):
+        is_pins_board = False
+        try:
+            from pins.boards import BaseBoard
+
+            is_pins_board = isinstance(data_source, BaseBoard)
+        except ImportError:
+            pass
+
+        if (
+            table_name is not None
+            and not is_pins_board
+            and not re.match(r"^[a-zA-Z][a-zA-Z0-9_]*$", table_name)
+        ):
             raise ValueError(
                 "Table name must begin with a letter and contain only letters, numbers, and underscores",
             )
@@ -95,6 +115,7 @@ class QueryChatBase(Generic[IntoFrameT]):
             self._data_source: DataSource | None = normalize_data_source(
                 data_source, table_name
             )
+            self._table_name = self._data_source.table_name
             self._auto_fill_data_description()
             self._build_system_prompt()
         else:
@@ -106,7 +127,7 @@ class QueryChatBase(Generic[IntoFrameT]):
         if self._data_description_auto:
             self._data_description = None
             self._data_description_auto = False
-        if self._data_description is None and isinstance(self._data_source, PinSource):
+        if self._data_description is None:
             desc = self._data_source.get_data_description()
             if desc:
                 self._data_description = desc
@@ -272,6 +293,15 @@ def normalize_data_source(
 ) -> DataSource:
     if isinstance(data_source, DataSource):
         return data_source
+
+    try:
+        from pins.boards import BaseBoard
+
+        if isinstance(data_source, BaseBoard):
+            return PinSource(data_source, table_name)
+    except ImportError:
+        pass
+
     if isinstance(data_source, sqlalchemy.Engine):
         return SQLAlchemySource(data_source, table_name)
 

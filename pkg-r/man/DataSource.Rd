@@ -37,6 +37,7 @@ MyDataSource <- R6::R6Class(
     \item \href{#method-DataSource-execute_query}{\code{DataSource$execute_query()}}
     \item \href{#method-DataSource-test_query}{\code{DataSource$test_query()}}
     \item \href{#method-DataSource-get_data}{\code{DataSource$get_data()}}
+    \item \href{#method-DataSource-get_data_description}{\code{DataSource$get_data_description()}}
     \item \href{#method-DataSource-cleanup}{\code{DataSource$cleanup()}}
     \item \href{#method-DataSource-clone}{\code{DataSource$clone()}}
   }
@@ -138,6 +139,24 @@ matches)
   }
   \subsection{Returns}{
     A data frame containing all data from the table
+  }
+}
+
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-DataSource-get_data_description"></a>}}
+\if{latex}{\out{\hypertarget{method-DataSource-get_data_description}{}}}
+\subsection{\code{DataSource$get_data_description()}}{
+  Get a human-readable data description for the system prompt.
+
+Subclasses may override this to provide metadata-derived descriptions
+(e.g., pin title/description). The default returns an empty string.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{DataSource$get_data_description()}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    A string, or empty string if no description is available.
   }
 }
 

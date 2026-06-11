@@ -48,8 +48,6 @@ PinSource <- R6::R6Class(
 
       table_name <- sanitize_table_name(table_name)
       private$.pin_meta <- pins::pin_meta(board, name, version = version)
-      private$.board <- board
-      private$.pin_name <- name
 
       pin_type <- private$.pin_meta$type
       con <- DBI::dbConnect(duckdb::duckdb())
@@ -127,8 +125,6 @@ SET lock_configuration = true;
     }
   ),
   private = list(
-    .pin_meta = NULL,
-    .board = NULL,
-    .pin_name = NULL
+    .pin_meta = NULL
   )
 )

@@ -45,6 +45,7 @@ Suggests:
     ggsql,
     knitr,
     palmerpenguins,
+    pins,
     rmarkdown,
     RSQLite,
     rsvg,

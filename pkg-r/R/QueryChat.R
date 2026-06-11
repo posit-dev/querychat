@@ -311,6 +311,12 @@ QueryChat <- R6::R6Class(
       # Initialize data source (may be NULL for deferred pattern)
       if (!is.null(data_source)) {
         private$.data_source <- normalize_data_source(data_source, table_name)
+        if (is.null(private$.data_description) && inherits(private$.data_source, "PinSource")) {
+          desc <- private$.data_source$get_data_description()
+          if (nzchar(desc)) {
+            private$.data_description <- desc
+          }
+        }
         private$build_system_prompt()
       }
 
@@ -809,6 +815,12 @@ QueryChat <- R6::R6Class(
           value,
           private$.table_name
         )
+        if (is.null(private$.data_description) && inherits(private$.data_source, "PinSource")) {
+          desc <- private$.data_source$get_data_description()
+          if (nzchar(desc)) {
+            private$.data_description <- desc
+          }
+        }
         private$build_system_prompt()
         invisible(self)
       }

@@ -69,7 +69,7 @@ sanitize_table_name <- function(x) {
   out <- gsub("[^a-zA-Z0-9_]", "_", x)
   if (!grepl("^[a-zA-Z]", out)) out <- paste0("t_", out)
   out <- gsub("_+", "_", out)
-  out <- sub("_$", "", out)
+  out <- sub("_+$", "", out)
   out
 }
 

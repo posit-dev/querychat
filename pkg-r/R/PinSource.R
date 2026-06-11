@@ -53,7 +53,8 @@ PinSource <- R6::R6Class(
 
       pin_type <- private$.pin_meta$type
       con <- DBI::dbConnect(duckdb::duckdb())
-      on.exit(DBI::dbDisconnect(con), add = TRUE)
+      con_owned <- FALSE
+      on.exit(if (!con_owned) DBI::dbDisconnect(con), add = TRUE)
 
       duckdb_file_types <- c("parquet", "csv", "json")
 
@@ -105,8 +106,8 @@ SET lock_configuration = true;
         )"
       )
 
-      on.exit() # disarm — super$initialize() takes ownership of con
       super$initialize(con, table_name)
+      con_owned <- TRUE
     },
 
     #' @description

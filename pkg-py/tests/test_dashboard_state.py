@@ -185,3 +185,5 @@ class TestDashboardHistory:
             spec.upsert_card(chart_card(f"c{i}"))
             history.record(spec)
         assert len(history.snapshots) <= DashboardHistory.MAX_SNAPSHOTS
+        assert history.can_undo()
+        assert history.undo() is not None

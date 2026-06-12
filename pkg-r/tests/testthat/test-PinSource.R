@@ -1,7 +1,7 @@
 local_pin_source <- function(
   data = mtcars[1:10, ],
   name = "test_data",
-  type = "parquet",
+  type = "csv",
   ...,
   table_name = name,
   version = NULL,
@@ -17,9 +17,10 @@ local_pin_source <- function(
 describe("PinSource$new() — lazy path (parquet)", {
   skip_if_not_installed("pins")
   skip_if_not_installed("duckdb")
+  skip_if_not_installed("nanoparquet")
 
   it("creates proper R6 object for parquet pin", {
-    ps <- local_pin_source()
+    ps <- local_pin_source(type = "parquet")
 
     expect_s3_class(ps, "PinSource")
     expect_s3_class(ps, "DBISource")
@@ -27,7 +28,7 @@ describe("PinSource$new() — lazy path (parquet)", {
   })
 
   it("executes queries against parquet pin", {
-    ps <- local_pin_source()
+    ps <- local_pin_source(type = "parquet")
 
     result <- ps$execute_query("SELECT * FROM test_data")
     expect_s3_class(result, "data.frame")
@@ -36,7 +37,7 @@ describe("PinSource$new() — lazy path (parquet)", {
   })
 
   it("filters parquet pin data correctly", {
-    ps <- local_pin_source(data = mtcars, name = "cars")
+    ps <- local_pin_source(data = mtcars, name = "cars", type = "parquet")
 
     result <- ps$execute_query("SELECT * FROM cars WHERE mpg > 30")
     expect_s3_class(result, "data.frame")
@@ -246,6 +247,7 @@ describe("PinSource$get_data_description()", {
 describe("PinSource$new() — error paths", {
   skip_if_not_installed("pins")
   skip_if_not_installed("duckdb")
+  skip_if_not_installed("nanoparquet")
 
   it("rejects multi-file pins", {
     board <- pins::board_temp()
@@ -296,7 +298,7 @@ describe("QueryChat + PinSource integration", {
         board,
         mtcars[1:5, ],
         "cars",
-        type = "parquet",
+        type = "csv",
         title = "Motor Trend Cars",
         description = "Road test data"
       )
@@ -317,7 +319,7 @@ describe("QueryChat + PinSource integration", {
         board,
         mtcars[1:5, ],
         "cars",
-        type = "parquet",
+        type = "csv",
         title = "Motor Trend Cars"
       )
     )
@@ -344,7 +346,7 @@ describe("QueryChat + PinSource integration", {
         board,
         mtcars[1:5, ],
         "cars",
-        type = "parquet",
+        type = "csv",
         title = "Motor Trend Cars"
       )
     )

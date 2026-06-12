@@ -75,6 +75,7 @@ reference:
   - DataFrameSource
   - DBISource
   - TblSqlSource
+  - PinSource
 - title: Package
   contents:
   - querychat

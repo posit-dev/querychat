@@ -44,6 +44,7 @@ Suggests:
     duckdb,
     ggsql,
     knitr,
+    nanoparquet,
     palmerpenguins,
     pins,
     rmarkdown,

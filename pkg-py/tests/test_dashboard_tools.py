@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING
 
 import narwhals as nw
 import pandas as pd
 import pytest
+from querychat import QueryChat
 from querychat._dashboard_tools import (
     tool_canvas_arrange,
     tool_canvas_remove_card,
@@ -114,16 +116,6 @@ class TestRemoveCard:
 
 class TestCanvasToolGroup:
     def test_canvas_group_registers_tools(self, source):
-        import os
-
-        import pandas as pd
-        from querychat import QueryChat
-        from querychat._tool_names import (
-            TOOL_CANVAS_ARRANGE,
-            TOOL_CANVAS_REMOVE_CARD,
-            TOOL_CANVAS_SET_CARDS,
-        )
-
         os.environ.setdefault("OPENAI_API_KEY", "sk-dummy-api-key-for-testing")
         df = pd.DataFrame({"mpg": [21.0, 22.8], "cyl": [6, 4]})
         qc = QueryChat(data_source=df, table_name="mtcars", greeting="Hi")
@@ -133,7 +125,7 @@ class TestCanvasToolGroup:
             canvas_arrange=lambda placements: None,
             canvas_remove_card=lambda name: None,
         )
-        tool_names = {t.name for t in client._tools.values()}
+        tool_names = {t.name for t in client.get_tools()}
         assert TOOL_CANVAS_SET_CARDS in tool_names
         assert TOOL_CANVAS_ARRANGE in tool_names
         assert TOOL_CANVAS_REMOVE_CARD in tool_names

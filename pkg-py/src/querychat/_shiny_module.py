@@ -13,6 +13,7 @@ from shiny import module, reactive, ui
 
 from ._artifact_panel import artifact_panel_ui
 from ._artifact_server import artifact_server
+from ._dashboard_server import DashboardController, dashboard_server
 from ._dashboard_ui import dashboard_drawer_ui
 from ._querychat_core import GREETING_PROMPT
 from ._viz_altair_widget import AltairWidget
@@ -160,9 +161,6 @@ def mod_server(
     def on_visualize(data: VisualizeData):
         viz_widgets.append({"widget_id": data["widget_id"], "ggsql": data["ggsql"]})
 
-    from ._dashboard_server import DashboardController
-    from ._dashboard_server import dashboard_server as _dashboard_server
-
     controller: DashboardController | None = (
         DashboardController(data_source)
         if data_source is not None and tools is not None and "canvas" in tools
@@ -234,7 +232,7 @@ def mod_server(
 
     bump_canvas_flush: Callable[[], None] | None = None
     if controller is not None:
-        bump_canvas_flush = _dashboard_server(
+        bump_canvas_flush = dashboard_server(
             input,
             session,
             controller,
@@ -267,6 +265,9 @@ def mod_server(
             chat_ui.update_user_input(value="/artifact", submit=True)
 
     @reactive.effect
+    # The lambda is required: it defers the reactive read into the event
+    # context. Inlining the bound method reads latest_message_stream (a reactive
+    # calc) at module load, where there is no reactive context.
     @reactive.event(lambda: chat_ui.latest_message_stream.status())  # noqa: PLW0108
     def _flush_canvas_when_settled():
         if bump_canvas_flush is None:
@@ -278,6 +279,9 @@ def mod_server(
     @chat_ui.on_user_submit
     async def _(user_input: str):
         if controller is not None and controller.opened_once:
+            # The canvas context block is injected into chatlas turns (what the
+            # LLM sees) — it is not echoed to shinychat's UI, so the user never
+            # sees it.
             user_input = f"{user_input}\n\n{controller.canvas_context()}"
         stream = await chat.stream_async(user_input, echo="none", content="all", controller=ctrl)
         await chat_ui.append_message_stream(stream)

@@ -263,8 +263,6 @@ class TestCanvasToolFlag:
     """Tests for has_tool_canvas conditional rendering."""
 
     def test_canvas_section_included_when_canvas_in_tools(self, sample_data_source):
-        from pathlib import Path
-
         template_path = (
             Path(__file__).parent.parent
             / "src"
@@ -284,8 +282,6 @@ class TestCanvasToolFlag:
     def test_canvas_section_excluded_when_canvas_not_in_tools(
         self, sample_data_source
     ):
-        from pathlib import Path
-
         template_path = (
             Path(__file__).parent.parent
             / "src"
@@ -353,8 +349,6 @@ class TestVizPromptConditionals:
         When only visualize is enabled (no query tool), the fallback
         to querychat_query should not appear in the rendered prompt.
         """
-        from pathlib import Path
-
         template_path = (
             Path(__file__).parent.parent
             / "src"
@@ -378,8 +372,6 @@ class TestVizPromptConditionals:
         When both query and visualize are enabled, the collapsed query
         guidance should appear in the system prompt.
         """
-        from pathlib import Path
-
         template_path = (
             Path(__file__).parent.parent
             / "src"
@@ -402,8 +394,6 @@ class TestVizPromptConditionals:
         should NOT contain "cannot query or analyze" and SHOULD contain
         "Visualizing Data".
         """
-        from pathlib import Path
-
         template_path = (
             Path(__file__).parent.parent
             / "src"
@@ -426,8 +416,6 @@ class TestVizPromptConditionals:
         The "Avoid redundant expanded results" guidance should only appear
         when both query and visualize are enabled.
         """
-        from pathlib import Path
-
         template_path = (
             Path(__file__).parent.parent
             / "src"

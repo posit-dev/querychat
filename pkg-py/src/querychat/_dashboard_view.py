@@ -23,7 +23,7 @@ class DashboardView:
     def __init__(self, session: Session) -> None:
         self.session = session
 
-    async def send(self, action: str, payload: dict) -> None:
+    async def send(self, action: str, payload: dict[str, object]) -> None:
         """Send a raw (action, payload) pair; the controller's outbox flush replays through this."""
         await self.session.send_custom_message(f"{MESSAGE_PREFIX}{action}", payload)
 
@@ -40,6 +40,7 @@ class DashboardView:
         await self.send("card-remove", {"name": name})
 
     async def layout_apply(self, placements: list[dict]) -> None:
+        # Caller serializes Placement objects (e.g. model_dump) before calling.
         await self.send("layout-apply", {"placements": placements})
 
     async def canvas_reset(self, *, title: str) -> None:

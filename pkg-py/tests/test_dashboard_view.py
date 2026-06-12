@@ -51,3 +51,27 @@ class TestCanvasReset:
         action, payload = session.messages[0]
         assert action == f"{MESSAGE_PREFIX}canvas-reset"
         assert payload == {"title": "Demo"}
+
+
+class TestRemainingActions:
+    """Typo guard for the rest of the wire contract (one smoke test per action)."""
+
+    def test_actions_and_payload_keys(self):
+        v, session = make_view()
+        asyncio.run(v.card_remove("kpi"))
+        asyncio.run(v.layout_apply([{"name": "kpi", "x": 0, "y": 0, "w": 4, "h": 2}]))
+        asyncio.run(v.set_badge(3))
+        asyncio.run(v.palette_update("<div/>"))
+        asyncio.run(v.set_autogen(active=True))
+        asyncio.run(v.set_history_buttons(can_undo=True, can_redo=False))
+        assert session.messages == [
+            (f"{MESSAGE_PREFIX}card-remove", {"name": "kpi"}),
+            (
+                f"{MESSAGE_PREFIX}layout-apply",
+                {"placements": [{"name": "kpi", "x": 0, "y": 0, "w": 4, "h": 2}]},
+            ),
+            (f"{MESSAGE_PREFIX}badge", {"count": 3}),
+            (f"{MESSAGE_PREFIX}palette", {"html": "<div/>"}),
+            (f"{MESSAGE_PREFIX}autogen", {"active": True}),
+            (f"{MESSAGE_PREFIX}history", {"can_undo": True, "can_redo": False}),
+        ]

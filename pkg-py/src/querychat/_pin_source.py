@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeGuard
 
 import duckdb
 
@@ -10,6 +10,16 @@ from ._utils import check_query
 
 if TYPE_CHECKING:
     import pandas as pd
+    from pins.boards import BaseBoard
+
+
+def is_pins_board(obj: object) -> TypeGuard[BaseBoard]:
+    try:
+        from pins.boards import BaseBoard
+
+        return isinstance(obj, BaseBoard)
+    except ImportError:
+        return False
 
 DUCKDB_FILE_TYPES = {"parquet", "csv", "json"}
 DUCKDB_READER_FN = {

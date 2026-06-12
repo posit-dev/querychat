@@ -38,9 +38,10 @@ if TYPE_CHECKING:
 
     from narwhals.stable.v1.typing import IntoFrame
 
+    from ._dashboard_state import CardSpec, Placement
     from ._viz_tools import VisualizeData
 
-TOOL_GROUPS = Literal["filter", "update", "query", "visualize"]
+TOOL_GROUPS = Literal["filter", "update", "query", "visualize", "canvas"]
 DEFAULT_TOOLS: tuple[TOOL_GROUPS, ...] = ("filter", "query")
 
 class QueryChatBase(Generic[IntoFrameT]):
@@ -135,6 +136,9 @@ class QueryChatBase(Generic[IntoFrameT]):
         reset_dashboard: Callable[[], None] | None = None,
         visualize: Callable[[VisualizeData], None] | None = None,
         request_artifact: Callable[[], None] | None = None,
+        canvas_set_cards: Callable[[list[CardSpec]], None] | None = None,
+        canvas_arrange: Callable[[list[Placement]], None] | None = None,
+        canvas_remove_card: Callable[[str], None] | None = None,
     ) -> chatlas.Chat:
         """Create a fresh, fully-configured Chat."""
         spec = self._client_spec if isinstance(client_spec, MISSING_TYPE) else client_spec
@@ -160,12 +164,29 @@ class QueryChatBase(Generic[IntoFrameT]):
             chat.register_tool(tool_update_dashboard(data_source, update_fn))
             chat.register_tool(tool_reset_dashboard(reset_fn))
 
+        show_pin = "canvas" in resolved_tools
+
         if "query" in resolved_tools:
-            chat.register_tool(tool_query(data_source))
+            chat.register_tool(tool_query(data_source, show_pin=show_pin))
 
         if "visualize" in resolved_tools:
             viz_fn = visualize or (lambda _: None)
-            chat.register_tool(tool_visualize(data_source, viz_fn))
+            chat.register_tool(tool_visualize(data_source, viz_fn, show_pin=show_pin))
+
+        if "canvas" in resolved_tools:
+            from ._dashboard_tools import (
+                tool_canvas_arrange,
+                tool_canvas_remove_card,
+                tool_canvas_set_cards,
+            )
+
+            chat.register_tool(
+                tool_canvas_set_cards(data_source, canvas_set_cards or (lambda _: None))
+            )
+            chat.register_tool(tool_canvas_arrange(canvas_arrange or (lambda _: None)))
+            chat.register_tool(
+                tool_canvas_remove_card(canvas_remove_card or (lambda _: None))
+            )
 
         return chat
 
@@ -177,6 +198,9 @@ class QueryChatBase(Generic[IntoFrameT]):
         reset_dashboard: Callable[[], None] | None = None,
         visualize: Callable[[VisualizeData], None] | None = None,
         request_artifact: Callable[[], None] | None = None,
+        canvas_set_cards: Callable[[list[CardSpec]], None] | None = None,
+        canvas_arrange: Callable[[list[Placement]], None] | None = None,
+        canvas_remove_card: Callable[[str], None] | None = None,
     ) -> chatlas.Chat:
         """
         Create a chat client with registered tools.
@@ -195,6 +219,12 @@ class QueryChatBase(Generic[IntoFrameT]):
             Callback when visualize tool succeeds.
         request_artifact
             Callback invoked when the request_artifact tool is called.
+        canvas_set_cards
+            Callback when canvas set_cards tool succeeds.
+        canvas_arrange
+            Callback when canvas arrange tool is invoked.
+        canvas_remove_card
+            Callback when canvas remove_card tool is invoked.
 
         Returns
         -------
@@ -209,6 +239,9 @@ class QueryChatBase(Generic[IntoFrameT]):
             reset_dashboard=reset_dashboard,
             visualize=visualize,
             request_artifact=request_artifact,
+            canvas_set_cards=canvas_set_cards,
+            canvas_arrange=canvas_arrange,
+            canvas_remove_card=canvas_remove_card,
         )
 
     def generate_greeting(self, *, echo: Literal["none", "output"] = "none") -> str:

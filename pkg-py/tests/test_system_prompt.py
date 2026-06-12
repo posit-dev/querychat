@@ -259,6 +259,49 @@ class TestQueryChatSystemPromptRender:
         assert sample_data_source.get_db_type() in rendered
 
 
+class TestCanvasToolFlag:
+    """Tests for has_tool_canvas conditional rendering."""
+
+    def test_canvas_section_included_when_canvas_in_tools(self, sample_data_source):
+        from pathlib import Path
+
+        template_path = (
+            Path(__file__).parent.parent
+            / "src"
+            / "querychat"
+            / "prompts"
+            / "prompt.md"
+        )
+        prompt = QueryChatSystemPrompt(
+            prompt_template=template_path,
+            data_source=sample_data_source,
+        )
+
+        rendered = prompt.render(tools={"query", "canvas"})
+        assert "dashboard drawer" in rendered
+        assert "querychat_canvas_set_cards" in rendered
+
+    def test_canvas_section_excluded_when_canvas_not_in_tools(
+        self, sample_data_source
+    ):
+        from pathlib import Path
+
+        template_path = (
+            Path(__file__).parent.parent
+            / "src"
+            / "querychat"
+            / "prompts"
+            / "prompt.md"
+        )
+        prompt = QueryChatSystemPrompt(
+            prompt_template=template_path,
+            data_source=sample_data_source,
+        )
+
+        rendered = prompt.render(tools={"query"})
+        assert "dashboard drawer" not in rendered
+
+
 class TestSchemaInferenceSkip:
     """Tests that schema inference is skipped when template doesn't reference {{schema}}."""
 

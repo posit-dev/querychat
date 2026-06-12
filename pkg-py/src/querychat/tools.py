@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Protocol, TypedDict, runtime_checkable
 
 from chatlas import ContentToolResult, Tool
+from htmltools import TagList, tags
 from shinychat.types import ToolResultDisplay
 
 from ._icons import bs_icon
@@ -280,7 +281,9 @@ def tool_request_artifact(
     )
 
 
-def _query_impl(data_source: DataSource) -> Callable[..., ContentToolResult]:
+def _query_impl(
+    data_source: DataSource, *, show_pin: bool = False
+) -> Callable[..., ContentToolResult]:
     """Create the implementation function for querying data."""
 
     def query(
@@ -305,6 +308,22 @@ def _query_impl(data_source: DataSource) -> Callable[..., ContentToolResult]:
             markdown += f"\n\n> Error: {error}"
             return ContentToolResult(value=markdown, error=Exception(error))
 
+        pin_footer: TagList | None = None
+        if show_pin:
+            pin_footer = TagList(
+                tags.button(
+                    {
+                        "class": "querychat-pin-btn",
+                        "data-querychat-action": "pin-card",
+                        "data-kind": "table",
+                        "data-title": _intent or "Query result",
+                        "data-source": query,
+                    },
+                    bs_icon("pin-angle"),
+                    "Pin",
+                )
+            )
+
         # Return ContentToolResult with display metadata
         return ContentToolResult(
             value=value,
@@ -316,6 +335,7 @@ def _query_impl(data_source: DataSource) -> Callable[..., ContentToolResult]:
                     if collapsed is not None
                     else querychat_tool_starts_open("query"),
                     icon=bs_icon("table"),
+                    footer=pin_footer,
                 ),
             },
         )
@@ -323,7 +343,7 @@ def _query_impl(data_source: DataSource) -> Callable[..., ContentToolResult]:
     return query
 
 
-def tool_query(data_source: DataSource) -> Tool:
+def tool_query(data_source: DataSource, *, show_pin: bool = False) -> Tool:
     """
     Create a tool that performs a SQL query on the data.
 
@@ -331,6 +351,8 @@ def tool_query(data_source: DataSource) -> Tool:
     ----------
     data_source
         The data source to query against
+    show_pin
+        Whether to show a Pin button in the query result footer.
 
     Returns
     -------
@@ -338,7 +360,7 @@ def tool_query(data_source: DataSource) -> Tool:
         A tool that can be registered with chatlas
 
     """
-    impl = _query_impl(data_source)
+    impl = _query_impl(data_source, show_pin=show_pin)
 
     description = read_prompt_template(
         "tool-query.md", db_type=data_source.get_db_type()

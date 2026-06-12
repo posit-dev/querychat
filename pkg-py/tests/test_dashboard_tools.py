@@ -110,3 +110,30 @@ class TestRemoveCard:
         result = tool.func(name="ghost")
         assert result.error is not None
         assert "ghost" in str(result.value)
+
+
+class TestCanvasToolGroup:
+    def test_canvas_group_registers_tools(self, source):
+        import os
+
+        import pandas as pd
+        from querychat import QueryChat
+        from querychat._tool_names import (
+            TOOL_CANVAS_ARRANGE,
+            TOOL_CANVAS_REMOVE_CARD,
+            TOOL_CANVAS_SET_CARDS,
+        )
+
+        os.environ.setdefault("OPENAI_API_KEY", "sk-dummy-api-key-for-testing")
+        df = pd.DataFrame({"mpg": [21.0, 22.8], "cyl": [6, 4]})
+        qc = QueryChat(data_source=df, table_name="mtcars", greeting="Hi")
+        client = qc.client(
+            tools=("query", "canvas"),
+            canvas_set_cards=lambda cards: None,
+            canvas_arrange=lambda placements: None,
+            canvas_remove_card=lambda name: None,
+        )
+        tool_names = {t.name for t in client._tools.values()}
+        assert TOOL_CANVAS_SET_CARDS in tool_names
+        assert TOOL_CANVAS_ARRANGE in tool_names
+        assert TOOL_CANVAS_REMOVE_CARD in tool_names

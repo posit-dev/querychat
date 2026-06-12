@@ -13,6 +13,7 @@ from shiny import module, reactive, ui
 
 from ._artifact_panel import artifact_panel_ui
 from ._artifact_server import artifact_server
+from ._dashboard_ui import dashboard_drawer_ui
 from ._querychat_core import GREETING_PROMPT
 from ._viz_altair_widget import AltairWidget
 from ._viz_ggsql import execute_ggsql
@@ -76,6 +77,7 @@ def mod_ui(*, preload_viz: bool = False, **kwargs):
         ),
         tag,
         artifact_panel_ui(),
+        dashboard_drawer_ui(),
         preload_viz_deps_ui() if preload_viz else None,
     )
 
@@ -158,6 +160,15 @@ def mod_server(
     def on_visualize(data: VisualizeData):
         viz_widgets.append({"widget_id": data["widget_id"], "ggsql": data["ggsql"]})
 
+    from ._dashboard_server import DashboardController
+    from ._dashboard_server import dashboard_server as _dashboard_server
+
+    controller: DashboardController | None = (
+        DashboardController(data_source)
+        if data_source is not None and tools is not None and "canvas" in tools
+        else None
+    )
+
     def build_chat_client() -> chatlas.Chat:
         return client(
             update_dashboard=update_dashboard,
@@ -165,6 +176,9 @@ def mod_server(
             visualize=on_visualize,
             request_artifact=on_request_artifact,
             tools=tools,
+            canvas_set_cards=(controller.stage_set_cards if controller else None),
+            canvas_arrange=(controller.stage_arrange if controller else None),
+            canvas_remove_card=(controller.stage_remove if controller else None),
         )
 
     # Short-circuit for stub sessions (e.g. 1st run of an Express app)
@@ -218,6 +232,17 @@ def mod_server(
         enable_bookmarking=enable_bookmarking,
     )
 
+    bump_canvas_flush: Callable[[], None] | None = None
+    if controller is not None:
+        bump_canvas_flush = _dashboard_server(
+            input,
+            session,
+            controller,
+            chat,
+            chat_ui,
+            enable_bookmarking=enable_bookmarking,
+        )
+
     @reactive.effect
     # The lambda is required: it defers the reactive read into the event
     # context. Inlining the bound method reads latest_message_stream (a reactive
@@ -241,9 +266,19 @@ def mod_server(
             # command a user types, so both share one modal-opening path.
             chat_ui.update_user_input(value="/artifact", submit=True)
 
+    @reactive.effect
+    @reactive.event(lambda: chat_ui.latest_message_stream.status())  # noqa: PLW0108
+    def _flush_canvas_when_settled():
+        if bump_canvas_flush is None:
+            return
+        if chat_ui.latest_message_stream.status() in ("success", "error", "cancelled"):
+            bump_canvas_flush()
+
     # Handle user input
     @chat_ui.on_user_submit
     async def _(user_input: str):
+        if controller is not None and controller.opened_once:
+            user_input = f"{user_input}\n\n{controller.canvas_context()}"
         stream = await chat.stream_async(user_input, echo="none", content="all", controller=ctrl)
         await chat_ui.append_message_stream(stream)
 

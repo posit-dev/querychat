@@ -85,6 +85,7 @@ class QueryChatSystemPrompt:
             "has_tool_update": "update" in tools if tools else False,
             "has_tool_query": "query" in tools if tools else False,
             "has_tool_visualize": has_viz_tool(tools),
+            "has_tool_canvas": "canvas" in tools if tools else False,
             "include_query_guidelines": len(tools or ()) > 0,
         }
 

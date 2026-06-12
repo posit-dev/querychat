@@ -58,6 +58,8 @@ class VisualizeData(TypedDict):
 def tool_visualize(
     data_source: DataSource,
     update_fn: Callable[[VisualizeData], None],
+    *,
+    show_pin: bool = False,
 ) -> Tool:
     """
     Create a tool that executes a ggsql query and renders the visualization.
@@ -68,6 +70,8 @@ def tool_visualize(
         The data source to query against
     update_fn
         Callback function to call with VisualizeData when visualization succeeds
+    show_pin
+        Whether to show a Pin button in the visualization footer.
 
     Returns
     -------
@@ -75,7 +79,7 @@ def tool_visualize(
         A tool that can be registered with chatlas
 
     """
-    impl = visualize_impl(data_source, update_fn)
+    impl = visualize_impl(data_source, update_fn, show_pin=show_pin)
     impl.__doc__ = read_prompt_template(
         "tool-visualize.md",
         db_type=data_source.get_db_type(),
@@ -98,6 +102,8 @@ class VisualizeResult(ContentToolResult):
         ggsql_str: str,
         title: str,
         png_bytes: bytes | None = None,
+        *,
+        show_pin: bool = False,
         **kwargs: Any,
     ):
         from shinywidgets import output_widget, register_widget
@@ -120,6 +126,7 @@ class VisualizeResult(ContentToolResult):
             ggsql_str,
             title,
             dom_widget_id=str(resolve_id(widget_id)),
+            show_pin=show_pin,
         )
 
         widget_html = output_widget(widget_id, fill=True, fillable=True)
@@ -149,6 +156,8 @@ class VisualizeResult(ContentToolResult):
 def visualize_impl(
     data_source: DataSource,
     update_fn: Callable[[VisualizeData], None],
+    *,
+    show_pin: bool = False,
 ) -> Callable[[str, str], ContentToolResult]:
     """Create the visualize implementation function."""
     from ggsql import VegaLiteWriter, validate
@@ -193,6 +202,7 @@ def visualize_impl(
                 ggsql_str=ggsql,
                 title=title,
                 png_bytes=png_bytes,
+                show_pin=show_pin,
             )
 
         except Exception as e:
@@ -243,6 +253,8 @@ def build_viz_footer(
     ggsql_str: str,
     title: str,
     dom_widget_id: str,
+    *,
+    show_pin: bool = False,
 ) -> TagList:
     """Build footer HTML for visualization tool results."""
     footer_id = f"querychat_footer_{uuid4().hex[:8]}"
@@ -269,7 +281,7 @@ def build_viz_footer(
     # Footer buttons row
     buttons_row = tags.div(
         {"class": "querychat-footer-buttons"},
-        # Left: Show Query toggle
+        # Left: Show Query toggle and optional Pin button
         tags.div(
             {"class": "querychat-footer-left"},
             tags.button(
@@ -281,6 +293,17 @@ def build_viz_footer(
                 tags.span({"class": "querychat-query-chevron"}, "\u25b6"),
                 tags.span({"class": "querychat-query-label"}, "Show Query"),
             ),
+            tags.button(
+                {
+                    "class": "querychat-pin-btn",
+                    "data-querychat-action": "pin-card",
+                    "data-kind": "chart",
+                    "data-title": title,
+                    "data-source": ggsql_str,
+                },
+                bs_icon("pin-angle"),
+                "Pin",
+            ) if show_pin else None,
         ),
         # Right: Save dropdown
         tags.div(

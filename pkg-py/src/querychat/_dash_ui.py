@@ -59,7 +59,6 @@ def card_ui(
     body_class_name: str = "",
 ) -> Component:
     """Create a Bootstrap card with optional header and action button."""
-    from dash import html
     from dash_bootstrap_components._components import (  # pyright: ignore[reportPrivateImportUsage]
         Card,
         CardBody,
@@ -67,6 +66,8 @@ def card_ui(
         Col,
         Row,
     )
+
+    from dash import html
 
     children = []
 
@@ -97,13 +98,14 @@ def card_ui(
 
 def chat_container_ui(ids: IDs) -> list[Component]:
     """Create the chat UI container (messages + input)."""
-    from dash import html
     from dash_bootstrap_components._components import (  # pyright: ignore[reportPrivateImportUsage]
         Button,
         Input,
         InputGroup,
         Spinner,
     )
+
+    from dash import html
 
     return [
         html.Div(

@@ -335,13 +335,14 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
 def app_layout(ids: IDs, table_name: str, chat_ui):
     """Build the layout for the complete app."""
     import dash_ag_grid as dag
-    from dash import dcc, html
     from dash_bootstrap_components._components import (  # pyright: ignore[reportPrivateImportUsage]
         Button,
         Col,
         Container,
         Row,
     )
+
+    from dash import dcc, html
 
     # SQL card with dynamic title and reset button
     sql_card = card_ui(

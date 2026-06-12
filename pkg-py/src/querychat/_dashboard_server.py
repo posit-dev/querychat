@@ -117,7 +117,13 @@ class DashboardController:
 
     def apply_browser_layout(self, placements: list[dict]) -> None:
         parsed = [Placement.model_validate(p) for p in placements]
-        known = [p for p in parsed if self.spec.get_card(p.name) is not None]
+        # Drop unknown AND hidden cards: drag events racing a removal must not
+        # re-promote a card whose layout was just cleared.
+        known = [
+            p
+            for p in parsed
+            if (c := self.spec.get_card(p.name)) is not None and c.layout is not None
+        ]
         self.spec.apply_placements(known)
         self.history.record(self.spec)
         # No card-upsert needed: the browser already shows the new layout.
@@ -308,7 +314,7 @@ def dashboard_server(
             return
         try:
             controller.add_palette_item(match)
-        except ValueError as e:
+        except Exception as e:  # card_html executes queries; errors aren't all ValueError
             ui.notification_show(f"Could not add card: {e}", type="error")
             return
         await refresh_palette()
@@ -339,7 +345,7 @@ def dashboard_server(
             card = card_for_palette_item(item, taken_names=taken)
             validate_card(controller.data_source, card)
             controller.stage_set_cards([card])
-        except ValueError as e:
+        except Exception as e:
             ui.notification_show(f"Could not pin: {e}", type="error")
             return
         bump_flush()

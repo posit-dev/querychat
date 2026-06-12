@@ -4,7 +4,7 @@ import narwhals as nw
 import pandas as pd
 import pytest
 from querychat._dashboard_server import DashboardController
-from querychat._dashboard_state import CardSpec, Placement
+from querychat._dashboard_state import CardLayout, CardSpec, DashboardSpec, Placement
 from querychat._datasource import DataFrameSource
 
 
@@ -36,6 +36,15 @@ class TestStageMutations:
         with pytest.raises(KeyError):
             controller.stage_arrange([Placement(name="nope", x=0, y=0, w=1, h=1)])
 
+    def test_browser_layout_ignores_hidden_cards(self, controller):
+        controller.stage_set_cards([md_card()])
+        controller.stage_remove("notes")
+        controller.drain_outbox()
+        controller.apply_browser_layout(
+            [{"name": "notes", "x": 0, "y": 0, "w": 6, "h": 2}]
+        )
+        assert controller.spec.get_card("notes").layout is None  # stays hidden
+
     def test_stage_remove(self, controller):
         controller.stage_set_cards([md_card()])
         controller.stage_remove("notes")
@@ -59,6 +68,9 @@ class TestUndoRedo:
         assert controller.redo() is True
         assert controller.spec.get_card("notes") is not None
 
+    def test_redo_false_at_head(self, controller):
+        assert controller.redo() is False
+
     def test_drag_layout_change_is_undoable(self, controller):
         controller.stage_set_cards([md_card()])
         controller.apply_browser_layout(
@@ -76,3 +88,16 @@ class TestBookmarkRoundTrip:
         c2 = DashboardController(controller.data_source)
         c2.restore_from_bookmark(dumped)
         assert c2.spec.get_card("notes") is not None
+
+
+class TestReplaceSpec:
+    def test_replace_spec_queues_full_resync(self, controller):
+        spec = DashboardSpec(title="Generated")
+        card = md_card("gen")
+        card.layout = CardLayout(x=0, y=0, w=12, h=2)
+        spec.upsert_card(card)
+        controller.replace_spec(spec)
+        ops = controller.drain_outbox()
+        assert ops[0][0] == "canvas-reset"
+        assert ops[0][1] == {"title": "Generated"}
+        assert any(op[0] == "card-upsert" and op[1]["name"] == "gen" for op in ops)

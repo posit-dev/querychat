@@ -41,6 +41,9 @@ class DashboardView:
 
     async def layout_apply(self, placements: list[dict]) -> None:
         # Caller serializes Placement objects (e.g. model_dump) before calling.
+        # Not yet used by the server: stage_arrange re-sends full card-upserts
+        # (so hidden cards get their DOM back). Reserved for a cheaper
+        # layout-only update path; the TS handler already supports it.
         await self.send("layout-apply", {"placements": placements})
 
     async def canvas_reset(self, *, title: str) -> None:

@@ -216,7 +216,6 @@ def dashboard_server(
     enable_bookmarking: bool = False,
 ) -> Callable[[], None]:
     view = DashboardView(session)
-    drawer_open = reactive.value(False)  # noqa: FBT003
     flush_requested = reactive.value(0)
 
     # reactive.Value.set works from non-reactive contexts (update_dashboard's
@@ -235,7 +234,6 @@ def dashboard_server(
             await view.send(action, payload)
 
     async def open_drawer() -> None:
-        drawer_open.set(True)
         await view.set_open(is_open=True)
         await refresh_palette()
         if not controller.opened_once:
@@ -281,7 +279,6 @@ def dashboard_server(
     @reactive.effect
     @reactive.event(input.dashboard_close)
     async def on_close():
-        drawer_open.set(False)
         await view.set_open(is_open=False)
 
     @reactive.effect

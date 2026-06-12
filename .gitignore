@@ -282,3 +282,6 @@ js/node_modules/
 docs/superpowers/
 
 /.luarc.json
+
+# Shiny bookmark state from local dev sessions
+shiny_bookmarks/

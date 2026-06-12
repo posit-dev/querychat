@@ -8,7 +8,6 @@ from shiny import App, render, ui
 qc = QueryChat(
     titanic(),
     "titanic",
-    client="anthropic/claude-sonnet-4-6",
     tools=("filter", "query", "visualize", "canvas"),
     greeting=(
         "Ask about the Titanic data — try pinning results or charts, "

@@ -6,6 +6,7 @@ from .._datasource import (
     PolarsLazySource,
     SQLAlchemySource,
 )
+from .._pin_source import PinSource
 from .._querychat_core import AppStateDict
 from .._shiny_module import ServerValues
 from .._utils import UnsafeQueryError
@@ -18,6 +19,7 @@ __all__ = (
     "DataSource",
     "IbisSource",
     "MissingColumnsError",
+    "PinSource",
     "PolarsLazySource",
     "SQLAlchemySource",
     "ServerValues",

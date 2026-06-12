@@ -307,6 +307,10 @@ QueryChat <- R6::R6Class(
           is.data.frame(data_source) || inherits(data_source, "tbl_sql")
         ) {
           table_name <- deparse1(substitute(data_source))
+        } else if (inherits(data_source, "pins_board")) {
+          cli::cli_abort(
+            "{.arg table_name} (the pin name) is required when {.arg data_source} is a pins board."
+          )
         }
       }
 
@@ -945,6 +949,10 @@ querychat <- function(
       table_name <- data_source$table_name
     } else if (is.data.frame(data_source) || inherits(data_source, "tbl_sql")) {
       table_name <- deparse1(substitute(data_source))
+    } else if (inherits(data_source, "pins_board")) {
+      cli::cli_abort(
+        "{.arg table_name} (the pin name) is required when {.arg data_source} is a pins board."
+      )
     }
   }
 
@@ -997,6 +1005,10 @@ querychat_app <- function(
       table_name <- data_source$table_name
     } else if (is.data.frame(data_source)) {
       table_name <- deparse1(substitute(data_source))
+    } else if (inherits(data_source, "pins_board")) {
+      cli::cli_abort(
+        "{.arg table_name} (the pin name) is required when {.arg data_source} is a pins board."
+      )
     }
   }
 

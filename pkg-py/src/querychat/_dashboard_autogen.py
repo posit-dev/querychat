@@ -50,8 +50,10 @@ async def generate_first_pass(
         db_type=data_source.get_db_type(),
         session_results=format_session_results(palette),
     )
+    # deepcopy keeps the conversation turns AND the registered tools. Providers
+    # generally honor the data_model schema over tool calls, but that's not
+    # guaranteed — same trade-off as ArtifactChat's fork, accepted project-wide.
     forked = copy.deepcopy(chat)
-    forked.set_turns(chat.get_turns())
     result: AutogenResult = await forked.chat_structured_async(
         prompt, data_model=AutogenResult
     )

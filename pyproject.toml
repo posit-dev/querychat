@@ -21,8 +21,8 @@ maintainers = [
 ]
 dependencies = [
     "duckdb",
-    "shiny @ git+https://github.com/posit-dev/py-shiny.git@main",
-    "shinychat @ git+https://github.com/posit-dev/shinychat.git@worktree-feat+slash-commands",
+    "shiny>=1.6.3",
+    "shinychat @ git+https://github.com/posit-dev/shinychat.git@main",
     "htmltools",
     "chatlas>=0.18.0",
     "narwhals>=2.2.0",

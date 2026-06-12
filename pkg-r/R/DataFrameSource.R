@@ -82,23 +82,7 @@ DataFrameSource <- R6::R6Class(
           experimental = FALSE
         )
 
-        DBI::dbExecute(
-          private$conn,
-          r"(
--- extensions: lock down supply chain + auto behaviors
-SET allow_community_extensions = false;
-SET allow_unsigned_extensions = false;
-SET autoinstall_known_extensions = false;
-SET autoload_known_extensions = false;
-
--- external I/O: block file/database/network access from SQL
-SET enable_external_access = false;
-SET disabled_filesystems = 'LocalFileSystem';
-
--- freeze configuration so user SQL can't relax anything
-SET lock_configuration = true;
-        )"
-        )
+        duckdb_lock_down(private$conn)
       } else if (engine == "sqlite") {
         check_installed("RSQLite")
         private$conn <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")

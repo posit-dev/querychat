@@ -6,7 +6,12 @@ from typing import TYPE_CHECKING, Any, TypeGuard
 import duckdb
 import narwhals.stable.v1 as nw
 
-from ._datasource import DataSource, MissingColumnsError, duckdb_get_schema
+from ._datasource import (
+    DataSource,
+    MissingColumnsError,
+    duckdb_get_schema,
+    duckdb_lock_down,
+)
 from ._utils import check_query
 
 if TYPE_CHECKING:
@@ -135,15 +140,7 @@ class PinSource(DataSource[nw.DataFrame]):
                 )
                 conn.unregister(vname)
 
-            conn.execute("""
-SET allow_community_extensions = false;
-SET allow_unsigned_extensions = false;
-SET autoinstall_known_extensions = false;
-SET autoload_known_extensions = false;
-SET enable_external_access = false;
-SET disabled_filesystems = 'LocalFileSystem';
-SET lock_configuration = true;
-            """)
+            duckdb_lock_down(conn)
         except Exception:
             conn.close()
             raise

@@ -98,7 +98,7 @@ QueryChat <- R6::R6Class(
     # Store init parameters for deferred system prompt building
     .prompt_template = NULL,
     .data_description = NULL,
-    .data_description_auto = FALSE,
+    .data_description_mode = "empty",  # "supplied", "inferred", or "empty"
     .extra_instructions = NULL,
     .categorical_threshold = NULL,
 
@@ -113,15 +113,15 @@ QueryChat <- R6::R6Class(
     },
 
     auto_fill_data_description = function() {
-      if (private$.data_description_auto) {
+      if (private$.data_description_mode == "inferred") {
         private$.data_description <- NULL
-        private$.data_description_auto <- FALSE
+        private$.data_description_mode <- "empty"
       }
-      if (is.null(private$.data_description)) {
+      if (private$.data_description_mode == "empty") {
         desc <- private$.data_source$get_data_description()
         if (nzchar(desc %||% "")) {
           private$.data_description <- desc
-          private$.data_description_auto <- TRUE
+          private$.data_description_mode <- "inferred"
         }
       }
     },
@@ -316,7 +316,7 @@ QueryChat <- R6::R6Class(
       # Store init parameters for deferred system prompt building
       private$.prompt_template <- prompt_template
       private$.data_description <- data_description
-      private$.data_description_auto <- FALSE
+      private$.data_description_mode <- if (is.null(data_description)) "empty" else "supplied"
       private$.extra_instructions <- extra_instructions
       private$.categorical_threshold <- categorical_threshold
 

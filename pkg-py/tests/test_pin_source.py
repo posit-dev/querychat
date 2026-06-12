@@ -235,6 +235,25 @@ class TestQueryChatPinSourceIntegration:
         finally:
             qc.cleanup()
 
+    def test_explicit_description_survives_source_change(self, board, sample_df):
+        from querychat import QueryChat
+
+        board.pin_write(
+            sample_df, "cars", type="parquet", title="Motor Trend Cars",
+        )
+        ps = PinSource(board, "cars")
+        qc = QueryChat(
+            data_source=ps, table_name="cars", greeting="Hi",
+            data_description="Custom description",
+        )
+        try:
+            qc.data_source = sample_df
+            prompt = qc._system_prompt.render(qc.tools)
+            assert "Custom description" in prompt
+            assert "Motor Trend Cars" not in prompt
+        finally:
+            qc.cleanup()
+
     def test_clears_auto_description_on_source_change(self, board, sample_df):
         from querychat import QueryChat
 

@@ -33,7 +33,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">querychat</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.2.0.9000</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.3.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -97,6 +97,8 @@ including:</p>
 <li>Data frames</li>
 <li>DBI database connections (e.g., SQLite, PostgreSQL, MySQL,
 DuckDB)</li>
+<li>
+<a href="https://pins.rstudio.com/" class="external-link">Pins</a> boards</li>
 <li>Custom <code>DataSource</code> interfaces</li>
 </ol>
 <p>The sections below describe how to use each type of data source with
@@ -227,6 +229,65 @@ DuckDB database from a data frame:</p>
 <span><span class="fu">duckdb</span><span class="fu">::</span><span class="fu"><a href="https://r.duckdb.org/reference/duckdb_read_csv.html" class="external-link">duckdb_read_csv</a></span><span class="op">(</span><span class="va">con</span>, <span class="st">"my_table"</span>, <span class="st">"path/to/your/file.csv"</span><span class="op">)</span></span></code></pre></div>
 <p>Then you can connect to this database using the DuckDB example
 above.</p>
+</div>
+<div class="section level2">
+<h2 id="pins">Pins<a class="anchor" aria-label="anchor" href="#pins"></a>
+</h2>
+<p>You can pass a <a href="https://pins.rstudio.com/" class="external-link">pins</a> board
+directly to <code><a href="../reference/querychat-convenience.html">querychat()</a></code> with the pin name as
+<code>table_name</code>:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://pins.rstudio.com/" class="external-link">pins</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://posit-dev.github.io/querychat/r/">querychat</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">board</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://pins.rstudio.com/reference/board_connect.html" class="external-link">board_connect</a></span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/querychat-convenience.html">querychat</a></span><span class="op">(</span><span class="va">board</span>, <span class="st">"my_pin"</span><span class="op">)</span></span>
+<span><span class="va">qc</span><span class="op">$</span><span class="fu">app</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<p>The pin is read and loaded into an in-memory DuckDB database, the
+same as data frames. For parquet, CSV, and JSON pins, the cached files
+go straight into DuckDB without R deserialization. Other pin types
+(e.g. RDS) go through <code><a href="https://pins.rstudio.com/reference/pin_read.html" class="external-link">pin_read()</a></code> first.</p>
+<p>If the pin has a title, description, or tags, querychat uses them as
+the default <code>data_description</code>, which you can override.</p>
+<p>Pin names with special characters (like
+<code>"user.name/my_pin"</code>) are sanitized into valid SQL table
+names. To control the table name yourself, use
+<code>PinSource</code>:</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">ps</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/PinSource.html">PinSource</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">board</span>, <span class="st">"user.name/my_pin"</span>, table_name <span class="op">=</span> <span class="st">"my_data"</span><span class="op">)</span></span>
+<span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/querychat-convenience.html">querychat</a></span><span class="op">(</span><span class="va">ps</span><span class="op">)</span></span></code></pre></div>
+<div class="section level3">
+<h3 id="lazy-queries-with-pins">Lazy queries with pins<a class="anchor" aria-label="anchor" href="#lazy-queries-with-pins"></a>
+</h3>
+<p>By default, the full dataset is materialized into DuckDB. For large
+parquet pins, you can skip that step by reading the pin files yourself
+and passing a <code>tbl_sql</code>:</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://pins.rstudio.com/" class="external-link">pins</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://r.duckdb.org/" class="external-link">duckdb</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://posit-dev.github.io/querychat/r/">querychat</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">board</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://pins.rstudio.com/reference/board_connect.html" class="external-link">board_connect</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">paths</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://pins.rstudio.com/reference/pin_download.html" class="external-link">pin_download</a></span><span class="op">(</span><span class="va">board</span>, <span class="st">"my_pin"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">con</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://dbi.r-dbi.org/reference/dbConnect.html" class="external-link">dbConnect</a></span><span class="op">(</span><span class="fu">duckdb</span><span class="fu">::</span><span class="fu"><a href="https://r.duckdb.org/reference/duckdb.html" class="external-link">duckdb</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu">DBI</span><span class="fu">::</span><span class="fu"><a href="https://dbi.r-dbi.org/reference/dbExecute.html" class="external-link">dbExecute</a></span><span class="op">(</span></span>
+<span>  <span class="va">con</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"CREATE VIEW my_pin AS SELECT * FROM read_parquet('%s')"</span>, <span class="va">paths</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/querychat-convenience.html">querychat</a></span><span class="op">(</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/tbl.html" class="external-link">tbl</a></span><span class="op">(</span><span class="va">con</span>, <span class="st">"my_pin"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">qc</span><span class="op">$</span><span class="fu">app</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<p>The pin files are still downloaded to a local cache —
+<code><a href="https://pins.rstudio.com/reference/pin_download.html" class="external-link">pin_download()</a></code> always fetches them. But rather than loading
+everything into memory, DuckDB reads the parquet file lazily through
+dbplyr. This is not the same as a database-backed source, where data
+never leaves the server.</p>
+<p>This approach skips the security lockdown that <code>PinSource</code>
+applies, so LLM-generated SQL can access files on the local system.</p>
+</div>
 </div>
 <div class="section level2">
 <h2 id="custom-sources">Custom sources<a class="anchor" aria-label="anchor" href="#custom-sources"></a>

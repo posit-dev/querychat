@@ -10,7 +10,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">querychat</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.2.0.9000</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.3.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -52,14 +52,30 @@
 
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="development version" id="querychat-development-version">querychat (development version)<a class="anchor" aria-label="anchor" href="#querychat-development-version"></a></h2>
-<ul><li><p>Added stream cancellation support. A stop button now appears during LLM streaming, allowing users to cancel in-progress responses by clicking it or pressing Escape. Cancellation is enabled by default and can be disabled via <code>enable_cancel = FALSE</code> in the UI. (<a href="https://github.com/posit-dev/querychat/issues/241" class="external-link">#241</a>)</p></li>
-<li><p>The <code>tools</code> parameter now uses <code>"filter"</code> as the preferred name (instead of <code>"update"</code>) for the dashboard-filtering tool group. The default is now <code>c("filter", "query")</code>. The legacy name <code>"update"</code> is still accepted everywhere. (<a href="https://github.com/posit-dev/querychat/issues/222" class="external-link">#222</a>)</p></li>
-<li><p><code>QueryChat$server()</code> now accepts a <code>client</code> parameter for session-scoped chat client overrides. This enables Posit Connect managed OAuth workflows where API credentials are only available inside the Shiny server function. The client spec is stored lazily at construction time and resolved only when needed, so <code>QueryChat$new(NULL, "table")</code> no longer requires an API key. (<a href="https://github.com/posit-dev/querychat/issues/205" class="external-link">#205</a>)</p></li>
-<li><p>When a custom <code>prompt_template</code> is provided that doesn’t contain Mustache references to <code>{{schema}}</code>, the expensive <code>get_schema()</code> call is now skipped entirely. This allows users with large databases to avoid slow startup by providing their own prompt that includes schema information inline (or omits it). (<a href="https://github.com/posit-dev/querychat/issues/208" class="external-link">#208</a>)</p></li>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.3.0" id="querychat-030">querychat 0.3.0<a class="anchor" aria-label="anchor" href="#querychat-030"></a></h2><p class="text-muted">CRAN release: 2026-06-01</p>
+<div class="section level3">
+<h3 id="new-features-0-3-0">New features<a class="anchor" aria-label="anchor" href="#new-features-0-3-0"></a></h3>
+<ul><li><p>Added a new <code>"visualize"</code> tool that lets querychat render interactive charts inline in the chat. When enabled (via <code>tools = c("filter", "query", "visualize")</code>), the LLM can answer questions with charts by writing ggsql (SQL with a <code>VISUALISE</code> clause) instead of only tables. Charts can be expanded to fullscreen and their underlying query inspected. Requires the <code>ggsql</code> package and <code>bslib &gt;= 0.11.0</code>. (<a href="https://github.com/posit-dev/querychat/issues/224" class="external-link">#224</a>)</p></li>
+<li><p>Added stream cancellation support. A stop button now appears during LLM streaming, allowing users to cancel in-progress responses by clicking it or pressing Escape. Cancellation is enabled by default and can be disabled via <code>enable_cancel = FALSE</code> in the UI. (<a href="https://github.com/posit-dev/querychat/issues/241" class="external-link">#241</a>)</p></li>
 <li><p>Added support for Snowflake Semantic Views. When connected to Snowflake via DBI, querychat automatically discovers available Semantic Views and includes their definitions in the system prompt. This helps the LLM generate correct queries using the <code>SEMANTIC_VIEW()</code> table function with certified business metrics and dimensions. (<a href="https://github.com/posit-dev/querychat/issues/200" class="external-link">#200</a>)</p></li>
 <li><p><code>QueryChat$new()</code> now supports deferred data source. Pass <code>data_source = NULL</code> at initialization time, then provide the actual data source via the <code>data_source</code> parameter of <code>$server()</code> or by setting the <code>$data_source</code> property. This enables use cases where the data source depends on session-specific authentication or per-user database connections. (<a href="https://github.com/posit-dev/querychat/issues/202" class="external-link">#202</a>)</p></li>
-<li><p><code>DBISource</code> now uses database-agnostic SQL for column and type detection, replacing <code>LIMIT</code> syntax with <code>WHERE 1=0</code> and <code>dbFetch(n=1)</code>. This fixes compatibility with SQL Server and other databases that don’t support <code>LIMIT</code>. (<a href="https://github.com/posit-dev/querychat/issues/112" class="external-link">#112</a>, <a href="https://github.com/posit-dev/querychat/issues/197" class="external-link">#197</a>)</p></li>
+<li><p><code>QueryChat$server()</code> now accepts a <code>client</code> parameter for session-scoped chat client overrides. This enables Posit Connect managed OAuth workflows where API credentials are only available inside the Shiny server function. The client spec is stored lazily at construction time and resolved only when needed, so <code>QueryChat$new(NULL, "table")</code> no longer requires an API key. (<a href="https://github.com/posit-dev/querychat/issues/205" class="external-link">#205</a>)</p></li>
 </ul></div>
+<div class="section level3">
+<h3 id="improvements-0-3-0">Improvements<a class="anchor" aria-label="anchor" href="#improvements-0-3-0"></a></h3>
+<ul><li><p>The query tool result card now starts collapsed by default. Users can still expand it to see the SQL query and results. Set <code>QUERYCHAT_TOOL_DETAILS=expanded</code> (or <code>options(querychat.tool_details = "expanded")</code>) to restore the previous behavior. (<a href="https://github.com/posit-dev/querychat/issues/239" class="external-link">#239</a>)</p></li>
+<li><p>Query suggestions generated by the LLM now render reliably as clickable cards in the chat. (<a href="https://github.com/posit-dev/querychat/issues/236" class="external-link">#236</a>, <a href="https://github.com/posit-dev/querychat/issues/238" class="external-link">#238</a>)</p></li>
+<li><p>The <code>tools</code> parameter now uses <code>"filter"</code> as the preferred name (instead of <code>"update"</code>) for the dashboard-filtering tool group. The default is now <code>c("filter", "query")</code>. The legacy name <code>"update"</code> is still accepted everywhere. (<a href="https://github.com/posit-dev/querychat/issues/222" class="external-link">#222</a>)</p></li>
+<li><p>When a custom <code>prompt_template</code> is provided that doesn’t contain Mustache references to <code>{{schema}}</code>, the expensive <code>get_schema()</code> call is now skipped entirely. This allows users with large databases to avoid slow startup by providing their own prompt that includes schema information inline (or omits it). (<a href="https://github.com/posit-dev/querychat/issues/208" class="external-link">#208</a>)</p></li>
+</ul></div>
+<div class="section level3">
+<h3 id="bug-fixes-0-3-0">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-3-0"></a></h3>
+<ul><li>
+<code>DBISource</code> now uses database-agnostic SQL for column and type detection, replacing <code>LIMIT</code> syntax with <code>WHERE 1=0</code> and <code>dbFetch(n=1)</code>. This fixes compatibility with SQL Server and other databases that don’t support <code>LIMIT</code>. (<a href="https://github.com/posit-dev/querychat/issues/112" class="external-link">#112</a>, <a href="https://github.com/posit-dev/querychat/issues/197" class="external-link">#197</a>)</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.2.0" id="querychat-020">querychat 0.2.0<a class="anchor" aria-label="anchor" href="#querychat-020"></a></h2><p class="text-muted">CRAN release: 2026-01-12</p>
 <ul><li><p>The update tool now requires that the SQL query returns all columns from the original data source, ensuring that the dashboard can display the complete data frame after filtering or sorting. If the query does not return all columns, an informative error message will be provided. (<a href="https://github.com/posit-dev/querychat/issues/180" class="external-link">#180</a>)</p></li>

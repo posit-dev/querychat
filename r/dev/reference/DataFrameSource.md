@@ -35,6 +35,7 @@ be installed.
 
 Inherited methods
 
+- [`DataSource$get_data_description()`](https://posit-dev.github.io/querychat/dev/reference/DataSource.html#method-get_data_description)
 - [`DBISource$cleanup()`](https://posit-dev.github.io/querychat/dev/reference/DBISource.html#method-cleanup)
 - [`DBISource$execute_query()`](https://posit-dev.github.io/querychat/dev/reference/DBISource.html#method-execute_query)
 - [`DBISource$get_data()`](https://posit-dev.github.io/querychat/dev/reference/DBISource.html#method-get_data)

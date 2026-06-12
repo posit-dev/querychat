@@ -16,7 +16,7 @@ DBISource."><meta property="og:image" content="https://posit-dev.github.io/query
 
     <a class="navbar-brand me-2" href="../index.html">querychat</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.2.0.9000</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.3.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -83,6 +83,7 @@ instead, use one of its concrete implementations like <a href="DataFrameSource.h
 <li><p><a href="#method-DataSource-execute_query"><code>DataSource$execute_query()</code></a></p></li>
 <li><p><a href="#method-DataSource-test_query"><code>DataSource$test_query()</code></a></p></li>
 <li><p><a href="#method-DataSource-get_data"><code>DataSource$get_data()</code></a></p></li>
+<li><p><a href="#method-DataSource-get_data_description"><code>DataSource$get_data_description()</code></a></p></li>
 <li><p><a href="#method-DataSource-cleanup"><code>DataSource$cleanup()</code></a></p></li>
 <li><p><a href="#method-DataSource-clone"><code>DataSource$clone()</code></a></p></li>
 </ul></div><p></p><hr><a id="method-DataSource-get_db_type"></a><div class="section">
@@ -172,13 +173,27 @@ matches)</p>
 
 </div>
 
+<p></p><hr><a id="method-DataSource-get_data_description"></a><div class="section">
+<h3 id="datasource-get-data-description-"><code>DataSource$get_data_description()</code><a class="anchor" aria-label="anchor" href="#datasource-get-data-description-"></a></h3>
+<p>Get a human-readable data description for the system prompt.</p>
+<p>Subclasses may override this to provide metadata-derived descriptions
+(e.g., pin title/description). The default returns an empty string.</p><div class="section">
+<h4 id="usage-5">Usage<a class="anchor" aria-label="anchor" href="#usage-5"></a></h4>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">DataSource</span><span class="op">$</span><span class="fu">get_data_description</span><span class="op">(</span><span class="op">)</span></span></code></pre></div><p></p></div>
+</div><p></p><div class="section">
+<h4 id="returns-5">Returns<a class="anchor" aria-label="anchor" href="#returns-5"></a></h4>
+<p>A string, or empty string if no description is available.</p>
+</div>
+
+</div>
+
 <p></p><hr><a id="method-DataSource-cleanup"></a><div class="section">
 <h3 id="datasource-cleanup-"><code>DataSource$cleanup()</code><a class="anchor" aria-label="anchor" href="#datasource-cleanup-"></a></h3>
 <p>Clean up resources (close connections, etc.)</p><div class="section">
-<h4 id="usage-5">Usage<a class="anchor" aria-label="anchor" href="#usage-5"></a></h4>
+<h4 id="usage-6">Usage<a class="anchor" aria-label="anchor" href="#usage-6"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">DataSource</span><span class="op">$</span><span class="fu">cleanup</span><span class="op">(</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div><p></p><div class="section">
-<h4 id="returns-5">Returns<a class="anchor" aria-label="anchor" href="#returns-5"></a></h4>
+<h4 id="returns-6">Returns<a class="anchor" aria-label="anchor" href="#returns-6"></a></h4>
 <p>NULL (invisibly)</p>
 </div>
 
@@ -187,7 +202,7 @@ matches)</p>
 <p></p><hr><a id="method-DataSource-clone"></a><div class="section">
 <h3 id="datasource-clone-"><code>DataSource$clone()</code><a class="anchor" aria-label="anchor" href="#datasource-clone-"></a></h3>
 <p>The objects of this class are cloneable with this method.</p><div class="section">
-<h4 id="usage-6">Usage<a class="anchor" aria-label="anchor" href="#usage-6"></a></h4>
+<h4 id="usage-7">Usage<a class="anchor" aria-label="anchor" href="#usage-7"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">DataSource</span><span class="op">$</span><span class="fu">clone</span><span class="op">(</span>deep <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div><p></p><div class="section">
 <h4 id="arguments-3">Arguments<a class="anchor" aria-label="anchor" href="#arguments-3"></a></h4>

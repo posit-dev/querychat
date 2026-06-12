@@ -31,6 +31,10 @@ SQL query execution against a single table in the database.
 
 - [`DBISource$clone()`](#method-DBISource-clone)
 
+Inherited methods
+
+- [`DataSource$get_data_description()`](https://posit-dev.github.io/querychat/dev/reference/DataSource.html#method-get_data_description)
+
 ------------------------------------------------------------------------
 
 ### `DBISource$new()`

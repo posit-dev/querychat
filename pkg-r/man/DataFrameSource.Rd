@@ -50,6 +50,7 @@ df_sqlite$cleanup()
 }
 \if{html}{\out{<details><summary>Inherited methods</summary>
 <ul>
+  <li><span class="pkg-link" data-pkg="querychat" data-topic="DataSource" data-id="get_data_description"><a href='../../querychat/html/DataSource.html#method-DataSource-get_data_description'><code>DataSource$get_data_description()</code></a></span></li>
   <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="cleanup"><a href='../../querychat/html/DBISource.html#method-DBISource-cleanup'><code>DBISource$cleanup()</code></a></span></li>
   <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="execute_query"><a href='../../querychat/html/DBISource.html#method-DBISource-execute_query'><code>DBISource$execute_query()</code></a></span></li>
   <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_data"><a href='../../querychat/html/DBISource.html#method-DBISource-get_data'><code>DBISource$get_data()</code></a></span></li>

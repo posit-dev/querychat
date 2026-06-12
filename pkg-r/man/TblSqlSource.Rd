@@ -56,6 +56,7 @@ mtcars_source$cleanup()
 }
 \if{html}{\out{<details open><summary>Inherited methods</summary>
 <ul>
+  <li><span class="pkg-link" data-pkg="querychat" data-topic="DataSource" data-id="get_data_description"><a href='../../querychat/html/DataSource.html#method-DataSource-get_data_description'><code>DataSource$get_data_description()</code></a></span></li>
   <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_semantic_views_description"><a href='../../querychat/html/DBISource.html#method-DBISource-get_semantic_views_description'><code>DBISource$get_semantic_views_description()</code></a></span></li>
 </ul>
 </details>}}

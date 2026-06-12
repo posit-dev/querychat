@@ -71,10 +71,7 @@ reference:
   - QueryChat
 - title: Data sources
   contents:
-  - DataSource
-  - DataFrameSource
-  - DBISource
-  - TblSqlSource
+  - ends_with("Source")
 - title: Package
   contents:
   - querychat

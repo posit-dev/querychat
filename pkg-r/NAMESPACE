@@ -3,6 +3,7 @@
 export(DBISource)
 export(DataFrameSource)
 export(DataSource)
+export(PinSource)
 export(QueryChat)
 export(TblSqlSource)
 export(querychat)

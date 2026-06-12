@@ -20,6 +20,7 @@ from ._datasource import (
     PolarsLazySource,
     SQLAlchemySource,
 )
+from ._pin_source import PinSource, is_pins_board
 from ._querychat_core import GREETING_PROMPT
 from ._system_prompt import QueryChatSystemPrompt
 from ._utils import MISSING, MISSING_TYPE, is_ibis_table
@@ -36,6 +37,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from narwhals.stable.v1.typing import IntoFrame
+    from pins.boards import BaseBoard
 
     from ._viz_tools import VisualizeData
 
@@ -57,8 +59,8 @@ class QueryChatBase(Generic[IntoFrameT]):
 
     def __init__(
         self,
-        data_source: IntoFrame | sqlalchemy.Engine | None,
-        table_name: str,
+        data_source: IntoFrame | sqlalchemy.Engine | BaseBoard | None,
+        table_name: str | None = None,
         *,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
@@ -68,10 +70,22 @@ class QueryChatBase(Generic[IntoFrameT]):
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
     ):
+        if table_name is None:
+            if isinstance(data_source, DataSource):
+                table_name = data_source.table_name
+            elif data_source is not None:
+                raise ValueError(
+                    "table_name is required when data_source is not a DataSource"
+                )
+
         # Store table_name for later normalization
         self._table_name = table_name
 
-        if not re.match(r"^[a-zA-Z][a-zA-Z0-9_]*$", table_name):
+        if (
+            table_name is not None
+            and not is_pins_board(data_source)
+            and not re.match(r"^[a-zA-Z][a-zA-Z0-9_]*$", table_name)
+        ):
             raise ValueError(
                 "Table name must begin with a letter and contain only letters, numbers, and underscores",
             )
@@ -82,6 +96,9 @@ class QueryChatBase(Generic[IntoFrameT]):
         # Store init parameters for deferred system prompt building
         self._prompt_template = prompt_template
         self._data_description = data_description
+        self._data_description_mode: Literal["supplied", "inferred", "empty"] = (
+            "supplied" if data_description is not None else "empty"
+        )
         self._extra_instructions = extra_instructions
         self._categorical_threshold = categorical_threshold
 
@@ -90,13 +107,28 @@ class QueryChatBase(Generic[IntoFrameT]):
 
         # Initialize data source (may be None for deferred pattern)
         if data_source is not None:
+            if table_name is None:
+                raise ValueError("table_name is required when data_source is provided")
             self._data_source: DataSource | None = normalize_data_source(
                 data_source, table_name
             )
+            self._table_name = self._data_source.table_name
+            self._auto_fill_data_description()
             self._build_system_prompt()
         else:
             self._data_source = None
             self._system_prompt = None
+
+    def _auto_fill_data_description(self) -> None:
+        """Auto-populate data_description from data source metadata if not user-supplied."""
+        if self._data_description_mode == "inferred":
+            self._data_description = None
+            self._data_description_mode = "empty"
+        if self._data_description_mode == "empty" and self._data_source is not None:
+            desc = self._data_source.get_data_description()
+            if desc:
+                self._data_description = desc
+                self._data_description_mode = "inferred"
 
     def _build_system_prompt(self) -> None:
         """Build/rebuild the system prompt from current data source."""
@@ -237,9 +269,15 @@ class QueryChatBase(Generic[IntoFrameT]):
         return self._data_source
 
     @data_source.setter
-    def data_source(self, value: IntoFrame | sqlalchemy.Engine) -> None:
+    def data_source(self, value: IntoFrame | sqlalchemy.Engine | BaseBoard) -> None:
         """Set the data source, normalizing and rebuilding system prompt."""
+        old_source = self._data_source
+        if self._table_name is None:
+            raise ValueError("table_name must be set before assigning a data source")
         self._data_source = normalize_data_source(value, self._table_name)
+        if old_source is not None and old_source is not self._data_source:
+            old_source.cleanup()
+        self._auto_fill_data_description()
         self._build_system_prompt()
 
     def cleanup(self) -> None:
@@ -249,11 +287,15 @@ class QueryChatBase(Generic[IntoFrameT]):
 
 
 def normalize_data_source(
-    data_source: IntoFrame | sqlalchemy.Engine | DataSource,
+    data_source: IntoFrame | sqlalchemy.Engine | BaseBoard | DataSource,
     table_name: str,
 ) -> DataSource:
     if isinstance(data_source, DataSource):
         return data_source
+
+    if is_pins_board(data_source):
+        return PinSource(data_source, table_name)
+
     if isinstance(data_source, sqlalchemy.Engine):
         return SQLAlchemySource(data_source, table_name)
 

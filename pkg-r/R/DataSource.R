@@ -91,6 +91,17 @@ DataSource <- R6::R6Class(
     },
 
     #' @description
+    #' Get a human-readable data description for the system prompt.
+    #'
+    #' Subclasses may override this to provide metadata-derived descriptions
+    #' (e.g., pin title/description). The default returns an empty string.
+    #'
+    #' @return A string, or empty string if no description is available.
+    get_data_description = function() {
+      ""
+    },
+
+    #' @description
     #' Clean up resources (close connections, etc.)
     #'
     #' @return NULL (invisibly)

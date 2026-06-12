@@ -69,6 +69,10 @@ PinSource <- R6::R6Class(
           csv = "read_csv_auto",
           json = "read_json_auto"
         )
+        if (pin_type == "json") {
+          DBI::dbExecute(con, "INSTALL json")
+          DBI::dbExecute(con, "LOAD json")
+        }
         quoted_path <- DBI::dbQuoteLiteral(con, paths[[1]])
         sql <- sprintf(
           "CREATE TABLE %s AS SELECT * FROM %s(%s)",

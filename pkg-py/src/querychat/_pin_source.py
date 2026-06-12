@@ -75,6 +75,9 @@ class PinSource(DataSource["pd.DataFrame"]):
                         "requires a single-file pin (as created by pin_write())."
                     )
                 reader_fn = DUCKDB_READER_FN[pin_type]
+                if pin_type == "json":
+                    conn.execute("INSTALL json")
+                    conn.execute("LOAD json")
                 conn.execute(
                     f'CREATE TABLE "{effective_table_name}" AS '
                     f"SELECT * FROM {reader_fn}(?)",

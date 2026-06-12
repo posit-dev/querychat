@@ -89,6 +89,15 @@ class TestBookmarkRoundTrip:
         c2.restore_from_bookmark(dumped)
         assert c2.spec.get_card("notes") is not None
 
+    def test_restore_starts_fresh_history(self, controller):
+        controller.stage_set_cards([md_card()])
+        dumped = controller.bookmark_value()
+        c2 = DashboardController(controller.data_source)
+        c2.restore_from_bookmark(dumped)
+        # dashboard_server sets opened_once on restore; the controller itself
+        # restores cleanly with a fresh history timeline
+        assert not c2.history.can_undo()
+
 
 class TestReplaceSpec:
     def test_replace_spec_queues_full_resync(self, controller):

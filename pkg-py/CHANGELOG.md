@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### New features
+
+* Added a `"canvas"` tool group that gives end users a personal dashboard drawer — a gridstack canvas opened via the `/dashboard` slash command or the floating badge — that the LLM can edit using canvas tools. Query and visualization results gain a pin button so users can add them directly to the canvas. Undo/redo is supported, and the first time the drawer is opened querychat auto-generates an initial layout from the conversation. Server-side bookmarking (`shiny.bookmark` `"server"` store) is recommended when enabling `"canvas"` so dashboards survive page reloads. Enable with `tools=("filter", "query", "canvas")`.
+
 ### Improvements
 
 * The query tool result card now starts collapsed by default. Users can still expand it to see the SQL query and results. Set `QUERYCHAT_TOOL_DETAILS=expanded` to restore the previous behavior. (#239)

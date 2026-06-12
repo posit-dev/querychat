@@ -108,6 +108,14 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         omitting both the `"query"` and `"visualize"` tools so the LLM
         cannot access or display any raw data values.
 
+        Include `"canvas"` to give end users a personal dashboard drawer — a
+        gridstack canvas opened via the `/dashboard` slash command or the
+        floating badge — that the LLM can edit using canvas tools. Query and
+        visualization results gain a pin button so users can add them directly
+        to the canvas. Server-side bookmarking (`shiny.bookmark` `"server"`
+        store) is recommended when enabling `"canvas"` so dashboards survive
+        page reloads.
+
         The legacy name `"update"` is still accepted as an alias for `"filter"`.
 
         The tools can be overridden per-client by passing a different `tools`

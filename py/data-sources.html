@@ -292,6 +292,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#lazy-frames" id="toc-lazy-frames" class="nav-link" data-scroll-target="#lazy-frames">Polars LazyFrames</a></li>
   <li><a href="#ibis-tables" id="toc-ibis-tables" class="nav-link" data-scroll-target="#ibis-tables">Ibis Tables</a></li>
   <li><a href="#databases" id="toc-databases" class="nav-link" data-scroll-target="#databases">Databases</a></li>
+  <li><a href="#pins" id="toc-pins" class="nav-link" data-scroll-target="#pins">Pins</a>
+  <ul class="collapse">
+  <li><a href="#lazy-queries-with-pins" id="toc-lazy-queries-with-pins" class="nav-link" data-scroll-target="#lazy-queries-with-pins">Lazy queries with pins</a></li>
+  </ul></li>
   <li><a href="#custom-sources" id="toc-custom-sources" class="nav-link" data-scroll-target="#custom-sources">Custom sources</a></li>
   </ul>
 <div class="toc-actions"><ul><li><a href="https://github.com/posit-dev/querychat/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li><li><a href="https://github.com/posit-dev/querychat/edit/main/pkg-py/docs/data-sources.qmd" class="toc-action"><i class="bi empty"></i>Edit this page</a></li></ul></div></nav>
@@ -324,6 +328,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li>Polars LazyFrames for efficient handling of large datasets.</li>
 <li><a href="https://ibis-project.org/">Ibis</a> Tables for lazy evaluation across many database backends.</li>
 <li>Any <a href="https://www.sqlalchemy.org/">SQLAlchemy</a> database.</li>
+<li><a href="https://rstudio.github.io/pins-python/">Pins</a> boards.</li>
 <li>A custom <a href="./reference/types.DataSource.html">DataSource</a> interface/protocol.</li>
 </ol>
 <p>The sections below describe how to use each type of data source with <code>querychat</code>.</p>
@@ -653,6 +658,52 @@ When to use Ibis vs SQLAlchemy
 <span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a><span class="st">"""</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p>Then you can connect to this database using the DuckDB example above (changing the table name as appropriate):</p>
+</section>
+<section id="pins" class="level2">
+<h2 class="anchored" data-anchor-id="pins">Pins</h2>
+<p>You can pass a <a href="https://rstudio.github.io/pins-python/">pins</a> board directly to <code>QueryChat</code> with the pin name as <code>table_name</code>:</p>
+<pre class="shell"><code>pip install querychat[pins]</code></pre>
+<div class="code-with-filename">
+<div class="code-with-filename-file">
+<pre><strong>pins-app.py</strong></pre>
+</div>
+<div class="sourceCode" id="cb24" data-filename="pins-app.py"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pins</span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat <span class="im">import</span> QueryChat</span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>board <span class="op">=</span> pins.board_connect()</span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(board, <span class="st">"my_pin"</span>)</span>
+<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>app <span class="op">=</span> qc.app()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The pin is read and loaded into an in-memory DuckDB database, the same as data frames. For parquet, CSV, JSON, and arrow pins, the cached files go straight into DuckDB (or through polars for arrow) without Python deserialization. Other pin types go through <code>pin_read()</code> first.</p>
+<p>If the pin has a title, description, or tags, querychat uses them as the default <code>data_description</code>, which you can override.</p>
+<p>Pin names with special characters (like <code>"user.name/my_pin"</code>) are sanitized into valid SQL table names. To control the table name yourself, use <code>PinSource</code>:</p>
+<div class="sourceCode" id="cb25"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat.types <span class="im">import</span> PinSource</span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>ps <span class="op">=</span> PinSource(board, <span class="st">"user.name/my_pin"</span>, table_name<span class="op">=</span><span class="st">"my_data"</span>)</span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(ps)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<section id="lazy-queries-with-pins" class="level3">
+<h3 class="anchored" data-anchor-id="lazy-queries-with-pins">Lazy queries with pins</h3>
+<p>By default, the full dataset is materialized into DuckDB. For large parquet pins, you can skip that step by reading the pin files yourself and passing a Polars LazyFrame:</p>
+<div class="code-with-filename">
+<div class="code-with-filename-file">
+<pre><strong>pins-lazy-app.py</strong></pre>
+</div>
+<div class="sourceCode" id="cb26" data-filename="pins-lazy-app.py"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pins</span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> polars <span class="im">as</span> pl</span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat <span class="im">import</span> QueryChat</span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>board <span class="op">=</span> pins.board_connect()</span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>paths <span class="op">=</span> board.pin_download(<span class="st">"my_pin"</span>)</span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a>lf <span class="op">=</span> pl.scan_parquet(paths[<span class="dv">0</span>])</span>
+<span id="cb26-9"><a href="#cb26-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-10"><a href="#cb26-10" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(lf, <span class="st">"my_pin"</span>)</span>
+<span id="cb26-11"><a href="#cb26-11" aria-hidden="true" tabindex="-1"></a>app <span class="op">=</span> qc.app()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<p>The pin files are still downloaded to a local cache — <code>pin_download()</code> always fetches them. But rather than loading everything into memory, Polars reads the parquet file lazily. This is not the same as a database-backed source, where data never leaves the server.</p>
+<p>This approach skips the security lockdown that <code>PinSource</code> applies, so LLM-generated SQL can access files on the local system.</p>
+</section>
 </section>
 <section id="custom-sources" class="level2">
 <h2 class="anchored" data-anchor-id="custom-sources">Custom sources</h2>

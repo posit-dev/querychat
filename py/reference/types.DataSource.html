@@ -301,6 +301,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#querychat.types.DataSource.cleanup" id="toc-querychat.types.DataSource.cleanup" class="nav-link" data-scroll-target="#querychat.types.DataSource.cleanup">cleanup</a></li>
   <li><a href="#querychat.types.DataSource.execute_query" id="toc-querychat.types.DataSource.execute_query" class="nav-link" data-scroll-target="#querychat.types.DataSource.execute_query">execute_query</a></li>
   <li><a href="#querychat.types.DataSource.get_data" id="toc-querychat.types.DataSource.get_data" class="nav-link" data-scroll-target="#querychat.types.DataSource.get_data">get_data</a></li>
+  <li><a href="#querychat.types.DataSource.get_data_description" id="toc-querychat.types.DataSource.get_data_description" class="nav-link" data-scroll-target="#querychat.types.DataSource.get_data_description">get_data_description</a></li>
   <li><a href="#querychat.types.DataSource.get_db_type" id="toc-querychat.types.DataSource.get_db_type" class="nav-link" data-scroll-target="#querychat.types.DataSource.get_db_type">get_db_type</a></li>
   <li><a href="#querychat.types.DataSource.get_schema" id="toc-querychat.types.DataSource.get_schema" class="nav-link" data-scroll-target="#querychat.types.DataSource.get_schema">get_schema</a></li>
   <li><a href="#querychat.types.DataSource.get_semantic_views_description" id="toc-querychat.types.DataSource.get_semantic_views_description" class="nav-link" data-scroll-target="#querychat.types.DataSource.get_semantic_views_description">get_semantic_views_description</a></li>
@@ -363,18 +364,22 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>Return the unfiltered data.</td>
 </tr>
 <tr class="even">
+<td><a href="#querychat.types.DataSource.get_data_description">get_data_description</a></td>
+<td>Get a human-readable data description for the system prompt.</td>
+</tr>
+<tr class="odd">
 <td><a href="#querychat.types.DataSource.get_db_type">get_db_type</a></td>
 <td>Name for the database behind the SQL execution.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><a href="#querychat.types.DataSource.get_schema">get_schema</a></td>
 <td>Return schema information about the table as a string.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><a href="#querychat.types.DataSource.get_semantic_views_description">get_semantic_views_description</a></td>
 <td>Get information about semantic views (if any) for the system prompt.</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><a href="#querychat.types.DataSource.test_query">test_query</a></td>
 <td>Test SQL query by fetching only one row.</td>
 </tr>
@@ -484,14 +489,20 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </table>
 </section>
 </section>
+<section id="querychat.types.DataSource.get_data_description" class="level3">
+<h3 class="anchored" data-anchor-id="querychat.types.DataSource.get_data_description">get_data_description</h3>
+<div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>types.DataSource.get_data_description()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Get a human-readable data description for the system prompt.</p>
+<p>Subclasses may override this to provide metadata-derived descriptions (e.g., pin title/description). The default returns an empty string.</p>
+</section>
 <section id="querychat.types.DataSource.get_db_type" class="level3">
 <h3 class="anchored" data-anchor-id="querychat.types.DataSource.get_db_type">get_db_type</h3>
-<div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>types.DataSource.get_db_type()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>types.DataSource.get_db_type()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Name for the database behind the SQL execution.</p>
 </section>
 <section id="querychat.types.DataSource.get_schema" class="level3">
 <h3 class="anchored" data-anchor-id="querychat.types.DataSource.get_schema">get_schema</h3>
-<div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>types.DataSource.get_schema(categorical_threshold)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>types.DataSource.get_schema(categorical_threshold)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Return schema information about the table as a string.</p>
 <section id="parameters-1" class="level4 doc-section doc-section-parameters">
 <h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-1">Parameters</h4>
@@ -536,12 +547,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="querychat.types.DataSource.get_semantic_views_description" class="level3">
 <h3 class="anchored" data-anchor-id="querychat.types.DataSource.get_semantic_views_description">get_semantic_views_description</h3>
-<div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>types.DataSource.get_semantic_views_description()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>types.DataSource.get_semantic_views_description()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Get information about semantic views (if any) for the system prompt.</p>
 </section>
 <section id="querychat.types.DataSource.test_query" class="level3">
 <h3 class="anchored" data-anchor-id="querychat.types.DataSource.test_query">test_query</h3>
-<div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>types.DataSource.test_query(query, <span class="op">*</span>, require_all_columns<span class="op">=</span><span class="va">False</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>types.DataSource.test_query(query, <span class="op">*</span>, require_all_columns<span class="op">=</span><span class="va">False</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Test SQL query by fetching only one row.</p>
 <section id="parameters-2" class="level4 doc-section doc-section-parameters">
 <h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-2">Parameters</h4>

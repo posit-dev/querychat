@@ -40,14 +40,20 @@ def _sanitize_table_name(name: str) -> str:
     return out
 
 
-def _convert_result(result: duckdb.DuckDBPyConnection) -> nw.DataFrame:
-    """Convert a DuckDB result to a narwhals DataFrame, preferring polars if available."""
+def _has_polars() -> bool:
     try:
         import polars as pl  # noqa: F401
 
-        return nw.from_native(result.pl())
+        return True
     except ImportError:
-        return nw.from_native(result.df())
+        return False
+
+
+def _convert_result(result: duckdb.DuckDBPyConnection) -> nw.DataFrame:
+    """Convert a DuckDB result to a narwhals DataFrame, preferring polars if available."""
+    if _has_polars():
+        return nw.from_native(result.pl())
+    return nw.from_native(result.df())
 
 
 class PinSource(DataSource[nw.DataFrame]):
@@ -93,6 +99,25 @@ class PinSource(DataSource[nw.DataFrame]):
                     f"SELECT * FROM {reader_fn}(?)",
                     [paths[0]],
                 )
+            elif pin_type == "arrow" and _has_polars():
+                # Arrow/IPC files can't be read natively by DuckDB, but
+                # polars can read them directly — avoiding pin_read() overhead.
+                import polars as pl
+
+                paths = board.pin_download(name, version=version)
+                if len(paths) != 1:
+                    raise ValueError(
+                        f"Pin '{name}' contains {len(paths)} files, but PinSource "
+                        "requires a single-file pin (as created by pin_write())."
+                    )
+                arrow_df = pl.read_ipc(paths[0])
+                vname = f"__pin_staging_{effective_table_name}"
+                conn.register(vname, arrow_df)
+                conn.execute(
+                    f'CREATE TABLE "{effective_table_name}" AS '
+                    f'SELECT * FROM "{vname}"'
+                )
+                conn.unregister(vname)
             else:
                 import pandas as pd
 

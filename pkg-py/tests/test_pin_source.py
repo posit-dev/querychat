@@ -61,6 +61,17 @@ class TestPinSourceLazyPath:
         finally:
             ps.cleanup()
 
+    def test_arrow_pin(self, board, sample_df):
+        board.pin_write(sample_df, "arrow_data", type="arrow")
+        ps = PinSource(board, "arrow_data")
+        try:
+            result = ps.execute_query("SELECT * FROM arrow_data")
+            assert isinstance(result, nw.DataFrame)
+            assert len(result) == 4
+            assert list(result.columns) == ["name", "age", "score"]
+        finally:
+            ps.cleanup()
+
     def test_parquet_pin_filtered_query(self, parquet_source, sample_df):
         result = parquet_source.execute_query(
             "SELECT name FROM test_data WHERE score > 90"

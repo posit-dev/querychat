@@ -841,7 +841,9 @@ QueryChat <- R6::R6Class(
           value,
           private$.table_name
         )
-        if (!is.null(old_source) && !identical(old_source, private$.data_source)) {
+        if (
+          !is.null(old_source) && !identical(old_source, private$.data_source)
+        ) {
           old_source$cleanup()
         }
         private$auto_fill_data_description()

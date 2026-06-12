@@ -275,7 +275,7 @@ class QueryChatBase(Generic[IntoFrameT]):
         if self._table_name is None:
             raise ValueError("table_name must be set before assigning a data source")
         self._data_source = normalize_data_source(value, self._table_name)
-        if old_source is not None:
+        if old_source is not None and old_source is not self._data_source:
             old_source.cleanup()
         self._auto_fill_data_description()
         self._build_system_prompt()

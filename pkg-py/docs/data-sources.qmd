@@ -9,7 +9,8 @@ lightbox: true
 2. Polars LazyFrames for efficient handling of large datasets.
 3. [Ibis](https://ibis-project.org/) Tables for lazy evaluation across many database backends.
 4. Any [SQLAlchemy](https://www.sqlalchemy.org/) database.
-5. A custom [DataSource](reference/types.DataSource.qmd) interface/protocol.
+5. [Pins](https://rstudio.github.io/pins-python/) boards.
+6. A custom [DataSource](reference/types.DataSource.qmd) interface/protocol.
 
 The sections below describe how to use each type of data source with `querychat`.
 
@@ -334,6 +335,59 @@ conn.execute("""
 ```
 
 Then you can connect to this database using the DuckDB example above (changing the table name as appropriate):
+
+## Pins
+
+You can pass a [pins](https://rstudio.github.io/pins-python/) board directly to `QueryChat` with the pin name as `table_name`:
+
+```shell
+pip install querychat[pins]
+```
+
+```{.python filename="pins-app.py"}
+import pins
+from querychat import QueryChat
+
+board = pins.board_connect()
+
+qc = QueryChat(board, "my_pin")
+app = qc.app()
+```
+
+The pin is read and loaded into an in-memory DuckDB database, the same as data frames. For parquet, CSV, JSON, and arrow pins, the cached files go straight into DuckDB (or through polars for arrow) without Python deserialization. Other pin types go through `pin_read()` first.
+
+If the pin has a title, description, or tags, querychat uses them as the default `data_description`, which you can override.
+
+Pin names with special characters (like `"user.name/my_pin"`) are sanitized into valid SQL table names. To control the table name yourself, use `PinSource`:
+
+```{.python}
+from querychat.types import PinSource
+
+ps = PinSource(board, "user.name/my_pin", table_name="my_data")
+qc = QueryChat(ps)
+```
+
+### Lazy queries with pins
+
+By default, the full dataset is materialized into DuckDB. For large parquet pins, you can skip that step by reading the pin files yourself and passing a Polars LazyFrame:
+
+```{.python filename="pins-lazy-app.py"}
+import pins
+import polars as pl
+from querychat import QueryChat
+
+board = pins.board_connect()
+paths = board.pin_download("my_pin")
+
+lf = pl.scan_parquet(paths[0])
+
+qc = QueryChat(lf, "my_pin")
+app = qc.app()
+```
+
+The pin files are still downloaded to a local cache --- `pin_download()` always fetches them. But rather than loading everything into memory, Polars reads the parquet file lazily. This is not the same as a database-backed source, where data never leaves the server.
+
+This approach skips the security lockdown that `PinSource` applies, so LLM-generated SQL can access files on the local system.
 
 ## Custom sources
 

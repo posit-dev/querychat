@@ -10,7 +10,37 @@ natively (parquet, CSV, JSON), the data is loaded directly from the cached
 pin files into DuckDB without deserializing into R. For other pin types
 (e.g. RDS), the data is deserialized via \code{pin_read()} and must produce
 a data frame (or tibble) to be registered with DuckDB.
+
+After loading, DuckDB's external file access is locked down so that
+LLM-generated SQL cannot reach the filesystem.
+
+If the pin has a title, description, or tags, \link{QueryChat} uses them as
+the default \code{data_description}, which you can override.
 }
+\section{Lazy queries with pins}{
+
+
+\code{PinSource} materializes the full dataset into DuckDB. For large parquet
+pins where you want lazy query execution, read the pin files yourself and
+pass a \code{tbl_sql} to \code{\link[=querychat]{querychat()}} instead:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{paths <- pins::pin_download(board, "my_pin")
+con <- DBI::dbConnect(duckdb::duckdb())
+DBI::dbExecute(
+  con,
+  sprintf("CREATE VIEW my_pin AS SELECT * FROM read_parquet('\%s')", paths[1])
+)
+qc <- querychat(dplyr::tbl(con, "my_pin"))
+}\if{html}{\out{</div>}}
+
+The pin files are still downloaded to a local cache --- \code{pin_download()}
+always fetches them. But rather than loading everything into memory, DuckDB
+reads the parquet file lazily through dbplyr.
+
+This approach skips the security lockdown that \code{PinSource} applies, so
+LLM-generated SQL can access files on the local system.
+}
+
 \examples{
 if (rlang::is_installed(c("pins", "duckdb"))) {
   # Create a temporary board and pin some data

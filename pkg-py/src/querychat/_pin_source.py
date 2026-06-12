@@ -62,7 +62,38 @@ def _convert_result(result: duckdb.DuckDBPyConnection) -> nw.DataFrame:
 
 
 class PinSource(DataSource[nw.DataFrame]):
-    """DataSource backed by a pin from a pins board."""
+    """
+    DataSource backed by a pin from a pins board.
+
+    For parquet, CSV, JSON, and arrow pins, the cached files go straight into
+    DuckDB (or through polars for arrow) without Python deserialization. Other
+    pin types go through ``pin_read()`` first.
+
+    After loading, DuckDB's external file access is locked down so that
+    LLM-generated SQL cannot reach the filesystem.
+
+    If the pin has a title, description, or tags,
+    :class:`~querychat.QueryChat` uses them as the default
+    ``data_description``, which you can override.
+
+    Lazy queries with pins
+    ~~~~~~~~~~~~~~~~~~~~~~
+
+    ``PinSource`` materializes the full dataset into DuckDB. For large parquet
+    pins where you want lazy query execution, read the pin files yourself and
+    pass a Polars LazyFrame to :class:`~querychat.QueryChat` instead::
+
+        paths = board.pin_download("my_pin")
+        lf = pl.scan_parquet(paths[0])
+        qc = QueryChat(lf, "my_pin")
+
+    The pin files are still downloaded to a local cache ---
+    ``pin_download()`` always fetches them. But rather than loading everything
+    into memory, Polars reads the parquet file lazily.
+
+    This approach skips the security lockdown that ``PinSource`` applies, so
+    LLM-generated SQL can access files on the local system.
+    """
 
     def __init__(
         self,

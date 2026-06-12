@@ -4912,6 +4912,7 @@
   var PREFIX = "querychat-dashboard-";
   var grid = null;
   var suppressChange = false;
+  var initialized = false;
   function qs(sel) {
     return document.querySelector(sel);
   }
@@ -4940,7 +4941,9 @@
     );
     grid.on("change", (_ev, nodes) => {
       if (suppressChange || !nodes?.length) return;
-      const placements = nodes.filter((n) => n.el?.getAttribute("data-card-name")).map((n) => ({
+      const placements = nodes.filter(
+        (n) => !!n.el?.getAttribute("data-card-name")
+      ).map((n) => ({
         name: n.el.getAttribute("data-card-name"),
         x: n.x ?? 0,
         y: n.y ?? 0,
@@ -4989,18 +4992,24 @@
   }
   function removeCard(shiny, msg) {
     const el = cardItem(msg.name);
-    if (el && grid) {
-      suppressChange = true;
+    if (!el || !grid) return;
+    suppressChange = true;
+    try {
       shiny.unbindAll?.(el);
       grid.removeWidget(el);
+    } finally {
       suppressChange = false;
     }
   }
-  function canvasReset(msg) {
-    if (!grid) return;
+  function canvasReset(shiny, msg) {
+    const g = ensureGrid(shiny);
+    g.getGridItems().forEach((el) => shiny.unbindAll?.(el));
     suppressChange = true;
-    grid.removeAll();
-    suppressChange = false;
+    try {
+      g.removeAll();
+    } finally {
+      suppressChange = false;
+    }
     const title = qs(".querychat-dash-title");
     if (title) title.textContent = msg.title;
   }
@@ -5022,10 +5031,10 @@
     const slot = qs(".querychat-dash-chat-slot");
     if (!chat || !slot) return;
     if (intoDrawer) {
-      chatHome = {
-        parent: chat.parentElement,
-        next: chat.nextSibling
-      };
+      if (chatHome) return;
+      const parent = chat.parentElement;
+      if (!parent) return;
+      chatHome = { parent, next: chat.nextSibling };
       slot.appendChild(chat);
     } else if (chatHome) {
       chatHome.parent.insertBefore(chat, chatHome.next);
@@ -5123,8 +5132,10 @@
     });
   }
   function initDashboard() {
+    if (initialized) return;
     const shiny = window.Shiny;
     if (!shiny) return;
+    initialized = true;
     shiny.addCustomMessageHandler(
       `${PREFIX}drawer-toggle`,
       (msg) => toggleDrawer(shiny, msg)
@@ -5137,7 +5148,10 @@
       `${PREFIX}card-remove`,
       (msg) => removeCard(shiny, msg)
     );
-    shiny.addCustomMessageHandler(`${PREFIX}canvas-reset`, canvasReset);
+    shiny.addCustomMessageHandler(
+      `${PREFIX}canvas-reset`,
+      (msg) => canvasReset(shiny, msg)
+    );
     shiny.addCustomMessageHandler(`${PREFIX}layout-apply`, applyLayout);
     shiny.addCustomMessageHandler(
       `${PREFIX}palette`,

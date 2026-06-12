@@ -33,6 +33,7 @@ interface Layout {
 
 let grid: GridStack | null = null;
 let suppressChange = false;
+let initialized = false;
 
 function qs(sel: string): HTMLElement | null {
   return document.querySelector(sel);
@@ -69,9 +70,11 @@ function ensureGrid(shiny: ShinyApi): GridStack {
   grid.on("change", (_ev: Event, nodes: GridStackNode[]) => {
     if (suppressChange || !nodes?.length) return;
     const placements = nodes
-      .filter((n) => n.el?.getAttribute("data-card-name"))
+      .filter((n): n is GridStackNode & { el: GridItemHTMLElement } =>
+        !!n.el?.getAttribute("data-card-name"),
+      )
       .map((n) => ({
-        name: n.el!.getAttribute("data-card-name")!,
+        name: n.el.getAttribute("data-card-name")!,
         x: n.x ?? 0,
         y: n.y ?? 0,
         w: n.w ?? 1,
@@ -128,19 +131,25 @@ function upsertCard(
 
 function removeCard(shiny: ShinyApi, msg: { name: string }): void {
   const el = cardItem(msg.name);
-  if (el && grid) {
-    suppressChange = true;
+  if (!el || !grid) return;
+  suppressChange = true;
+  try {
     shiny.unbindAll?.(el);
     grid.removeWidget(el);
+  } finally {
     suppressChange = false;
   }
 }
 
-function canvasReset(msg: { title: string }): void {
-  if (!grid) return;
+function canvasReset(shiny: ShinyApi, msg: { title: string }): void {
+  const g = ensureGrid(shiny);
+  g.getGridItems().forEach((el) => shiny.unbindAll?.(el));
   suppressChange = true;
-  grid.removeAll();
-  suppressChange = false;
+  try {
+    g.removeAll();
+  } finally {
+    suppressChange = false;
+  }
   const title = qs(".querychat-dash-title");
   if (title) title.textContent = msg.title;
 }
@@ -169,17 +178,16 @@ function reparentChat(intoDrawer: boolean): void {
   const slot = qs(".querychat-dash-chat-slot");
   if (!chat || !slot) return;
   if (intoDrawer) {
-    chatHome = {
-      parent: chat.parentElement as HTMLElement,
-      next: chat.nextSibling,
-    };
+    if (chatHome) return; // already in the drawer; don't overwrite the true home
+    const parent = chat.parentElement;
+    if (!parent) return;
+    chatHome = { parent, next: chat.nextSibling };
     slot.appendChild(chat);
   } else if (chatHome) {
     chatHome.parent.insertBefore(chat, chatHome.next);
     chatHome = null;
   }
-  // Let widgets re-measure after the layout shift.
-  window.dispatchEvent(new Event("resize"));
+  window.dispatchEvent(new Event("resize")); // let widgets re-measure
 }
 
 function toggleDrawer(shiny: ShinyApi, msg: { open: boolean }): void {
@@ -282,8 +290,10 @@ function wireStaticControls(shiny: ShinyApi): void {
 }
 
 export function initDashboard(): void {
+  if (initialized) return;
   const shiny = (window as any).Shiny as ShinyApi | undefined;
   if (!shiny) return;
+  initialized = true;
 
   shiny.addCustomMessageHandler(`${PREFIX}drawer-toggle`, (msg) =>
     toggleDrawer(shiny, msg),
@@ -294,7 +304,9 @@ export function initDashboard(): void {
   shiny.addCustomMessageHandler(`${PREFIX}card-remove`, (msg) =>
     removeCard(shiny, msg),
   );
-  shiny.addCustomMessageHandler(`${PREFIX}canvas-reset`, canvasReset);
+  shiny.addCustomMessageHandler(`${PREFIX}canvas-reset`, (msg) =>
+    canvasReset(shiny, msg),
+  );
   shiny.addCustomMessageHandler(`${PREFIX}layout-apply`, applyLayout);
   shiny.addCustomMessageHandler(`${PREFIX}palette`, (msg) =>
     updatePalette(shiny, msg),

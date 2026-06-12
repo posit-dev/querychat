@@ -335,7 +335,12 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
 def app_layout(ids: IDs, table_name: str, chat_ui):
     """Build the layout for the complete app."""
     import dash_ag_grid as dag
-    import dash_bootstrap_components as dbc
+    from dash_bootstrap_components._components import (  # pyright: ignore[reportPrivateImportUsage]
+        Button,
+        Col,
+        Container,
+        Row,
+    )
 
     from dash import dcc, html
 
@@ -346,7 +351,7 @@ def app_layout(ids: IDs, table_name: str, chat_ui):
             className="querychat-sql-display",
         ),
         title_id=ids.sql_title,
-        action_button=dbc.Button(
+        action_button=Button(
             "Reset Query",
             id=ids.reset_button,
             color="danger",
@@ -382,7 +387,7 @@ def app_layout(ids: IDs, table_name: str, chat_ui):
             dcc.Download(id=ids.download_csv),  # pyright: ignore[reportPrivateImportUsage]
         ],
         title="Data view",
-        action_button=dbc.Button(
+        action_button=Button(
             "Export CSV",
             id=ids.export_button,
             color="secondary",
@@ -400,13 +405,13 @@ def app_layout(ids: IDs, table_name: str, chat_ui):
         body_class_name="d-flex flex-column p-0 flex-grow-1",
     )
 
-    return dbc.Container(
+    return Container(
         [
             html.H1(f"querychat with {table_name}"),
-            dbc.Row(
+            Row(
                 [
-                    dbc.Col(chat_card, width=4),
-                    dbc.Col(
+                    Col(chat_card, width=4),
+                    Col(
                         [sql_card, data_card],
                         width=8,
                         className="d-flex flex-column",

@@ -35,6 +35,21 @@ class TestPaletteHtml:
         assert "on-canvas" in html  # used-indicator class
         assert "<img" in html  # thumbnail
 
+    def test_preview_html_injected_raw(self):
+        # preview_html is trusted server-rendered HTML and must NOT be escaped.
+        items = [
+            PaletteItem(
+                id="q",
+                kind="table",
+                title="Top cars",
+                source="SELECT 1",
+                thumbnail=None,
+                preview_html="<table><tbody><tr><td>val</td></tr></tbody></table>",
+                on_canvas=False,
+            ),
+        ]
+        assert "<table>" in palette_html(items)
+
     def test_escapes_titles(self):
         items = [
             PaletteItem(

@@ -44,7 +44,7 @@ def dashboard_drawer_ui() -> TagList:
     drawer = tags.div(
         {
             "class": "querychat-dash-drawer",
-            "hidden": "hidden",
+            "hidden": "",
             "data-qcdash-inputs": json.dumps(input_ids),
         },
         tags.div(
@@ -77,7 +77,7 @@ def dashboard_drawer_ui() -> TagList:
             tags.div(
                 {"class": "querychat-dash-canvas-wrap"},
                 tags.div(
-                    {"class": "querychat-dash-autogen-spinner", "hidden": "hidden"},
+                    {"class": "querychat-dash-autogen-spinner", "hidden": ""},
                     "Generating a first-pass dashboard…",
                 ),
                 tags.div({"class": "grid-stack querychat-dash-canvas"}),
@@ -90,7 +90,7 @@ def dashboard_drawer_ui() -> TagList:
         ),
     )
     badge = tags.button(
-        {"class": "querychat-dash-badge", "hidden": "hidden"},
+        {"class": "querychat-dash-badge", "hidden": ""},
         bs_icon("grid-1x2-fill"),
         tags.span({"class": "querychat-dash-badge-count"}, "0"),
     )
@@ -104,6 +104,8 @@ def palette_html(items: list[PaletteItem]) -> str:
         if item.thumbnail:
             thumb = f'<img src="{html_mod.escape(item.thumbnail, quote=True)}" alt="">'
         else:
+            # preview_html is trusted server-rendered HTML (build_preview_table
+            # escapes all cell values) — injected raw on purpose.
             thumb = item.preview_html or ""
         check = (
             '<span class="querychat-dash-palette-check">✓</span>'
@@ -112,7 +114,7 @@ def palette_html(items: list[PaletteItem]) -> str:
         )
         parts.append(
             f'<div class="{cls}" draggable="true" data-palette-id="{html_mod.escape(item.id)}" '
-            f'data-kind="{item.kind}">'
+            f'data-kind="{html_mod.escape(item.kind)}">'
             f'<div class="querychat-dash-palette-thumb">{thumb}</div>'
             f'<div class="querychat-dash-palette-title">{html_mod.escape(item.title)}</div>'
             f"{check}"

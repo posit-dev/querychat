@@ -677,5 +677,10 @@ class ArtifactModalActions:
         expect(sql_code).to_contain_text(
             re.compile(r"WHERE|SELECT", re.IGNORECASE), timeout=timeout
         )
-        # Wait for the stream to finish so the slash command handler won't refuse
-        expect(self.chat.loc_input).to_be_editable(timeout=timeout)
+        # Wait for the stream to finish. In shinychat's TipTap input the
+        # contenteditable div is always editable (to_be_editable() is always
+        # true), so we check the container's "disabled" class instead, which
+        # is added/removed by shinychat when streaming starts/ends.
+        expect(self.chat.loc_input_container).not_to_have_class(
+            re.compile(r"\bdisabled\b"), timeout=timeout
+        )

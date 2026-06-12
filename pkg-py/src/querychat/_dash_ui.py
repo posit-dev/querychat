@@ -59,9 +59,14 @@ def card_ui(
     body_class_name: str = "",
 ) -> Component:
     """Create a Bootstrap card with optional header and action button."""
-    import dash_bootstrap_components as dbc
-
     from dash import html
+    from dash_bootstrap_components._components import (  # pyright: ignore[reportPrivateImportUsage]
+        Card,
+        CardBody,
+        CardHeader,
+        Col,
+        Row,
+    )
 
     children = []
 
@@ -73,42 +78,46 @@ def card_ui(
         title_el = html.H4(title or "", **title_kwargs)
 
         if action_button:
-            header_content = dbc.Row(
+            header_content = Row(
                 [
-                    dbc.Col(title_el),
-                    dbc.Col(action_button, width="auto"),
+                    Col(title_el),
+                    Col(action_button, width="auto"),
                 ],
                 align="center",
             )
         else:
             header_content = title_el
 
-        children.append(dbc.CardHeader(header_content))
+        children.append(CardHeader(header_content))
 
-    children.append(dbc.CardBody(body, className=body_class_name or None))
+    children.append(CardBody(body, className=body_class_name or None))
 
-    return dbc.Card(children, className=class_name or None)
+    return Card(children, className=class_name or None)
 
 
 def chat_container_ui(ids: IDs) -> list[Component]:
     """Create the chat UI container (messages + input)."""
-    import dash_bootstrap_components as dbc
-
     from dash import html
+    from dash_bootstrap_components._components import (  # pyright: ignore[reportPrivateImportUsage]
+        Button,
+        Input,
+        InputGroup,
+        Spinner,
+    )
 
     return [
         html.Div(
             id=ids.chat_history,
             className="querychat-chat-history",
         ),
-        dbc.InputGroup(
+        InputGroup(
             [
-                dbc.Input(
+                Input(
                     id=ids.chat_input,
                     placeholder="Ask a question about your data...",
                     type="text",
                 ),
-                dbc.Button(
+                Button(
                     "Send",
                     id=ids.send_button,
                     color="primary",
@@ -116,7 +125,7 @@ def chat_container_ui(ids: IDs) -> list[Component]:
             ]
         ),
         html.Div(
-            dbc.Spinner(
+            Spinner(
                 size="sm",
                 color="primary",
                 spinner_class_name="ms-2",

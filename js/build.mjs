@@ -28,6 +28,10 @@ const jsTargets = [
     source: "src/artifact.ts",
     output: "../pkg-py/src/querychat/static/js/artifact.js",
   },
+  {
+    source: "src/dashboard.ts",
+    output: "../pkg-py/src/querychat/static/js/dashboard.js",
+  },
 ];
 
 const cssTargets = [
@@ -42,6 +46,14 @@ const cssTargets = [
   {
     source: "src/artifact.css",
     output: "../pkg-py/src/querychat/static/css/artifact.css",
+  },
+  {
+    source: "src/dashboard.css",
+    output: "../pkg-py/src/querychat/static/css/dashboard.css",
+  },
+  {
+    source: "node_modules/gridstack/dist/gridstack.min.css",
+    output: "../pkg-py/src/querychat/static/css/gridstack.css",
   },
 ];
 

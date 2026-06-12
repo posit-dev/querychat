@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import duckdb
+import narwhals.stable.v1 as nw
 import pandas as pd
 import pytest
 
@@ -36,7 +37,7 @@ def parquet_source(board, sample_df):
 class TestPinSourceLazyPath:
     def test_parquet_pin(self, parquet_source):
         result = parquet_source.execute_query("SELECT * FROM test_data")
-        assert isinstance(result, pd.DataFrame)
+        assert isinstance(result, nw.DataFrame)
         assert len(result) == 4
         assert list(result.columns) == ["name", "age", "score"]
 
@@ -45,7 +46,7 @@ class TestPinSourceLazyPath:
         ps = PinSource(board, "csv_data")
         try:
             result = ps.execute_query("SELECT * FROM csv_data WHERE age > 28")
-            assert isinstance(result, pd.DataFrame)
+            assert isinstance(result, nw.DataFrame)
             assert all(result["age"] > 28)
         finally:
             ps.cleanup()
@@ -55,7 +56,7 @@ class TestPinSourceLazyPath:
         ps = PinSource(board, "json_data")
         try:
             result = ps.get_data()
-            assert isinstance(result, pd.DataFrame)
+            assert isinstance(result, nw.DataFrame)
             assert len(result) == 4
         finally:
             ps.cleanup()
@@ -64,7 +65,7 @@ class TestPinSourceLazyPath:
         result = parquet_source.execute_query(
             "SELECT name FROM test_data WHERE score > 90"
         )
-        assert isinstance(result, pd.DataFrame)
+        assert isinstance(result, nw.DataFrame)
         assert list(result.columns) == ["name"]
         assert len(result) == 2
 

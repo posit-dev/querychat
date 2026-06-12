@@ -4,12 +4,12 @@ import re
 from typing import TYPE_CHECKING, Any, TypeGuard
 
 import duckdb
+import narwhals.stable.v1 as nw
 
 from ._datasource import DataSource, MissingColumnsError, duckdb_get_schema
 from ._utils import check_query
 
 if TYPE_CHECKING:
-    import pandas as pd
     from pins.boards import BaseBoard
 
 
@@ -40,7 +40,17 @@ def _sanitize_table_name(name: str) -> str:
     return out
 
 
-class PinSource(DataSource["pd.DataFrame"]):
+def _convert_result(result: duckdb.DuckDBPyConnection) -> nw.DataFrame:
+    """Convert a DuckDB result to a narwhals DataFrame, preferring polars if available."""
+    try:
+        import polars as pl  # noqa: F401
+
+        return nw.from_native(result.pl())
+    except ImportError:
+        return nw.from_native(result.df())
+
+
+class PinSource(DataSource[nw.DataFrame]):
     """DataSource backed by a pin from a pins board."""
 
     def __init__(
@@ -125,18 +135,20 @@ SET lock_configuration = true;
     def get_schema(self, *, categorical_threshold: int) -> str:
         return duckdb_get_schema(self._conn, self.table_name, categorical_threshold)
 
-    def execute_query(self, query: str) -> pd.DataFrame:
+    def execute_query(self, query: str) -> nw.DataFrame:
         check_query(query)
-        return self._conn.execute(query).df()
+        return _convert_result(self._conn.execute(query))
 
     def test_query(
         self, query: str, *, require_all_columns: bool = False
-    ) -> pd.DataFrame:
+    ) -> nw.DataFrame:
         check_query(query)
         normalized = query.rstrip().removesuffix(";")
-        result = self._conn.execute(
-            f"SELECT * FROM ({normalized}) AS subquery LIMIT 1"
-        ).df()
+        result = _convert_result(
+            self._conn.execute(
+                f"SELECT * FROM ({normalized}) AS subquery LIMIT 1"
+            )
+        )
 
         if require_all_columns:
             result_columns = set(result.columns)
@@ -152,8 +164,10 @@ SET lock_configuration = true;
 
         return result
 
-    def get_data(self) -> pd.DataFrame:
-        return self._conn.execute(f'SELECT * FROM "{self.table_name}"').df()
+    def get_data(self) -> nw.DataFrame:
+        return _convert_result(
+            self._conn.execute(f'SELECT * FROM "{self.table_name}"')
+        )
 
     def cleanup(self) -> None:
         if self._conn:

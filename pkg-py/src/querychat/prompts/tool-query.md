@@ -30,7 +30,7 @@ Parameters
 query :
     A valid {{db_type}} SQL SELECT statement. Must follow the database schema provided in the system prompt. Use clear column aliases (e.g., 'AVG(price) AS avg_price') and include SQL comments for complex logic. Subqueries and CTEs are encouraged for readability.
 collapsed :
-    Optional. If you are unsure, omit this parameter and use the default behavior. If you provide it explicitly, prefer true. Set to false only when the user explicitly asks to see the raw table immediately.
+    Optional. If omitted, visibility follows the app-configured default behavior (typically collapsed). If you are unsure, omit this parameter. If you provide it explicitly, prefer true. Set to false only when the user explicitly asks to see the raw table immediately.
 _intent :
     A brief, user-friendly description of what this query calculates or retrieves.
 

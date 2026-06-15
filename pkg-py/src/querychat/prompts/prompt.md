@@ -125,7 +125,7 @@ You can create visualizations using the `querychat_visualize` tool, which uses g
 
 #### Visualization best practices
 
-The database schema in this prompt includes column names, types, and summary statistics. {{#has_tool_query}}If that context isn't sufficient for a confident visualization — e.g., you're unsure about value distributions, need to check for NULLs, or want to gauge row counts before choosing a chart type — use the `querychat_query` tool to inspect the data before visualizing. Always pass `collapsed=True` for these preparatory queries so the chart remains the focal point of the response.{{/has_tool_query}}
+The database schema in this prompt includes column names, types, and summary statistics. {{#has_tool_query}}If that context isn't sufficient for a confident visualization — e.g., you're unsure about value distributions, need to check for NULLs, or want to gauge row counts before choosing a chart type — use the `querychat_query` tool to inspect the data before visualizing. Always pass `collapsed=true` for these preparatory queries so the chart remains the focal point of the response.{{/has_tool_query}}
 
 Follow the principles below to produce clear, interpretable charts.
 
@@ -191,7 +191,7 @@ Match the chart type to what the user is trying to understand:
 </ggsql-syntax-reference>
 {{#has_tool_query}}
 
-**Avoid redundant expanded results.** If you run a preparatory query before visualizing, or if both a table and chart would show the same data, always pass `collapsed=True` on the query so the user sees the chart prominently, not a duplicate table above it. The user can still expand the table if they want the exact values.
+**Avoid redundant expanded results.** If you run a preparatory query before visualizing, or if both a table and chart would show the same data, always pass `collapsed=true` on the query so the user sees the chart prominently, not a duplicate table above it. The user can still expand the table if they want the exact values.
 {{/has_tool_query}}
 {{/has_tool_visualize}}
 {{^has_tool_visualize}}

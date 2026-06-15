@@ -256,12 +256,13 @@ class ArtifactOrchestrator:
         """
         Generate a new artifact under `artifact_id`. Raises on failure.
 
-        The caller (the reactive server layer) owns the id and the
-        `active_artifact_id` reactive that drives panel visibility, so this
-        method never opens the panel itself.
+        The caller (the reactive server layer) owns the id and persistence, but
+        generation itself opens the panel immediately so users can see streaming
+        source updates as they arrive.
         """
         plan = await self.prepare_generation(req, directions)
 
+        await self.view.set_panel_open(is_open=True)
         self.view.remove_modal()
         await self.view.clear_editor(plan.artifact_type.editor_language)
 
@@ -286,6 +287,7 @@ class ArtifactOrchestrator:
                 artifact_id, plan.artifact_type, result.summary
             )
         except Exception:
+            await self.view.set_panel_open(is_open=False)
             self.store.discard(artifact_id)
             raise
 

@@ -302,16 +302,25 @@ class TestGenerate:
         assert orch.store.has("myid")
         assert orch.store.get("myid").source == "gen src"
 
-    def test_does_not_drive_panel_visibility(self):
-        # The panel's open/closed state is owned by the server's
-        # active_artifact_id; generate must not emit a panel-toggle itself.
+    def test_opens_panel_before_streaming(self):
         chat = FakeChat(['{"source": "gen src", "summary": "sum"}'])
         orch = make_session(chat, data_source=FakeDataSource())
         req = GenerateRequest(type_id="quarto-dashboard")
 
         asyncio.run(orch.generate(req, "", "myid"))
 
-        assert "querychat-artifact-panel-toggle" not in message_types(orch)
+        messages = orch.view.session.messages
+        panel_idx = next(
+            i
+            for i, (msg_type, payload) in enumerate(messages)
+            if msg_type == "querychat-artifact-panel-toggle" and payload["open"] is True
+        )
+        stream_idx = next(
+            i
+            for i, (msg_type, _payload) in enumerate(messages)
+            if msg_type == "querychat-artifact-streaming"
+        )
+        assert panel_idx < stream_idx
 
     def test_failure_discards_provided_id_and_reraises(self):
         class BoomChat(FakeChat):
@@ -325,6 +334,26 @@ class TestGenerate:
             asyncio.run(orch.generate(req, "", "myid"))
 
         assert not orch.store.has("myid")
+
+    def test_failure_closes_panel(self):
+        class BoomChat(FakeChat):
+            async def stream_async(self, prompt, echo="none", data_model=None):
+                raise RuntimeError("boom")
+
+        orch = make_session(BoomChat([]), data_source=FakeDataSource())
+        req = GenerateRequest(type_id="quarto-dashboard")
+
+        with pytest.raises(RuntimeError, match="boom"):
+            asyncio.run(orch.generate(req, "", "myid"))
+
+        assert orch.view.session.messages[0] == (
+            "querychat-artifact-panel-toggle",
+            {"open": True},
+        )
+        assert orch.view.session.messages[-1] == (
+            "querychat-artifact-panel-toggle",
+            {"open": False},
+        )
 
 
 class TestPrepareGeneration:

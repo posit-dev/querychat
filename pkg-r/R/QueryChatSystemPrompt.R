@@ -164,6 +164,7 @@ QueryChatSystemPrompt <- R6::R6Class(
         has_tool_update = if ("update" %in% tools) "true",
         has_tool_query = if ("query" %in% tools) "true",
         has_tool_visualize = if ("visualize" %in% tools) "true",
+        has_tool_card = if ("cards" %in% tools) "true",
         include_query_guidelines = if (length(tools) > 0) "true",
         multi_table = length(self$data_sources) > 1
       )

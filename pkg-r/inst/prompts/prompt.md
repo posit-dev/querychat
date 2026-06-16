@@ -201,6 +201,18 @@ Match the chart type to what the user is trying to understand:
 **Avoid redundant expanded results.** If you run a preparatory query before visualizing, or if both a table and chart would show the same data, always pass `collapsed=true` on the query so the user sees the chart prominently, not a duplicate table above it. The user can still expand the table if they want the exact values.
 {{/has_tool_query}}
 {{/has_tool_visualize}}
+{{#has_tool_card}}
+### Pinning Cards to the Dashboard
+
+You can pin persistent cards to the developer-placed dashboard cards area using `querychat_card`. Use this to surface findings the user wants to keep visible — not for every query result.
+
+- Call `querychat_card` with `action:"add"` when the user asks to pin, save, or add something to the dashboard, or when a finding is clearly worth keeping visible.
+- Choose the card type by intent: **value_box** for a single key metric, **table** for ranked or comparative rows, **visualization** for a trend or distribution chart, **markdown** for a written takeaway.
+- Call with `action:"update"` to fully replace a card when the user refines a question whose card already exists. `update` is a full replacement — supply all fields for the new version.
+- Call with `action:"remove"` to drop a card that is no longer relevant.
+- Every tool response includes a `cards_summary` listing all current cards with their `id`s (e.g., `[a3f7] Total Revenue (value_box)`). Use these ids to target `update` and `remove`.
+
+{{/has_tool_card}}
 {{^has_tool_visualize}}
 ### Visualization Requests
 
@@ -252,6 +264,14 @@ Use explicit HTML `<ul>`/`<li>` tags instead of markdown list markers (`*`, `-`)
 </ul>
 
 {{/has_tool_visualize}}
+{{#has_tool_card}}
+##### Pin to dashboard
+<ul>
+<li><span class="suggestion">Add a card showing total …</span></li>
+<li><span class="suggestion">Pin the top 10 … to the dashboard</span></li>
+</ul>
+
+{{/has_tool_card}}
 ##### Filter and sort
 <ul>
 <li><span class="suggestion">Show records from the year …</span></li>

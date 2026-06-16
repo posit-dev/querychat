@@ -132,6 +132,7 @@ access its \verb{$tables} and \verb{$prompt}.}
     \item \href{#method-QueryChat-app_obj}{\code{QueryChat$app_obj()}}
     \item \href{#method-QueryChat-sidebar}{\code{QueryChat$sidebar()}}
     \item \href{#method-QueryChat-ui}{\code{QueryChat$ui()}}
+    \item \href{#method-QueryChat-ui_cards}{\code{QueryChat$ui_cards()}}
     \item \href{#method-QueryChat-server}{\code{QueryChat$server()}}
     \item \href{#method-QueryChat-generate_greeting}{\code{QueryChat$generate_greeting()}}
     \item \href{#method-QueryChat-cleanup}{\code{QueryChat$cleanup()}}
@@ -345,6 +346,8 @@ data source.
  },
   visualize = function(data) {
  },
+  card = function(action, id = NULL, card = NULL) {
+ },
   session = NULL
 )}
     \if{html}{\out{</div>}}
@@ -363,6 +366,9 @@ The legacy name \code{"update"} is still accepted as an alias for \code{"filter"
 \code{reset_dashboard} tool is called. Takes a \code{table} argument.}
       \item{\code{visualize}}{Optional function to call with a list containing
 \code{ggsql}, \code{title}, and \code{widget_id} when a visualization succeeds.}
+      \item{\code{card}}{Optional function to call when the \code{querychat_card} tool
+performs an \code{add}, \code{update}, or \code{remove} action. The function signature
+must be \verb{function(action, id = NULL, card = NULL)}.}
       \item{\code{session}}{A Shiny session object. Required when \code{"visualize"} is
 in \code{tools} and you want interactive chart rendering. When \code{NULL}
 (the default), visualizations still execute but are not rendered
@@ -503,6 +509,46 @@ By default, only the \code{"query"} tool is included, regardless of the
 }
 
 \if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-QueryChat-ui_cards"></a>}}
+\if{latex}{\out{\hypertarget{method-QueryChat-ui_cards}{}}}
+\subsection{\code{QueryChat$ui_cards()}}{
+  Create the UI for the querychat cards area.
+
+This method generates the output area where cards created by the LLM are
+displayed. Place it in your app's main panel, next to \verb{$sidebar()}.
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{qc <- QueryChat$new(mtcars)
+
+ui <- bslib::page_sidebar(
+  sidebar = qc$sidebar(),
+  qc$ui_cards()
+)
+}\if{html}{\out{</div>}}
+
+Placeholder text and card layout are configured on \verb{$server()} via
+\code{card_placeholder} and \code{card_layout}, not here.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{QueryChat$ui_cards(..., id = NULL)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{...}}{Additional arguments passed to \code{\link[shiny:uiOutput]{shiny::uiOutput()}}.}
+      \item{\code{id}}{Optional ID for the QueryChat instance. If not provided,
+will use the ID provided at initialization. If using \verb{$ui_cards()} in a
+Shiny module, you'll need to provide \code{id = ns("your_id")} where \code{ns} is
+the namespacing function from \code{\link[shiny:NS]{shiny::NS()}}.}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    A UI component containing the cards output area.
+  }
+}
+
+\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-QueryChat-server"></a>}}
 \if{latex}{\out{\hypertarget{method-QueryChat-server}{}}}
 \subsection{\code{QueryChat$server()}}{
@@ -513,6 +559,8 @@ By default, only the \code{"query"} tool is included, regardless of the
   data_source = NULL,
   client = NULL,
   enable_bookmarking = FALSE,
+  card_placeholder = "Insights will appear here",
+  card_layout = NULL,
   ...,
   id = NULL,
   session = shiny::getDefaultReactiveDomain()
@@ -522,10 +570,27 @@ By default, only the \code{"query"} tool is included, regardless of the
   \subsection{Arguments}{
     \if{html}{\out{<div class="arguments">}}
     \describe{
-      \item{\code{data_source}}{Optional data source for backward compatibility.
-If provided, calls \verb{$add_table()} before initializing server logic.}
-      \item{\code{client}}{Optional chat client override for this session.}
-      \item{\code{enable_bookmarking}}{Whether to enable bookmarking. Default is \code{FALSE}.}
+      \item{\code{data_source}}{Optional data source to use. If provided, sets the
+data_source property before initializing server logic. This is useful
+for the deferred pattern where data_source is not known at
+initialization time (e.g., when the data source depends on session-
+specific authentication).}
+      \item{\code{client}}{Optional chat client override for this session. Can be an
+\link[ellmer:Chat]{ellmer::Chat} object or a string (e.g., \code{"openai/gpt-4o"}). If provided,
+overrides the client set at initialization for this session only —
+other sessions are unaffected. This is useful when the client must be
+created within a session scope (e.g., Posit Connect managed credentials).}
+      \item{\code{enable_bookmarking}}{Whether to enable bookmarking for the chat
+state. Default is \code{FALSE}. When enabled, the chat state (including
+current query, title, and chat history) will be saved and restored
+with Shiny bookmarks. This requires that the Shiny app has bookmarking
+enabled via \code{shiny::enableBookmarking()} or the \code{enableBookmarking}
+parameter of \code{shiny::shinyApp()}.}
+      \item{\code{card_placeholder}}{Text shown in the \verb{$ui_cards()} area when no
+cards exist. Set to \code{NULL} for no placeholder.}
+      \item{\code{card_layout}}{Optional named list of arguments forwarded to
+\code{\link[bslib:layout_columns]{bslib::layout_columns()}} for arranging cards (e.g.,
+\code{list(col_widths = c(6, 6))}).}
       \item{\code{...}}{Ignored.}
       \item{\code{id}}{Optional module ID override.}
       \item{\code{session}}{The Shiny session object.}
@@ -536,9 +601,10 @@ If provided, calls \verb{$add_table()} before initializing server logic.}
     A list containing session-specific reactive values and the chat
 client. For single-table usage, includes \code{df}, \code{sql}, \code{title} directly.
 For multi-table, use \code{qc_vals$table("name")} to get a \link{TableAccessor}
-with per-table reactive state. Also includes \code{table_names()} to list tables.
-\code{current_table()} returns the name of the most recently queried table,
-or \code{NULL} before any query.
+with per-table reactive state. Also includes \code{table_names()} to list tables,
+\code{current_table()} which returns the name of the most recently queried table
+(or \code{NULL} before any query), and \code{cards}, a reactive value holding the
+current list of cards.
   }
 }
 

@@ -35,6 +35,22 @@ mod_ui <- function(
   )
 }
 
+mod_ui_cards <- function(id, ...) {
+  ns <- shiny::NS(id)
+  htmltools::tagList(
+    htmltools::htmlDependency(
+      "querychat",
+      version = "0.0.1",
+      package = "querychat",
+      src = "htmldep",
+      script = "querychat.js",
+      stylesheet = "styles.css"
+    ),
+    viz_dep(),
+    shiny::uiOutput(ns("cards"), ...)
+  )
+}
+
 # Main module server function
 mod_server <- function(
   id,
@@ -45,7 +61,9 @@ mod_server <- function(
   tools,
   greeter = NULL,
   greeting_base = NULL,
-  enable_bookmarking = FALSE
+  enable_bookmarking = FALSE,
+  card_placeholder = "Insights will appear here",
+  card_layout = NULL
 ) {
   shiny::moduleServer(id, function(input, output, session) {
     current_table_val <- shiny::reactiveVal(NULL, label = "current_table")
@@ -56,6 +74,7 @@ mod_server <- function(
     # the last_turn() capture below, and the greeting handling in
     # onBookmark/onRestore can be dropped (and the shinychat minimum bumped).
     current_greeting <- shiny::reactiveVal(NULL, label = "current_greeting")
+    cards <- shiny::reactiveVal(list(), label = "cards")
 
     # Per-table reactive state
     tables <- list()
@@ -126,12 +145,55 @@ mod_server <- function(
       )
     }
 
+    cards_summary <- function(card_list) {
+      if (length(card_list) == 0) {
+        return("No cards on the dashboard.")
+      }
+      descriptor <- function(cd) {
+        if (identical(cd$type, "value_box")) "value_box" else cd$display
+      }
+      items <- vapply(
+        card_list,
+        function(cd) sprintf("[%s] %s (%s)", cd$id, cd$title, descriptor(cd)),
+        character(1)
+      )
+      sprintf(
+        "%d card%s: %s",
+        length(card_list),
+        if (length(card_list) == 1) "" else "s",
+        paste(items, collapse = ", ")
+      )
+    }
+
+    manage_card <- function(action, id = NULL, card = NULL) {
+      card_list <- cards()
+      if (action == "remove") {
+        card_list <- Filter(function(cd) !identical(cd$id, id), card_list)
+      } else if (action == "update") {
+        idx <- which(vapply(
+          card_list,
+          function(cd) identical(cd$id, id),
+          logical(1)
+        ))
+        if (length(idx) > 0) {
+          card_list[[idx[[1]]]] <- card
+        } else {
+          card_list <- c(card_list, list(card))
+        }
+      } else {
+        card_list <- c(card_list, list(card))
+      }
+      cards(card_list)
+      cards_summary(card_list)
+    }
+
     # Set up the chat object for this session
     check_function(client)
     chat <- client(
       update_dashboard = update_dashboard,
       reset_dashboard = reset_query,
       visualize = on_visualize,
+      card = manage_card,
       tools = tools,
       session = session
     )
@@ -206,6 +268,23 @@ mod_server <- function(
       }
     })
 
+    output$cards <- shiny::renderUI({
+      card_list <- cards()
+      if (length(card_list) == 0) {
+        if (is.null(card_placeholder)) {
+          return(NULL)
+        }
+        return(htmltools::div(
+          class = "querychat-cards-placeholder text-muted",
+          card_placeholder
+        ))
+      }
+      card_uis <- lapply(card_list, function(cd) {
+        render_card(cd, executor, session)
+      })
+      do.call(bslib::layout_columns, c(card_uis, card_layout %||% list()))
+    })
+
     if (enable_bookmarking) {
       shinychat::chat_restore(
         "chat",
@@ -229,6 +308,9 @@ mod_server <- function(
         }
         if (length(viz_widgets) > 0) {
           state$values$querychat_viz_widgets <- viz_widgets
+        }
+        if (length(cards()) > 0) {
+          state$values$querychat_cards <- cards()
         }
       })
 
@@ -265,6 +347,9 @@ mod_server <- function(
           )
           viz_widgets <<- restored
         }
+        if (!is.null(state$values$querychat_cards)) {
+          cards(state$values$querychat_cards)
+        }
       })
     }
 
@@ -288,6 +373,7 @@ mod_server <- function(
         sql = first$sql,
         title = first$title,
         df = first$df,
+        cards = cards,
         table = table_fn,
         table_names = table_names_fn,
         current_table = current_table_val,
@@ -306,6 +392,7 @@ mod_server <- function(
         sql = single_table_error("sql"),
         title = single_table_error("title"),
         df = single_table_error("df"),
+        cards = cards,
         table = table_fn,
         table_names = table_names_fn,
         current_table = current_table_val,
@@ -373,4 +460,121 @@ restore_viz_widgets <- function(executor, saved_widgets, session) {
     )
   }
   restored
+}
+
+render_card <- function(card, data_source, session) {
+  if (identical(card$type, "value_box")) {
+    tryCatch(
+      {
+        df <- data_source$execute_query(card$value)
+        scalar <- as.character(df[[1]][1])
+        showcase <- if (!is.null(card$icon)) {
+          bsicons::bs_icon(card$icon)
+        } else {
+          NULL
+        }
+        subtitle_content <- if (!is.null(card$subtitle)) {
+          shiny::p(card$subtitle)
+        } else {
+          NULL
+        }
+        bslib::value_box(
+          title = card$title,
+          value = scalar,
+          subtitle_content,
+          showcase = showcase,
+          theme = card$theme %||% "primary"
+        )
+      },
+      error = function(e) {
+        bslib::value_box(
+          title = card$title,
+          value = "Error",
+          shiny::p(conditionMessage(e)),
+          theme = "danger"
+        )
+      }
+    )
+  } else if (identical(card$display, "table")) {
+    rlang::check_installed("DT", reason = "for table cards.")
+    content_panel <- tryCatch(
+      {
+        df <- data_source$execute_query(card$value)
+        if (inherits(df, "tbl_sql")) {
+          df <- dplyr::collect(df)
+        }
+        DT::datatable(
+          df,
+          fillContainer = TRUE,
+          options = list(pageLength = 10, scrollX = TRUE)
+        )
+      },
+      error = function(e) {
+        htmltools::div(conditionMessage(e))
+      }
+    )
+    bslib::card(
+      full_screen = TRUE,
+      bslib::card_header(card$title),
+      bslib::navset_tab(
+        bslib::nav_panel(
+          "Content",
+          content_panel
+        ),
+        bslib::nav_panel(
+          "Code",
+          bslib::input_code_editor(
+            value = card$value,
+            language = "sql",
+            read_only = TRUE,
+            height = "auto"
+          )
+        )
+      ),
+      if (!is.null(card$footer)) bslib::card_footer(card$footer)
+    )
+  } else if (identical(card$display, "visualization")) {
+    widget_id <- paste0("querychat_card_viz_", card$id)
+    content_panel <- tryCatch(
+      {
+        validated <- ggsql::ggsql_validate(card$value)
+        spec <- execute_ggsql(data_source, validated)
+        session$output[[widget_id]] <- ggsql::renderGgsql(spec)
+        htmltools::div(
+          class = "querychat-viz-container",
+          bslib::as_fill_carrier(),
+          ggsql::ggsqlOutput(session$ns(widget_id))
+        )
+      },
+      error = function(e) {
+        htmltools::div(conditionMessage(e))
+      }
+    )
+    bslib::card(
+      full_screen = TRUE,
+      bslib::card_header(card$title),
+      bslib::navset_tab(
+        bslib::nav_panel(
+          "Content",
+          content_panel
+        ),
+        bslib::nav_panel(
+          "Code",
+          bslib::input_code_editor(
+            value = card$value,
+            language = "ggsql",
+            read_only = TRUE,
+            height = "auto"
+          )
+        )
+      ),
+      if (!is.null(card$footer)) bslib::card_footer(card$footer)
+    )
+  } else {
+    bslib::card(
+      bslib::card_header(card$title),
+      bslib::card_body(shiny::markdown(card$value)),
+      if (!is.null(card$footer)) bslib::card_footer(card$footer)
+    )
+  }
 }

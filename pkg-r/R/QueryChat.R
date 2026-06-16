@@ -156,7 +156,8 @@ QueryChat <- R6::R6Class(
       session = NULL,
       update_dashboard = function(query, title, table) {},
       reset_dashboard = function(table) {},
-      visualize = function(data) {}
+      visualize = function(data) {},
+      card = function(action, id = NULL, card = NULL) {}
     ) {
       spec <- client_spec %||% private$.client_spec
       chat <- create_client(spec)
@@ -219,6 +220,12 @@ QueryChat <- R6::R6Class(
             update_fn = visualize,
             has_tool_query = "query" %in% tools
           )
+        )
+      }
+
+      if ("cards" %in% tools) {
+        chat$register_tool(
+          tool_card(executor, manage_card = card)
         )
       }
 
@@ -310,7 +317,7 @@ QueryChat <- R6::R6Class(
       check_string(greeting, allow_null = TRUE)
       arg_match(
         tools,
-        values = c("filter", "update", "query", "visualize"),
+        values = c("filter", "update", "query", "visualize", "cards"),
         multiple = TRUE
       )
       tools <- normalize_tools(tools)
@@ -633,6 +640,9 @@ QueryChat <- R6::R6Class(
     #'   `reset_dashboard` tool is called. Takes a `table` argument.
     #' @param visualize Optional function to call with a list containing
     #'   `ggsql`, `title`, and `widget_id` when a visualization succeeds.
+    #' @param card Optional function to call when the `querychat_card` tool
+    #'   performs an `add`, `update`, or `remove` action. The function signature
+    #'   must be `function(action, id = NULL, card = NULL)`.
     #' @param session A Shiny session object. Required when `"visualize"` is
     #'   in `tools` and you want interactive chart rendering. When `NULL`
     #'   (the default), visualizations still execute but are not rendered
@@ -642,6 +652,7 @@ QueryChat <- R6::R6Class(
       update_dashboard = function(query, title, table) {},
       reset_dashboard = function(table) {},
       visualize = function(data) {},
+      card = function(action, id = NULL, card = NULL) {},
       session = NULL
     ) {
       private$require_initialized("$client")
@@ -649,7 +660,7 @@ QueryChat <- R6::R6Class(
       if (!is_na(tools) && !is.null(tools)) {
         tools <- arg_match(
           tools,
-          values = c("filter", "update", "query", "visualize"),
+          values = c("filter", "update", "query", "visualize", "cards"),
           multiple = TRUE
         )
         tools <- normalize_tools(tools)
@@ -660,7 +671,8 @@ QueryChat <- R6::R6Class(
         session = session,
         update_dashboard = update_dashboard,
         reset_dashboard = reset_dashboard,
-        visualize = visualize
+        visualize = visualize,
+        card = card
       )
     },
 
@@ -913,12 +925,76 @@ QueryChat <- R6::R6Class(
     },
 
     #' @description
+    #' Create the UI for the querychat cards area.
+    #'
+    #' This method generates the output area where cards created by the LLM are
+    #' displayed. Place it in your app's main panel, next to `$sidebar()`.
+    #'
+    #' ```r
+    #' qc <- QueryChat$new(mtcars)
+    #'
+    #' ui <- bslib::page_sidebar(
+    #'   sidebar = qc$sidebar(),
+    #'   qc$ui_cards()
+    #' )
+    #' ```
+    #'
+    #' Placeholder text and card layout are configured on `$server()` via
+    #' `card_placeholder` and `card_layout`, not here.
+    #'
+    #' @param ... Additional arguments passed to [shiny::uiOutput()].
+    #' @param id Optional ID for the QueryChat instance. If not provided,
+    #'   will use the ID provided at initialization. If using `$ui_cards()` in a
+    #'   Shiny module, you'll need to provide `id = ns("your_id")` where `ns` is
+    #'   the namespacing function from [shiny::NS()].
+    #'
+    #' @return A UI component containing the cards output area.
+    ui_cards = function(..., id = NULL) {
+      check_string(id, allow_null = TRUE, allow_empty = FALSE)
+      id <- id %||% namespaced_id(self$id)
+      mod_ui_cards(id, ...)
+    },
+
+    #' @description
     #' Initialize the querychat server logic.
     #'
-    #' @param data_source Optional data source for backward compatibility.
-    #'   If provided, calls `$add_table()` before initializing server logic.
-    #' @param client Optional chat client override for this session.
-    #' @param enable_bookmarking Whether to enable bookmarking. Default is `FALSE`.
+    #' This method must be called within a Shiny server function. It sets up the
+    #' reactive logic for the chat interface and returns session-specific
+    #' reactive values.
+    #'
+    #' ```r
+    #' qc <- QueryChat$new(mtcars)
+    #'
+    #' server <- function(input, output, session) {
+    #'   qc_vals <- qc$server(enable_bookmarking = TRUE)
+    #'
+    #'   output$data <- renderDataTable(qc_vals$df())
+    #'   output$query <- renderText(qc_vals$sql())
+    #'   output$title <- renderText(qc_vals$title() %||% "No Query")
+    #' }
+    #' ```
+    #'
+    #' @param data_source Optional data source to use. If provided, sets the
+    #'   data_source property before initializing server logic. This is useful
+    #'   for the deferred pattern where data_source is not known at
+    #'   initialization time (e.g., when the data source depends on session-
+    #'   specific authentication).
+    #' @param client Optional chat client override for this session. Can be an
+    #'   [ellmer::Chat] object or a string (e.g., `"openai/gpt-4o"`). If provided,
+    #'   overrides the client set at initialization for this session only —
+    #'   other sessions are unaffected. This is useful when the client must be
+    #'   created within a session scope (e.g., Posit Connect managed credentials).
+    #' @param enable_bookmarking Whether to enable bookmarking for the chat
+    #'   state. Default is `FALSE`. When enabled, the chat state (including
+    #'   current query, title, and chat history) will be saved and restored
+    #'   with Shiny bookmarks. This requires that the Shiny app has bookmarking
+    #'   enabled via `shiny::enableBookmarking()` or the `enableBookmarking`
+    #'   parameter of `shiny::shinyApp()`.
+    #' @param card_placeholder Text shown in the `$ui_cards()` area when no
+    #'   cards exist. Set to `NULL` for no placeholder.
+    #' @param card_layout Optional named list of arguments forwarded to
+    #'   [bslib::layout_columns()] for arranging cards (e.g.,
+    #'   `list(col_widths = c(6, 6))`).)
     #' @param ... Ignored.
     #' @param id Optional module ID override.
     #' @param session The Shiny session object.
@@ -926,13 +1002,17 @@ QueryChat <- R6::R6Class(
     #' @return A list containing session-specific reactive values and the chat
     #'   client. For single-table usage, includes `df`, `sql`, `title` directly.
     #'   For multi-table, use `qc_vals$table("name")` to get a [TableAccessor]
-    #'   with per-table reactive state. Also includes `table_names()` to list tables.
-    #'   `current_table()` returns the name of the most recently queried table,
-    #'   or `NULL` before any query.
+    #'   with per-table reactive state. Also includes `table_names()` to list tables,
+    #'   `current_table()` which returns the name of the most recently queried table
+    #'   (or `NULL` before any query), and `cards`, a reactive value holding the
+    #'   current list of cards.
+    #'
     server = function(
       data_source = NULL,
       client = NULL,
       enable_bookmarking = FALSE,
+      card_placeholder = "Insights will appear here",
+      card_layout = NULL,
       ...,
       id = NULL,
       session = shiny::getDefaultReactiveDomain()
@@ -984,7 +1064,9 @@ QueryChat <- R6::R6Class(
         tools = self$tools,
         greeter = self$greeter,
         greeting_base = base_client,
-        enable_bookmarking = enable_bookmarking
+        enable_bookmarking = enable_bookmarking,
+        card_placeholder = card_placeholder,
+        card_layout = card_layout
       )
       result
     },

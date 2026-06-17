@@ -57,12 +57,14 @@ ServerClient = chatlas.Chat | _DeferredStubChatClient
 
 
 @module.ui
-def mod_ui(*, preload_viz: bool = False, **kwargs):
+def mod_ui(*, preload_viz: bool = False, greeting: str | None = None, **kwargs):
     css_path = Path(__file__).parent / "static" / "css" / "styles.css"
     js_path = Path(__file__).parent / "static" / "js" / "querychat.js"
 
     kwargs.setdefault("enable_cancel", True)
     kwargs.setdefault("allow_attachments", True)
+    if greeting:
+        kwargs.setdefault("greeting", shinychat.chat_greeting(greeting, dismissible=False))
     tag = shinychat.chat_ui(CHAT_ID, **kwargs)
     tag.add_class("querychat")
 
@@ -130,7 +132,6 @@ def mod_server(
     # Reactive values to store state
     sql = ReactiveStringOrNone(None)
     title = ReactiveStringOrNone(None)
-    has_greeted = reactive.value[bool](False)  # noqa: FBT003
 
     if not callable(client):
         raise TypeError("mod_server() requires a callable client factory.")
@@ -211,14 +212,11 @@ def mod_server(
     def _handle_cancel():
         ctrl.cancel()
 
-    @reactive.effect
-    async def greet_on_startup():
-        if has_greeted():
-            return
+    if greeting is None:
 
-        if greeting:
-            await chat_ui.append_message(greeting)
-        elif greeting is None:
+        @reactive.effect
+        @reactive.event(input[f"{CHAT_ID}_greeting_requested"])
+        async def _handle_greeting_requested():
             warnings.warn(
                 "No greeting provided to `QueryChat()`. Using the LLM `client` to generate one now. "
                 "For faster startup, lower cost, and determinism, consider providing a greeting "
@@ -226,10 +224,9 @@ def mod_server(
                 GreetWarning,
                 stacklevel=2,
             )
-            stream = await chat.stream_async(GREETING_PROMPT, echo="none")
-            await chat_ui.append_message_stream(stream)
-
-        has_greeted.set(True)
+            greeting_client = client(tools=None)
+            stream = await greeting_client.stream_async(GREETING_PROMPT, echo="none")
+            await chat_ui.set_greeting(shinychat.chat_greeting(stream, dismissible=False))
 
     # Handle update button clicks
     @reactive.effect
@@ -257,7 +254,6 @@ def mod_server(
             vals = x.values
             vals["querychat_sql"] = sql.get()
             vals["querychat_title"] = title.get()
-            vals["querychat_has_greeted"] = has_greeted.get()
             if viz_widgets:
                 vals["querychat_viz_widgets"] = viz_widgets
 
@@ -268,8 +264,6 @@ def mod_server(
                 sql.set(vals["querychat_sql"])
             if "querychat_title" in vals:
                 title.set(vals["querychat_title"])
-            if "querychat_has_greeted" in vals:
-                has_greeted.set(vals["querychat_has_greeted"])
             if "querychat_viz_widgets" in vals:
                 restored = restore_viz_widgets(
                     data_source, vals["querychat_viz_widgets"]

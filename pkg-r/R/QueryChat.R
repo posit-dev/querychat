@@ -681,7 +681,7 @@ QueryChat <- R6::R6Class(
       # implicitly by UI functions like shinychat.chat_ui().
       id <- id %||% namespaced_id(self$id)
 
-      mod_ui(id, ...)
+      mod_ui(id, ..., greeting = self$greeting)
     },
 
     #' @description

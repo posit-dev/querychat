@@ -147,6 +147,20 @@ def other_ibis_orders_table():
     conn.disconnect()
 
 
+class TestNoArgConstruction:
+    """Tests for QueryChatBase() / QueryChat() with no positional arguments."""
+
+    def test_no_arg_construction(self):
+        qc = QueryChatBase()
+        assert qc.table_names() == []
+
+    def test_no_arg_construction_multi_table(self, orders_df, customers_df):
+        qc = QueryChatBase()
+        qc.add_table(orders_df, "orders")
+        qc.add_table(customers_df, "customers")
+        assert qc.table_names() == ["orders", "customers"]
+
+
 class TestMultiSourceStorage:
     """Tests for multi-source storage infrastructure."""
 
@@ -629,6 +643,272 @@ class TestBuildQueryExecutor:
         assert orders_qc.table_names() == original_table_names
         assert orders_qc._data_sources["customers"] is original_customer_source
         assert result.to_dict("records") == [{"name": "Alice"}]
+
+
+class TestMultiTableGuardrails:
+    """Top-level accessors raise when multiple tables are registered."""
+
+    def test_shiny_server_values_df_raises(self, orders_df, customers_df):
+        from querychat._shiny_module import (
+            ServerValues,
+            TableState,
+            _MultiTableBlockedReactive,
+        )
+
+        from shiny import reactive
+
+        orders_sql = reactive.Value(None)
+        orders_title = reactive.Value(None)
+        customers_sql = reactive.Value(None)
+        customers_title = reactive.Value(None)
+
+        def orders_df_calc():
+            return orders_df
+
+        def customers_df_calc():
+            return customers_df
+
+        table_list = "'orders', 'customers'"
+        vals = ServerValues(
+            df=lambda: (_ for _ in ()).throw(
+                AttributeError(
+                    f"Cannot use .df() with multiple tables ({table_list}). "
+                    "Use .tables['name'].df() for per-table access."
+                )
+            ),
+            sql=_MultiTableBlockedReactive(table_list, "sql"),  # type: ignore[arg-type]
+            title=_MultiTableBlockedReactive(table_list, "title"),  # type: ignore[arg-type]
+            tables={
+                "orders": TableState(sql=orders_sql, title=orders_title, df=orders_df_calc),
+                "customers": TableState(sql=customers_sql, title=customers_title, df=customers_df_calc),
+            },
+            client=None,  # type: ignore[arg-type]
+        )
+
+        with pytest.raises(AttributeError, match="multiple tables"):
+            vals.sql()
+
+        with pytest.raises(AttributeError, match="multiple tables"):
+            vals.sql.get()
+
+        with pytest.raises(AttributeError, match="multiple tables"):
+            vals.sql.set("SELECT 1")
+
+        with pytest.raises(AttributeError, match="multiple tables"):
+            vals.title()
+
+    def test_shiny_server_values_tables_still_works(self, orders_df, customers_df):
+        from querychat._shiny_module import (
+            ServerValues,
+            TableState,
+            _MultiTableBlockedReactive,
+        )
+
+        from shiny import reactive
+
+        orders_sql = reactive.Value(None)
+        orders_title = reactive.Value(None)
+        customers_sql = reactive.Value(None)
+        customers_title = reactive.Value(None)
+
+        table_list = "'orders', 'customers'"
+        vals = ServerValues(
+            df=lambda: None,  # type: ignore[return-value]
+            sql=_MultiTableBlockedReactive(table_list, "sql"),  # type: ignore[arg-type]
+            title=_MultiTableBlockedReactive(table_list, "title"),  # type: ignore[arg-type]
+            tables={
+                "orders": TableState(sql=orders_sql, title=orders_title, df=lambda: orders_df),
+                "customers": TableState(sql=customers_sql, title=customers_title, df=lambda: customers_df),
+            },
+            client=None,  # type: ignore[arg-type]
+        )
+
+        orders_state = vals.tables["orders"]
+        assert orders_state.df() is orders_df
+        customers_state = vals.tables["customers"]
+        assert customers_state.df() is customers_df
+
+    def test_shiny_app_raises_multi_table(self, orders_df, customers_df):
+        from querychat.shiny import QueryChat
+
+        qc = QueryChat(orders_df, "orders", greeting="Hi")
+        qc.add_table(customers_df, "customers")
+        with pytest.raises(RuntimeError, match="does not support multiple tables"):
+            qc.app()
+
+    def test_shiny_app_works_single_table(self, orders_df):
+        from querychat.shiny import QueryChat
+
+        qc = QueryChat(orders_df, "orders", greeting="Hi")
+        app = qc.app()
+        assert app is not None
+
+    def test_streamlit_app_raises_multi_table(self, orders_df, customers_df):
+        pytest.importorskip("streamlit")
+        from querychat.streamlit import QueryChat
+
+        qc = QueryChat(orders_df, "orders", greeting="Hi")
+        qc.add_table(customers_df, "customers")
+        with pytest.raises(RuntimeError, match="does not support multiple tables"):
+            qc.app()
+
+    def test_streamlit_df_raises_multi_table(self, orders_df, customers_df):
+        pytest.importorskip("streamlit")
+        from querychat.streamlit import QueryChat
+
+        qc = QueryChat(orders_df, "orders", greeting="Hi")
+        qc.add_table(customers_df, "customers")
+        with pytest.raises(AttributeError, match="multiple tables"):
+            qc.df()
+
+    def test_streamlit_sql_raises_multi_table(self, orders_df, customers_df):
+        pytest.importorskip("streamlit")
+        from querychat.streamlit import QueryChat
+
+        qc = QueryChat(orders_df, "orders", greeting="Hi")
+        qc.add_table(customers_df, "customers")
+        with pytest.raises(AttributeError, match="multiple tables"):
+            qc.sql()
+
+    def test_streamlit_title_raises_multi_table(self, orders_df, customers_df):
+        pytest.importorskip("streamlit")
+        from querychat.streamlit import QueryChat
+
+        qc = QueryChat(orders_df, "orders", greeting="Hi")
+        qc.add_table(customers_df, "customers")
+        with pytest.raises(AttributeError, match="multiple tables"):
+            qc.title()
+
+    def test_streamlit_single_table_accessor_still_works(self, orders_df, customers_df):
+        pytest.importorskip("streamlit")
+        from unittest.mock import patch
+
+        from querychat.streamlit import QueryChat
+
+        qc = QueryChat(orders_df, "orders", greeting="Hi")
+        qc.add_table(customers_df, "customers")
+        with patch("streamlit.session_state", {}):
+            result = qc.table("customers").df()
+        assert result["id"].tolist() == [101, 102]
+
+    def test_state_dict_mixin_df_raises_multi_table(self, orders_df, customers_df):
+        from unittest.mock import MagicMock
+
+        from querychat import QueryChat
+        from querychat._querychat_core import StateDictAccessorMixin
+
+        qc = QueryChat(orders_df, "orders")
+        qc.add_table(customers_df, "customers")
+
+        class DummyAccessor(StateDictAccessorMixin):
+            def __init__(self):
+                self._data_sources = dict(qc._data_sources)
+                self._query_executor = qc._query_executor
+                self.greeting = None
+
+            def _require_initialized(self, _m):
+                pass
+
+            def _require_query_executor(self, _m):
+                return self._query_executor
+
+            def client(self, **_kw):
+                return MagicMock()
+
+        acc = DummyAccessor()
+        with pytest.raises(AttributeError, match="multiple tables"):
+            acc.df({"sql": None, "title": None, "error": None, "turns": []})
+
+    def test_state_dict_mixin_sql_raises_multi_table(self, orders_df, customers_df):
+        from unittest.mock import MagicMock
+
+        from querychat import QueryChat
+        from querychat._querychat_core import StateDictAccessorMixin
+
+        qc = QueryChat(orders_df, "orders")
+        qc.add_table(customers_df, "customers")
+
+        class DummyAccessor(StateDictAccessorMixin):
+            def __init__(self):
+                self._data_sources = dict(qc._data_sources)
+                self._query_executor = qc._query_executor
+                self.greeting = None
+
+            def _require_initialized(self, _m):
+                pass
+
+            def _require_query_executor(self, _m):
+                return self._query_executor
+
+            def client(self, **_kw):
+                return MagicMock()
+
+        acc = DummyAccessor()
+        with pytest.raises(AttributeError, match="multiple tables"):
+            acc.sql({"sql": "SELECT 1", "title": None, "error": None, "turns": []})
+
+    def test_state_dict_mixin_title_raises_multi_table(self, orders_df, customers_df):
+        from unittest.mock import MagicMock
+
+        from querychat import QueryChat
+        from querychat._querychat_core import StateDictAccessorMixin
+
+        qc = QueryChat(orders_df, "orders")
+        qc.add_table(customers_df, "customers")
+
+        class DummyAccessor(StateDictAccessorMixin):
+            def __init__(self):
+                self._data_sources = dict(qc._data_sources)
+                self._query_executor = qc._query_executor
+                self.greeting = None
+
+            def _require_initialized(self, _m):
+                pass
+
+            def _require_query_executor(self, _m):
+                return self._query_executor
+
+            def client(self, **_kw):
+                return MagicMock()
+
+        acc = DummyAccessor()
+        with pytest.raises(AttributeError, match="multiple tables"):
+            acc.title({"sql": None, "title": "hi", "error": None, "turns": []})
+
+    def test_state_dict_mixin_with_table_kwarg_still_works(self, orders_df, customers_df):
+        from unittest.mock import MagicMock
+
+        from querychat import QueryChat
+        from querychat._querychat_core import StateDictAccessorMixin
+
+        qc = QueryChat(orders_df, "orders")
+        qc.add_table(customers_df, "customers")
+
+        class DummyAccessor(StateDictAccessorMixin):
+            def __init__(self):
+                self._data_sources = dict(qc._data_sources)
+                self._query_executor = qc._query_executor
+                self.greeting = None
+
+            def _require_initialized(self, _m):
+                pass
+
+            def _require_query_executor(self, _m):
+                return self._query_executor
+
+            def client(self, **_kw):
+                return MagicMock()
+
+        acc = DummyAccessor()
+        state = {
+            "table_states": {
+                "orders": {"sql": None, "title": None, "error": None},
+                "customers": {"sql": None, "title": None, "error": None},
+            },
+            "sql": None, "title": None, "error": None, "turns": [],
+        }
+        assert acc.sql(state, table="orders") is None
+        assert acc.title(state, table="orders") is None
 
 
 class TestMultiTableQueryTool:

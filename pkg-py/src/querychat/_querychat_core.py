@@ -47,6 +47,14 @@ ClientFactory = Callable[
 """Factory that creates a Chat client with update_dashboard and reset_dashboard callbacks."""
 
 
+class TableStateData(TypedDict):
+    """Per-table state for serialization."""
+
+    sql: str | None
+    title: str | None
+    error: str | None
+
+
 class AppStateDict(TypedDict):
     """Serialized AppState for framework state stores."""
 
@@ -54,6 +62,7 @@ class AppStateDict(TypedDict):
     sql: str | None
     title: str | None
     error: str | None
+    table_states: NotRequired[dict[str, TableStateData]]
     turns: list[dict]  # Serialized chatlas Turns via model_dump()
 
 
@@ -62,6 +71,19 @@ class DisplayMessage(TypedDict):
 
     role: str
     content: str
+
+
+def _get_table_sql(state: AppStateDict | None, table: str) -> str | None:
+    """Extract the SQL for a specific table from a serialized state dict."""
+    if state is None:
+        return None
+    per_table = state.get("table_states")
+    if per_table and table in per_table:
+        return per_table[table].get("sql")
+    # Backward compat: if table matches the active table and no table_states key exists
+    if state.get("table") == table:
+        return state.get("sql")
+    return None
 
 
 class StateDictAccessorMixin(Generic[IntoFrameT]):
@@ -78,7 +100,7 @@ class StateDictAccessorMixin(Generic[IntoFrameT]):
         """Create a chat client with dashboard callbacks."""
         return self.client(update_dashboard=update_cb, reset_dashboard=reset_cb)  # type: ignore[attr-defined]
 
-    def df(self, state: AppStateDict | None) -> IntoFrameT:
+    def df(self, state: AppStateDict | None, *, table: str | None = None) -> IntoFrameT:
         """
         Get the current DataFrame from state.
 
@@ -86,6 +108,8 @@ class StateDictAccessorMixin(Generic[IntoFrameT]):
         ----------
         state
             The state dictionary from a framework callback.
+        table
+            Table name to read. Defaults to the active table when None.
 
         Returns
         -------
@@ -94,12 +118,28 @@ class StateDictAccessorMixin(Generic[IntoFrameT]):
             Returns a LazyFrame if the data source is lazy.
 
         """
+        if table is not None:
+            data_source = self._data_sources[table]  # type: ignore[attr-defined]
+            sql = _get_table_sql(state, table)
+            if sql:
+                try:
+                    query_executor = self._require_query_executor("df")  # type: ignore[attr-defined]
+                    return query_executor.execute_query(sql)
+                except Exception:
+                    return data_source.get_data()
+            return data_source.get_data()
+        if len(self._data_sources) > 1:  # type: ignore[attr-defined]
+            table_list = ", ".join(f"'{n}'" for n in self._data_sources)  # type: ignore[attr-defined]
+            raise AttributeError(
+                f"Cannot use .df(state) with multiple tables ({table_list}). "
+                "Pass table='name' to specify which table."
+            )
         data_source = self._get_state_data_source(state)
-        sql = state.get("sql") if state else None
-        if sql:
+        sql_active = state.get("sql") if state else None
+        if sql_active:
             try:
                 query_executor = self._require_query_executor("df")  # type: ignore[attr-defined]
-                return query_executor.execute_query(sql)
+                return query_executor.execute_query(sql_active)
             except Exception:
                 return data_source.get_data()
         return data_source.get_data()
@@ -119,7 +159,7 @@ class StateDictAccessorMixin(Generic[IntoFrameT]):
 
         return first_source
 
-    def sql(self, state: AppStateDict | None) -> str | None:
+    def sql(self, state: AppStateDict | None, *, table: str | None = None) -> str | None:
         """
         Get the current SQL query from state.
 
@@ -127,6 +167,8 @@ class StateDictAccessorMixin(Generic[IntoFrameT]):
         ----------
         state
             The state dictionary from a framework callback.
+        table
+            Table name. Defaults to the active table when None.
 
         Returns
         -------
@@ -134,9 +176,17 @@ class StateDictAccessorMixin(Generic[IntoFrameT]):
             The current SQL query, or None if showing full dataset.
 
         """
+        if table is not None:
+            return _get_table_sql(state, table)
+        if len(self._data_sources) > 1:  # type: ignore[attr-defined]
+            table_list = ", ".join(f"'{n}'" for n in self._data_sources)  # type: ignore[attr-defined]
+            raise AttributeError(
+                f"Cannot use .sql(state) with multiple tables ({table_list}). "
+                "Pass table='name' to specify which table."
+            )
         return state.get("sql") if state else None
 
-    def title(self, state: AppStateDict | None) -> str | None:
+    def title(self, state: AppStateDict | None, *, table: str | None = None) -> str | None:
         """
         Get the current query title from state.
 
@@ -144,6 +194,8 @@ class StateDictAccessorMixin(Generic[IntoFrameT]):
         ----------
         state
             The state dictionary from a framework callback.
+        table
+            Table name. Defaults to the active table when None.
 
         Returns
         -------
@@ -151,6 +203,21 @@ class StateDictAccessorMixin(Generic[IntoFrameT]):
             A short description of the current filter, or None if showing full dataset.
 
         """
+        if table is not None:
+            if state is None:
+                return None
+            per_table = state.get("table_states")
+            if per_table and table in per_table:
+                return per_table[table].get("title")
+            if state.get("table") == table:
+                return state.get("title")
+            return None
+        if len(self._data_sources) > 1:  # type: ignore[attr-defined]
+            table_list = ", ".join(f"'{n}'" for n in self._data_sources)  # type: ignore[attr-defined]
+            raise AttributeError(
+                f"Cannot use .title(state) with multiple tables ({table_list}). "
+                "Pass table='name' to specify which table."
+            )
         return state.get("title") if state else None
 
     def _deserialize_state(self, state_data: AppStateDict | None) -> AppState:
@@ -226,19 +293,54 @@ class AppState:
     greeting: Optional[str] = None
 
     active_table: str | None = None
-    sql: Optional[str] = None
-    title: Optional[str] = None
-    error: Optional[str] = None
+    # sql, title, error are per-table properties backed by _table_states
 
     def __post_init__(self) -> None:
         if self.active_table is None:
             self.active_table = next(iter(self.data_sources))
+        self._table_states: dict[str, dict[str, str | None]] = {
+            name: {"sql": None, "title": None, "error": None}
+            for name in self.data_sources
+        }
+
+    def _get_active_state(self) -> dict[str, str | None]:
+        table = self.active_table or next(iter(self.data_sources))
+        if table not in self._table_states:
+            self._table_states[table] = {"sql": None, "title": None, "error": None}
+        return self._table_states[table]
+
+    @property
+    def sql(self) -> str | None:
+        return self._get_active_state()["sql"]
+
+    @sql.setter
+    def sql(self, value: str | None) -> None:
+        self._get_active_state()["sql"] = value
+
+    @property
+    def title(self) -> str | None:
+        return self._get_active_state()["title"]
+
+    @title.setter
+    def title(self, value: str | None) -> None:
+        self._get_active_state()["title"] = value
+
+    @property
+    def error(self) -> str | None:
+        return self._get_active_state()["error"]
+
+    @error.setter
+    def error(self, value: str | None) -> None:
+        self._get_active_state()["error"] = value
 
     def update_dashboard(self, data: UpdateDashboardData) -> None:
-        self.active_table = data["table"]
-        self.sql = data["query"]
-        self.title = data["title"]
-        self.error = None  # Clear any previous error on successful update
+        table_name = data["table"]
+        self.active_table = table_name
+        if table_name not in self._table_states:
+            self._table_states[table_name] = {"sql": None, "title": None, "error": None}
+        self._table_states[table_name]["sql"] = data["query"]
+        self._table_states[table_name]["title"] = data["title"]
+        self._table_states[table_name]["error"] = None
 
     def reset_dashboard(self, table: str | None = None) -> None:
         if table is not None:
@@ -322,6 +424,10 @@ class AppState:
             "sql": self.sql,
             "title": self.title,
             "error": self.error,
+            "table_states": {
+                name: {"sql": ts["sql"], "title": ts["title"], "error": ts["error"]}
+                for name, ts in self._table_states.items()
+            },
             "turns": [turn.model_dump() for turn in self.client.get_turns()],
         }
 
@@ -330,9 +436,21 @@ class AppState:
         from chatlas import Turn
 
         self.active_table = data.get("table", next(iter(self.data_sources)))
-        self.sql = data["sql"]
-        self.title = data["title"]
-        self.error = data["error"]
+
+        per_table = data.get("table_states")
+        if per_table:
+            for name, ts in per_table.items():
+                if name in self._table_states:
+                    self._table_states[name]["sql"] = ts.get("sql")
+                    self._table_states[name]["title"] = ts.get("title")
+                    self._table_states[name]["error"] = ts.get("error")
+        else:
+            # Backward compat: restore single active-table state from flat fields.
+            active = self.active_table or next(iter(self.data_sources))
+            if active in self._table_states:
+                self._table_states[active]["sql"] = data["sql"]
+                self._table_states[active]["title"] = data["title"]
+                self._table_states[active]["error"] = data["error"]
 
         turns_data = data["turns"]
         turns = [Turn.model_validate(t) for t in turns_data]

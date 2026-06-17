@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
+import contextlib
 import copy
 import os
 import re
-import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Generic, Literal, Optional
 
@@ -72,26 +72,18 @@ class QueryChatBase(Generic[IntoFrameT]):
 
     def __init__(
         self,
-        data_source: IntoFrame | sqlalchemy.Engine | BaseBoard | None,
+        data_source: IntoFrame | sqlalchemy.Engine | BaseBoard | None = None,
         table_name: str | None = None,
         *,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
-        data_description: Optional[str | Path] = None,
         data_dict: DataDict | str | Path | None = None,
-        categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
     ):
-        if data_description is not None:
-            warnings.warn(
-                "data_description is deprecated. Use data_dict with per-table "
-                "descriptions in the YAML instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-
         # Resolve data_dict from path/string or use as-is
         if isinstance(data_dict, (str, Path)):
             from ._data_dict import DataDict as _DataDict
@@ -99,26 +91,6 @@ class QueryChatBase(Generic[IntoFrameT]):
             self._data_dict: DataDict | None = _DataDict.from_yaml(data_dict)
         else:
             self._data_dict = data_dict
-
-        if table_name is None:
-            if isinstance(data_source, DataSource):
-                table_name = data_source.table_name
-            elif data_source is not None:
-                raise ValueError(
-                    "table_name is required when data_source is not a DataSource"
-                )
-
-        # Store table_name for later normalization
-        self._table_name = table_name
-
-        if (
-            table_name is not None
-            and not is_pins_board(data_source)
-            and not re.match(r"^[a-zA-Z][a-zA-Z0-9_]*$", table_name)
-        ):
-            raise ValueError(
-                "Table name must begin with a letter and contain only letters, numbers, and underscores",
-            )
 
         # Multi-table storage: dict of data sources keyed by table name
         self._data_sources: dict[str, DataSource] = {}
@@ -133,9 +105,6 @@ class QueryChatBase(Generic[IntoFrameT]):
         # Store init parameters for deferred system prompt building
         self._prompt_template = prompt_template
         self._data_description = data_description
-        self._data_description_mode: Literal["supplied", "inferred", "empty"] = (
-            "supplied" if data_description is not None else "empty"
-        )
         self._extra_instructions = extra_instructions
         self._categorical_threshold = categorical_threshold
 
@@ -144,16 +113,15 @@ class QueryChatBase(Generic[IntoFrameT]):
 
         self._system_prompt: QueryChatSystemPrompt | None = None
 
-        # Initialize data source (may be None for deferred pattern)
         if data_source is not None:
             if table_name is None:
-                raise ValueError("table_name is required when data_source is provided")
-            normalized = normalize_data_source(data_source, table_name)
-            self._table_name = normalized.table_name
-            self._data_sources[table_name] = normalized
-            self._validate_table_in_data_dict(table_name)
-            self._auto_fill_data_description()
-            self._build_system_prompt()
+                if isinstance(data_source, DataSource):
+                    table_name = data_source.table_name
+                else:
+                    raise ValueError(
+                        "table_name is required when data_source is provided"
+                    )
+            self.add_table(data_source, table_name)
 
     def _validate_table_in_data_dict(self, table_name: str) -> None:
         """Raise ValueError if data_dict is set but table_name is not listed in it."""
@@ -165,18 +133,6 @@ class QueryChatBase(Generic[IntoFrameT]):
                 f"Table '{table_name}' not found in data_dict. "
                 f"Available tables: {available}"
             )
-
-    def _auto_fill_data_description(self) -> None:
-        """Auto-populate data_description from data source metadata if not user-supplied."""
-        if self._data_description_mode == "inferred":
-            self._data_description = None
-            self._data_description_mode = "empty"
-        if self._data_description_mode == "empty" and self._data_sources:
-            first_source = next(iter(self._data_sources.values()))
-            desc = first_source.get_data_description()
-            if desc:
-                self._data_description = desc
-                self._data_description_mode = "inferred"
 
     def _build_system_prompt(
         self,
@@ -206,10 +162,8 @@ class QueryChatBase(Generic[IntoFrameT]):
         self._query_executor = replacement_executor
 
         if previous_executor is not None:
-            try:
+            with contextlib.suppress(Exception):
                 previous_executor.cleanup()
-            except Exception:
-                pass
 
     def _build_query_executor(
         self, *, data_sources: dict[str, DataSource] | None = None
@@ -241,6 +195,15 @@ class QueryChatBase(Generic[IntoFrameT]):
             raise RuntimeError(
                 f"At least one data source must be set before calling {method_name}(). "
                 "Either pass data_source to __init__() or call add_table()."
+            )
+
+    def _require_single_table(self, method_name: str) -> None:
+        """Raise if multiple tables are registered, directing to per-table API."""
+        if len(self._data_sources) > 1:
+            table_list = ", ".join(f"'{n}'" for n in self._data_sources)
+            raise AttributeError(
+                f"Cannot use .{method_name}() with multiple tables ({table_list}). "
+                f"Use .table('name').{method_name}() for per-table access."
             )
 
     def _require_query_executor(self, method_name: str) -> QueryExecutor:
@@ -435,7 +398,7 @@ class QueryChatBase(Generic[IntoFrameT]):
 
     def add_table(
         self,
-        data_source: IntoFrame | sqlalchemy.Engine,
+        data_source: IntoFrame | sqlalchemy.Engine | BaseBoard,
         table_name: str,
         *,
         replace: bool = False,
@@ -446,7 +409,7 @@ class QueryChatBase(Generic[IntoFrameT]):
         Parameters
         ----------
         data_source
-            The data source (DataFrame, LazyFrame, or database connection).
+            The data source (DataFrame, LazyFrame, database connection, or pins board).
         table_name
             Name for the table.
         replace
@@ -468,7 +431,9 @@ class QueryChatBase(Generic[IntoFrameT]):
                 "Add all tables before calling .server() or .app()."
             )
 
-        if not re.match(r"^[a-zA-Z][a-zA-Z0-9_]*$", table_name):
+        if not is_pins_board(data_source) and not re.match(
+            r"^[a-zA-Z][a-zA-Z0-9_]*$", table_name
+        ):
             raise ValueError(
                 "Table name must begin with a letter and contain only "
                 "letters, numbers, and underscores"
@@ -489,10 +454,6 @@ class QueryChatBase(Generic[IntoFrameT]):
             check_source_compatibility(other_sources, normalized, table_name)
             next_data_sources = dict(self._data_sources)
             next_data_sources[table_name] = normalized
-
-            if replace and self._data_description_mode == "inferred":
-                self._data_description = None
-                self._data_description_mode = "empty"
 
             self._build_system_prompt(data_sources=next_data_sources)
         except Exception:
@@ -604,7 +565,7 @@ def normalize_data_source(
 
 
 def cleanup_failed_staged_source(
-    original_source: IntoFrame | sqlalchemy.Engine | DataSource,
+    original_source: IntoFrame | sqlalchemy.Engine | BaseBoard | DataSource,
     normalized_source: DataSource,
 ) -> None:
     """

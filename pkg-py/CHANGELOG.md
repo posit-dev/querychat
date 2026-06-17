@@ -33,7 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Improvements
 
-* `data_description` is deprecated in favor of `data_dict`. (#195)
+* `data_description` is superseded by `data_dict` for new code; existing usage continues to work without any warnings. (#195)
 * The query tool result card now starts collapsed by default. Users can still expand it to see the SQL query and results. Set `QUERYCHAT_TOOL_DETAILS=expanded` to restore the previous behavior. (#239)
 
 ## [0.6.1] - 2026-05-26

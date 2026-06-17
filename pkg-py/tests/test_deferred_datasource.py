@@ -89,6 +89,26 @@ class TestMethodRequirements:
         qc.cleanup()
 
 
+class TestNoArgConstruction:
+    """Tests for QueryChatBase() with no positional arguments."""
+
+    def test_init_no_args(self):
+        qc = QueryChatBase()
+        assert qc.table_names() == []
+
+    def test_init_no_args_then_add_table(self, sample_df):
+        qc = QueryChatBase()
+        qc.add_table(sample_df, "test_table")
+        assert qc.table_names() == ["test_table"]
+
+    def test_init_no_args_then_add_multiple_tables(self, sample_df):
+        df2 = pd.DataFrame({"x": [1, 2], "y": [3, 4]})
+        qc = QueryChatBase()
+        qc.add_table(sample_df, "users")
+        qc.add_table(df2, "extra")
+        assert qc.table_names() == ["users", "extra"]
+
+
 class TestBackwardCompatibility:
     """Tests that existing patterns continue to work."""
 

@@ -65,25 +65,6 @@ class TableState(Generic[IntoFrameT]):
     df: Callable[[], IntoFrameT]
 
 
-class _MultiTableGuard:
-    """Raises ValueError when accessed, guiding users to per-table API."""
-
-    def __init__(self, field: str, table_names: list[str]):
-        names = ", ".join(f"'{n}'" for n in table_names)
-        self._msg = (
-            f"Multiple tables present ({names}). "
-            f"Use qc.table('name').{field}() instead."
-        )
-
-    def __call__(self, *args: object, **kwargs: object) -> None:  # noqa: ARG002
-        raise ValueError(self._msg)
-
-    def set(self, value: object) -> None:  # noqa: ARG002
-        raise ValueError(self._msg)
-
-    def get(self) -> None:
-        raise ValueError(self._msg)
-
 
 @module.ui
 def mod_ui(*, preload_viz: bool = False, **kwargs):
@@ -104,6 +85,25 @@ def mod_ui(*, preload_viz: bool = False, **kwargs):
     )
 
 
+class _MultiTableBlockedReactive:
+    """Sentinel that raises on any access, directing users to per-table API."""
+
+    def __init__(self, table_list: str, attr_name: str) -> None:
+        self._msg = (
+            f"Cannot use .{attr_name}() with multiple tables ({table_list}). "
+            f"Use .tables['name'].{attr_name} for per-table access."
+        )
+
+    def __call__(self, *_args: object, **_kwargs: object) -> object:
+        raise AttributeError(self._msg)
+
+    def get(self, *_args: object, **_kwargs: object) -> object:
+        raise AttributeError(self._msg)
+
+    def set(self, *_args: object, **_kwargs: object) -> None:
+        raise AttributeError(self._msg)
+
+
 @dataclass
 class ServerValues(Generic[IntoFrameT]):
     """
@@ -120,15 +120,21 @@ class ServerValues(Generic[IntoFrameT]):
         If the data source is lazy, returns a LazyFrame. If no SQL query has been
         set, this returns the unfiltered data from the data source.
         Call it like `.df()` to reactively read the current data.
+        Raises ``AttributeError`` when multiple tables are registered;
+        use ``tables["name"].df()`` instead.
     sql
         A reactive Value containing the current SQL query string. Access the value
         by calling `.sql()`, or set it with `.sql.set("SELECT ...")`.
         Returns `None` if no query has been set.
+        Raises ``AttributeError`` when multiple tables are registered;
+        use ``tables["name"].sql`` instead.
     title
         A reactive Value containing the current title for the query. The LLM
         provides this title when generating a new SQL query. Access it with
         `.title()`, or set it with `.title.set("...")`. Returns
         `None` if no title has been set.
+        Raises ``AttributeError`` when multiple tables are registered;
+        use ``tables["name"].title`` instead.
     tables
         Per-table reactive state. Keys are table names. Each value is a
         `TableState` with `sql`, `title`, and `df` attributes. Always populated,
@@ -322,27 +328,31 @@ def mod_server(
                 )
                 viz_widgets[:] = restored
 
-    # Build return value with backward-compatible flat fields
-    table_names = list(data_sources.keys())
-    is_multi = len(table_names) > 1
+    if len(table_states) == 1:
+        only_state = next(iter(table_states.values()))
+        return ServerValues(
+            df=only_state.df,
+            sql=only_state.sql,
+            title=only_state.title,
+            tables=table_states,
+            client=chat,
+        )
 
-    if is_multi:
-        return ServerValues(
-            df=_MultiTableGuard("df", table_names),  # type: ignore[arg-type]
-            sql=_MultiTableGuard("sql", table_names),  # type: ignore[arg-type]
-            title=_MultiTableGuard("title", table_names),  # type: ignore[arg-type]
-            tables=table_states,
-            client=chat,
+    table_list = ", ".join(f"'{n}'" for n in table_states)
+
+    def _multi_table_df() -> IntoFrameT:
+        raise AttributeError(
+            f"Cannot use .df() with multiple tables ({table_list}). "
+            "Use .tables['name'].df() for per-table access."
         )
-    else:
-        first_state = next(iter(table_states.values()))
-        return ServerValues(
-            df=first_state.df,
-            sql=first_state.sql,
-            title=first_state.title,
-            tables=table_states,
-            client=chat,
-        )
+
+    return ServerValues(
+        df=_multi_table_df,
+        sql=_MultiTableBlockedReactive(table_list, "sql"),  # type: ignore[arg-type]
+        title=_MultiTableBlockedReactive(table_list, "title"),  # type: ignore[arg-type]
+        tables=table_states,
+        client=chat,
+    )
 
 
 class GreetWarning(Warning):

@@ -245,6 +245,91 @@ class TestAppState:
         state.sql = "SELECT name FROM test_table"
         assert state.get_display_sql() == "SELECT name FROM test_table"
 
+    def test_update_dashboard_preserves_other_table_state(self, mock_client):
+        """Updating table B should not clobber table A's sql/title."""
+        orders = pd.DataFrame({"id": [1, 2], "amount": [100.0, 200.0]})
+        customers = pd.DataFrame({"id": [101, 102], "state": ["CA", "NY"]})
+        qc = QueryChat(orders, "orders")
+        qc.add_table(customers, "customers")
+
+        state = AppState(
+            data_sources=dict(qc._data_sources),
+            client=mock_client,
+            query_executor=qc._query_executor,
+        )
+
+        state.update_dashboard(
+            {"table": "orders", "query": "SELECT * FROM orders WHERE amount > 100", "title": "Big orders"}
+        )
+        state.update_dashboard(
+            {"table": "customers", "query": "SELECT * FROM customers WHERE state = 'CA'", "title": "CA customers"}
+        )
+
+        # orders' filter should still be intact
+        assert state._table_states["orders"]["sql"] == "SELECT * FROM orders WHERE amount > 100"
+        assert state._table_states["orders"]["title"] == "Big orders"
+        # customers is now active
+        assert state.active_table == "customers"
+        assert state.sql == "SELECT * FROM customers WHERE state = 'CA'"
+
+    def test_to_dict_includes_per_table_states(self, mock_client):
+        """to_dict() should include all tables' sql/title/error, not just the active one."""
+        orders = pd.DataFrame({"id": [1, 2], "amount": [100.0, 200.0]})
+        customers = pd.DataFrame({"id": [101, 102], "state": ["CA", "NY"]})
+        qc = QueryChat(orders, "orders")
+        qc.add_table(customers, "customers")
+
+        mock_client.get_turns.return_value = []
+        state = AppState(
+            data_sources=dict(qc._data_sources),
+            client=mock_client,
+            query_executor=qc._query_executor,
+        )
+        state.update_dashboard(
+            {"table": "orders", "query": "SELECT * FROM orders WHERE amount > 100", "title": "Big orders"}
+        )
+        state.update_dashboard(
+            {"table": "customers", "query": "SELECT * FROM customers WHERE state = 'CA'", "title": "CA customers"}
+        )
+
+        result = state.to_dict()
+
+        assert "table_states" in result
+        assert result["table_states"]["orders"]["sql"] == "SELECT * FROM orders WHERE amount > 100"
+        assert result["table_states"]["customers"]["sql"] == "SELECT * FROM customers WHERE state = 'CA'"
+
+    def test_update_from_dict_restores_per_table_states(self, mock_client):
+        """update_from_dict() should restore all tables' sql/title/error."""
+        orders = pd.DataFrame({"id": [1, 2], "amount": [100.0, 200.0]})
+        customers = pd.DataFrame({"id": [101, 102], "state": ["CA", "NY"]})
+        qc = QueryChat(orders, "orders")
+        qc.add_table(customers, "customers")
+
+        state = AppState(
+            data_sources=dict(qc._data_sources),
+            client=mock_client,
+            query_executor=qc._query_executor,
+        )
+
+        state.update_from_dict(
+            {
+                "table": "customers",
+                "sql": "SELECT * FROM customers WHERE state = 'CA'",
+                "title": "CA customers",
+                "error": None,
+                "table_states": {
+                    "orders": {"sql": "SELECT * FROM orders WHERE amount > 100", "title": "Big orders", "error": None},
+                    "customers": {"sql": "SELECT * FROM customers WHERE state = 'CA'", "title": "CA customers", "error": None},
+                },
+                "turns": [],
+            }
+        )
+
+        assert state.active_table == "customers"
+        assert state.sql == "SELECT * FROM customers WHERE state = 'CA'"
+        assert state._table_states["orders"]["sql"] == "SELECT * FROM orders WHERE amount > 100"
+        assert state._table_states["orders"]["title"] == "Big orders"
+
 
 class TestCreateAppState:
     def test_creates_state_with_callbacks(self, data_source):
@@ -312,19 +397,26 @@ class TestStateDictAccessorMixin:
         qc = QueryChat(orders, "orders")
         qc.add_table(customers, "customers")
         accessor = DummyStateAccessor(qc)
+        sql = (
+            "SELECT orders.* "
+            "FROM orders "
+            "JOIN customers ON orders.customer_id = customers.id "
+            "WHERE customers.state = 'CA'"
+        )
 
         result = accessor.df(
             {
-                "sql": (
-                    "SELECT orders.* "
-                    "FROM orders "
-                    "JOIN customers ON orders.customer_id = customers.id "
-                    "WHERE customers.state = 'CA'"
-                ),
+                "table_states": {
+                    "orders": {"sql": sql, "title": "California orders", "error": None},
+                    "customers": {"sql": None, "title": None, "error": None},
+                },
+                "table": "orders",
+                "sql": sql,
                 "title": "California orders",
                 "error": None,
                 "turns": [],
-            }
+            },
+            table="orders",
         )
 
         assert result["id"].tolist() == [1, 3]
@@ -354,7 +446,8 @@ class TestStateDictAccessorMixin:
                 "title": None,
                 "error": None,
                 "turns": [],
-            }
+            },
+            table="customers",
         )
         error_result = accessor.df(
             {
@@ -363,7 +456,8 @@ class TestStateDictAccessorMixin:
                 "title": "Broken customer query",
                 "error": None,
                 "turns": [],
-            }
+            },
+            table="customers",
         )
 
         assert full_result["id"].tolist() == [101, 102]

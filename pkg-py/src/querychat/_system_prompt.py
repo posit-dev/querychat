@@ -70,10 +70,12 @@ class QueryChatSystemPrompt:
 
     def _generate_tables_overview(self) -> str:
         lines = []
-        for name in self._data_sources:
-            desc = None
+        for name, source in self._data_sources.items():
+            desc: str | None = None
             if self._data_dict and name in self._data_dict.tables:
                 desc = self._data_dict.tables[name].description
+            if not desc and not self.data_description:
+                desc = source.get_data_description() or None
             if desc:
                 lines.append(f"- {name}: {desc}")
             else:

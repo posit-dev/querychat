@@ -88,17 +88,17 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
     @overload
     def __init__(
         self: QueryChat[Any],
-        data_source: None,
-        table_name: str,
+        data_source: None = None,
+        table_name: str | None = None,
         *,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("filter", "query"),
-        data_description: Optional[str | Path] = None,
         data_dict: DataDict | str | Path | None = None,
-        categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
     ) -> None: ...
 
     @overload
@@ -110,11 +110,11 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("filter", "query"),
-        data_description: Optional[str | Path] = None,
         data_dict: DataDict | str | Path | None = None,
-        categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
     ) -> None: ...
 
     @overload
@@ -126,11 +126,11 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("filter", "query"),
-        data_description: Optional[str | Path] = None,
         data_dict: DataDict | str | Path | None = None,
-        categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
     ) -> None: ...
 
     @overload
@@ -142,11 +142,11 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("filter", "query"),
-        data_description: Optional[str | Path] = None,
         data_dict: DataDict | str | Path | None = None,
-        categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
     ) -> None: ...
 
     @overload
@@ -158,26 +158,26 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("filter", "query"),
-        data_description: Optional[str | Path] = None,
         data_dict: DataDict | str | Path | None = None,
-        categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
     ) -> None: ...
 
     def __init__(
         self,
-        data_source: IntoFrame | sqlalchemy.Engine | ibis.Table | None,
-        table_name: str,
+        data_source: IntoFrame | sqlalchemy.Engine | ibis.Table | None = None,
+        table_name: str | None = None,
         *,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("filter", "query"),
-        data_description: Optional[str | Path] = None,
         data_dict: DataDict | str | Path | None = None,
-        categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
     ):
         super().__init__(
             data_source,
@@ -341,6 +341,12 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
 
         """
         self._require_initialized("app")
+        if len(self._data_sources) > 1:
+            table_list = ", ".join(f"'{n}'" for n in self._data_sources)
+            raise RuntimeError(
+                f"app() does not support multiple tables ({table_list}). "
+                "Build a custom layout using ui() and table('name') instead."
+            )
         from gradio.themes import Soft
 
         import gradio as gr

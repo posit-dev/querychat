@@ -175,6 +175,15 @@ class TestNormalizeTools:
 
 
 class TestQueryChatBase:
+    def test_init_no_args(self):
+        qc = QueryChatBase()
+        assert qc.table_names() == []
+
+    def test_init_no_args_then_add_table(self, sample_df):
+        qc = QueryChatBase()
+        qc.add_table(sample_df, "test_table")
+        assert qc.table_names() == ["test_table"]
+
     def test_init_with_dataframe(self, sample_df):
         qc = QueryChatBase(sample_df, "test_table")
         assert isinstance(qc.table("test_table").data_source, DataFrameSource)
@@ -273,9 +282,9 @@ class TestDataDict:
         with pytest.raises(ValueError, match="t2"):
             qc.add_table(df2, "t2")
 
-    def test_data_description_deprecation_warning(self) -> None:
+    def test_data_description_accepted(self) -> None:
         df = pl.DataFrame({"x": [1]})
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             QueryChat(df, table_name="t", data_description="some desc")
-        assert any(issubclass(warning.category, DeprecationWarning) for warning in w)
+        assert not any(issubclass(warning.category, DeprecationWarning) for warning in w)

@@ -114,9 +114,6 @@ class QueryChat(QueryChatBase[IntoFrameT]):
 
         The tools can be overridden per-client by passing a different `tools`
         parameter to the `.client()` method.
-    data_description
-        *Deprecated.* Use ``data_dict`` with a per-table description in the
-        YAML instead. Passing this parameter raises a ``DeprecationWarning``.
     data_dict
         A :class:`~querychat.DataDict` instance, or a path (``str`` or
         ``pathlib.Path``) to a YAML file, that provides rich per-table and
@@ -124,9 +121,6 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         ``values``, ``range``, and ``description`` fields instead of querying
         the data source for statistics, which speeds up schema generation and
         improves LLM context. Supersedes ``data_description``.
-    categorical_threshold
-        Threshold for determining if a column is categorical based on number of
-        unique values.
     extra_instructions
         Additional instructions for the chat model. If a pathlib.Path object is
         passed, querychat will read the contents of the path into a string with
@@ -141,24 +135,30 @@ class QueryChat(QueryChatBase[IntoFrameT]):
           `data_source.get_schema()`
         - `{{data_description}}`: The optional data description provided
         - `{{extra_instructions}}`: Any additional instructions provided
+    categorical_threshold
+        Threshold for determining if a column is categorical based on number of
+        unique values.
+    data_description
+        Optional plain-text or Markdown description of the data, as a string or
+        file path. Superseded by ``data_dict`` for new code.
 
     """
 
     @overload
     def __init__(
         self: QueryChat[Any],
-        data_source: None,
-        table_name: str,
+        data_source: None = None,
+        table_name: str | None = None,
         *,
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("filter", "query"),
-        data_description: Optional[str | Path] = None,
         data_dict: DataDict | str | Path | None = None,
-        categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
     ) -> None: ...
 
     @overload
@@ -171,11 +171,11 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
-        data_description: Optional[str | Path] = None,
         data_dict: DataDict | str | Path | None = None,
-        categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
     ) -> None: ...
 
     @overload
@@ -188,11 +188,11 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
-        data_description: Optional[str | Path] = None,
         data_dict: DataDict | str | Path | None = None,
-        categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
     ) -> None: ...
 
     @overload
@@ -205,11 +205,11 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
-        data_description: Optional[str | Path] = None,
         data_dict: DataDict | str | Path | None = None,
-        categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
     ) -> None: ...
 
     @overload
@@ -222,27 +222,27 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
-        data_description: Optional[str | Path] = None,
         data_dict: DataDict | str | Path | None = None,
-        categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
     ) -> None: ...
 
     def __init__(
         self,
-        data_source: IntoFrame | sqlalchemy.Engine | ibis.Table | None,
-        table_name: str,
+        data_source: IntoFrame | sqlalchemy.Engine | ibis.Table | None = None,
+        table_name: str | None = None,
         *,
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
-        data_description: Optional[str | Path] = None,
         data_dict: DataDict | str | Path | None = None,
-        categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
     ):
         super().__init__(
             data_source,
@@ -256,8 +256,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             extra_instructions=extra_instructions,
             prompt_template=prompt_template,
         )
-        # Use table_name for ID since data_source might be None
-        self.id = id or f"querychat_{table_name}"
+        self.id = id or (f"querychat_{table_name}" if table_name else "querychat")
 
     def app(
         self, *, bookmark_store: Literal["url", "server", "disable"] = "url"
@@ -283,6 +282,13 @@ class QueryChat(QueryChatBase[IntoFrameT]):
 
         """
         self._require_initialized("app")
+        if len(self._data_sources) > 1:
+            table_list = ", ".join(f"'{n}'" for n in self._data_sources)
+            raise RuntimeError(
+                f"app() does not support multiple tables ({table_list}). "
+                "Build a custom layout using sidebar(), ui(), and table('name') instead. "
+                "See the multi-table example for guidance."
+            )
         enable_bookmarking = bookmark_store != "disable"
         table_name = next(iter(self._data_sources))
 
@@ -598,9 +604,6 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         If `client` is not provided, querychat consults the
         `QUERYCHAT_CLIENT` environment variable. If that is not set, it
         defaults to `"openai"`.
-    data_description
-        *Deprecated.* Use ``data_dict`` with a per-table description in the
-        YAML instead. Passing this parameter raises a ``DeprecationWarning``.
     data_dict
         A :class:`~querychat.DataDict` instance, or a path (``str`` or
         ``pathlib.Path``) to a YAML file, that provides rich per-table and
@@ -608,9 +611,6 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         ``values``, ``range``, and ``description`` fields instead of querying
         the data source for statistics, which speeds up schema generation and
         improves LLM context. Supersedes ``data_description``.
-    categorical_threshold
-        Threshold for determining if a column is categorical based on number of
-        unique values.
     extra_instructions
         Additional instructions for the chat model. If a pathlib.Path object is
         passed, querychat will read the contents of the path into a string with
@@ -625,6 +625,12 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
           `data_source.get_schema()`
         - `{{data_description}}`: The optional data description provided
         - `{{extra_instructions}}`: Any additional instructions provided
+    categorical_threshold
+        Threshold for determining if a column is categorical based on number of
+        unique values.
+    data_description
+        Optional plain-text or Markdown description of the data, as a string or
+        file path. Superseded by ``data_dict`` for new code.
 
     """
 
@@ -634,18 +640,18 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
     @overload
     def __init__(
         self: QueryChatExpress[Any],
-        data_source: None,
-        table_name: str,
+        data_source: None = None,
+        table_name: str | None = None,
         *,
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("filter", "query"),
-        data_description: Optional[str | Path] = None,
         data_dict: DataDict | str | Path | None = None,
-        categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
         enable_bookmarking: Literal["auto", True, False] = "auto",
     ) -> None: ...
 
@@ -659,11 +665,11 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
-        data_description: Optional[str | Path] = None,
         data_dict: DataDict | str | Path | None = None,
-        categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
         enable_bookmarking: Literal["auto", True, False] = "auto",
     ) -> None: ...
 
@@ -677,11 +683,11 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
-        data_description: Optional[str | Path] = None,
         data_dict: DataDict | str | Path | None = None,
-        categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
         enable_bookmarking: Literal["auto", True, False] = "auto",
     ) -> None: ...
 
@@ -695,11 +701,11 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
-        data_description: Optional[str | Path] = None,
         data_dict: DataDict | str | Path | None = None,
-        categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
         enable_bookmarking: Literal["auto", True, False] = "auto",
     ) -> None: ...
 
@@ -713,28 +719,28 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
-        data_description: Optional[str | Path] = None,
         data_dict: DataDict | str | Path | None = None,
-        categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
         enable_bookmarking: Literal["auto", True, False] = "auto",
     ) -> None: ...
 
     def __init__(
         self,
-        data_source: IntoFrame | sqlalchemy.Engine | ibis.Table | None,
-        table_name: str,
+        data_source: IntoFrame | sqlalchemy.Engine | ibis.Table | None = None,
+        table_name: str | None = None,
         *,
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
-        data_description: Optional[str | Path] = None,
         data_dict: DataDict | str | Path | None = None,
-        categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
         enable_bookmarking: Literal["auto", True, False] = "auto",
     ):
         # Sanity check: Express should always have a (stub/real) session
@@ -757,7 +763,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             extra_instructions=extra_instructions,
             prompt_template=prompt_template,
         )
-        self.id = id or f"querychat_{table_name}"
+        self.id = id or (f"querychat_{table_name}" if table_name else "querychat")
 
         # Determine bookmarking setting
         # During stub session: detect from app_opts and cache in class variable

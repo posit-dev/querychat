@@ -13,6 +13,7 @@ from ._querychat_core import (
     create_app_state,
     stream_response,
 )
+from ._table_accessor import TableAccessor
 from ._ui_assets import STREAMLIT_JS, SUGGESTION_CSS
 from ._utils import as_narwhals
 
@@ -26,6 +27,44 @@ if TYPE_CHECKING:
     from narwhals.stable.v1.typing import IntoFrame
 
     from ._data_dict import DataDict
+
+
+class StreamlitTableAccessor(TableAccessor):
+    """Per-table accessor for Streamlit QueryChat. Returned by ``qc.table(name)``."""
+
+    def __init__(self, querychat: QueryChat, table_name: str) -> None:
+        super().__init__(querychat, table_name)
+
+    def df(self) -> Any:
+        """
+        Get the current filtered data for this table.
+
+        Returns the full dataset when no SQL filter is active.
+        """
+        qc: QueryChat = self._querychat  # type: ignore[assignment]
+        state = qc._get_state()
+        ts = state._table_states.get(self._table_name, {})
+        sql = ts.get("sql")
+        data_source = qc._data_sources[self._table_name]
+        if sql:
+            try:
+                executor = qc._require_query_executor("table.df")
+                return executor.execute_query(sql)
+            except Exception:
+                return data_source.get_data()
+        return data_source.get_data()
+
+    def sql(self) -> str | None:
+        """Return the current SQL filter for this table, or None."""
+        qc: QueryChat = self._querychat  # type: ignore[assignment]
+        state = qc._get_state()
+        return state._table_states.get(self._table_name, {}).get("sql")
+
+    def title(self) -> str | None:
+        """Return the current filter title for this table, or None."""
+        qc: QueryChat = self._querychat  # type: ignore[assignment]
+        state = qc._get_state()
+        return state._table_states.get(self._table_name, {}).get("title")
 
 
 class QueryChat(QueryChatBase[IntoFrameT]):
@@ -63,17 +102,17 @@ class QueryChat(QueryChatBase[IntoFrameT]):
     @overload
     def __init__(
         self: QueryChat[Any],
-        data_source: None,
-        table_name: str,
+        data_source: None = None,
+        table_name: str | None = None,
         *,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("filter", "query"),
-        data_description: Optional[str | Path] = None,
         data_dict: DataDict | str | Path | None = None,
-        categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
     ) -> None: ...
 
     @overload
@@ -85,11 +124,11 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("filter", "query"),
-        data_description: Optional[str | Path] = None,
         data_dict: DataDict | str | Path | None = None,
-        categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
     ) -> None: ...
 
     @overload
@@ -101,11 +140,11 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("filter", "query"),
-        data_description: Optional[str | Path] = None,
         data_dict: DataDict | str | Path | None = None,
-        categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
     ) -> None: ...
 
     @overload
@@ -117,11 +156,11 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("filter", "query"),
-        data_description: Optional[str | Path] = None,
         data_dict: DataDict | str | Path | None = None,
-        categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
     ) -> None: ...
 
     @overload
@@ -133,26 +172,26 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("filter", "query"),
-        data_description: Optional[str | Path] = None,
         data_dict: DataDict | str | Path | None = None,
-        categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
     ) -> None: ...
 
     def __init__(
         self,
-        data_source: IntoFrame | sqlalchemy.Engine | ibis.Table | None,
-        table_name: str,
+        data_source: IntoFrame | sqlalchemy.Engine | ibis.Table | None = None,
+        table_name: str | None = None,
         *,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("filter", "query"),
-        data_description: Optional[str | Path] = None,
         data_dict: DataDict | str | Path | None = None,
-        categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
     ):
         super().__init__(
             data_source,
@@ -166,7 +205,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             extra_instructions=extra_instructions,
             prompt_template=prompt_template,
         )
-        self._state_key = f"_querychat_{table_name}"
+        self._state_key = f"_querychat_{table_name}" if table_name else "_querychat"
 
     def _get_state(self) -> AppState:
         """Get or create session state."""
@@ -193,6 +232,12 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         SQL query and data table in the main area.
         """
         self._require_initialized("app")
+        if len(self._data_sources) > 1:
+            table_list = ", ".join(f"'{n}'" for n in self._data_sources)
+            raise RuntimeError(
+                f"app() does not support multiple tables ({table_list}). "
+                "Build a custom layout using sidebar(), ui(), and table('name') instead."
+            )
         import streamlit as st
 
         table_name = next(iter(self._data_sources))
@@ -281,16 +326,32 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         eager sources, a LazyFrame for Polars lazy sources, or an Ibis Table
         for Ibis sources. Callers needing an eager DataFrame should collect
         the result (e.g., via ``as_narwhals(qc.df())``).
+
+        Raises ``AttributeError`` when multiple tables are registered;
+        use ``qc.table('name').df()`` instead.
         """
+        self._require_single_table("df")
         # Cast is safe because get_current_data() returns the same type as the data source
         return cast("IntoFrameT", self._get_state().get_current_data())
 
     def sql(self) -> str | None:
-        """Get the current SQL query, or None if using default."""
+        """
+        Get the current SQL query, or None if using default.
+
+        Raises ``AttributeError`` when multiple tables are registered;
+        use ``qc.table('name').sql()`` instead.
+        """
+        self._require_single_table("sql")
         return self._get_state().sql
 
     def title(self) -> str | None:
-        """Get the current query title, or None if using default."""
+        """
+        Get the current query title, or None if using default.
+
+        Raises ``AttributeError`` when multiple tables are registered;
+        use ``qc.table('name').title()`` instead.
+        """
+        self._require_single_table("title")
         return self._get_state().title
 
     def reset(self) -> None:
@@ -343,3 +404,24 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             df.to_native(), use_container_width=True, height=400, hide_index=True
         )
         st.caption(f"Data has {df.shape[0]} rows and {df.shape[1]} columns.")
+
+    def table(self, name: str) -> StreamlitTableAccessor:
+        """
+        Return a per-table accessor for the given table name.
+
+        Parameters
+        ----------
+        name
+            Table name (must be one of ``qc.table_names()``).
+
+        Raises
+        ------
+        ValueError
+            If ``name`` is not a registered table.
+
+        """
+        if name not in self._data_sources:
+            raise ValueError(
+                f"Table '{name}' not found. Available tables: {self.table_names()}"
+            )
+        return StreamlitTableAccessor(self, name)

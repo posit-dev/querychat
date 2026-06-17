@@ -41,6 +41,9 @@ mod_server <- function(
   shiny::moduleServer(id, function(input, output, session) {
     current_title <- shiny::reactiveVal(NULL, label = "current_title")
     current_query <- shiny::reactiveVal(NULL, label = "current_query")
+    # Holds a generated greeting so it can be saved and restored on bookmark.
+    # Static greetings live in the UI (chat_ui(greeting=)) and persist already.
+    current_greeting <- shiny::reactiveVal(NULL, label = "current_greeting")
     filtered_df <- shiny::reactive(label = "filtered_df", {
       data_source$execute_query(query = current_query())
     })
@@ -96,6 +99,14 @@ mod_server <- function(
         input$chat_greeting_requested,
         label = "on_greeting_requested",
         {
+          # Re-display a restored greeting rather than generating a new one.
+          if (!is.null(current_greeting())) {
+            shinychat::chat_set_greeting(
+              "chat",
+              shinychat::chat_greeting(current_greeting(), dismissible = FALSE)
+            )
+            return()
+          }
           cli::cli_warn(c(
             "No {.arg greeting} provided to {.fn QueryChat}. Using the LLM {.arg client} to generate one now.",
             "i" = "For faster startup, lower cost, and determinism, consider providing a {.arg greeting} to {.fn QueryChat}.",
@@ -103,10 +114,14 @@ mod_server <- function(
           ))
           greeting_client <- client(tools = NULL)
           stream <- greeting_client$stream_async(GREETING_PROMPT)
-          shinychat::chat_set_greeting(
+          p <- shinychat::chat_set_greeting(
             "chat",
             shinychat::chat_greeting(stream, dismissible = FALSE)
           )
+          # Capture the generated greeting so it can be bookmarked and restored.
+          promises::then(p, function(value) {
+            current_greeting(greeting_client$last_turn()@text)
+          })
         }
       )
     }
@@ -153,6 +168,9 @@ mod_server <- function(
       shiny::onBookmark(function(state) {
         state$values$querychat_sql <- current_query()
         state$values$querychat_title <- current_title()
+        if (!is.null(current_greeting())) {
+          state$values$querychat_greeting <- current_greeting()
+        }
         if (length(viz_widgets) > 0) {
           state$values$querychat_viz_widgets <- viz_widgets
         }
@@ -164,6 +182,17 @@ mod_server <- function(
         }
         if (!is.null(state$values$querychat_title)) {
           current_title(state$values$querychat_title)
+        }
+        if (!is.null(state$values$querychat_greeting)) {
+          current_greeting(state$values$querychat_greeting)
+          shinychat::chat_set_greeting(
+            "chat",
+            shinychat::chat_greeting(
+              state$values$querychat_greeting,
+              dismissible = FALSE
+            ),
+            session = session
+          )
         }
         if (!is.null(state$values$querychat_viz_widgets)) {
           restored <- restore_viz_widgets(

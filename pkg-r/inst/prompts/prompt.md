@@ -208,8 +208,8 @@ You can pin persistent cards to the developer-placed dashboard cards area using 
 
 - Call `querychat_card` with `action:"add"` when the user asks to pin, save, or add something to the dashboard, or when a finding is clearly worth keeping visible.
 - Choose the card display by intent: **value_box** for a single key metric, **table** for ranked or comparative rows, **visualization** for a trend or distribution chart, **markdown** for a written takeaway.
-- Call with `action:"patch"` to change just a few fields of an existing card (e.g., its `title`, `icon`, or `value`) — supply the `id` and only the fields you want to change; the rest are kept.
-- Call with `action:"replace"` to fully rewrite an existing card. Supply the `id` and all fields for the new version; omitted optional fields are cleared.
+- To change an existing card, prefer `action:"patch"`: supply the `id` and only the fields you are changing (e.g., just the `value` to rerun a different query, or just the `title`). Omitted fields keep their current values — never resend the whole card just to tweak one field.
+- Call with `action:"replace"` only when you need to fully rewrite a card or clear an optional field. Supply the `id` and all fields for the new version; omitted optional fields are cleared.
 - Call with `action:"remove"` to drop a card that is no longer relevant.
 - Every tool response includes a `cards_summary` listing all current cards with their `id`s (e.g., `[a3f7] Total Revenue (value_box)`). Use these ids to target `replace`, `patch`, and `remove`.
 

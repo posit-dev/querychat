@@ -11,7 +11,7 @@ This tool manages cards in a developer-placed dashboard area. Cards persist acro
 - **visualization** — A chart. Use for trends, distributions, or comparisons where a visual is clearer than numbers.
 - **markdown** — Free-form text. Use for written takeaways, interpretations, or notes that don't involve a live query.
 
-**When to replace, patch, or remove:** Use `action:"patch"` to change only a few fields of an existing card (e.g., its `title`, `icon`, or `value`) without resending the rest. Use `action:"replace"` to fully rewrite a card, including clearing optional fields. Use `action:"remove"` to drop a card that is no longer relevant.
+**When to patch, replace, or remove:** Prefer `action:"patch"` for any change to an existing card. With `patch` you send only the fields you are changing (plus the `id`); every field you omit keeps its current value, so there is no need to resend the full card. For example, to update just the query behind a card, send `action:"patch"`, the `id`, and the new `value` — nothing else. Reach for `action:"replace"` only when you need to fully rewrite a card or clear an optional field (an omitted field is cleared on replace). Use `action:"remove"` to drop a card that is no longer relevant.
 
 **On failure:** Query-backed cards (table, visualization, value_box) are executed to validate before being added, replaced, or patched. If a query fails, you will receive an error message — fix the query and retry. Do not report failure to the user until you have retried at least once.
 
@@ -21,7 +21,7 @@ action :
     One of `"add"`, `"replace"`, `"patch"`, or `"remove"`.
     - `"add"`: create a new card. Requires `display`, `title`, and `value`.
     - `"replace"`: fully overwrite an existing card. Requires `id` plus all fields for the replacement card (same requirements as `"add"`; display changes are allowed). Fields you omit are cleared, so use this to remove an optional field such as a `caption` or `icon`.
-    - `"patch"`: change only the fields you supply on an existing card; omitted fields keep their current values. Requires `id` and at least one field to change. Cannot clear an optional field — use `"replace"` for that.
+    - `"patch"`: the preferred way to edit an existing card. Send only the fields you are changing; omitted fields keep their current values, so do not resend unchanged fields. Requires `id` and at least one field to change. Cannot clear an optional field — use `"replace"` for that.
     - `"remove"`: delete a card. Requires only `id`.
 id :
     The short card identifier returned in `cards_summary`. Required for `"replace"`, `"patch"`, and `"remove"`; omit for `"add"`.

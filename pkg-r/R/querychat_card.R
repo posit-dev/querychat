@@ -188,10 +188,22 @@ tool_card_impl <- function(executor, manage_card) {
 }
 
 card_tool_result <- function(id, status, cards_summary) {
+  title <- switch(
+    status,
+    added = "Add Card",
+    replaced = "Replace Card",
+    patched = "Update Card",
+    removed = "Remove Card",
+    "Update Cards"
+  )
+
   ellmer::ContentToolResult(
     value = jsonlite::toJSON(
       list(id = id, status = status, cards_summary = cards_summary),
       auto_unbox = TRUE
+    ),
+    extra = list(
+      display = list(title = title)
     )
   )
 }

@@ -46,7 +46,8 @@ def _send_viz_prompt(
     """Navigate to the viz app and trigger a visualization before each test."""
     page.goto(app_10_viz)
     page.wait_for_selector("shiny-chat-container", timeout=30_000)
-    expect(chat_10_viz.loc_latest_message).to_contain_text("Welcome", timeout=30_000)
+    greeting = chat_10_viz.loc.locator(".shiny-chat-greeting")
+    expect(greeting).to_contain_text("Welcome", timeout=30_000)
 
     chat_10_viz.set_user_input(VIZ_PROMPT)
     chat_10_viz.send_user_input(method="click")

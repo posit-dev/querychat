@@ -1201,11 +1201,33 @@ QueryChat <- R6::R6Class(
 #'   connection).
 #' @param table_name A string specifying the table name to use in SQL queries.
 #' @param ... Additional arguments (currently unused).
-#' @param id Optional module ID for the QueryChat instance.
-#' @param greeting Optional initial message to display to users.
-#' @param client Optional chat client.
-#' @param tools Which querychat tools to include in the chat client.
-#' @param data_description Optional description of the data.
+#' @param id Optional module ID for the QueryChat instance. If not provided,
+#'   will be auto-generated from `table_name`. The ID is used to namespace
+#'   the Shiny module.
+#' @param greeting Optional initial message to display to users. Can be a
+#'   character string (in Markdown format) or a file path. If not provided,
+#'   a greeting will be generated at the start of each conversation using the
+#'   LLM, which adds latency and cost. Use `$generate_greeting()` to create
+#'   a greeting to save and reuse.
+#' @param client Optional chat client. Can be:
+#'   - An [ellmer::Chat] object
+#'   - A string to pass to [ellmer::chat()] (e.g., `"openai/gpt-4o"`)
+#'   - `NULL` (default): Uses the `querychat.client` option, the
+#'     `QUERYCHAT_CLIENT` environment variable, or defaults to
+#'     [ellmer::chat_openai()]
+#' @param tools Which querychat tools to include in the chat client, by
+#'   default. `"filter"` includes the tools for filtering and resetting the
+#'   dashboard and `"query"` includes the tool for executing SQL queries.
+#'   Use `tools = "filter"` when you only want the dashboard filtering tools,
+#'   or when you want to disable the querying tool entirely to prevent the
+#'   LLM from seeing any of the data in your dataset. The legacy name
+#'   `"update"` is still accepted as an alias for `"filter"`.
+#'   `querychat_app()` defaults to
+#'   `c("filter", "query", "visualize", "cards")` so the bundled app's Insights
+#'   tab is populated; pass `tools` explicitly to override.
+#' @param data_description Optional description of the data in plain text or
+#'   Markdown. Can be a string or a file path. This provides context to the
+#'   LLM about what the data represents.
 #' @param categorical_threshold For text columns, the maximum number of unique
 #'   values to consider as a categorical variable. Default is 20.
 #' @param extra_instructions Optional additional instructions for the chat model.
@@ -1274,7 +1296,7 @@ querychat_app <- function(
   id = NULL,
   greeting = NULL,
   client = NULL,
-  tools = c("filter", "query"),
+  tools = c("filter", "query", "visualize", "cards"),
   data_description = NULL,
   categorical_threshold = 20,
   extra_instructions = NULL,

@@ -28,7 +28,7 @@ querychat_app(
   id = NULL,
   greeting = NULL,
   client = NULL,
-  tools = c("filter", "query"),
+  tools = c("filter", "query", "visualize", "cards"),
   data_description = NULL,
   categorical_threshold = 20,
   extra_instructions = NULL,
@@ -52,7 +52,16 @@ connection).}
 
 \item{client}{Optional chat client.}
 
-\item{tools}{Which querychat tools to include in the chat client.}
+\item{tools}{Which querychat tools to include in the chat client, by
+default. \code{"filter"} includes the tools for filtering and resetting the
+dashboard and \code{"query"} includes the tool for executing SQL queries.
+Use \code{tools = "filter"} when you only want the dashboard filtering tools,
+or when you want to disable the querying tool entirely to prevent the
+LLM from seeing any of the data in your dataset. The legacy name
+\code{"update"} is still accepted as an alias for \code{"filter"}.
+\code{querychat_app()} defaults to
+\code{c("filter", "query", "visualize", "cards")} so the bundled app's Insights
+tab is populated; pass \code{tools} explicitly to override.}
 
 \item{data_description}{Optional description of the data.}
 

@@ -918,3 +918,50 @@ class TestMultiTableQueryTool:
 
         assert result.error is None
         assert result.value == [{"name": "Alice", "amount": 100.0}]
+
+
+class TestDataDictListInput:
+    """Tests for list-based data_dict input to QueryChat."""
+
+    def test_accepts_list_of_data_dicts(self, orders_df, customers_df) -> None:
+        from querychat._data_dict import DataDict, TableSpec
+
+        dd1 = DataDict(name="sales", tables={"orders": TableSpec(description="Orders")})
+        dd2 = DataDict(
+            name="people", tables={"customers": TableSpec(description="Customers")}
+        )
+        qc = QueryChat(orders_df, "orders", data_dict=[dd1, dd2])
+        qc.add_table(customers_df, "customers")
+        assert qc is not None
+
+    def test_accepts_list_of_paths(self, orders_df, customers_df, tmp_path) -> None:
+        f1 = tmp_path / "orders_dict.yaml"
+        f2 = tmp_path / "customers_dict.yaml"
+        f1.write_text('tables:\n  orders:\n    description: "Order records."\n')
+        f2.write_text('tables:\n  customers:\n    description: "Customer records."\n')
+        qc = QueryChat(orders_df, "orders", data_dict=[f1, f2])
+        qc.add_table(customers_df, "customers")
+        assert qc is not None
+
+    def test_single_data_dict_still_works(self, orders_df) -> None:
+        from querychat._data_dict import DataDict, TableSpec
+
+        dd = DataDict(name="sales", tables={"orders": TableSpec(description="Orders")})
+        qc = QueryChat(orders_df, "orders", data_dict=dd)
+        assert qc is not None
+
+    def test_list_dicts_appear_in_system_prompt(
+        self, orders_df, customers_df
+    ) -> None:
+        from querychat._data_dict import DataDict, TableSpec
+
+        dd1 = DataDict(name="sales", tables={"orders": TableSpec(description="Orders")})
+        dd2 = DataDict(
+            name="people", tables={"customers": TableSpec(description="Customers")}
+        )
+        qc = QueryChat(orders_df, "orders", data_dict=[dd1, dd2])
+        qc.add_table(customers_df, "customers")
+        qc._build_system_prompt()
+        rendered = qc._system_prompt.render(qc.tools)
+        assert 'name="sales"' in rendered
+        assert 'name="people"' in rendered

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import chevron
+import yaml
 
 from ._viz_utils import has_viz_tool
 
@@ -24,21 +26,8 @@ class QueryChatSystemPrompt:
         data_description: str | Path | None = None,
         extra_instructions: str | Path | None = None,
         categorical_threshold: int = 20,
-        data_dict: DataDict | None = None,
+        data_dicts: list[DataDict] | None = None,
     ):
-        """
-        Initialize with prompt components.
-
-        Args:
-            prompt_template: Mustache template string or path to template file, or None for default
-            data_source: Single DataSource instance (backwards compatibility)
-            data_sources: Dictionary of DataSource instances keyed by table name
-            data_description: Optional data context (string or path)
-            extra_instructions: Optional custom LLM instructions (string or path)
-            categorical_threshold: Threshold for categorical column detection
-            data_dict: Optional DataDict for table descriptions, relationships, and glossary
-
-        """
         if data_sources is not None:
             self._data_sources = data_sources
         elif data_source is not None:
@@ -46,7 +35,16 @@ class QueryChatSystemPrompt:
         else:
             raise ValueError("Either data_source or data_sources must be provided")
 
-        self._data_dict = data_dict
+        self._data_dicts: list[DataDict] = data_dicts or []
+
+        if len(self._data_sources) > 1 and not self._data_dicts:
+            warnings.warn(
+                "Multiple tables registered without a data_dict. "
+                "Providing a data_dict with table descriptions and relationships "
+                "gives the LLM better context for multi-table queries.",
+                UserWarning,
+                stacklevel=3,
+            )
 
         if prompt_template is None:
             prompt_template = Path(__file__).parent / "prompts" / "prompt.md"
@@ -71,37 +69,53 @@ class QueryChatSystemPrompt:
     def _generate_tables_overview(self) -> str:
         lines = []
         for name, source in self._data_sources.items():
-            desc: str | None = None
-            if self._data_dict and name in self._data_dict.tables:
-                desc = self._data_dict.tables[name].description
-            if not desc and not self.data_description:
-                desc = source.get_data_description() or None
-            if desc:
+            desc: str | None = source.get_data_description() or None
+            if desc and not self.data_description:
                 lines.append(f"- {name}: {desc}")
             else:
                 lines.append(f"- {name}")
         return "\n".join(lines)
 
-    def _generate_relationships_text(self) -> str:
-        if not self._data_dict or not self._data_dict.relationships:
-            return ""
-        lines = []
-        for rel in self._data_dict.relationships:
-            line = rel.join
-            if rel.cardinality:
-                line += f" ({rel.cardinality})"
-            if rel.description:
-                line += f": {rel.description}"
-            lines.append("- " + line)
-        return "\n".join(lines)
+    def _generate_data_dicts_yaml(self) -> str:
+        blocks: list[str] = []
+        all_claimed: set[str] = set()
 
-    def _generate_glossary_text(self) -> str:
-        if not self._data_dict or not self._data_dict.glossary:
-            return ""
-        return "\n".join(
-            f"- {term}: {definition}"
-            for term, definition in self._data_dict.glossary.items()
-        )
+        for dd in self._data_dicts:
+            d = dd.to_prompt_dict()
+            # Name and description belong in the XML tag, not the YAML body
+            d.pop("name", None)
+            d.pop("description", None)
+
+            claimed = {n for n in self._data_sources if n in dd.tables}
+            all_claimed.update(claimed)
+            if "tables" in d:
+                d["tables"] = {
+                    n: v for n, v in d["tables"].items() if n in self._data_sources
+                }
+                if not d["tables"]:
+                    del d["tables"]
+
+            attrs = f'name="{dd.name}"' if dd.name else ""
+            if dd.description:
+                attrs += f' description="{dd.description}"'
+
+            body = yaml.dump(d, default_flow_style=False, allow_unicode=True, sort_keys=False).rstrip() if d else ""
+            blocks.append(f"<data-dict {attrs}>\n{body}\n</data-dict>" if body else f"<data-dict {attrs}/>")
+
+        unclaimed = [n for n in self._data_sources if n not in all_claimed]
+        if unclaimed:
+            tables: dict = {}
+            for name in unclaimed:
+                desc = (
+                    self._data_sources[name].get_data_description() or None
+                    if not self.data_description
+                    else None
+                )
+                tables[name] = {"description": desc} if desc else None
+            yaml_str = yaml.dump({"tables": tables}, default_flow_style=False, allow_unicode=True, sort_keys=False).rstrip()
+            blocks.append(f"<tables>\n{yaml_str}\n</tables>")
+
+        return "\n\n".join(blocks)
 
     def render(self, tools: set[str] | None) -> str:
         """
@@ -116,14 +130,15 @@ class QueryChatSystemPrompt:
         """
         first_source = next(iter(self._data_sources.values()))
         db_type = first_source.get_db_type()
+        has_dicts = bool(self._data_dicts)
 
         context = {
             "db_type": db_type,
             "is_duck_db": db_type.lower() == "duckdb",
             "semantic_views": first_source.get_semantic_views_description(),
-            "tables_overview": self._generate_tables_overview(),
-            "relationships": self._generate_relationships_text(),
-            "glossary": self._generate_glossary_text(),
+            "has_data_dicts": has_dicts,
+            "data_dicts": self._generate_data_dicts_yaml() if has_dicts else "",
+            "tables_overview": "" if has_dicts else self._generate_tables_overview(),
             "data_description": self.data_description,
             "extra_instructions": self.extra_instructions,
             "has_tool_update": "update" in tools if tools else False,

@@ -78,19 +78,13 @@ class QueryChatBase(Generic[IntoFrameT]):
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
-        data_dict: DataDict | str | Path | None = None,
+        data_dict: DataDict | str | Path | list[DataDict | str | Path] | None = None,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         data_description: Optional[str | Path] = None,
     ):
-        # Resolve data_dict from path/string or use as-is
-        if isinstance(data_dict, (str, Path)):
-            from ._data_dict import DataDict as _DataDict
-
-            self._data_dict: DataDict | None = _DataDict.from_yaml(data_dict)
-        else:
-            self._data_dict = data_dict
+        self._data_dicts: list[DataDict] = _normalize_data_dicts(data_dict)
 
         # Multi-table storage: dict of data sources keyed by table name
         self._data_sources: dict[str, DataSource] = {}
@@ -140,7 +134,7 @@ class QueryChatBase(Generic[IntoFrameT]):
             data_description=self._data_description,
             extra_instructions=self._extra_instructions,
             categorical_threshold=self._categorical_threshold,
-            data_dict=self._data_dict,
+            data_dicts=self._data_dicts,
         )
 
     def _build_query_executor(
@@ -218,7 +212,7 @@ class QueryChatBase(Generic[IntoFrameT]):
         # Always register the schema tool regardless of resolved_tools
         chat.register_tool(
             tool_get_schema(
-                self._data_dict,
+                self._data_dicts,
                 executor,
                 list(self._data_sources.keys()),
                 self._categorical_threshold,
@@ -605,3 +599,20 @@ def normalize_tools(
             "vl-convert-python. Install them with: pip install querychat[viz]"
         )
     return resolved
+
+
+def _normalize_data_dicts(
+    data_dict: DataDict | str | Path | list[DataDict | str | Path] | None,
+) -> list[DataDict]:
+    from ._data_dict import DataDict as _DataDict
+
+    if data_dict is None:
+        return []
+    if isinstance(data_dict, list):
+        return [
+            _DataDict.from_yaml(item) if isinstance(item, (str, Path)) else item
+            for item in data_dict
+        ]
+    if isinstance(data_dict, (str, Path)):
+        return [_DataDict.from_yaml(data_dict)]
+    return [data_dict]

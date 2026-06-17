@@ -124,6 +124,14 @@ class DataDict(BaseModel):
 
     Parameters
     ----------
+    name
+        Short identifier for this dictionary's domain (e.g. ``"sales"``).
+        Used as the ``name`` attribute on the ``<data-dict>`` tag in the system
+        prompt. When loading from YAML via :meth:`from_yaml`, defaults to the
+        file stem if not set explicitly.
+    description
+        One-line summary of the domain, shown alongside ``name`` in the
+        system prompt.
     tables
         Per-table metadata, keyed by table name. Each value is a
         :class:`TableSpec` with optional description and column specs.
@@ -153,9 +161,32 @@ class DataDict(BaseModel):
 
     """
 
+    name: str | None = None
+    description: str | None = None
     tables: dict[str, TableSpec] = {}
     relationships: list[RelationshipSpec] = []
     glossary: dict[str, str] = {}
+
+    def to_prompt_dict(self) -> dict[str, Any]:
+        """Return a filtered dict for the system prompt (excludes per-column details)."""
+        result: dict[str, Any] = {}
+        if self.name is not None:
+            result["name"] = self.name
+        if self.description is not None:
+            result["description"] = self.description
+        if self.tables:
+            result["tables"] = {
+                name: ({"description": spec.description} if spec.description else None)
+                for name, spec in self.tables.items()
+            }
+        if self.relationships:
+            result["relationships"] = [
+                {k: v for k, v in rel.model_dump().items() if v is not None}
+                for rel in self.relationships
+            ]
+        if self.glossary:
+            result["glossary"] = self.glossary
+        return result
 
     def get_table_schema(
         self,
@@ -204,6 +235,10 @@ class DataDict(BaseModel):
         """
         import yaml
 
-        with Path(path).open() as f:
-            data = yaml.safe_load(f)
-        return cls.model_validate(data)
+        path = Path(path)
+        with path.open() as f:
+            data = yaml.safe_load(f) or {}
+        dd = cls.model_validate(data)
+        if dd.name is None:
+            dd = dd.model_copy(update={"name": path.stem})
+        return dd

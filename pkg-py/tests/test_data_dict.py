@@ -78,6 +78,40 @@ def test_from_yaml_str_path(tmp_path: Path) -> None:
     assert dd.tables == {}
 
 
+def test_name_and_description_are_optional() -> None:
+    dd = DataDict()
+    assert dd.name is None
+    assert dd.description is None
+
+
+def test_from_yaml_derives_name_from_file_stem(tmp_path: Path) -> None:
+    f = tmp_path / "my_schema.yaml"
+    f.write_text('version: "0.1.0"\n')
+    dd = DataDict.from_yaml(f)
+    assert dd.name == "my_schema"
+
+
+def test_from_yaml_explicit_name_overrides_stem(tmp_path: Path) -> None:
+    f = tmp_path / "file_name.yaml"
+    f.write_text("name: custom_name\n")
+    dd = DataDict.from_yaml(f)
+    assert dd.name == "custom_name"
+
+
+def test_from_yaml_loads_description(tmp_path: Path) -> None:
+    f = tmp_path / "spec.yaml"
+    f.write_text('description: "Sales data"\n')
+    dd = DataDict.from_yaml(f)
+    assert dd.description == "Sales data"
+
+
+def test_from_yaml_description_defaults_to_none(tmp_path: Path) -> None:
+    f = tmp_path / "spec.yaml"
+    f.write_text('version: "0.1.0"\n')
+    dd = DataDict.from_yaml(f)
+    assert dd.description is None
+
+
 def _make_executor(df: pl.DataFrame, table_name: str) -> DataSourceExecutor:
     source = DataFrameSource(nw.from_native(df), table_name)
     return DataSourceExecutor({table_name: source})
@@ -137,3 +171,58 @@ def test_get_table_schema_mixed_coverage() -> None:
     schema = dd.get_table_schema("orders", executor, categorical_threshold=10)
     assert "Range: 0 to 999" in schema  # from data_dict
     assert "status" in schema           # from SQL fallback
+
+
+def test_to_prompt_dict_excludes_column_specs() -> None:
+    dd = DataDict(
+        name="sales",
+        tables={
+            "orders": TableSpec(
+                description="Order records.",
+                columns=[ColumnSpec(name="amount", range=ColumnRange(min=0, max=100))],
+            )
+        },
+    )
+    d = dd.to_prompt_dict()
+    assert "columns" not in (d.get("tables", {}).get("orders") or {})
+
+
+def test_to_prompt_dict_includes_table_description() -> None:
+    dd = DataDict(tables={"orders": TableSpec(description="Order records.")})
+    d = dd.to_prompt_dict()
+    assert d["tables"]["orders"]["description"] == "Order records."
+
+
+def test_to_prompt_dict_table_with_no_description_is_null() -> None:
+    dd = DataDict(tables={"orders": TableSpec()})
+    d = dd.to_prompt_dict()
+    assert d["tables"]["orders"] is None
+
+
+def test_to_prompt_dict_excludes_none_name() -> None:
+    dd = DataDict()
+    d = dd.to_prompt_dict()
+    assert "name" not in d
+
+
+def test_to_prompt_dict_excludes_none_description() -> None:
+    dd = DataDict(name="sales")
+    d = dd.to_prompt_dict()
+    assert "description" not in d
+
+
+def test_to_prompt_dict_includes_relationships() -> None:
+    from querychat._data_dict import RelationshipSpec
+
+    dd = DataDict(
+        relationships=[RelationshipSpec(join="a.id = b.id", cardinality="one-to-many")]
+    )
+    d = dd.to_prompt_dict()
+    assert d["relationships"][0]["join"] == "a.id = b.id"
+    assert d["relationships"][0]["cardinality"] == "one-to-many"
+
+
+def test_to_prompt_dict_includes_glossary() -> None:
+    dd = DataDict(glossary={"ARR": "Annual Recurring Revenue"})
+    d = dd.to_prompt_dict()
+    assert d["glossary"]["ARR"] == "Annual Recurring Revenue"

@@ -42,13 +42,13 @@ Tables: {{{tables_overview}}}
 
 def _make_system_prompt(
     data_sources: dict,
-    data_dict: DataDict | None = None,
+    data_dicts: list[DataDict] | None = None,
     **kwargs,
 ) -> QueryChatSystemPrompt:
     return QueryChatSystemPrompt(
         prompt_template=None,
         data_sources=data_sources,
-        data_dict=data_dict,
+        data_dicts=data_dicts or [],
         **kwargs,
     )
 
@@ -72,7 +72,7 @@ def test_system_prompt_includes_table_description() -> None:
     dd = DataDict(
         tables={"orders": TableSpec(description="Order records.")},
     )
-    sp = _make_system_prompt({"orders": source}, data_dict=dd)
+    sp = _make_system_prompt({"orders": source}, data_dicts=[dd])
     rendered = sp.render({"query"})
     assert "Order records." in rendered
 
@@ -84,7 +84,7 @@ def test_system_prompt_includes_glossary() -> None:
         tables={"orders": TableSpec(columns=[])},
         glossary={"churn": "No orders in 90 days."},
     )
-    sp = _make_system_prompt({"orders": source}, data_dict=dd)
+    sp = _make_system_prompt({"orders": source}, data_dicts=[dd])
     rendered = sp.render({"query"})
     assert "churn" in rendered
     assert "No orders in 90 days." in rendered
@@ -103,7 +103,7 @@ def test_system_prompt_includes_relationships() -> None:
             )
         ],
     )
-    sp = _make_system_prompt({"orders": source}, data_dict=dd)
+    sp = _make_system_prompt({"orders": source}, data_dicts=[dd])
     rendered = sp.render({"query"})
     assert "orders.customer_id = customers.id" in rendered
 
@@ -431,3 +431,93 @@ class TestVizPromptConditionals:
         assert "Avoid redundant expanded results" in rendered_both
         assert "Avoid redundant expanded results" not in rendered_query_only
         assert "Avoid redundant expanded results" not in rendered_viz_only
+
+
+class TestDataDictYamlRendering:
+    """Tests for YAML-based data dict rendering in the system prompt."""
+
+    def _make_source(self, table_name: str) -> DataFrameSource:
+        df = nw.from_native(pl.DataFrame({"x": [1]}))
+        return DataFrameSource(df, table_name)
+
+    def test_no_dict_renders_flat_tables_block(self) -> None:
+        sp = _make_system_prompt({"mytable": self._make_source("mytable")})
+        rendered = sp.render({"query"})
+        assert "<tables>" in rendered
+        assert "<data-dict" not in rendered
+
+    def test_single_dict_renders_xml_tag_with_name(self) -> None:
+        dd = DataDict(name="sales", tables={"orders": TableSpec(description="Orders.")})
+        sp = _make_system_prompt(
+            {"orders": self._make_source("orders")}, data_dicts=[dd]
+        )
+        rendered = sp.render({"query"})
+        assert '<data-dict name="sales">' in rendered
+        assert "Orders." in rendered
+
+    def test_xml_tag_includes_description_attribute(self) -> None:
+        dd = DataDict(name="sales", description="Sales domain data", tables={})
+        sp = _make_system_prompt(
+            {"orders": self._make_source("orders")}, data_dicts=[dd]
+        )
+        rendered = sp.render({"query"})
+        assert 'description="Sales domain data"' in rendered
+
+    def test_xml_tag_omits_description_when_absent(self) -> None:
+        dd = DataDict(name="sales", tables={})
+        sp = _make_system_prompt(
+            {"orders": self._make_source("orders")}, data_dicts=[dd]
+        )
+        rendered = sp.render({"query"})
+        assert "description=" not in rendered
+
+    def test_yaml_body_excludes_name_and_description(self) -> None:
+        dd = DataDict(name="sales", description="Sales domain data", tables={})
+        sp = _make_system_prompt(
+            {"orders": self._make_source("orders")}, data_dicts=[dd]
+        )
+        rendered = sp.render({"query"})
+        # name and description belong in the XML tag, not the YAML body
+        assert "name: sales" not in rendered
+        assert "description: Sales domain data" not in rendered
+
+    def test_yaml_body_includes_tables_relationships_glossary(self) -> None:
+        dd = DataDict(
+            name="sales",
+            tables={"orders": TableSpec(description="Order records.")},
+            relationships=[RelationshipSpec(join="orders.customer_id = customers.id")],
+            glossary={"churn": "No orders in 90 days."},
+        )
+        sp = _make_system_prompt(
+            {"orders": self._make_source("orders")}, data_dicts=[dd]
+        )
+        rendered = sp.render({"query"})
+        assert "orders.customer_id = customers.id" in rendered
+        assert "churn" in rendered
+        assert "Order records." in rendered
+
+    def test_multiple_dicts_render_sibling_xml_tags(self) -> None:
+        dd1 = DataDict(name="sales", tables={"orders": TableSpec(description="Orders")})
+        dd2 = DataDict(
+            name="catalog", tables={"products": TableSpec(description="Products")}
+        )
+        sp = _make_system_prompt(
+            {
+                "orders": self._make_source("orders"),
+                "products": self._make_source("products"),
+            },
+            data_dicts=[dd1, dd2],
+        )
+        rendered = sp.render({"query"})
+        assert '<data-dict name="sales">' in rendered
+        assert '<data-dict name="catalog">' in rendered
+        assert rendered.count("<data-dict") == 2
+
+    def test_multi_table_no_dict_emits_warning(self) -> None:
+        with pytest.warns(UserWarning, match="data_dict"):
+            _make_system_prompt(
+                {
+                    "orders": self._make_source("orders"),
+                    "products": self._make_source("products"),
+                }
+            )

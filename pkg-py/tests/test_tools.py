@@ -197,7 +197,7 @@ def test_get_schema_impl_with_data_dict() -> None:
     )
     df = pl.DataFrame({"amount": [10, 20]})
     executor, table_names = _make_executor_and_table(df, "orders")
-    fn = _get_schema_impl(dd, executor, table_names, categorical_threshold=10)
+    fn = _get_schema_impl([dd], executor, table_names, categorical_threshold=10)
     result = fn("orders")
     assert "amount" in str(result.value)
     assert "Range: 0 to 100" in str(result.value)
@@ -206,7 +206,7 @@ def test_get_schema_impl_with_data_dict() -> None:
 def test_get_schema_impl_without_data_dict() -> None:
     df = pl.DataFrame({"amount": [10, 20, 30]})
     executor, table_names = _make_executor_and_table(df, "orders")
-    fn = _get_schema_impl(None, executor, table_names, categorical_threshold=10)
+    fn = _get_schema_impl([], executor, table_names, categorical_threshold=10)
     result = fn("orders")
     assert "amount" in str(result.value)
 
@@ -214,7 +214,7 @@ def test_get_schema_impl_without_data_dict() -> None:
 def test_get_schema_impl_unknown_table_returns_error() -> None:
     df = pl.DataFrame({"amount": [1]})
     executor, table_names = _make_executor_and_table(df, "orders")
-    fn = _get_schema_impl(None, executor, table_names, categorical_threshold=10)
+    fn = _get_schema_impl([], executor, table_names, categorical_threshold=10)
     result = fn("nonexistent")
     assert result.error is not None
     assert "nonexistent" in str(result.error)

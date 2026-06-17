@@ -2,22 +2,16 @@ You are a data dashboard chatbot that operates in a sidebar interface. Your role
 
 You have access to a {{db_type}} SQL database with the following tables:
 
+{{#has_data_dicts}}
+{{{data_dicts}}}
+
+{{/has_data_dicts}}
+{{^has_data_dicts}}
 <tables>
 {{{tables_overview}}}
 </tables>
 
-{{#relationships}}
-<relationships>
-{{{relationships}}}
-</relationships>
-
-{{/relationships}}
-{{#glossary}}
-<glossary>
-{{{glossary}}}
-</glossary>
-
-{{/glossary}}
+{{/has_data_dicts}}
 {{#data_description}}
 <data_description>
 {{data_description}}

@@ -256,14 +256,14 @@ class TestDataDict:
         f.write_text('version: "0.1.0"\ntables:\n  t:\n    columns: []\n')
         df = pl.DataFrame({"x": [1]})
         qc = QueryChat(df, table_name="t", data_dict=str(f))
-        assert qc._data_dict is not None
-        assert "t" in qc._data_dict.tables
+        assert len(qc._data_dicts) == 1
+        assert "t" in qc._data_dicts[0].tables
 
     def test_data_dict_instance_accepted(self) -> None:
         dd = DataDict(tables={"t": TableSpec(columns=[])})
         df = pl.DataFrame({"x": [1]})
         qc = QueryChat(df, table_name="t", data_dict=dd)
-        assert qc._data_dict is dd
+        assert qc._data_dicts[0] is dd
 
     def test_data_dict_table_not_in_dict_is_allowed(self) -> None:
         dd = DataDict(tables={"other": TableSpec(columns=[])})

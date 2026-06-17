@@ -525,7 +525,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         return mod_server(
             id or self.id,
             data_sources=dict(self._data_sources),
-            executor=self._query_executor,
+            executor=self._require_query_executor("server"),
             greeting=self.greeting,
             client=create_session_client,
             enable_bookmarking=enable_bookmarking,
@@ -805,7 +805,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         self._vals = mod_server(
             self.id,
             data_sources=dict(self._data_sources),
-            executor=self._query_executor,
+            executor=self._require_query_executor("_ensure_server_started"),
             greeting=self.greeting,
             client=self._create_session_client,
             enable_bookmarking=self._enable_bookmarking,

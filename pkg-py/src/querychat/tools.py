@@ -49,7 +49,7 @@ def _(message: GetSchemaResult) -> ChatMessage:
 
 
 def _get_schema_impl(
-    data_dict: DataDict | None,
+    data_dicts: list[DataDict],
     executor: QueryExecutor,
     table_names: list[str],
     categorical_threshold: int,
@@ -60,8 +60,9 @@ def _get_schema_impl(
             error = f"Table '{table_name}' not found. Available: {available}"
             return ContentToolResult(value=error, error=Exception(error))
 
-        if data_dict is not None:
-            schema = data_dict.get_table_schema(table_name, executor, categorical_threshold)
+        dd = next((d for d in data_dicts if table_name in d.tables), None)
+        if dd is not None:
+            schema = dd.get_table_schema(table_name, executor, categorical_threshold)
         else:
             schema = executor.get_schema(table_name, categorical_threshold)
 
@@ -71,7 +72,7 @@ def _get_schema_impl(
 
 
 def tool_get_schema(
-    data_dict: DataDict | None,
+    data_dicts: list[DataDict],
     executor: QueryExecutor,
     table_names: list[str],
     categorical_threshold: int,
@@ -81,8 +82,10 @@ def tool_get_schema(
 
     Parameters
     ----------
-    data_dict
-        Optional data dictionary with enriched column metadata.
+    data_dicts
+        Data dictionaries with enriched column metadata. The first dict that
+        covers a requested table is used; tables not covered by any dict fall
+        back to live statistics from the executor.
     executor
         The query executor to use for schema introspection.
     table_names
@@ -97,7 +100,7 @@ def tool_get_schema(
         A tool that can be registered with chatlas.
 
     """
-    impl = _get_schema_impl(data_dict, executor, table_names, categorical_threshold)
+    impl = _get_schema_impl(data_dicts, executor, table_names, categorical_threshold)
     description = read_prompt_template("tool-get-schema.md")
     impl.__doc__ = description
     return Tool.from_func(

@@ -166,7 +166,7 @@ mod_server <- function(
     }
 
     manage_card <- function(action, id = NULL, card = NULL) {
-      card_list <- cards()
+      card_list <- shiny::isolate(cards())
       if (action == "remove") {
         card_list <- Filter(function(cd) !identical(cd$id, id), card_list)
       } else if (action == "update") {
@@ -282,7 +282,12 @@ mod_server <- function(
       card_uis <- lapply(card_list, function(cd) {
         render_card(cd, executor, session)
       })
-      do.call(bslib::layout_columns, c(card_uis, card_layout %||% list()))
+      card_layout <- card_layout %||% list()
+      bslib::layout_columns(
+        !!!card_uis,
+        col_widths = card_layout$col_widths %||% NA,
+        row_heights = card_layout$row_heights %||% NA
+      )
     })
 
     if (enable_bookmarking) {
@@ -513,25 +518,25 @@ render_card <- function(card, data_source, session) {
         htmltools::div(conditionMessage(e))
       }
     )
-    bslib::card(
+    bslib::navset_card_underline(
+      title = card$title,
       full_screen = TRUE,
-      bslib::card_header(card$title),
-      bslib::navset_tab(
-        bslib::nav_panel(
-          "Content",
-          content_panel
-        ),
-        bslib::nav_panel(
-          "Code",
-          bslib::input_code_editor(
-            value = card$value,
-            language = "sql",
-            read_only = TRUE,
-            height = "auto"
-          )
-        )
+      footer = if (!is.null(card$footer)) bslib::card_footer(card$footer),
+      bslib::nav_spacer(),
+      bslib::nav_panel(
+        bsicons::bs_icon("table"),
+        content_panel
       ),
-      if (!is.null(card$footer)) bslib::card_footer(card$footer)
+      bslib::nav_panel(
+        bsicons::bs_icon("code-slash"),
+        bslib::input_code_editor(
+          id = session$ns(paste0("querychat_card_code_", card$id)),
+          value = card$value,
+          language = "sql",
+          read_only = TRUE,
+          height = "auto"
+        )
+      )
     )
   } else if (identical(card$display, "visualization")) {
     widget_id <- paste0("querychat_card_viz_", card$id)
@@ -550,25 +555,25 @@ render_card <- function(card, data_source, session) {
         htmltools::div(conditionMessage(e))
       }
     )
-    bslib::card(
+    bslib::navset_card_underline(
+      title = card$title,
       full_screen = TRUE,
-      bslib::card_header(card$title),
-      bslib::navset_tab(
-        bslib::nav_panel(
-          "Content",
-          content_panel
-        ),
-        bslib::nav_panel(
-          "Code",
-          bslib::input_code_editor(
-            value = card$value,
-            language = "ggsql",
-            read_only = TRUE,
-            height = "auto"
-          )
-        )
+      footer = if (!is.null(card$footer)) bslib::card_footer(card$footer),
+      bslib::nav_spacer(),
+      bslib::nav_panel(
+        bsicons::bs_icon("bar-chart-fill"),
+        content_panel
       ),
-      if (!is.null(card$footer)) bslib::card_footer(card$footer)
+      bslib::nav_panel(
+        bsicons::bs_icon("code-slash"),
+        bslib::input_code_editor(
+          id = session$ns(paste0("querychat_card_code_", card$id)),
+          value = card$value,
+          language = "ggsql",
+          read_only = TRUE,
+          height = "auto"
+        )
+      )
     )
   } else {
     bslib::card(

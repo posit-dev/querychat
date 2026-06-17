@@ -103,6 +103,12 @@ tool_card_impl <- function(executor, manage_card) {
     }
 
     if (type == "value_box") {
+      if (!is.null(icon)) {
+        tryCatch(
+          bsicons::bs_icon(icon),
+          error = function(e) rlang::abort(conditionMessage(e))
+        )
+      }
       df <- executor$execute_query(value)
       if (!(nrow(df) == 1 && ncol(df) == 1)) {
         rlang::abort(sprintf(

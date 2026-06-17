@@ -485,13 +485,9 @@ coalesce_card_runs <- function(card_list) {
   if (length(card_list) == 0) {
     return(list())
   }
-  kinds <- vapply(
-    card_list,
-    function(cd) {
-      if (identical(cd$display, "value_box")) "value_box" else "content"
-    },
-    character(1)
-  )
+  kinds <- map_chr(card_list, function(cd) {
+    if (identical(cd$display, "value_box")) "value_box" else "content"
+  })
   runs <- list()
   run_start <- 1L
   for (i in seq_along(kinds)) {
@@ -526,118 +522,111 @@ navset_title_with_icon <- function(title, icon) {
 }
 
 render_card <- function(card, data_source, session) {
-  if (identical(card$display, "value_box")) {
-    tryCatch(
-      {
-        df <- data_source$execute_query(card$value)
-        scalar <- as.character(df[[1]][1])
-        showcase <- if (!is.null(card$icon)) {
-          bsicons::bs_icon(card$icon)
-        } else {
-          NULL
-        }
-        caption_content <- if (!is.null(card$caption)) {
-          shiny::p(card$caption)
-        } else {
-          NULL
-        }
-        bslib::value_box(
-          title = card$title,
-          value = scalar,
-          caption_content,
-          showcase = showcase,
-          theme = card$theme %||% "primary"
-        )
-      },
-      error = function(e) {
-        bslib::value_box(
-          title = card$title,
-          value = "Error",
-          shiny::p(conditionMessage(e)),
-          theme = "danger"
-        )
-      }
-    )
-  } else if (identical(card$display, "table")) {
-    rlang::check_installed("DT", reason = "for table cards.")
-    content_panel <- tryCatch(
-      {
-        df <- data_source$execute_query(card$value)
-        if (inherits(df, "tbl_sql")) {
-          df <- dplyr::collect(df)
-        }
-        DT::datatable(
-          df,
-          fillContainer = TRUE,
-          options = list(pageLength = 10, scrollX = TRUE)
-        )
-      },
-      error = function(e) {
-        htmltools::div(conditionMessage(e))
-      }
-    )
-    bslib::navset_card_underline(
-      title = navset_title_with_icon(card$title, card$icon),
-      full_screen = TRUE,
-      footer = if (!is.null(card$caption)) bslib::card_footer(card$caption),
-      bslib::nav_spacer(),
-      bslib::nav_panel(
-        bsicons::bs_icon("table"),
-        content_panel
-      ),
-      bslib::nav_panel(
-        bsicons::bs_icon("code-slash"),
-        bslib::input_code_editor(
-          id = session$ns(paste0("querychat_card_code_", card$id)),
-          value = card$value,
-          language = "sql",
-          read_only = TRUE,
-          height = "auto"
-        )
-      )
-    )
-  } else if (identical(card$display, "visualization")) {
-    widget_id <- paste0("querychat_card_viz_", card$id)
-    content_panel <- tryCatch(
-      {
-        validated <- ggsql::ggsql_validate(card$value)
-        spec <- execute_ggsql(data_source, validated)
-        session$output[[widget_id]] <- ggsql::renderGgsql(spec)
-        htmltools::div(
-          class = "querychat-viz-container",
-          bslib::as_fill_carrier(),
-          ggsql::ggsqlOutput(session$ns(widget_id))
-        )
-      },
-      error = function(e) {
-        htmltools::div(conditionMessage(e))
-      }
-    )
-    bslib::navset_card_underline(
-      title = navset_title_with_icon(card$title, card$icon),
-      full_screen = TRUE,
-      footer = if (!is.null(card$caption)) bslib::card_footer(card$caption),
-      bslib::nav_spacer(),
-      bslib::nav_panel(
-        bsicons::bs_icon("bar-chart-fill"),
-        content_panel
-      ),
-      bslib::nav_panel(
-        bsicons::bs_icon("code-slash"),
-        bslib::input_code_editor(
-          id = session$ns(paste0("querychat_card_code_", card$id)),
-          value = card$value,
-          language = "ggsql",
-          read_only = TRUE,
-          height = "auto"
-        )
-      )
-    )
-  } else {
-    bslib::card(
-      card_header_with_icon(card$title, card$icon),
-      bslib::card_body(shiny::markdown(card$value)),
-      if (!is.null(card$caption)) bslib::card_footer(card$caption)
-    )
+  tryCatch(
+    switch(
+      card$display %||% "markdown",
+      value_box = render_card_value_box(card, data_source, session),
+      table = render_card_table(card, data_source, session),
+      visualization = render_card_visualization(card, data_source, session),
+      render_card_markdown(card, data_source, session)
+    ),
+    error = function(e) render_card_error(card, conditionMessage(e))
+  )
+}
+
+render_card_error <- function(card, message) {
+  bslib::card(
+    class = "border-danger",
+    card_header_with_icon(card$title, card$icon),
+    bslib::card_body(class = "text-danger", message)
+  )
+}
+
+render_card_value_box <- function(card, data_source, session) {
+  df <- data_source$execute_query(card$value)
+  scalar <- as.character(df[[1]][1])
+
+  showcase <- if (!is.null(card$icon)) bsicons::bs_icon(card$icon)
+  caption_content <- if (!is.null(card$caption)) shiny::p(card$caption)
+
+  bslib::value_box(
+    title = card$title,
+    value = scalar,
+    caption_content,
+    showcase = showcase,
+    theme = card$theme %||% "primary"
+  )
+}
+
+render_card_table <- function(card, data_source, session) {
+  rlang::check_installed("DT", reason = "for table cards.")
+  df <- data_source$execute_query(card$value)
+  if (inherits(df, "tbl_sql")) {
+    df <- dplyr::collect(df)
   }
+  content_panel <- DT::datatable(
+    df,
+    fillContainer = TRUE,
+    options = list(pageLength = 10, scrollX = TRUE)
+  )
+  bslib::navset_card_underline(
+    title = navset_title_with_icon(card$title, card$icon),
+    full_screen = TRUE,
+    footer = if (!is.null(card$caption)) bslib::card_footer(card$caption),
+    bslib::nav_spacer(),
+    bslib::nav_panel(
+      bsicons::bs_icon("table"),
+      content_panel
+    ),
+    bslib::nav_panel(
+      bsicons::bs_icon("code-slash"),
+      bslib::input_code_editor(
+        id = session$ns(paste0("querychat_card_code_", card$id)),
+        value = card$value,
+        language = "sql",
+        read_only = TRUE,
+        height = "auto"
+      )
+    )
+  )
+}
+
+render_card_visualization <- function(card, data_source, session) {
+  widget_id <- paste0("querychat_card_viz_", card$id)
+  validated <- ggsql::ggsql_validate(card$value)
+  spec <- execute_ggsql(data_source, validated)
+  session$output[[widget_id]] <- ggsql::renderGgsql(spec)
+  content_panel <- htmltools::div(
+    class = "querychat-viz-container",
+    bslib::as_fill_carrier(),
+    ggsql::ggsqlOutput(session$ns(widget_id))
+  )
+  bslib::navset_card_underline(
+    title = navset_title_with_icon(card$title, card$icon),
+    full_screen = TRUE,
+    footer = if (!is.null(card$caption)) bslib::card_footer(card$caption),
+    bslib::nav_spacer(),
+    bslib::nav_panel(
+      bsicons::bs_icon("bar-chart-fill"),
+      content_panel
+    ),
+    bslib::nav_panel(
+      bsicons::bs_icon("code-slash"),
+      bslib::input_code_editor(
+        id = session$ns(paste0("querychat_card_code_", card$id)),
+        value = card$value,
+        language = "ggsql",
+        read_only = TRUE,
+        height = "auto"
+      )
+    )
+  )
+}
+
+render_card_markdown <- function(card, data_source, session) {
+  bslib::card(
+    card_header_with_icon(card$title, card$icon),
+    bslib::card_body(shiny::markdown(card$value)),
+    if (!is.null(card$caption)) bslib::card_footer(card$caption)
+  )
 }

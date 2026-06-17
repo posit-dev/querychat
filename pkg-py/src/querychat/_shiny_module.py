@@ -227,6 +227,9 @@ def mod_server(
         @reactive.event(input[f"{CHAT_ID}_greeting_requested"])
         async def _handle_greeting_requested():
             # Re-display a restored greeting rather than generating a new one.
+            # On empty-chat restore both this and on_restore set the greeting
+            # (harmless, identical content); on non-empty restore this never
+            # fires, so on_restore is the only path that re-displays.
             existing = current_greeting.get()
             if existing is not None:
                 await chat_ui.set_greeting(

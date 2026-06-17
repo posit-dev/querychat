@@ -104,6 +104,9 @@ mod_server <- function(
         label = "on_greeting_requested",
         {
           # Re-display a restored greeting rather than generating a new one.
+          # On empty-chat restore both this and onRestore set the greeting
+          # (harmless, identical content); on non-empty restore this never fires,
+          # so onRestore is the only path that re-displays.
           if (!is.null(current_greeting())) {
             shinychat::chat_set_greeting(
               "chat",

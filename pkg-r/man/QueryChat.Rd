@@ -525,8 +525,8 @@ ui <- bslib::page_sidebar(
 )
 }\if{html}{\out{</div>}}
 
-Placeholder text and card layout are configured on \verb{$server()} via
-\code{card_placeholder} and \code{card_layout}, not here.
+The placeholder text is configured on \verb{$server()} via \code{card_placeholder}.
+Card layout is handled automatically.
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
     \preformatted{QueryChat$ui_cards(..., id = NULL)}
@@ -560,7 +560,6 @@ the namespacing function from \code{\link[shiny:NS]{shiny::NS()}}.}
   client = NULL,
   enable_bookmarking = FALSE,
   card_placeholder = "Insights will appear here",
-  card_layout = NULL,
   ...,
   id = NULL,
   session = shiny::getDefaultReactiveDomain()
@@ -588,9 +587,6 @@ enabled via \code{shiny::enableBookmarking()} or the \code{enableBookmarking}
 parameter of \code{shiny::shinyApp()}.}
       \item{\code{card_placeholder}}{Text shown in the \verb{$ui_cards()} area when no
 cards exist. Set to \code{NULL} for no placeholder.}
-      \item{\code{card_layout}}{Optional named list of arguments forwarded to
-\code{\link[bslib:layout_columns]{bslib::layout_columns()}} for arranging cards (e.g.,
-\code{list(col_widths = c(6, 6))}).}
       \item{\code{...}}{Ignored.}
       \item{\code{id}}{Optional module ID override.}
       \item{\code{session}}{The Shiny session object.}

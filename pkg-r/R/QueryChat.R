@@ -939,8 +939,8 @@ QueryChat <- R6::R6Class(
     #' )
     #' ```
     #'
-    #' Placeholder text and card layout are configured on `$server()` via
-    #' `card_placeholder` and `card_layout`, not here.
+    #' The placeholder text is configured on `$server()` via `card_placeholder`.
+    #' Card layout is handled automatically.
     #'
     #' @param ... Additional arguments passed to [shiny::uiOutput()].
     #' @param id Optional ID for the QueryChat instance. If not provided,
@@ -992,9 +992,6 @@ QueryChat <- R6::R6Class(
     #'   parameter of `shiny::shinyApp()`.
     #' @param card_placeholder Text shown in the `$ui_cards()` area when no
     #'   cards exist. Set to `NULL` for no placeholder.
-    #' @param card_layout Optional named list of arguments forwarded to
-    #'   [bslib::layout_columns()] for arranging cards (e.g.,
-    #'   `list(col_widths = c(6, 6))`).)
     #' @param ... Ignored.
     #' @param id Optional module ID override.
     #' @param session The Shiny session object.
@@ -1012,7 +1009,6 @@ QueryChat <- R6::R6Class(
       client = NULL,
       enable_bookmarking = FALSE,
       card_placeholder = "Insights will appear here",
-      card_layout = NULL,
       ...,
       id = NULL,
       session = shiny::getDefaultReactiveDomain()
@@ -1065,8 +1061,7 @@ QueryChat <- R6::R6Class(
         greeter = self$greeter,
         greeting_base = base_client,
         enable_bookmarking = enable_bookmarking,
-        card_placeholder = card_placeholder,
-        card_layout = card_layout
+        card_placeholder = card_placeholder
       )
       result
     },

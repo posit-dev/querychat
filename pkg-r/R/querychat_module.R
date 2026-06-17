@@ -62,8 +62,7 @@ mod_server <- function(
   greeter = NULL,
   greeting_base = NULL,
   enable_bookmarking = FALSE,
-  card_placeholder = "Insights will appear here",
-  card_layout = NULL
+  card_placeholder = "Insights will appear here"
 ) {
   shiny::moduleServer(id, function(input, output, session) {
     current_table_val <- shiny::reactiveVal(NULL, label = "current_table")
@@ -284,15 +283,23 @@ mod_server <- function(
           card_placeholder
         ))
       }
-      card_uis <- lapply(card_list, function(cd) {
-        render_card(cd, executor, session)
+      runs <- coalesce_card_runs(card_list)
+      blocks <- lapply(runs, function(run) {
+        is_vb <- identical(run$kind, "value_box")
+        uis <- lapply(run$cards, function(cd) {
+          render_card(cd, executor, session)
+        })
+        if (is_vb) {
+          bslib::layout_column_wrap(width = "200px", !!!uis)
+        } else {
+          bslib::layout_column_wrap(
+            width = "400px",
+            heights_equal = "row",
+            !!!uis
+          )
+        }
       })
-      card_layout <- card_layout %||% list()
-      bslib::layout_columns(
-        !!!card_uis,
-        col_widths = card_layout$col_widths %||% NA,
-        row_heights = card_layout$row_heights %||% NA
-      )
+      htmltools::tagList(!!!blocks)
     })
 
     if (enable_bookmarking) {
@@ -470,6 +477,36 @@ restore_viz_widgets <- function(executor, saved_widgets, session) {
     )
   }
   restored
+}
+
+# Split a flat card list into consecutive runs of the same kind.
+# Returns a list of run objects: list(kind = "value_box" | "content", cards = list(...))
+coalesce_card_runs <- function(card_list) {
+  if (length(card_list) == 0) {
+    return(list())
+  }
+  kinds <- vapply(
+    card_list,
+    function(cd) {
+      if (identical(cd$display, "value_box")) "value_box" else "content"
+    },
+    character(1)
+  )
+  runs <- list()
+  run_start <- 1L
+  for (i in seq_along(kinds)) {
+    if (i == length(kinds) || kinds[i + 1L] != kinds[i]) {
+      runs <- c(
+        runs,
+        list(list(
+          kind = kinds[i],
+          cards = card_list[run_start:i]
+        ))
+      )
+      run_start <- i + 1L
+    }
+  }
+  runs
 }
 
 card_header_with_icon <- function(title, icon) {

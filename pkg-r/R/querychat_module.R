@@ -149,12 +149,9 @@ mod_server <- function(
       if (length(card_list) == 0) {
         return("No cards on the dashboard.")
       }
-      descriptor <- function(cd) {
-        if (identical(cd$type, "value_box")) "value_box" else cd$display
-      }
       items <- vapply(
         card_list,
-        function(cd) sprintf("[%s] %s (%s)", cd$id, cd$title, descriptor(cd)),
+        function(cd) sprintf("[%s] %s (%s)", cd$id, cd$title, cd$display),
         character(1)
       )
       sprintf(
@@ -475,8 +472,24 @@ restore_viz_widgets <- function(executor, saved_widgets, session) {
   restored
 }
 
+card_header_with_icon <- function(title, icon) {
+  if (!is.null(icon)) {
+    bslib::card_header(bsicons::bs_icon(icon), title)
+  } else {
+    bslib::card_header(title)
+  }
+}
+
+navset_title_with_icon <- function(title, icon) {
+  if (!is.null(icon)) {
+    htmltools::tagList(bsicons::bs_icon(icon), title)
+  } else {
+    title
+  }
+}
+
 render_card <- function(card, data_source, session) {
-  if (identical(card$type, "value_box")) {
+  if (identical(card$display, "value_box")) {
     tryCatch(
       {
         df <- data_source$execute_query(card$value)
@@ -486,15 +499,15 @@ render_card <- function(card, data_source, session) {
         } else {
           NULL
         }
-        subtitle_content <- if (!is.null(card$subtitle)) {
-          shiny::p(card$subtitle)
+        caption_content <- if (!is.null(card$caption)) {
+          shiny::p(card$caption)
         } else {
           NULL
         }
         bslib::value_box(
           title = card$title,
           value = scalar,
-          subtitle_content,
+          caption_content,
           showcase = showcase,
           theme = card$theme %||% "primary"
         )
@@ -527,9 +540,9 @@ render_card <- function(card, data_source, session) {
       }
     )
     bslib::navset_card_underline(
-      title = card$title,
+      title = navset_title_with_icon(card$title, card$icon),
       full_screen = TRUE,
-      footer = if (!is.null(card$footer)) bslib::card_footer(card$footer),
+      footer = if (!is.null(card$caption)) bslib::card_footer(card$caption),
       bslib::nav_spacer(),
       bslib::nav_panel(
         bsicons::bs_icon("table"),
@@ -564,9 +577,9 @@ render_card <- function(card, data_source, session) {
       }
     )
     bslib::navset_card_underline(
-      title = card$title,
+      title = navset_title_with_icon(card$title, card$icon),
       full_screen = TRUE,
-      footer = if (!is.null(card$footer)) bslib::card_footer(card$footer),
+      footer = if (!is.null(card$caption)) bslib::card_footer(card$caption),
       bslib::nav_spacer(),
       bslib::nav_panel(
         bsicons::bs_icon("bar-chart-fill"),
@@ -585,9 +598,9 @@ render_card <- function(card, data_source, session) {
     )
   } else {
     bslib::card(
-      bslib::card_header(card$title),
+      card_header_with_icon(card$title, card$icon),
       bslib::card_body(shiny::markdown(card$value)),
-      if (!is.null(card$footer)) bslib::card_footer(card$footer)
+      if (!is.null(card$caption)) bslib::card_footer(card$caption)
     )
   }
 }

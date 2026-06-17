@@ -41,7 +41,6 @@ describe("tool_card_impl()", {
 
     res <- impl(
       action = "add",
-      type = "card",
       display = "table",
       title = "T",
       value = "SELECT * FROM test_table"
@@ -52,7 +51,6 @@ describe("tool_card_impl()", {
     call <- mock$record$calls[[1]]
     expect_equal(call$action, "add")
     expect_false(is.null(call$id))
-    expect_equal(call$card$type, "card")
     expect_equal(call$card$display, "table")
     expect_equal(call$card$id, call$id)
   })
@@ -64,7 +62,6 @@ describe("tool_card_impl()", {
 
     res <- impl(
       action = "add",
-      type = "card",
       display = "markdown",
       title = "M",
       value = "Some **markdown**"
@@ -83,7 +80,7 @@ describe("tool_card_impl()", {
 
     res <- impl(
       action = "add",
-      type = "value_box",
+      display = "value_box",
       title = "V",
       value = "SELECT COUNT(*) AS n FROM test_table"
     )
@@ -91,7 +88,7 @@ describe("tool_card_impl()", {
     expect_s7_class(res, ellmer::ContentToolResult)
     expect_length(mock$record$calls, 1)
     call <- mock$record$calls[[1]]
-    expect_equal(call$card$type, "value_box")
+    expect_equal(call$card$display, "value_box")
   })
 
   it("errors for value_box query returning more than 1 row x 1 column", {
@@ -102,7 +99,7 @@ describe("tool_card_impl()", {
     expect_error(
       impl(
         action = "add",
-        type = "value_box",
+        display = "value_box",
         title = "V",
         value = "SELECT * FROM test_table"
       ),
@@ -119,7 +116,6 @@ describe("tool_card_impl()", {
     expect_error(
       impl(
         action = "replace",
-        type = "card",
         display = "table",
         title = "T",
         value = "SELECT * FROM test_table"
@@ -132,11 +128,10 @@ describe("tool_card_impl()", {
     ds <- local_data_frame_source(new_test_df())
     existing <- list(
       id = "abcd",
-      type = "card",
       display = "table",
       title = "Old title",
       value = "SELECT * FROM test_table",
-      footer = "Old footer"
+      caption = "Old caption"
     )
     record <- new.env(parent = emptyenv())
     record$calls <- list()
@@ -162,7 +157,7 @@ describe("tool_card_impl()", {
     expect_equal(call$id, "abcd")
     expect_equal(call$card$title, "New title")
     expect_equal(call$card$value, existing$value)
-    expect_equal(call$card$footer, existing$footer)
+    expect_equal(call$card$caption, existing$caption)
     expect_equal(jsonlite::fromJSON(res@value)$status, "patched")
   })
 
@@ -204,12 +199,111 @@ describe("tool_card_impl()", {
     expect_error(
       impl(
         action = "add",
-        type = "card",
         display = "table",
         title = "T"
       ),
       "'value' is required"
     )
+  })
+
+  it("errors when display is missing on add", {
+    ds <- local_data_frame_source(new_test_df())
+    mock <- new_mock()
+    impl <- tool_card_impl(ds, mock$mock_manage)
+
+    expect_error(
+      impl(
+        action = "add",
+        title = "T",
+        value = "SELECT * FROM test_table"
+      ),
+      "'display' is required"
+    )
+  })
+
+  it("validates icon for table display", {
+    ds <- local_data_frame_source(new_test_df())
+    mock <- new_mock()
+    impl <- tool_card_impl(ds, mock$mock_manage)
+
+    expect_error(
+      impl(
+        action = "add",
+        display = "table",
+        title = "T",
+        value = "SELECT * FROM test_table",
+        icon = "not-a-real-icon-xyz-99999"
+      )
+    )
+    expect_length(mock$record$calls, 0)
+  })
+
+  it("validates icon for markdown display", {
+    ds <- local_data_frame_source(new_test_df())
+    mock <- new_mock()
+    impl <- tool_card_impl(ds, mock$mock_manage)
+
+    expect_error(
+      impl(
+        action = "add",
+        display = "markdown",
+        title = "M",
+        value = "Some text",
+        icon = "not-a-real-icon-xyz-99999"
+      )
+    )
+    expect_length(mock$record$calls, 0)
+  })
+
+  it("validates icon for value_box display", {
+    ds <- local_data_frame_source(new_test_df())
+    mock <- new_mock()
+    impl <- tool_card_impl(ds, mock$mock_manage)
+
+    expect_error(
+      impl(
+        action = "add",
+        display = "value_box",
+        title = "V",
+        value = "SELECT COUNT(*) AS n FROM test_table",
+        icon = "not-a-real-icon-xyz-99999"
+      )
+    )
+    expect_length(mock$record$calls, 0)
+  })
+
+  it("stores caption field in the card", {
+    ds <- local_data_frame_source(new_test_df())
+    mock <- new_mock()
+    impl <- tool_card_impl(ds, mock$mock_manage)
+
+    impl(
+      action = "add",
+      display = "table",
+      title = "T",
+      value = "SELECT * FROM test_table",
+      caption = "Some caption text"
+    )
+
+    call <- mock$record$calls[[1]]
+    expect_equal(call$card$caption, "Some caption text")
+  })
+
+  it("stores caption field for value_box", {
+    ds <- local_data_frame_source(new_test_df())
+    mock <- new_mock()
+    impl <- tool_card_impl(ds, mock$mock_manage)
+
+    impl(
+      action = "add",
+      display = "value_box",
+      title = "V",
+      value = "SELECT COUNT(*) AS n FROM test_table",
+      caption = "All time"
+    )
+
+    call <- mock$record$calls[[1]]
+    expect_equal(call$card$caption, "All time")
   })
 })
 

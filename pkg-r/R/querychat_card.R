@@ -16,14 +16,9 @@ tool_card <- function(executor, manage_card) {
         "Card id, required for replace, patch, and remove.",
         required = FALSE
       ),
-      type = ellmer::type_enum(
-        c("card", "value_box"),
-        "Card type. Use 'card' for a general content card (table, visualization, or markdown), or 'value_box' for a single highlighted metric.",
-        required = FALSE
-      ),
       display = ellmer::type_enum(
-        c("table", "visualization", "markdown"),
-        "Display mode for a 'card' type. 'table' renders SQL query results as a table, 'visualization' renders a ggsql chart, 'markdown' renders static markdown text.",
+        c("table", "visualization", "markdown", "value_box"),
+        "Display mode. 'table' renders SQL query results as a table, 'visualization' renders a ggsql chart, 'markdown' renders static markdown text, 'value_box' renders a single highlighted metric (SQL query returning exactly 1 row and 1 column).",
         required = FALSE
       ),
       title = ellmer::type_string(
@@ -32,25 +27,21 @@ tool_card <- function(executor, manage_card) {
       ),
       value = ellmer::type_string(
         ellmer::interpolate(
-          "The card content. For 'value_box': a {{db_type}} SQL SELECT query returning exactly one row and one column. For 'card'+'table': a {{db_type}} SQL SELECT query. For 'card'+'visualization': a full ggsql query including a VISUALISE clause. For 'card'+'markdown': markdown text to render.",
+          "The card content. For 'table': a {{db_type}} SQL SELECT query. For 'visualization': a full ggsql query including a VISUALISE clause. For 'markdown': markdown text to render. For 'value_box': a {{db_type}} SQL SELECT query returning exactly one row and one column.",
           db_type = db_type
         ),
         required = FALSE
       ),
-      footer = ellmer::type_string(
-        "Optional footer text for a 'card' type.",
-        required = FALSE
-      ),
-      subtitle = ellmer::type_string(
-        "Value box subtitle.",
+      caption = ellmer::type_string(
+        "Optional brief secondary text. Rendered as a card footer for table/visualization/markdown, and as the subtitle for value_box. Keep it short.",
         required = FALSE
       ),
       theme = ellmer::type_string(
-        "Value box bslib theme name.",
+        "Optional bslib theme name for the value_box background. One of: primary, secondary, success, danger, warning, info. Applies to value_box only; ignored for other displays.",
         required = FALSE
       ),
       icon = ellmer::type_string(
-        "Value box bsicons icon name.",
+        "Optional bsicons icon name (e.g., 'bar-chart', 'currency-dollar', 'people-fill'). Honored by all display types.",
         required = FALSE
       )
     ),
@@ -68,12 +59,10 @@ tool_card_impl <- function(executor, manage_card) {
   function(
     action,
     id = NULL,
-    type = NULL,
     display = NULL,
     title = NULL,
     value = NULL,
-    footer = NULL,
-    subtitle = NULL,
+    caption = NULL,
     theme = NULL,
     icon = NULL
   ) {
@@ -101,30 +90,26 @@ tool_card_impl <- function(executor, manage_card) {
       supplied <- Filter(
         Negate(is.null),
         list(
-          type = type,
           display = display,
           title = title,
           value = value,
-          footer = footer,
-          subtitle = subtitle,
+          caption = caption,
           theme = theme,
           icon = icon
         )
       )
       merged <- utils::modifyList(existing, supplied)
-      type <- merged$type
       display <- merged$display
       title <- merged$title
       value <- merged$value
-      footer <- merged$footer
-      subtitle <- merged$subtitle
+      caption <- merged$caption
       theme <- merged$theme
       icon <- merged$icon
     }
 
-    if (is.null(type)) {
+    if (is.null(display)) {
       rlang::abort(
-        "'type' is required for actions 'add', 'replace', and 'patch'."
+        "'display' is required for actions 'add', 'replace', and 'patch'."
       )
     }
     if (is.null(title)) {
@@ -137,17 +122,16 @@ tool_card_impl <- function(executor, manage_card) {
         "'value' is required for actions 'add', 'replace', and 'patch'."
       )
     }
-    if (type == "card" && is.null(display)) {
-      rlang::abort("'display' is required when 'type' is 'card'.")
+
+    # Validate icon (bsicons) for any display that supplies one
+    if (!is.null(icon)) {
+      tryCatch(
+        bsicons::bs_icon(icon),
+        error = function(e) rlang::abort(conditionMessage(e))
+      )
     }
 
-    if (type == "value_box") {
-      if (!is.null(icon)) {
-        tryCatch(
-          bsicons::bs_icon(icon),
-          error = function(e) rlang::abort(conditionMessage(e))
-        )
-      }
+    if (display == "value_box") {
       df <- executor$execute_query(value)
       if (!(nrow(df) == 1 && ncol(df) == 1)) {
         rlang::abort(sprintf(
@@ -156,25 +140,10 @@ tool_card_impl <- function(executor, manage_card) {
           ncol(df)
         ))
       }
-      card <- list(
-        type = "value_box",
-        title = title,
-        value = value,
-        subtitle = subtitle,
-        theme = theme,
-        icon = icon
-      )
     } else if (display == "table") {
       tryCatch(
         executor$test_query(value),
         error = function(e) rlang::abort(conditionMessage(e))
-      )
-      card <- list(
-        type = "card",
-        display = "table",
-        title = title,
-        value = value,
-        footer = footer
       )
     } else if (display == "visualization") {
       rlang::check_installed("ggsql", reason = "for visualization support.")
@@ -189,22 +158,17 @@ tool_card_impl <- function(executor, manage_card) {
         execute_ggsql(executor, validated),
         error = function(e) rlang::abort(conditionMessage(e))
       )
-      card <- list(
-        type = "card",
-        display = "visualization",
-        title = title,
-        value = value,
-        footer = footer
-      )
-    } else {
-      card <- list(
-        type = "card",
-        display = "markdown",
-        title = title,
-        value = value,
-        footer = footer
-      )
     }
+    # markdown: no query validation needed
+
+    card <- list(
+      display = display,
+      title = title,
+      value = value,
+      caption = caption,
+      theme = theme,
+      icon = icon
+    )
 
     if (action == "add") {
       id <- random_hex()

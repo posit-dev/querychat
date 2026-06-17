@@ -4,7 +4,7 @@ This tool manages cards in a developer-placed dashboard area. Cards persist acro
 
 **When to use:** Call this tool when the user asks to "pin", "save", or "add to the dashboard" a finding, or when you've answered a question and a persistent summary card would genuinely add value. Do not add a card for routine lookups — reserve cards for key metrics and insights the user wants to keep visible.
 
-**Card types:**
+**Card displays:**
 
 - **value_box** — A single prominent number or label. Use for one key metric (e.g., total revenue, record count). The SQL query must return exactly 1 row and 1 column.
 - **table** — A ranked or comparative result set. Use when the user wants to see multiple rows side-by-side at a glance.
@@ -19,36 +19,33 @@ Parameters
 ----------
 action :
     One of `"add"`, `"replace"`, `"patch"`, or `"remove"`.
-    - `"add"`: create a new card. Requires `type` (and `display` when `type` is `"card"`), `title`, and `value`.
-    - `"replace"`: fully overwrite an existing card. Requires `id` plus all fields for the replacement card (same requirements as `"add"`; type changes are allowed). Fields you omit are cleared, so use this to remove an optional field such as a `footer` or `subtitle`.
+    - `"add"`: create a new card. Requires `display`, `title`, and `value`.
+    - `"replace"`: fully overwrite an existing card. Requires `id` plus all fields for the replacement card (same requirements as `"add"`; display changes are allowed). Fields you omit are cleared, so use this to remove an optional field such as a `caption` or `icon`.
     - `"patch"`: change only the fields you supply on an existing card; omitted fields keep their current values. Requires `id` and at least one field to change. Cannot clear an optional field — use `"replace"` for that.
     - `"remove"`: delete a card. Requires only `id`.
 id :
     The short card identifier returned in `cards_summary`. Required for `"replace"`, `"patch"`, and `"remove"`; omit for `"add"`.
-type :
-    `"card"` for table, visualization, and markdown cards; `"value_box"` for a single-metric highlight. Required for `"add"` and `"replace"`.
 display :
-    Required when `type` is `"card"`. One of:
+    Required for `"add"` and `"replace"`. One of:
     - `"table"` — renders the query result as a table.
     - `"visualization"` — renders a ggsql query as a chart.
     - `"markdown"` — renders `value` as markdown text (no query).
+    - `"value_box"` — renders a single highlighted metric (SQL query returning exactly 1 row and 1 column).
 title :
     A brief, user-friendly card heading. Required for `"add"` and `"replace"`.
 value :
-    The card content. Interpretation depends on `type`/`display`:
-    - `type:"card"`, `display:"table"` — a valid {{db_type}} SQL SELECT query.
-    - `type:"card"`, `display:"visualization"` — a full ggsql query (SQL with a VISUALISE clause). Do NOT include `LABEL title => ...`; use the `title` parameter instead.
-    - `type:"card"`, `display:"markdown"` — markdown text (no query).
-    - `type:"value_box"` — a {{db_type}} SQL SELECT query that MUST return exactly 1 row and 1 column.
+    The card content. Interpretation depends on `display`:
+    - `"table"` — a valid {{db_type}} SQL SELECT query.
+    - `"visualization"` — a full ggsql query (SQL with a VISUALISE clause). Do NOT include `LABEL title => ...`; use the `title` parameter instead.
+    - `"markdown"` — markdown text (no query).
+    - `"value_box"` — a {{db_type}} SQL SELECT query that MUST return exactly 1 row and 1 column.
     Required for `"add"` and `"replace"`.
-footer :
-    Optional. A short note displayed below the card content. Applies to all `type:"card"` displays. Not available for `type:"value_box"`.
-subtitle :
-    Optional. A secondary label shown below the main value. Applies to `type:"value_box"` only.
+caption :
+    Optional. Brief secondary text (keep it short — a few words). Rendered as a footer below the card content for table/visualization/markdown displays, and as the subtitle below the main value for value_box.
 theme :
-    Optional. A bslib theme name for the value box background. One of: `primary`, `secondary`, `success`, `danger`, `warning`, `info`. Applies to `type:"value_box"` only.
+    Optional. A bslib theme name for the value_box background. One of: `primary`, `secondary`, `success`, `danger`, `warning`, `info`. Applies to `value_box` only; ignored for other displays.
 icon :
-    Optional. A bsicons icon name (e.g., `"bar-chart"`, `"currency-dollar"`, `"people-fill"`). Applies to `type:"value_box"` only.
+    Optional. A bsicons icon name (e.g., `"bar-chart"`, `"currency-dollar"`, `"people-fill"`). Honored by all display types: value_box uses it as the showcase icon; table/visualization/markdown show it in the card header next to the title.
 
 Returns
 -------

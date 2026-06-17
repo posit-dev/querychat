@@ -24,6 +24,9 @@ describe("tool_card_impl()", {
     record <- new.env(parent = emptyenv())
     record$calls <- list()
     mock_manage <- function(action, id = NULL, card = NULL) {
+      if (action == "get") {
+        return(list())
+      }
       record$calls[[length(record$calls) + 1L]] <- list(
         action = action,
         id = id,
@@ -51,6 +54,7 @@ describe("tool_card_impl()", {
     call <- mock$record$calls[[1]]
     expect_equal(call$action, "add")
     expect_false(is.null(call$id))
+    expect_match(call$id, "^[0-9a-f]{4}$")
     expect_equal(call$card$display, "table")
     expect_equal(call$card$id, call$id)
   })
@@ -316,6 +320,23 @@ describe("card_tool_result()", {
     expect_equal(parsed$id, "abc123")
     expect_equal(parsed$status, "added")
     expect_null(parsed$cards_summary)
+  })
+})
+
+describe("new_card_id()", {
+  it("returns a 4 hex char id", {
+    id <- new_card_id(function(action, ...) list())
+    expect_match(id, "^[0-9a-f]{4}$")
+  })
+
+  it("avoids colliding with existing card ids", {
+    # Exhaust all but one id so the loop is forced onto the only free value.
+    all_ids <- sprintf("%04x", 0:65535)
+    free <- "abcd"
+    taken <- setdiff(all_ids, free)
+    existing <- lapply(taken, function(x) list(id = x))
+    id <- new_card_id(function(action, ...) existing)
+    expect_equal(id, free)
   })
 })
 

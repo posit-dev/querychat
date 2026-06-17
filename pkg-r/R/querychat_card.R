@@ -183,7 +183,7 @@ tool_card_impl <- function(executor, manage_card) {
     )
 
     if (action == "add") {
-      id <- random_hex()
+      id <- new_card_id(manage_card)
     }
     card$id <- id
 
@@ -212,6 +212,18 @@ card_tool_result <- function(value, title) {
       display = list(title = title)
     )
   )
+}
+
+# Generate a short (4 hex char) card id that does not collide with an existing
+# card. Cards are few, so collisions are rare; the loop guarantees uniqueness.
+new_card_id <- function(manage_card) {
+  existing <- map_chr(manage_card("get"), function(cd) cd$id)
+  repeat {
+    id <- random_hex(2)
+    if (!id %in% existing) {
+      return(id)
+    }
+  }
 }
 
 # Present a stored card to the model: drop unset optional fields and order

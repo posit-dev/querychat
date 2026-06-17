@@ -235,8 +235,8 @@ def mod_server(
     # Real session requires data_sources and executor
     if data_sources is None or executor is None:
         raise RuntimeError(
-            "data_source must be set before the real session. "
-            "Set it via the data_source property before users connect."
+            "At least one table must be registered before the session starts. "
+            "Use add_table() or pass data_source to the QueryChat constructor."
         )
 
     for name, source in data_sources.items():

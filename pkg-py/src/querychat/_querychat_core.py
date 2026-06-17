@@ -251,6 +251,8 @@ def format_tool_result(result: ContentToolResult) -> str:
     display_info = result.extra.get("display") if result.extra else None
     if display_info and hasattr(display_info, "markdown"):
         return display_info.markdown
+    if result.value is not None:
+        return str(result.value)
     return ""
 
 

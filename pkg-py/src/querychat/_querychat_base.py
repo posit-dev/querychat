@@ -553,14 +553,14 @@ def cleanup_failed_staged_source(
     """
     Clean up transient resources created during a failed staged rebuild.
 
-    Only DataFrameSource owns a fresh disposable connection created during
+    DataFrameSource and PinSource both allocate disposable connections during
     normalization. SQLAlchemySource wraps a caller-owned engine, while
     PolarsLazySource and IbisSource do not allocate disposable resources here.
     """
     if isinstance(original_source, (DataSource, sqlalchemy.Engine)):
         return
 
-    if isinstance(normalized_source, DataFrameSource):
+    if isinstance(normalized_source, (DataFrameSource, PinSource)):
         normalized_source.cleanup()
 
 

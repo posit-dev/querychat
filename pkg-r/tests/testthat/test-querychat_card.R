@@ -309,12 +309,82 @@ describe("tool_card_impl()", {
 
 describe("card_tool_result()", {
   it("returns a ContentToolResult with JSON value", {
-    res <- card_tool_result("abc123", "added", "1 card: [abc123] Test (table)")
+    res <- card_tool_result(list(id = "abc123", status = "added"), "Add Card")
 
     expect_s7_class(res, ellmer::ContentToolResult)
     parsed <- jsonlite::fromJSON(res@value)
     expect_equal(parsed$id, "abc123")
     expect_equal(parsed$status, "added")
-    expect_equal(parsed$cards_summary, "1 card: [abc123] Test (table)")
+    expect_null(parsed$cards_summary)
+  })
+})
+
+describe("card_public()", {
+  it("orders id first and drops NULL optional fields", {
+    card <- list(
+      display = "table",
+      title = "T",
+      value = "SELECT 1",
+      caption = NULL,
+      theme = NULL,
+      icon = NULL,
+      id = "abc123"
+    )
+    public <- card_public(card)
+    expect_equal(names(public)[[1]], "id")
+
+    parsed <- jsonlite::fromJSON(jsonlite::toJSON(public, auto_unbox = TRUE))
+    expect_equal(parsed$id, "abc123")
+    expect_equal(parsed$display, "table")
+    expect_null(parsed$caption)
+  })
+})
+
+describe("tool_card_impl() get action", {
+  skip_if_no_dataframe_engine()
+
+  it("returns all cards when id is omitted", {
+    ds <- local_data_frame_source(new_test_df())
+    all_cards <- list(
+      list(id = "aaa", display = "table", title = "One", value = "SELECT 1"),
+      list(id = "bbb", display = "markdown", title = "Two", value = "Note")
+    )
+    mock_manage <- function(action, id = NULL, card = NULL) {
+      expect_equal(action, "get")
+      expect_null(id)
+      all_cards
+    }
+    impl <- tool_card_impl(ds, mock_manage)
+
+    res <- impl(action = "get")
+    parsed <- jsonlite::fromJSON(res@value, simplifyDataFrame = FALSE)
+    expect_length(parsed, 2)
+    expect_equal(parsed[[1]]$id, "aaa")
+    expect_equal(parsed[[2]]$title, "Two")
+  })
+
+  it("returns a single card when id is supplied", {
+    ds <- local_data_frame_source(new_test_df())
+    mock_manage <- function(action, id = NULL, card = NULL) {
+      expect_equal(id, "aaa")
+      list(id = "aaa", display = "table", title = "One", value = "SELECT 1")
+    }
+    impl <- tool_card_impl(ds, mock_manage)
+
+    res <- impl(action = "get", id = "aaa")
+    parsed <- jsonlite::fromJSON(res@value)
+    expect_equal(parsed$id, "aaa")
+    expect_equal(parsed$display, "table")
+  })
+
+  it("errors when the requested card does not exist", {
+    ds <- local_data_frame_source(new_test_df())
+    mock_manage <- function(action, id = NULL, card = NULL) NULL
+    impl <- tool_card_impl(ds, mock_manage)
+
+    expect_error(
+      impl(action = "get", id = "zzzz"),
+      "No card found with id 'zzzz'"
+    )
   })
 })

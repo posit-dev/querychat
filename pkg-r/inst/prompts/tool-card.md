@@ -13,6 +13,8 @@ This tool manages cards in a developer-placed dashboard area. Cards persist acro
 
 **When to patch, replace, or remove:** Prefer `action:"patch"` for any change to an existing card. With `patch` you send only the fields you are changing (plus the `id`); every field you omit keeps its current value, so there is no need to resend the full card. For example, to update just the query behind a card, send `action:"patch"`, the `id`, and the new `value` — nothing else. Reach for `action:"replace"` only when you need to fully rewrite a card or clear an optional field (an omitted field is cleared on replace). Use `action:"remove"` to drop a card that is no longer relevant.
 
+**Reading existing cards:** Use `action:"get"` to inspect what is on the dashboard. Omit `id` to get every card, or pass an `id` to get a single card. The returned objects include each card's full definition (`value`, `caption`, etc.), so call `get` before a `patch` or `replace` when you need to know a card's current contents or its `id`.
+
 **On failure:** Query-backed cards (table, visualization, value_box) are executed to validate before being added, replaced, or patched. If a query fails, you will receive an error message — fix the query and retry. Do not report failure to the user until you have retried at least once.
 
 Parameters
@@ -23,8 +25,9 @@ action :
     - `"replace"`: fully overwrite an existing card. Requires `id` plus all fields for the replacement card (same requirements as `"add"`; display changes are allowed). Fields you omit are cleared, so use this to remove an optional field such as a `caption` or `icon`.
     - `"patch"`: the preferred way to edit an existing card. Send only the fields you are changing; omitted fields keep their current values, so do not resend unchanged fields. Requires `id` and at least one field to change. Cannot clear an optional field — use `"replace"` for that.
     - `"remove"`: delete a card. Requires only `id`.
+    - `"get"`: read existing cards. Omit `id` to return all cards; pass an `id` to return a single card.
 id :
-    The short card identifier returned in `cards_summary`. Required for `"replace"`, `"patch"`, and `"remove"`; omit for `"add"`.
+    The short card identifier. Required for `"replace"`, `"patch"`, and `"remove"`; omit for `"add"`. Optional for `"get"` (omit to return all cards). Use `"get"` to discover the ids of existing cards.
 display :
     Required for `"add"` and `"replace"`. One of:
     - `"table"` — renders the query result as a table.
@@ -50,7 +53,11 @@ icon :
 Returns
 -------
 :
-    A `cards_summary` string listing all cards currently on the dashboard, e.g.:
-    `3 cards: [a3f7] Total Revenue (value_box), [b2c1] Top Customers (table), [d4e5] Monthly Trend (visualization)`
-    Use the bracketed `id` values to target cards with `"replace"`, `"patch"`, or `"remove"`.
+    For `"add"`, `"replace"`, `"patch"`, and `"remove"`: a JSON object with the
+    affected card's `id` and a `status` (e.g. `{"id": "a3f7", "status": "added"}`).
+    For `"get"` with no `id`: a JSON array of all cards. For `"get"` with an `id`:
+    a single card object. Each card object includes its `id`, `display`, `title`,
+    `value`, and any optional fields, e.g.:
+    `{"id": "a3f7", "display": "value_box", "title": "Total Revenue", "value": "SELECT ..."}`
+    Use `"get"` to discover card `id`s to target with `"replace"`, `"patch"`, or `"remove"`.
     If a query-backed card fails validation, an error message is returned instead and no card is created or changed.

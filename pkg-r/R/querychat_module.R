@@ -144,25 +144,12 @@ mod_server <- function(
       )
     }
 
-    cards_summary <- function(card_list) {
-      if (length(card_list) == 0) {
-        return("No cards on the dashboard.")
-      }
-      items <- map_chr(
-        card_list,
-        function(cd) sprintf("[%s] %s (%s)", cd$id, cd$title, cd$display)
-      )
-      sprintf(
-        "%d card%s: %s",
-        length(card_list),
-        if (length(card_list) == 1) "" else "s",
-        paste(items, collapse = ", ")
-      )
-    }
-
     manage_card <- function(action, id = NULL, card = NULL) {
       card_list <- shiny::isolate(cards())
       if (action == "get") {
+        if (is.null(id)) {
+          return(card_list)
+        }
         idx <- which(map_lgl(
           card_list,
           function(cd) identical(cd$id, id)
@@ -182,7 +169,7 @@ mod_server <- function(
         card_list <- c(card_list, list(card))
       }
       cards(card_list)
-      cards_summary(card_list)
+      invisible(card_list)
     }
 
     # Set up the chat object for this session

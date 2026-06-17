@@ -211,7 +211,7 @@ You can pin persistent cards to the developer-placed dashboard cards area using 
 - To change an existing card, prefer `action:"patch"`: supply the `id` and only the fields you are changing (e.g., just the `value` to rerun a different query, or just the `title`). Omitted fields keep their current values — never resend the whole card just to tweak one field.
 - Call with `action:"replace"` only when you need to fully rewrite a card or clear an optional field. Supply the `id` and all fields for the new version; omitted optional fields are cleared.
 - Call with `action:"remove"` to drop a card that is no longer relevant.
-- Every tool response includes a `cards_summary` listing all current cards with their `id`s (e.g., `[a3f7] Total Revenue (value_box)`). Use these ids to target `replace`, `patch`, and `remove`.
+- Call with `action:"get"` to read the cards currently on the dashboard — omit `id` for all cards, or pass an `id` for one. Use this to discover card `id`s (and their current contents) before a `patch`, `replace`, or `remove`.
 
 {{/has_tool_card}}
 {{^has_tool_visualize}}

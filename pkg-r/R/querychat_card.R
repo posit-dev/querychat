@@ -9,11 +9,11 @@ tool_card <- function(executor, manage_card) {
     description = interpolate_package("tool-card.md", db_type = db_type),
     arguments = list(
       action = ellmer::type_enum(
-        c("add", "replace", "patch", "remove"),
-        "Action to perform on a dashboard card. Use 'add' to create a new card, 'replace' to fully overwrite an existing card, 'patch' to change only the fields you supply on an existing card, or 'remove' to delete a card by id."
+        c("add", "replace", "patch", "remove", "get"),
+        "Action to perform on a dashboard card. Use 'add' to create a new card, 'replace' to fully overwrite an existing card, 'patch' to change only the fields you supply on an existing card, 'remove' to delete a card by id, or 'get' to read existing cards (all cards when 'id' is omitted, or a single card when 'id' is supplied)."
       ),
       id = ellmer::type_string(
-        "Card id, required for replace, patch, and remove.",
+        "Card id. Required for replace, patch, and remove. Optional for get (omit to return all cards).",
         required = FALSE
       ),
       display = ellmer::type_enum(
@@ -66,12 +66,24 @@ tool_card_impl <- function(executor, manage_card) {
     theme = NULL,
     icon = NULL
   ) {
+    if (action == "get") {
+      if (is.null(id)) {
+        cards <- manage_card("get")
+        return(card_tool_result(lapply(cards, card_public), "View Cards"))
+      }
+      card <- manage_card("get", id = id)
+      if (is.null(card)) {
+        rlang::abort(sprintf("No card found with id '%s'.", id))
+      }
+      return(card_tool_result(card_public(card), "View Card"))
+    }
+
     if (action == "remove") {
       if (is.null(id)) {
         rlang::abort("'id' is required for action 'remove'.")
       }
-      summary <- manage_card("remove", id = id)
-      return(card_tool_result(id, "removed", summary))
+      manage_card("remove", id = id)
+      return(card_tool_result(list(id = id, status = "removed"), "Remove Card"))
     }
 
     if (action %in% c("replace", "patch") && is.null(id)) {
@@ -176,36 +188,38 @@ tool_card_impl <- function(executor, manage_card) {
     card$id <- id
 
     store_action <- if (action == "add") "add" else "replace"
-    summary <- manage_card(store_action, id = id, card = card)
+    manage_card(store_action, id = id, card = card)
     status <- switch(
       action,
       add = "added",
       replace = "replaced",
       patch = "patched"
     )
-    card_tool_result(id, status, summary)
+    title <- switch(
+      action,
+      add = "Add Card",
+      replace = "Replace Card",
+      patch = "Update Card"
+    )
+    card_tool_result(list(id = id, status = status), title)
   }
 }
 
-card_tool_result <- function(id, status, cards_summary) {
-  title <- switch(
-    status,
-    added = "Add Card",
-    replaced = "Replace Card",
-    patched = "Update Card",
-    removed = "Remove Card",
-    "Update Cards"
-  )
-
+card_tool_result <- function(value, title) {
   ellmer::ContentToolResult(
-    value = jsonlite::toJSON(
-      list(id = id, status = status, cards_summary = cards_summary),
-      auto_unbox = TRUE
-    ),
+    value = jsonlite::toJSON(value, auto_unbox = TRUE),
     extra = list(
       display = list(title = title)
     )
   )
+}
+
+# Present a stored card to the model: drop unset optional fields and order
+# the remaining fields with `id` first.
+card_public <- function(card) {
+  card <- compact(card)
+  ordered <- c("id", "display", "title", "value", "caption", "theme", "icon")
+  card[intersect(ordered, names(card))]
 }
 
 card_icon <- function() {

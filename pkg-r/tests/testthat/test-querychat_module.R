@@ -330,12 +330,13 @@ test_that("restored viz widgets survive a second bookmark cycle", {
 
       shiny::isolate(callbacks$visualize(saved[[1]]))
 
-      viz_key <- session$ns("querychat_viz_widgets")
-
+      # The shiny onBookmark/onRestore mocks bypass Shiny's per-module scope
+      # wrapper (which namespaces keys), so the keys here are the flat ones the
+      # module code writes directly.
       first_state <- new.env(parent = emptyenv())
       first_state$values <- list()
       shiny::isolate(bookmark_fn(first_state))
-      expect_equal(first_state$values[[viz_key]], saved)
+      expect_equal(first_state$values$querychat_viz_widgets, saved)
 
       restore_state <- new.env(parent = emptyenv())
       restore_state$values <- first_state$values
@@ -346,7 +347,7 @@ test_that("restored viz widgets survive a second bookmark cycle", {
       second_state <- new.env(parent = emptyenv())
       second_state$values <- list()
       shiny::isolate(bookmark_fn(second_state))
-      expect_equal(second_state$values[[viz_key]], saved)
+      expect_equal(second_state$values$querychat_viz_widgets, saved)
     }
   )
 })
@@ -385,4 +386,45 @@ test_that("normalize_bookmark_categories() rejects invalid input", {
   expect_error(normalize_bookmark_categories(NA))
   expect_error(normalize_bookmark_categories(c(TRUE, FALSE)))
   expect_error(normalize_bookmark_categories(1))
+})
+
+test_that("restore_record_list() rebuilds list-of-lists from a data.frame", {
+  cards <- list(
+    list(
+      id = "a3f7",
+      display = "value_box",
+      title = "Total",
+      value = "SELECT 1"
+    ),
+    list(
+      id = "b2c1",
+      display = "table",
+      title = "Top",
+      value = "SELECT 2",
+      caption = "x"
+    )
+  )
+
+  # Simulate the Shiny URL bookmark round-trip (jsonlite simplifies to a df)
+  as_df <- jsonlite::fromJSON(jsonlite::toJSON(cards, auto_unbox = TRUE))
+  expect_s3_class(as_df, "data.frame")
+
+  restored <- restore_record_list(as_df)
+  expect_type(restored, "list")
+  expect_length(restored, 2)
+  expect_equal(restored[[1]]$display, "value_box")
+  expect_equal(restored[[2]]$caption, "x")
+  # Absent optional fields (NA after simplification) are dropped, not kept as NA
+  expect_null(restored[[1]]$caption)
+})
+
+test_that("restore_record_list() passes through lists and NULL", {
+  cards <- list(list(
+    id = "a3f7",
+    display = "markdown",
+    title = "x",
+    value = "y"
+  ))
+  expect_equal(restore_record_list(cards), cards)
+  expect_null(restore_record_list(NULL))
 })

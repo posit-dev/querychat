@@ -319,12 +319,14 @@ mod_server <- function(
       bookmark_conversation <- "conversation" %in% bookmark_cats
       bookmark_cards <- "cards" %in% bookmark_cats
 
-      # Namespaced bookmark keys so multiple QueryChat instances in one app do
-      # not clobber each other's state ($values is app-wide, not auto-namespaced)
-      key_tables <- session$ns("querychat_tables")
-      key_greeting <- session$ns("querychat_greeting")
-      key_viz_widgets <- session$ns("querychat_viz_widgets")
-      key_cards <- session$ns("querychat_cards")
+      # Bookmark state keys. Shiny's module scope automatically namespaces these
+      # per module id (it writes `state$values[[ns(key)]]` on save and strips the
+      # prefix on restore), so multiple QueryChat instances do not collide and we
+      # must NOT pre-namespace with session$ns() (that double-prefixes the key).
+      key_tables <- "querychat_tables"
+      key_greeting <- "querychat_greeting"
+      key_viz_widgets <- "querychat_viz_widgets"
+      key_cards <- "querychat_cards"
 
       if (bookmark_conversation) {
         # shinychat owns the transcript state and the bookmark trigger
@@ -402,7 +404,7 @@ mod_server <- function(
           }
         }
         if (bookmark_cards && !is.null(state$values[[key_cards]])) {
-          cards(state$values[[key_cards]])
+          cards(restore_record_list(state$values[[key_cards]]))
         }
       })
     }
@@ -475,10 +477,9 @@ restore_record_list <- function(x) {
   if (is.data.frame(x)) {
     return(lapply(seq_len(nrow(x)), function(i) {
       row <- as.list(x[i, , drop = FALSE])
-      row <- lapply(row, function(v) {
+      compact(lapply(row, function(v) {
         if (length(v) == 1 && is.na(v)) NULL else v
-      })
-      row[!vapply(row, is.null, logical(1))]
+      }))
     }))
   }
   as.list(x)

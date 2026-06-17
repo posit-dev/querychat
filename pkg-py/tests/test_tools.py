@@ -4,12 +4,15 @@ import warnings
 
 import narwhals.stable.v1 as nw
 import pandas as pd
+import polars as pl
 import pytest
+from querychat._data_dict import ColumnRange, ColumnSpec, DataDict, TableSpec
 from querychat._datasource import DataFrameSource
 from querychat._query_executor import DataSourceExecutor
 from querychat._utils import querychat_tool_starts_open
 from querychat.tools import (
     UpdateDashboardData,
+    _get_schema_impl,
     _query_impl,
     tool_reset_dashboard,
 )
@@ -146,20 +149,6 @@ def test_reset_dashboard_accepts_table_parameter():
     assert reset_tables == ["orders"]
 
 
-def test_reset_dashboard_supports_legacy_zero_arg_callback():
-    """Legacy reset callbacks without a table argument should still work."""
-    reset_calls = []
-
-    def callback():
-        reset_calls.append("called")
-
-    tool = tool_reset_dashboard(callback, ["orders"])
-
-    tool.func(table="orders")
-
-    assert reset_calls == ["called"]
-
-
 def test_reset_dashboard_rejects_unknown_table():
     """Reset dashboard should fail fast for an unknown table name."""
     reset_tables = []
@@ -188,3 +177,45 @@ def test_reset_dashboard_without_table_names_preserves_legacy_signature():
     tool.func(table="customers")
 
     assert reset_tables == ["customers"]
+
+
+def _make_executor_and_table(
+    df: pl.DataFrame, table_name: str
+) -> tuple[DataSourceExecutor, list[str]]:
+    source = DataFrameSource(nw.from_native(df), table_name)
+    executor = DataSourceExecutor({table_name: source})
+    return executor, [table_name]
+
+
+def test_get_schema_impl_with_data_dict() -> None:
+    dd = DataDict(
+        version="0.1.0",
+        tables={
+            "orders": TableSpec(
+                columns=[ColumnSpec(name="amount", range=ColumnRange(min=0, max=100))]
+            )
+        },
+    )
+    df = pl.DataFrame({"amount": [10, 20]})
+    executor, table_names = _make_executor_and_table(df, "orders")
+    fn = _get_schema_impl(dd, executor, table_names, categorical_threshold=10)
+    result = fn("orders")
+    assert "amount" in str(result.value)
+    assert "Range: 0 to 100" in str(result.value)
+
+
+def test_get_schema_impl_without_data_dict() -> None:
+    df = pl.DataFrame({"amount": [10, 20, 30]})
+    executor, table_names = _make_executor_and_table(df, "orders")
+    fn = _get_schema_impl(None, executor, table_names, categorical_threshold=10)
+    result = fn("orders")
+    assert "amount" in str(result.value)
+
+
+def test_get_schema_impl_unknown_table_returns_error() -> None:
+    df = pl.DataFrame({"amount": [1]})
+    executor, table_names = _make_executor_and_table(df, "orders")
+    fn = _get_schema_impl(None, executor, table_names, categorical_threshold=10)
+    result = fn("nonexistent")
+    assert result.error is not None
+    assert "nonexistent" in str(result.error)

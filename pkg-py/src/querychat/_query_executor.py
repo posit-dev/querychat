@@ -8,7 +8,14 @@ from typing import TYPE_CHECKING, Any
 import duckdb
 import narwhals.stable.v1 as nw
 
-from ._datasource import MissingColumnsError, lockdown_duckdb
+from ._datasource import (
+    ColumnMeta,
+    MissingColumnsError,
+    duckdb_column_meta,
+    duckdb_column_stats,
+    format_schema,
+    lockdown_duckdb,
+)
 from ._utils import check_query
 
 if TYPE_CHECKING:
@@ -32,6 +39,19 @@ class QueryExecutor(ABC):
     @abstractmethod
     def cleanup(self) -> None: ...
 
+    @abstractmethod
+    def get_column_metas(self, table_name: str) -> list[ColumnMeta]: ...
+
+    @abstractmethod
+    def populate_column_stats(
+        self, table_name: str, columns: list[ColumnMeta], categorical_threshold: int
+    ) -> None: ...
+
+    def get_schema(self, table_name: str, categorical_threshold: int) -> str:
+        metas = self.get_column_metas(table_name)
+        self.populate_column_stats(table_name, metas, categorical_threshold)
+        return format_schema(table_name, metas)
+
 
 class DuckDBExecutor(QueryExecutor):
     """Shared DuckDB connection for multi-table DataFrameSource queries."""
@@ -46,7 +66,7 @@ class DuckDBExecutor(QueryExecutor):
         # Cache column names per table before lockdown
         self._table_columns: dict[str, list[str]] = {}
         for name in sources:
-            result = self._conn.execute(f"SELECT * FROM {name} LIMIT 0")
+            result = self._conn.execute(f'SELECT * FROM "{name}" LIMIT 0')
             self._table_columns[name] = [desc[0] for desc in result.description]
 
         lockdown_duckdb(self._conn)
@@ -97,6 +117,15 @@ class DuckDBExecutor(QueryExecutor):
         if self._conn:
             self._conn.close()
 
+    def get_column_metas(self, table_name: str) -> list[ColumnMeta]:
+        result = self._conn.execute(f'SELECT * FROM "{table_name}" LIMIT 0')
+        return [duckdb_column_meta(desc[0], desc[1]) for desc in result.description]
+
+    def populate_column_stats(
+        self, table_name: str, columns: list[ColumnMeta], categorical_threshold: int
+    ) -> None:
+        duckdb_column_stats(self._conn, table_name, columns, categorical_threshold)
+
 
 class PolarsSQLExecutor(QueryExecutor):
     """Shared Polars SQLContext for multi-table PolarsLazySource queries."""
@@ -106,6 +135,7 @@ class PolarsSQLExecutor(QueryExecutor):
 
         frames = {name: source.get_data() for name, source in sources.items()}
         self._ctx = pl.SQLContext(frames)
+        self._sources = sources  # stored for schema delegation
 
         self._table_columns: dict[str, list[str]] = {}
         for name, source in sources.items():
@@ -144,6 +174,14 @@ class PolarsSQLExecutor(QueryExecutor):
     def cleanup(self) -> None:
         pass
 
+    def get_column_metas(self, table_name: str) -> list[ColumnMeta]:
+        return self._sources[table_name].get_column_metas()
+
+    def populate_column_stats(
+        self, table_name: str, columns: list[ColumnMeta], categorical_threshold: int
+    ) -> None:
+        self._sources[table_name].populate_column_stats(columns, categorical_threshold)
+
 
 class DataSourceExecutor(QueryExecutor):
     """
@@ -173,6 +211,14 @@ class DataSourceExecutor(QueryExecutor):
 
     def cleanup(self) -> None:
         pass
+
+    def get_column_metas(self, table_name: str) -> list[ColumnMeta]:
+        return self._data_sources[table_name].get_column_metas()
+
+    def populate_column_stats(
+        self, table_name: str, columns: list[ColumnMeta], categorical_threshold: int
+    ) -> None:
+        self._data_sources[table_name].populate_column_stats(columns, categorical_threshold)
 
 
 def get_shared_dataframe_backend(sources: dict[str, DataFrameSource]) -> str:

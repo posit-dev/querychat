@@ -1,3 +1,4 @@
+from ._data_dict import DataDict
 from ._datasource import (
     DataFrameSource,
     DataSource,
@@ -13,6 +14,7 @@ from ._shiny import QueryChat
 from ._table_accessor import TableAccessor
 
 __all__ = (
+    "DataDict",
     "DataFrameSource",
     "DataSource",
     "IbisSource",

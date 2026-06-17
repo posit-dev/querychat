@@ -51,6 +51,9 @@ class ColumnMeta:
     categories: list[str] = field(default_factory=list)
     """Unique values for text columns below the categorical threshold."""
 
+    description: str | None = None
+    """Optional human-readable description of the column."""
+
 
 def format_schema(table_name: str, columns: list[ColumnMeta]) -> str:
     """Format column metadata into schema string."""
@@ -59,6 +62,8 @@ def format_schema(table_name: str, columns: list[ColumnMeta]) -> str:
     for col in columns:
         lines.append(f"- {col.name} ({col.sql_type})")
 
+        if col.description:
+            lines.append(f"  Description: {col.description}")
         if col.kind in ("numeric", "date") and col.min_val is not None and col.max_val is not None:
             lines.append(f"  Range: {col.min_val} to {col.max_val}")
         elif col.categories:
@@ -218,6 +223,18 @@ class DataSource(ABC, Generic[IntoFrameT]):
             prompting an LLM about the data structure
 
         """
+        ...
+
+    @abstractmethod
+    def get_column_metas(self) -> list[ColumnMeta]:
+        """Return column names and types without running stats queries."""
+        ...
+
+    @abstractmethod
+    def populate_column_stats(
+        self, columns: list[ColumnMeta], categorical_threshold: int
+    ) -> None:
+        """Populate min/max/categories on the given ColumnMeta list in place."""
         ...
 
     @abstractmethod
@@ -386,7 +403,18 @@ class DataFrameSource(DataSource[IntoDataFrameT]):
             String describing the schema
 
         """
-        return duckdb_get_schema(self._conn, self.table_name, categorical_threshold)
+        metas = self.get_column_metas()
+        self.populate_column_stats(metas, categorical_threshold)
+        return format_schema(self.table_name, metas)
+
+    def get_column_metas(self) -> list[ColumnMeta]:
+        result = self._conn.execute(f'SELECT * FROM "{self.table_name}" LIMIT 0')
+        return [duckdb_column_meta(desc[0], desc[1]) for desc in result.description]
+
+    def populate_column_stats(
+        self, columns: list[ColumnMeta], categorical_threshold: int
+    ) -> None:
+        duckdb_column_stats(self._conn, self.table_name, columns, categorical_threshold)
 
     def execute_query(self, query: str) -> IntoDataFrameT:
         """
@@ -575,12 +603,20 @@ class SQLAlchemySource(DataSource[nw.DataFrame]):
             String describing the schema
 
         """
-        columns = [
+        metas = self.get_column_metas()
+        self.populate_column_stats(metas, categorical_threshold)
+        return format_schema(self.table_name, metas)
+
+    def get_column_metas(self) -> list[ColumnMeta]:
+        return [
             self._make_column_meta(col["name"], col["type"])
             for col in self._columns_info
         ]
+
+    def populate_column_stats(
+        self, columns: list[ColumnMeta], categorical_threshold: int
+    ) -> None:
         self._add_column_stats(columns, categorical_threshold)
-        return format_schema(self.table_name, columns)
 
     def get_semantic_views_description(self) -> str:
         """Get information about semantic views (if any) for the system prompt."""
@@ -850,14 +886,17 @@ class PolarsLazySource(DataSource["pl.LazyFrame"]):
 
     def get_schema(self, *, categorical_threshold: int) -> str:
         """Generate schema information from LazyFrame using lazy aggregates."""
-        # Build column metadata (classification happens here)
-        columns = [
-            self._make_column_meta(name, dtype) for name, dtype in self._schema.items()
-        ]
+        metas = self.get_column_metas()
+        self.populate_column_stats(metas, categorical_threshold)
+        return format_schema(self.table_name, metas)
 
-        # Add stats to the metadata and format schema string
+    def get_column_metas(self) -> list[ColumnMeta]:
+        return [self._make_column_meta(name, dtype) for name, dtype in self._schema.items()]
+
+    def populate_column_stats(
+        self, columns: list[ColumnMeta], categorical_threshold: int
+    ) -> None:
         self._add_column_stats(columns, self._lf, categorical_threshold)
-        return format_schema(self.table_name, columns)
 
     def execute_query(self, query: str) -> pl.LazyFrame:
         """
@@ -1058,11 +1097,19 @@ class IbisSource(DataSource["ibis.Table"]):
         return self._backend
 
     def get_schema(self, *, categorical_threshold: int) -> str:
-        columns = [
+        metas = self.get_column_metas()
+        self.populate_column_stats(metas, categorical_threshold)
+        return format_schema(self.table_name, metas)
+
+    def get_column_metas(self) -> list[ColumnMeta]:
+        return [
             self._make_column_meta(name, dtype) for name, dtype in self._schema.items()
         ]
+
+    def populate_column_stats(
+        self, columns: list[ColumnMeta], categorical_threshold: int
+    ) -> None:
         self._add_column_stats(columns, self._table, categorical_threshold)
-        return format_schema(self.table_name, columns)
 
     def get_semantic_views_description(self) -> str:
         """Get information about semantic views (if any) for the system prompt."""

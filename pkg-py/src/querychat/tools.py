@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-import inspect
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, Protocol, TypedDict, cast, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, TypedDict, runtime_checkable
 
 from chatlas import ContentToolResult, Tool
 from shinychat.types import ToolResultDisplay
@@ -18,6 +17,7 @@ from ._utils import (
 from ._viz_tools import tool_visualize
 
 __all__ = [
+    "tool_get_schema",
     "tool_query",
     "tool_reset_dashboard",
     "tool_update_dashboard",
@@ -25,10 +25,70 @@ __all__ = [
 ]
 
 if TYPE_CHECKING:
+    from ._data_dict import DataDict
     from ._query_executor import QueryExecutor
 
 
-ResetDashboardCallback = Callable[[], None] | Callable[[str], None]
+ResetDashboardCallback = Callable[[str], None]
+
+
+def _get_schema_impl(
+    data_dict: DataDict | None,
+    executor: QueryExecutor,
+    table_names: list[str],
+    categorical_threshold: int,
+) -> Callable[[str], ContentToolResult]:
+    def get_schema(table_name: str) -> ContentToolResult:
+        if table_name not in table_names:
+            available = ", ".join(table_names)
+            error = f"Table '{table_name}' not found. Available: {available}"
+            return ContentToolResult(value=error, error=Exception(error))
+
+        if data_dict is not None:
+            schema = data_dict.get_table_schema(table_name, executor, categorical_threshold)
+        else:
+            schema = executor.get_schema(table_name, categorical_threshold)
+
+        return ContentToolResult(value=schema)
+
+    return get_schema
+
+
+def tool_get_schema(
+    data_dict: DataDict | None,
+    executor: QueryExecutor,
+    table_names: list[str],
+    categorical_threshold: int,
+) -> Tool:
+    """
+    Create a tool that retrieves full column details for a table.
+
+    Parameters
+    ----------
+    data_dict
+        Optional data dictionary with enriched column metadata.
+    executor
+        The query executor to use for schema introspection.
+    table_names
+        List of valid table names.
+    categorical_threshold
+        Maximum number of unique values before a text column is treated as
+        free-form rather than categorical.
+
+    Returns
+    -------
+    Tool
+        A tool that can be registered with chatlas.
+
+    """
+    impl = _get_schema_impl(data_dict, executor, table_names, categorical_threshold)
+    description = read_prompt_template("tool-get-schema.md")
+    impl.__doc__ = description
+    return Tool.from_func(
+        impl,
+        name="querychat_get_schema",
+        annotations={"title": "Get Schema"},
+    )
 
 
 @runtime_checkable
@@ -199,7 +259,7 @@ def _reset_dashboard_impl(
             )
 
         # Call the callback to reset
-        _call_reset_dashboard(reset_fn, table)
+        reset_fn(table)
 
         # Add Reset Filter button
         button_html = f"""<button
@@ -257,28 +317,6 @@ def tool_reset_dashboard(
         name="querychat_reset_dashboard",
         annotations={"title": "Reset Dashboard"},
     )
-
-
-def _call_reset_dashboard(reset_fn: ResetDashboardCallback, table: str) -> None:
-    """Invoke legacy zero-arg and current table-aware reset callbacks safely."""
-    try:
-        signature = inspect.signature(reset_fn)
-    except (TypeError, ValueError):
-        cast("Callable[[str], None]", reset_fn)(table)
-        return
-
-    try:
-        signature.bind(table)
-    except TypeError:
-        try:
-            signature.bind(table=table)
-        except TypeError:
-            signature.bind()
-            cast("Callable[[], None]", reset_fn)()
-        else:
-            cast("Callable[..., None]", reset_fn)(table=table)
-    else:
-        cast("Callable[[str], None]", reset_fn)(table)
 
 
 def _query_impl(executor: QueryExecutor) -> Callable[..., ContentToolResult]:

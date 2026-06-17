@@ -25,6 +25,8 @@ if TYPE_CHECKING:
     import sqlalchemy
     from narwhals.stable.v1.typing import IntoFrame
 
+    from ._data_dict import DataDict
+
 
 class QueryChat(QueryChatBase[IntoFrameT]):
     """
@@ -68,6 +70,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("filter", "query"),
         data_description: Optional[str | Path] = None,
+        data_dict: DataDict | str | Path | None = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
@@ -83,6 +86,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("filter", "query"),
         data_description: Optional[str | Path] = None,
+        data_dict: DataDict | str | Path | None = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
@@ -98,6 +102,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("filter", "query"),
         data_description: Optional[str | Path] = None,
+        data_dict: DataDict | str | Path | None = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
@@ -113,6 +118,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("filter", "query"),
         data_description: Optional[str | Path] = None,
+        data_dict: DataDict | str | Path | None = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
@@ -128,6 +134,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("filter", "query"),
         data_description: Optional[str | Path] = None,
+        data_dict: DataDict | str | Path | None = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
@@ -142,6 +149,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("filter", "query"),
         data_description: Optional[str | Path] = None,
+        data_dict: DataDict | str | Path | None = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
@@ -153,6 +161,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             client=client,
             tools=tools,
             data_description=data_description,
+            data_dict=data_dict,
             categorical_threshold=categorical_threshold,
             extra_instructions=extra_instructions,
             prompt_template=prompt_template,
@@ -161,18 +170,17 @@ class QueryChat(QueryChatBase[IntoFrameT]):
 
     def _get_state(self) -> AppState:
         """Get or create session state."""
-        data_source = self._require_data_source("_get_state")
+        self._require_initialized("_get_state")
         import streamlit as st
 
         if self._state_key not in st.session_state:
             st.session_state[self._state_key] = create_app_state(
-                data_source,
-                lambda update_cb, reset_cb: self.client(
+                data_sources=dict(self._data_sources),
+                client_factory=lambda update_cb, reset_cb: self.client(
                     update_dashboard=update_cb,
                     reset_dashboard=reset_cb,
                 ),
-                self.greeting,
-                data_sources=dict(self._data_sources),
+                greeting=self.greeting,
                 query_executor=self._require_query_executor("_get_state"),
             )
         return st.session_state[self._state_key]
@@ -184,11 +192,12 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         Configures the page, renders chat in sidebar, and displays
         SQL query and data table in the main area.
         """
-        data_source = self._require_data_source("app")
+        self._require_initialized("app")
         import streamlit as st
 
+        table_name = next(iter(self._data_sources))
         st.set_page_config(
-            page_title=f"querychat with {data_source.table_name}",
+            page_title=f"querychat with {table_name}",
             layout="wide",
             initial_sidebar_state="expanded",
         )
@@ -307,12 +316,13 @@ class QueryChat(QueryChatBase[IntoFrameT]):
 
     def _render_main_content(self) -> None:
         """Render the main content area (SQL + data table)."""
-        data_source = self._require_data_source("_render_main_content")
+        self._require_initialized("_render_main_content")
         import streamlit as st
 
         state = self._get_state()
+        table_name = next(iter(self._data_sources))
 
-        st.title(f"querychat with `{data_source.table_name}`")
+        st.title(f"querychat with `{table_name}`")
 
         st.subheader(state.title or "SQL Query")
 

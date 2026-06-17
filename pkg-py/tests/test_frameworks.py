@@ -37,7 +37,7 @@ class TestGradioQueryChat:
 
         qc = QueryChat(sample_df, "tips")
         assert qc is not None
-        assert qc.data_source is not None
+        assert len(qc.table_names()) > 0
 
     def test_app_returns_blocks(self, sample_df):
         from querychat.gradio import QueryChat
@@ -101,7 +101,7 @@ class TestDashQueryChat:
 
         qc = QueryChat(sample_df, "tips")
         assert qc is not None
-        assert qc.data_source is not None
+        assert len(qc.table_names()) > 0
 
     def test_app_returns_dash_app(self, sample_df):
         from querychat.dash import QueryChat
@@ -183,7 +183,7 @@ class TestStreamlitQueryChat:
 
         qc = QueryChat(sample_df, "tips")
         assert qc is not None
-        assert qc.data_source is not None
+        assert len(qc.table_names()) > 0
 
     def test_system_prompt_generated(self, sample_df):
         from querychat.streamlit import QueryChat
@@ -220,6 +220,6 @@ class TestStreamlitQueryChat:
         from querychat.streamlit import QueryChat
 
         qc = QueryChat(sample_df, "tips")
-        ds = qc.data_source
+        ds = qc.table("tips").data_source
         assert ds is not None
         assert ds.table_name == "tips"

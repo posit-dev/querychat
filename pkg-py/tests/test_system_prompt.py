@@ -5,7 +5,9 @@ from pathlib import Path
 
 import narwhals.stable.v1 as nw
 import pandas as pd
+import polars as pl
 import pytest
+from querychat._data_dict import DataDict, RelationshipSpec, TableSpec
 from querychat._datasource import DataFrameSource
 from querychat._system_prompt import QueryChatSystemPrompt
 
@@ -29,13 +31,90 @@ def sample_data_source():
 def sample_prompt_template():
     """Create a sample prompt template for testing."""
     return """Database Type: {{db_type}}
-Schema: {{schema}}
+Tables: {{{tables_overview}}}
 {{#data_description}}Data: {{data_description}}{{/data_description}}
 {{#extra_instructions}}Instructions: {{extra_instructions}}{{/extra_instructions}}
 {{#has_tool_update}}UPDATE TOOL ENABLED{{/has_tool_update}}
 {{#has_tool_query}}QUERY TOOL ENABLED{{/has_tool_query}}
 {{#include_query_guidelines}}QUERY GUIDELINES{{/include_query_guidelines}}
 """
+
+
+def _make_system_prompt(
+    data_sources: dict,
+    data_dict: DataDict | None = None,
+    **kwargs,
+) -> QueryChatSystemPrompt:
+    return QueryChatSystemPrompt(
+        prompt_template=None,
+        data_sources=data_sources,
+        data_dict=data_dict,
+        **kwargs,
+    )
+
+
+def test_system_prompt_contains_table_names(sample_data_source) -> None:
+    sp = _make_system_prompt({"mytable": sample_data_source})
+    rendered = sp.render({"query"})
+    assert "mytable" in rendered
+
+
+def test_system_prompt_no_schema_block(sample_data_source) -> None:
+    sp = _make_system_prompt({"mytable": sample_data_source})
+    rendered = sp.render({"query"})
+    # Schema block should be gone — no "Columns:" section in prompt
+    assert "Columns:" not in rendered
+
+
+def test_system_prompt_includes_table_description() -> None:
+    df = nw.from_native(pl.DataFrame({"x": [1]}))
+    source = DataFrameSource(df, "orders")
+    dd = DataDict(
+        version="0.1.0",
+        tables={"orders": TableSpec(description="Order records.")},
+    )
+    sp = _make_system_prompt({"orders": source}, data_dict=dd)
+    rendered = sp.render({"query"})
+    assert "Order records." in rendered
+
+
+def test_system_prompt_includes_glossary() -> None:
+    df = nw.from_native(pl.DataFrame({"x": [1]}))
+    source = DataFrameSource(df, "orders")
+    dd = DataDict(
+        version="0.1.0",
+        tables={"orders": TableSpec(columns=[])},
+        glossary={"churn": "No orders in 90 days."},
+    )
+    sp = _make_system_prompt({"orders": source}, data_dict=dd)
+    rendered = sp.render({"query"})
+    assert "churn" in rendered
+    assert "No orders in 90 days." in rendered
+
+
+def test_system_prompt_includes_relationships() -> None:
+    df = nw.from_native(pl.DataFrame({"x": [1]}))
+    source = DataFrameSource(df, "orders")
+    dd = DataDict(
+        version="0.1.0",
+        tables={"orders": TableSpec(columns=[])},
+        relationships=[
+            RelationshipSpec(
+                join="orders.customer_id = customers.id",
+                cardinality="many-to-one",
+                description="Order placed by customer.",
+            )
+        ],
+    )
+    sp = _make_system_prompt({"orders": source}, data_dict=dd)
+    rendered = sp.render({"query"})
+    assert "orders.customer_id = customers.id" in rendered
+
+
+def test_system_prompt_no_glossary_section_when_empty(sample_data_source) -> None:
+    sp = _make_system_prompt({"t": sample_data_source})
+    rendered = sp.render({"query"})
+    assert "<glossary>" not in rendered
 
 
 class TestQueryChatSystemPromptInit:
@@ -54,8 +133,7 @@ class TestQueryChatSystemPromptInit:
         assert prompt.data_source == sample_data_source
         assert prompt.data_description is None
         assert prompt.extra_instructions is None
-        assert prompt.schema is not None
-        assert prompt.categorical_threshold == 10
+        assert prompt.categorical_threshold == 20
 
     def test_init_with_path_template(self, sample_data_source):
         """Test initialization with Path template."""
@@ -164,7 +242,7 @@ class TestQueryChatSystemPromptRender:
         assert "QUERY TOOL ENABLED" in rendered
         assert "QUERY GUIDELINES" in rendered
         assert "Database Type:" in rendered
-        assert "Schema:" in rendered
+        assert "Tables:" in rendered
 
     def test_render_with_query_only(self, sample_data_source, sample_prompt_template):
         """Test rendering with only query tool enabled."""
@@ -233,8 +311,10 @@ class TestQueryChatSystemPromptRender:
 
         assert "Instructions: Be very concise" in rendered
 
-    def test_render_includes_schema(self, sample_data_source, sample_prompt_template):
-        """Test that rendering includes schema information."""
+    def test_render_includes_table_name(
+        self, sample_data_source, sample_prompt_template
+    ):
+        """Test that rendering includes the table name in the overview."""
         prompt = QueryChatSystemPrompt(
             prompt_template=sample_prompt_template,
             data_source=sample_data_source,
@@ -242,13 +322,8 @@ class TestQueryChatSystemPromptRender:
 
         rendered = prompt.render(tools=("query",))
 
-        assert "Schema:" in rendered
-        # Schema should contain table and column information
-        # Note: chevron escapes HTML entities, so we check for key schema content
+        assert "Tables:" in rendered
         assert "test_table" in rendered
-        assert "id" in rendered
-        assert "name" in rendered
-        assert "age" in rendered
 
     def test_render_includes_db_type(self, sample_data_source, sample_prompt_template):
         """Test that rendering includes database type."""
@@ -263,47 +338,6 @@ class TestQueryChatSystemPromptRender:
         assert sample_data_source.get_db_type() in rendered
 
 
-class TestSchemaInferenceSkip:
-    """Tests that schema inference is skipped when template doesn't reference {{schema}}."""
-
-    def test_schema_skipped_when_not_in_template(self, sample_data_source):
-        """Schema should be empty string when template doesn't use {{schema}}."""
-        prompt = QueryChatSystemPrompt(
-            prompt_template="No schema here: {{db_type}}",
-            data_source=sample_data_source,
-        )
-
-        assert prompt.schema == ""
-
-    def test_schema_computed_when_in_template(self, sample_data_source):
-        """Schema should be computed when template uses {{schema}}."""
-        prompt = QueryChatSystemPrompt(
-            prompt_template="Schema: {{schema}}",
-            data_source=sample_data_source,
-        )
-
-        assert prompt.schema != ""
-        assert "test_table" in prompt.schema
-
-    def test_schema_computed_for_triple_braces(self, sample_data_source):
-        """Schema should be computed for unescaped {{{schema}}} syntax."""
-        prompt = QueryChatSystemPrompt(
-            prompt_template="Schema: {{{schema}}}",
-            data_source=sample_data_source,
-        )
-
-        assert prompt.schema != ""
-
-    def test_schema_computed_for_conditional_section(self, sample_data_source):
-        """Schema should be computed for {{#schema}} conditional sections."""
-        prompt = QueryChatSystemPrompt(
-            prompt_template="{{#schema}}Has schema{{/schema}}",
-            data_source=sample_data_source,
-        )
-
-        assert prompt.schema != ""
-
-
 class TestVizPromptConditionals:
     """Tests for visualization-related conditional rendering in the real prompt."""
 
@@ -314,8 +348,6 @@ class TestVizPromptConditionals:
         When only visualize is enabled (no query tool), the fallback
         to querychat_query should not appear in the rendered prompt.
         """
-        from pathlib import Path
-
         template_path = (
             Path(__file__).parent.parent
             / "src"
@@ -339,8 +371,6 @@ class TestVizPromptConditionals:
         When both query and visualize are enabled, the collapsed query
         guidance should appear in the system prompt.
         """
-        from pathlib import Path
-
         template_path = (
             Path(__file__).parent.parent
             / "src"
@@ -363,8 +393,6 @@ class TestVizPromptConditionals:
         should NOT contain "cannot query or analyze" and SHOULD contain
         "Visualizing Data".
         """
-        from pathlib import Path
-
         template_path = (
             Path(__file__).parent.parent
             / "src"
@@ -387,8 +415,6 @@ class TestVizPromptConditionals:
         The "Avoid redundant expanded results" guidance should only appear
         when both query and visualize are enabled.
         """
-        from pathlib import Path
-
         template_path = (
             Path(__file__).parent.parent
             / "src"

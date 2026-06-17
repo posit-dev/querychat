@@ -25,7 +25,6 @@ if TYPE_CHECKING:
 
     from ._datasource import DataSource
     from ._query_executor import QueryExecutor
-    from ._querychat_base import TOOL_GROUPS
     from ._viz_tools import VisualizeData
     from .types import UpdateDashboardData
 

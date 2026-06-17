@@ -33,9 +33,8 @@ def create_large_dataset(path: Path, n_rows: int) -> None:
     print(f"Creating dataset with {n_rows:,} rows...")
     start = time.perf_counter()
 
-    # Generate data in chunks to avoid memory issues
     chunk_size = 1_000_000
-    chunks_written = 0
+    chunk_paths: list[Path] = []
 
     for i in range(0, n_rows, chunk_size):
         chunk_rows = min(chunk_size, n_rows - i)
@@ -50,15 +49,15 @@ def create_large_dataset(path: Path, n_rows: int) -> None:
             }
         )
 
-        if chunks_written == 0:
-            chunk.write_parquet(path)
-        else:
-            # Append by reading existing and concatenating
-            existing = pl.read_parquet(path)
-            pl.concat([existing, chunk]).write_parquet(path)
-
-        chunks_written += 1
+        chunk_path = path.with_suffix(f".chunk{len(chunk_paths)}.parquet")
+        chunk.write_parquet(chunk_path)
+        chunk_paths.append(chunk_path)
         print(f"  Written {min(i + chunk_size, n_rows):,} / {n_rows:,} rows")
+
+    # Concat all chunks into the final file in one pass
+    pl.concat([pl.read_parquet(p) for p in chunk_paths]).write_parquet(path)
+    for p in chunk_paths:
+        p.unlink()
 
     elapsed = time.perf_counter() - start
     file_size_mb = path.stat().st_size / (1024 * 1024)
@@ -118,7 +117,7 @@ def demo_eager_vs_lazy(parquet_path: Path) -> None:
 
     # Execute a query
     start = time.perf_counter()
-    result = qc_eager.data_source.execute_query(
+    result = qc_eager.table("sales").data_source.execute_query(
         "SELECT region, SUM(value) as total FROM sales GROUP BY region"
     )
     query_time = time.perf_counter() - start
@@ -158,7 +157,7 @@ def demo_eager_vs_lazy(parquet_path: Path) -> None:
 
     # Execute the same query (stays lazy)
     start = time.perf_counter()
-    result_lazy = qc_lazy.data_source.execute_query(
+    result_lazy = qc_lazy.table("sales").data_source.execute_query(
         "SELECT region, SUM(value) as total FROM sales GROUP BY region"
     )
     query_time = time.perf_counter() - start

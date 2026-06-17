@@ -5,7 +5,12 @@ from pathlib import Path
 import narwhals.stable.v1 as nw
 import pandas as pd
 import pytest
-from querychat._datasource import DataFrameSource, SQLAlchemySource
+from querychat._datasource import (
+    ColumnMeta,
+    DataFrameSource,
+    SQLAlchemySource,
+    format_schema,
+)
 from querychat._utils import UnsafeQueryError, check_query
 from querychat.types import MissingColumnsError
 from sqlalchemy import create_engine, text
@@ -503,3 +508,61 @@ def test_check_query_escape_hatch_accepts_various_values(monkeypatch):
     for value in ["true", "TRUE", "1", "yes", "YES"]:
         monkeypatch.setenv("QUERYCHAT_ENABLE_UPDATE_QUERIES", value)
         check_query("INSERT INTO table VALUES (1)")  # Should not raise
+
+
+# -- ColumnMeta.description and format_schema tests --
+
+
+@pytest.fixture
+def sample_df():
+    """Create a sample pandas DataFrame for testing."""
+    return pd.DataFrame(
+        {
+            "id": [1, 2, 3],
+            "name": ["Alice", "Bob", "Charlie"],
+            "age": [25, 30, 35],
+            "salary": [50000.0, 60000.0, 70000.0],
+        }
+    )
+
+
+def test_column_meta_has_description_field() -> None:
+    meta = ColumnMeta(name="x", sql_type="TEXT", kind="text")
+    assert meta.description is None
+    meta2 = ColumnMeta(name="x", sql_type="TEXT", kind="text", description="A column")
+    assert meta2.description == "A column"
+
+
+def test_format_schema_includes_description() -> None:
+    cols = [
+        ColumnMeta(name="id", sql_type="INTEGER", kind="numeric", description="Primary key"),
+        ColumnMeta(name="name", sql_type="TEXT", kind="text"),
+    ]
+    result = format_schema("mytable", cols)
+    assert "Description: Primary key" in result
+    assert "name" in result
+
+
+def test_dataframe_source_get_column_metas(sample_df) -> None:
+    source = DataFrameSource(nw.from_native(sample_df), "test")
+    metas = source.get_column_metas()
+    assert len(metas) > 0
+    assert all(isinstance(m, ColumnMeta) for m in metas)
+    # Stats should NOT be populated yet
+    assert all(m.min_val is None for m in metas if m.kind == "numeric")
+
+
+def test_dataframe_source_populate_column_stats(sample_df) -> None:
+    source = DataFrameSource(nw.from_native(sample_df), "test")
+    metas = source.get_column_metas()
+    source.populate_column_stats(metas, categorical_threshold=10)
+    numeric_metas = [m for m in metas if m.kind == "numeric"]
+    if numeric_metas:
+        assert numeric_metas[0].min_val is not None
+
+
+def test_dataframe_source_get_schema_unchanged(sample_df) -> None:
+    source = DataFrameSource(nw.from_native(sample_df), "test")
+    schema = source.get_schema(categorical_threshold=10)
+    assert "Table: test" in schema
+    assert "Columns:" in schema

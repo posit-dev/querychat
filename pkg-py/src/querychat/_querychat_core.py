@@ -14,12 +14,13 @@ __all__ = [
 ]
 
 from collections.abc import Callable
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Generic, NotRequired, Optional, TypedDict, Union
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Generic, Optional, TypedDict, Union
 
 from chatlas import Chat, ContentToolRequest, ContentToolResult
 from chatlas.types import Content
 from narwhals.stable.v1.typing import IntoFrameT
+from typing_extensions import NotRequired
 
 from .tools import UpdateDashboardData
 
@@ -66,7 +67,6 @@ class DisplayMessage(TypedDict):
 class StateDictAccessorMixin(Generic[IntoFrameT]):
     """Mixin providing df/sql/title accessors for frameworks using serialized state dicts."""
 
-    _data_source: DataSource[IntoFrameT] | None
     _data_sources: dict[str, DataSource[IntoFrameT]]
     _query_executor: QueryExecutor | None
 
@@ -94,7 +94,7 @@ class StateDictAccessorMixin(Generic[IntoFrameT]):
             Returns a LazyFrame if the data source is lazy.
 
         """
-        data_source = self._get_state_data_source(state)  # type: ignore[attr-defined]
+        data_source = self._get_state_data_source(state)
         sql = state.get("sql") if state else None
         if sql:
             try:
@@ -108,18 +108,16 @@ class StateDictAccessorMixin(Generic[IntoFrameT]):
         self, state: AppStateDict | None
     ) -> DataSource[IntoFrameT]:
         """Resolve the full-data source for a serialized state payload."""
-        default_source = self._require_data_source("_get_state_data_source")  # type: ignore[attr-defined]
+        self._require_initialized("_get_state_data_source")  # type: ignore[attr-defined]
+        first_source: DataSource[IntoFrameT] = next(iter(self._data_sources.values()))
         if not state:
-            return default_source
+            return first_source
 
         table_name = state.get("table")
-        if table_name is None:
-            return default_source
-
-        if table_name in self._data_sources:
+        if table_name is not None and table_name in self._data_sources:
             return self._data_sources[table_name]
 
-        return default_source
+        return first_source
 
     def sql(self, state: AppStateDict | None) -> str | None:
         """
@@ -157,12 +155,11 @@ class StateDictAccessorMixin(Generic[IntoFrameT]):
 
     def _deserialize_state(self, state_data: AppStateDict | None) -> AppState:
         """Reconstruct AppState from a serialized state dict."""
-        data_source = self._require_data_source("_deserialize_state")  # type: ignore[attr-defined]
+        self._require_initialized("_deserialize_state")  # type: ignore[attr-defined]
         state = create_app_state(
-            data_source,
-            self._client_factory,
-            self.greeting,  # type: ignore[attr-defined]
             data_sources=dict(self._data_sources),  # type: ignore[attr-defined]
+            client_factory=self._client_factory,
+            greeting=self.greeting,  # type: ignore[attr-defined]
             query_executor=self._require_query_executor("_deserialize_state"),  # type: ignore[attr-defined]
         )
         if state_data:
@@ -223,10 +220,9 @@ def format_query_error(e: Exception) -> str:
 class AppState:
     """Framework-agnostic application state for a querychat session."""
 
-    data_source: DataSource
+    data_sources: dict[str, DataSource]
     client: Chat
     query_executor: QueryExecutor | None = None
-    data_sources: dict[str, DataSource] = field(default_factory=dict)
     greeting: Optional[str] = None
 
     active_table: str | None = None
@@ -235,10 +231,8 @@ class AppState:
     error: Optional[str] = None
 
     def __post_init__(self) -> None:
-        if not self.data_sources:
-            self.data_sources = {self.data_source.table_name: self.data_source}
         if self.active_table is None:
-            self.active_table = self.data_source.table_name
+            self.active_table = next(iter(self.data_sources))
 
     def update_dashboard(self, data: UpdateDashboardData) -> None:
         self.active_table = data["table"]
@@ -255,9 +249,9 @@ class AppState:
 
     def get_active_data_source(self) -> DataSource:
         """Return the current full-data source for the active table."""
-        if self.active_table is None:
-            return self.data_source
-        return self.data_sources.get(self.active_table, self.data_source)
+        if self.active_table is not None and self.active_table in self.data_sources:
+            return self.data_sources[self.active_table]
+        return next(iter(self.data_sources.values()))
 
     def get_current_data(self) -> IntoFrame:
         """Get current data, falling back to default if query fails."""
@@ -276,7 +270,7 @@ class AppState:
         return data_source.get_data()
 
     def get_display_sql(self) -> str:
-        table_name = self.active_table or self.data_source.table_name
+        table_name = self.active_table or next(iter(self.data_sources))
         return self.sql or f"SELECT * FROM {table_name}"
 
     def get_display_messages(self) -> list[DisplayMessage]:
@@ -335,7 +329,7 @@ class AppState:
         """Restore state from serialized dict."""
         from chatlas import Turn
 
-        self.active_table = data.get("table", self.data_source.table_name)
+        self.active_table = data.get("table", next(iter(self.data_sources)))
         self.sql = data["sql"]
         self.title = data["title"]
         self.error = data["error"]
@@ -346,11 +340,10 @@ class AppState:
 
 
 def create_app_state(
-    data_source: DataSource,
+    *,
+    data_sources: dict[str, DataSource],
     client_factory: ClientFactory,
     greeting: Optional[str] = None,
-    *,
-    data_sources: dict[str, DataSource] | None = None,
     query_executor: QueryExecutor | None = None,
 ) -> AppState:
     """Create AppState with callbacks connected via holder pattern."""
@@ -370,14 +363,9 @@ def create_app_state(
 
     client = client_factory(update_callback, reset_callback)
     state = AppState(
-        data_source=data_source,
+        data_sources=dict(data_sources),
         client=client,
         query_executor=query_executor,
-        data_sources=(
-            dict(data_sources)
-            if data_sources is not None
-            else {data_source.table_name: data_source}
-        ),
         greeting=greeting,
     )
     state_holder["state"] = state

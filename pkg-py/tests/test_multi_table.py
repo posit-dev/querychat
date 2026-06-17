@@ -160,12 +160,11 @@ class TestMultiSourceStorage:
         assert "orders" in qc._data_sources
         assert len(qc._data_sources) == 1
 
-    def test_data_source_property_returns_first_source(self, orders_df):
-        """Test backwards compatibility: data_source property returns the first source."""
+    def test_table_accessor_returns_data_source(self, orders_df):
+        """Test that table() accessor returns the correct data source."""
         qc = QueryChat(orders_df, "orders", greeting="Hello!")
 
-        # data_source property should return the single source
-        assert qc.data_source is qc._data_sources["orders"]
+        assert qc.table("orders").data_source is qc._data_sources["orders"]
 
     def test_table_names_returns_list(self, orders_df):
         """Test that table_names() returns list of table names."""
@@ -186,24 +185,6 @@ class TestAddTable:
 
         assert qc.table_names() == ["orders", "customers"]
         assert len(qc._data_sources) == 2
-
-    def test_add_table_with_relationships(self, orders_df, customers_df):
-        """Test adding table with explicit relationships."""
-        qc = QueryChat(orders_df, "orders", greeting="Hello!")
-        qc.add_table(
-            customers_df, "customers", relationships={"id": "orders.customer_id"}
-        )
-
-        assert "customers" in qc._data_sources
-
-    def test_add_table_with_description(self, orders_df, customers_df):
-        """Test adding table with description."""
-        qc = QueryChat(orders_df, "orders", greeting="Hello!")
-        qc.add_table(
-            customers_df, "customers", description="Customer contact information"
-        )
-
-        assert "customers" in qc._data_sources
 
     def test_add_table_duplicate_name_raises(self, orders_df):
         """Test that adding duplicate table name raises error."""
@@ -305,24 +286,6 @@ class TestTableAccessor:
         assert orders_accessor.data_source is not customers_accessor.data_source
 
 
-class TestAccessorAmbiguity:
-    """Tests for accessor ambiguity errors with multiple tables."""
-
-    def test_df_single_table_works(self, orders_df):
-        """Test that data_source works with single table."""
-        qc = QueryChat(orders_df, "orders", greeting="Hello!")
-        # data_source property should work
-        assert qc.data_source is qc._data_sources["orders"]
-
-    def test_data_source_multiple_tables_raises(self, orders_df, customers_df):
-        """Test that data_source property raises with multiple tables."""
-        qc = QueryChat(orders_df, "orders", greeting="Hello!")
-        qc.add_table(customers_df, "customers")
-
-        with pytest.raises(ValueError, match="Multiple tables present"):
-            _ = qc.data_source
-
-
 class TestMultiTableSystemPrompt:
     """Tests for multi-table system prompt generation."""
 
@@ -336,20 +299,18 @@ class TestMultiTableSystemPrompt:
         assert "orders" in prompt
         assert "customers" in prompt
 
-    def test_system_prompt_contains_all_columns(self, orders_df, customers_df):
-        """Test that system prompt contains columns from all tables."""
+    def test_system_prompt_references_get_schema_tool(self, orders_df, customers_df):
+        """Column details are now behind get_schema; prompt lists table names only."""
         qc = QueryChat(orders_df, "orders", greeting="Hello!")
         qc.add_table(customers_df, "customers")
 
         prompt = qc.system_prompt
 
-        # Orders columns
-        assert "id" in prompt
-        assert "customer_id" in prompt
-        assert "amount" in prompt
-        # Customers columns
-        assert "name" in prompt
-        assert "state" in prompt
+        # Table names still appear in the prompt
+        assert "orders" in prompt
+        assert "customers" in prompt
+        # Column details are no longer inlined in the prompt
+        assert "querychat_get_schema" in prompt
 
 
 class TestMultiTableCleanup:
@@ -448,20 +409,24 @@ class TestSourceCompatibility:
         with pytest.raises(ValueError, match="share the same backend instance"):
             check_source_compatibility({"orders": first}, second, "customers")
 
-    def test_data_source_setter_validates_replacement_compatibility(
+    def test_add_table_replace_validates_compatibility(
         self, orders_qc, customers_df
     ):
-        """Replacing the primary source must still respect multi-table compatibility."""
+        """Replacing a table must still respect multi-table compatibility."""
         orders_qc.add_table(customers_df, "customers")
         original_orders = orders_qc._data_sources["orders"]
 
         with pytest.raises(ValueError, match="same DataFrame backend"):
-            orders_qc.data_source = pl.DataFrame(
-                {
-                    "id": [1, 2],
-                    "customer_id": [101, 102],
-                    "amount": [100.0, 200.0],
-                }
+            orders_qc.add_table(
+                pl.DataFrame(
+                    {
+                        "id": [1, 2],
+                        "customer_id": [101, 102],
+                        "amount": [100.0, 200.0],
+                    }
+                ),
+                "orders",
+                replace=True,
             )
 
         assert orders_qc._data_sources["orders"] is original_orders
@@ -582,7 +547,7 @@ class TestBuildQueryExecutor:
         assert orders_qc.system_prompt == original_system_prompt
         assert orders_qc.table_names() == original_table_names
 
-    def test_data_source_rebuild_failure_preserves_state_and_cleans_staged_source(
+    def test_add_table_replace_failure_preserves_state_and_cleans_staged_source(
         self, orders_qc, customers_df, monkeypatch
     ):
         orders_qc.add_table(customers_df, "customers")
@@ -612,12 +577,16 @@ class TestBuildQueryExecutor:
         )
 
         with pytest.raises(RuntimeError, match="executor rebuild failed"):
-            orders_qc.data_source = pd.DataFrame(
-                {
-                    "id": [1, 2, 3],
-                    "customer_id": [101, 102, 101],
-                    "amount": [100.0, 200.0, 150.0],
-                }
+            orders_qc.add_table(
+                pd.DataFrame(
+                    {
+                        "id": [1, 2, 3],
+                        "customer_id": [101, 102, 101],
+                        "amount": [100.0, 200.0, 150.0],
+                    }
+                ),
+                "orders",
+                replace=True,
             )
 
         import duckdb

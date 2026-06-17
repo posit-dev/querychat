@@ -391,3 +391,43 @@ class TestDataSourceExecutor:
     def test_cleanup_noop(self, orders_source):
         executor = DataSourceExecutor({"orders": orders_source})
         executor.cleanup()
+
+
+def test_datasource_executor_get_column_metas() -> None:
+    df = pl.DataFrame({"id": [1, 2], "name": ["a", "b"]})
+    source = DataFrameSource(nw.from_native(df), "t")
+    executor = DataSourceExecutor({"t": source})
+    metas = executor.get_column_metas("t")
+    assert [m.name for m in metas] == ["id", "name"]
+    assert all(m.min_val is None for m in metas)
+
+
+def test_datasource_executor_get_schema() -> None:
+    df = pl.DataFrame({"id": [1, 2, 3], "val": [10.0, 20.0, 30.0]})
+    source = DataFrameSource(nw.from_native(df), "t")
+    executor = DataSourceExecutor({"t": source})
+    schema = executor.get_schema("t", categorical_threshold=10)
+    assert "Table: t" in schema
+    assert "id" in schema
+    assert "val" in schema
+
+
+def test_duckdb_executor_get_column_metas() -> None:
+    df1 = pl.DataFrame({"id": [1, 2], "val": [10.0, 20.0]})
+    df2 = pl.DataFrame({"id": [1, 2], "name": ["a", "b"]})
+    source1 = DataFrameSource(nw.from_native(df1), "t1")
+    source2 = DataFrameSource(nw.from_native(df2), "t2")
+    executor = DuckDBExecutor({"t1": source1, "t2": source2})
+    metas = executor.get_column_metas("t1")
+    assert [m.name for m in metas] == ["id", "val"]
+
+
+def test_duckdb_executor_get_schema() -> None:
+    df1 = pl.DataFrame({"id": [1, 2, 3], "val": [10.0, 20.0, 30.0]})
+    df2 = pl.DataFrame({"id": [1], "name": ["x"]})
+    source1 = DataFrameSource(nw.from_native(df1), "t1")
+    source2 = DataFrameSource(nw.from_native(df2), "t2")
+    executor = DuckDBExecutor({"t1": source1, "t2": source2})
+    schema = executor.get_schema("t1", categorical_threshold=10)
+    assert "Table: t1" in schema
+    assert "Range:" in schema

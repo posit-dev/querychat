@@ -43,29 +43,26 @@ class TestShinyDeferredDataSource:
     def test_init_with_none(self):
         """Shiny QueryChat should accept None data_source."""
         qc = QueryChat(None, "users")
-        assert qc._data_source is None
+        assert len(qc.table_names()) == 0
         assert qc._table_name == "users"
-        # ID should use table_name even with None data_source
         assert qc.id == "querychat_users"
 
     def test_ui_works_without_data_source(self):
         """ui() should work without data_source set."""
         qc = QueryChat(None, "users")
-        # Should not raise
         ui = qc.ui()
         assert ui is not None
 
     def test_sidebar_works_without_data_source(self):
         """sidebar() should work without data_source set."""
         qc = QueryChat(None, "users")
-        # Should not raise
         sidebar = qc.sidebar()
         assert sidebar is not None
 
     def test_app_requires_data_source(self):
         """app() should raise if data_source not set."""
         qc = QueryChat(None, "users")
-        with pytest.raises(RuntimeError, match="data_source must be set"):
+        with pytest.raises(RuntimeError, match="At least one data source"):
             qc.app()
 
     def test_express_allows_deferred_data_source_during_stub_session(self):
@@ -82,6 +79,7 @@ class TestShinyDeferredDataSource:
         init_client = ChatOpenAI(model="gpt-4.1")
         override_client = ChatOpenAI(model="gpt-4.1-mini")
         qc = QueryChat(None, "users", client=init_client)
+        qc.add_table(sample_df, "users")
         recorded_specs = []
         real_create_client = _create_client
 
@@ -94,7 +92,7 @@ class TestShinyDeferredDataSource:
         )
 
         with session_context(ExpressStubSession()):
-            vals = qc.server(data_source=sample_df, client=override_client)
+            vals = qc.server(client=override_client)
 
         assert isinstance(vals.client, chatlas.Chat)
         assert len(recorded_specs) == 1
@@ -107,11 +105,15 @@ class TestShinyDeferredDataSource:
         first_override = ChatOpenAI(model="gpt-4.1-mini")
         second_override = ChatOpenAI(model="gpt-4.1-nano")
         qc = QueryChat(None, "users", client=init_client)
+        qc.add_table(sample_df, "users")
 
         with session_context(ExpressStubSession()):
-            qc.server(data_source=sample_df, client=first_override)
+            qc.server(client=first_override)
+
+        # Reset server_initialized for sequential test
+        qc._server_initialized = False
 
         with session_context(ExpressStubSession()):
-            qc.server(data_source=sample_df, client=second_override)
+            qc.server(client=second_override)
 
         assert qc._client_spec is init_client

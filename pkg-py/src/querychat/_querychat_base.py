@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import os
 import re
+import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Generic, Literal, Optional
 
@@ -37,6 +38,7 @@ from ._viz_utils import has_viz_deps, has_viz_tool
 from .tools import (
     ResetDashboardCallback,
     UpdateDashboardData,
+    tool_get_schema,
     tool_query,
     tool_reset_dashboard,
     tool_update_dashboard,
@@ -49,6 +51,7 @@ if TYPE_CHECKING:
     from narwhals.stable.v1.typing import IntoFrame
     from pins.boards import BaseBoard
 
+    from ._data_dict import DataDict
     from ._viz_tools import VisualizeData
 
 TOOL_GROUPS = Literal["filter", "update", "query", "visualize"]
@@ -76,10 +79,27 @@ class QueryChatBase(Generic[IntoFrameT]):
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
         data_description: Optional[str | Path] = None,
+        data_dict: DataDict | str | Path | None = None,
         categorical_threshold: int = 20,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
     ):
+        if data_description is not None:
+            warnings.warn(
+                "data_description is deprecated. Use data_dict with per-table "
+                "descriptions in the YAML instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
+        # Resolve data_dict from path/string or use as-is
+        if isinstance(data_dict, (str, Path)):
+            from ._data_dict import DataDict as _DataDict
+
+            self._data_dict: DataDict | None = _DataDict.from_yaml(data_dict)
+        else:
+            self._data_dict = data_dict
+
         if table_name is None:
             if isinstance(data_source, DataSource):
                 table_name = data_source.table_name
@@ -102,13 +122,10 @@ class QueryChatBase(Generic[IntoFrameT]):
 
         # Multi-table storage: dict of data sources keyed by table name
         self._data_sources: dict[str, DataSource] = {}
+        self._query_executor: QueryExecutor | None = None
 
         # Track server initialization state for add/remove table validation
         self._server_initialized = False
-
-        # Store metadata for multi-table support
-        self._table_relationships: dict[str, dict[str, str]] = {}
-        self._table_descriptions: dict[str, str] = {}
 
         self.tools = normalize_tools(tools, default=DEFAULT_TOOLS)
         self.greeting = greeting.read_text() if isinstance(greeting, Path) else greeting
@@ -125,29 +142,38 @@ class QueryChatBase(Generic[IntoFrameT]):
         self._client_spec: str | chatlas.Chat | None = client
         self._client_console = None
 
+        self._system_prompt: QueryChatSystemPrompt | None = None
+
         # Initialize data source (may be None for deferred pattern)
         if data_source is not None:
             if table_name is None:
                 raise ValueError("table_name is required when data_source is provided")
-            self._data_source: DataSource | None = normalize_data_source(
-                data_source, table_name
-            )
-            self._table_name = self._data_source.table_name
-            self._data_sources[table_name] = self._data_source
+            normalized = normalize_data_source(data_source, table_name)
+            self._table_name = normalized.table_name
+            self._data_sources[table_name] = normalized
+            self._validate_table_in_data_dict(table_name)
             self._auto_fill_data_description()
             self._build_system_prompt()
-        else:
-            self._data_source = None
-            self._system_prompt = None
-            self._query_executor = None
+
+    def _validate_table_in_data_dict(self, table_name: str) -> None:
+        """Raise ValueError if data_dict is set but table_name is not listed in it."""
+        if self._data_dict is None:
+            return
+        if table_name not in self._data_dict.tables:
+            available = ", ".join(self._data_dict.tables.keys())
+            raise ValueError(
+                f"Table '{table_name}' not found in data_dict. "
+                f"Available tables: {available}"
+            )
 
     def _auto_fill_data_description(self) -> None:
         """Auto-populate data_description from data source metadata if not user-supplied."""
         if self._data_description_mode == "inferred":
             self._data_description = None
             self._data_description_mode = "empty"
-        if self._data_description_mode == "empty" and self._data_source is not None:
-            desc = self._data_source.get_data_description()
+        if self._data_description_mode == "empty" and self._data_sources:
+            first_source = next(iter(self._data_sources.values()))
+            desc = first_source.get_data_description()
             if desc:
                 self._data_description = desc
                 self._data_description_mode = "inferred"
@@ -156,8 +182,6 @@ class QueryChatBase(Generic[IntoFrameT]):
         self,
         *,
         data_sources: dict[str, DataSource] | None = None,
-        relationships: dict[str, dict[str, str]] | None = None,
-        table_descriptions: dict[str, str] | None = None,
     ) -> None:
         """Build/rebuild the system prompt from current or staged data sources."""
         next_data_sources = self._data_sources if data_sources is None else data_sources
@@ -166,17 +190,6 @@ class QueryChatBase(Generic[IntoFrameT]):
             raise RuntimeError("Cannot build system prompt without data_source")
 
         prompt_template = self._prompt_template
-        if prompt_template is None:
-            prompt_template = Path(__file__).parent / "prompts" / "prompt.md"
-
-        next_relationships = (
-            self._table_relationships if relationships is None else relationships
-        )
-        next_table_descriptions = (
-            self._table_descriptions
-            if table_descriptions is None
-            else table_descriptions
-        )
 
         replacement_prompt = QueryChatSystemPrompt(
             prompt_template=prompt_template,
@@ -184,17 +197,19 @@ class QueryChatBase(Generic[IntoFrameT]):
             data_description=self._data_description,
             extra_instructions=self._extra_instructions,
             categorical_threshold=self._categorical_threshold,
-            relationships=next_relationships,
-            table_descriptions=next_table_descriptions,
+            data_dict=self._data_dict,
         )
         replacement_executor = self._build_query_executor(data_sources=next_data_sources)
-        previous_executor = getattr(self, "_query_executor", None)
+        previous_executor = self._query_executor
 
         self._system_prompt = replacement_prompt
         self._query_executor = replacement_executor
 
         if previous_executor is not None:
-            previous_executor.cleanup()
+            try:
+                previous_executor.cleanup()
+            except Exception:
+                pass
 
     def _build_query_executor(
         self, *, data_sources: dict[str, DataSource] | None = None
@@ -220,15 +235,13 @@ class QueryChatBase(Generic[IntoFrameT]):
 
         return DataSourceExecutor(dict(sources))
 
-    def _require_data_source(self, method_name: str) -> DataSource[IntoFrameT]:
-        """Raise if data_source is not set, otherwise return it for type narrowing."""
-        if self._data_source is None:
+    def _require_initialized(self, method_name: str) -> None:
+        """Raise if no data sources have been registered."""
+        if not self._data_sources:
             raise RuntimeError(
-                f"data_source must be set before calling {method_name}(). "
-                "Either pass data_source to __init__(), set the data_source property, "
-                "or pass data_source to server()."
+                f"At least one data source must be set before calling {method_name}(). "
+                "Either pass data_source to __init__() or call add_table()."
             )
-        return self._data_source
 
     def _require_query_executor(self, method_name: str) -> QueryExecutor:
         """Raise if query executor is not initialized, otherwise return it."""
@@ -257,11 +270,20 @@ class QueryChatBase(Generic[IntoFrameT]):
         if self._system_prompt is not None:
             chat.system_prompt = self._system_prompt.render(resolved_tools)
 
+        executor = self._require_query_executor("_create_session_client")
+
+        # Always register the schema tool regardless of resolved_tools
+        chat.register_tool(
+            tool_get_schema(
+                self._data_dict,
+                executor,
+                list(self._data_sources.keys()),
+                self._categorical_threshold,
+            )
+        )
+
         if resolved_tools is None:
             return chat
-
-        self._require_data_source("_create_session_client")
-        assert self._query_executor is not None  # noqa: S101
 
         if "update" in resolved_tools:
             update_fn = update_dashboard or (lambda _: None)
@@ -269,7 +291,7 @@ class QueryChatBase(Generic[IntoFrameT]):
 
             chat.register_tool(
                 tool_update_dashboard(
-                    self._query_executor,
+                    executor,
                     list(self._data_sources.keys()),
                     update_fn,
                 )
@@ -279,11 +301,11 @@ class QueryChatBase(Generic[IntoFrameT]):
             )
 
         if "query" in resolved_tools:
-            chat.register_tool(tool_query(self._query_executor))
+            chat.register_tool(tool_query(executor))
 
         if "visualize" in resolved_tools:
             viz_fn = visualize or (lambda _: None)
-            chat.register_tool(tool_visualize(self._query_executor, viz_fn))
+            chat.register_tool(tool_visualize(executor, viz_fn))
 
         return chat
 
@@ -317,7 +339,7 @@ class QueryChatBase(Generic[IntoFrameT]):
             A configured chat client.
 
         """
-        self._require_data_source("client")
+        self._require_initialized("client")
         return self._create_session_client(
             tools=tools,
             update_dashboard=update_dashboard,
@@ -327,7 +349,7 @@ class QueryChatBase(Generic[IntoFrameT]):
 
     def generate_greeting(self, *, echo: Literal["none", "output"] = "none") -> str:
         """Generate a welcome greeting for the chat."""
-        self._require_data_source("generate_greeting")
+        self._require_initialized("generate_greeting")
         chat = create_client(self._client_spec)
         if self._system_prompt is not None:
             chat.system_prompt = self._system_prompt.render(self.tools)
@@ -341,7 +363,7 @@ class QueryChatBase(Generic[IntoFrameT]):
         **kwargs,
     ) -> None:
         """Launch an interactive console chat with the data."""
-        self._require_data_source("console")
+        self._require_initialized("console")
         if new or self._client_console is None:
             self._client_console = self.client(tools=tools, **kwargs)
 
@@ -350,50 +372,28 @@ class QueryChatBase(Generic[IntoFrameT]):
     @property
     def system_prompt(self) -> str:
         """Get the system prompt."""
-        self._require_data_source("system_prompt")
+        self._require_initialized("system_prompt")
         if self._system_prompt is None:
             raise RuntimeError("System prompt not initialized")
         return self._system_prompt.render(self.tools)
 
     @property
-    def data_source(self) -> DataSource | None:
-        """
-        Get the data source (for single-table backwards compatibility).
-
-        Returns None if no data source is set. Raises ValueError if multiple
-        tables are present - use .table("name").data_source instead.
-        """
-        if not self._data_sources:
-            return None
-        if len(self._data_sources) == 1:
-            return next(iter(self._data_sources.values()))
-        raise ValueError(
-            f"Multiple tables present ({', '.join(self._data_sources.keys())}). "
-            "Use qc.table('name').data_source instead."
+    def data_source(self) -> DataSource:
+        """Removed. Use ``qc.table('name').data_source`` instead."""
+        raise AttributeError(
+            "The .data_source property has been removed. "
+            "Use qc.table('name').data_source to access a table's data source, "
+            "or qc.add_table(df, 'name') / qc.add_table(df, 'name', replace=True) "
+            "to add or replace a table."
         )
 
     @data_source.setter
-    def data_source(self, value: IntoFrame | sqlalchemy.Engine | BaseBoard) -> None:
-        """Set the data source, normalizing and rebuilding system prompt."""
-        normalized = normalize_data_source(value, self._table_name)
-        try:
-            other_sources = {
-                name: source
-                for name, source in self._data_sources.items()
-                if name != self._table_name
-            }
-            check_source_compatibility(other_sources, normalized, self._table_name)
-
-            next_data_sources = dict(self._data_sources)
-            next_data_sources[self._table_name] = normalized
-            self._data_source = normalized
-            self._auto_fill_data_description()
-            self._build_system_prompt(data_sources=next_data_sources)
-        except Exception:
-            cleanup_failed_staged_source(value, normalized)
-            raise
-
-        self._data_sources = next_data_sources
+    def data_source(self, _value: object) -> None:
+        raise AttributeError(
+            "The .data_source setter has been removed. "
+            "Use qc.add_table(df, 'name') to add a new table, "
+            "or qc.add_table(df, 'name', replace=True) to replace an existing one."
+        )
 
     def table_names(self) -> list[str]:
         """
@@ -438,78 +438,71 @@ class QueryChatBase(Generic[IntoFrameT]):
         data_source: IntoFrame | sqlalchemy.Engine,
         table_name: str,
         *,
-        relationships: dict[str, str] | None = None,
-        description: str | None = None,
+        replace: bool = False,
     ) -> None:
         """
-        Add an additional table to the QueryChat instance.
+        Add or replace a table in the QueryChat instance.
 
         Parameters
         ----------
         data_source
             The data source (DataFrame, LazyFrame, or database connection).
         table_name
-            Name for the table (must be unique within this QueryChat).
-        relationships
-            Optional dict mapping local columns to "other_table.column" for JOINs.
-            Example: {"customer_id": "customers.id"}
-        description
-            Optional free-text description of the table for the LLM.
+            Name for the table.
+        replace
+            If True, replace an existing table with the same name.
+            If False (default), raise ValueError if the table already exists.
 
         Raises
         ------
         ValueError
-            If table_name already exists or is invalid.
+            If table_name already exists (and replace=False), is invalid,
+            or is not in data_dict.
         RuntimeError
             If called after server() has been invoked.
 
         """
-        # Check if server already initialized
         if self._server_initialized:
             raise RuntimeError(
                 "Cannot add tables after server initialization. "
                 "Add all tables before calling .server() or .app()."
             )
 
-        # Validate table name format
         if not re.match(r"^[a-zA-Z][a-zA-Z0-9_]*$", table_name):
             raise ValueError(
                 "Table name must begin with a letter and contain only "
                 "letters, numbers, and underscores"
             )
 
-        # Check for duplicates
-        if table_name in self._data_sources:
+        if table_name in self._data_sources and not replace:
             raise ValueError(f"Table '{table_name}' already exists")
 
-        # Normalize and validate compatibility with existing sources
+        self._validate_table_in_data_dict(table_name)
+
         normalized = normalize_data_source(data_source, table_name)
         try:
-            check_source_compatibility(self._data_sources, normalized, table_name)
+            other_sources = {
+                name: source
+                for name, source in self._data_sources.items()
+                if name != table_name
+            }
+            check_source_compatibility(other_sources, normalized, table_name)
             next_data_sources = dict(self._data_sources)
             next_data_sources[table_name] = normalized
-            next_relationships = dict(self._table_relationships)
-            next_table_descriptions = dict(self._table_descriptions)
 
-            # Store relationship and description metadata
-            if relationships:
-                next_relationships[table_name] = relationships
-            if description:
-                next_table_descriptions[table_name] = description
+            if replace and self._data_description_mode == "inferred":
+                self._data_description = None
+                self._data_description_mode = "empty"
 
-            # Rebuild system prompt with new table
-            self._build_system_prompt(
-                data_sources=next_data_sources,
-                relationships=next_relationships,
-                table_descriptions=next_table_descriptions,
-            )
+            self._build_system_prompt(data_sources=next_data_sources)
         except Exception:
             cleanup_failed_staged_source(data_source, normalized)
             raise
 
+        old_source = self._data_sources.get(table_name)
         self._data_sources = next_data_sources
-        self._table_relationships = next_relationships
-        self._table_descriptions = next_table_descriptions
+        if old_source is not None and old_source is not normalized:
+            old_source.cleanup()
 
     def remove_table(self, table_name: str) -> None:
         """
@@ -546,20 +539,12 @@ class QueryChatBase(Generic[IntoFrameT]):
         removed_source = self._data_sources[table_name]
         next_data_sources = dict(self._data_sources)
         del next_data_sources[table_name]
-        next_relationships = dict(self._table_relationships)
-        next_relationships.pop(table_name, None)
-        next_table_descriptions = dict(self._table_descriptions)
-        next_table_descriptions.pop(table_name, None)
 
         # Rebuild system prompt without removed table
         self._build_system_prompt(
             data_sources=next_data_sources,
-            relationships=next_relationships,
-            table_descriptions=next_table_descriptions,
         )
         self._data_sources = next_data_sources
-        self._table_relationships = next_relationships
-        self._table_descriptions = next_table_descriptions
         removed_source.cleanup()
 
     def _mark_server_initialized(self) -> None:
@@ -568,7 +553,7 @@ class QueryChatBase(Generic[IntoFrameT]):
 
     def cleanup(self) -> None:
         """Clean up resources associated with all data sources."""
-        if hasattr(self, "_query_executor") and self._query_executor is not None:
+        if self._query_executor is not None:
             self._query_executor.cleanup()
         for source in self._data_sources.values():
             source.cleanup()

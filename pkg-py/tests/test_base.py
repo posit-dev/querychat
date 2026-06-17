@@ -1,12 +1,16 @@
 """Tests for QueryChatBase and normalization functions."""
 
 import os
+import warnings
+from pathlib import Path
 from typing import Any
 
 import chatlas
 import narwhals.stable.v1 as nw
 import pandas as pd
+import polars as pl
 import pytest
+from querychat._data_dict import DataDict, TableSpec
 from querychat._datasource import DataFrameSource, SQLAlchemySource
 from querychat._querychat_base import (
     QueryChatBase,
@@ -14,6 +18,7 @@ from querychat._querychat_base import (
     normalize_data_source,
     normalize_tools,
 )
+from querychat._shiny import QueryChat
 from querychat._utils import MISSING
 from sqlalchemy import create_engine, text
 
@@ -172,7 +177,7 @@ class TestNormalizeTools:
 class TestQueryChatBase:
     def test_init_with_dataframe(self, sample_df):
         qc = QueryChatBase(sample_df, "test_table")
-        assert isinstance(qc.data_source, DataFrameSource)
+        assert isinstance(qc.table("test_table").data_source, DataFrameSource)
         assert qc.tools == {"update", "query"}
 
     def test_init_with_custom_greeting(self, sample_df):
@@ -194,10 +199,9 @@ class TestQueryChatBase:
         with pytest.raises(ValueError, match="Table name must begin with a letter"):
             QueryChatBase(sample_df, "table-with-dash")
 
-    def test_data_source_property(self, sample_df):
+    def test_table_accessor_returns_data_source(self, sample_df):
         qc = QueryChatBase(sample_df, "test_table")
-        # data_source returns first source from _data_sources dict
-        assert qc.data_source is qc._data_sources["test_table"]
+        assert qc.table("test_table").data_source is qc._data_sources["test_table"]
 
     def test_system_prompt_property(self, sample_df):
         qc = QueryChatBase(sample_df, "test_table")
@@ -235,3 +239,43 @@ class TestQueryChatBase:
     def test_cleanup(self, sample_df):
         qc = QueryChatBase(sample_df, "test_table")
         qc.cleanup()
+
+
+class TestDataDict:
+    def test_data_dict_path_accepted(self, tmp_path: Path) -> None:
+        f = tmp_path / "spec.yaml"
+        f.write_text('version: "0.1.0"\ntables:\n  t:\n    columns: []\n')
+        df = pl.DataFrame({"x": [1]})
+        qc = QueryChat(df, table_name="t", data_dict=str(f))
+        assert qc._data_dict is not None
+        assert "t" in qc._data_dict.tables
+
+    def test_data_dict_instance_accepted(self) -> None:
+        dd = DataDict(version="0.1.0", tables={"t": TableSpec(columns=[])})
+        df = pl.DataFrame({"x": [1]})
+        qc = QueryChat(df, table_name="t", data_dict=dd)
+        assert qc._data_dict is dd
+
+    def test_data_dict_unknown_table_raises(self) -> None:
+        dd = DataDict(version="0.1.0", tables={"other": TableSpec(columns=[])})
+        df = pl.DataFrame({"x": [1]})
+        with pytest.raises(ValueError, match="other"):
+            QueryChat(df, table_name="t", data_dict=dd)
+
+    def test_add_table_unknown_table_raises_with_data_dict(self) -> None:
+        dd = DataDict(
+            version="0.1.0",
+            tables={"t1": TableSpec(columns=[])},
+        )
+        df = pl.DataFrame({"x": [1]})
+        qc = QueryChat(df, table_name="t1", data_dict=dd)
+        df2 = pl.DataFrame({"y": [2]})
+        with pytest.raises(ValueError, match="t2"):
+            qc.add_table(df2, "t2")
+
+    def test_data_description_deprecation_warning(self) -> None:
+        df = pl.DataFrame({"x": [1]})
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            QueryChat(df, table_name="t", data_description="some desc")
+        assert any(issubclass(warning.category, DeprecationWarning) for warning in w)

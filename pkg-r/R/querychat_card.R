@@ -9,11 +9,11 @@ tool_card <- function(executor, manage_card) {
     description = interpolate_package("tool-card.md", db_type = db_type),
     arguments = list(
       action = ellmer::type_enum(
-        c("add", "update", "remove"),
-        "Action to perform on a dashboard card. Use 'add' to create a new card, 'update' to replace an existing card, or 'remove' to delete a card by id."
+        c("add", "replace", "patch", "remove"),
+        "Action to perform on a dashboard card. Use 'add' to create a new card, 'replace' to fully overwrite an existing card, 'patch' to change only the fields you supply on an existing card, or 'remove' to delete a card by id."
       ),
       id = ellmer::type_string(
-        "Card id, required for update and remove.",
+        "Card id, required for replace, patch, and remove.",
         required = FALSE
       ),
       type = ellmer::type_enum(
@@ -85,18 +85,57 @@ tool_card_impl <- function(executor, manage_card) {
       return(card_tool_result(id, "removed", summary))
     }
 
-    if (action == "update" && is.null(id)) {
-      rlang::abort("'id' is required for action 'update'.")
+    if (action %in% c("replace", "patch") && is.null(id)) {
+      rlang::abort(sprintf("'id' is required for action '%s'.", action))
+    }
+
+    # For 'patch', overlay the supplied fields onto the existing card and then
+    # validate the merged result the same way 'add'/'replace' do. Drop unset
+    # (NULL) fields first so modifyList() does not delete them. To clear an
+    # optional field, use 'replace' instead.
+    if (action == "patch") {
+      existing <- manage_card("get", id = id)
+      if (is.null(existing)) {
+        rlang::abort(sprintf("No card found with id '%s'.", id))
+      }
+      supplied <- Filter(
+        Negate(is.null),
+        list(
+          type = type,
+          display = display,
+          title = title,
+          value = value,
+          footer = footer,
+          subtitle = subtitle,
+          theme = theme,
+          icon = icon
+        )
+      )
+      merged <- utils::modifyList(existing, supplied)
+      type <- merged$type
+      display <- merged$display
+      title <- merged$title
+      value <- merged$value
+      footer <- merged$footer
+      subtitle <- merged$subtitle
+      theme <- merged$theme
+      icon <- merged$icon
     }
 
     if (is.null(type)) {
-      rlang::abort("'type' is required for actions 'add' and 'update'.")
+      rlang::abort(
+        "'type' is required for actions 'add', 'replace', and 'patch'."
+      )
     }
     if (is.null(title)) {
-      rlang::abort("'title' is required for actions 'add' and 'update'.")
+      rlang::abort(
+        "'title' is required for actions 'add', 'replace', and 'patch'."
+      )
     }
     if (is.null(value)) {
-      rlang::abort("'value' is required for actions 'add' and 'update'.")
+      rlang::abort(
+        "'value' is required for actions 'add', 'replace', and 'patch'."
+      )
     }
     if (type == "card" && is.null(display)) {
       rlang::abort("'display' is required when 'type' is 'card'.")
@@ -172,8 +211,15 @@ tool_card_impl <- function(executor, manage_card) {
     }
     card$id <- id
 
-    summary <- manage_card(action, id = id, card = card)
-    card_tool_result(id, if (action == "add") "added" else "updated", summary)
+    store_action <- if (action == "add") "add" else "replace"
+    summary <- manage_card(store_action, id = id, card = card)
+    status <- switch(
+      action,
+      add = "added",
+      replace = "replaced",
+      patch = "patched"
+    )
+    card_tool_result(id, status, summary)
   }
 }
 

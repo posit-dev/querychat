@@ -111,20 +111,74 @@ describe("tool_card_impl()", {
     expect_length(mock$record$calls, 0)
   })
 
-  it("errors for update action when id is missing", {
+  it("errors for replace action when id is missing", {
     ds <- local_data_frame_source(new_test_df())
     mock <- new_mock()
     impl <- tool_card_impl(ds, mock$mock_manage)
 
     expect_error(
       impl(
-        action = "update",
+        action = "replace",
         type = "card",
         display = "table",
         title = "T",
         value = "SELECT * FROM test_table"
       ),
-      "'id' is required for action 'update'"
+      "'id' is required for action 'replace'"
+    )
+  })
+
+  it("patches an existing card by overlaying supplied fields", {
+    ds <- local_data_frame_source(new_test_df())
+    existing <- list(
+      id = "abcd",
+      type = "card",
+      display = "table",
+      title = "Old title",
+      value = "SELECT * FROM test_table",
+      footer = "Old footer"
+    )
+    record <- new.env(parent = emptyenv())
+    record$calls <- list()
+    mock_manage <- function(action, id = NULL, card = NULL) {
+      if (action == "get") {
+        return(existing)
+      }
+      record$calls[[length(record$calls) + 1L]] <- list(
+        action = action,
+        id = id,
+        card = card
+      )
+      "1 card: [abcd] New title (table)"
+    }
+    impl <- tool_card_impl(ds, mock_manage)
+
+    res <- impl(action = "patch", id = "abcd", title = "New title")
+
+    expect_s7_class(res, ellmer::ContentToolResult)
+    expect_length(record$calls, 1)
+    call <- record$calls[[1]]
+    expect_equal(call$action, "replace")
+    expect_equal(call$id, "abcd")
+    expect_equal(call$card$title, "New title")
+    expect_equal(call$card$value, existing$value)
+    expect_equal(call$card$footer, existing$footer)
+    expect_equal(jsonlite::fromJSON(res@value)$status, "patched")
+  })
+
+  it("errors for patch action when the card does not exist", {
+    ds <- local_data_frame_source(new_test_df())
+    mock_manage <- function(action, id = NULL, card = NULL) {
+      if (action == "get") {
+        return(NULL)
+      }
+      "no cards"
+    }
+    impl <- tool_card_impl(ds, mock_manage)
+
+    expect_error(
+      impl(action = "patch", id = "zzzz", title = "New title"),
+      "No card found with id 'zzzz'"
     )
   })
 

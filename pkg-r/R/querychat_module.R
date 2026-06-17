@@ -167,9 +167,17 @@ mod_server <- function(
 
     manage_card <- function(action, id = NULL, card = NULL) {
       card_list <- shiny::isolate(cards())
+      if (action == "get") {
+        idx <- which(vapply(
+          card_list,
+          function(cd) identical(cd$id, id),
+          logical(1)
+        ))
+        return(if (length(idx) > 0) card_list[[idx[[1]]]] else NULL)
+      }
       if (action == "remove") {
         card_list <- Filter(function(cd) !identical(cd$id, id), card_list)
-      } else if (action == "update") {
+      } else if (action == "replace") {
         idx <- which(vapply(
           card_list,
           function(cd) identical(cd$id, id),

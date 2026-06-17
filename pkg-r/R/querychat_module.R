@@ -43,6 +43,10 @@ mod_server <- function(
     current_query <- shiny::reactiveVal(NULL, label = "current_query")
     # Holds a generated greeting so it can be saved and restored on bookmark.
     # Static greetings live in the UI (chat_ui(greeting=)) and persist already.
+    # Workaround for posit-dev/shinychat#253: shinychat does not bookmark
+    # greetings or expose their state. If that issue is fixed, this reactiveVal,
+    # the last_turn() capture below, and the greeting handling in
+    # onBookmark/onRestore can be dropped (and the shinychat minimum bumped).
     current_greeting <- shiny::reactiveVal(NULL, label = "current_greeting")
     filtered_df <- shiny::reactive(label = "filtered_df", {
       data_source$execute_query(query = current_query())

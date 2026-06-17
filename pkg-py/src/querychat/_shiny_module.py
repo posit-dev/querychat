@@ -136,6 +136,10 @@ def mod_server(
     title = ReactiveStringOrNone(None)
     # Holds a generated greeting so it can be saved and restored on bookmark.
     # Static greetings live in the UI (chat_ui(greeting=)) and persist already.
+    # Workaround for posit-dev/shinychat#253: shinychat does not bookmark
+    # greetings or expose their state. If that issue is fixed, this value, the
+    # get_last_turn() capture below, and the greeting handling in
+    # on_bookmark/on_restore can be dropped (and the shinychat minimum bumped).
     current_greeting = ReactiveStringOrNone(None)
 
     if not callable(client):

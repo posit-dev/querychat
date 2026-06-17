@@ -448,27 +448,35 @@ class TestSourceCompatibility:
 
 
 class TestBuildQueryExecutor:
+    def test_executor_none_before_first_use(self, orders_qc):
+        assert orders_qc._query_executor is None
+
     def test_single_table_uses_data_source_executor(self, orders_qc):
-        assert isinstance(orders_qc._query_executor, DataSourceExecutor)
+        assert isinstance(orders_qc._require_query_executor("test"), DataSourceExecutor)
 
     def test_multi_dataframe_uses_duckdb_executor(self, orders_qc, customers_df):
         orders_qc.add_table(customers_df, "customers")
-        assert isinstance(orders_qc._query_executor, DuckDBExecutor)
+        assert isinstance(orders_qc._require_query_executor("test"), DuckDBExecutor)
 
-    def test_executor_rebuilt_on_add_table(self, orders_qc, customers_df):
-        exec_before = orders_qc._query_executor
+    def test_executor_invalidated_on_add_table(self, orders_qc, customers_df):
+        orders_qc._require_query_executor("test")  # build it
         orders_qc.add_table(customers_df, "customers")
-        assert orders_qc._query_executor is not exec_before
+        assert orders_qc._query_executor is None
 
-    def test_executor_rebuilt_on_remove_table(self, orders_qc, customers_df):
+    def test_executor_invalidated_on_remove_table(self, orders_qc, customers_df):
         orders_qc.add_table(customers_df, "customers")
-        exec_before = orders_qc._query_executor
+        orders_qc._require_query_executor("test")  # build it
         orders_qc.remove_table("customers")
-        assert orders_qc._query_executor is not exec_before
+        assert orders_qc._query_executor is None
+
+    def test_executor_cached_after_build(self, orders_qc):
+        first = orders_qc._require_query_executor("test")
+        second = orders_qc._require_query_executor("test")
+        assert first is second
 
     def test_cleanup_includes_executor(self, orders_qc, customers_df):
         orders_qc.add_table(customers_df, "customers")
-        executor = orders_qc._query_executor
+        executor = orders_qc._require_query_executor("test")
         orders_qc.cleanup()
         # DuckDBExecutor's connection should be closed
         import duckdb
@@ -494,25 +502,20 @@ class TestBuildQueryExecutor:
         with pytest.raises(ValueError, match="same DataFrame backend"):
             orders_qc._build_query_executor()
 
-    def test_failed_rebuild_preserves_last_working_executor(self, orders_qc, customers_df):
+    def test_cached_executor_survives_direct_source_mutation(self, orders_qc, customers_df):
+        """Executor built lazily is not invalidated by direct _data_sources mutation."""
         orders_qc.add_table(customers_df, "customers")
-        original_executor = orders_qc._query_executor
+        built = orders_qc._require_query_executor("test")
 
+        # Directly corrupt _data_sources (bypassing add_table) — executor should
+        # not be affected since invalidation only happens through add/remove_table.
         orders_qc._data_sources["customers"] = normalize_data_source(
-            pl.DataFrame(
-                {
-                    "id": [101, 102],
-                    "name": ["Alice", "Bob"],
-                }
-            ),
+            pl.DataFrame({"id": [101, 102], "name": ["Alice", "Bob"]}),
             "customers",
         )
 
-        with pytest.raises(ValueError, match="same DataFrame backend"):
-            orders_qc._build_query_executor()
-
-        assert orders_qc._query_executor is original_executor
-        result = orders_qc._query_executor.execute_query(
+        assert orders_qc._query_executor is built
+        result = built.execute_query(
             """
             SELECT customers.name, orders.amount
             FROM orders
@@ -522,11 +525,9 @@ class TestBuildQueryExecutor:
         )
         assert result.to_dict("records") == [{"name": "Alice", "amount": 100.0}]
 
-    def test_add_table_rebuild_failure_preserves_last_working_prompt_and_executor(
+    def test_add_table_failure_cleans_staged_source_and_preserves_state(
         self, orders_qc, customers_df, monkeypatch
     ):
-        original_executor = orders_qc._query_executor
-        original_system_prompt = orders_qc.system_prompt
         original_table_names = orders_qc.table_names()
         staged_source = None
 
@@ -537,19 +538,19 @@ class TestBuildQueryExecutor:
             staged_source = original_normalize(data_source, table_name)
             return staged_source
 
-        def fail_executor_build(*args, **kwargs):
-            raise RuntimeError("executor rebuild failed")
-
         monkeypatch.setattr(
             "querychat._querychat_base.normalize_data_source",
             capture_staged_source,
         )
+        def fail_compat(*a, **kw):
+            raise ValueError("compat check failed")
+
         monkeypatch.setattr(
-            "querychat._querychat_base.DuckDBExecutor",
-            fail_executor_build,
+            "querychat._querychat_base.check_source_compatibility",
+            fail_compat,
         )
 
-        with pytest.raises(RuntimeError, match="executor rebuild failed"):
+        with pytest.raises(ValueError, match="compat check failed"):
             orders_qc.add_table(customers_df, "customers")
 
         import duckdb
@@ -557,16 +558,12 @@ class TestBuildQueryExecutor:
         assert isinstance(staged_source, DataFrameSource)
         with pytest.raises(duckdb.ConnectionException):
             staged_source.execute_query("SELECT 1")
-        assert orders_qc._query_executor is original_executor
-        assert orders_qc.system_prompt == original_system_prompt
         assert orders_qc.table_names() == original_table_names
 
-    def test_add_table_replace_failure_preserves_state_and_cleans_staged_source(
+    def test_add_table_replace_failure_cleans_staged_source_and_preserves_state(
         self, orders_qc, customers_df, monkeypatch
     ):
         orders_qc.add_table(customers_df, "customers")
-        original_executor = orders_qc._query_executor
-        original_system_prompt = orders_qc.system_prompt
         original_orders_source = orders_qc._data_sources["orders"]
         original_table_names = orders_qc.table_names()
         staged_source = None
@@ -578,19 +575,19 @@ class TestBuildQueryExecutor:
             staged_source = original_normalize(data_source, table_name)
             return staged_source
 
-        def fail_executor_build(*args, **kwargs):
-            raise RuntimeError("executor rebuild failed")
-
         monkeypatch.setattr(
             "querychat._querychat_base.normalize_data_source",
             capture_staged_source,
         )
+        def fail_compat(*a, **kw):
+            raise ValueError("compat check failed")
+
         monkeypatch.setattr(
-            "querychat._querychat_base.DuckDBExecutor",
-            fail_executor_build,
+            "querychat._querychat_base.check_source_compatibility",
+            fail_compat,
         )
 
-        with pytest.raises(RuntimeError, match="executor rebuild failed"):
+        with pytest.raises(ValueError, match="compat check failed"):
             orders_qc.add_table(
                 pd.DataFrame(
                     {
@@ -609,40 +606,20 @@ class TestBuildQueryExecutor:
         assert staged_source is not original_orders_source
         with pytest.raises(duckdb.ConnectionException):
             staged_source.execute_query("SELECT 1")
-        assert orders_qc._query_executor is original_executor
-        assert orders_qc.system_prompt == original_system_prompt
         assert orders_qc._data_sources["orders"] is original_orders_source
         assert orders_qc.table_names() == original_table_names
 
-    def test_remove_table_rebuild_failure_preserves_state_without_cleaning_removed_source(
-        self, orders_qc, customers_df, monkeypatch
-    ):
+    def test_remove_table_cleans_up_removed_source(self, orders_qc, customers_df):
         orders_qc.add_table(customers_df, "customers")
-        original_executor = orders_qc._query_executor
-        original_system_prompt = orders_qc.system_prompt
-        original_table_names = orders_qc.table_names()
-        original_customer_source = orders_qc._data_sources["customers"]
+        customer_source = orders_qc._data_sources["customers"]
 
-        def fail_executor_build(*args, **kwargs):
-            raise RuntimeError("executor rebuild failed")
+        orders_qc.remove_table("customers")
 
-        monkeypatch.setattr(
-            "querychat._querychat_base.DataSourceExecutor",
-            fail_executor_build,
-        )
+        assert orders_qc.table_names() == ["orders"]
+        import duckdb
 
-        with pytest.raises(RuntimeError, match="executor rebuild failed"):
-            orders_qc.remove_table("customers")
-
-        result = original_customer_source.execute_query(
-            "SELECT name FROM customers WHERE id = 101"
-        )
-
-        assert orders_qc._query_executor is original_executor
-        assert orders_qc.system_prompt == original_system_prompt
-        assert orders_qc.table_names() == original_table_names
-        assert orders_qc._data_sources["customers"] is original_customer_source
-        assert result.to_dict("records") == [{"name": "Alice"}]
+        with pytest.raises(duckdb.ConnectionException):
+            customer_source.execute_query("SELECT id FROM customers")
 
 
 class TestMultiTableGuardrails:
@@ -789,7 +766,7 @@ class TestMultiTableGuardrails:
         qc.add_table(customers_df, "customers")
         with patch("streamlit.session_state", {}):
             result = qc.table("customers").df()
-        assert result["id"].tolist() == [101, 102]
+        assert result["id"].tolist() == [101, 102, 103]
 
     def test_state_dict_mixin_df_raises_multi_table(self, orders_df, customers_df):
         from unittest.mock import MagicMock

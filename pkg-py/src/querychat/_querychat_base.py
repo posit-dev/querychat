@@ -123,17 +123,6 @@ class QueryChatBase(Generic[IntoFrameT]):
                     )
             self.add_table(data_source, table_name)
 
-    def _validate_table_in_data_dict(self, table_name: str) -> None:
-        """Raise ValueError if data_dict is set but table_name is not listed in it."""
-        if self._data_dict is None:
-            return
-        if table_name not in self._data_dict.tables:
-            available = ", ".join(self._data_dict.tables.keys())
-            raise ValueError(
-                f"Table '{table_name}' not found in data_dict. "
-                f"Available tables: {available}"
-            )
-
     def _build_system_prompt(
         self,
         *,
@@ -145,25 +134,14 @@ class QueryChatBase(Generic[IntoFrameT]):
         if not next_data_sources:
             raise RuntimeError("Cannot build system prompt without data_source")
 
-        prompt_template = self._prompt_template
-
-        replacement_prompt = QueryChatSystemPrompt(
-            prompt_template=prompt_template,
+        self._system_prompt = QueryChatSystemPrompt(
+            prompt_template=self._prompt_template,
             data_sources=next_data_sources,
             data_description=self._data_description,
             extra_instructions=self._extra_instructions,
             categorical_threshold=self._categorical_threshold,
             data_dict=self._data_dict,
         )
-        replacement_executor = self._build_query_executor(data_sources=next_data_sources)
-        previous_executor = self._query_executor
-
-        self._system_prompt = replacement_prompt
-        self._query_executor = replacement_executor
-
-        if previous_executor is not None:
-            with contextlib.suppress(Exception):
-                previous_executor.cleanup()
 
     def _build_query_executor(
         self, *, data_sources: dict[str, DataSource] | None = None
@@ -207,12 +185,14 @@ class QueryChatBase(Generic[IntoFrameT]):
             )
 
     def _require_query_executor(self, method_name: str) -> QueryExecutor:
-        """Raise if query executor is not initialized, otherwise return it."""
+        """Return the cached executor, building it lazily on first use."""
         if self._query_executor is None:
-            raise RuntimeError(
-                f"query executor must be set before calling {method_name}(). "
-                "Set the data_source first so querychat can build an executor."
-            )
+            if not self._data_sources:
+                raise RuntimeError(
+                    f"query executor must be set before calling {method_name}(). "
+                    "Set the data_source first so querychat can build an executor."
+                )
+            self._query_executor = self._build_query_executor()
         return self._query_executor
 
     def _create_session_client(
@@ -419,8 +399,7 @@ class QueryChatBase(Generic[IntoFrameT]):
         Raises
         ------
         ValueError
-            If table_name already exists (and replace=False), is invalid,
-            or is not in data_dict.
+            If table_name already exists (and replace=False) or is invalid.
         RuntimeError
             If called after server() has been invoked.
 
@@ -442,8 +421,6 @@ class QueryChatBase(Generic[IntoFrameT]):
         if table_name in self._data_sources and not replace:
             raise ValueError(f"Table '{table_name}' already exists")
 
-        self._validate_table_in_data_dict(table_name)
-
         normalized = normalize_data_source(data_source, table_name)
         try:
             other_sources = {
@@ -464,6 +441,10 @@ class QueryChatBase(Generic[IntoFrameT]):
         self._data_sources = next_data_sources
         if old_source is not None and old_source is not normalized:
             old_source.cleanup()
+        if self._query_executor is not None:
+            with contextlib.suppress(Exception):
+                self._query_executor.cleanup()
+            self._query_executor = None
 
     def remove_table(self, table_name: str) -> None:
         """
@@ -501,11 +482,12 @@ class QueryChatBase(Generic[IntoFrameT]):
         next_data_sources = dict(self._data_sources)
         del next_data_sources[table_name]
 
-        # Rebuild system prompt without removed table
-        self._build_system_prompt(
-            data_sources=next_data_sources,
-        )
+        self._build_system_prompt(data_sources=next_data_sources)
         self._data_sources = next_data_sources
+        if self._query_executor is not None:
+            with contextlib.suppress(Exception):
+                self._query_executor.cleanup()
+            self._query_executor = None
         removed_source.cleanup()
 
     def _mark_server_initialized(self) -> None:

@@ -4,7 +4,9 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, Protocol, TypedDict, runtime_checkable
 
 from chatlas import ContentToolResult, Tool
-from shinychat.types import ToolResultDisplay
+from htmltools import tags
+from shinychat import message_content_chunk
+from shinychat.types import ChatMessage, ToolResultDisplay
 
 from ._icons import bs_icon
 from ._utils import (
@@ -32,6 +34,20 @@ if TYPE_CHECKING:
 ResetDashboardCallback = Callable[[str], None]
 
 
+class GetSchemaResult(ContentToolResult):
+    table_name: str
+
+
+@message_content_chunk.register
+def _(message: GetSchemaResult) -> ChatMessage:
+    content = tags.p(
+        bs_icon("search"),
+        f" Fetched schema for {message.table_name}",
+        style="color: var(--bs-secondary-color, #6c757d); font-size: 0.875em; margin: 0.1rem 0;",
+    )
+    return ChatMessage(content=content)
+
+
 def _get_schema_impl(
     data_dict: DataDict | None,
     executor: QueryExecutor,
@@ -49,7 +65,7 @@ def _get_schema_impl(
         else:
             schema = executor.get_schema(table_name, categorical_threshold)
 
-        return ContentToolResult(value=schema)
+        return GetSchemaResult(value=schema, table_name=table_name)
 
     return get_schema
 

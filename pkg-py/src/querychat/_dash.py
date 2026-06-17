@@ -17,6 +17,7 @@ from ._querychat_core import (
     create_app_state,
     stream_response_async,
 )
+from ._table_accessor import StateDictTableAccessor, TableAccessor
 from ._ui_assets import DASH_CSS, DASH_JS, SUGGESTION_CSS
 from ._utils import as_narwhals
 
@@ -215,6 +216,12 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
         Use this in @app.callback Input/Output to react to state changes.
         """
         return self._ids.store
+
+    def table(self, name: str) -> TableAccessor:
+        if name not in self._data_sources:
+            available = ", ".join(self._data_sources.keys())
+            raise ValueError(f"Table '{name}' not found. Available: {available}")
+        return StateDictTableAccessor(self, name)
 
     def app(self) -> dash.Dash:
         """

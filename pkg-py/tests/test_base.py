@@ -260,27 +260,26 @@ class TestDataDict:
         assert "t" in qc._data_dict.tables
 
     def test_data_dict_instance_accepted(self) -> None:
-        dd = DataDict(version="0.1.0", tables={"t": TableSpec(columns=[])})
+        dd = DataDict(tables={"t": TableSpec(columns=[])})
         df = pl.DataFrame({"x": [1]})
         qc = QueryChat(df, table_name="t", data_dict=dd)
         assert qc._data_dict is dd
 
-    def test_data_dict_unknown_table_raises(self) -> None:
-        dd = DataDict(version="0.1.0", tables={"other": TableSpec(columns=[])})
+    def test_data_dict_table_not_in_dict_is_allowed(self) -> None:
+        dd = DataDict(tables={"other": TableSpec(columns=[])})
         df = pl.DataFrame({"x": [1]})
-        with pytest.raises(ValueError, match="other"):
-            QueryChat(df, table_name="t", data_dict=dd)
+        qc = QueryChat(df, table_name="t", data_dict=dd)
+        assert "t" in qc._data_sources
 
-    def test_add_table_unknown_table_raises_with_data_dict(self) -> None:
+    def test_add_table_not_in_data_dict_is_allowed(self) -> None:
         dd = DataDict(
-            version="0.1.0",
             tables={"t1": TableSpec(columns=[])},
         )
         df = pl.DataFrame({"x": [1]})
         qc = QueryChat(df, table_name="t1", data_dict=dd)
         df2 = pl.DataFrame({"y": [2]})
-        with pytest.raises(ValueError, match="t2"):
-            qc.add_table(df2, "t2")
+        qc.add_table(df2, "t2")
+        assert "t2" in qc._data_sources
 
     def test_data_description_accepted(self) -> None:
         df = pl.DataFrame({"x": [1]})

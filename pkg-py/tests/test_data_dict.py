@@ -2,8 +2,6 @@ from pathlib import Path
 
 import narwhals.stable.v1 as nw
 import polars as pl
-import pytest
-from pydantic import ValidationError
 from querychat._data_dict import ColumnRange, ColumnSpec, DataDict, TableSpec
 from querychat._datasource import DataFrameSource
 from querychat._query_executor import DataSourceExecutor
@@ -40,7 +38,6 @@ glossary:
     f.write_text(yaml_content)
     dd = DataDict.from_yaml(f)
 
-    assert dd.version == "0.1.0"
     assert "orders" in dd.tables
     t = dd.tables["orders"]
     assert t.description == "One row per order."
@@ -74,18 +71,11 @@ def test_from_yaml_partial_spec(tmp_path: Path) -> None:
     assert dd.glossary == {}
 
 
-def test_from_yaml_missing_version_raises(tmp_path: Path) -> None:
-    f = tmp_path / "spec.yaml"
-    f.write_text("tables: {}\n")
-    with pytest.raises(ValidationError):
-        DataDict.from_yaml(f)
-
-
 def test_from_yaml_str_path(tmp_path: Path) -> None:
     f = tmp_path / "spec.yaml"
     f.write_text('version: "0.1.0"\n')
     dd = DataDict.from_yaml(str(f))
-    assert dd.version == "0.1.0"
+    assert dd.tables == {}
 
 
 def _make_executor(df: pl.DataFrame, table_name: str) -> DataSourceExecutor:
@@ -95,7 +85,6 @@ def _make_executor(df: pl.DataFrame, table_name: str) -> DataSourceExecutor:
 
 def test_get_table_schema_all_documented() -> None:
     dd = DataDict(
-        version="0.1.0",
         tables={
             "orders": TableSpec(
                 description="Order records.",
@@ -124,7 +113,7 @@ def test_get_table_schema_all_documented() -> None:
 
 
 def test_get_table_schema_no_documentation() -> None:
-    dd = DataDict(version="0.1.0", tables={"orders": TableSpec(columns=[])})
+    dd = DataDict(tables={"orders": TableSpec(columns=[])})
     df = pl.DataFrame({"amount": [10, 20, 30], "status": ["a", "b", "a"]})
     executor = _make_executor(df, "orders")
     schema = dd.get_table_schema("orders", executor, categorical_threshold=10)
@@ -135,7 +124,6 @@ def test_get_table_schema_no_documentation() -> None:
 
 def test_get_table_schema_mixed_coverage() -> None:
     dd = DataDict(
-        version="0.1.0",
         tables={
             "orders": TableSpec(
                 columns=[

@@ -124,8 +124,6 @@ class DataDict(BaseModel):
 
     Parameters
     ----------
-    version
-        Schema version string. Use ``"1"`` for the current format.
     tables
         Per-table metadata, keyed by table name. Each value is a
         :class:`TableSpec` with optional description and column specs.
@@ -155,7 +153,6 @@ class DataDict(BaseModel):
 
     """
 
-    version: str
     tables: dict[str, TableSpec] = {}
     relationships: list[RelationshipSpec] = []
     glossary: dict[str, str] = {}

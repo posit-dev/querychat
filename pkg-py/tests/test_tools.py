@@ -189,7 +189,6 @@ def _make_executor_and_table(
 
 def test_get_schema_impl_with_data_dict() -> None:
     dd = DataDict(
-        version="0.1.0",
         tables={
             "orders": TableSpec(
                 columns=[ColumnSpec(name="amount", range=ColumnRange(min=0, max=100))]

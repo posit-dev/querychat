@@ -325,7 +325,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             vals = mod_server(
                 self.id,
                 data_sources=dict(self._data_sources),
-                executor=self._query_executor,
+                executor=self._require_query_executor("server"),
                 greeting=self.greeting,
                 client=self._create_session_client,
                 enable_bookmarking=enable_bookmarking,

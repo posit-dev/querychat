@@ -3,7 +3,6 @@ from ._datasource import (
     DataFrameSource,
     DataSource,
     IbisSource,
-    MissingColumnsError,
     PolarsLazySource,
     SQLAlchemySource,
 )
@@ -18,7 +17,6 @@ __all__ = (
     "DataFrameSource",
     "DataSource",
     "IbisSource",
-    "MissingColumnsError",
     "PolarsLazySource",
     "QueryChat",
     "SQLAlchemySource",

@@ -18,6 +18,7 @@ from ._querychat_core import (
     create_app_state,
     stream_response,
 )
+from ._table_accessor import StateDictTableAccessor, TableAccessor
 from ._ui_assets import GRADIO_CSS, GRADIO_JS, SUGGESTION_CSS
 from ._utils import as_narwhals
 
@@ -212,6 +213,12 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
         """
         return f"<script>{GRADIO_JS}</script>"
 
+    def table(self, name: str) -> TableAccessor:
+        if name not in self._data_sources:
+            available = ", ".join(self._data_sources.keys())
+            raise ValueError(f"Table '{name}' not found. Available: {available}")
+        return StateDictTableAccessor(self, name)
+
     def ui(self) -> gr.State:
         """
         Create chat UI components for custom layouts.
@@ -341,12 +348,6 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
 
         """
         self._require_initialized("app")
-        if len(self._data_sources) > 1:
-            table_list = ", ".join(f"'{n}'" for n in self._data_sources)
-            raise RuntimeError(
-                f"app() does not support multiple tables ({table_list}). "
-                "Build a custom layout using ui() and table('name') instead."
-            )
         from gradio.themes import Soft
 
         import gradio as gr

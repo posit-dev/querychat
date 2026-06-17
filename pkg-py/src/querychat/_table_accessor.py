@@ -12,6 +12,20 @@ if TYPE_CHECKING:
     from ._shiny_module import ServerValues
 
 
+_STATE_DICT_DF_MSG = (
+    "TableAccessor.df() is not available for this framework. "
+    "Use qc.df(state, table='{name}') inside your callback instead."
+)
+_STATE_DICT_SQL_MSG = (
+    "TableAccessor.sql() is not available for this framework. "
+    "Use qc.sql(state, table='{name}') inside your callback instead."
+)
+_STATE_DICT_TITLE_MSG = (
+    "TableAccessor.title() is not available for this framework. "
+    "Use qc.title(state, table='{name}') inside your callback instead."
+)
+
+
 class TableAccessor:
     """
     Accessor for a specific table's state and data.
@@ -110,4 +124,29 @@ class TableAccessor:
             shiny_ui.card_header(self._table_name),
             shiny_ui.output_data_frame(f"{table_id}_dt"),
             shiny_ui.output_text(f"{table_id}_sql"),
+        )
+
+
+class StateDictTableAccessor(TableAccessor):
+    """
+    Per-table accessor for frameworks that use a state dict (Dash, Gradio).
+
+    ``data_source`` and ``table_name`` work normally. ``df()``, ``sql()``, and
+    ``title()`` raise ``NotImplementedError`` — those frameworks pass state
+    explicitly, so use ``qc.df(state, table=name)`` inside your callback.
+    """
+
+    def df(self) -> Any:
+        raise NotImplementedError(
+            _STATE_DICT_DF_MSG.format(name=self._table_name)
+        )
+
+    def sql(self) -> str | None:
+        raise NotImplementedError(
+            _STATE_DICT_SQL_MSG.format(name=self._table_name)
+        )
+
+    def title(self) -> str | None:
+        raise NotImplementedError(
+            _STATE_DICT_TITLE_MSG.format(name=self._table_name)
         )

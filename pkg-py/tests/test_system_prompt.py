@@ -70,7 +70,6 @@ def test_system_prompt_includes_table_description() -> None:
     df = nw.from_native(pl.DataFrame({"x": [1]}))
     source = DataFrameSource(df, "orders")
     dd = DataDict(
-        version="0.1.0",
         tables={"orders": TableSpec(description="Order records.")},
     )
     sp = _make_system_prompt({"orders": source}, data_dict=dd)
@@ -82,7 +81,6 @@ def test_system_prompt_includes_glossary() -> None:
     df = nw.from_native(pl.DataFrame({"x": [1]}))
     source = DataFrameSource(df, "orders")
     dd = DataDict(
-        version="0.1.0",
         tables={"orders": TableSpec(columns=[])},
         glossary={"churn": "No orders in 90 days."},
     )
@@ -96,7 +94,6 @@ def test_system_prompt_includes_relationships() -> None:
     df = nw.from_native(pl.DataFrame({"x": [1]}))
     source = DataFrameSource(df, "orders")
     dd = DataDict(
-        version="0.1.0",
         tables={"orders": TableSpec(columns=[])},
         relationships=[
             RelationshipSpec(

@@ -169,7 +169,7 @@ class TestAppState:
         state = AppState(
             data_sources=dict(qc._data_sources),
             client=mock_client,
-            query_executor=qc._query_executor,
+            query_executor=qc._require_query_executor("test"),
         )
         state.update_dashboard(
             {
@@ -211,7 +211,7 @@ class TestAppState:
         state = AppState(
             data_sources=dict(qc._data_sources),
             client=mock_client,
-            query_executor=qc._query_executor,
+            query_executor=qc._require_query_executor("test"),
         )
         state.update_dashboard(
             {
@@ -255,7 +255,7 @@ class TestAppState:
         state = AppState(
             data_sources=dict(qc._data_sources),
             client=mock_client,
-            query_executor=qc._query_executor,
+            query_executor=qc._require_query_executor("test"),
         )
 
         state.update_dashboard(
@@ -283,7 +283,7 @@ class TestAppState:
         state = AppState(
             data_sources=dict(qc._data_sources),
             client=mock_client,
-            query_executor=qc._query_executor,
+            query_executor=qc._require_query_executor("test"),
         )
         state.update_dashboard(
             {"table": "orders", "query": "SELECT * FROM orders WHERE amount > 100", "title": "Big orders"}
@@ -308,7 +308,7 @@ class TestAppState:
         state = AppState(
             data_sources=dict(qc._data_sources),
             client=mock_client,
-            query_executor=qc._query_executor,
+            query_executor=qc._require_query_executor("test"),
         )
 
         state.update_from_dict(
@@ -366,7 +366,7 @@ class TestCreateAppState:
 class DummyStateAccessor(StateDictAccessorMixin[pd.DataFrame]):
     def __init__(self, qc: QueryChat):
         self._data_sources = dict(qc._data_sources)
-        self._query_executor = qc._query_executor
+        self._query_executor = qc._require_query_executor("test")
         self.greeting = None
 
     def _require_initialized(self, _method_name: str):

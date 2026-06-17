@@ -330,10 +330,12 @@ test_that("restored viz widgets survive a second bookmark cycle", {
 
       shiny::isolate(callbacks$visualize(saved[[1]]))
 
+      viz_key <- session$ns("querychat_viz_widgets")
+
       first_state <- new.env(parent = emptyenv())
       first_state$values <- list()
       shiny::isolate(bookmark_fn(first_state))
-      expect_equal(first_state$values$querychat_viz_widgets, saved)
+      expect_equal(first_state$values[[viz_key]], saved)
 
       restore_state <- new.env(parent = emptyenv())
       restore_state$values <- first_state$values
@@ -344,7 +346,43 @@ test_that("restored viz widgets survive a second bookmark cycle", {
       second_state <- new.env(parent = emptyenv())
       second_state$values <- list()
       shiny::isolate(bookmark_fn(second_state))
-      expect_equal(second_state$values$querychat_viz_widgets, saved)
+      expect_equal(second_state$values[[viz_key]], saved)
     }
   )
+})
+
+test_that("normalize_bookmark_categories() handles logical input", {
+  expect_equal(
+    normalize_bookmark_categories(TRUE),
+    c("conversation", "cards")
+  )
+  expect_equal(normalize_bookmark_categories(FALSE), character(0))
+})
+
+test_that("normalize_bookmark_categories() treats NULL/empty as none", {
+  expect_equal(normalize_bookmark_categories(NULL), character(0))
+  expect_equal(normalize_bookmark_categories(character(0)), character(0))
+})
+
+test_that("normalize_bookmark_categories() accepts a character subset", {
+  expect_equal(
+    normalize_bookmark_categories("cards"),
+    "cards"
+  )
+  expect_equal(
+    normalize_bookmark_categories("conversation"),
+    "conversation"
+  )
+  expect_equal(
+    normalize_bookmark_categories(c("cards", "conversation")),
+    c("cards", "conversation")
+  )
+})
+
+test_that("normalize_bookmark_categories() rejects invalid input", {
+  expect_error(normalize_bookmark_categories("nonsense"))
+  expect_error(normalize_bookmark_categories(c("cards", "nonsense")))
+  expect_error(normalize_bookmark_categories(NA))
+  expect_error(normalize_bookmark_categories(c(TRUE, FALSE)))
+  expect_error(normalize_bookmark_categories(1))
 })

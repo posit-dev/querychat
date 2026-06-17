@@ -51,6 +51,36 @@ mod_ui_cards <- function(id, ...) {
   )
 }
 
+# Valid bookmark categories
+BOOKMARK_CATEGORIES <- c("conversation", "cards")
+
+# Normalize the `enable_bookmarking` argument to a character vector of
+# categories. Accepts TRUE (all), FALSE/NULL (none), or a character subset of
+# `BOOKMARK_CATEGORIES`.
+normalize_bookmark_categories <- function(enable_bookmarking) {
+  if (is.null(enable_bookmarking) || length(enable_bookmarking) == 0) {
+    return(character(0))
+  }
+  if (is.logical(enable_bookmarking)) {
+    if (length(enable_bookmarking) != 1 || is.na(enable_bookmarking)) {
+      cli::cli_abort(
+        "{.arg enable_bookmarking} must be {.code TRUE}, {.code FALSE}, or a character vector of {.or {.val {BOOKMARK_CATEGORIES}}}."
+      )
+    }
+    return(if (enable_bookmarking) BOOKMARK_CATEGORIES else character(0))
+  }
+  if (is.character(enable_bookmarking)) {
+    return(rlang::arg_match(
+      enable_bookmarking,
+      BOOKMARK_CATEGORIES,
+      multiple = TRUE
+    ))
+  }
+  cli::cli_abort(
+    "{.arg enable_bookmarking} must be {.code TRUE}, {.code FALSE}, or a character vector of {.or {.val {BOOKMARK_CATEGORIES}}}."
+  )
+}
+
 # Main module server function
 mod_server <- function(
   id,
@@ -64,6 +94,7 @@ mod_server <- function(
   enable_bookmarking = FALSE,
   card_placeholder = "Insights will appear here"
 ) {
+  bookmark_cats <- normalize_bookmark_categories(enable_bookmarking)
   shiny::moduleServer(id, function(input, output, session) {
     current_table_val <- shiny::reactiveVal(NULL, label = "current_table")
     # Holds a generated greeting so it can be saved and restored on bookmark.
@@ -283,70 +314,95 @@ mod_server <- function(
       htmltools::tagList(!!!blocks)
     })
 
-    if (enable_bookmarking) {
-      shinychat::chat_restore(
-        "chat",
-        chat,
-        restore_ui = FALSE,
-        session = session
-      )
+    if (length(bookmark_cats) > 0) {
       shiny::setBookmarkExclude("chat_update", session = session)
+      bookmark_conversation <- "conversation" %in% bookmark_cats
+      bookmark_cards <- "cards" %in% bookmark_cats
+
+      # Namespaced bookmark keys so multiple QueryChat instances in one app do
+      # not clobber each other's state ($values is app-wide, not auto-namespaced)
+      key_tables <- session$ns("querychat_tables")
+      key_greeting <- session$ns("querychat_greeting")
+      key_viz_widgets <- session$ns("querychat_viz_widgets")
+      key_cards <- session$ns("querychat_cards")
+
+      if (bookmark_conversation) {
+        # shinychat owns the transcript state and the bookmark trigger
+        # (observes chat input/response -> doBookmark) plus updateQueryString.
+        shinychat::chat_restore("chat", chat, restore_ui = FALSE, session = session)
+      } else {
+        # Cards-only: drive the bookmark trigger ourselves when cards change,
+        # mirroring shinychat's onBookmarked -> updateQueryString.
+        shiny::observeEvent(cards(), ignoreInit = TRUE, {
+          session$doBookmark()
+        })
+        shiny::withReactiveDomain(
+          session$rootScope(),
+          shiny::onBookmarked(function(url) {
+            shiny::updateQueryString(url)
+          })
+        )
+      }
 
       shiny::onBookmark(function(state) {
-        table_states <- list()
-        for (name in names(tables)) {
-          table_states[[name]] <- list(
-            sql = tables[[name]]$sql(),
-            title = tables[[name]]$title()
-          )
+        if (bookmark_conversation) {
+          table_states <- list()
+          for (name in names(tables)) {
+            table_states[[name]] <- list(
+              sql = tables[[name]]$sql(),
+              title = tables[[name]]$title()
+            )
+          }
+          state$values[[key_tables]] <- table_states
+          if (!is.null(current_greeting())) {
+            state$values[[key_greeting]] <- current_greeting()
+          }
+          if (length(viz_widgets) > 0) {
+            state$values[[key_viz_widgets]] <- viz_widgets
+          }
         }
-        state$values$querychat_tables <- table_states
-        if (!is.null(current_greeting())) {
-          state$values$querychat_greeting <- current_greeting()
-        }
-        if (length(viz_widgets) > 0) {
-          state$values$querychat_viz_widgets <- viz_widgets
-        }
-        if (length(cards()) > 0) {
-          state$values$querychat_cards <- cards()
+        if (bookmark_cards && length(cards()) > 0) {
+          state$values[[key_cards]] <- cards()
         }
       })
 
       shiny::onRestore(function(state) {
-        if (!is.null(state$values$querychat_tables)) {
-          last_restored <- NULL
-          for (name in names(state$values$querychat_tables)) {
-            tbl_state <- state$values$querychat_tables[[name]]
-            if (!is.null(tbl_state$sql)) {
-              tables[[name]]$sql(tbl_state$sql)
-              last_restored <- name
+        if (bookmark_conversation) {
+          if (!is.null(state$values[[key_tables]])) {
+            last_restored <- NULL
+            for (name in names(state$values[[key_tables]])) {
+              tbl_state <- state$values[[key_tables]][[name]]
+              if (!is.null(tbl_state$sql)) {
+                tables[[name]]$sql(tbl_state$sql)
+                last_restored <- name
+              }
+              if (!is.null(tbl_state$title)) {
+                tables[[name]]$title(tbl_state$title)
+              }
             }
-            if (!is.null(tbl_state$title)) {
-              tables[[name]]$title(tbl_state$title)
+            if (!is.null(last_restored)) {
+              current_table_val(last_restored)
             }
           }
-          if (!is.null(last_restored)) {
-            current_table_val(last_restored)
+          if (!is.null(state$values[[key_greeting]])) {
+            current_greeting(state$values[[key_greeting]])
+            shinychat::chat_set_greeting(
+              "chat",
+              chat_greeting_persistent(state$values[[key_greeting]]),
+              session = session
+            )
+          }
+          if (!is.null(state$values[[key_viz_widgets]])) {
+            restored <- restore_viz_widgets(
+              executor,
+              restore_record_list(state$values[[key_viz_widgets]]),
+              session
+            )
+            viz_widgets <<- restored
           }
         }
-        if (!is.null(state$values$querychat_greeting)) {
-          current_greeting(state$values$querychat_greeting)
-          shinychat::chat_set_greeting(
-            "chat",
-            chat_greeting_persistent(state$values$querychat_greeting),
-            session = session
-          )
-        }
-        if (!is.null(state$values$querychat_viz_widgets)) {
-          restored <- restore_viz_widgets(
-            executor,
-            restore_record_list(state$values$querychat_viz_widgets),
-            session
-          )
-          viz_widgets <<- restored
-        }
-        if (!is.null(state$values$querychat_cards)) {
-          cards(state$values$querychat_cards)
+        if (bookmark_cards && !is.null(state$values[[key_cards]])) {
+          cards(state$values[[key_cards]])
         }
       })
     }

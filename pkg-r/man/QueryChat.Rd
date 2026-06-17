@@ -595,12 +595,26 @@ specific authentication).}
 overrides the client set at initialization for this session only —
 other sessions are unaffected. This is useful when the client must be
 created within a session scope (e.g., Posit Connect managed credentials).}
-      \item{\code{enable_bookmarking}}{Whether to enable bookmarking for the chat
-state. Default is \code{FALSE}. When enabled, the chat state (including
-current query, title, and chat history) will be saved and restored
-with Shiny bookmarks. This requires that the Shiny app has bookmarking
-enabled via \code{shiny::enableBookmarking()} or the \code{enableBookmarking}
-parameter of \code{shiny::shinyApp()}.}
+      \item{\code{enable_bookmarking}}{Which categories of state to bookmark. Default
+is \code{FALSE} (no bookmarking). Accepts:
+\itemize{
+\item \code{TRUE} to bookmark everything (equivalent to
+\code{c("conversation", "cards")}).
+\item \code{FALSE} or \code{NULL} to disable bookmarking.
+\item A character vector subset of \code{c("conversation", "cards")} to bookmark
+only those categories. \code{"conversation"} covers the chat transcript,
+the active dashboard filter (query and title), the generated greeting,
+and inline visualization widgets. \code{"cards"} covers the insight cards
+created with the \code{querychat_card} tool.
+}
+
+Bookmarking categories independently enables share patterns such as
+\code{enable_bookmarking = "cards"}, which produces links that open the app
+with the same insights but a fresh conversation.
+
+This requires that the Shiny app has bookmarking enabled via
+\code{shiny::enableBookmarking()} or the \code{enableBookmarking} parameter of
+\code{shiny::shinyApp()}.}
       \item{\code{card_placeholder}}{Text shown in the \verb{$ui_cards()} area when no
 cards exist. Set to \code{NULL} for no placeholder.}
       \item{\code{...}}{Ignored.}

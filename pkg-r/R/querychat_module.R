@@ -148,10 +148,9 @@ mod_server <- function(
       if (length(card_list) == 0) {
         return("No cards on the dashboard.")
       }
-      items <- vapply(
+      items <- map_chr(
         card_list,
-        function(cd) sprintf("[%s] %s (%s)", cd$id, cd$title, cd$display),
-        character(1)
+        function(cd) sprintf("[%s] %s (%s)", cd$id, cd$title, cd$display)
       )
       sprintf(
         "%d card%s: %s",
@@ -164,21 +163,16 @@ mod_server <- function(
     manage_card <- function(action, id = NULL, card = NULL) {
       card_list <- shiny::isolate(cards())
       if (action == "get") {
-        idx <- which(vapply(
+        idx <- which(map_lgl(
           card_list,
-          function(cd) identical(cd$id, id),
-          logical(1)
+          function(cd) identical(cd$id, id)
         ))
         return(if (length(idx) > 0) card_list[[idx[[1]]]] else NULL)
       }
       if (action == "remove") {
-        card_list <- Filter(function(cd) !identical(cd$id, id), card_list)
+        card_list <- discard(card_list, function(cd) identical(cd$id, id))
       } else if (action == "replace") {
-        idx <- which(vapply(
-          card_list,
-          function(cd) identical(cd$id, id),
-          logical(1)
-        ))
+        idx <- which(map_lgl(card_list, function(cd) identical(cd$id, id)))
         if (length(idx) > 0) {
           card_list[[idx[[1]]]] <- card
         } else {

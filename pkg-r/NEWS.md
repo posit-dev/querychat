@@ -6,6 +6,10 @@
 
 * File attachments are now enabled by default in the Shiny chat UI. Users can attach images, PDFs, and text files to their messages and the LLM will receive them. Disable with `allow_attachments = FALSE` in `mod_ui()` or `QueryChat$ui()`. (#253)
 
+## Improvements
+
+* Chat greetings now use shinychat's greeting API (requires shinychat >= 0.4.0). A provided `greeting` renders instantly when the app loads, and when no `greeting` is given one is generated on demand without being added to the conversation history. Generated greetings are now preserved across bookmark/restore. (#249)
+
 # querychat 0.3.0
 
 ## New features

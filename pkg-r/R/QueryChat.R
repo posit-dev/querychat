@@ -716,9 +716,8 @@ QueryChat <- R6::R6Class(
     #'
     #' Creates a Shiny app designed for chatting with data, with:
     #' - A sidebar containing the chat interface
-    #' - A card displaying the current SQL query
-    #' - A card displaying the filtered data table
-    #' - A reset button to clear the query
+    #' - A "Data" tab with the current SQL query, a reset button, and the
+    #'   filtered data table
     #' - An "Insights" tab displaying LLM-curated cards, when the `"cards"` tool
     #'   is enabled
     #'
@@ -743,69 +742,69 @@ QueryChat <- R6::R6Class(
       first_table_name <- names(private$.data_sources)[[1]]
       cards_enabled <- "cards" %in% self$tools
 
-      data_view <- if (cards_enabled) {
-        bslib::navset_card_tab(
-          full_screen = TRUE,
-          bslib::nav_panel(
-            title = list(bsicons::bs_icon("table"), "Data"),
-            DT::DTOutput("dt")
+      ui <- function(req) {
+        sql_card <- bslib::card(
+          fill = FALSE,
+          style = bslib::css(max_height = "33%"),
+          bslib::card_header(
+            shiny::div(
+              class = "hstack w-100",
+              shiny::div(
+                bsicons::bs_icon("terminal-fill"),
+                shiny::textOutput("query_title", inline = TRUE)
+              ),
+              shiny::div(
+                class = "ms-auto",
+                shiny::uiOutput("ui_reset", inline = TRUE)
+              )
+            )
           ),
-          bslib::nav_panel(
-            title = list(bsicons::bs_icon("lightbulb"), "Insights"),
-            self$ui_cards()
+          shiny::uiOutput("sql_output")
+        )
+
+        data_nav <- bslib::nav_panel(
+          title = list(bsicons::bs_icon("table"), "Data"),
+          class = "bslib-page-dashboard",
+          sql_card,
+          bslib::card(
+            full_screen = TRUE,
+            DT::DTOutput("dt")
           )
         )
-      } else {
-        bslib::card(
-          full_screen = TRUE,
-          bslib::card_header(
-            bsicons::bs_icon("table"),
-            "Data — ",
-            shiny::textOutput("data_card_header_text", inline = TRUE)
-          ),
-          DT::DTOutput("dt")
-        )
-      }
 
-      ui <- function(req) {
-        bslib::page_sidebar(
+        insights_nav <- if (cards_enabled) {
+          bslib::nav_panel(
+            title = list(bsicons::bs_icon("lightbulb"), "Insights"),
+            class = "bslib-page-dashboard",
+            self$ui_cards()
+          )
+        }
+
+        close_nav <- if (rlang::is_interactive()) {
+          bslib::nav_item(
+            shiny::actionButton(
+              "close_btn",
+              label = "",
+              class = "btn-close",
+              style = "align-self: center;"
+            )
+          )
+        }
+
+        rlang::inject(bslib::page_navbar(
           title = shiny::HTML(
             sprintf(
               "<span>querychat with <code>%s</code></span>",
               first_table_name
             )
           ),
-          class = "bslib-page-dashboard",
+          window_title = paste("querychat with", first_table_name),
           sidebar = self$sidebar(),
-          shiny::useBusyIndicators(pulse = TRUE, spinners = FALSE),
-          bslib::card(
-            fill = FALSE,
-            style = bslib::css(max_height = "33%"),
-            bslib::card_header(
-              shiny::div(
-                class = "hstack w-100",
-                shiny::div(
-                  bsicons::bs_icon("terminal-fill"),
-                  shiny::textOutput("query_title", inline = TRUE)
-                ),
-                shiny::div(
-                  class = "ms-auto",
-                  shiny::uiOutput("ui_reset", inline = TRUE)
-                )
-              )
-            ),
-            shiny::uiOutput("sql_output")
-          ),
-          data_view,
-          if (rlang::is_interactive()) {
-            shiny::actionButton(
-              "close_btn",
-              label = "",
-              class = "btn-close",
-              style = "position: fixed; top: 6px; right: 6px;"
-            )
-          }
-        )
+          header = shiny::useBusyIndicators(pulse = TRUE, spinners = FALSE),
+          bslib::nav_spacer(),
+          !!!compact(list(data_nav, insights_nav)),
+          close_nav
+        ))
       }
 
       server <- function(input, output, session) {

@@ -437,9 +437,8 @@ By default, only the \code{"query"} tool is included, regardless of the
 Creates a Shiny app designed for chatting with data, with:
 \itemize{
 \item A sidebar containing the chat interface
-\item A card displaying the current SQL query
-\item A card displaying the filtered data table
-\item A reset button to clear the query
+\item A "Data" tab with the current SQL query, a reset button, and the
+filtered data table
 \item An "Insights" tab displaying LLM-curated cards, when the \code{"cards"} tool
 is enabled
 }

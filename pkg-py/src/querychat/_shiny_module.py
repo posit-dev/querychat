@@ -64,7 +64,9 @@ def mod_ui(*, preload_viz: bool = False, greeting: str | None = None, **kwargs):
     kwargs.setdefault("enable_cancel", True)
     kwargs.setdefault("allow_attachments", True)
     if greeting:
-        kwargs.setdefault("greeting", shinychat.chat_greeting(greeting, dismissible=False))
+        kwargs.setdefault(
+            "greeting", shinychat.chat_greeting(greeting, dismissible=False)
+        )
     tag = shinychat.chat_ui(CHAT_ID, **kwargs)
     tag.add_class("querychat")
 
@@ -132,6 +134,9 @@ def mod_server(
     # Reactive values to store state
     sql = ReactiveStringOrNone(None)
     title = ReactiveStringOrNone(None)
+    # Holds a generated greeting so it can be saved and restored on bookmark.
+    # Static greetings live in the UI (chat_ui(greeting=)) and persist already.
+    current_greeting = ReactiveStringOrNone(None)
 
     if not callable(client):
         raise TypeError("mod_server() requires a callable client factory.")
@@ -217,6 +222,13 @@ def mod_server(
         @reactive.effect
         @reactive.event(input[f"{CHAT_ID}_greeting_requested"])
         async def _handle_greeting_requested():
+            # Re-display a restored greeting rather than generating a new one.
+            existing = current_greeting.get()
+            if existing is not None:
+                await chat_ui.set_greeting(
+                    shinychat.chat_greeting(existing, dismissible=False)
+                )
+                return
             warnings.warn(
                 "No greeting provided to `QueryChat()`. Using the LLM `client` to generate one now. "
                 "For faster startup, lower cost, and determinism, consider providing a greeting "
@@ -226,7 +238,13 @@ def mod_server(
             )
             greeting_client = client(tools=None)
             stream = await greeting_client.stream_async(GREETING_PROMPT, echo="none")
-            await chat_ui.set_greeting(shinychat.chat_greeting(stream, dismissible=False))
+            await chat_ui.set_greeting(
+                shinychat.chat_greeting(stream, dismissible=False)
+            )
+            # Capture the generated greeting so it can be bookmarked and restored.
+            last_turn = greeting_client.get_last_turn(role="assistant")
+            if last_turn is not None:
+                current_greeting.set(last_turn.text)
 
     # Handle update button clicks
     @reactive.effect
@@ -254,16 +272,26 @@ def mod_server(
             vals = x.values
             vals["querychat_sql"] = sql.get()
             vals["querychat_title"] = title.get()
+            greeting_val = current_greeting.get()
+            if greeting_val is not None:
+                vals["querychat_greeting"] = greeting_val
             if viz_widgets:
                 vals["querychat_viz_widgets"] = viz_widgets
 
         @session.bookmark.on_restore
-        def _on_restore(x: RestoreState) -> None:
+        async def _on_restore(x: RestoreState) -> None:
             vals = x.values
             if "querychat_sql" in vals:
                 sql.set(vals["querychat_sql"])
             if "querychat_title" in vals:
                 title.set(vals["querychat_title"])
+            if "querychat_greeting" in vals:
+                current_greeting.set(vals["querychat_greeting"])
+                await chat_ui.set_greeting(
+                    shinychat.chat_greeting(
+                        vals["querychat_greeting"], dismissible=False
+                    )
+                )
             if "querychat_viz_widgets" in vals:
                 restored = restore_viz_widgets(
                     data_source, vals["querychat_viz_widgets"]

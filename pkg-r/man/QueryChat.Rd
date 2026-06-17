@@ -433,6 +433,23 @@ By default, only the \code{"query"} tool is included, regardless of the
 \if{latex}{\out{\hypertarget{method-QueryChat-app_obj}{}}}
 \subsection{\code{QueryChat$app_obj()}}{
   A streamlined Shiny app for chatting with data
+
+Creates a Shiny app designed for chatting with data, with:
+\itemize{
+\item A sidebar containing the chat interface
+\item A card displaying the current SQL query
+\item A card displaying the filtered data table
+\item A reset button to clear the query
+\item An "Insights" tab displaying LLM-curated cards, when the \code{"cards"} tool
+is enabled
+}
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{library(querychat)
+
+qc <- QueryChat$new(mtcars)
+app <- qc$app_obj()
+shiny::runApp(app)
+}\if{html}{\out{</div>}}
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
     \preformatted{QueryChat$app_obj(..., bookmark_store = "url")}

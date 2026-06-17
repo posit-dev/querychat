@@ -714,6 +714,22 @@ QueryChat <- R6::R6Class(
     #' @description
     #' A streamlined Shiny app for chatting with data
     #'
+    #' Creates a Shiny app designed for chatting with data, with:
+    #' - A sidebar containing the chat interface
+    #' - A card displaying the current SQL query
+    #' - A card displaying the filtered data table
+    #' - A reset button to clear the query
+    #' - An "Insights" tab displaying LLM-curated cards, when the `"cards"` tool
+    #'   is enabled
+    #'
+    #' ```r
+    #' library(querychat)
+    #'
+    #' qc <- QueryChat$new(mtcars)
+    #' app <- qc$app_obj()
+    #' shiny::runApp(app)
+    #' ```
+    #'
     #' @param ... Additional arguments (currently unused).
     #' @param bookmark_store The bookmarking storage method. Passed to
     #'  [shiny::enableBookmarking()]. Default is `"url"`.
@@ -725,6 +741,31 @@ QueryChat <- R6::R6Class(
       check_dots_empty()
 
       first_table_name <- names(private$.data_sources)[[1]]
+      cards_enabled <- "cards" %in% self$tools
+
+      data_view <- if (cards_enabled) {
+        bslib::navset_card_tab(
+          full_screen = TRUE,
+          bslib::nav_panel(
+            title = list(bsicons::bs_icon("table"), "Data"),
+            DT::DTOutput("dt")
+          ),
+          bslib::nav_panel(
+            title = list(bsicons::bs_icon("lightbulb"), "Insights"),
+            self$ui_cards()
+          )
+        )
+      } else {
+        bslib::card(
+          full_screen = TRUE,
+          bslib::card_header(
+            bsicons::bs_icon("table"),
+            "Data — ",
+            shiny::textOutput("data_card_header_text", inline = TRUE)
+          ),
+          DT::DTOutput("dt")
+        )
+      }
 
       ui <- function(req) {
         bslib::page_sidebar(
@@ -755,15 +796,7 @@ QueryChat <- R6::R6Class(
             ),
             shiny::uiOutput("sql_output")
           ),
-          bslib::card(
-            full_screen = TRUE,
-            bslib::card_header(
-              bsicons::bs_icon("table"),
-              "Data \u2014 ",
-              shiny::textOutput("data_card_header_text", inline = TRUE)
-            ),
-            DT::DTOutput("dt")
-          ),
+          data_view,
           if (rlang::is_interactive()) {
             shiny::actionButton(
               "close_btn",

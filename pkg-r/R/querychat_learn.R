@@ -98,6 +98,26 @@ querychat_learn <- function(
   qc$learn(bookmark_store = bookmark_store)
 }
 
+# Read the curated data description for `table_name` from the conventional
+# `.querychat/<table_name>.md` file in the working directory, if it exists and
+# is non-empty. This is the file produced by querychat_learn(); querychat()
+# folds it into the system prompt automatically. Returns `NULL` when absent.
+querychat_data_description_file <- function(table_name) {
+  if (!is_string(table_name) || !nzchar(table_name)) {
+    return(NULL)
+  }
+  path <- file.path(getwd(), ".querychat", paste0(table_name, ".md"))
+  if (!file.exists(path)) {
+    return(NULL)
+  }
+  txt <- read_utf8(path)
+  if (nzchar(trimws(txt))) {
+    txt
+  } else {
+    NULL
+  }
+}
+
 # Build the learn-mode greeting, offering the analyst a few starting paths. The
 # "update existing" path is only offered when a description file already exists.
 querychat_learn_greeting <- function(table_name, has_existing = FALSE) {

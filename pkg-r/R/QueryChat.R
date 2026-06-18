@@ -98,7 +98,8 @@ QueryChat <- R6::R6Class(
     # Store init parameters for deferred system prompt building
     .prompt_template = NULL,
     .data_description = NULL,
-    .data_description_mode = "empty", # "supplied", "inferred", or "empty"
+    # "supplied", "file", "inferred", or "empty"
+    .data_description_mode = "empty",
     .extra_instructions = NULL,
     .categorical_threshold = NULL,
 
@@ -113,16 +114,29 @@ QueryChat <- R6::R6Class(
     },
 
     auto_fill_data_description = function() {
-      if (private$.data_description_mode == "inferred") {
-        private$.data_description <- NULL
-        private$.data_description_mode <- "empty"
+      # An explicitly supplied description always wins and is never overwritten.
+      if (private$.data_description_mode == "supplied") {
+        return(invisible())
       }
-      if (private$.data_description_mode == "empty") {
-        desc <- private$.data_source$get_data_description()
-        if (nzchar(desc %||% "")) {
-          private$.data_description <- desc
-          private$.data_description_mode <- "inferred"
-        }
+
+      # Otherwise re-resolve from scratch (the data source may have changed),
+      # using precedence: curated file > data-source-inferred > empty.
+      private$.data_description <- NULL
+      private$.data_description_mode <- "empty"
+
+      file_desc <- querychat_data_description_file(
+        private$.data_source$table_name
+      )
+      if (!is.null(file_desc)) {
+        private$.data_description <- file_desc
+        private$.data_description_mode <- "file"
+        return(invisible())
+      }
+
+      desc <- private$.data_source$get_data_description()
+      if (nzchar(desc %||% "")) {
+        private$.data_description <- desc
+        private$.data_description_mode <- "inferred"
       }
     },
 

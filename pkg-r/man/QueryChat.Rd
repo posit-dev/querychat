@@ -122,6 +122,7 @@ the value is normalized and the system prompt is rebuilt.}
     \item \href{#method-QueryChat-console}{\code{QueryChat$console()}}
     \item \href{#method-QueryChat-app}{\code{QueryChat$app()}}
     \item \href{#method-QueryChat-app_obj}{\code{QueryChat$app_obj()}}
+    \item \href{#method-QueryChat-learn}{\code{QueryChat$learn()}}
     \item \href{#method-QueryChat-sidebar}{\code{QueryChat$sidebar()}}
     \item \href{#method-QueryChat-ui}{\code{QueryChat$ui()}}
     \item \href{#method-QueryChat-server}{\code{QueryChat$server()}}
@@ -359,6 +360,37 @@ shiny::runApp(app)
   }
   \subsection{Returns}{
     A Shiny app object that can be run with \code{shiny::runApp()}.
+  }
+}
+
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-QueryChat-learn"></a>}}
+\if{latex}{\out{\hypertarget{method-QueryChat-learn}{}}}
+\subsection{\code{QueryChat$learn()}}{
+  Launch a learn-mode chat app to explore the data and produce a reusable
+data description.
+
+Runs a full-page chat gadget (no dashboard) in which the assistant
+explores the data source, interviews you about what it means, and writes
+a description to \verb{.querychat/<table_name>.md}. The chat has access to the
+querying tools plus cwd-gated \code{read}/\code{write}/\code{edit} file tools. Typically
+invoked via the \code{\link[=querychat_learn]{querychat_learn()}} convenience function.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{QueryChat$learn(..., bookmark_store = "url")}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{...}}{Additional arguments (currently unused).}
+      \item{\code{bookmark_store}}{The bookmarking storage method. Passed to
+\code{\link[shiny:enableBookmarking]{shiny::enableBookmarking()}}. Default is \code{"url"}.}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    Invisibly returns a list with the session-specific \code{client}.
   }
 }
 

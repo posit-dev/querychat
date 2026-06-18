@@ -97,6 +97,13 @@ QueryChatSystemPrompt <- R6::R6Class(
         is_duck_db = is_duck_db,
         semantic_views = semantic_views,
         schema = self$schema,
+        table_name = self$data_source$table_name,
+        skill_path = system.file(
+          "skills",
+          "learn-dataset",
+          "SKILL.md",
+          package = "querychat"
+        ),
         data_description = self$data_description,
         extra_instructions = self$extra_instructions,
         has_tool_update = if ("update" %in% tools) "true",

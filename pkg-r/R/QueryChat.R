@@ -605,6 +605,89 @@ QueryChat <- R6::R6Class(
     },
 
     #' @description
+    #' Launch a learn-mode chat app to explore the data and produce a reusable
+    #' data description.
+    #'
+    #' Runs a full-page chat gadget (no dashboard) in which the assistant
+    #' explores the data source, interviews you about what it means, and writes
+    #' a description to `.querychat/<table_name>.md`. The chat has access to the
+    #' querying tools plus cwd-gated `read`/`write`/`edit` file tools. Typically
+    #' invoked via the [querychat_learn()] convenience function.
+    #'
+    #' @param ... Additional arguments (currently unused).
+    #' @param bookmark_store The bookmarking storage method. Passed to
+    #'   [shiny::enableBookmarking()]. Default is `"url"`.
+    #'
+    #' @return Invisibly returns a list with the session-specific `client`.
+    learn = function(..., bookmark_store = "url") {
+      private$require_data_source("$learn")
+      check_dots_empty()
+
+      table_name <- private$.data_source$table_name
+      skill_path <- system.file(
+        "skills",
+        "learn-dataset",
+        "SKILL.md",
+        package = "querychat"
+      )
+      resolved_client_spec <- private$.client_spec
+
+      # Session client carries the learn prompt + query/visualize tools (from
+      # construction); layer the cwd-gated file tools on top of the clone.
+      create_learn_client <- function(...) {
+        chat <- private$create_session_client(
+          client_spec = resolved_client_spec,
+          ...
+        )
+        chat$register_tool(querychat_learn_read(skill_path))
+        chat$register_tool(querychat_learn_write())
+        chat$register_tool(querychat_learn_edit())
+        chat
+      }
+
+      ui <- function(req) {
+        bslib::page_fillable(
+          padding = 0,
+          gap = 0,
+          title = shiny::HTML(
+            sprintf(
+              "<span>querychat learn: <code>%s</code></span>",
+              table_name
+            )
+          ),
+          shiny::useBusyIndicators(pulse = TRUE, spinners = FALSE),
+          self$ui(),
+          shiny::actionButton(
+            "close_btn",
+            label = "",
+            class = "btn-close",
+            style = "position: fixed; top: 6px; right: 6px;"
+          )
+        )
+      }
+
+      server <- function(input, output, session) {
+        enable_bookmarking <- bookmark_store %in% c("url", "server")
+        qc_vals <- mod_server(
+          self$id,
+          data_source = private$.data_source,
+          greeting = self$greeting,
+          client = create_learn_client,
+          tools = self$tools,
+          enable_bookmarking = enable_bookmarking
+        )
+
+        shiny::observeEvent(input$close_btn, label = "on_close_btn", {
+          shiny::stopApp(list(client = qc_vals$client))
+        })
+      }
+
+      app <- shiny::shinyApp(ui, server, enableBookmarking = bookmark_store)
+      vals <- tryCatch(shiny::runGadget(app), interrupt = function(cnd) NULL)
+      invisible(vals)
+    },
+
+    #' @description
     #' Create a sidebar containing the querychat UI.
     #'
     #' This method generates a [bslib::sidebar()] component containing the chat

@@ -64,7 +64,7 @@ MyDataSource <- R6::R6Class(
   Get schema information about the table
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
-    \preformatted{DataSource$get_schema(categorical_threshold = 20)}
+    \preformatted{DataSource$get_schema(categorical_threshold = 20, table_spec = NULL)}
     \if{html}{\out{</div>}}
   }
   \subsection{Arguments}{

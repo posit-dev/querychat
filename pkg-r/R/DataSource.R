@@ -45,7 +45,7 @@ DataSource <- R6::R6Class(
     #' @param categorical_threshold Maximum number of unique values for a text
     #'   column to be considered categorical
     #' @return A string containing schema information formatted for LLM prompts
-    get_schema = function(categorical_threshold = 20) {
+    get_schema = function(categorical_threshold = 20, table_spec = NULL) {
       cli::cli_abort(
         "{.fn get_schema} must be implemented by subclass",
         class = "not_implemented_error"

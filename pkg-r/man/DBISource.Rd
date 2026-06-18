@@ -96,7 +96,7 @@ string or a \code{\link[DBI:Id]{DBI::Id()}} object for tables in catalogs/schema
   Get schema information for the database table
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
-    \preformatted{DBISource$get_schema(categorical_threshold = 20)}
+    \preformatted{DBISource$get_schema(categorical_threshold = 20, table_spec = NULL)}
     \if{html}{\out{</div>}}
   }
   \subsection{Arguments}{

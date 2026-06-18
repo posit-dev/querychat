@@ -29,7 +29,7 @@ QueryChatSystemPrompt <- R6::R6Class(
     #' @field data_sources Named list of DataSource objects.
     data_sources = NULL,
 
-    #' @field data_dicts List of querychat_data_dict objects.
+    #' @field data_dicts List of data dict lists (from [read_data_dict()]).
     data_dicts = NULL,
 
     #' @description
@@ -40,7 +40,7 @@ QueryChatSystemPrompt <- R6::R6Class(
     #' @param data_description Optional path to data description file or description string.
     #' @param extra_instructions Optional path to instructions file or instructions string.
     #' @param categorical_threshold Threshold for categorical column detection (default: 10).
-    #' @param data_dicts Optional list of querychat_data_dict objects.
+    #' @param data_dicts Optional list of data dict lists (from [read_data_dict()]).
     #'
     #' @return A new `QueryChatSystemPrompt` object.
     initialize = function(

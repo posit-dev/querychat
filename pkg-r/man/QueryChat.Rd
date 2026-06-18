@@ -206,8 +206,8 @@ model in plain text or Markdown. Can be a string or a file path.}
 template file. If not provided, the default querychat template will be
 used. See the package prompts directory for the default template
 format.}
-      \item{\code{data_dict}}{Optional data dictionary (or list thereof). Can be a
-\code{\link[=data_dict]{data_dict()}} object, a path to a YAML file, or a list of these.}
+      \item{\code{data_dict}}{Optional data dictionary. A path to a YAML file, or a
+list of YAML file paths. See \code{\link[=read_data_dict]{read_data_dict()}} for the expected format.}
       \item{\code{cleanup}}{Whether or not to automatically run \verb{$cleanup()} when the
 Shiny session/app stops. By default, cleanup only occurs if \code{QueryChat}
 gets created within a Shiny session. Set to \code{TRUE} to always clean up,

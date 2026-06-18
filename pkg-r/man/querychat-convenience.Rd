@@ -63,7 +63,7 @@ values to consider as a categorical variable. Default is 20.}
 
 \item{prompt_template}{Optional path to or string of a custom prompt template.}
 
-\item{data_dict}{Optional data dictionary (or list thereof).}
+\item{data_dict}{Optional data dictionary. A path to a YAML file or a list of paths.}
 
 \item{cleanup}{Whether or not to automatically run \verb{$cleanup()} when the
 Shiny session/app stops.}

@@ -107,9 +107,9 @@ DBISource <- R6::R6Class(
     #' @param categorical_threshold Maximum number of unique values for a text
     #'   column to be considered categorical (default: 20)
     #' @return A string describing the schema
-    get_schema = function(categorical_threshold = 20) {
+    get_schema = function(categorical_threshold = 20, table_spec = NULL) {
       check_number_whole(categorical_threshold, min = 1)
-      get_schema_impl(private$conn, self$table_name, categorical_threshold)
+      get_schema_impl(private$conn, self$table_name, categorical_threshold, table_spec = table_spec)
     },
 
     #' @description
@@ -205,11 +205,17 @@ get_schema_impl <- function(
   table_name,
   categorical_threshold = 20,
   columns = NULL,
-  prep_query = identity
+  prep_query = identity,
+  table_spec = NULL
 ) {
   check_function(prep_query)
 
-  # Get column information
+  # Build column-name -> spec lookup from the DataDict table entry (if any)
+  documented <- list()
+  for (spec in table_spec[["columns"]] %||% list()) {
+    documented[[spec[["name"]]]] <- spec
+  }
+
   columns <- columns %||% DBI::dbListFields(conn, table_name)
 
   schema_lines <- c(
@@ -217,12 +223,10 @@ get_schema_impl <- function(
     "Columns:"
   )
 
-  # Build single query to get column statistics
   select_parts <- character(0)
   numeric_columns <- character(0)
   text_columns <- character(0)
 
-  # Get sample of data to determine types
   # Use dbFetch(n=1) instead of LIMIT 1 for SQL Server compatibility
   sample_query <- paste0(
     "SELECT * FROM ",
@@ -233,6 +237,7 @@ get_schema_impl <- function(
   DBI::dbClearResult(rs)
 
   for (col in columns) {
+    spec <- documented[[col]]
     col_class <- class(sample_data[[col]])[1]
 
     if (
@@ -240,32 +245,38 @@ get_schema_impl <- function(
         c("integer", "numeric", "double", "Date", "POSIXct", "POSIXt")
     ) {
       numeric_columns <- c(numeric_columns, col)
-      select_parts <- c(
-        select_parts,
-        paste0(
-          "MIN(",
-          DBI::dbQuoteIdentifier(conn, col),
-          ") as ",
-          DBI::dbQuoteIdentifier(conn, paste0(col, '__min'))
-        ),
-        paste0(
-          "MAX(",
-          DBI::dbQuoteIdentifier(conn, col),
-          ") as ",
-          DBI::dbQuoteIdentifier(conn, paste0(col, '__max'))
+      # Skip MIN/MAX query if DataDict supplies a range
+      if (is.null(spec[["range"]])) {
+        select_parts <- c(
+          select_parts,
+          paste0(
+            "MIN(",
+            DBI::dbQuoteIdentifier(conn, col),
+            ") as ",
+            DBI::dbQuoteIdentifier(conn, paste0(col, '__min'))
+          ),
+          paste0(
+            "MAX(",
+            DBI::dbQuoteIdentifier(conn, col),
+            ") as ",
+            DBI::dbQuoteIdentifier(conn, paste0(col, '__max'))
+          )
         )
-      )
+      }
     } else if (col_class %in% c("character", "factor")) {
       text_columns <- c(text_columns, col)
-      select_parts <- c(
-        select_parts,
-        paste0(
-          "COUNT(DISTINCT ",
-          DBI::dbQuoteIdentifier(conn, col),
-          ") as ",
-          DBI::dbQuoteIdentifier(conn, paste0(col, '__distinct_count'))
+      # Skip COUNT DISTINCT query if DataDict supplies values
+      if (is.null(spec[["values"]])) {
+        select_parts <- c(
+          select_parts,
+          paste0(
+            "COUNT(DISTINCT ",
+            DBI::dbQuoteIdentifier(conn, col),
+            ") as ",
+            DBI::dbQuoteIdentifier(conn, paste0(col, '__distinct_count'))
+          )
         )
-      )
+      }
     }
   }
 
@@ -291,11 +302,12 @@ get_schema_impl <- function(
     )
   }
 
-  # Get categorical values for text columns below threshold
+  # Get categorical values for text columns below threshold (skip if DataDict provides values)
   categorical_values <- list()
   text_cols_to_query <- character(0)
 
   for (col_name in text_columns) {
+    if (!is.null(documented[[col_name]][["values"]])) next
     distinct_count_key <- paste0(col_name, "__distinct_count")
     if (
       distinct_count_key %in%
@@ -307,10 +319,8 @@ get_schema_impl <- function(
     }
   }
 
-  # Remove duplicates
   text_cols_to_query <- unique(text_cols_to_query)
 
-  # Get categorical values
   if (length(text_cols_to_query) > 0) {
     for (col_name in text_cols_to_query) {
       tryCatch(
@@ -339,39 +349,61 @@ get_schema_impl <- function(
 
   # Build schema description
   for (col in columns) {
+    spec <- documented[[col]]
     col_class <- class(sample_data[[col]])[1]
-    sql_type <- r_class_to_sql_type(col_class)
 
+    sql_type <- spec[["type"]] %||% r_class_to_sql_type(col_class)
     column_info <- paste0("- ", col, " (", sql_type, ")")
 
-    # Add range info for numeric columns
+    if (!is.null(spec[["units"]])) {
+      column_info <- paste0(column_info, " [", spec[["units"]], "]")
+    }
+    if (!is.null(spec[["description"]])) {
+      column_info <- paste(column_info, paste0("  Description: ", spec[["description"]]), sep = "\n")
+    }
+    if (length(spec[["constraints"]]) > 0) {
+      column_info <- paste(
+        column_info,
+        paste0("  Constraints: ", paste(spec[["constraints"]], collapse = ", ")),
+        sep = "\n"
+      )
+    }
+
     if (col %in% numeric_columns) {
-      min_key <- paste0(col, "__min")
-      max_key <- paste0(col, "__max")
-      if (
-        min_key %in%
-          names(column_stats) &&
-          max_key %in% names(column_stats) &&
-          !is.na(column_stats[[min_key]]) &&
-          !is.na(column_stats[[max_key]])
-      ) {
+      if (!is.null(spec[["range"]])) {
         range_info <- paste0(
-          "  Range: ",
-          column_stats[[min_key]],
-          " to ",
-          column_stats[[max_key]]
+          "  Range: ", spec[["range"]][["min"]] %||% "?",
+          " to ", spec[["range"]][["max"]] %||% "?"
         )
         column_info <- paste(column_info, range_info, sep = "\n")
+      } else {
+        min_key <- paste0(col, "__min")
+        max_key <- paste0(col, "__max")
+        if (
+          min_key %in% names(column_stats) &&
+            max_key %in% names(column_stats) &&
+            !is.na(column_stats[[min_key]]) &&
+            !is.na(column_stats[[max_key]])
+        ) {
+          range_info <- paste0(
+            "  Range: ", column_stats[[min_key]],
+            " to ", column_stats[[max_key]]
+          )
+          column_info <- paste(column_info, range_info, sep = "\n")
+        }
       }
     }
 
-    # Add categorical values for text columns
-    if (col %in% names(categorical_values)) {
-      values <- categorical_values[[col]]
-      if (length(values) > 0) {
-        values_str <- paste0("'", values, "'", collapse = ", ")
-        cat_info <- paste0("  Categorical values: ", values_str)
-        column_info <- paste(column_info, cat_info, sep = "\n")
+    if (col %in% text_columns) {
+      if (!is.null(spec[["values"]])) {
+        values_str <- paste0("'", spec[["values"]], "'", collapse = ", ")
+        column_info <- paste(column_info, paste0("  Categorical values: ", values_str), sep = "\n")
+      } else if (col %in% names(categorical_values)) {
+        values <- categorical_values[[col]]
+        if (length(values) > 0) {
+          values_str <- paste0("'", values, "'", collapse = ", ")
+          column_info <- paste(column_info, paste0("  Categorical values: ", values_str), sep = "\n")
+        }
       }
     }
 

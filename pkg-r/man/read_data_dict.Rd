@@ -10,10 +10,13 @@ read_data_dict(path)
 \item{path}{Path to the YAML file.}
 }
 \value{
-A \code{querychat_data_dict} S3 object.
+A named list with the structure of the YAML file.
 }
 \description{
-Loads a \code{\link[=data_dict]{data_dict()}} from a YAML file. The YAML schema mirrors the
-constructor arguments. If \code{name} is absent from the file, it defaults to
-the file stem.
+Loads a data dictionary from a YAML file conforming to the
+\href{https://data-dict.tidyverse.org/}{data-dict spec}. The dictionary is
+returned as a plain list and can be passed directly to \link{QueryChat} via the
+\code{data_dict} argument.
+
+If \code{name} is absent from the YAML file, it defaults to the file stem.
 }

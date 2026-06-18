@@ -106,7 +106,7 @@ string, or will be inferred from the \code{tbl} argument, if possible.}
   Get schema information about the table
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
-    \preformatted{TblSqlSource$get_schema(categorical_threshold = 20)}
+    \preformatted{TblSqlSource$get_schema(categorical_threshold = 20, table_spec = NULL)}
     \if{html}{\out{</div>}}
   }
   \subsection{Arguments}{

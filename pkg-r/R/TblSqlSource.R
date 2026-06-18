@@ -103,13 +103,14 @@ TblSqlSource <- R6::R6Class(
     #' @param categorical_threshold Maximum number of unique values for a text
     #'   column to be considered categorical
     #' @return A string containing schema information formatted for LLM prompts
-    get_schema = function(categorical_threshold = 20) {
+    get_schema = function(categorical_threshold = 20, table_spec = NULL) {
       get_schema_impl(
         private$conn,
         self$table_name,
         categorical_threshold,
         columns = colnames(private$tbl),
-        prep_query = self$prep_query
+        prep_query = self$prep_query,
+        table_spec = table_spec
       )
     },
 

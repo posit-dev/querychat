@@ -76,6 +76,10 @@ NULL
 #' @rawNamespace if (getRversion() < "4.3.0") importFrom("S7", "@")
 NULL
 
+.onLoad <- function(libname, pkgname) {
+  rlang::run_on_load()
+}
+
 release_bullets <- function() {
   c(
     "Run `staticimports::import()` to update static imports",

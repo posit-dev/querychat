@@ -285,8 +285,8 @@ QueryChat <- R6::R6Class(
     #'   template file. If not provided, the default querychat template will be
     #'   used. See the package prompts directory for the default template
     #'   format.
-    #' @param data_dict Optional data dictionary (or list thereof). Can be a
-    #'   [data_dict()] object, a path to a YAML file, or a list of these.
+    #' @param data_dict Optional data dictionary. A path to a YAML file, or a
+    #'   list of YAML file paths. See [read_data_dict()] for the expected format.
     #' @param cleanup Whether or not to automatically run `$cleanup()` when the
     #'   Shiny session/app stops. By default, cleanup only occurs if `QueryChat`
     #'   gets created within a Shiny session. Set to `TRUE` to always clean up,
@@ -903,7 +903,7 @@ QueryChat <- R6::R6Class(
 #'   values to consider as a categorical variable. Default is 20.
 #' @param extra_instructions Optional additional instructions for the chat model.
 #' @param prompt_template Optional path to or string of a custom prompt template.
-#' @param data_dict Optional data dictionary (or list thereof).
+#' @param data_dict Optional data dictionary. A path to a YAML file or a list of paths.
 #' @param cleanup Whether or not to automatically run `$cleanup()` when the
 #'   Shiny session/app stops.
 #'
@@ -1064,9 +1064,6 @@ normalize_data_dicts <- function(data_dict) {
   if (is.null(data_dict)) {
     return(list())
   }
-  if (inherits(data_dict, "querychat_data_dict")) {
-    return(list(data_dict))
-  }
   if (is.character(data_dict)) {
     return(list(read_data_dict(data_dict)))
   }
@@ -1074,20 +1071,17 @@ normalize_data_dicts <- function(data_dict) {
     result <- vector("list", length(data_dict))
     for (i in seq_along(data_dict)) {
       item <- data_dict[[i]]
-      if (inherits(item, "querychat_data_dict")) {
-        result[[i]] <- item
-      } else if (is.character(item)) {
-        result[[i]] <- read_data_dict(item)
-      } else {
+      if (!is.character(item)) {
         cli::cli_abort(
-          "Each element of {.arg data_dict} must be a {.cls querychat_data_dict} or a file path string."
+          "Each element of {.arg data_dict} must be a file path string."
         )
       }
+      result[[i]] <- read_data_dict(item)
     }
     return(result)
   }
   cli::cli_abort(
-    "{.arg data_dict} must be a {.cls querychat_data_dict}, a file path, or a list thereof."
+    "{.arg data_dict} must be a file path or a list of file paths."
   )
 }
 

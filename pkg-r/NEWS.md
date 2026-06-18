@@ -1,5 +1,9 @@
 # querychat (development version)
 
+## New features
+
+* Added `PinSource`, a data source for chatting with datasets pinned to a [pins](https://pins.rstudio.com/) board. Works with parquet, CSV, JSON, and RDS pins, and uses the pin's title, description, and tags as the default data description. (#246)
+
 # querychat 0.3.0
 
 ## New features

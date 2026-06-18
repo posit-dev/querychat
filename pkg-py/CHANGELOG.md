@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### New features
+
+* Added `PinSource`, a data source for chatting with datasets pinned to a [pins](https://pins.rstudio.com/) board. Works with parquet, CSV, JSON, and Arrow pins, and uses the pin's title, description, and tags as the default data description. Install the optional dependency with `pip install querychat[pins]`. (#246)
+
 ### Improvements
 
 * The query tool result card now starts collapsed by default. Users can still expand it to see the SQL query and results. Set `QUERYCHAT_TOOL_DETAILS=expanded` to restore the previous behavior. (#239)

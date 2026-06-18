@@ -10,38 +10,53 @@ tool_card <- function(executor, manage_card) {
     arguments = list(
       action = ellmer::type_enum(
         c("add", "replace", "patch", "remove", "get"),
-        "Action to perform on a dashboard card. Use 'add' to create a new card, 'replace' to fully overwrite an existing card, 'patch' to change only the fields you supply on an existing card, 'remove' to delete a card by id, or 'get' to read existing cards (all cards when 'id' is omitted, or a single card when 'id' is supplied)."
+        paste(
+          "The operation to perform.",
+          "- 'add': create a new card. Requires display, title, and value.",
+          "- 'patch': the preferred way to edit a card. Send the id and only the fields you are changing; omitted fields keep their current values. Cannot clear an optional field; use 'replace' for that.",
+          "- 'replace': fully overwrite a card. Send the id and every field for the new version (same requirements as 'add'; changing display is allowed). Omitted optional fields are cleared.",
+          "- 'remove': delete a card. Requires only id.",
+          "- 'get': read existing cards. Omit id for all cards, or pass an id for one. Use it to discover card ids and their current contents before a patch, replace, or remove.",
+          sep = "\n"
+        )
       ),
       id = ellmer::type_string(
-        "Card id. Required for replace, patch, and remove. Optional for get (omit to return all cards).",
+        "The short card identifier. Required for replace, patch, and remove; optional for get (omit to return all cards); omit for add.",
         required = FALSE
       ),
       display = ellmer::type_enum(
         c("table", "visualization", "markdown", "value_box"),
-        "Display mode. 'table' renders SQL query results as a table, 'visualization' renders a ggsql chart, 'markdown' renders static markdown text, 'value_box' renders a single highlighted metric (SQL query returning exactly 1 row and 1 column).",
+        "Which renderer to use; required for add and replace. 'table' renders SQL query results as a table, 'visualization' renders a ggsql chart, 'markdown' renders static markdown text, 'value_box' renders a single highlighted metric (SQL query returning exactly 1 row and 1 column).",
         required = FALSE
       ),
       title = ellmer::type_string(
-        "Card title displayed in the card header.",
+        "A brief card heading shown in the card header. Required for add and replace.",
         required = FALSE
       ),
       value = ellmer::type_string(
         ellmer::interpolate(
-          "The card content. For 'table': a {{db_type}} SQL SELECT query. For 'visualization': a full ggsql query including a VISUALISE clause. For 'markdown': markdown text to render. For 'value_box': a {{db_type}} SQL SELECT query returning exactly one row and one column.",
+          paste(
+            "The card content; required for add and replace. Its meaning depends on display:",
+            "- table: a {{db_type}} SQL SELECT query.",
+            "- visualization: a full ggsql query including a VISUALISE clause. Do NOT include `LABEL title => ...`; use the title parameter instead.",
+            "- markdown: markdown text to render.",
+            "- value_box: a {{db_type}} SQL SELECT query returning exactly 1 row and 1 column. Format the value into a human-readable string in SQL (thousands separators, currency, rounding, a % suffix, etc.) so it displays cleanly; don't return a raw float.",
+            sep = "\n"
+          ),
           db_type = db_type
         ),
         required = FALSE
       ),
       caption = ellmer::type_string(
-        "Optional brief secondary text. Rendered as a card footer for table/visualization/markdown, and as the subtitle for value_box. Keep it short.",
+        "Optional brief secondary text. Rendered as a footer for table/visualization/markdown cards, and as the subtitle for value_box. Keep it to a few words.",
         required = FALSE
       ),
       theme = ellmer::type_string(
-        "Optional bslib theme name for the value_box background. One of: primary, secondary, success, danger, warning, info. Applies to value_box only; ignored for other displays.",
+        "Optional Bootstrap theme name for a value_box background: one of primary, secondary, success, danger, warning, info. Applies to value_box only; ignored for other displays.",
         required = FALSE
       ),
       icon = ellmer::type_string(
-        "Optional bsicons icon name (e.g., 'bar-chart', 'currency-dollar', 'people-fill'). Honored by all display types.",
+        "Optional Bootstrap icon name (e.g., 'bar-chart', 'currency-dollar', 'people-fill'). Honored by every display: the showcase icon for value_box, and shown beside the title for table/visualization/markdown.",
         required = FALSE
       )
     ),

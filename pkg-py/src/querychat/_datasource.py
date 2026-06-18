@@ -54,16 +54,27 @@ class ColumnMeta:
     description: str | None = None
     """Optional human-readable description of the column."""
 
+    units: str | None = None
+    """Unit label (e.g. 'kg', 'USD')."""
+
+    constraints: list[str] = field(default_factory=list)
+    """Free-text constraints (e.g. 'non-negative')."""
+
 
 def format_schema(table_name: str, columns: list[ColumnMeta]) -> str:
     """Format column metadata into schema string."""
     lines = [f"Table: {table_name}", "Columns:"]
 
     for col in columns:
-        lines.append(f"- {col.name} ({col.sql_type})")
+        header = f"- {col.name} ({col.sql_type})"
+        if col.units:
+            header += f" [{col.units}]"
+        lines.append(header)
 
         if col.description:
             lines.append(f"  Description: {col.description}")
+        if col.constraints:
+            lines.append(f"  Constraints: {', '.join(col.constraints)}")
         if col.kind in ("numeric", "date") and col.min_val is not None and col.max_val is not None:
             lines.append(f"  Range: {col.min_val} to {col.max_val}")
         elif col.categories:

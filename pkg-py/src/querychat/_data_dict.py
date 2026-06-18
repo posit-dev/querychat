@@ -207,6 +207,8 @@ class DataDict(BaseModel):
         for meta in metas:
             spec = documented.get(meta.name)
             if spec is not None:
+                if spec.type is not None:
+                    meta.sql_type = spec.type
                 if spec.range is not None:
                     meta.min_val = spec.range.min
                     meta.max_val = spec.range.max
@@ -214,6 +216,10 @@ class DataDict(BaseModel):
                     meta.categories = [str(v) for v in spec.values]
                 if spec.description is not None:
                     meta.description = spec.description
+                if spec.units is not None:
+                    meta.units = spec.units
+                if spec.constraints:
+                    meta.constraints = list(spec.constraints)
             else:
                 undocumented.append(meta)
 

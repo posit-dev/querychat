@@ -21,6 +21,8 @@ test_that("mod_server() passes visualize callback and tools to client factory", 
   skip_if_no_dataframe_engine()
 
   ds <- local_data_frame_source(new_test_df())
+  executor <- build_query_executor(list(test_table = ds))
+  withr::defer(executor$cleanup())
   captured <- NULL
 
   client_factory <- function(...) {
@@ -32,7 +34,8 @@ test_that("mod_server() passes visualize callback and tools to client factory", 
     mod_server,
     args = list(
       id = "test",
-      data_source = ds,
+      data_sources = list(test_table = ds),
+      executor = executor,
       greeting = "Hello",
       client = client_factory,
       tools = c("query", "visualize"),
@@ -52,6 +55,8 @@ test_that("restored viz widgets survive a second bookmark cycle", {
   skip_if_no_dataframe_engine()
 
   ds <- local_data_frame_source(new_test_df())
+  executor <- build_query_executor(list(test_table = ds))
+  withr::defer(executor$cleanup())
   callbacks <- NULL
   bookmark_fn <- NULL
   restore_fn <- NULL
@@ -63,7 +68,8 @@ test_that("restored viz widgets survive a second bookmark cycle", {
   }
 
   local_mocked_bindings(
-    chat_restore = function(id, chat, session) {},
+    chat_restore = function(id, chat, session) {
+    },
     .package = "shinychat"
   )
   local_mocked_bindings(
@@ -76,9 +82,9 @@ test_that("restored viz widgets survive a second bookmark cycle", {
     .package = "shiny"
   )
   local_mocked_bindings(
-    restore_viz_widgets = function(data_source, saved_widgets, session) {
+    restore_viz_widgets = function(executor, saved_widgets, session) {
       restored_args <<- list(
-        data_source = data_source,
+        executor = executor,
         saved_widgets = saved_widgets,
         session = session
       )
@@ -91,7 +97,8 @@ test_that("restored viz widgets survive a second bookmark cycle", {
     mod_server,
     args = list(
       id = "test",
-      data_source = ds,
+      data_sources = list(test_table = ds),
+      executor = executor,
       greeting = "Hello",
       client = client_factory,
       tools = c("query", "visualize"),
@@ -119,7 +126,7 @@ test_that("restored viz widgets survive a second bookmark cycle", {
       restore_state <- new.env(parent = emptyenv())
       restore_state$values <- first_state$values
       shiny::isolate(restore_fn(restore_state))
-      expect_identical(restored_args$data_source, ds)
+      expect_true(inherits(restored_args$executor, "QueryExecutor"))
       expect_equal(restored_args$saved_widgets, saved)
 
       second_state <- new.env(parent = emptyenv())

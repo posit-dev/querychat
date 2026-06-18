@@ -58,10 +58,12 @@ DBISource <- R6::R6Class(
 
       # Check if table exists
       if (!DBI::dbExistsTable(conn, table_name)) {
-        cli::cli_abort(c(
-          "Table {.val {DBI::dbQuoteIdentifier(conn, table_name)}} not found in database",
-          "i" = "If you're using a table in a catalog or schema, pass a {.fn DBI::Id} object to {.arg table_name}"
-        ))
+        cli::cli_abort(
+          c(
+            "Table {.val {DBI::dbQuoteIdentifier(conn, table_name)}} not found in database",
+            "i" = "If you're using a table in a catalog or schema, pass a {.fn DBI::Id} object to {.arg table_name}"
+          )
+        )
       }
 
       private$conn <- conn
@@ -69,13 +71,15 @@ DBISource <- R6::R6Class(
 
       # Store original column names for validation
       # Use WHERE 1=0 instead of LIMIT 0 for SQL Server compatibility
-      private$colnames <- colnames(DBI::dbGetQuery(
-        conn,
-        sprintf(
-          "SELECT * FROM %s WHERE 1=0",
-          DBI::dbQuoteIdentifier(conn, table_name)
+      private$colnames <- colnames(
+        DBI::dbGetQuery(
+          conn,
+          sprintf(
+            "SELECT * FROM %s WHERE 1=0",
+            DBI::dbQuoteIdentifier(conn, table_name)
+          )
         )
-      ))
+      )
     },
 
     #' @description Get the database type
@@ -195,7 +199,6 @@ DBISource <- R6::R6Class(
     }
   )
 )
-
 
 get_schema_impl <- function(
   conn,
@@ -377,7 +380,6 @@ get_schema_impl <- function(
 
   paste(schema_lines, collapse = "\n")
 }
-
 
 # nocov start
 # Map R classes to SQL types

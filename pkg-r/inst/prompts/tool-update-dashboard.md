@@ -1,8 +1,8 @@
 Filter and sort the dashboard data
 
-This tool executes a {{db_type}} SQL SELECT `query` to filter or sort the data used in the dashboard.
+This tool executes a {{db_type}} SQL SELECT query to filter or sort the data used in the dashboard.
 
-**Returns:** A confirmation that the dashboard was updated successfully, or the error that occurred when running the SQL query. The results of the query will update the data shown in the dashboard.
+The `table` parameter specifies which table to filter. Use the table name exactly as shown in the schema.
 
 **When to use:** Call this tool whenever the user requests filtering, sorting, or data manipulation on the dashboard with questions like "Show me..." or "Which records have...". This tool is appropriate for any request that involves showing a subset of the data or reordering it.
 
@@ -15,3 +15,22 @@ This tool executes a {{db_type}} SQL SELECT `query` to filter or sort the data u
 - For statistical filters (stddev, percentiles), use CTEs to calculate thresholds within the query
 - Assume the user will only see the original columns in the dataset
 
+
+{{#multi_table}}
+
+**Multi-table filters:** When filtering a table, you may reference other tables in WHERE clauses, subqueries, or CTEs (e.g., filtering orders by a condition on customers). The result must still return all columns of the target table specified by the `table` parameter.
+
+{{/multi_table}}
+Parameters
+----------
+table :
+    The name of the table to filter. Must match exactly one of the table names from the schema.
+query :
+    A {{db_type}} SQL SELECT query that MUST return all existing schema columns (use SELECT * or explicitly list all columns). May include additional computed columns, subqueries, CTEs, WHERE clauses, ORDER BY, and any {{db_type}}-supported SQL functions.
+title :
+    A brief title for display purposes, summarizing the intent of the SQL query.
+
+Returns
+-------
+:
+    A confirmation that the dashboard was updated successfully, or the error that occurred when running the SQL query. The results of the query will update the data shown in the dashboard.

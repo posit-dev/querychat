@@ -8,12 +8,11 @@ describe("QueryChatSystemPrompt$new()", {
 
     sp <- QueryChatSystemPrompt$new(
       prompt_template = "Template: {{schema}}",
-      data_source = ds
+      data_sources = list(test_table = ds)
     )
 
     expect_type(sp$template, "character")
     expect_true(grepl("Template:", sp$template))
-    expect_type(sp$schema, "character")
     expect_equal(sp$categorical_threshold, 10)
   })
 
@@ -27,7 +26,7 @@ describe("QueryChatSystemPrompt$new()", {
 
     sp <- QueryChatSystemPrompt$new(
       prompt_template = temp_file,
-      data_source = ds
+      data_sources = list(test_table = ds)
     )
 
     expect_type(sp$template, "character")
@@ -41,7 +40,7 @@ describe("QueryChatSystemPrompt$new()", {
 
     sp <- QueryChatSystemPrompt$new(
       prompt_template = "Template",
-      data_source = ds,
+      data_sources = list(test_table = ds),
       data_description = "Test data description"
     )
 
@@ -58,7 +57,7 @@ describe("QueryChatSystemPrompt$new()", {
 
     sp <- QueryChatSystemPrompt$new(
       prompt_template = "Template",
-      data_source = ds,
+      data_sources = list(test_table = ds),
       data_description = temp_file
     )
 
@@ -72,7 +71,7 @@ describe("QueryChatSystemPrompt$new()", {
 
     sp <- QueryChatSystemPrompt$new(
       prompt_template = "Template",
-      data_source = ds,
+      data_sources = list(test_table = ds),
       extra_instructions = "Extra instructions here"
     )
 
@@ -89,7 +88,7 @@ describe("QueryChatSystemPrompt$new()", {
 
     sp <- QueryChatSystemPrompt$new(
       prompt_template = "Template",
-      data_source = ds,
+      data_sources = list(test_table = ds),
       extra_instructions = temp_file
     )
 
@@ -103,7 +102,7 @@ describe("QueryChatSystemPrompt$new()", {
 
     sp <- QueryChatSystemPrompt$new(
       prompt_template = "Template",
-      data_source = ds,
+      data_sources = list(test_table = ds),
       categorical_threshold = 25
     )
 
@@ -117,7 +116,7 @@ describe("QueryChatSystemPrompt$new()", {
 
     sp <- QueryChatSystemPrompt$new(
       prompt_template = "Template",
-      data_source = ds
+      data_sources = list(test_table = ds)
     )
 
     expect_null(sp$data_description)
@@ -140,7 +139,7 @@ describe("QueryChatSystemPrompt$render()", {
 
     sp <- QueryChatSystemPrompt$new(
       prompt_template = template,
-      data_source = ds
+      data_sources = list(test_table = ds)
     )
 
     result <- sp$render(c("update", "query"))
@@ -164,7 +163,7 @@ describe("QueryChatSystemPrompt$render()", {
 
     sp <- QueryChatSystemPrompt$new(
       prompt_template = template,
-      data_source = ds
+      data_sources = list(test_table = ds)
     )
 
     result <- sp$render("query")
@@ -188,7 +187,7 @@ describe("QueryChatSystemPrompt$render()", {
 
     sp <- QueryChatSystemPrompt$new(
       prompt_template = template,
-      data_source = ds
+      data_sources = list(test_table = ds)
     )
 
     result <- sp$render("update")
@@ -213,7 +212,7 @@ describe("QueryChatSystemPrompt$render()", {
 
     sp <- QueryChatSystemPrompt$new(
       prompt_template = template,
-      data_source = ds
+      data_sources = list(test_table = ds)
     )
 
     result <- sp$render(NULL)
@@ -231,7 +230,7 @@ describe("QueryChatSystemPrompt$render()", {
 
     sp <- QueryChatSystemPrompt$new(
       prompt_template = "Schema: {{schema}}",
-      data_source = ds
+      data_sources = list(test_table = ds)
     )
 
     result <- sp$render(NULL)
@@ -247,7 +246,7 @@ describe("QueryChatSystemPrompt$render()", {
 
     sp <- QueryChatSystemPrompt$new(
       prompt_template = "Database: {{db_type}}",
-      data_source = ds
+      data_sources = list(test_table = ds)
     )
 
     result <- sp$render(NULL)
@@ -268,7 +267,7 @@ describe("QueryChatSystemPrompt$render()", {
 
     sp <- QueryChatSystemPrompt$new(
       prompt_template = template,
-      data_source = ds,
+      data_sources = list(test_table = ds),
       data_description = "My test data"
     )
 
@@ -290,7 +289,7 @@ describe("QueryChatSystemPrompt$render()", {
 
     sp <- QueryChatSystemPrompt$new(
       prompt_template = template,
-      data_source = ds
+      data_sources = list(test_table = ds)
     )
 
     result <- sp$render(NULL)
@@ -311,7 +310,7 @@ describe("QueryChatSystemPrompt$render()", {
 
     sp <- QueryChatSystemPrompt$new(
       prompt_template = template,
-      data_source = ds,
+      data_sources = list(test_table = ds),
       extra_instructions = "Be concise"
     )
 
@@ -333,7 +332,7 @@ describe("QueryChatSystemPrompt$render()", {
 
     sp <- QueryChatSystemPrompt$new(
       prompt_template = template,
-      data_source = ds
+      data_sources = list(test_table = ds)
     )
 
     result <- sp$render(NULL)
@@ -351,7 +350,7 @@ describe("QueryChatSystemPrompt$render()", {
 
     sp <- QueryChatSystemPrompt$new(
       prompt_template = template,
-      data_source = ds
+      data_sources = list(test_table = ds)
     )
 
     result <- sp$render(NULL)
@@ -367,7 +366,7 @@ describe("QueryChatSystemPrompt$render()", {
 
     sp <- QueryChatSystemPrompt$new(
       prompt_template = "Simple template",
-      data_source = ds
+      data_sources = list(test_table = ds)
     )
 
     result <- sp$render(NULL)
@@ -389,7 +388,7 @@ describe("QueryChatSystemPrompt with full prompt.md template", {
         "prompt.md",
         package = "querychat"
       ),
-      data_source = ds,
+      data_sources = list(test_table = ds),
       data_description = "A test dataframe"
     )
     prompt <- sp$render(NULL)
@@ -397,7 +396,7 @@ describe("QueryChatSystemPrompt with full prompt.md template", {
     expect_type(prompt, "character")
     expect_true(nchar(prompt) > 0)
     expect_match(prompt, "A test dataframe")
-    expect_match(prompt, "Table: test_table")
+    expect_match(prompt, "test_table")
   })
 
   it("includes DuckDB-specific content for DuckDB sources", {
@@ -411,7 +410,7 @@ describe("QueryChatSystemPrompt with full prompt.md template", {
         "prompt.md",
         package = "querychat"
       ),
-      data_source = ds
+      data_sources = list(test_table = ds)
     )
     sys_prompt <- sp$render(NULL)
 
@@ -419,8 +418,7 @@ describe("QueryChatSystemPrompt with full prompt.md template", {
     expect_true(grepl("DuckDB SQL Tips", sys_prompt, fixed = TRUE))
   })
 
-  it("handles categorical_threshold with full template", {
-    # Create a source with categorical data
+  it("stores categorical_threshold for on-demand schema", {
     df_with_categories <- data.frame(
       id = 1:10,
       category = rep(c("A", "B", "C", "D", "E"), each = 2)
@@ -428,31 +426,18 @@ describe("QueryChatSystemPrompt with full prompt.md template", {
     cat_source <- DataFrameSource$new(df_with_categories, "test_table")
     withr::defer(cat_source$cleanup())
 
-    # With low threshold, categories should not be listed
-    sp_low <- QueryChatSystemPrompt$new(
+    sp <- QueryChatSystemPrompt$new(
       prompt_template = system.file(
         "prompts",
         "prompt.md",
         package = "querychat"
       ),
-      data_source = cat_source,
+      data_sources = list(test_table = cat_source),
       categorical_threshold = 3
     )
-    prompt_low <- sp_low$render(NULL)
-    expect_false(grepl("Categorical values:", prompt_low))
-
-    # With high threshold, categories should be listed
-    sp_high <- QueryChatSystemPrompt$new(
-      prompt_template = system.file(
-        "prompts",
-        "prompt.md",
-        package = "querychat"
-      ),
-      data_source = cat_source,
-      categorical_threshold = 10
-    )
-    prompt_high <- sp_high$render(NULL)
-    expect_match(prompt_high, "Categorical values:")
+    expect_equal(sp$categorical_threshold, 3)
+    prompt <- sp$render(NULL)
+    expect_match(prompt, "querychat_get_schema")
   })
 })
 
@@ -467,7 +452,7 @@ describe("viz prompt conditionals", {
     ds <- local_data_frame_source(new_test_df())
     sp <- QueryChatSystemPrompt$new(
       prompt_template = default_prompt(),
-      data_source = ds
+      data_sources = list(test_table = ds)
     )
     rendered <- sp$render(tools = c("query", "visualize"))
     expect_match(rendered, "querychat_visualize")
@@ -479,7 +464,7 @@ describe("viz prompt conditionals", {
     ds <- local_data_frame_source(new_test_df())
     sp <- QueryChatSystemPrompt$new(
       prompt_template = default_prompt(),
-      data_source = ds
+      data_sources = list(test_table = ds)
     )
     rendered <- sp$render(tools = c("query"))
     expect_no_match(rendered, "querychat_visualize")
@@ -489,7 +474,7 @@ describe("viz prompt conditionals", {
     ds <- local_data_frame_source(new_test_df())
     sp <- QueryChatSystemPrompt$new(
       prompt_template = default_prompt(),
-      data_source = ds
+      data_sources = list(test_table = ds)
     )
     rendered <- sp$render(tools = c("query"))
     expect_match(rendered, "visualization is not currently enabled")
@@ -499,7 +484,7 @@ describe("viz prompt conditionals", {
     ds <- local_data_frame_source(new_test_df())
     sp <- QueryChatSystemPrompt$new(
       prompt_template = default_prompt(),
-      data_source = ds
+      data_sources = list(test_table = ds)
     )
     rendered <- sp$render(tools = c("visualize"))
     expect_match(rendered, "ggsql-syntax-reference")
@@ -516,7 +501,7 @@ describe("viz prompt conditionals", {
     ds <- local_data_frame_source(new_test_df())
     sp <- QueryChatSystemPrompt$new(
       prompt_template = default_prompt(),
-      data_source = ds
+      data_sources = list(test_table = ds)
     )
     rendered <- sp$render(tools = c("query", "visualize"))
     expect_match(rendered, "Avoid redundant expanded results")
@@ -526,66 +511,9 @@ describe("viz prompt conditionals", {
     ds <- local_data_frame_source(new_test_df())
     sp <- QueryChatSystemPrompt$new(
       prompt_template = default_prompt(),
-      data_source = ds
+      data_sources = list(test_table = ds)
     )
     rendered <- sp$render(tools = c("visualize"))
     expect_no_match(rendered, "Avoid redundant expanded results")
-  })
-})
-
-describe("Schema inference skip", {
-  skip_if_no_dataframe_engine()
-
-  it("skips schema when template doesn't reference {{schema}}", {
-    df <- new_test_df()
-    ds <- DataFrameSource$new(df, "test_table")
-    withr::defer(ds$cleanup())
-
-    sp <- QueryChatSystemPrompt$new(
-      prompt_template = "No schema here: {{db_type}}",
-      data_source = ds
-    )
-
-    expect_equal(sp$schema, "")
-  })
-
-  it("computes schema when template uses {{schema}}", {
-    df <- new_test_df()
-    ds <- DataFrameSource$new(df, "test_table")
-    withr::defer(ds$cleanup())
-
-    sp <- QueryChatSystemPrompt$new(
-      prompt_template = "Schema: {{schema}}",
-      data_source = ds
-    )
-
-    expect_true(nchar(sp$schema) > 0)
-    expect_match(sp$schema, "test_table")
-  })
-
-  it("computes schema for {{{schema}}} triple braces", {
-    df <- new_test_df()
-    ds <- DataFrameSource$new(df, "test_table")
-    withr::defer(ds$cleanup())
-
-    sp <- QueryChatSystemPrompt$new(
-      prompt_template = "Schema: {{{schema}}}",
-      data_source = ds
-    )
-
-    expect_true(nchar(sp$schema) > 0)
-  })
-
-  it("computes schema for {{#schema}} conditional sections", {
-    df <- new_test_df()
-    ds <- DataFrameSource$new(df, "test_table")
-    withr::defer(ds$cleanup())
-
-    sp <- QueryChatSystemPrompt$new(
-      prompt_template = "{{#schema}}Has schema{{/schema}}",
-      data_source = ds
-    )
-
-    expect_true(nchar(sp$schema) > 0)
   })
 })

@@ -1,22 +1,33 @@
-test_that("tool_update_dashboard() checks inputs", {
+local_executor <- function(df_source, env = parent.frame()) {
+  executor <- build_query_executor(list(test_table = df_source))
+  withr::defer(executor$cleanup(), envir = env)
+  executor
+}
+
+test_that("tool_update_dashboard() checks update_fn inputs", {
   skip_if_no_dataframe_engine()
 
-  expect_snapshot(error = TRUE, tool_update_dashboard("foo"))
-
   df_source <- local_data_frame_source(new_test_df())
+  executor <- local_executor(df_source)
+
   expect_snapshot(error = TRUE, {
-    tool_update_dashboard(df_source, update_fn = NULL)
-    tool_update_dashboard(df_source, update_fn = function(query) {})
-    tool_update_dashboard(df_source, update_fn = function(title, extra) {})
+    tool_update_dashboard(executor, "test_table", update_fn = NULL)
+    tool_update_dashboard(executor, "test_table", update_fn = function(query) {
+    })
+    tool_update_dashboard(
+      executor,
+      "test_table",
+      update_fn = function(title, extra) {
+      }
+    )
   })
 })
 
 test_that("tool_reset_dashboard() checks inputs", {
-  expect_snapshot(error = TRUE, tool_reset_dashboard("not_a_function"))
-})
-
-test_that("tool_query() checks inputs", {
-  expect_snapshot(error = TRUE, tool_query("invalid_source"))
+  expect_snapshot(
+    error = TRUE,
+    tool_reset_dashboard("not_a_function", table_names = "t")
+  )
 })
 
 describe("querychat_tool_starts_open()", {
@@ -94,9 +105,10 @@ describe("querychat_tool_result()", {
 
   it("returns successful result for valid query action", {
     df_source <- local_data_frame_source(new_test_df())
+    executor <- local_executor(df_source)
 
     result <- querychat_tool_result(
-      df_source,
+      executor,
       query = "SELECT * FROM test_table WHERE id = 1",
       action = "query"
     )
@@ -109,12 +121,14 @@ describe("querychat_tool_result()", {
 
   it("returns successful result for valid update action", {
     df_source <- local_data_frame_source(new_test_df())
+    executor <- local_executor(df_source)
 
     result <- querychat_tool_result(
-      df_source,
+      executor,
       query = "SELECT * FROM test_table WHERE value > 20",
       title = "High values",
-      action = "update"
+      action = "update",
+      table_name = "test_table"
     )
 
     expect_s7_class(result, ellmer::ContentToolResult)
@@ -127,9 +141,10 @@ describe("querychat_tool_result()", {
 
   it("returns successful result for reset action", {
     df_source <- local_data_frame_source(new_test_df())
+    executor <- local_executor(df_source)
 
     result <- querychat_tool_result(
-      df_source,
+      executor,
       query = NULL,
       action = "reset"
     )
@@ -141,9 +156,10 @@ describe("querychat_tool_result()", {
 
   it("handles query errors appropriately", {
     df_source <- local_data_frame_source(new_test_df())
+    executor <- local_executor(df_source)
 
     result <- querychat_tool_result(
-      df_source,
+      executor,
       query = "SELECT * FROM nonexistent_table",
       action = "query"
     )
@@ -155,11 +171,13 @@ describe("querychat_tool_result()", {
 
   it("handles update errors appropriately", {
     df_source <- local_data_frame_source(new_test_df())
+    executor <- local_executor(df_source)
 
     result <- querychat_tool_result(
-      df_source,
+      executor,
       query = "INVALID SQL",
-      action = "update"
+      action = "update",
+      table_name = "test_table"
     )
 
     expect_s7_class(result, ellmer::ContentToolResult)
@@ -169,9 +187,10 @@ describe("querychat_tool_result()", {
 
   it("formats query results with details block", {
     df_source <- local_data_frame_source(new_test_df())
+    executor <- local_executor(df_source)
 
     result <- querychat_tool_result(
-      df_source,
+      executor,
       query = "SELECT * FROM test_table LIMIT 1",
       action = "query"
     )
@@ -185,12 +204,14 @@ describe("querychat_tool_result()", {
 
   it("formats update results with button HTML", {
     df_source <- local_data_frame_source(new_test_df())
+    executor <- local_executor(df_source)
 
     result <- querychat_tool_result(
-      df_source,
+      executor,
       query = "SELECT * FROM test_table",
       title = "Test Filter",
-      action = "update"
+      action = "update",
+      table_name = "test_table"
     )
 
     markdown <- result@extra$display$markdown
@@ -204,9 +225,10 @@ describe("querychat_tool_result()", {
 
   it("formats reset results with button HTML", {
     df_source <- local_data_frame_source(new_test_df())
+    executor <- local_executor(df_source)
 
     result <- querychat_tool_result(
-      df_source,
+      executor,
       query = NULL,
       action = "reset"
     )
@@ -218,12 +240,14 @@ describe("querychat_tool_result()", {
 
   it("includes title in extra display metadata for update action", {
     df_source <- local_data_frame_source(new_test_df())
+    executor <- local_executor(df_source)
 
     result <- querychat_tool_result(
-      df_source,
+      executor,
       query = "SELECT * FROM test_table",
       title = "Custom Title",
-      action = "update"
+      action = "update",
+      table_name = "test_table"
     )
 
     expect_equal(result@extra$display$title, "Custom Title")
@@ -231,9 +255,10 @@ describe("querychat_tool_result()", {
 
   it("does not include title for query action", {
     df_source <- local_data_frame_source(new_test_df())
+    executor <- local_executor(df_source)
 
     result <- querychat_tool_result(
-      df_source,
+      executor,
       query = "SELECT * FROM test_table",
       title = "Should be ignored",
       action = "query"
@@ -244,17 +269,18 @@ describe("querychat_tool_result()", {
 
   it("sets open state based on action and tool details option", {
     df_source <- local_data_frame_source(new_test_df())
+    executor <- local_executor(df_source)
     withr::local_options(querychat.tool_details = NULL)
 
     query_result <- querychat_tool_result(
-      df_source,
+      executor,
       query = "SELECT * FROM test_table",
       action = "query"
     )
     expect_false(query_result@extra$display$open)
 
     reset_result <- querychat_tool_result(
-      df_source,
+      executor,
       query = NULL,
       action = "reset"
     )
@@ -263,9 +289,10 @@ describe("querychat_tool_result()", {
 
   it("shows request on error", {
     df_source <- local_data_frame_source(new_test_df())
+    executor <- local_executor(df_source)
 
     result <- querychat_tool_result(
-      df_source,
+      executor,
       query = "INVALID SQL",
       action = "query"
     )
@@ -275,9 +302,10 @@ describe("querychat_tool_result()", {
 
   it("hides request on success", {
     df_source <- local_data_frame_source(new_test_df())
+    executor <- local_executor(df_source)
 
     result <- querychat_tool_result(
-      df_source,
+      executor,
       query = "SELECT * FROM test_table",
       action = "query"
     )
@@ -291,7 +319,8 @@ describe("tool_query()", {
 
   it("returns an ellmer tool object", {
     df_source <- local_data_frame_source(new_test_df())
-    tool <- tool_query(df_source)
+    executor <- local_executor(df_source)
+    tool <- tool_query(executor)
 
     expect_s3_class(tool, "ellmer::ToolDef")
     expect_equal(tool@name, "querychat_query")
@@ -299,7 +328,8 @@ describe("tool_query()", {
 
   it("includes database type in description", {
     df_source <- local_data_frame_source(new_test_df())
-    tool <- tool_query(df_source)
+    executor <- local_executor(df_source)
+    tool <- tool_query(executor)
 
     # DataFrameSource uses DuckDB
     expect_match(tool@description, "DuckDB|duckdb", ignore.case = TRUE)
@@ -307,7 +337,8 @@ describe("tool_query()", {
 
   it("creates a working tool function", {
     df_source <- local_data_frame_source(new_test_df())
-    tool <- tool_query(df_source)
+    executor <- local_executor(df_source)
+    tool <- tool_query(executor)
 
     # Execute the tool function
     result <- tool(query = "SELECT * FROM test_table LIMIT 1")
@@ -322,8 +353,14 @@ describe("tool_update_dashboard()", {
 
   it("returns an ellmer tool object", {
     df_source <- local_data_frame_source(new_test_df())
+    executor <- local_executor(df_source)
 
-    tool <- tool_update_dashboard(df_source)
+    tool <- tool_update_dashboard(
+      executor,
+      table_names = "test_table",
+      update_fn = function(query, title, table) {
+      }
+    )
 
     expect_s3_class(tool, "ellmer::ToolDef")
     expect_equal(tool@name, "querychat_update_dashboard")
@@ -331,8 +368,14 @@ describe("tool_update_dashboard()", {
 
   it("includes database type in description", {
     df_source <- local_data_frame_source(new_test_df())
+    executor <- local_executor(df_source)
 
-    tool <- tool_update_dashboard(df_source)
+    tool <- tool_update_dashboard(
+      executor,
+      table_names = "test_table",
+      update_fn = function(query, title, table) {
+      }
+    )
 
     # DataFrameSource uses DuckDB
     expect_match(tool@description, "DuckDB|duckdb", ignore.case = TRUE)
@@ -340,40 +383,48 @@ describe("tool_update_dashboard()", {
 
   it("creates a working tool function", {
     df_source <- local_data_frame_source(new_test_df())
+    executor <- local_executor(df_source)
 
     res_update <- NULL
-    tool <- tool_update_dashboard(df_source, function(query, title) {
-      res_update <<- list(query = query, title = title)
-    })
+    tool <- tool_update_dashboard(
+      executor,
+      table_names = "test_table",
+      update_fn = function(query, title, table) {
+        res_update <<- list(query = query, title = title, table = table)
+      }
+    )
 
     res_tool <- tool(
       query = "SELECT * FROM test_table WHERE id > 2",
-      title = "Filtered View"
+      title = "Filtered View",
+      table = "test_table"
     )
 
     expect_s7_class(res_tool, ellmer::ContentToolResult)
     expect_equal(res_update$query, "SELECT * FROM test_table WHERE id > 2")
     expect_equal(res_update$title, "Filtered View")
+    expect_equal(res_update$table, "test_table")
   })
 })
 
 describe("tool_reset_dashboard()", {
-  reset_fn <- function() {
-    "Reset executed"
-  }
-
   it("returns an ellmer tool object", {
-    tool <- tool_reset_dashboard(reset_fn)
+    tool <- tool_reset_dashboard(
+      reset_fn = function(table) {
+      },
+      table_names = c("test_table")
+    )
 
     expect_s3_class(tool, "ellmer::ToolDef")
     expect_equal(tool@name, "querychat_reset_dashboard")
   })
 
   it("uses the provided reset function", {
-    tool <- tool_reset_dashboard(reset_fn)
+    reset_fn <- function(table) paste("Reset executed for", table)
+    tool <- tool_reset_dashboard(reset_fn, table_names = c("test_table"))
 
     expect_s3_class(tool, "ellmer::ToolDef")
-    expect_equal(tool(), "Reset executed")
+    expect_equal(tool("test_table"), "Reset executed for test_table")
   })
 })
 
@@ -382,43 +433,60 @@ describe("tool_update_dashboard_impl()", {
 
   it("returns a function", {
     df_source <- local_data_frame_source(new_test_df())
-    current_query <- shiny::reactiveVal("SELECT * FROM test_table")
-    current_title <- shiny::reactiveVal("All Data")
+    executor <- local_executor(df_source)
 
-    impl_fn <- tool_update_dashboard_impl(df_source)
+    impl_fn <- tool_update_dashboard_impl(
+      executor,
+      table_names = "test_table",
+      update_fn = function(query, title, table) {
+      }
+    )
 
     expect_type(impl_fn, "closure")
   })
 
   it("updates reactive values on successful query", {
     df_source <- local_data_frame_source(new_test_df())
+    executor <- local_executor(df_source)
 
     res_update <- NULL
-    impl_fn <- tool_update_dashboard_impl(df_source, function(query, title) {
-      res_update <<- list(query = query, title = title)
-    })
+    impl_fn <- tool_update_dashboard_impl(
+      executor,
+      table_names = "test_table",
+      update_fn = function(query, title, table) {
+        res_update <<- list(query = query, title = title, table = table)
+      }
+    )
 
     res_tool <- impl_fn(
       query = "SELECT * FROM test_table WHERE id < 3",
-      title = "First Two"
+      title = "First Two",
+      table = "test_table"
     )
 
     expect_equal(res_update$query, "SELECT * FROM test_table WHERE id < 3")
     expect_equal(res_update$title, "First Two")
+    expect_equal(res_update$table, "test_table")
     expect_null(res_tool@error)
   })
 
   it("does not update reactive values on query error", {
     df_source <- local_data_frame_source(new_test_df())
+    executor <- local_executor(df_source)
 
     res_update <- NULL
-    impl_fn <- tool_update_dashboard_impl(df_source, function(query, title) {
-      res_update <<- list(query = query, title = title)
-    })
+    impl_fn <- tool_update_dashboard_impl(
+      executor,
+      table_names = "test_table",
+      update_fn = function(query, title, table) {
+        res_update <<- list(query = query, title = title, table = table)
+      }
+    )
 
     res_tool <- impl_fn(
       query = "INVALID SQL",
-      title = "Should Not Update"
+      title = "Should Not Update",
+      table = "test_table"
     )
 
     # `update_fn` was not called

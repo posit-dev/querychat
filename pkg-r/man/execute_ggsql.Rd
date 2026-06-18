@@ -2,12 +2,12 @@
 % Please edit documentation in R/querychat_viz.R
 \name{execute_ggsql}
 \alias{execute_ggsql}
-\title{Execute a pre-validated ggsql query against a DataSource}
+\title{Execute a pre-validated ggsql query against an executor}
 \usage{
-execute_ggsql(data_source, validated)
+execute_ggsql(executor, validated)
 }
 \arguments{
-\item{data_source}{A querychat DataSource R6 object.}
+\item{executor}{A querychat QueryExecutor R6 object.}
 
 \item{validated}{A pre-validated ggsql query (from \code{ggsql::ggsql_validate()}).
 Must be a list with \verb{$sql} and \verb{$visual} fields.}
@@ -16,7 +16,7 @@ Must be a list with \verb{$sql} and \verb{$visual} fields.}
 A \code{ggsql::Spec} R6 object (the writer-independent plot specification).
 }
 \description{
-Executes the SQL portion through a DataSource (preserving database pushdown),
+Executes the SQL portion through an executor (preserving database pushdown),
 then feeds the result into a ggsql DuckDB reader to produce a Spec.
 }
 \keyword{internal}

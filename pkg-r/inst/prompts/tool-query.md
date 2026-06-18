@@ -19,19 +19,28 @@ Always use SQL for counting, averaging, summing, and other calculations—NEVER 
 - Optimize for readability over efficiency—use clear column aliases and SQL comments to explain complex logic
 - Subqueries and CTEs are acceptable and encouraged for complex calculations
 - After receiving results, always present the key findings in your response text — the tool result starts collapsed by default, so don't assume the user has seen the raw data
-- When the result is a single value or small summary, state it directly in prose. When the result is a table that IS the answer, either use a Markdown table in your response or set `collapsed` to `false` — not both
+- If you are unsure whether to control visibility, omit `collapsed` and rely on the tool default behavior
+- If you set `collapsed` explicitly, prefer `collapsed=true`
+- Use `collapsed=false` only when the user explicitly wants the raw table visible immediately (for example, "show me the rows/table")
+- When using `collapsed=false`, avoid duplicating the same rows/values in both the tool result and your response text
 - Do not reproduce large result sets in your response — summarize the key takeaways instead
+
+{{#multi_table}}
+
+**Multi-table queries:** Your schema includes multiple tables. You can reference any table in your queries and use JOINs when the data spans tables. Use the relationships described in the schema to determine join conditions.
+
+{{/multi_table}}
 
 Parameters
 ----------
 query :
     A valid {{db_type}} SQL SELECT statement. Must follow the database schema provided in the system prompt. Use clear column aliases (e.g., 'AVG(price) AS avg_price') and include SQL comments for complex logic. Subqueries and CTEs are encouraged for readability.
 collapsed :
-    Optional (default: true). The result card starts collapsed by default; the user can expand it to see the query and results. Set to false when the query result table is the primary answer to the user's question and should be immediately visible without expanding.
+    Optional. If omitted, visibility follows the app-configured default behavior (typically collapsed). If you are unsure, omit this parameter. If you provide it explicitly, prefer true. Set to false only when the user explicitly asks to see the raw table immediately.
 _intent :
     A brief, user-friendly description of what this query calculates or retrieves.
 
 Returns
 -------
 :
-    The tabular data results from executing the SQL query. The query results will be visible to the user in the interface, so you must interpret and explain the data in natural language after receiving it.
+    The tabular data results from executing the SQL query. Present the key findings in your response — the tool result may be collapsed, so don't assume the user has seen the raw data.

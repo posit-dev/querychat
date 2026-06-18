@@ -9,8 +9,8 @@ describe("QueryChat$new()", {
     )
     withr::defer(qc$cleanup())
 
-    expect_s3_class(qc$data_source, "DataSource")
-    expect_s3_class(qc$data_source, "DataFrameSource")
+    expect_s3_class(qc$table("test_df")$data_source, "DataSource")
+    expect_s3_class(qc$table("test_df")$data_source, "DataFrameSource")
   })
 
   it("accepts DataFrameSource directly", {
@@ -22,8 +22,8 @@ describe("QueryChat$new()", {
       greeting = "Test greeting"
     )
 
-    expect_s3_class(qc$data_source, "DataFrameSource")
-    expect_equal(qc$data_source$table_name, "test_source")
+    expect_s3_class(qc$table("test_source")$data_source, "DataFrameSource")
+    expect_equal(qc$table("test_source")$data_source$table_name, "test_source")
   })
 
   it("accepts DBISource", {
@@ -36,8 +36,8 @@ describe("QueryChat$new()", {
       greeting = "Test greeting"
     )
 
-    expect_s3_class(qc$data_source, "DBISource")
-    expect_equal(qc$data_source$table_name, "test_table")
+    expect_s3_class(qc$table("test_table")$data_source, "DBISource")
+    expect_equal(qc$table("test_table")$data_source$table_name, "test_table")
   })
 
   it("infers table_name from data.frame variable name", {
@@ -45,7 +45,7 @@ describe("QueryChat$new()", {
     qc <- QueryChat$new(my_data, greeting = "Test")
     withr::defer(qc$cleanup())
 
-    expect_equal(qc$data_source$table_name, "my_data")
+    expect_equal(qc$table("my_data")$data_source$table_name, "my_data")
     expect_equal(qc$id, "querychat_my_data")
   })
 
@@ -104,7 +104,7 @@ describe("QueryChat$new()", {
 describe("QueryChat deferred client", {
   it("accepts NULL data_source with table_name", {
     qc <- QueryChat$new(NULL, "users", greeting = "Test")
-    expect_null(qc$data_source)
+    expect_equal(length(qc$table_names()), 0L)
     expect_equal(qc$id, "querychat_users")
   })
 
@@ -119,41 +119,53 @@ describe("QueryChat deferred client", {
     withr::local_envvar(OPENAI_API_KEY = NA)
     withr::local_options(querychat.client = NULL)
     qc <- QueryChat$new(NULL, "users", greeting = "Test")
-    expect_null(qc$data_source)
+    expect_equal(length(qc$table_names()), 0L)
   })
 
   it("stores explicit client string as spec", {
     withr::local_envvar(OPENAI_API_KEY = "boop")
     qc <- QueryChat$new(NULL, "users", greeting = "Test", client = "openai")
-    expect_null(qc$data_source)
+    expect_equal(length(qc$table_names()), 0L)
   })
 
   it("$client() errors when data_source is NULL", {
     qc <- QueryChat$new(NULL, "users", greeting = "Test")
-    expect_error(qc$client(), "data_source.*must be set")
+    expect_error(
+      qc$client(),
+      "data_source.*must be set|data_source.*set before"
+    )
   })
 
   it("$console() errors when data_source is NULL", {
     qc <- QueryChat$new(NULL, "users", greeting = "Test")
-    expect_error(qc$console(), "data_source.*must be set")
+    expect_error(
+      qc$console(),
+      "data_source.*must be set|data_source.*set before"
+    )
   })
 
   it("$generate_greeting() errors when data_source is NULL", {
     qc <- QueryChat$new(NULL, "users", greeting = "Test")
-    expect_error(qc$generate_greeting(), "data_source.*must be set")
+    expect_error(
+      qc$generate_greeting(),
+      "data_source.*must be set|data_source.*set before"
+    )
   })
 
   it("$system_prompt errors when data_source is NULL", {
     qc <- QueryChat$new(NULL, "users", greeting = "Test")
-    expect_error(qc$system_prompt, "data_source.*must be set")
+    expect_error(
+      qc$system_prompt,
+      "data_source.*must be set|data_source.*set before"
+    )
   })
 
-  it("works after setting data_source later", {
+  it("works after adding table via add_table()", {
     skip_if_no_dataframe_engine()
     qc <- QueryChat$new(NULL, "users", greeting = "Test")
-    qc$data_source <- new_users_df()
+    qc$add_table(new_users_df(), "users")
 
-    expect_s3_class(qc$data_source, "DataFrameSource")
+    expect_s3_class(qc$table("users")$data_source, "DataFrameSource")
     prompt <- qc$system_prompt
     expect_match(prompt, "users")
   })
@@ -186,15 +198,15 @@ describe("QueryChat integration with DBISource", {
       client = mock_client
     )
 
-    expect_s3_class(qc$data_source, "DBISource")
-    expect_s3_class(qc$data_source, "DataSource")
+    expect_s3_class(qc$table("iris")$data_source, "DBISource")
+    expect_s3_class(qc$table("iris")$data_source, "DataSource")
 
-    result_data <- qc$data_source$execute_query(NULL)
+    result_data <- qc$table("iris")$data_source$execute_query(NULL)
     expect_s3_class(result_data, "data.frame")
     expect_equal(nrow(result_data), 150)
     expect_equal(ncol(result_data), 5)
 
-    query_result <- qc$data_source$execute_query(
+    query_result <- qc$table("iris")$data_source$execute_query(
       "SELECT \"Sepal.Length\", \"Sepal.Width\" FROM iris WHERE \"Species\" = 'setosa'"
     )
     expect_s3_class(query_result, "data.frame")
@@ -293,16 +305,20 @@ describe("QueryChat$system_prompt", {
 describe("QueryChat$data_source", {
   skip_if_no_dataframe_engine()
 
-  it("returns the data source object", {
+  it("errors when accessed (removed)", {
     test_df <- new_test_df()
     qc <- QueryChat$new(test_df, greeting = "Test")
     withr::defer(qc$cleanup())
 
-    ds <- qc$data_source
+    expect_error(qc$data_source, "removed")
+  })
 
-    expect_s3_class(ds, "DataSource")
-    expect_s3_class(ds, "DataFrameSource")
-    expect_equal(ds$table_name, "test_df")
+  it("errors when set (removed)", {
+    test_df <- new_test_df()
+    qc <- QueryChat$new(test_df, greeting = "Test")
+    withr::defer(qc$cleanup())
+
+    expect_error(qc$data_source <- test_df, "removed")
   })
 })
 
@@ -334,7 +350,7 @@ describe("QueryChat$client()", {
 
     client <- qc$client(tools = "query")
 
-    # Should only have query tool
+    # Should only have query tool (plus get_schema)
     tool_names <- sapply(client$get_tools(), function(t) t@name)
     expect_contains(tool_names, "querychat_query")
     expect_false("querychat_update_dashboard" %in% tool_names)
@@ -451,7 +467,7 @@ describe("QueryChat$client()", {
     client <- qc$client(tools = "visualize")
 
     tool_names <- sapply(client$get_tools(), function(t) t@name)
-    expect_equal(unname(tool_names), "querychat_visualize")
+    expect_contains(tool_names, "querychat_visualize")
   })
 
   it("registers only visualize tool when tools = 'visualize'", {
@@ -473,7 +489,11 @@ describe("QueryChat$client()", {
     client <- qc$client(tools = "visualize", session = session)
 
     tool_names <- sapply(client$get_tools(), function(t) t@name)
-    expect_equal(unname(tool_names), "querychat_visualize")
+    # get_schema is always registered when tools != NULL
+    expect_contains(tool_names, "querychat_visualize")
+    expect_false("querychat_update_dashboard" %in% tool_names)
+    expect_false("querychat_reset_dashboard" %in% tool_names)
+    expect_false("querychat_query" %in% tool_names)
   })
 
   it("returns client with no tools when tools = NULL", {
@@ -520,8 +540,8 @@ describe("QueryChat$client()", {
     update_calls <- list()
     client <- qc$client(
       tools = "update",
-      update_dashboard = function(query, title) {
-        update_calls <<- list(query = query, title = title)
+      update_dashboard = function(query, title, table) {
+        update_calls <<- list(query = query, title = title, table = table)
       }
     )
 
@@ -538,12 +558,14 @@ describe("QueryChat$client()", {
     # Call the tool - it should execute the query and call the callback
     result <- update_tool(
       query = "SELECT * FROM test_df WHERE id = 1",
-      title = "Test Filter"
+      title = "Test Filter",
+      table = "test_df"
     )
 
     expect_null(result@error)
     expect_equal(update_calls$query, "SELECT * FROM test_df WHERE id = 1")
     expect_equal(update_calls$title, "Test Filter")
+    expect_equal(update_calls$table, "test_df")
   })
 
   it("passes reset_dashboard callback to tool", {
@@ -553,11 +575,11 @@ describe("QueryChat$client()", {
     )
     withr::defer(qc$cleanup())
 
-    reset_called <- FALSE
+    reset_called_with <- NULL
     client <- qc$client(
       tools = "update",
-      reset_dashboard = function() {
-        reset_called <<- TRUE
+      reset_dashboard = function(table) {
+        reset_called_with <<- table
       }
     )
 
@@ -572,9 +594,9 @@ describe("QueryChat$client()", {
     ]]
 
     # Call the tool
-    reset_tool()
+    reset_tool("test_df")
 
-    expect_true(reset_called)
+    expect_equal(reset_called_with, "test_df")
   })
 
   it("returns independent client instances on each call", {
@@ -675,7 +697,7 @@ describe("querychat()", {
     withr::defer(qc$cleanup())
 
     expect_s3_class(qc, "QueryChat")
-    expect_s3_class(qc$data_source, "DataFrameSource")
+    expect_s3_class(qc$table("test_df")$data_source, "DataFrameSource")
     expect_equal(qc$greeting, "Test greeting")
   })
 
@@ -684,7 +706,10 @@ describe("querychat()", {
     qc <- querychat(my_test_data, greeting = "Test")
     withr::defer(qc$cleanup())
 
-    expect_equal(qc$data_source$table_name, "my_test_data")
+    expect_equal(
+      qc$table("my_test_data")$data_source$table_name,
+      "my_test_data"
+    )
   })
 
   it("passes all arguments to QueryChat$new()", {
@@ -702,7 +727,7 @@ describe("querychat()", {
 
     expect_equal(qc$id, "custom_id")
     expect_equal(qc$greeting, "Custom greeting")
-    expect_equal(qc$data_source$table_name, "custom_name")
+    expect_equal(qc$table("custom_name")$data_source$table_name, "custom_name")
   })
 })
 
@@ -734,7 +759,8 @@ describe("QueryChat$console()", {
     expect_s3_class(console_client, "Chat")
 
     tools <- console_client$get_tools()
-    expect_equal(names(tools), "querychat_query")
+    tool_names <- names(tools)
+    expect_contains(tool_names, "querychat_query")
   })
 
   it("persists console client across calls", {
@@ -782,7 +808,7 @@ describe("QueryChat$console()", {
     expect_s3_class(console_client, "Chat")
 
     tools <- console_client$get_tools()
-    expect_setequal(
+    expect_contains(
       names(tools),
       c(
         "querychat_query",
@@ -849,7 +875,8 @@ test_that("querychat_app() only cleans up data frame sources on exit", {
         # have to use an option because the code is evaluated in a far-away env
         options(.test_cleanup = cleanup)
       },
-      app = function(...) {}
+      app = function(...) {
+      }
     )
   )
   withr::local_options(rlang_interactive = TRUE)
@@ -900,10 +927,9 @@ describe("QueryChat deferred client with $server()", {
     )
   })
 
-  it("$server(data_source=...) sets the data_source", {
+  it("$server(data_source=...) errors without Shiny session", {
     skip_if_no_dataframe_engine()
     qc <- QueryChat$new(NULL, "users", greeting = "Test")
-    expect_null(qc$data_source)
 
     expect_error(
       qc$server(data_source = new_users_df()),

@@ -12,7 +12,6 @@ check_data_source <- function(
   }
 }
 
-
 # SQL table name validation ----------------------------------------------
 
 #' Check SQL table name validity
@@ -76,7 +75,6 @@ sanitize_table_name <- function(x) {
   out <- sub("_+$", "", out)
   out
 }
-
 
 # SQL query validation --------------------------------------------------------
 

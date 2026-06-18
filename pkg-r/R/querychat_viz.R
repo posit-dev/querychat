@@ -1,16 +1,16 @@
 tool_visualize_dashboard <- function(
-  data_source,
+  executor,
   session,
-  update_fn = function(data) {},
+  update_fn = function(data) {
+  },
   has_tool_query = FALSE
 ) {
-  check_data_source(data_source)
   check_function(update_fn)
 
-  db_type <- data_source$get_db_type()
+  db_type <- executor$get_db_type()
 
   ellmer::tool(
-    tool_visualize_impl(data_source, session, update_fn),
+    tool_visualize_impl(executor, session, update_fn),
     name = "querychat_visualize",
     description = render_viz_tool_description(
       db_type = db_type,
@@ -34,13 +34,13 @@ tool_visualize_dashboard <- function(
   )
 }
 
-tool_visualize_impl <- function(data_source, session, update_fn) {
-  force(data_source)
+tool_visualize_impl <- function(executor, session, update_fn) {
+  force(executor)
   force(session)
   force(update_fn)
 
   function(ggsql, title) {
-    visualize_result(data_source, session, update_fn, ggsql, title)
+    visualize_result(executor, session, update_fn, ggsql, title)
   }
 }
 
@@ -52,7 +52,7 @@ random_hex <- function(n_bytes = 8) {
 }
 
 visualize_result <- function(
-  data_source,
+  executor,
   session,
   update_fn,
   ggsql_str,
@@ -73,7 +73,7 @@ visualize_result <- function(
     rlang::abort(collapse_validation_errors(validated))
   }
 
-  spec <- execute_ggsql(data_source, validated)
+  spec <- execute_ggsql(executor, validated)
 
   widget_id <- paste0("querychat_viz_", random_hex())
 
@@ -89,13 +89,15 @@ visualize_result <- function(
   } else {
     # Non-Shiny usage: print the Spec to display via the interactive viewer
     print(spec)
-    update_fn(list(ggsql = ggsql_str, title = title, widget_id = widget_id))
-    return(ellmer::ContentToolResult(
-      value = sprintf(
-        "Chart displayed%s.",
-        if (nzchar(title)) sprintf(" with title '%s'", title) else ""
+    update_fn(list(ggsql = ggsql_str, title = title, widget_id = widget_id)) # nolint
+    return(
+      ellmer::ContentToolResult(
+        value = sprintf(
+          "Chart displayed%s.",
+          if (nzchar(title)) sprintf(" with title '%s'", title) else ""
+        )
       )
-    ))
+    )
   }
 
   # PNG snapshot for LLM feedback (best-effort; requires V8 + rsvg)
@@ -107,12 +109,14 @@ visualize_result <- function(
       ellmer::content_image_file(png_file)
     },
     error = function(e) {
-      cli::cli_warn(c(
-        "Unable to render PNG preview for the visualization card.",
-        "i" = "The interactive chart will still render, but the LLM will not receive the static image preview for this visualization.",
-        "i" = "PNG preview generation requires optional dependencies used by {.fn ggsql::ggsql_save}, typically {.pkg V8} and {.pkg rsvg}.",
-        "x" = "Underlying error: {.msg {conditionMessage(e)}}"
-      ))
+      cli::cli_warn(
+        c(
+          "Unable to render PNG preview for the visualization card.",
+          "i" = "The interactive chart will still render, but the LLM will not receive the static image preview for this visualization.",
+          "i" = "PNG preview generation requires optional dependencies used by {.fn ggsql::ggsql_save}, typically {.pkg V8} and {.pkg rsvg}.",
+          "x" = "Underlying error: {.msg {conditionMessage(e)}}"
+        )
+      )
       NULL
     }
   )
@@ -274,19 +278,19 @@ render_viz_tool_description <- function(db_type, has_tool_query = FALSE) {
   )
 }
 
-#' Execute a pre-validated ggsql query against a DataSource
+#' Execute a pre-validated ggsql query against an executor
 #'
-#' Executes the SQL portion through a DataSource (preserving database pushdown),
+#' Executes the SQL portion through an executor (preserving database pushdown),
 #' then feeds the result into a ggsql DuckDB reader to produce a Spec.
 #'
-#' @param data_source A querychat DataSource R6 object.
+#' @param executor A querychat QueryExecutor R6 object.
 #' @param validated A pre-validated ggsql query (from `ggsql::ggsql_validate()`).
 #'   Must be a list with `$sql` and `$visual` fields.
 #'
 #' @return A `ggsql::Spec` R6 object (the writer-independent plot specification).
 #'
 #' @keywords internal
-execute_ggsql <- function(data_source, validated) {
+execute_ggsql <- function(executor, validated) {
   rlang::check_installed("ggsql", reason = "for visualization support.")
 
   visual <- validated$visual
@@ -297,7 +301,7 @@ execute_ggsql <- function(data_source, validated) {
     )
   }
 
-  df <- data_source$execute_query(validated$sql)
+  df <- executor$execute_query(validated$sql)
 
   if (inherits(df, "tbl_sql")) {
     # Materialize the query for ggsql, {dplyr} guaranteed by TblSqlSource

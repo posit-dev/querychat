@@ -5,14 +5,16 @@
 \title{Pin Source}
 \description{
 A DataSource implementation that reads data from a
-\href{https://pins.rstudio.com/}{pins} board. For pin types that DuckDB can read
-natively (parquet, CSV, JSON), the data is loaded directly from the cached
-pin files into DuckDB without deserializing into R. For other pin types
-(e.g. RDS), the data is deserialized via \code{pin_read()} and must produce
-a data frame (or tibble) to be registered with DuckDB.
+\href{https://pins.rstudio.com/}{pins} board. When the \code{"duckdb"} engine is used
+and the pin type is one DuckDB can read natively (parquet, CSV, JSON), the
+data is loaded directly from the cached pin files into DuckDB without
+deserializing into R. For other pin types (e.g. RDS), or when the \code{"sqlite"}
+engine is used, the data is deserialized via \code{pin_read()} and must produce
+a data frame (or tibble), which is then registered with the chosen engine
+just like \link{DataFrameSource}.
 
-After loading, DuckDB's external file access is locked down so that
-LLM-generated SQL cannot reach the filesystem.
+When loaded into DuckDB, the connection's external file access is locked
+down so that LLM-generated SQL cannot reach the filesystem.
 
 If the pin has a title, description, or tags, \link{QueryChat} uses them as
 the default \code{data_description}, which you can override.
@@ -86,7 +88,14 @@ if (rlang::is_installed(c("pins", "duckdb"))) {
   Create a new PinSource
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
-    \preformatted{PinSource$new(board, name, ..., table_name = name, version = NULL)}
+    \preformatted{PinSource$new(
+  board,
+  name,
+  ...,
+  table_name = name,
+  version = NULL,
+  engine = getOption("querychat.DataFrameSource.engine", NULL)
+)}
     \if{html}{\out{</div>}}
   }
   \subsection{Arguments}{
@@ -100,6 +109,12 @@ if (rlang::is_installed(c("pins", "duckdb"))) {
 the pin name.}
       \item{\code{version}}{Pin version to read. If \code{NULL} (default), reads the
 latest version.}
+      \item{\code{engine}}{Database engine to use: \code{"duckdb"} or \code{"sqlite"}. Set the
+global option \code{querychat.DataFrameSource.engine} to specify the default
+engine. If \code{NULL} (default), uses the first available engine from
+duckdb or RSQLite (in that order). Parquet, CSV, and JSON pins are read
+most efficiently with the \code{"duckdb"} engine; with \code{"sqlite"} they are
+deserialized via \code{pin_read()} instead.}
     }
     \if{html}{\out{</div>}}
   }

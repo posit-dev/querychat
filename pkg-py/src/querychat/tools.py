@@ -381,7 +381,7 @@ def _query_impl(executor: QueryExecutor) -> Callable[..., ContentToolResult]:
     return query
 
 
-def tool_query(executor: QueryExecutor) -> Tool:
+def tool_query(executor: QueryExecutor, *, multi_table: bool = False) -> Tool:
     """
     Create a tool that performs a SQL query on the data.
 
@@ -389,6 +389,9 @@ def tool_query(executor: QueryExecutor) -> Tool:
     ----------
     executor
         The query executor to use for running queries.
+    multi_table
+        Whether multiple tables are registered. When True, multi-table
+        query guidance is included in the tool description.
 
     Returns
     -------
@@ -399,7 +402,9 @@ def tool_query(executor: QueryExecutor) -> Tool:
     impl = _query_impl(executor)
 
     description = read_prompt_template(
-        "tool-query.md", db_type=executor.get_db_type()
+        "tool-query.md",
+        db_type=executor.get_db_type(),
+        multi_table=multi_table,
     )
     impl.__doc__ = description
 

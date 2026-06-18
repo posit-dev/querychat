@@ -238,7 +238,9 @@ class QueryChatBase(Generic[IntoFrameT]):
             )
 
         if "query" in resolved_tools:
-            chat.register_tool(tool_query(executor))
+            chat.register_tool(
+                tool_query(executor, multi_table=len(self._data_sources) > 1)
+            )
 
         if "visualize" in resolved_tools:
             viz_fn = visualize or (lambda _: None)

@@ -415,6 +415,11 @@ QueryChat <- R6::R6Class(
       }
       normalized <- normalize_data_source(data_source, table_name)
 
+      other_sources <- private$.data_sources[
+        names(private$.data_sources) != table_name
+      ]
+      check_source_compatibility(other_sources, normalized, table_name)
+
       next_sources <- private$.data_sources
       next_sources[[table_name]] <- normalized
 

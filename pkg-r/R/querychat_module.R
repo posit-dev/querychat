@@ -179,7 +179,7 @@ mod_server <- function(
     })
 
     if (enable_bookmarking) {
-      shinychat::chat_restore("chat", chat, session = session)
+      shinychat::chat_restore("chat", chat, restore_ui = FALSE, session = session)
 
       shiny::onBookmark(function(state) {
         table_states <- list()

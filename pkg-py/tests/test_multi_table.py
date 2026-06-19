@@ -663,9 +663,9 @@ class TestMultiTableGuardrails:
             current_table=reactive.Value(None),
         )
 
-        orders_state = vals.tables["orders"]
+        orders_state = vals._tables["orders"]
         assert orders_state.df() is orders_df
-        customers_state = vals.tables["customers"]
+        customers_state = vals._tables["customers"]
         assert customers_state.df() is customers_df
 
     def test_server_values_table_names(self, orders_df, customers_df):

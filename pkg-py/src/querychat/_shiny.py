@@ -355,8 +355,8 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             def _():
                 name = active_table_name()
                 # TableAccessor is read-only; mutation requires direct TableState access
-                vals.tables[name].sql.set(None)
-                vals.tables[name].title.set(None)
+                vals._tables[name].sql.set(None)
+                vals._tables[name].title.set(None)
 
             @render.data_frame
             def dt():

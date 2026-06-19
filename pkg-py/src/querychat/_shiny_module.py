@@ -149,7 +149,7 @@ class ServerValues(Generic[IntoFrameT]):
         self.df = df
         self.sql = sql
         self.title = title
-        self.tables = tables
+        self._tables = tables
         self.client = client
         self._data_sources = data_sources
         self._current_table_rv = current_table
@@ -169,14 +169,14 @@ class ServerValues(Generic[IntoFrameT]):
             Accessor with df(), sql(), title() backed by per-session state.
 
         """
-        if name not in self.tables:
-            available = ", ".join(f"'{n}'" for n in self.tables)
+        if name not in self._tables:
+            available = ", ".join(f"'{n}'" for n in self._tables)
             raise ValueError(f"Table '{name}' not found. Available: {available}")
-        return TableAccessor(name, self._data_sources[name], state=self.tables[name])
+        return TableAccessor(name, self._data_sources[name], state=self._tables[name])
 
     def table_names(self) -> list[str]:
         """Return the names of all registered tables."""
-        return list(self.tables.keys())
+        return list(self._tables.keys())
 
     def current_table(self) -> str | None:
         """Return the name of the most recently queried table, or None (reactive)."""

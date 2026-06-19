@@ -172,7 +172,7 @@ def server(input, output, session):
 
     @reactive.calc
     def current_subset() -> pl.DataFrame:
-        queried = qc_vals.tables["foods"].df()
+        queried = qc_vals.table("foods").df()
         # queried may be polars or pandas depending on the data source
         if hasattr(queried, "to_pandas"):  # polars DataFrame
             ids = queried["fdc_id"].to_list()

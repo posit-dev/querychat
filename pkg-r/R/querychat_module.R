@@ -33,6 +33,7 @@ mod_server <- function(
 ) {
   shiny::moduleServer(id, function(input, output, session) {
     has_greeted <- shiny::reactiveVal(FALSE, label = "has_greeted")
+    current_table_val <- shiny::reactiveVal(NULL, label = "current_table")
 
     # Per-table reactive state
     tables <- list()
@@ -78,11 +79,13 @@ mod_server <- function(
       if (!is.null(title)) {
         tables[[table]]$title(title)
       }
+      current_table_val(table)
     }
 
     reset_query <- function(table) {
       tables[[table]]$sql(NULL)
       tables[[table]]$title(NULL)
+      current_table_val(table)
       querychat_tool_result(
         executor,
         query = NULL,
@@ -168,8 +171,11 @@ mod_server <- function(
 
     shiny::observeEvent(input$chat_update, label = "on_chat_update", {
       tbl <- input$chat_update$table
-      tables[[tbl]]$sql(input$chat_update$query)
-      tables[[tbl]]$title(input$chat_update$title)
+      if (!is.null(tbl) && tbl %in% names(tables)) {
+        tables[[tbl]]$sql(input$chat_update$query)
+        tables[[tbl]]$title(input$chat_update$title)
+        current_table_val(tbl)
+      }
     })
 
     if (enable_bookmarking) {
@@ -192,14 +198,19 @@ mod_server <- function(
 
       shiny::onRestore(function(state) {
         if (!is.null(state$values$querychat_tables)) {
+          last_restored <- NULL
           for (name in names(state$values$querychat_tables)) {
             tbl_state <- state$values$querychat_tables[[name]]
             if (!is.null(tbl_state$sql)) {
               tables[[name]]$sql(tbl_state$sql)
+              last_restored <- name
             }
             if (!is.null(tbl_state$title)) {
               tables[[name]]$title(tbl_state$title)
             }
+          }
+          if (!is.null(last_restored)) {
+            current_table_val(last_restored)
           }
         }
         if (!is.null(state$values$querychat_has_greeted)) {
@@ -238,6 +249,7 @@ mod_server <- function(
         df = first$df,
         table = table_fn,
         table_names = table_names_fn,
+        current_table = current_table_val,
         .tables = tables
       )
     } else {
@@ -255,6 +267,7 @@ mod_server <- function(
         df = single_table_error("df"),
         table = table_fn,
         table_names = table_names_fn,
+        current_table = current_table_val,
         .tables = tables
       )
     }

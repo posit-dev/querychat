@@ -1,7 +1,8 @@
 tool_visualize_dashboard <- function(
   executor,
   session,
-  update_fn = function(data) {},
+  update_fn = function(data) {
+  },
   has_tool_query = FALSE
 ) {
   check_function(update_fn)

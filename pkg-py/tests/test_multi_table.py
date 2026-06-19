@@ -683,6 +683,7 @@ class TestMultiTableGuardrails:
             },
             client=None,  # type: ignore[arg-type]
             data_sources={},
+            current_table=reactive.Value(None),
         )
 
         with pytest.raises(AttributeError, match="multiple tables"):
@@ -722,6 +723,7 @@ class TestMultiTableGuardrails:
             },
             client=None,  # type: ignore[arg-type]
             data_sources={},
+            current_table=reactive.Value(None),
         )
 
         orders_state = vals.tables["orders"]
@@ -752,6 +754,7 @@ class TestMultiTableGuardrails:
             },
             client=None,  # type: ignore[arg-type]
             data_sources={"orders": orders_source, "customers": customers_source},
+            current_table=reactive.Value(None),
         )
 
         assert vals.table_names() == ["orders", "customers"]
@@ -775,6 +778,7 @@ class TestMultiTableGuardrails:
             },
             client=None,  # type: ignore[arg-type]
             data_sources={"orders": orders_source, "customers": customers_source},
+            current_table=reactive.Value(None),
         )
 
         accessor = vals.table("orders")
@@ -801,18 +805,74 @@ class TestMultiTableGuardrails:
             },
             client=None,  # type: ignore[arg-type]
             data_sources={"orders": orders_source},
+            current_table=reactive.Value(None),
         )
 
         with pytest.raises(ValueError, match="Table 'foo' not found"):
             vals.table("foo")
 
-    def test_shiny_app_raises_multi_table(self, orders_df, customers_df):
+    def test_server_values_current_table_initially_none(self, orders_df):
+        from querychat._shiny_module import ServerValues, TableState
+
+        from shiny import reactive
+
+        vals = ServerValues(
+            df=lambda: orders_df,
+            sql=reactive.Value(None),
+            title=reactive.Value(None),
+            tables={
+                "orders": TableState(
+                    sql=reactive.Value(None),
+                    title=reactive.Value(None),
+                    df=lambda: orders_df,
+                ),
+            },
+            client=None,  # type: ignore[arg-type]
+            data_sources={},
+            current_table=reactive.Value(None),
+        )
+
+        with reactive.isolate():
+            assert vals.current_table() is None
+
+    def test_server_values_current_table_reflects_reactive(self, orders_df, customers_df):
+        from querychat._shiny_module import (
+            ServerValues,
+            TableState,
+            _MultiTableBlockedReactive,
+        )
+
+        from shiny import reactive
+
+        ct_rv = reactive.Value(None)
+        table_list = "'orders', 'customers'"
+        vals = ServerValues(
+            df=lambda: None,  # type: ignore[return-value]
+            sql=_MultiTableBlockedReactive(table_list, "sql"),  # type: ignore[arg-type]
+            title=_MultiTableBlockedReactive(table_list, "title"),  # type: ignore[arg-type]
+            tables={
+                "orders": TableState(sql=reactive.Value(None), title=reactive.Value(None), df=lambda: orders_df),
+                "customers": TableState(sql=reactive.Value(None), title=reactive.Value(None), df=lambda: customers_df),
+            },
+            client=None,  # type: ignore[arg-type]
+            data_sources={},
+            current_table=ct_rv,
+        )
+
+        with reactive.isolate():
+            assert vals.current_table() is None
+            ct_rv.set("orders")
+            assert vals.current_table() == "orders"
+            ct_rv.set("customers")
+            assert vals.current_table() == "customers"
+
+    def test_shiny_app_works_multi_table(self, orders_df, customers_df):
         from querychat.shiny import QueryChat
 
         qc = QueryChat(orders_df, "orders", greeting="Hi")
         qc.add_table(customers_df, "customers")
-        with pytest.raises(RuntimeError, match="does not support multiple tables"):
-            qc.app()
+        app = qc.app()
+        assert app is not None
 
     def test_shiny_app_works_single_table(self, orders_df):
         from querychat.shiny import QueryChat

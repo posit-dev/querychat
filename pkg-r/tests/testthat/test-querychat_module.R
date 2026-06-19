@@ -164,6 +164,80 @@ test_that("mod_server() passes visualize callback and tools to client factory", 
   )
 })
 
+test_that("mod_server() exposes current_table() starting as NULL", {
+  skip_if_no_dataframe_engine()
+
+  ds <- local_data_frame_source(new_test_df())
+  executor <- build_query_executor(list(test_table = ds))
+  withr::defer(executor$cleanup())
+
+  client_factory <- function(...) structure(list(), class = "MockChat")
+
+  shiny::testServer(
+    mod_server,
+    args = list(
+      id = "test",
+      data_sources = list(test_table = ds),
+      executor = executor,
+      greeting = "Hello",
+      client = client_factory,
+      tools = "query",
+      enable_bookmarking = FALSE
+    ),
+    {
+      expect_true(is.function(session$returned$current_table))
+      expect_null(shiny::isolate(session$returned$current_table()))
+    }
+  )
+})
+
+test_that("mod_server() current_table() updates on update_dashboard and reset_query", {
+  skip_if_no_dataframe_engine()
+
+  ds1 <- local_data_frame_source(new_test_df(), table_name = "tbl_a")
+  ds2 <- local_data_frame_source(new_test_df(), table_name = "tbl_b")
+  data_sources <- list(tbl_a = ds1, tbl_b = ds2)
+  executor <- build_query_executor(data_sources)
+  withr::defer(executor$cleanup())
+
+  captured_callbacks <- NULL
+  client_factory <- function(...) {
+    captured_callbacks <<- list(...)
+    structure(list(), class = "MockChat")
+  }
+
+  shiny::testServer(
+    mod_server,
+    args = list(
+      id = "test",
+      data_sources = data_sources,
+      executor = executor,
+      greeting = "Hello",
+      client = client_factory,
+      tools = "query",
+      enable_bookmarking = FALSE
+    ),
+    {
+      # Initially NULL
+      expect_null(shiny::isolate(session$returned$current_table()))
+
+      # update_dashboard sets it
+      shiny::isolate(
+        captured_callbacks$update_dashboard(
+          query = "SELECT * FROM tbl_a",
+          title = "All of tbl_a",
+          table = "tbl_a"
+        )
+      )
+      expect_equal(shiny::isolate(session$returned$current_table()), "tbl_a")
+
+      # reset_dashboard also sets it
+      shiny::isolate(captured_callbacks$reset_dashboard("tbl_b"))
+      expect_equal(shiny::isolate(session$returned$current_table()), "tbl_b")
+    }
+  )
+})
+
 test_that("mod_ui() passes allow_attachments = TRUE to shinychat by default", {
   captured <- NULL
   local_mocked_bindings(
@@ -207,7 +281,8 @@ test_that("restored viz widgets survive a second bookmark cycle", {
   }
 
   local_mocked_bindings(
-    chat_restore = function(id, chat, session) {},
+    chat_restore = function(id, chat, session) {
+    },
     .package = "shinychat"
   )
   local_mocked_bindings(

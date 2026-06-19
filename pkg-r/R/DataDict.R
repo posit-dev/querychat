@@ -53,11 +53,13 @@ data_dict_to_prompt_list <- function(dd) {
   }
   if (length(dd[["relationships"]]) > 0) {
     result[["relationships"]] <- lapply(dd[["relationships"]], function(rs) {
-      compact(list(
-        join = rs[["join"]],
-        description = rs[["description"]],
-        cardinality = rs[["cardinality"]]
-      ))
+      compact(
+        list(
+          join = rs[["join"]],
+          description = rs[["description"]],
+          cardinality = rs[["cardinality"]]
+        )
+      )
     })
   }
   if (length(dd[["glossary"]]) > 0) {

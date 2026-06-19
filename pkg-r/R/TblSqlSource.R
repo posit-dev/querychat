@@ -114,7 +114,10 @@ TblSqlSource <- R6::R6Class(
       )
     },
 
-    get_schema_result = function(categorical_threshold = 20, table_spec = NULL) {
+    get_schema_result = function(
+      categorical_threshold = 20,
+      table_spec = NULL
+    ) {
       details <- build_column_details_impl(
         private$conn,
         self$table_name,

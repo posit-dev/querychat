@@ -175,9 +175,16 @@ QueryChatSystemPrompt <- R6::R6Class(
         }
 
         escape_attr <- function(s) gsub('"', "&quot;", s, fixed = TRUE)
-        attrs <- if (!is.null(dd$name)) sprintf('name="%s"', escape_attr(dd$name)) else ""
+        attrs <- if (!is.null(dd$name)) {
+          sprintf('name="%s"', escape_attr(dd$name))
+        } else {
+          ""
+        }
         if (!is.null(dd$description)) {
-          attrs <- paste0(attrs, sprintf(' description="%s"', escape_attr(dd$description)))
+          attrs <- paste0(
+            attrs,
+            sprintf(' description="%s"', escape_attr(dd$description))
+          )
         }
         attrs <- trimws(attrs)
 

@@ -117,7 +117,10 @@ DBISource <- R6::R6Class(
       )
     },
 
-    get_schema_result = function(categorical_threshold = 20, table_spec = NULL) {
+    get_schema_result = function(
+      categorical_threshold = 20,
+      table_spec = NULL
+    ) {
       check_number_whole(categorical_threshold, min = 1)
       details <- build_column_details_impl(
         private$conn,
@@ -246,7 +249,10 @@ build_column_details_impl <- function(
   text_columns <- character(0)
 
   # Use dbFetch(n=1) instead of LIMIT 1 for SQL Server compatibility
-  sample_query <- paste0("SELECT * FROM ", DBI::dbQuoteIdentifier(conn, table_name))
+  sample_query <- paste0(
+    "SELECT * FROM ",
+    DBI::dbQuoteIdentifier(conn, table_name)
+  )
   rs <- DBI::dbSendQuery(conn, prep_query(sample_query))
   sample_data <- DBI::dbFetch(rs, n = 1)
   DBI::dbClearResult(rs)
@@ -255,13 +261,26 @@ build_column_details_impl <- function(
     spec <- documented[[col]]
     col_class <- class(sample_data[[col]])[1]
 
-    if (col_class %in% c("integer", "numeric", "double", "Date", "POSIXct", "POSIXt")) {
+    if (
+      col_class %in%
+        c("integer", "numeric", "double", "Date", "POSIXct", "POSIXt")
+    ) {
       numeric_columns <- c(numeric_columns, col)
       if (is.null(spec[["range"]])) {
         select_parts <- c(
           select_parts,
-          paste0("MIN(", DBI::dbQuoteIdentifier(conn, col), ") as ", DBI::dbQuoteIdentifier(conn, paste0(col, "__min"))),
-          paste0("MAX(", DBI::dbQuoteIdentifier(conn, col), ") as ", DBI::dbQuoteIdentifier(conn, paste0(col, "__max")))
+          paste0(
+            "MIN(",
+            DBI::dbQuoteIdentifier(conn, col),
+            ") as ",
+            DBI::dbQuoteIdentifier(conn, paste0(col, "__min"))
+          ),
+          paste0(
+            "MAX(",
+            DBI::dbQuoteIdentifier(conn, col),
+            ") as ",
+            DBI::dbQuoteIdentifier(conn, paste0(col, "__max"))
+          )
         )
       }
     } else if (col_class %in% c("character", "factor")) {
@@ -269,7 +288,12 @@ build_column_details_impl <- function(
       if (is.null(spec[["values"]])) {
         select_parts <- c(
           select_parts,
-          paste0("COUNT(DISTINCT ", DBI::dbQuoteIdentifier(conn, col), ") as ", DBI::dbQuoteIdentifier(conn, paste0(col, "__distinct_count")))
+          paste0(
+            "COUNT(DISTINCT ",
+            DBI::dbQuoteIdentifier(conn, col),
+            ") as ",
+            DBI::dbQuoteIdentifier(conn, paste0(col, "__distinct_count"))
+          )
         )
       }
     }
@@ -280,8 +304,10 @@ build_column_details_impl <- function(
     tryCatch(
       {
         stats_query <- paste0(
-          "SELECT ", paste0(select_parts, collapse = ", "),
-          " FROM ", DBI::dbQuoteIdentifier(conn, table_name)
+          "SELECT ",
+          paste0(select_parts, collapse = ", "),
+          " FROM ",
+          DBI::dbQuoteIdentifier(conn, table_name)
         )
         result <- DBI::dbGetQuery(conn, prep_query(stats_query))
         if (nrow(result) > 0) column_stats <- as.list(result[1, ])
@@ -293,12 +319,15 @@ build_column_details_impl <- function(
   categorical_values <- list()
   text_cols_to_query <- character(0)
   for (col_name in text_columns) {
-    if (!is.null(documented[[col_name]][["values"]])) next
+    if (!is.null(documented[[col_name]][["values"]])) {
+      next
+    }
     distinct_count_key <- paste0(col_name, "__distinct_count")
     if (
-      distinct_count_key %in% names(column_stats) &&
-      !is.na(column_stats[[distinct_count_key]]) &&
-      column_stats[[distinct_count_key]] <= categorical_threshold
+      distinct_count_key %in%
+        names(column_stats) &&
+        !is.na(column_stats[[distinct_count_key]]) &&
+        column_stats[[distinct_count_key]] <= categorical_threshold
     ) {
       text_cols_to_query <- c(text_cols_to_query, col_name)
     }
@@ -309,10 +338,14 @@ build_column_details_impl <- function(
       tryCatch(
         {
           cat_query <- paste0(
-            "SELECT DISTINCT ", DBI::dbQuoteIdentifier(conn, col_name),
-            " FROM ", DBI::dbQuoteIdentifier(conn, table_name),
-            " WHERE ", DBI::dbQuoteIdentifier(conn, col_name),
-            " IS NOT NULL ORDER BY ", DBI::dbQuoteIdentifier(conn, col_name)
+            "SELECT DISTINCT ",
+            DBI::dbQuoteIdentifier(conn, col_name),
+            " FROM ",
+            DBI::dbQuoteIdentifier(conn, table_name),
+            " WHERE ",
+            DBI::dbQuoteIdentifier(conn, col_name),
+            " IS NOT NULL ORDER BY ",
+            DBI::dbQuoteIdentifier(conn, col_name)
           )
           result <- DBI::dbGetQuery(conn, prep_query(cat_query))
           if (nrow(result) > 0) categorical_values[[col_name]] <- result[[1]]
@@ -331,7 +364,11 @@ build_column_details_impl <- function(
     min_val <- NA_character_
     max_val <- NA_character_
     categories <- list()
-    constraints <- if (length(spec[["constraints"]]) > 0) as.list(spec[["constraints"]]) else list()
+    constraints <- if (length(spec[["constraints"]]) > 0) {
+      as.list(spec[["constraints"]])
+    } else {
+      list()
+    }
 
     if (col %in% numeric_columns) {
       if (!is.null(spec[["range"]])) {
@@ -341,8 +378,11 @@ build_column_details_impl <- function(
         min_key <- paste0(col, "__min")
         max_key <- paste0(col, "__max")
         if (
-          min_key %in% names(column_stats) && max_key %in% names(column_stats) &&
-          !is.na(column_stats[[min_key]]) && !is.na(column_stats[[max_key]])
+          min_key %in%
+            names(column_stats) &&
+            max_key %in% names(column_stats) &&
+            !is.na(column_stats[[min_key]]) &&
+            !is.na(column_stats[[max_key]])
         ) {
           min_val <- as.character(column_stats[[min_key]])
           max_val <- as.character(column_stats[[max_key]])
@@ -375,18 +415,36 @@ format_schema_from_details <- function(table_name_display, details) {
   schema_lines <- c(paste("Table:", table_name_display), "Columns:")
   for (col in details) {
     line <- paste0("- ", col$name, " (", col$sql_type, ")")
-    if (!is.na(col$units)) line <- paste0(line, " [", col$units, "]")
+    if (!is.na(col$units)) {
+      line <- paste0(line, " [", col$units, "]")
+    }
     if (!is.na(col$description)) {
-      line <- paste(line, paste0("  Description: ", col$description), sep = "\n")
+      line <- paste(
+        line,
+        paste0("  Description: ", col$description),
+        sep = "\n"
+      )
     }
     if (length(col$constraints) > 0) {
-      line <- paste(line, paste0("  Constraints: ", paste(col$constraints, collapse = ", ")), sep = "\n")
+      line <- paste(
+        line,
+        paste0("  Constraints: ", paste(col$constraints, collapse = ", ")),
+        sep = "\n"
+      )
     }
     if (!is.na(col$min_val) && !is.na(col$max_val)) {
-      line <- paste(line, paste0("  Range: ", col$min_val, " to ", col$max_val), sep = "\n")
+      line <- paste(
+        line,
+        paste0("  Range: ", col$min_val, " to ", col$max_val),
+        sep = "\n"
+      )
     } else if (length(col$categories) > 0) {
       values_str <- paste0("'", col$categories, "'", collapse = ", ")
-      line <- paste(line, paste0("  Categorical values: ", values_str), sep = "\n")
+      line <- paste(
+        line,
+        paste0("  Categorical values: ", values_str),
+        sep = "\n"
+      )
     }
     schema_lines <- c(schema_lines, line)
   }
@@ -403,10 +461,17 @@ get_schema_impl <- function(
 ) {
   check_function(prep_query)
   details <- build_column_details_impl(
-    conn, table_name, categorical_threshold,
-    columns = columns, prep_query = prep_query, table_spec = table_spec
+    conn,
+    table_name,
+    categorical_threshold,
+    columns = columns,
+    prep_query = prep_query,
+    table_spec = table_spec
   )
-  format_schema_from_details(as.character(DBI::dbQuoteIdentifier(conn, table_name)), details)
+  format_schema_from_details(
+    as.character(DBI::dbQuoteIdentifier(conn, table_name)),
+    details
+  )
 }
 
 # nocov start

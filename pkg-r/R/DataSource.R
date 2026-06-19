@@ -52,7 +52,10 @@ DataSource <- R6::R6Class(
       )
     },
 
-    get_schema_result = function(categorical_threshold = 20, table_spec = NULL) {
+    get_schema_result = function(
+      categorical_threshold = 20,
+      table_spec = NULL
+    ) {
       cli::cli_abort(
         "{.fn get_schema_result} must be implemented by subclass",
         class = "not_implemented_error"

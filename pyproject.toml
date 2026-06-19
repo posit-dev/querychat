@@ -22,7 +22,7 @@ maintainers = [
 dependencies = [
     "duckdb",
     "shiny>=1.6.2",
-    "shinychat>=0.4.0",
+    "shinychat>=0.5.1",
     "htmltools",
     "chatlas>=0.18.0",
     "narwhals>=2.2.0",
@@ -71,6 +71,9 @@ required-environments = [
     "sys_platform == 'linux' and platform_machine == 'x86_64'",
     "sys_platform == 'darwin'",
 ]
+
+[tool.uv.sources]
+shinychat = { git = "https://github.com/posit-dev/shinychat.git" }
 
 [tool.hatch.build.targets.wheel]
 packages = ["pkg-py/src/querychat"]

@@ -1,5 +1,5 @@
 # Main module UI function
-mod_ui <- function(id, ..., enable_cancel = TRUE) {
+mod_ui <- function(id, ..., enable_cancel = TRUE, allow_attachments = TRUE) {
   ns <- shiny::NS(id)
   htmltools::tagList(
     htmltools::htmlDependency(
@@ -15,6 +15,7 @@ mod_ui <- function(id, ..., enable_cancel = TRUE) {
       height = "100%",
       class = "querychat",
       enable_cancel = enable_cancel,
+      allow_attachments = allow_attachments,
       ...
     )
   )
@@ -94,11 +95,13 @@ mod_server <- function(
       greeting_content <- if (!is.null(greeting) && any(nzchar(greeting))) {
         greeting
       } else {
-        cli::cli_warn(c(
-          "No {.arg greeting} provided to {.fn QueryChat}. Using the LLM {.arg client} to generate one now.",
-          "i" = "For faster startup, lower cost, and determinism, consider providing a {.arg greeting} to {.fn QueryChat}.",
-          "i" = "You can use your {.help querychat::QueryChat} object's {.fn $generate_greeting} method to generate a greeting."
-        ))
+        cli::cli_warn(
+          c(
+            "No {.arg greeting} provided to {.fn QueryChat}. Using the LLM {.arg client} to generate one now.",
+            "i" = "For faster startup, lower cost, and determinism, consider providing a {.arg greeting} to {.fn QueryChat}.",
+            "i" = "You can use your {.help querychat::QueryChat} object's {.fn $generate_greeting} method to generate a greeting."
+          )
+        )
         chat$stream_async(GREETING_PROMPT)
       }
 
@@ -111,7 +114,7 @@ mod_server <- function(
     append_stream_task <- shiny::ExtendedTask$new(
       function(client, user_input, controller = NULL) {
         stream <- client$stream_async(
-          user_input,
+          !!!user_input,
           stream = "content",
           controller = controller
         )

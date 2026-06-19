@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import html
 import json
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, Protocol, TypedDict, runtime_checkable
@@ -240,9 +241,9 @@ def _update_dashboard_impl(
             # Add Apply Filter button
             button_html = f"""<button
                 class="btn btn-outline-primary btn-sm float-end mt-3 querychat-update-dashboard-btn"
-                data-table="{table}"
-                data-query="{query}"
-                data-title="{title}">
+                data-table="{html.escape(table, quote=True)}"
+                data-query="{html.escape(query, quote=True)}"
+                data-title="{html.escape(title, quote=True)}">
                 Apply Filter
             </button>"""
 
@@ -275,6 +276,8 @@ def tool_update_dashboard(
     executor: QueryExecutor,
     table_names: list[str],
     update_fn: Callable[[UpdateDashboardData], None],
+    *,
+    multi_table: bool = False,
 ) -> Tool:
     """
     Create a tool that modifies the data presented in the dashboard.
@@ -287,6 +290,8 @@ def tool_update_dashboard(
         List of valid table names for validation.
     update_fn
         Callback function to call with UpdateDashboardData when update succeeds.
+    multi_table
+        Whether multiple tables are registered.
 
     Returns
     -------
@@ -299,6 +304,7 @@ def tool_update_dashboard(
     description = read_prompt_template(
         "tool-update-dashboard.md",
         db_type=executor.get_db_type(),
+        multi_table=multi_table,
     )
     impl.__doc__ = description
 
@@ -330,7 +336,7 @@ def _reset_dashboard_impl(
         # Add Reset Filter button
         button_html = f"""<button
             class="btn btn-outline-primary btn-sm float-end mt-3 querychat-update-dashboard-btn"
-            data-table="{table}"
+            data-table="{html.escape(table, quote=True)}"
             data-query=""
             data-title="">
             Reset Filter

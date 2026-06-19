@@ -230,6 +230,7 @@ class QueryChatBase(Generic[IntoFrameT]):
                     executor,
                     list(self._data_sources.keys()),
                     update_fn,
+                    multi_table=len(self._data_sources) > 1,
                 )
             )
             chat.register_tool(
@@ -243,7 +244,9 @@ class QueryChatBase(Generic[IntoFrameT]):
 
         if "visualize" in resolved_tools:
             viz_fn = visualize or (lambda _: None)
-            chat.register_tool(tool_visualize(executor, viz_fn))
+            chat.register_tool(
+                tool_visualize(executor, viz_fn, multi_table=len(self._data_sources) > 1)
+            )
 
         return chat
 

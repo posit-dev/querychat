@@ -172,8 +172,10 @@ mod_server <- function(
     shiny::observeEvent(input$chat_update, label = "on_chat_update", {
       tbl <- input$chat_update$table
       if (!is.null(tbl) && tbl %in% names(tables)) {
-        tables[[tbl]]$sql(input$chat_update$query)
-        tables[[tbl]]$title(input$chat_update$title)
+        q <- input$chat_update$query
+        ttl <- input$chat_update$title
+        tables[[tbl]]$sql(if (nzchar(q %||% "")) q else NULL)
+        tables[[tbl]]$title(if (nzchar(ttl %||% "")) ttl else NULL)
         current_table_val(tbl)
       }
     })

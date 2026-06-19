@@ -57,6 +57,8 @@ class VisualizeData(TypedDict):
 def tool_visualize(
     executor: QueryExecutor,
     update_fn: Callable[[VisualizeData], None],
+    *,
+    multi_table: bool = False,
 ) -> Tool:
     """
     Create a tool that executes a ggsql query and renders the visualization.
@@ -67,6 +69,8 @@ def tool_visualize(
         The query executor to query against
     update_fn
         Callback function to call with VisualizeData when visualization succeeds
+    multi_table
+        Whether multiple tables are registered.
 
     Returns
     -------
@@ -78,6 +82,7 @@ def tool_visualize(
     impl.__doc__ = read_prompt_template(
         "tool-visualize.md",
         db_type=executor.get_db_type(),
+        multi_table=multi_table,
     )
 
     return Tool.from_func(

@@ -327,13 +327,11 @@ def mod_server(
         if update is None or not isinstance(update, dict):
             return
         table_name = update.get("table", "")
-        new_query = update.get("query")
-        new_title = update.get("title")
+        new_query = update.get("query") or None  # "" → None (reset)
+        new_title = update.get("title") or None
         if table_name and table_name in table_states:
-            if new_query is not None:
-                table_states[table_name].sql.set(new_query)
-            if new_title is not None:
-                table_states[table_name].title.set(new_title)
+            table_states[table_name].sql.set(new_query)
+            table_states[table_name].title.set(new_title)
             _current_table.set(table_name)
 
     if enable_bookmarking:

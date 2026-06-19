@@ -55,6 +55,18 @@ test_that("mod_server() return includes table() and table_names() for single-tab
       expect_true(is.function(first_state$df))
       expect_true(is.function(first_state$sql))
       expect_true(is.function(first_state$title))
+
+      # Verify the returned list exposes table() and table_names()
+      expect_true(is.function(session$returned$table))
+      expect_true(is.function(session$returned$table_names))
+      acc <- session$returned$table("test_table")
+      expect_s3_class(acc, "TableAccessor")
+      expect_equal(session$returned$table_names(), "test_table")
+
+      # Verify backward-compat reactive accessors on the returned list
+      expect_true(is.function(session$returned$df))
+      expect_true(is.function(session$returned$sql))
+      expect_true(is.function(session$returned$title))
     }
   )
 })
@@ -104,6 +116,16 @@ test_that("mod_server() return includes table() and table_names() for multi-tabl
       # Multi-table: single_table_error functions mention qc_vals$table()
       single_err <- single_table_error("sql")
       expect_error(single_err(), regexp = "qc_vals\\$table")
+
+      # Verify the returned list exposes table() and table_names()
+      expect_true(is.function(session$returned$table))
+      expect_true(is.function(session$returned$table_names))
+      acc <- session$returned$table("tbl_a")
+      expect_s3_class(acc, "TableAccessor")
+      expect_equal(sort(session$returned$table_names()), c("tbl_a", "tbl_b"))
+
+      # Verify error is surfaced through the public API
+      expect_error(session$returned$table("nonexistent"), "not found")
     }
   )
 })

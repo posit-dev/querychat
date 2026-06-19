@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from narwhals.stable.v1.typing import IntoFrame
 
     from ._data_dict import DataDict
+    from ._table_accessor import TableAccessor
 
 
 class QueryChat(QueryChatBase[IntoFrameT]):
@@ -969,3 +970,55 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             return self._require_vals().title()
         else:
             return self._require_vals().title.set(value)
+
+    def table(self, name: str) -> "TableAccessor":
+        """
+        Get a per-table accessor with reactive state.
+
+        Parameters
+        ----------
+        name
+            Table name (must match a name passed to ``add_table()``).
+
+        Returns
+        -------
+        TableAccessor
+            Accessor with ``df()``, ``sql()``, and ``title()`` backed by
+            per-session reactive state.
+
+        Examples
+        --------
+        ```python
+        from querychat.express import QueryChat
+        from shiny.express import render
+
+        qc = QueryChat(orders, "orders")
+        qc.add_table(customers, "customers")
+        qc.sidebar()
+
+        @render.data_frame
+        def orders_table():
+            return qc.table("orders").df()
+
+        @render.data_frame
+        def customers_table():
+            return qc.table("customers").df()
+        ```
+
+        """
+        return self._require_vals().table(name)
+
+    def current_table(self) -> str | None:
+        """
+        Reactively read the name of the most recently queried table.
+
+        Returns ``None`` if no query has run yet in this session. Useful for
+        auto-switching a tabbed UI to the active table.
+
+        Returns
+        -------
+        str or None
+            Table name, or ``None``.
+
+        """
+        return self._require_vals().current_table()

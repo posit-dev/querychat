@@ -241,3 +241,75 @@ class TestExpressMultiTable:
             qc._ensure_server_started()
 
         assert started_with_sources == [["orders", "customers"]]
+
+    def test_table_delegates_to_vals(self, orders_df, customers_df, monkeypatch):
+        """table() should delegate to _vals.table() and return its result."""
+        fake_accessor = MagicMock()
+        fake_vals = MagicMock()
+        fake_vals.table.return_value = fake_accessor
+
+        monkeypatch.setattr("querychat._shiny.mod_server", lambda *a, **kw: fake_vals)
+
+        mock_session = MagicMock()
+        mock_session.ns = Root
+        with session_context(mock_session):
+            qc = ExpressQueryChat(orders_df, "orders")
+            qc.add_table(customers_df, "customers")
+            result = qc.table("orders")
+
+        fake_vals.table.assert_called_once_with("orders")
+        assert result is fake_accessor
+
+    def test_table_unknown_name_propagates_error(
+        self, orders_df, customers_df, monkeypatch
+    ):
+        """table() with an unknown name should propagate ValueError from ServerValues."""
+        fake_vals = MagicMock()
+        fake_vals.table.side_effect = ValueError("'foo' not found")
+
+        monkeypatch.setattr("querychat._shiny.mod_server", lambda *a, **kw: fake_vals)
+
+        mock_session = MagicMock()
+        mock_session.ns = Root
+        with session_context(mock_session):
+            qc = ExpressQueryChat(orders_df, "orders")
+            qc.add_table(customers_df, "customers")
+            with pytest.raises(ValueError, match="not found"):
+                qc.table("foo")
+
+    def test_current_table_delegates_to_vals(
+        self, orders_df, customers_df, monkeypatch
+    ):
+        """current_table() should delegate to _vals.current_table()."""
+        fake_vals = MagicMock()
+        fake_vals.current_table.return_value = "customers"
+
+        monkeypatch.setattr("querychat._shiny.mod_server", lambda *a, **kw: fake_vals)
+
+        mock_session = MagicMock()
+        mock_session.ns = Root
+        with session_context(mock_session):
+            qc = ExpressQueryChat(orders_df, "orders")
+            qc.add_table(customers_df, "customers")
+            result = qc.current_table()
+
+        fake_vals.current_table.assert_called_once()
+        assert result == "customers"
+
+    def test_current_table_returns_none_before_any_query(
+        self, orders_df, customers_df, monkeypatch
+    ):
+        """current_table() returns None when no query has been run yet."""
+        fake_vals = MagicMock()
+        fake_vals.current_table.return_value = None
+
+        monkeypatch.setattr("querychat._shiny.mod_server", lambda *a, **kw: fake_vals)
+
+        mock_session = MagicMock()
+        mock_session.ns = Root
+        with session_context(mock_session):
+            qc = ExpressQueryChat(orders_df, "orders")
+            qc.add_table(customers_df, "customers")
+            result = qc.current_table()
+
+        assert result is None

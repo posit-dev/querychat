@@ -168,19 +168,6 @@ def duckdb_column_stats(
         pass
 
 
-def duckdb_get_schema(
-    conn: duckdb.DuckDBPyConnection,
-    table_name: str,
-    categorical_threshold: int,
-) -> str:
-    """Generate schema string from a DuckDB connection and table name."""
-    result = conn.execute(f'SELECT * FROM "{table_name}" LIMIT 0')
-    columns = [
-        duckdb_column_meta(desc[0], desc[1]) for desc in result.description
-    ]
-    duckdb_column_stats(conn, table_name, columns, categorical_threshold)
-    return format_schema(table_name, columns)
-
 
 def duckdb_lock_down(conn: duckdb.DuckDBPyConnection) -> None:
     """Lock down a DuckDB connection to prevent LLM-generated SQL from accessing external resources."""

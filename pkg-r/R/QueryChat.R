@@ -615,7 +615,7 @@ QueryChat <- R6::R6Class(
             full_screen = TRUE,
             bslib::card_header(
               bsicons::bs_icon("table"),
-              "Data — ",
+              "Data \u2014 ",
               shiny::textOutput("data_card_header_text", inline = TRUE)
             ),
             DT::DTOutput("dt")

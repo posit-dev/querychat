@@ -284,7 +284,7 @@ def server(input, output, session):
         return _renderer
 
     for _tname in qc.table_names():
-        output[f"dt_{_tname}"] = _make_dt_renderer(_tname)
+        output(id=f"dt_{_tname}")(_make_dt_renderer(_tname))
 
 
 app = App(app_ui, server)

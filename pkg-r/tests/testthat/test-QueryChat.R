@@ -9,8 +9,8 @@ describe("QueryChat$new()", {
     )
     withr::defer(qc$cleanup())
 
-    expect_s3_class(qc$table("test_df")$data_source, "DataSource")
-    expect_s3_class(qc$table("test_df")$data_source, "DataFrameSource")
+    expect_s3_class(qc_data_source(qc, "test_df"), "DataSource")
+    expect_s3_class(qc_data_source(qc, "test_df"), "DataFrameSource")
   })
 
   it("accepts DataFrameSource directly", {
@@ -22,8 +22,8 @@ describe("QueryChat$new()", {
       greeting = "Test greeting"
     )
 
-    expect_s3_class(qc$table("test_source")$data_source, "DataFrameSource")
-    expect_equal(qc$table("test_source")$data_source$table_name, "test_source")
+    expect_s3_class(qc_data_source(qc, "test_source"), "DataFrameSource")
+    expect_equal(qc_data_source(qc, "test_source")$table_name, "test_source")
   })
 
   it("accepts DBISource", {
@@ -36,8 +36,8 @@ describe("QueryChat$new()", {
       greeting = "Test greeting"
     )
 
-    expect_s3_class(qc$table("test_table")$data_source, "DBISource")
-    expect_equal(qc$table("test_table")$data_source$table_name, "test_table")
+    expect_s3_class(qc_data_source(qc, "test_table"), "DBISource")
+    expect_equal(qc_data_source(qc, "test_table")$table_name, "test_table")
   })
 
   it("infers table_name from data.frame variable name", {
@@ -45,7 +45,7 @@ describe("QueryChat$new()", {
     qc <- QueryChat$new(my_data, greeting = "Test")
     withr::defer(qc$cleanup())
 
-    expect_equal(qc$table("my_data")$data_source$table_name, "my_data")
+    expect_equal(qc_data_source(qc, "my_data")$table_name, "my_data")
     expect_equal(qc$id, "querychat_my_data")
   })
 
@@ -98,26 +98,6 @@ describe("QueryChat$new()", {
     expect_snapshot(error = TRUE, {
       QueryChat$new(test_df, table_name = "test", cleanup = "not_logical")
     })
-  })
-})
-
-describe("TableAccessor", {
-  skip_if_no_dataframe_engine()
-
-  it("errors when calling reactive methods on config-only TableAccessor", {
-    qc <- QueryChat$new(
-      data.frame(x = 1),
-      table_name = "test_df",
-      greeting = ""
-    )
-    accessor <- qc$table("test_df")
-    expect_error(accessor$df(), "server return value")
-    expect_error(accessor$sql(), "server return value")
-    expect_error(accessor$title(), "server return value")
-
-    # Non-reactive access still works
-    expect_s3_class(accessor$data_source, "DataFrameSource")
-    expect_equal(accessor$table_name, "test_df")
   })
 })
 
@@ -185,7 +165,7 @@ describe("QueryChat deferred client", {
     qc <- QueryChat$new(NULL, "users", greeting = "Test")
     qc$add_table(new_users_df(), "users")
 
-    expect_s3_class(qc$table("users")$data_source, "DataFrameSource")
+    expect_s3_class(qc_data_source(qc, "users"), "DataFrameSource")
     prompt <- qc$system_prompt
     expect_match(prompt, "users")
   })
@@ -218,15 +198,16 @@ describe("QueryChat integration with DBISource", {
       client = mock_client
     )
 
-    expect_s3_class(qc$table("iris")$data_source, "DBISource")
-    expect_s3_class(qc$table("iris")$data_source, "DataSource")
+    iris_source <- qc_data_source(qc, "iris")
+    expect_s3_class(iris_source, "DBISource")
+    expect_s3_class(iris_source, "DataSource")
 
-    result_data <- qc$table("iris")$data_source$execute_query(NULL)
+    result_data <- iris_source$execute_query(NULL)
     expect_s3_class(result_data, "data.frame")
     expect_equal(nrow(result_data), 150)
     expect_equal(ncol(result_data), 5)
 
-    query_result <- qc$table("iris")$data_source$execute_query(
+    query_result <- iris_source$execute_query(
       "SELECT \"Sepal.Length\", \"Sepal.Width\" FROM iris WHERE \"Species\" = 'setosa'"
     )
     expect_s3_class(query_result, "data.frame")
@@ -717,7 +698,7 @@ describe("querychat()", {
     withr::defer(qc$cleanup())
 
     expect_s3_class(qc, "QueryChat")
-    expect_s3_class(qc$table("test_df")$data_source, "DataFrameSource")
+    expect_s3_class(qc_data_source(qc, "test_df"), "DataFrameSource")
     expect_equal(qc$greeting, "Test greeting")
   })
 
@@ -727,7 +708,7 @@ describe("querychat()", {
     withr::defer(qc$cleanup())
 
     expect_equal(
-      qc$table("my_test_data")$data_source$table_name,
+      qc_data_source(qc, "my_test_data")$table_name,
       "my_test_data"
     )
   })
@@ -747,7 +728,7 @@ describe("querychat()", {
 
     expect_equal(qc$id, "custom_id")
     expect_equal(qc$greeting, "Custom greeting")
-    expect_equal(qc$table("custom_name")$data_source$table_name, "custom_name")
+    expect_equal(qc_data_source(qc, "custom_name")$table_name, "custom_name")
   })
 })
 

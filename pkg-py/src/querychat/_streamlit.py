@@ -33,7 +33,10 @@ class StreamlitTableAccessor(TableAccessor):
     """Per-table accessor for Streamlit QueryChat. Returned by ``qc.table(name)``."""
 
     def __init__(self, querychat: QueryChat, table_name: str) -> None:
-        super().__init__(table_name, querychat._data_sources[table_name])
+        # Bypass TableAccessor.__init__ — this subclass owns df/sql/title entirely
+        # via session state, so _state is never used.
+        self._table_name = table_name
+        self._data_source = querychat._data_sources[table_name]
         self._querychat_ref = querychat
 
     def df(self) -> Any:

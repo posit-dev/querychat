@@ -32,7 +32,6 @@ from ._query_executor import (
 )
 from ._querychat_core import GREETING_PROMPT
 from ._system_prompt import QueryChatSystemPrompt
-from ._table_accessor import TableAccessor
 from ._utils import MISSING, MISSING_TYPE, is_ibis_table
 from ._viz_utils import has_viz_deps, has_viz_tool
 from .tools import (
@@ -318,12 +317,11 @@ class QueryChatBase(Generic[IntoFrameT]):
 
     @property
     def data_source(self) -> DataSource:
-        """Removed. Use ``qc.table('name').data_source`` instead."""
+        """Removed. Use ``add_table()`` and ``remove_table()`` to manage tables."""
         raise AttributeError(
             "The .data_source property has been removed. "
-            "Use qc.table('name').data_source to access a table's data source, "
-            "or qc.add_table(df, 'name') / qc.add_table(df, 'name', replace=True) "
-            "to add or replace a table."
+            "Use qc.add_table(df, 'name') to add a new table, "
+            "or qc.add_table(df, 'name', replace=True) to replace an existing one."
         )
 
     @data_source.setter
@@ -345,32 +343,6 @@ class QueryChatBase(Generic[IntoFrameT]):
 
         """
         return list(self._data_sources.keys())
-
-    def table(self, name: str) -> TableAccessor:
-        """
-        Get an accessor for a specific table.
-
-        Parameters
-        ----------
-        name
-            The name of the table to access.
-
-        Returns
-        -------
-        TableAccessor
-            An accessor object with df(), sql(), title() methods.
-
-        Raises
-        ------
-        ValueError
-            If the table doesn't exist.
-
-        """
-        if name not in self._data_sources:
-            available = ", ".join(self._data_sources.keys())
-            raise ValueError(f"Table '{name}' not found. Available: {available}")
-
-        return TableAccessor(name, self._data_sources[name])
 
     def add_table(
         self,

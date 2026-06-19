@@ -175,12 +175,6 @@ class TestMultiSourceStorage:
         assert "orders" in qc._data_sources
         assert len(qc._data_sources) == 1
 
-    def test_table_accessor_returns_data_source(self, orders_df):
-        """Test that table() accessor returns the correct data source."""
-        qc = QueryChat(orders_df, "orders", greeting="Hello!")
-
-        assert qc.table("orders").data_source is qc._data_sources["orders"]
-
     def test_table_names_returns_list(self, orders_df):
         """Test that table_names() returns list of table names."""
         qc = QueryChat(orders_df, "orders", greeting="Hello!")
@@ -263,63 +257,6 @@ class TestRemoveTable:
 class TestTableAccessor:
     """Tests for table() method and TableAccessor class."""
 
-    def test_table_returns_accessor(self, orders_df):
-        """Test that table() returns a TableAccessor."""
-        qc = QueryChat(orders_df, "orders", greeting="Hello!")
-
-        accessor = qc.table("orders")
-
-        assert accessor is not None
-        assert isinstance(accessor, TableAccessor)
-        assert accessor.table_name == "orders"
-
-    def test_table_accessor_has_data_source(self, orders_df):
-        """Test that accessor provides access to data source."""
-        qc = QueryChat(orders_df, "orders", greeting="Hello!")
-
-        accessor = qc.table("orders")
-
-        assert accessor.data_source is qc._data_sources["orders"]
-
-    def test_table_nonexistent_raises(self, orders_df):
-        """Test that accessing nonexistent table raises error."""
-        qc = QueryChat(orders_df, "orders", greeting="Hello!")
-
-        with pytest.raises(ValueError, match="Table 'foo' not found"):
-            qc.table("foo")
-
-    def test_table_accessor_multiple_tables(self, orders_df, customers_df):
-        """Test accessor works with multiple tables."""
-        qc = QueryChat(orders_df, "orders", greeting="Hello!")
-        qc.add_table(customers_df, "customers")
-
-        orders_accessor = qc.table("orders")
-        customers_accessor = qc.table("customers")
-
-        assert orders_accessor.table_name == "orders"
-        assert customers_accessor.table_name == "customers"
-        assert orders_accessor.data_source is not customers_accessor.data_source
-
-    def test_config_only_table_df_raises(self, orders_df):
-        """qc.table() is config-only: df() raises with guidance."""
-        qc = QueryChat(orders_df, "orders", greeting="Hello!")
-        accessor = qc.table("orders")
-        with pytest.raises(RuntimeError, match=r"qc_vals\.table"):
-            accessor.df()
-
-    def test_config_only_table_sql_raises(self, orders_df):
-        """qc.table() is config-only: sql() raises with guidance."""
-        qc = QueryChat(orders_df, "orders", greeting="Hello!")
-        accessor = qc.table("orders")
-        with pytest.raises(RuntimeError, match=r"qc_vals\.table"):
-            accessor.sql()
-
-    def test_config_only_table_title_raises(self, orders_df):
-        """qc.table() is config-only: title() raises with guidance."""
-        qc = QueryChat(orders_df, "orders", greeting="Hello!")
-        accessor = qc.table("orders")
-        with pytest.raises(RuntimeError, match=r"qc_vals\.table"):
-            accessor.title()
 
 
 class TestMultiTableSystemPrompt:

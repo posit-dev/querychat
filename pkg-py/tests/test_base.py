@@ -186,7 +186,7 @@ class TestQueryChatBase:
 
     def test_init_with_dataframe(self, sample_df):
         qc = QueryChatBase(sample_df, "test_table")
-        assert isinstance(qc.table("test_table").data_source, DataFrameSource)
+        assert isinstance(qc._data_sources["test_table"], DataFrameSource)
         assert qc.tools == {"update", "query"}
 
     def test_init_with_custom_greeting(self, sample_df):
@@ -207,10 +207,6 @@ class TestQueryChatBase:
 
         with pytest.raises(ValueError, match="Table name must begin with a letter"):
             QueryChatBase(sample_df, "table-with-dash")
-
-    def test_table_accessor_returns_data_source(self, sample_df):
-        qc = QueryChatBase(sample_df, "test_table")
-        assert qc.table("test_table").data_source is qc._data_sources["test_table"]
 
     def test_system_prompt_property(self, sample_df):
         qc = QueryChatBase(sample_df, "test_table")

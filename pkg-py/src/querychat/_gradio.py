@@ -18,7 +18,6 @@ from ._querychat_core import (
     create_app_state,
     stream_response,
 )
-from ._table_accessor import StateDictTableAccessor, TableAccessor
 from ._ui_assets import GRADIO_CSS, GRADIO_JS, SUGGESTION_CSS
 from ._utils import as_narwhals
 
@@ -212,12 +211,6 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
         suggestion click handling. Pass to `.launch(head=qc.head)`.
         """
         return f"<script>{GRADIO_JS}</script>"
-
-    def table(self, name: str) -> TableAccessor:
-        if name not in self._data_sources:
-            available = ", ".join(self._data_sources.keys())
-            raise ValueError(f"Table '{name}' not found. Available: {available}")
-        return StateDictTableAccessor(name, self._data_sources[name])
 
     def ui(self) -> gr.State:
         """

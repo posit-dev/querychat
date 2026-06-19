@@ -15,7 +15,7 @@
 #' - Initialize server logic that returns session-specific reactive values (via
 #'   `$server()`)
 #' - Access reactive data, SQL queries, and titles through the returned server
-#'   values (use `$table("name")` for multi-table access)
+#'   values (use `qc_vals$table("name")` for multi-table access)
 #'
 #' @section Usage in Shiny Apps:
 #' ```r
@@ -487,25 +487,6 @@ QueryChat <- R6::R6Class(
     table_names = function() names(private$.data_sources),
 
     #' @description
-    #' Return a [TableAccessor] for the given table.
-    #'
-    #' @param name The name of the table.
-    table = function(name) {
-      if (!name %in% names(private$.data_sources)) {
-        available <- paste0(
-          "'",
-          names(private$.data_sources),
-          "'",
-          collapse = ", "
-        )
-        cli::cli_abort(
-          "Table {.val {name}} not found. Available: {available}"
-        )
-      }
-      TableAccessor$new(name, private$.data_sources[[name]])
-    },
-
-    #' @description
     #' Create a chat client, complete with registered tools, for the current
     #' data source.
     #'
@@ -782,8 +763,8 @@ QueryChat <- R6::R6Class(
     #'
     #' @return A list containing session-specific reactive values and the chat
     #'   client. For single-table usage, includes `df`, `sql`, `title` directly.
-    #'   For multi-table, use `$table("name")` to get a [TableAccessor] with
-    #'   per-table reactive state. Also includes `table_names()` to list tables.
+    #'   For multi-table, use `qc_vals$table("name")` to get a [TableAccessor]
+    #'   with per-table reactive state. Also includes `table_names()` to list tables.
     #'   `current_table()` returns the name of the most recently queried table,
     #'   or `NULL` before any query.
     server = function(
@@ -871,13 +852,12 @@ QueryChat <- R6::R6Class(
       private$.system_prompt$render(tools = self$tools)
     },
 
-    #' @field data_source Removed. Use `$table('name')$data_source` instead.
+    #' @field data_source Removed. Use `$add_table()` and `$remove_table()` to manage tables.
     data_source = function(value) {
       if (missing(value)) {
         cli::cli_abort(
           c(
             "The {.field $data_source} property has been removed.",
-            "i" = "Use {.code qc$table('name')$data_source} to access a table's data source.",
             "i" = "Use {.code qc$add_table(df, 'name')} to add a new table."
           )
         )

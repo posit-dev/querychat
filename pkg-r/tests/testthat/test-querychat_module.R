@@ -51,7 +51,10 @@ test_that("mod_server() passes visualize callback and tools to client factory", 
 test_that("mod_ui() passes allow_attachments = TRUE to shinychat by default", {
   captured <- NULL
   local_mocked_bindings(
-    chat_ui = function(...) { captured <<- list(...); htmltools::div() },
+    chat_ui = function(...) {
+      captured <<- list(...)
+      htmltools::div()
+    },
     .package = "shinychat"
   )
   mod_ui("test")
@@ -61,7 +64,10 @@ test_that("mod_ui() passes allow_attachments = TRUE to shinychat by default", {
 test_that("mod_ui() passes allow_attachments = FALSE when requested", {
   captured <- NULL
   local_mocked_bindings(
-    chat_ui = function(...) { captured <<- list(...); htmltools::div() },
+    chat_ui = function(...) {
+      captured <<- list(...)
+      htmltools::div()
+    },
     .package = "shinychat"
   )
   mod_ui("test", allow_attachments = FALSE)

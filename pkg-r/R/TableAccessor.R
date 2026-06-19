@@ -5,6 +5,7 @@
 #' Returned by the server return value's `$table("name")` method.
 #'
 #' @export
+#' @keywords internal
 TableAccessor <- R6::R6Class(
   "TableAccessor",
   private = list(

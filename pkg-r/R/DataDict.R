@@ -12,6 +12,7 @@
 #'
 #' @return A named list with the structure of the YAML file.
 #' @export
+#' @keywords internal
 read_data_dict <- function(path) {
   check_installed("yaml")
   check_string(path)

@@ -7,6 +7,7 @@
 Accessor for a specific table's data source and per-table reactive state.
 Returned by the server return value's \verb{$table("name")} method.
 }
+\keyword{internal}
 \section{Active bindings}{
   \if{html}{\out{<div class="r6-active-bindings">}}
   \describe{

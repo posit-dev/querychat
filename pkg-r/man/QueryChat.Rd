@@ -506,6 +506,8 @@ If provided, calls \verb{$add_table()} before initializing server logic.}
 client. For single-table usage, includes \code{df}, \code{sql}, \code{title} directly.
 For multi-table, use \verb{$table("name")} to get a \link{TableAccessor} with
 per-table reactive state. Also includes \code{table_names()} to list tables.
+\code{current_table()} returns the name of the most recently queried table,
+or \code{NULL} before any query.
   }
 }
 

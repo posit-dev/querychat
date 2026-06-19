@@ -113,7 +113,8 @@ ui <- page_navbar(
         showcase = bsicons::bs_icon("fire"),
         theme = "warning"
       ),
-      col_widths = c(3, 3, 3, 3)
+      col_widths = c(3, 3, 3, 3),
+      fill = FALSE
     ),
     layout_columns(
       card(

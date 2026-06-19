@@ -38,7 +38,7 @@ class TestAddTableDeferred:
         qc.add_table(sample_df, "users")
 
         assert "users" in qc.table_names()
-        assert qc.table("users").data_source.table_name == "users"
+        assert qc._data_sources["users"].table_name == "users"
         assert "users" in qc.system_prompt
 
     def test_add_table_replace(self, sample_df):
@@ -116,7 +116,7 @@ class TestBackwardCompatibility:
         qc = QueryChatBase(sample_df, "test_table")
 
         assert len(qc.table_names()) > 0
-        assert qc.table("test_table").data_source.table_name == "test_table"
+        assert qc._data_sources["test_table"].table_name == "test_table"
 
         client = qc.client()
         assert client is not None

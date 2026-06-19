@@ -46,7 +46,7 @@ def test_querychat_init(sample_df):
     assert qc.id == "querychat_test_table"
 
     # Even without server initialization, we should be able to query the data source
-    result = qc.table("test_table").data_source.execute_query(
+    result = qc._data_sources["test_table"].execute_query(
         "SELECT * FROM test_table WHERE id = 2",
     )
 
@@ -149,10 +149,10 @@ def test_querychat_with_polars_lazyframe():
     )
 
     # Should have created a PolarsLazySource
-    assert isinstance(qc.table("test_table").data_source, PolarsLazySource)
+    assert isinstance(qc._data_sources["test_table"], PolarsLazySource)
 
     # Query should return a native polars LazyFrame
-    result = qc.table("test_table").data_source.execute_query("SELECT * FROM test_table WHERE id = 2")
+    result = qc._data_sources["test_table"].execute_query("SELECT * FROM test_table WHERE id = 2")
     assert isinstance(result, pl.LazyFrame)
 
     # Collect to verify
@@ -182,10 +182,10 @@ def test_querychat_with_ibis_table():
         )
 
         # Should have created an IbisSource
-        assert isinstance(qc.table("test_table").data_source, IbisSource)
+        assert isinstance(qc._data_sources["test_table"], IbisSource)
 
         # Query should return an ibis.Table
-        result = qc.table("test_table").data_source.execute_query("SELECT * FROM test_table WHERE id = 2")
+        result = qc._data_sources["test_table"].execute_query("SELECT * FROM test_table WHERE id = 2")
         assert isinstance(result, ibis.Table)
 
         # Execute to verify results

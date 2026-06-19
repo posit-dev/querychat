@@ -37,6 +37,8 @@ ResetDashboardCallback = Callable[[str], None]
 
 
 class GetSchemaResult(ContentToolResult):
+    """Tool result that carries schema text for a single table."""
+
     table_name: str
 
 
@@ -122,35 +124,6 @@ def tool_get_schema(
         impl,
         name="querychat_get_schema",
         annotations={"title": "Get Schema"},
-    )
-
-
-class GetSchemaResult(ContentToolResult):
-    """Tool result that carries schema text for a single table."""
-
-    table_name: str
-
-
-@message_content_chunk.register
-def _(message: GetSchemaResult) -> ChatMessage:
-    content = TagList(
-        tags.span(
-            class_="qc-schema-collector",
-            data_table=message.table_name,
-            data_schema=str(message.value),
-            style="display:none",
-        ),
-        _schema_dep(),
-    )
-    return ChatMessage(content=content)
-
-
-def _schema_dep() -> HTMLDependency:
-    return HTMLDependency(
-        "querychat-schema-display",
-        __version__,
-        source={"package": "querychat", "subdir": "static"},
-        script=[{"src": "js/schema-display.js"}],
     )
 
 

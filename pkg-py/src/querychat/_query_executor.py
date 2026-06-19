@@ -13,8 +13,8 @@ from ._datasource import (
     MissingColumnsError,
     duckdb_column_meta,
     duckdb_column_stats,
-    format_schema,
     duckdb_lock_down,
+    format_schema,
 )
 from ._utils import check_query
 

@@ -48,20 +48,24 @@ test_that("mod_server() passes visualize callback and tools to client factory", 
   )
 })
 
-test_that("mod_ui() includes allow_attachments attribute by default", {
-  skip_if_no_dataframe_engine()
-
-  html <- mod_ui("test")
-  html_str <- as.character(htmltools::renderTags(html)$html)
-  expect_match(html_str, "allow_attachments")
+test_that("mod_ui() passes allow_attachments = TRUE to shinychat by default", {
+  captured <- NULL
+  local_mocked_bindings(
+    chat_ui = function(...) { captured <<- list(...); htmltools::div() },
+    .package = "shinychat"
+  )
+  mod_ui("test")
+  expect_true(isTRUE(captured$allow_attachments))
 })
 
 test_that("mod_ui() passes allow_attachments = FALSE when requested", {
-  skip_if_no_dataframe_engine()
-
-  html <- mod_ui("test", allow_attachments = FALSE)
-  html_str <- as.character(htmltools::renderTags(html)$html)
-  expect_no_match(html_str, "allow_attachments")
+  captured <- NULL
+  local_mocked_bindings(
+    chat_ui = function(...) { captured <<- list(...); htmltools::div() },
+    .package = "shinychat"
+  )
+  mod_ui("test", allow_attachments = FALSE)
+  expect_false(isTRUE(captured$allow_attachments))
 })
 
 test_that("restored viz widgets survive a second bookmark cycle", {

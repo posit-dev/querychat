@@ -52,9 +52,9 @@ class Test03SidebarExpress:
 
     def test_data_table_visible(self) -> None:
         """Data table is visible with rows."""
-        table = self.page.locator("table")
+        table = self.page.locator("table[aria-rowcount]")
         expect(table).to_be_visible()
-        rows = self.page.locator("table tbody tr")
+        rows = self.page.locator("table[aria-rowcount] tbody tr")
         expect(rows.first).to_be_visible()
 
     def test_chat_input_visible(self) -> None:
@@ -95,7 +95,7 @@ class Test03SidebarExpress:
         )
 
         # Table should still be visible (with filtered data)
-        table = self.page.locator("table")
+        table = self.page.locator("table[aria-rowcount]")
         expect(table).to_be_visible()
 
     def test_analytical_query_in_chat(self) -> None:
@@ -135,9 +135,9 @@ class Test03SidebarCore:
 
     def test_data_table_visible(self) -> None:
         """Data table is visible with rows."""
-        table = self.page.locator("table")
+        table = self.page.locator("table[aria-rowcount]")
         expect(table).to_be_visible()
-        rows = self.page.locator("table tbody tr")
+        rows = self.page.locator("table[aria-rowcount] tbody tr")
         expect(rows.first).to_be_visible()
 
     def test_chat_input_visible(self) -> None:
@@ -178,7 +178,7 @@ class Test03SidebarCore:
         )
 
         # Table should still be visible (with filtered data)
-        table = self.page.locator("table")
+        table = self.page.locator("table[aria-rowcount]")
         expect(table).to_be_visible()
 
     def test_analytical_query_in_chat(self) -> None:

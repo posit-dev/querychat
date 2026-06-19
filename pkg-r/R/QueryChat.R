@@ -15,7 +15,7 @@
 #' - Initialize server logic that returns session-specific reactive values (via
 #'   `$server()`)
 #' - Access reactive data, SQL queries, and titles through the returned server
-#'   values
+#'   values (use `$table("name")` for multi-table access)
 #'
 #' @section Usage in Shiny Apps:
 #' ```r
@@ -89,7 +89,6 @@
 QueryChat <- R6::R6Class(
   "QueryChat",
   private = list(
-    server_values = NULL,
     .data_sources = list(),
     .deferred_table_name = NULL,
     .query_executor = NULL,
@@ -776,7 +775,9 @@ QueryChat <- R6::R6Class(
     #' @param session The Shiny session object.
     #'
     #' @return A list containing session-specific reactive values and the chat
-    #'   client.
+    #'   client. For single-table usage, includes `df`, `sql`, `title` directly.
+    #'   For multi-table, use `$table("name")` to get a [TableAccessor] with
+    #'   per-table reactive state. Also includes `table_names()` to list tables.
     server = function(
       data_source = NULL,
       client = NULL,
@@ -826,7 +827,6 @@ QueryChat <- R6::R6Class(
         tools = self$tools,
         enable_bookmarking = enable_bookmarking
       )
-      private$server_values <- result
       result
     },
 

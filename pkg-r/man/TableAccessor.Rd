@@ -5,7 +5,8 @@
 \title{Table Accessor}
 \description{
 Accessor for a specific table's data source and per-table reactive state.
-Returned by \link{QueryChat}'s \verb{$table("name")} method.
+Returned by \link{QueryChat}'s \verb{$table("name")} method (config-only) or by the
+server return's \verb{$table("name")} method (with reactive state).
 }
 \section{Active bindings}{
   \if{html}{\out{<div class="r6-active-bindings">}}
@@ -33,14 +34,16 @@ Returned by \link{QueryChat}'s \verb{$table("name")} method.
   Create a new TableAccessor.
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
-    \preformatted{TableAccessor$new(querychat, table_name)}
+    \preformatted{TableAccessor$new(table_name, data_source, state = NULL)}
     \if{html}{\out{</div>}}
   }
   \subsection{Arguments}{
     \if{html}{\out{<div class="arguments">}}
     \describe{
-      \item{\code{querychat}}{The parent QueryChat instance.}
       \item{\code{table_name}}{The name of the table.}
+      \item{\code{data_source}}{The DataSource for this table.}
+      \item{\code{state}}{Optional list of per-table reactive state (\code{sql}, \code{title},
+\code{df}). When \code{NULL}, reactive methods raise an error.}
     }
     \if{html}{\out{</div>}}
   }

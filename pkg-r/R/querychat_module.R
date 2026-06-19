@@ -210,6 +210,18 @@ mod_server <- function(
       })
     }
 
+    table_fn <- function(name) {
+      if (!name %in% names(tables)) {
+        available <- paste0("'", names(tables), "'", collapse = ", ")
+        cli::cli_abort(
+          "Table {.val {name}} not found. Available: {available}"
+        )
+      }
+      TableAccessor$new(name, data_sources[[name]], state = tables[[name]])
+    }
+
+    table_names_fn <- function() names(tables)
+
     # Backward compat: for single-table, expose sql/title/df directly
     if (length(data_sources) == 1) {
       first <- tables[[1]]
@@ -218,13 +230,15 @@ mod_server <- function(
         sql = first$sql,
         title = first$title,
         df = first$df,
+        table = table_fn,
+        table_names = table_names_fn,
         .tables = tables
       )
     } else {
       single_table_error <- function(method) {
         function(...) {
           cli::cli_abort(
-            "Multiple tables registered. Use {.code qc$table('name')${method}()} instead."
+            "Multiple tables registered. Use {.code qc_vals$table('name')${method}()} instead."
           )
         }
       }
@@ -233,6 +247,8 @@ mod_server <- function(
         sql = single_table_error("sql"),
         title = single_table_error("title"),
         df = single_table_error("df"),
+        table = table_fn,
+        table_names = table_names_fn,
         .tables = tables
       )
     }

@@ -17,6 +17,97 @@ test_that("Shiny app example loads without errors", {
   })
 })
 
+test_that("mod_server() return includes table() and table_names() for single-table", {
+  skip_if_no_dataframe_engine()
+
+  ds <- local_data_frame_source(new_test_df())
+  executor <- build_query_executor(list(test_table = ds))
+  withr::defer(executor$cleanup())
+
+  client_factory <- function(...) structure(list(), class = "MockChat")
+
+  shiny::testServer(
+    mod_server,
+    args = list(
+      id = "test",
+      data_sources = list(test_table = ds),
+      executor = executor,
+      greeting = "Hello",
+      client = client_factory,
+      tools = "query",
+      enable_bookmarking = FALSE
+    ),
+    {
+      # table_names_fn() returns the table name vector
+      expect_equal(table_names_fn(), "test_table")
+
+      # table_fn() returns a TableAccessor backed by reactive state
+      acc <- table_fn("test_table")
+      expect_true(inherits(acc, "TableAccessor"))
+      expect_equal(acc$table_name, "test_table")
+
+      # TableAccessor$df() works (returns the full data frame when no filter set)
+      df_result <- shiny::isolate(acc$df())
+      expect_equal(nrow(df_result), 5L)
+
+      # Single-table backward compat: first$df/sql/title are still in the return
+      first_state <- tables[[1]]
+      expect_true(is.function(first_state$df))
+      expect_true(is.function(first_state$sql))
+      expect_true(is.function(first_state$title))
+    }
+  )
+})
+
+test_that("mod_server() return includes table() and table_names() for multi-table", {
+  skip_if_no_dataframe_engine()
+
+  ds1 <- local_data_frame_source(new_test_df(), table_name = "tbl_a")
+  ds2 <- local_data_frame_source(new_test_df(), table_name = "tbl_b")
+  data_sources <- list(tbl_a = ds1, tbl_b = ds2)
+  executor <- build_query_executor(data_sources)
+  withr::defer(executor$cleanup())
+
+  result <- NULL
+  client_factory <- function(...) {
+    result <<- "client_called"
+    structure(list(), class = "MockChat")
+  }
+
+  shiny::testServer(
+    mod_server,
+    args = list(
+      id = "test",
+      data_sources = data_sources,
+      executor = executor,
+      greeting = "Hello",
+      client = client_factory,
+      tools = "query",
+      enable_bookmarking = FALSE
+    ),
+    {
+      # table_names_fn() returns all registered table names
+      expect_equal(table_names_fn(), c("tbl_a", "tbl_b"))
+
+      # table_fn() returns a TableAccessor for each table
+      acc_a <- table_fn("tbl_a")
+      expect_true(inherits(acc_a, "TableAccessor"))
+      expect_equal(acc_a$table_name, "tbl_a")
+
+      acc_b <- table_fn("tbl_b")
+      expect_true(inherits(acc_b, "TableAccessor"))
+      expect_equal(acc_b$table_name, "tbl_b")
+
+      # table_fn() errors for unknown names
+      expect_error(table_fn("nonexistent"), class = "rlang_error")
+
+      # Multi-table: single_table_error functions mention qc_vals$table()
+      single_err <- single_table_error("sql")
+      expect_error(single_err(), regexp = "qc_vals\\$table")
+    }
+  )
+})
+
 test_that("mod_server() passes visualize callback and tools to client factory", {
   skip_if_no_dataframe_engine()
 

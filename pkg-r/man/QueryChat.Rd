@@ -18,7 +18,7 @@ as input and provides methods to:
 \item Initialize server logic that returns session-specific reactive values (via
 \verb{$server()})
 \item Access reactive data, SQL queries, and titles through the returned server
-values
+values (use \verb{$table("name")} for multi-table access)
 }
 }
 \section{Usage in Shiny Apps}{
@@ -503,7 +503,9 @@ If provided, calls \verb{$add_table()} before initializing server logic.}
   }
   \subsection{Returns}{
     A list containing session-specific reactive values and the chat
-client.
+client. For single-table usage, includes \code{df}, \code{sql}, \code{title} directly.
+For multi-table, use \verb{$table("name")} to get a \link{TableAccessor} with
+per-table reactive state. Also includes \code{table_names()} to list tables.
   }
 }
 

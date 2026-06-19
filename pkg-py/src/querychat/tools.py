@@ -4,10 +4,11 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, Protocol, TypedDict, runtime_checkable
 
 from chatlas import ContentToolResult, Tool
-from htmltools import tags
+from htmltools import HTMLDependency, TagList, tags
 from shinychat import message_content_chunk
 from shinychat.types import ChatMessage, ToolResultDisplay
 
+from .__version import __version__
 from ._icons import bs_icon
 from ._utils import (
     as_narwhals,
@@ -19,6 +20,7 @@ from ._utils import (
 from ._viz_tools import tool_visualize
 
 __all__ = [
+    "GetSchemaResult",
     "tool_get_schema",
     "tool_query",
     "tool_reset_dashboard",
@@ -40,12 +42,25 @@ class GetSchemaResult(ContentToolResult):
 
 @message_content_chunk.register
 def _(message: GetSchemaResult) -> ChatMessage:
-    content = tags.p(
-        bs_icon("search"),
-        f" Fetched schema for {message.table_name}",
-        style="color: var(--bs-secondary-color, #6c757d); font-size: 0.875em; margin: 0.1rem 0;",
+    content = TagList(
+        tags.span(
+            class_="qc-schema-collector",
+            data_table=message.table_name,
+            data_schema=str(message.value),
+            style="display:none",
+        ),
+        _schema_dep(),
     )
     return ChatMessage(content=content)
+
+
+def _schema_dep() -> HTMLDependency:
+    return HTMLDependency(
+        "querychat-schema-display",
+        __version__,
+        source={"package": "querychat", "subdir": "static"},
+        script=[{"src": "js/schema-display.js"}],
+    )
 
 
 def _get_schema_impl(
@@ -107,6 +122,35 @@ def tool_get_schema(
         impl,
         name="querychat_get_schema",
         annotations={"title": "Get Schema"},
+    )
+
+
+class GetSchemaResult(ContentToolResult):
+    """Tool result that carries schema text for a single table."""
+
+    table_name: str
+
+
+@message_content_chunk.register
+def _(message: GetSchemaResult) -> ChatMessage:
+    content = TagList(
+        tags.span(
+            class_="qc-schema-collector",
+            data_table=message.table_name,
+            data_schema=str(message.value),
+            style="display:none",
+        ),
+        _schema_dep(),
+    )
+    return ChatMessage(content=content)
+
+
+def _schema_dep() -> HTMLDependency:
+    return HTMLDependency(
+        "querychat-schema-display",
+        __version__,
+        source={"package": "querychat", "subdir": "static"},
+        script=[{"src": "js/schema-display.js"}],
     )
 
 

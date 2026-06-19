@@ -493,3 +493,37 @@ describe("tool_update_dashboard_impl()", {
     expect_s3_class(res_tool@error, class = "error")
   })
 })
+
+describe("get_schema_result_display()", {
+  it("returns a sentinel span with data-table attribute", {
+    result <- GetSchemaResult(
+      value = "Table: orders\nColumns:\n- id (INTEGER)",
+      table_name = "orders"
+    )
+    html <- get_schema_result_display(result)
+    html_str <- as.character(html)
+    expect_true(grepl("qc-schema-collector", html_str))
+    expect_true(grepl('data-table="orders"', html_str))
+    expect_true(grepl("display:none", html_str) || grepl("display: none", html_str))
+  })
+
+  it("embeds schema text in data-schema attribute", {
+    schema <- "Table: orders\nColumns:\n- id (INTEGER)"
+    result <- GetSchemaResult(value = schema, table_name = "orders")
+    html <- get_schema_result_display(result)
+    html_str <- as.character(html)
+    expect_true(grepl("data-schema", html_str))
+    expect_true(grepl("orders", html_str))
+  })
+
+  it("includes querychat-schema-display HTML dependency", {
+    result <- GetSchemaResult(
+      value = "Table: t\nColumns:\n- x (TEXT)",
+      table_name = "t"
+    )
+    html <- get_schema_result_display(result)
+    deps <- htmltools::findDependencies(html)
+    dep_names <- vapply(deps, function(d) d$name, character(1))
+    expect_true("querychat-schema-display" %in% dep_names)
+  })
+})

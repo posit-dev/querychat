@@ -8,7 +8,8 @@ from unittest.mock import patch
 import pandas as pd
 import polars as pl
 import pytest
-from querychat import QueryChat, TableAccessor
+from querychat import QueryChat
+from querychat.types import TableAccessor
 from querychat._datasource import DataFrameSource
 from querychat._query_executor import (
     DataSourceExecutor,

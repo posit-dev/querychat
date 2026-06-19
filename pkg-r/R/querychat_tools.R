@@ -1,6 +1,4 @@
-# S7 subclass of ContentToolResult that carries the table name so the
-# contents_shinychat method can render a compact inline display instead of a
-# full tool card.
+#' @noRd
 GetSchemaResult <- S7::new_class(
   "GetSchemaResult",
   parent = ellmer::ContentToolResult,
@@ -52,6 +50,7 @@ tool_get_schema <- function(
     annotations = ellmer::tool_annotations(title = "Get Schema")
   )
 }
+
 
 # Modifies the data presented in the data dashboard, based on the given SQL
 # query, and also updates the title.
@@ -336,12 +335,24 @@ querychat_tool_result <- function(
   )
 }
 
+schema_dep <- function() {
+  htmltools::htmlDependency(
+    name = "querychat-schema-display",
+    version = utils::packageVersion("querychat"),
+    package = "querychat",
+    src = "htmldep",
+    script = "schema-display.js"
+  )
+}
+
 get_schema_result_display <- function(content) {
-  shiny::tags$p(
-    shiny::HTML(
-      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="bi bi-search" style="height:1em;width:1em;fill:currentColor;vertical-align:-0.125em;" aria-hidden="true" role="img"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.099M12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/></svg>'
+  htmltools::tagList(
+    htmltools::tags$span(
+      class = "qc-schema-collector",
+      `data-table` = content@table_name,
+      `data-schema` = content@value,
+      style = "display:none"
     ),
-    paste(" Fetched schema for", content@table_name),
-    style = "color: var(--bs-secondary-color, #6c757d); font-size: 0.875em; margin: 0.1rem 0;"
+    schema_dep()
   )
 }

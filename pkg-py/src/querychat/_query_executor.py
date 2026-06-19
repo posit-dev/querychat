@@ -14,7 +14,7 @@ from ._datasource import (
     duckdb_column_meta,
     duckdb_column_stats,
     format_schema,
-    lockdown_duckdb,
+    duckdb_lock_down,
 )
 from ._utils import check_query
 
@@ -69,7 +69,7 @@ class DuckDBExecutor(QueryExecutor):
             result = self._conn.execute(f'SELECT * FROM "{name}" LIMIT 0')
             self._table_columns[name] = [desc[0] for desc in result.description]
 
-        lockdown_duckdb(self._conn)
+        duckdb_lock_down(self._conn)
 
     def execute_query(self, query: str) -> Any:
         check_query(query)

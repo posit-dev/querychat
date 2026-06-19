@@ -1,21 +1,25 @@
 """Tests for tool functions and utilities."""
 
+import html as html_module
 import warnings
 
 import narwhals.stable.v1 as nw
 import pandas as pd
 import polars as pl
 import pytest
+from htmltools import TagList
 from querychat._data_dict import ColumnRange, ColumnSpec, DataDict, TableSpec
 from querychat._datasource import DataFrameSource
 from querychat._query_executor import DataSourceExecutor
 from querychat._utils import querychat_tool_starts_open
 from querychat.tools import (
+    GetSchemaResult,
     UpdateDashboardData,
     _get_schema_impl,
     _query_impl,
     tool_reset_dashboard,
 )
+from shinychat import message_content_chunk
 
 
 @pytest.fixture
@@ -218,3 +222,33 @@ def test_get_schema_impl_unknown_table_returns_error() -> None:
     result = fn("nonexistent")
     assert result.error is not None
     assert "nonexistent" in str(result.error)
+
+
+def test_get_schema_result_sentinel_has_data_attributes():
+    result = GetSchemaResult(
+        value="Table: orders\nColumns:\n- id (INTEGER)",
+        table_name="orders",
+    )
+    msg = message_content_chunk(result)
+    # msg.content is a pre-rendered HTML string; wrap in TagList to render again
+    rendered = TagList(msg.content).render()
+    html = rendered["html"]
+    assert "qc-schema-collector" in html
+    assert 'data-table="orders"' in html
+    assert "display:none" in html
+
+
+def test_get_schema_result_sentinel_embeds_schema():
+    schema = "Table: orders\nColumns:\n- id (INTEGER)"
+    result = GetSchemaResult(value=schema, table_name="orders")
+    msg = message_content_chunk(result)
+    # ChatMessage pre-renders TagList to a string; unescape HTML entities to check schema
+    assert schema in html_module.unescape(msg.content)
+
+
+def test_get_schema_result_includes_js_dependency():
+    result = GetSchemaResult(value="Table: t\nColumns:\n- x (TEXT)", table_name="t")
+    msg = message_content_chunk(result)
+    # ChatMessage extracts HTMLDependency objects into html_deps
+    dep_names = [d.name for d in msg.html_deps]
+    assert "querychat-schema-display" in dep_names

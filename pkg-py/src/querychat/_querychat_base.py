@@ -207,9 +207,12 @@ class QueryChatBase(Generic[IntoFrameT]):
         if self._system_prompt is not None:
             chat.system_prompt = self._system_prompt.render(resolved_tools)
 
+        if resolved_tools is None:
+            return chat
+
         executor = self._require_query_executor("_create_session_client")
 
-        # Always register the schema tool regardless of resolved_tools
+        # Always register the schema tool (for all non-None tool sets)
         chat.register_tool(
             tool_get_schema(
                 self._data_dicts,
@@ -218,9 +221,6 @@ class QueryChatBase(Generic[IntoFrameT]):
                 self._categorical_threshold,
             )
         )
-
-        if resolved_tools is None:
-            return chat
 
         if "update" in resolved_tools:
             update_fn = update_dashboard or (lambda _: None)

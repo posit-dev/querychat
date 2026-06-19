@@ -227,6 +227,7 @@ class TestQueryChatBase:
         qc = QueryChatBase(sample_df, "test_table")
         client = qc.client(tools=None)
         assert isinstance(client, chatlas.Chat)
+        assert client.get_tools() == []
 
     def test_client_with_callbacks(self, sample_df):
         qc = QueryChatBase(sample_df, "test_table")

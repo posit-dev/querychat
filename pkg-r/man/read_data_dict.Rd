@@ -20,4 +20,3 @@ returned as a plain list and can be passed directly to \link{QueryChat} via the
 
 If \code{name} is absent from the YAML file, it defaults to the file stem.
 }
-\keyword{internal}

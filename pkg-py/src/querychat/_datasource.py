@@ -335,24 +335,6 @@ class DataSource(ABC, Generic[IntoFrameT]):
         return ""
 
 
-def lockdown_duckdb(conn: duckdb.DuckDBPyConnection) -> None:
-    """Apply security lockdown to a DuckDB connection."""
-    conn.execute("""
--- extensions: lock down supply chain + auto behaviors
-SET allow_community_extensions = false;
-SET allow_unsigned_extensions = false;
-SET autoinstall_known_extensions = false;
-SET autoload_known_extensions = false;
-
--- external I/O: block file/database/network access from SQL
-SET enable_external_access = false;
-SET disabled_filesystems = 'LocalFileSystem';
-
--- freeze configuration so user SQL can't relax anything
-SET lock_configuration = true;
-    """)
-
-
 class DataFrameSource(DataSource[IntoDataFrameT]):
     """A DataSource implementation that wraps a DataFrame using DuckDB."""
 
@@ -381,7 +363,7 @@ class DataFrameSource(DataSource[IntoDataFrameT]):
         self._conn = duckdb.connect(database=":memory:")
         # NOTE: if native representation is polars, pyarrow is required for registration
         self._conn.register(table_name, self._df.to_native())
-        lockdown_duckdb(self._conn)
+        duckdb_lock_down(self._conn)
 
         # Store original column names for validation
         self._colnames = list(self._df.columns)

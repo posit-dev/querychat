@@ -94,7 +94,7 @@ class _MultiTableBlockedReactive:
     def __init__(self, table_list: str, attr_name: str) -> None:
         self._msg = (
             f"Cannot use .{attr_name}() with multiple tables ({table_list}). "
-            f"Use .tables['name'].{attr_name} for per-table access."
+            f"Use .table('name').{attr_name}() for per-table access."
         )
 
     def __call__(self, *_args: object, **_kwargs: object) -> object:
@@ -387,7 +387,7 @@ def mod_server(
     def _multi_table_df() -> IntoFrameT:
         raise AttributeError(
             f"Cannot use .df() with multiple tables ({table_list}). "
-            "Use .tables['name'].df() for per-table access."
+            "Use .table('name').df() for per-table access."
         )
 
     return ServerValues(

@@ -672,7 +672,7 @@ class TestMultiTableGuardrails:
             df=lambda: (_ for _ in ()).throw(
                 AttributeError(
                     f"Cannot use .df() with multiple tables ({table_list}). "
-                    "Use .tables['name'].df() for per-table access."
+                    "Use .table('name').df() for per-table access."
                 )
             ),
             sql=_MultiTableBlockedReactive(table_list, "sql"),  # type: ignore[arg-type]

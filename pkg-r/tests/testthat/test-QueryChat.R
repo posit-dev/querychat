@@ -101,6 +101,26 @@ describe("QueryChat$new()", {
   })
 })
 
+describe("TableAccessor", {
+  skip_if_no_dataframe_engine()
+
+  it("errors when calling reactive methods on config-only TableAccessor", {
+    qc <- QueryChat$new(
+      data.frame(x = 1),
+      table_name = "test_df",
+      greeting = ""
+    )
+    accessor <- qc$table("test_df")
+    expect_error(accessor$df(), "server return value")
+    expect_error(accessor$sql(), "server return value")
+    expect_error(accessor$title(), "server return value")
+
+    # Non-reactive access still works
+    expect_s3_class(accessor$data_source, "DataFrameSource")
+    expect_equal(accessor$table_name, "test_df")
+  })
+})
+
 describe("QueryChat deferred client", {
   it("accepts NULL data_source with table_name", {
     qc <- QueryChat$new(NULL, "users", greeting = "Test")

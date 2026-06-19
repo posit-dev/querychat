@@ -504,7 +504,7 @@ QueryChat <- R6::R6Class(
           "Table {.val {name}} not found. Available: {available}"
         )
       }
-      TableAccessor$new(self, name)
+      TableAccessor$new(name, private$.data_sources[[name]])
     },
 
     #' @description

@@ -48,12 +48,12 @@ test_that("mod_server() passes visualize callback and tools to client factory", 
   )
 })
 
-test_that("mod_ui() includes allow-attachments attribute by default", {
+test_that("mod_ui() includes allow_attachments attribute by default", {
   skip_if_no_dataframe_engine()
 
   html <- mod_ui("test")
   html_str <- as.character(htmltools::renderTags(html)$html)
-  expect_match(html_str, "allow-attachments")
+  expect_match(html_str, "allow_attachments")
 })
 
 test_that("mod_ui() passes allow_attachments = FALSE when requested", {
@@ -61,7 +61,7 @@ test_that("mod_ui() passes allow_attachments = FALSE when requested", {
 
   html <- mod_ui("test", allow_attachments = FALSE)
   html_str <- as.character(htmltools::renderTags(html)$html)
-  expect_no_match(html_str, "allow-attachments")
+  expect_no_match(html_str, "allow_attachments")
 })
 
 test_that("restored viz widgets survive a second bookmark cycle", {

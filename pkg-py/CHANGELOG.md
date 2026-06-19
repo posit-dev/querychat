@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### New features
+
+* File attachments are now enabled by default in the Shiny chat UI. Users can attach images, PDFs, and text files to their messages and the LLM will receive them. Disable with `allow_attachments=False` in `mod_ui()` or `QueryChat.ui()`. (#253)
+
 ### Improvements
 
 * The query tool result card now starts collapsed by default. Users can still expand it to see the SQL query and results. Set `QUERYCHAT_TOOL_DETAILS=expanded` to restore the previous behavior. (#239)

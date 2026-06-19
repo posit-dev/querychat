@@ -36,8 +36,8 @@ Imports:
     shiny,
     shinychat (>= 0.4.0),
     utils,
-    yaml,
-    whisker
+    whisker,
+    yaml
 Suggests:
     dbplyr,
     dplyr,

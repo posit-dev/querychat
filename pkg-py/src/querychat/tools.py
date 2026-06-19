@@ -1,14 +1,17 @@
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, Protocol, TypedDict, runtime_checkable
 
 from chatlas import ContentToolResult, Tool
 from htmltools import HTMLDependency, TagList, tags
+from pydantic import Field
 from shinychat import message_content_chunk
 from shinychat.types import ChatMessage, ToolResultDisplay
 
 from .__version import __version__
+from ._datasource import ColumnMeta, format_schema
 from ._icons import bs_icon
 from ._utils import (
     as_narwhals,
@@ -37,18 +40,34 @@ ResetDashboardCallback = Callable[[str], None]
 
 
 class GetSchemaResult(ContentToolResult):
-    """Tool result that carries schema text for a single table."""
+    """Tool result that carries schema text and structured column metadata for a single table."""
 
     table_name: str
+    columns: list[ColumnMeta] = Field(default_factory=list)
+
+
+def _col_to_dict(col: ColumnMeta) -> dict[str, Any]:
+    return {
+        "name": col.name,
+        "sql_type": col.sql_type,
+        "units": col.units,
+        "description": col.description,
+        "min_val": str(col.min_val) if col.min_val is not None else None,
+        "max_val": str(col.max_val) if col.max_val is not None else None,
+        "categories": col.categories,
+        "constraints": col.constraints,
+    }
 
 
 @message_content_chunk.register
 def _(message: GetSchemaResult) -> ChatMessage:
+    columns_json = json.dumps([_col_to_dict(c) for c in message.columns])
     content = TagList(
         tags.span(
             class_="qc-schema-collector",
             data_table=message.table_name,
             data_schema=str(message.value),
+            data_schema_json=columns_json,
             style="display:none",
         ),
         _schema_dep(),
@@ -79,11 +98,12 @@ def _get_schema_impl(
 
         dd = next((d for d in data_dicts if table_name in d.tables), None)
         if dd is not None:
-            schema = dd.get_table_schema(table_name, executor, categorical_threshold)
+            columns = dd.get_table_schema(table_name, executor, categorical_threshold)
         else:
-            schema = executor.get_schema(table_name, categorical_threshold)
+            columns = executor.get_column_details(table_name, categorical_threshold)
 
-        return GetSchemaResult(value=schema, table_name=table_name)
+        schema_text = format_schema(table_name, columns)
+        return GetSchemaResult(value=schema_text, table_name=table_name, columns=columns)
 
     return get_schema
 

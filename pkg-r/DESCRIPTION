@@ -28,6 +28,7 @@ Imports:
     DBI,
     ellmer (>= 0.4.1),
     htmltools,
+    jsonlite,
     lifecycle,
     promises,
     R6,

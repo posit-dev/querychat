@@ -5,39 +5,20 @@ let activePanel = null;
 
 // -- Schema text parser --------------------------------------------------
 
-function parseSchema(text) {
-  const columns = [];
-  let current = null;
-
-  for (const line of text.split('\n')) {
-    if (line.startsWith('- ')) {
-      const match = line.slice(2).match(/^(\S+)\s+\(([^)]+)\)(?:\s+\[([^\]]+)\])?/);
-      if (match) {
-        current = {
-          name: match[1],
-          type: match[2],
-          units: match[3] || null,
-          description: null,
-          constraints: null,
-          range: null,
-          categories: null,
-        };
-        columns.push(current);
-      }
-    } else if (current) {
-      const trimmed = line.trim();
-      if (trimmed.startsWith('Description: ')) {
-        current.description = trimmed.slice(13);
-      } else if (trimmed.startsWith('Constraints: ')) {
-        current.constraints = trimmed.slice(13);
-      } else if (trimmed.startsWith('Range: ')) {
-        current.range = trimmed.slice(7);
-      } else if (trimmed.startsWith('Categorical values: ')) {
-        current.categories = trimmed.slice(20);
-      }
-    }
-  }
-  return columns;
+function parseColumnsJson(json) {
+  return JSON.parse(json).map((col) => ({
+    name: col.name,
+    type: col.sql_type,
+    units: col.units || null,
+    description: col.description || null,
+    constraints: col.constraints && col.constraints.length > 0 ? col.constraints.join(', ') : null,
+    range:
+      col.min_val != null && col.max_val != null ? `${col.min_val} to ${col.max_val}` : null,
+    categories:
+      col.categories && col.categories.length > 0
+        ? col.categories.map((v) => `'${v}'`).join(', ')
+        : null,
+  }));
 }
 
 // -- Table rendering -----------------------------------------------------
@@ -161,8 +142,8 @@ window.addEventListener('resize', closePanel);
 
 // -- Button + panel construction -----------------------------------------
 
-function createBtn(tableName, schemaText) {
-  const columns = parseSchema(schemaText);
+function createBtn(tableName, columnsJson) {
+  const columns = parseColumnsJson(columnsJson);
 
   const btn = document.createElement('button');
   btn.type = 'button';
@@ -213,8 +194,7 @@ document.head.appendChild(style);
 function processCollector(sentinel) {
   const now = Date.now();
   const tableName = sentinel.dataset.table;
-  const schemaText = sentinel.dataset.schema;
-  const btn = createBtn(tableName, schemaText);
+  const btn = createBtn(tableName, sentinel.dataset.schemaJson);
 
   if (lastDisplay && document.contains(lastDisplay) && now - lastDisplayTime < BATCH_MS) {
     lastDisplay.appendChild(document.createTextNode(', '));

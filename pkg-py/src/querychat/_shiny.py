@@ -971,7 +971,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         else:
             return self._require_vals().title.set(value)
 
-    def table(self, name: str) -> "TableAccessor":
+    def table(self, name: str) -> TableAccessor:
         """
         Get a per-table accessor with reactive state.
 

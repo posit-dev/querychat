@@ -138,22 +138,25 @@ def test_get_table_schema_all_documented() -> None:
     )
     df = pl.DataFrame({"amount": [10, 20], "status": ["pending", "shipped"]})
     executor = _make_executor(df, "orders")
-    schema = dd.get_table_schema("orders", executor, categorical_threshold=10)
-    assert "amount" in schema
-    assert "Range: 0 to 500" in schema
-    assert "status" in schema
-    assert "pending" in schema
-    assert "Description: Order total in USD." in schema
+    cols = dd.get_table_schema("orders", executor, categorical_threshold=10)
+    col_map = {c.name: c for c in cols}
+    assert "amount" in col_map
+    assert col_map["amount"].min_val == 0
+    assert col_map["amount"].max_val == 500
+    assert col_map["amount"].description == "Order total in USD."
+    assert "status" in col_map
+    assert "pending" in col_map["status"].categories
 
 
 def test_get_table_schema_no_documentation() -> None:
     dd = DataDict(tables={"orders": TableSpec(columns=[])})
     df = pl.DataFrame({"amount": [10, 20, 30], "status": ["a", "b", "a"]})
     executor = _make_executor(df, "orders")
-    schema = dd.get_table_schema("orders", executor, categorical_threshold=10)
+    cols = dd.get_table_schema("orders", executor, categorical_threshold=10)
+    col_names = [c.name for c in cols]
     # SQL fallback should populate stats
-    assert "amount" in schema
-    assert "status" in schema
+    assert "amount" in col_names
+    assert "status" in col_names
 
 
 def test_get_table_schema_mixed_coverage() -> None:
@@ -168,9 +171,11 @@ def test_get_table_schema_mixed_coverage() -> None:
     )
     df = pl.DataFrame({"amount": [10, 20], "status": ["a", "b"]})
     executor = _make_executor(df, "orders")
-    schema = dd.get_table_schema("orders", executor, categorical_threshold=10)
-    assert "Range: 0 to 999" in schema  # from data_dict
-    assert "status" in schema           # from SQL fallback
+    cols = dd.get_table_schema("orders", executor, categorical_threshold=10)
+    col_map = {c.name: c for c in cols}
+    assert col_map["amount"].min_val == 0  # from data_dict
+    assert col_map["amount"].max_val == 999
+    assert "status" in col_map            # from SQL fallback
 
 
 def test_to_prompt_dict_excludes_column_specs() -> None:

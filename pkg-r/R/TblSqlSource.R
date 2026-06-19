@@ -114,6 +114,24 @@ TblSqlSource <- R6::R6Class(
       )
     },
 
+    get_schema_result = function(categorical_threshold = 20, table_spec = NULL) {
+      details <- build_column_details_impl(
+        private$conn,
+        self$table_name,
+        categorical_threshold,
+        columns = colnames(private$tbl),
+        prep_query = self$prep_query,
+        table_spec = table_spec
+      )
+      list(
+        text = format_schema_from_details(
+          as.character(DBI::dbQuoteIdentifier(private$conn, self$table_name)),
+          details
+        ),
+        columns = details
+      )
+    },
+
     #' @description
     #' Execute a SQL query and return results
     #'

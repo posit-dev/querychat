@@ -3,7 +3,8 @@ GetSchemaResult <- S7::new_class(
   "GetSchemaResult",
   parent = ellmer::ContentToolResult,
   properties = list(
-    table_name = S7::class_character
+    table_name = S7::class_character,
+    columns_json = S7::new_property(S7::class_character, default = "")
   )
 )
 
@@ -33,12 +34,17 @@ tool_get_schema <- function(
           break
         }
       }
-      schema <- executor$get_schema(
+      schema_result <- executor$get_schema_result(
         table_name,
         categorical_threshold,
         table_spec = table_spec
       )
-      GetSchemaResult(value = schema, table_name = table_name)
+      columns_json <- jsonlite::toJSON(schema_result$columns, auto_unbox = TRUE)
+      GetSchemaResult(
+        value = schema_result$text,
+        table_name = table_name,
+        columns_json = as.character(columns_json)
+      )
     },
     name = "querychat_get_schema",
     description = interpolate_package("tool-get-schema.md"),
@@ -351,6 +357,7 @@ get_schema_result_display <- function(content) {
       class = "qc-schema-collector",
       `data-table` = content@table_name,
       `data-schema` = content@value,
+      `data-schema-json` = content@columns_json,
       style = "display:none"
     ),
     schema_dep()

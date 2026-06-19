@@ -270,7 +270,7 @@ def mod_server(
     if data_sources is None or executor is None:
         raise RuntimeError(
             "At least one table must be registered before the session starts. "
-            "Use add_table() or pass data_source to the QueryChat constructor."
+            "Call add_table() before server(), or pass the data to the QueryChat constructor."
         )
 
     for name, source in data_sources.items():

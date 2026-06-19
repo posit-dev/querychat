@@ -77,6 +77,9 @@ class QueryChatSystemPrompt:
         return "\n".join(lines)
 
     def _generate_data_dicts_yaml(self) -> str:
+        def escape_attr(val: str) -> str:
+            return val.replace('"', "&quot;")
+
         blocks: list[str] = []
         all_claimed: set[str] = set()
 
@@ -95,9 +98,9 @@ class QueryChatSystemPrompt:
                 if not d["tables"]:
                     del d["tables"]
 
-            attrs = f'name="{dd.name}"' if dd.name else ""
+            attrs = f'name="{escape_attr(dd.name)}"' if dd.name else ""
             if dd.description:
-                attrs += f' description="{dd.description}"'
+                attrs += f' description="{escape_attr(dd.description)}"'
 
             body = yaml.dump(d, default_flow_style=False, allow_unicode=True, sort_keys=False).rstrip() if d else ""
             blocks.append(f"<data-dict {attrs}>\n{body}\n</data-dict>" if body else f"<data-dict {attrs}/>")

@@ -47,10 +47,13 @@ class QueryExecutor(ABC):
         self, table_name: str, columns: list[ColumnMeta], categorical_threshold: int
     ) -> None: ...
 
-    def get_schema(self, table_name: str, categorical_threshold: int) -> str:
+    def get_column_details(self, table_name: str, categorical_threshold: int) -> list[ColumnMeta]:
         metas = self.get_column_metas(table_name)
         self.populate_column_stats(table_name, metas, categorical_threshold)
-        return format_schema(table_name, metas)
+        return metas
+
+    def get_schema(self, table_name: str, categorical_threshold: int) -> str:
+        return format_schema(table_name, self.get_column_details(table_name, categorical_threshold))
 
 
 class DuckDBExecutor(QueryExecutor):

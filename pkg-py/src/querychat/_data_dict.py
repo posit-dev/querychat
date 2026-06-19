@@ -5,9 +5,8 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel
 
-from ._datasource import ColumnMeta, format_schema
-
 if TYPE_CHECKING:
+    from ._datasource import ColumnMeta
     from ._query_executor import QueryExecutor
 
 
@@ -193,7 +192,7 @@ class DataDict(BaseModel):
         table_name: str,
         executor: QueryExecutor,
         categorical_threshold: int,
-    ) -> str:
+    ) -> list[ColumnMeta]:
         # Get authoritative column names + types via cheap LIMIT 0
         metas: list[ColumnMeta] = executor.get_column_metas(table_name)
 
@@ -226,7 +225,7 @@ class DataDict(BaseModel):
         if undocumented:
             executor.populate_column_stats(table_name, undocumented, categorical_threshold)
 
-        return format_schema(table_name, metas)
+        return metas
 
     @classmethod
     def from_yaml(cls, path: Path | str) -> DataDict:

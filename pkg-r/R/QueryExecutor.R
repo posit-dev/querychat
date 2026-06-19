@@ -35,6 +35,16 @@ QueryExecutor <- R6::R6Class(
         class = "not_implemented_error"
       )
     },
+    get_schema_result = function(
+      table_name,
+      categorical_threshold,
+      table_spec = NULL
+    ) {
+      cli::cli_abort(
+        "{.fn get_schema_result} must be implemented by subclass",
+        class = "not_implemented_error"
+      )
+    },
     cleanup = function() {
       invisible(NULL)
     }
@@ -127,6 +137,26 @@ DuckDBExecutor <- R6::R6Class(
       )
     },
 
+    get_schema_result = function(
+      table_name,
+      categorical_threshold,
+      table_spec = NULL
+    ) {
+      details <- build_column_details_impl(
+        private$conn,
+        table_name,
+        categorical_threshold,
+        table_spec = table_spec
+      )
+      list(
+        text = format_schema_from_details(
+          as.character(DBI::dbQuoteIdentifier(private$conn, table_name)),
+          details
+        ),
+        columns = details
+      )
+    },
+
     cleanup = function() {
       if (!is.null(private$conn) && DBI::dbIsValid(private$conn)) {
         DBI::dbDisconnect(private$conn, shutdown = TRUE)
@@ -170,6 +200,17 @@ DataSourceExecutor <- R6::R6Class(
       table_spec = NULL
     ) {
       private$data_sources[[table_name]]$get_schema(
+        categorical_threshold,
+        table_spec = table_spec
+      )
+    },
+
+    get_schema_result = function(
+      table_name,
+      categorical_threshold,
+      table_spec = NULL
+    ) {
+      private$data_sources[[table_name]]$get_schema_result(
         categorical_threshold,
         table_spec = table_spec
       )

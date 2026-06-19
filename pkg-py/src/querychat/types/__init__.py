@@ -9,6 +9,7 @@ from .._datasource import (
 from .._pin_source import PinSource
 from .._querychat_core import AppStateDict
 from .._shiny_module import ServerValues, TableState
+from .._table_accessor import TableAccessor
 from .._utils import UnsafeQueryError
 from .._viz_tools import VisualizeData, VisualizeResult
 from ..tools import UpdateDashboardData
@@ -23,6 +24,7 @@ __all__ = (
     "PolarsLazySource",
     "SQLAlchemySource",
     "ServerValues",
+    "TableAccessor",
     "TableState",
     "UnsafeQueryError",
     "UpdateDashboardData",

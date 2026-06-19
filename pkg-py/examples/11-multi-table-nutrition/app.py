@@ -139,6 +139,7 @@ def app_ui(request):
             ),
             col_widths=[3, 3, 3, 3],
             gap="1rem",
+            fill=False,
         ),
         ui.layout_columns(
             ui.card(

@@ -4,7 +4,7 @@ import json
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, Protocol, TypedDict, runtime_checkable
 
-from chatlas import ContentToolResult, Tool
+from chatlas import ContentToolRequest, ContentToolResult, Tool
 from htmltools import HTMLDependency, TagList, tags
 from pydantic import Field
 from shinychat import message_content_chunk
@@ -57,6 +57,16 @@ def _col_to_dict(col: ColumnMeta) -> dict[str, Any]:
         "categories": col.categories,
         "constraints": col.constraints,
     }
+
+
+_orig_request_handler = message_content_chunk.dispatch(ContentToolRequest)
+
+
+@message_content_chunk.register
+def _(request: ContentToolRequest) -> ChatMessage:
+    if request.name == "querychat_get_schema":
+        return ChatMessage(content="")
+    return _orig_request_handler(request)
 
 
 @message_content_chunk.register

@@ -12,9 +12,16 @@ GetSchemaResult <- S7::new_class(
 rlang::on_load({
   S7::method(contents_shinychat, GetSchemaResult) <- get_schema_result_display
 
-  orig_request_contents <- S7::method(contents_shinychat, ellmer::ContentToolRequest)
-  S7::method(contents_shinychat, ellmer::ContentToolRequest) <- function(content) {
-    if (identical(content@name, "querychat_get_schema")) return(NULL)
+  orig_request_contents <- S7::method(
+    contents_shinychat,
+    ellmer::ContentToolRequest
+  )
+  S7::method(contents_shinychat, ellmer::ContentToolRequest) <- function(
+    content
+  ) {
+    if (identical(content@name, "querychat_get_schema")) {
+      return(NULL)
+    }
     orig_request_contents(content)
   }
 })

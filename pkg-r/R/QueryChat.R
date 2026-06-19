@@ -113,8 +113,8 @@ QueryChat <- R6::R6Class(
       }
     },
 
-    auto_fill_data_description = function() {
-      if (length(private$.data_sources) != 1) {
+    auto_fill_data_description = function(sources = private$.data_sources) {
+      if (length(sources) != 1) {
         return()
       }
       if (private$.data_description_mode == "inferred") {
@@ -122,7 +122,7 @@ QueryChat <- R6::R6Class(
         private$.data_description_mode <- "empty"
       }
       if (private$.data_description_mode == "empty") {
-        desc <- private$.data_sources[[1]]$get_data_description()
+        desc <- sources[[1]]$get_data_description()
         if (nzchar(desc %||% "")) {
           private$.data_description <- desc
           private$.data_description_mode <- "inferred"
@@ -419,7 +419,7 @@ QueryChat <- R6::R6Class(
       next_sources <- private$.data_sources
       next_sources[[table_name]] <- normalized
 
-      private$auto_fill_data_description()
+      private$auto_fill_data_description(next_sources)
       tryCatch(
         {
           private$build_system_prompt(data_sources = next_sources)

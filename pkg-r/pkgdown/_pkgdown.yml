@@ -69,6 +69,8 @@ reference:
   contents:
   - querychat
   - QueryChat
+  - TableAccessor
+  - read_data_dict
 - title: Data sources
   contents:
   - ends_with("Source")

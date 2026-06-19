@@ -1,5 +1,5 @@
 # Main module UI function
-mod_ui <- function(id, ..., enable_cancel = TRUE) {
+mod_ui <- function(id, ..., enable_cancel = TRUE, allow_attachments = TRUE) {
   ns <- shiny::NS(id)
   htmltools::tagList(
     htmltools::htmlDependency(
@@ -15,6 +15,7 @@ mod_ui <- function(id, ..., enable_cancel = TRUE) {
       height = "100%",
       class = "querychat",
       enable_cancel = enable_cancel,
+      allow_attachments = allow_attachments,
       ...
     )
   )
@@ -139,8 +140,13 @@ mod_server <- function(
 
     append_stream_task <- shiny::ExtendedTask$new(
       function(client, user_input, controller = NULL) {
+        user_input_parts <- if (is.list(user_input)) {
+          user_input
+        } else {
+          list(user_input)
+        }
         stream <- client$stream_async(
-          user_input,
+          !!!user_input_parts,
           stream = "content",
           controller = controller
         )

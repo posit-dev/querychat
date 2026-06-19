@@ -30,17 +30,3 @@ Always use SQL for counting, averaging, summing, and other calculations—NEVER 
 **Multi-table queries:** Your schema includes multiple tables. You can reference any table in your queries and use JOINs when the data spans tables. Use the relationships described in the schema to determine join conditions.
 
 {{/multi_table}}
-
-Parameters
-----------
-query :
-    A valid {{db_type}} SQL SELECT statement. Must follow the database schema provided in the system prompt. Use clear column aliases (e.g., 'AVG(price) AS avg_price') and include SQL comments for complex logic. Subqueries and CTEs are encouraged for readability.
-collapsed :
-    Optional. If omitted, visibility follows the app-configured default behavior (typically collapsed). If you are unsure, omit this parameter. If you provide it explicitly, prefer true. Set to false only when the user explicitly asks to see the raw table immediately.
-_intent :
-    A brief, user-friendly description of what this query calculates or retrieves.
-
-Returns
--------
-:
-    The tabular data results from executing the SQL query. Present the key findings in your response — the tool result may be collapsed, so don't assume the user has seen the raw data.

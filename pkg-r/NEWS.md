@@ -1,5 +1,9 @@
 # querychat (development version)
 
+## New features
+
+* File attachments are now enabled by default in the Shiny chat UI. Users can attach images, PDFs, and text files to their messages and the LLM will receive them. Disable with `allow_attachments = FALSE` in `mod_ui()` or `QueryChat$ui()`. (#253)
+
 # querychat 0.3.0
 
 ## New features

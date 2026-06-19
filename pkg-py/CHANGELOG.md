@@ -27,6 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * The system prompt is now lighter: full schema is no longer embedded upfront. Instead the LLM fetches per-table schema on demand via the new `querychat_get_schema` tool — and only when it needs to. When a `DataDict` is provided, the tool skips columns that already have descriptions, so the LLM only pays for what isn't already documented. (#195)
 
+* File attachments are now enabled by default in the Shiny chat UI. Users can attach images, PDFs, and text files to their messages and the LLM will receive them. Disable with `allow_attachments=False` in `mod_ui()` or `QueryChat.ui()`. (#253)
+
 ### Breaking Changes
 
 * The `data_source` property has been removed. Use `qc.table("name").data_source` to read a table's data source, and `qc.add_table(df, "name", replace=True)` to replace it. The `data_source` parameter to `server()` (Shiny) has also been removed; call `add_table()` before `server()` instead. (#195)

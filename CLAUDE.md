@@ -148,9 +148,11 @@ Both R and Python implementations use an object-oriented architecture:
    - R: `pkg-r/inst/prompts/`
      - Main prompt (`prompt.md`)
      - Tool descriptions (`tool-query.md`, `tool-reset-dashboard.md`, `tool-update-dashboard.md`)
+     - `tool-*.md` files contain only the tool description — parameter descriptions belong in the `arguments` list in ellmer's tool definition
    - Python: `pkg-py/src/querychat/prompts/`
      - Main prompt (`prompt.md`)
      - Tool descriptions (`tool-query.md`, `tool-reset-dashboard.md`, `tool-update-dashboard.md`)
+     - `tool-*.md` files include `Parameters`/`Returns` sections — chatlas extracts parameter descriptions from the function `__doc__` string
 
 ### R Package Architecture
 

@@ -9,23 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
-* `QueryChat()` now supports **multiple related tables**. Register additional tables with `add_table()` and the LLM can reason across all of them — joins, cross-table filters, aggregations. Per-table reactive state (`df()`, `sql()`, `title()`) is accessible via `qc.table("name")`. (#195)
+* `QueryChat()` now supports **multiple related tables**. Register additional tables with `add_table()` and the LLM can reason across all of them — joins, cross-table filters, aggregations. Per-table reactive state (`df()`, `sql()`, `title()`) is accessible via `qc_vals.table("name")` on the value returned by `server()`. (#195)
 
   ```python
   qc = QueryChat(orders_df, "orders")
   qc.add_table(customers_df, "customers")
 
-  qc.table("orders").df()
-  qc.table("customers").sql()
+  qc_vals = qc.server()
+  qc_vals.table("orders").df()
+  qc_vals.table("customers").sql()
   ```
 
-* A new **`DataDict`** type lets you annotate columns with plain-English descriptions loaded from a YAML file. The LLM receives these descriptions when it fetches the schema, helping it interpret ambiguous or domain-specific column names without any extra prompting. (#195)
+* A new **`DataDict`** type — integrating with the [data-dict](https://data-dict.tidyverse.org/) spec — lets you annotate tables and columns with plain-English descriptions loaded from a YAML file. This is the preferred way to provide additional context for the data, especially when multiple tables are relevant. The LLM receives these descriptions when it fetches the schema, helping it interpret ambiguous or domain-specific column names without any extra prompting. (#195)
 
   ```python
-  qc = QueryChat(df, "sales", data_dict=DataDict.from_yaml("schema.yaml"))
+  QueryChat(data_dict="data_dict.yaml")
   ```
-
-* The system prompt is now lighter: full schema is no longer embedded upfront. Instead the LLM fetches per-table schema on demand via the new `querychat_get_schema` tool — and only when it needs to. When a `DataDict` is provided, the tool skips columns that already have descriptions, so the LLM only pays for what isn't already documented. (#195)
 
 * File attachments are now enabled by default in the Shiny chat UI. Users can attach images, PDFs, and text files to their messages and the LLM will receive them. Disable with `allow_attachments=False` in `mod_ui()` or `QueryChat.ui()`. (#253)
 
@@ -35,7 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Improvements
 
-* `data_description` is superseded by `data_dict` for new code; existing usage continues to work without any warnings. (#195)
+* The system prompt is now lighter: full schema is no longer embedded upfront. Instead the LLM fetches per-table schema on demand via the new `querychat_get_schema` tool — and only when it needs to. When a `DataDict` is provided, the tool skips columns that already have descriptions, so the LLM only pays for what isn't already documented. (#195)
 * The query tool result card now starts collapsed by default. Users can still expand it to see the SQL query and results. Set `QUERYCHAT_TOOL_DETAILS=expanded` to restore the previous behavior. (#239)
 
 ## [0.6.1] - 2026-05-26
@@ -105,8 +104,6 @@ Each framework's `QueryChat` provides `.app()` for quick standalone apps and `.u
   * Note that `polars` or `pandas` will be needed to realize a `sqlalchemy` connection query as a dataframe. Install with `pip install querychat[pandas]` or `pip install querychat[polars]`
 
 ### New features
-
-* Added multi-table support. Use `qc.add_table(df, "table_name")` to register additional tables after construction, then write cross-table SQL (JOINs, subqueries) in queries. Access per-table state via `qc.table("name")`. All tables must share the same backend type (e.g., all pandas DataFrames or all SQLAlchemy tables on the same engine).
 
 * Added `PolarsLazySource` to support Polars LazyFrames as data sources. Data stays lazy until the render boundary, enabling efficient handling of large datasets. Pass a `polars.LazyFrame` directly to `QueryChat()` and queries will be executed lazily via Polars' SQLContext.
 

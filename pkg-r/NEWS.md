@@ -2,7 +2,32 @@
 
 ## New features
 
+* `QueryChat$new()` now supports **multiple related tables**. Register additional tables with `$add_table()` and the LLM can reason across all of them — joins, cross-table filters, aggregations. Per-table reactive state (`$df()`, `$sql()`, `$title()`) is accessible via `qc_vals$table("name")` on the list returned by `$server()`. (#195)
+
+  ```r
+  qc <- QueryChat$new(orders_df, "orders")
+  qc$add_table(customers_df, "customers")
+
+  qc_vals <- qc$server()
+  qc_vals$table("orders")$df()
+  qc_vals$table("customers")$sql()
+  ```
+
+* A new **`data_dict`** parameter — integrating with the [data-dict](https://data-dict.tidyverse.org/) spec — lets you annotate tables and columns with plain-English descriptions loaded from a YAML file. This is the preferred way to provide additional context for the data, especially when multiple tables are relevant. The LLM receives these descriptions when it fetches the schema, helping it interpret ambiguous or domain-specific column names without any extra prompting. (#195)
+
+  ```r
+  QueryChat$new(data_dict = "data_dict.yaml")
+  ```
+
 * File attachments are now enabled by default in the Shiny chat UI. Users can attach images, PDFs, and text files to their messages and the LLM will receive them. Disable with `allow_attachments = FALSE` in `mod_ui()` or `QueryChat$ui()`. (#253)
+
+## Breaking changes
+
+* The `$data_source` property has been removed. Use `qc$table("name")$data_source` to read a table's data source, and `qc$add_table(df, "name", replace = TRUE)` to replace it. The `data_source` parameter to `$server()` has also been removed; call `$add_table()` before `$server()` instead. (#195)
+
+## Improvements
+
+* The system prompt is now lighter: full schema is no longer embedded upfront. Instead the LLM fetches per-table schema on demand via the new `querychat_get_schema` tool — and only when it needs to. When a `data_dict` is provided, the tool skips columns that already have descriptions, so the LLM only pays for what isn't already documented. (#195)
 
 # querychat 0.3.0
 

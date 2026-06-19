@@ -113,7 +113,11 @@ mod_server <- function(
 
     append_stream_task <- shiny::ExtendedTask$new(
       function(client, user_input, controller = NULL) {
-        user_input_parts <- if (is.list(user_input)) user_input else list(user_input)
+        user_input_parts <- if (is.list(user_input)) {
+          user_input
+        } else {
+          list(user_input)
+        }
         stream <- client$stream_async(
           !!!user_input_parts,
           stream = "content",

@@ -46,6 +46,7 @@ mtcars_source$cleanup()
     \item \href{#method-TblSqlSource-initialize}{\code{TblSqlSource$new()}}
     \item \href{#method-TblSqlSource-get_db_type}{\code{TblSqlSource$get_db_type()}}
     \item \href{#method-TblSqlSource-get_schema}{\code{TblSqlSource$get_schema()}}
+    \item \href{#method-TblSqlSource-get_schema_result}{\code{TblSqlSource$get_schema_result()}}
     \item \href{#method-TblSqlSource-execute_query}{\code{TblSqlSource$execute_query()}}
     \item \href{#method-TblSqlSource-test_query}{\code{TblSqlSource$test_query()}}
     \item \href{#method-TblSqlSource-prep_query}{\code{TblSqlSource$prep_query()}}
@@ -119,6 +120,17 @@ column to be considered categorical}
   }
   \subsection{Returns}{
     A string containing schema information formatted for LLM prompts
+  }
+}
+
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-TblSqlSource-get_schema_result"></a>}}
+\if{latex}{\out{\hypertarget{method-TblSqlSource-get_schema_result}{}}}
+\subsection{\code{TblSqlSource$get_schema_result()}}{
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{TblSqlSource$get_schema_result(categorical_threshold = 20, table_spec = NULL)}
+    \if{html}{\out{</div>}}
   }
 }
 

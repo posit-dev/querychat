@@ -34,6 +34,7 @@ MyDataSource <- R6::R6Class(
   \itemize{
     \item \href{#method-DataSource-get_db_type}{\code{DataSource$get_db_type()}}
     \item \href{#method-DataSource-get_schema}{\code{DataSource$get_schema()}}
+    \item \href{#method-DataSource-get_schema_result}{\code{DataSource$get_schema_result()}}
     \item \href{#method-DataSource-execute_query}{\code{DataSource$execute_query()}}
     \item \href{#method-DataSource-test_query}{\code{DataSource$test_query()}}
     \item \href{#method-DataSource-get_data}{\code{DataSource$get_data()}}
@@ -77,6 +78,17 @@ column to be considered categorical}
   }
   \subsection{Returns}{
     A string containing schema information formatted for LLM prompts
+  }
+}
+
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-DataSource-get_schema_result"></a>}}
+\if{latex}{\out{\hypertarget{method-DataSource-get_schema_result}{}}}
+\subsection{\code{DataSource$get_schema_result()}}{
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{DataSource$get_schema_result(categorical_threshold = 20, table_spec = NULL)}
+    \if{html}{\out{</div>}}
   }
 }
 

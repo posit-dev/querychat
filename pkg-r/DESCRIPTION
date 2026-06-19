@@ -34,7 +34,7 @@ Imports:
     rlang (>= 1.1.0),
     S7,
     shiny,
-    shinychat (>= 0.4.0),
+    shinychat (> 0.4.0),
     utils,
     whisker,
     yaml
@@ -55,6 +55,8 @@ Suggests:
     testthat (>= 3.0.0),
     V8,
     withr
+Remotes:
+    posit-dev/shinychat
 VignetteBuilder:
     knitr
 Config/roxygen2/version: 8.0.0

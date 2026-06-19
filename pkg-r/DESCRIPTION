@@ -56,10 +56,10 @@ Suggests:
     testthat (>= 3.0.0),
     V8,
     withr
-Remotes:
-    posit-dev/shinychat/pkg-r
 VignetteBuilder:
     knitr
+Remotes:
+    posit-dev/shinychat/pkg-r
 Config/roxygen2/version: 8.0.0
 Config/testthat/edition: 3
 Config/testthat/parallel: true

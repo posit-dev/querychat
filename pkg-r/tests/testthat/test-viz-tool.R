@@ -14,8 +14,7 @@ describe("tool_visualize_dashboard()", {
     tool <- tool_visualize_dashboard(
       ds,
       session = session,
-      update_fn = function(data) {
-      }
+      update_fn = function(data) {}
     )
     expect_equal(tool@name, "querychat_visualize")
   })
@@ -33,15 +32,13 @@ describe("tool_visualize_dashboard()", {
     with_query <- tool_visualize_dashboard(
       ds,
       session = session,
-      update_fn = function(data) {
-      },
+      update_fn = function(data) {},
       has_tool_query = TRUE
     )
     without_query <- tool_visualize_dashboard(
       ds,
       session = session,
-      update_fn = function(data) {
-      },
+      update_fn = function(data) {},
       has_tool_query = FALSE
     )
 
@@ -74,8 +71,7 @@ describe("tool_visualize_dashboard()", {
     tool <- tool_visualize_dashboard(
       ds,
       session = session,
-      update_fn = function(data) {
-      }
+      update_fn = function(data) {}
     )
 
     expect_match(
@@ -97,8 +93,7 @@ describe("tool_visualize_dashboard()", {
     tool <- tool_visualize_dashboard(
       ds,
       session = NULL,
-      update_fn = function(data) {
-      }
+      update_fn = function(data) {}
     )
 
     result <- tool(
@@ -177,8 +172,7 @@ describe("tool_visualize_dashboard()", {
     tool <- tool_visualize_dashboard(
       ds,
       session = session,
-      update_fn = function(data) {
-      }
+      update_fn = function(data) {}
     )
 
     expect_warning(
@@ -208,8 +202,7 @@ describe("tool_visualize_dashboard()", {
     tool <- tool_visualize_dashboard(
       ds,
       session = session,
-      update_fn = function(data) {
-      }
+      update_fn = function(data) {}
     )
     expect_error(
       tool(
@@ -232,8 +225,7 @@ describe("tool_visualize_dashboard()", {
     tool <- tool_visualize_dashboard(
       ds,
       session = session,
-      update_fn = function(data) {
-      }
+      update_fn = function(data) {}
     )
     expect_error(
       tool(
@@ -283,8 +275,7 @@ describe("tool_visualize_dashboard()", {
     tool <- tool_visualize_dashboard(
       ds,
       session = session,
-      update_fn = function(data) {
-      }
+      update_fn = function(data) {}
     )
 
     expect_error(
@@ -324,8 +315,7 @@ describe("tool_visualize_dashboard()", {
     tool <- tool_visualize_dashboard(
       ds,
       session = session,
-      update_fn = function(data) {
-      }
+      update_fn = function(data) {}
     )
 
     err <- tryCatch(
@@ -372,8 +362,7 @@ describe("tool_visualize_dashboard()", {
     tool <- tool_visualize_dashboard(
       ds,
       session = session,
-      update_fn = function(data) {
-      }
+      update_fn = function(data) {}
     )
 
     suppressWarnings(tool(
@@ -408,8 +397,7 @@ describe("tool_visualize_dashboard()", {
     impl <- tool_visualize_impl(
       ds,
       session = session,
-      update_fn = function(data) {
-      }
+      update_fn = function(data) {}
     )
     expect_error(
       impl(

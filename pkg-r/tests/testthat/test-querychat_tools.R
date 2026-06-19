@@ -12,13 +12,15 @@ test_that("tool_update_dashboard() checks update_fn inputs", {
 
   expect_snapshot(error = TRUE, {
     tool_update_dashboard(executor, "test_table", update_fn = NULL)
-    tool_update_dashboard(executor, "test_table", update_fn = function(query) {
-    })
     tool_update_dashboard(
       executor,
       "test_table",
-      update_fn = function(title, extra) {
-      }
+      update_fn = function(query) {}
+    )
+    tool_update_dashboard(
+      executor,
+      "test_table",
+      update_fn = function(title, extra) {}
     )
   })
 })
@@ -358,8 +360,7 @@ describe("tool_update_dashboard()", {
     tool <- tool_update_dashboard(
       executor,
       table_names = "test_table",
-      update_fn = function(query, title, table) {
-      }
+      update_fn = function(query, title, table) {}
     )
 
     expect_s3_class(tool, "ellmer::ToolDef")
@@ -373,8 +374,7 @@ describe("tool_update_dashboard()", {
     tool <- tool_update_dashboard(
       executor,
       table_names = "test_table",
-      update_fn = function(query, title, table) {
-      }
+      update_fn = function(query, title, table) {}
     )
 
     # DataFrameSource uses DuckDB
@@ -410,8 +410,7 @@ describe("tool_update_dashboard()", {
 describe("tool_reset_dashboard()", {
   it("returns an ellmer tool object", {
     tool <- tool_reset_dashboard(
-      reset_fn = function(table) {
-      },
+      reset_fn = function(table) {},
       table_names = c("test_table")
     )
 
@@ -438,8 +437,7 @@ describe("tool_update_dashboard_impl()", {
     impl_fn <- tool_update_dashboard_impl(
       executor,
       table_names = "test_table",
-      update_fn = function(query, title, table) {
-      }
+      update_fn = function(query, title, table) {}
     )
 
     expect_type(impl_fn, "closure")

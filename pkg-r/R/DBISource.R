@@ -109,7 +109,12 @@ DBISource <- R6::R6Class(
     #' @return A string describing the schema
     get_schema = function(categorical_threshold = 20, table_spec = NULL) {
       check_number_whole(categorical_threshold, min = 1)
-      get_schema_impl(private$conn, self$table_name, categorical_threshold, table_spec = table_spec)
+      get_schema_impl(
+        private$conn,
+        self$table_name,
+        categorical_threshold,
+        table_spec = table_spec
+      )
     },
 
     #' @description
@@ -307,7 +312,9 @@ get_schema_impl <- function(
   text_cols_to_query <- character(0)
 
   for (col_name in text_columns) {
-    if (!is.null(documented[[col_name]][["values"]])) next
+    if (!is.null(documented[[col_name]][["values"]])) {
+      next
+    }
     distinct_count_key <- paste0(col_name, "__distinct_count")
     if (
       distinct_count_key %in%
@@ -359,12 +366,19 @@ get_schema_impl <- function(
       column_info <- paste0(column_info, " [", spec[["units"]], "]")
     }
     if (!is.null(spec[["description"]])) {
-      column_info <- paste(column_info, paste0("  Description: ", spec[["description"]]), sep = "\n")
+      column_info <- paste(
+        column_info,
+        paste0("  Description: ", spec[["description"]]),
+        sep = "\n"
+      )
     }
     if (length(spec[["constraints"]]) > 0) {
       column_info <- paste(
         column_info,
-        paste0("  Constraints: ", paste(spec[["constraints"]], collapse = ", ")),
+        paste0(
+          "  Constraints: ",
+          paste(spec[["constraints"]], collapse = ", ")
+        ),
         sep = "\n"
       )
     }
@@ -372,22 +386,27 @@ get_schema_impl <- function(
     if (col %in% numeric_columns) {
       if (!is.null(spec[["range"]])) {
         range_info <- paste0(
-          "  Range: ", spec[["range"]][["min"]] %||% "?",
-          " to ", spec[["range"]][["max"]] %||% "?"
+          "  Range: ",
+          spec[["range"]][["min"]] %||% "?",
+          " to ",
+          spec[["range"]][["max"]] %||% "?"
         )
         column_info <- paste(column_info, range_info, sep = "\n")
       } else {
         min_key <- paste0(col, "__min")
         max_key <- paste0(col, "__max")
         if (
-          min_key %in% names(column_stats) &&
+          min_key %in%
+            names(column_stats) &&
             max_key %in% names(column_stats) &&
             !is.na(column_stats[[min_key]]) &&
             !is.na(column_stats[[max_key]])
         ) {
           range_info <- paste0(
-            "  Range: ", column_stats[[min_key]],
-            " to ", column_stats[[max_key]]
+            "  Range: ",
+            column_stats[[min_key]],
+            " to ",
+            column_stats[[max_key]]
           )
           column_info <- paste(column_info, range_info, sep = "\n")
         }
@@ -397,12 +416,20 @@ get_schema_impl <- function(
     if (col %in% text_columns) {
       if (!is.null(spec[["values"]])) {
         values_str <- paste0("'", spec[["values"]], "'", collapse = ", ")
-        column_info <- paste(column_info, paste0("  Categorical values: ", values_str), sep = "\n")
+        column_info <- paste(
+          column_info,
+          paste0("  Categorical values: ", values_str),
+          sep = "\n"
+        )
       } else if (col %in% names(categorical_values)) {
         values <- categorical_values[[col]]
         if (length(values) > 0) {
           values_str <- paste0("'", values, "'", collapse = ", ")
-          column_info <- paste(column_info, paste0("  Categorical values: ", values_str), sep = "\n")
+          column_info <- paste(
+            column_info,
+            paste0("  Categorical values: ", values_str),
+            sep = "\n"
+          )
         }
       }
     }

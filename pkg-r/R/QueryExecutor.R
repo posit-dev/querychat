@@ -25,7 +25,11 @@ QueryExecutor <- R6::R6Class(
         class = "not_implemented_error"
       )
     },
-    get_schema = function(table_name, categorical_threshold, table_spec = NULL) {
+    get_schema = function(
+      table_name,
+      categorical_threshold,
+      table_spec = NULL
+    ) {
       cli::cli_abort(
         "{.fn get_schema} must be implemented by subclass",
         class = "not_implemented_error"
@@ -110,8 +114,17 @@ DuckDBExecutor <- R6::R6Class(
 
     get_db_type = function() "DuckDB",
 
-    get_schema = function(table_name, categorical_threshold, table_spec = NULL) {
-      get_schema_impl(private$conn, table_name, categorical_threshold, table_spec = table_spec)
+    get_schema = function(
+      table_name,
+      categorical_threshold,
+      table_spec = NULL
+    ) {
+      get_schema_impl(
+        private$conn,
+        table_name,
+        categorical_threshold,
+        table_spec = table_spec
+      )
     },
 
     cleanup = function() {
@@ -151,8 +164,15 @@ DataSourceExecutor <- R6::R6Class(
       private$primary$get_db_type()
     },
 
-    get_schema = function(table_name, categorical_threshold, table_spec = NULL) {
-      private$data_sources[[table_name]]$get_schema(categorical_threshold, table_spec = table_spec)
+    get_schema = function(
+      table_name,
+      categorical_threshold,
+      table_spec = NULL
+    ) {
+      private$data_sources[[table_name]]$get_schema(
+        categorical_threshold,
+        table_spec = table_spec
+      )
     },
 
     cleanup = function() {

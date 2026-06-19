@@ -107,8 +107,11 @@ QueryChatSystemPrompt <- R6::R6Class(
         schema = schema,
         has_data_dicts = has_dicts,
         data_dicts = if (has_dicts) self$generate_data_dicts_yaml() else "",
-        tables_overview = if (!has_dicts) self$generate_tables_overview() else
-          "",
+        tables_overview = if (!has_dicts) {
+          self$generate_tables_overview()
+        } else {
+          ""
+        },
         data_description = self$data_description,
         extra_instructions = self$extra_instructions,
         has_tool_update = if ("update" %in% tools) "true",
@@ -140,8 +143,9 @@ QueryChatSystemPrompt <- R6::R6Class(
       lines <- character()
       for (name in names(self$data_sources)) {
         source <- self$data_sources[[name]]
-        desc <- if (is.null(self$data_description))
+        desc <- if (is.null(self$data_description)) {
           source$get_data_description()
+        }
         if (nzchar(desc %||% "")) {
           lines <- c(lines, sprintf("- %s: %s", name, desc))
         } else {
@@ -200,8 +204,11 @@ QueryChatSystemPrompt <- R6::R6Class(
           desc <- if (is.null(self$data_description)) {
             self$data_sources[[name]]$get_data_description()
           }
-          tables[[name]] <- if (nzchar(desc %||% ""))
-            list(description = desc) else NULL
+          tables[[name]] <- if (nzchar(desc %||% "")) {
+            list(description = desc)
+          } else {
+            NULL
+          }
         }
         yaml_str <- yaml::as.yaml(list(tables = tables), column.major = FALSE)
         yaml_str <- sub("\n$", "", yaml_str)

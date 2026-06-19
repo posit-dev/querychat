@@ -10,7 +10,9 @@ GetSchemaResult <- S7::new_class(
 )
 
 #' @importFrom shinychat contents_shinychat
-rlang::on_load(S7::method(contents_shinychat, GetSchemaResult) <- get_schema_result_display)
+rlang::on_load(
+  S7::method(contents_shinychat, GetSchemaResult) <- get_schema_result_display
+)
 
 tool_get_schema <- function(
   data_dicts,
@@ -33,7 +35,11 @@ tool_get_schema <- function(
           break
         }
       }
-      schema <- executor$get_schema(table_name, categorical_threshold, table_spec = table_spec)
+      schema <- executor$get_schema(
+        table_name,
+        categorical_threshold,
+        table_spec = table_spec
+      )
       GetSchemaResult(value = schema, table_name = table_name)
     },
     name = "querychat_get_schema",
@@ -55,8 +61,7 @@ tool_get_schema <- function(
 tool_update_dashboard <- function(
   executor,
   table_names,
-  update_fn = function(query, title, table) {
-  }
+  update_fn = function(query, title, table) {}
 ) {
   check_function(update_fn)
   has_args <- intersect(fn_fmls_names(update_fn), c("query", "title", "table"))
@@ -124,8 +129,7 @@ tool_update_dashboard_impl <- function(executor, table_names, update_fn) {
 }
 
 tool_reset_dashboard <- function(
-  reset_fn = function(table) {
-  },
+  reset_fn = function(table) {},
   table_names
 ) {
   check_function(reset_fn)

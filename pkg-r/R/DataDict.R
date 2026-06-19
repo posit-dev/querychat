@@ -44,7 +44,11 @@ data_dict_to_prompt_list <- function(dd) {
   }
   if (length(dd[["tables"]]) > 0) {
     result[["tables"]] <- lapply(dd[["tables"]], function(ts) {
-      if (is.null(ts[["description"]])) NULL else list(description = ts[["description"]])
+      if (is.null(ts[["description"]])) {
+        NULL
+      } else {
+        list(description = ts[["description"]])
+      }
     })
   }
   if (length(dd[["relationships"]]) > 0) {

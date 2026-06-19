@@ -103,7 +103,10 @@ describe("data_dict_to_prompt_list()", {
     )
     result <- data_dict_to_prompt_list(dd)
     expect_true("tables" %in% names(result))
-    expect_equal(result[["tables"]][["orders"]][["description"]], "Orders table")
+    expect_equal(
+      result[["tables"]][["orders"]][["description"]],
+      "Orders table"
+    )
     expect_null(result[["tables"]][["orders"]][["columns"]])
     expect_null(result[["tables"]][["orders"]][["details"]])
   })
@@ -111,7 +114,11 @@ describe("data_dict_to_prompt_list()", {
   it("includes relationships as list of non-NULL fields", {
     dd <- list(
       relationships = list(
-        list(join = "a.id = b.id", description = "A to B", cardinality = "one-to-many")
+        list(
+          join = "a.id = b.id",
+          description = "A to B",
+          cardinality = "one-to-many"
+        )
       )
     )
     result <- data_dict_to_prompt_list(dd)

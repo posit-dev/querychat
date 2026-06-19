@@ -207,8 +207,7 @@ test_that("restored viz widgets survive a second bookmark cycle", {
   }
 
   local_mocked_bindings(
-    chat_restore = function(id, chat, session) {
-    },
+    chat_restore = function(id, chat, session) {},
     .package = "shinychat"
   )
   local_mocked_bindings(

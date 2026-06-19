@@ -88,6 +88,21 @@ DataFrameSource <- R6::R6Class(
         private$conn <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
         DBI::dbWriteTable(private$conn, table_name, df)
       }
+    },
+
+    #' @description
+    #' Disconnect from the database and shut down the DuckDB instance if used.
+    #'
+    #' @return NULL (invisibly)
+    cleanup = function() {
+      if (!is.null(private$conn) && DBI::dbIsValid(private$conn)) {
+        if (inherits(private$conn, "duckdb_connection")) {
+          DBI::dbDisconnect(private$conn, shutdown = TRUE)
+        } else {
+          DBI::dbDisconnect(private$conn)
+        }
+      }
+      invisible(NULL)
     }
   )
 )

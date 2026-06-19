@@ -21,16 +21,3 @@ The `table` parameter specifies which table to filter. Use the table name exactl
 **Multi-table filters:** When filtering a table, you may reference other tables in WHERE clauses, subqueries, or CTEs (e.g., filtering orders by a condition on customers). The result must still return all columns of the target table specified by the `table` parameter.
 
 {{/multi_table}}
-Parameters
-----------
-table :
-    The name of the table to filter. Must match exactly one of the table names from the schema.
-query :
-    A {{db_type}} SQL SELECT query that MUST return all existing schema columns (use SELECT * or explicitly list all columns). May include additional computed columns, subqueries, CTEs, WHERE clauses, ORDER BY, and any {{db_type}}-supported SQL functions.
-title :
-    A brief title for display purposes, summarizing the intent of the SQL query.
-
-Returns
--------
-:
-    A confirmation that the dashboard was updated successfully, or the error that occurred when running the SQL query. The results of the query will update the data shown in the dashboard.

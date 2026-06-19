@@ -5,13 +5,3 @@ Resets the dashboard to use the original unfiltered dataset and clears any custo
 If the user asks to reset the dashboard, call this tool with the relevant table name and no other response. The reset action will be obvious to the user.
 
 If the user asks to start over, call this tool with the relevant table name and then provide a new set of suggestions for next steps. Include suggestions that encourage exploration of the data in new directions.
-
-Parameters
-----------
-table
-    The name of the table to reset.
-
-Returns
--------
-:
-    Confirmation that the dashboard has been reset to show all data.

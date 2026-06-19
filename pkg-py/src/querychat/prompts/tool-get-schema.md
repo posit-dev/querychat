@@ -11,3 +11,8 @@ Parameters
 ----------
 table_name
     The name of the table to retrieve schema for. Must match one of the table names shown in the system prompt.
+
+Returns
+-------
+:
+    Full column details for the specified table, including column names, types, value ranges, categorical values, and descriptions.

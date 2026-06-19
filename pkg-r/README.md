@@ -59,8 +59,7 @@ With the [visualization tool](https://posit-dev.github.io/querychat/r/articles/v
 
 ## Custom apps
 
-querychat is designed to be highly extensible -- it provides programmatic access to the chat interface, the filtered/sorted data frame, SQL queries, and more.
-This makes it easy to build custom web apps that leverage natural language interaction with your data.
+querychat is designed to be highly extensible — it provides programmatic access to the chat interface, the filtered/sorted data frame, SQL queries, and more. You can register [multiple related tables](https://posit-dev.github.io/querychat/r/articles/build.html#multiple-tables) for cross-table queries and joins, and connect all of it to your own visualizations and layouts.
 For example, [here](https://github.com/posit-conf-2025/llm/blob/main/_solutions/25_querychat/25_querychat_02-end-app.R)'s a bespoke app for exploring Airbnb listings in Ashville, NC:
 
 ![](man/figures/airbnb.png){alt="A custom app for exploring Airbnb listings, powered by querychat." class="shadow rounded mb-3"}
@@ -69,9 +68,9 @@ To learn more, see [Build an app](https://posit-dev.github.io/querychat/r/articl
 
 ## How it works
 
-querychat uses LLMs to translate natural language into SQL queries. Models of all sizes, from small ones you can run locally to large frontier models from major AI providers, are remarkably effective at this task. But even the best models need to understand your data's overall structure to perform well.
+querychat uses LLMs to translate natural language into SQL queries. Models of all sizes, from small ones you can run locally to large frontier models from major AI providers, are remarkably effective at this task. But even the best models need to understand your data's structure to perform well.
 
-To address this, querychat includes schema metadata -- column names, types, ranges, categorical values -- in the LLM's [system prompt](https://posit-dev.github.io/querychat/r/articles/context.html). Importantly, querychat **does not** send raw data to the LLM; it shares only enough structural information for the model to generate accurate queries. When the LLM produces a query, querychat executes it in a SQL database (DuckDB[^duckdb], by default) to obtain precise results.
+To address this, querychat provides a schema retrieval [tool](https://posit-dev.github.io/querychat/r/articles/tools.html#schema-retrieval) that the LLM calls on demand to learn about table structure — column names, types, ranges, and categorical values. You can further improve results by providing a [data dictionary](https://posit-dev.github.io/querychat/r/articles/context.html#data-dictionary) with column descriptions, table relationships, and domain terminology. Importantly, querychat **does not** send raw data to the LLM; it shares only enough structural information for the model to generate accurate queries. When the LLM produces a query, querychat executes it in a SQL database (DuckDB[^duckdb], by default) to obtain precise results.
 
 This design makes querychat reliable, safe, and reproducible:
 

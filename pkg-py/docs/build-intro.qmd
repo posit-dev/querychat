@@ -4,21 +4,14 @@ title: Intro
 
 While the `.app()` method is a great [quick start](index.qmd#quick-start) for exploring data, building custom apps with querychat unlocks the full power of integrating natural language data exploration with custom visualizations, layouts, and interactivity.
 
-querychat is a particularly good fit for apps that have:
-
-1. **A single data source** (or a set of related tables that can be joined)
-2. **Multiple filters** that let users slice and explore the data in different ways
-3. **Several visualizations and outputs** that all depend on the same filtered data
-
-In these apps, querychat can replace or augment your filtering UI by allowing users to describe what they want to see in natural language. Instead of building complex filter controls, users can simply ask questions like "show me customers from California who spent over $1000 last quarter" and querychat will generate the appropriate SQL query.
+querychat lets users ask questions of their data in plain language — filtering, sorting, summarizing, joining across tables, and creating visualizations — all without needing to write SQL or navigate complex filter UIs. You can use it as the primary exploration interface in a standalone app, or embed it alongside curated views in an existing dashboard to let users go deeper than the views you designed.
 
 This is especially valuable when:
 
 - Your data has many columns and building a UI for all possible filters would be overwhelming
 - Users want to explore ad-hoc combinations of filters that you didn't anticipate
-- You want to make data exploration more accessible to users who aren't comfortable with traditional filtering UIs
-
-If you have an existing app with a data frame that flows through multiple outputs, querychat can be a natural addition to provide an alternative way to filter that data.
+- You have multiple related tables that users may want to query and join
+- You want to make data exploration more accessible to non-technical users
 
 ## General pattern
 

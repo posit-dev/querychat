@@ -33,7 +33,8 @@ class StreamlitTableAccessor(TableAccessor):
     """Per-table accessor for Streamlit QueryChat. Returned by ``qc.table(name)``."""
 
     def __init__(self, querychat: QueryChat, table_name: str) -> None:
-        super().__init__(querychat, table_name)
+        super().__init__(table_name, querychat._data_sources[table_name])
+        self._querychat_ref = querychat
 
     def df(self) -> Any:
         """
@@ -41,7 +42,7 @@ class StreamlitTableAccessor(TableAccessor):
 
         Returns the full dataset when no SQL filter is active.
         """
-        qc: QueryChat = self._querychat  # type: ignore[assignment]
+        qc = self._querychat_ref
         state = qc._get_state()
         ts = state._table_states.get(self._table_name, {})
         sql = ts.get("sql")
@@ -56,13 +57,13 @@ class StreamlitTableAccessor(TableAccessor):
 
     def sql(self) -> str | None:
         """Return the current SQL filter for this table, or None."""
-        qc: QueryChat = self._querychat  # type: ignore[assignment]
+        qc = self._querychat_ref
         state = qc._get_state()
         return state._table_states.get(self._table_name, {}).get("sql")
 
     def title(self) -> str | None:
         """Return the current filter title for this table, or None."""
-        qc: QueryChat = self._querychat  # type: ignore[assignment]
+        qc = self._querychat_ref
         state = qc._get_state()
         return state._table_states.get(self._table_name, {}).get("title")
 

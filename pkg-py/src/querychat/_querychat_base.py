@@ -370,7 +370,7 @@ class QueryChatBase(Generic[IntoFrameT]):
             available = ", ".join(self._data_sources.keys())
             raise ValueError(f"Table '{name}' not found. Available: {available}")
 
-        return TableAccessor(self, name)
+        return TableAccessor(name, self._data_sources[name])
 
     def add_table(
         self,

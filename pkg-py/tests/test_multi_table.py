@@ -299,6 +299,27 @@ class TestTableAccessor:
         assert customers_accessor.table_name == "customers"
         assert orders_accessor.data_source is not customers_accessor.data_source
 
+    def test_config_only_table_df_raises(self, orders_df):
+        """qc.table() is config-only: df() raises with guidance."""
+        qc = QueryChat(orders_df, "orders", greeting="Hello!")
+        accessor = qc.table("orders")
+        with pytest.raises(RuntimeError, match=r"qc_vals\.table"):
+            accessor.df()
+
+    def test_config_only_table_sql_raises(self, orders_df):
+        """qc.table() is config-only: sql() raises with guidance."""
+        qc = QueryChat(orders_df, "orders", greeting="Hello!")
+        accessor = qc.table("orders")
+        with pytest.raises(RuntimeError, match=r"qc_vals\.table"):
+            accessor.sql()
+
+    def test_config_only_table_title_raises(self, orders_df):
+        """qc.table() is config-only: title() raises with guidance."""
+        qc = QueryChat(orders_df, "orders", greeting="Hello!")
+        accessor = qc.table("orders")
+        with pytest.raises(RuntimeError, match=r"qc_vals\.table"):
+            accessor.title()
+
 
 class TestMultiTableSystemPrompt:
     """Tests for multi-table system prompt generation."""
@@ -660,6 +681,7 @@ class TestMultiTableGuardrails:
                 "customers": TableState(sql=customers_sql, title=customers_title, df=customers_df_calc),
             },
             client=None,  # type: ignore[arg-type]
+            data_sources={},
         )
 
         with pytest.raises(AttributeError, match="multiple tables"):
@@ -698,12 +720,90 @@ class TestMultiTableGuardrails:
                 "customers": TableState(sql=customers_sql, title=customers_title, df=lambda: customers_df),
             },
             client=None,  # type: ignore[arg-type]
+            data_sources={},
         )
 
         orders_state = vals.tables["orders"]
         assert orders_state.df() is orders_df
         customers_state = vals.tables["customers"]
         assert customers_state.df() is customers_df
+
+    def test_server_values_table_names(self, orders_df, customers_df):
+        from querychat._querychat_base import normalize_data_source
+        from querychat._shiny_module import (
+            ServerValues,
+            TableState,
+            _MultiTableBlockedReactive,
+        )
+
+        from shiny import reactive
+
+        orders_source = normalize_data_source(orders_df, "orders")
+        customers_source = normalize_data_source(customers_df, "customers")
+        table_list = "'orders', 'customers'"
+        vals = ServerValues(
+            df=lambda: None,  # type: ignore[return-value]
+            sql=_MultiTableBlockedReactive(table_list, "sql"),  # type: ignore[arg-type]
+            title=_MultiTableBlockedReactive(table_list, "title"),  # type: ignore[arg-type]
+            tables={
+                "orders": TableState(sql=reactive.Value(None), title=reactive.Value(None), df=lambda: orders_df),
+                "customers": TableState(sql=reactive.Value(None), title=reactive.Value(None), df=lambda: customers_df),
+            },
+            client=None,  # type: ignore[arg-type]
+            data_sources={"orders": orders_source, "customers": customers_source},
+        )
+
+        assert vals.table_names() == ["orders", "customers"]
+
+    def test_server_values_table_accessor_df(self, orders_df, customers_df):
+        from querychat._querychat_base import normalize_data_source
+        from querychat._shiny_module import ServerValues, TableState
+        from querychat._table_accessor import TableAccessor
+
+        from shiny import reactive
+
+        orders_source = normalize_data_source(orders_df, "orders")
+        customers_source = normalize_data_source(customers_df, "customers")
+        vals = ServerValues(
+            df=lambda: orders_df,  # type: ignore[return-value]
+            sql=reactive.Value(None),
+            title=reactive.Value(None),
+            tables={
+                "orders": TableState(sql=reactive.Value(None), title=reactive.Value(None), df=lambda: orders_df),
+                "customers": TableState(sql=reactive.Value(None), title=reactive.Value(None), df=lambda: customers_df),
+            },
+            client=None,  # type: ignore[arg-type]
+            data_sources={"orders": orders_source, "customers": customers_source},
+        )
+
+        accessor = vals.table("orders")
+        assert isinstance(accessor, TableAccessor)
+        assert accessor.table_name == "orders"
+        assert accessor.df() is orders_df
+
+        customers_accessor = vals.table("customers")
+        assert customers_accessor.df() is customers_df
+
+    def test_server_values_table_unknown_raises(self, orders_df):
+        from querychat._querychat_base import normalize_data_source
+        from querychat._shiny_module import ServerValues, TableState
+
+        from shiny import reactive
+
+        orders_source = normalize_data_source(orders_df, "orders")
+        vals = ServerValues(
+            df=lambda: orders_df,  # type: ignore[return-value]
+            sql=reactive.Value(None),
+            title=reactive.Value(None),
+            tables={
+                "orders": TableState(sql=reactive.Value(None), title=reactive.Value(None), df=lambda: orders_df),
+            },
+            client=None,  # type: ignore[arg-type]
+            data_sources={"orders": orders_source},
+        )
+
+        with pytest.raises(ValueError, match="Table 'foo' not found"):
+            vals.table("foo")
 
     def test_shiny_app_raises_multi_table(self, orders_df, customers_df):
         from querychat.shiny import QueryChat

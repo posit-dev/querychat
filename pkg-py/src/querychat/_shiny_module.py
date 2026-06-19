@@ -12,6 +12,7 @@ from narwhals.stable.v1.typing import IntoFrameT
 from shiny import module, reactive, ui
 
 from ._querychat_core import GREETING_PROMPT
+from ._table_accessor import TableAccessor
 from ._viz_altair_widget import AltairWidget
 from ._viz_ggsql import execute_ggsql
 from ._viz_utils import has_viz_tool, preload_viz_deps_server, preload_viz_deps_ui
@@ -104,54 +105,71 @@ class _MultiTableBlockedReactive:
         raise AttributeError(self._msg)
 
 
-@dataclass
 class ServerValues(Generic[IntoFrameT]):
     """
     Session-specific reactive values and client returned by QueryChat.server().
 
-    This dataclass contains all the session-specific reactive state for a QueryChat
-    instance. Each session gets its own ServerValues to ensure proper isolation
+    Each session gets its own ServerValues to ensure proper isolation
     between concurrent sessions.
 
     Attributes
     ----------
     df
-        A reactive Calc that returns the current filtered data frame or lazy frame.
-        If the data source is lazy, returns a LazyFrame. If no SQL query has been
-        set, this returns the unfiltered data from the data source.
-        Call it like `.df()` to reactively read the current data.
-        Raises ``AttributeError`` when multiple tables are registered;
-        use ``tables["name"].df()`` instead.
+        Reactive Calc returning the current filtered data frame.
+        Raises ``AttributeError`` with multiple tables; use ``.table('name').df()``.
     sql
-        A reactive Value containing the current SQL query string. Access the value
-        by calling `.sql()`, or set it with `.sql.set("SELECT ...")`.
-        Returns `None` if no query has been set.
-        Raises ``AttributeError`` when multiple tables are registered;
-        use ``tables["name"].sql`` instead.
+        Reactive Value for the current SQL query string.
+        Raises ``AttributeError`` with multiple tables; use ``.table('name').sql``.
     title
-        A reactive Value containing the current title for the query. The LLM
-        provides this title when generating a new SQL query. Access it with
-        `.title()`, or set it with `.title.set("...")`. Returns
-        `None` if no title has been set.
-        Raises ``AttributeError`` when multiple tables are registered;
-        use ``tables["name"].title`` instead.
+        Reactive Value for the current title.
+        Raises ``AttributeError`` with multiple tables; use ``.table('name').title``.
     tables
-        Per-table reactive state. Keys are table names. Each value is a
-        `TableState` with `sql`, `title`, and `df` attributes. Always populated,
-        even for single-table usage.
+        Per-table reactive state dict. Keys are table names.
     client
-        Session chat client value.
-        For real sessions this is a `chatlas.Chat` created by the client
-        factory. For deferred stub sessions (where `data_source` is not set
-        yet), this is a placeholder client that raises when accessed.
+        Session chat client.
 
     """
 
-    df: Callable[[], IntoFrameT]
-    sql: ReactiveStringOrNone
-    title: ReactiveStringOrNone
-    tables: dict[str, TableState[IntoFrameT]]
-    client: ServerClient
+    def __init__(
+        self,
+        *,
+        df: Callable[[], IntoFrameT],
+        sql: ReactiveStringOrNone,
+        title: ReactiveStringOrNone,
+        tables: dict[str, TableState[IntoFrameT]],
+        client: ServerClient,
+        data_sources: dict[str, DataSource[IntoFrameT]],
+    ):
+        self.df = df
+        self.sql = sql
+        self.title = title
+        self.tables = tables
+        self.client = client
+        self._data_sources = data_sources
+
+    def table(self, name: str) -> TableAccessor:
+        """
+        Get a per-table accessor with reactive state.
+
+        Parameters
+        ----------
+        name
+            Table name.
+
+        Returns
+        -------
+        TableAccessor
+            Accessor with df(), sql(), title() backed by per-session state.
+
+        """
+        if name not in self.tables:
+            available = ", ".join(f"'{n}'" for n in self.tables)
+            raise ValueError(f"Table '{name}' not found. Available: {available}")
+        return TableAccessor(name, self._data_sources[name], state=self.tables[name])
+
+    def table_names(self) -> list[str]:
+        """Return the names of all registered tables."""
+        return list(self.tables.keys())
 
 
 @module.server
@@ -230,6 +248,7 @@ def mod_server(
             title=ReactiveStringOrNone(None),
             tables={},
             client=stub_client,
+            data_sources=data_sources or {},
         )
 
     # Real session requires data_sources and executor
@@ -336,6 +355,7 @@ def mod_server(
             title=only_state.title,
             tables=table_states,
             client=chat,
+            data_sources=data_sources,
         )
 
     table_list = ", ".join(f"'{n}'" for n in table_states)
@@ -352,6 +372,7 @@ def mod_server(
         title=_MultiTableBlockedReactive(table_list, "title"),  # type: ignore[arg-type]
         tables=table_states,
         client=chat,
+        data_sources=data_sources,
     )
 
 

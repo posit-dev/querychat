@@ -217,7 +217,7 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
         if name not in self._data_sources:
             available = ", ".join(self._data_sources.keys())
             raise ValueError(f"Table '{name}' not found. Available: {available}")
-        return StateDictTableAccessor(self, name)
+        return StateDictTableAccessor(name, self._data_sources[name])
 
     def ui(self) -> gr.State:
         """

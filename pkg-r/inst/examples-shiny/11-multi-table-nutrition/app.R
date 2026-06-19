@@ -130,10 +130,14 @@ ui <- page_navbar(
   ),
   nav_panel(
     "Data",
-    card(
-      full_screen = TRUE,
-      card_header(textOutput("foods_title", inline = TRUE)),
-      DTOutput("foods_table")
+    do.call(
+      navset_card_underline,
+      c(
+        lapply(qc$table_names(), function(name) {
+          nav_panel(name, DTOutput(paste0("dt_", name)))
+        }),
+        list(id = "table_tabs", full_screen = TRUE)
+      )
     )
   ),
   fillable = TRUE
@@ -179,7 +183,7 @@ server <- function(input, output, session) {
     plot_ly(
       df,
       x = ~protein_g,
-      y = ~ reorder(label, protein_g),
+      y = ~reorder(label, protein_g),
       type = "bar",
       orientation = "h",
       marker = list(color = "#2196F3")
@@ -211,7 +215,7 @@ server <- function(input, output, session) {
     plot_ly(
       agg,
       x = ~avg_protein,
-      y = ~ reorder(category, avg_protein),
+      y = ~reorder(category, avg_protein),
       type = "bar",
       orientation = "h",
       marker = list(color = "#4CAF50")
@@ -224,34 +228,29 @@ server <- function(input, output, session) {
       )
   })
 
-  output$foods_title <- renderText({
-    title <- qc_vals$table("foods")$title()
-    n <- nrow(current_subset())
-    if (!is.null(title) && nzchar(title)) title else sprintf("Foods (%d)", n)
+  # Auto-switch tab when LLM queries a table.
+  observe({
+    ct <- qc_vals$current_table()
+    if (!is.null(ct)) {
+      nav_select("table_tabs", selected = ct, session = session)
+    }
   })
 
-  output$foods_table <- renderDT({
-    current_subset() |>
-      select(
-        description,
-        category,
-        protein_g,
-        fat_g,
-        carbs_g,
-        fiber_g,
-        energy_kcal
-      ) |>
-      rename(
-        Food = description,
-        Category = category,
-        `Protein (g)` = protein_g,
-        `Fat (g)` = fat_g,
-        `Carbs (g)` = carbs_g,
-        `Fiber (g)` = fiber_g,
-        `Calories (kcal)` = energy_kcal
-      ) |>
-      datatable(fillContainer = TRUE)
-  })
+  # Register one DT render per table.
+  # Value boxes and charts above remain tied to the `foods` table — they
+  # use foods-specific wide-format joins and are not generic per-table views.
+  for (tbl_name in qc$table_names()) {
+    local({
+      name <- tbl_name
+      output[[paste0("dt_", name)]] <- renderDT({
+        qc_vals$table(name)$df() |>
+          datatable(
+            fillContainer = TRUE,
+            options = list(pageLength = 25, scrollX = TRUE)
+          )
+      })
+    })
+  }
 }
 
 shinyApp(ui, server)

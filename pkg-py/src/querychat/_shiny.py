@@ -282,15 +282,8 @@ class QueryChat(QueryChatBase[IntoFrameT]):
 
         """
         self._require_initialized("app")
-        if len(self._data_sources) > 1:
-            table_list = ", ".join(f"'{n}'" for n in self._data_sources)
-            raise RuntimeError(
-                f"app() does not support multiple tables ({table_list}). "
-                "Build a custom layout using sidebar(), ui(), and table('name') instead. "
-                "See the multi-table example for guidance."
-            )
         enable_bookmarking = bookmark_store != "disable"
-        table_name = next(iter(self._data_sources))
+        first_table_name = next(iter(self._data_sources))
 
         def app_ui(request):
             return ui.page_sidebar(
@@ -312,10 +305,14 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                     style="max-height: 33%;",
                 ),
                 ui.card(
-                    ui.card_header(bs_icon("table"), " Data"),
+                    ui.card_header(
+                        bs_icon("table"),
+                        " Data — ",
+                        ui.output_text("data_card_header_text", inline=True),
+                    ),
                     ui.output_data_frame("dt"),
                 ),
-                title=ui.span("querychat with ", ui.code(table_name)),
+                title=ui.span("querychat with ", ui.code(first_table_name)),
                 class_="bslib-page-dashboard",
                 fillable=True,
             )
@@ -332,13 +329,21 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 tools=self.tools,
             )
 
+            @reactive.calc
+            def active_table_name() -> str:
+                return vals.current_table() or first_table_name
+
+            @render.text
+            def data_card_header_text():
+                return active_table_name()
+
             @render.text
             def query_title():
-                return vals.title() or "SQL Query"
+                return vals.table(active_table_name()).title() or "SQL Query"
 
             @render.ui
             def ui_reset():
-                req(vals.sql())
+                req(vals.table(active_table_name()).sql())
                 return ui.input_action_button(
                     "reset_query",
                     "Reset Query",
@@ -348,17 +353,20 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             @reactive.effect
             @reactive.event(input.reset_query)
             def _():
-                vals.sql.set(None)
-                vals.title.set(None)
+                name = active_table_name()
+                # TableAccessor is read-only; mutation requires direct TableState access
+                vals.tables[name].sql.set(None)
+                vals.tables[name].title.set(None)
 
             @render.data_frame
             def dt():
                 # Collect lazy sources (LazyFrame, Ibis Table) to eager DataFrame
-                return as_narwhals(vals.df())
+                return as_narwhals(vals.table(active_table_name()).df())
 
             @render.ui
             def sql_output():
-                sql_value = vals.sql() or f"SELECT * FROM {table_name}"
+                name = active_table_name()
+                sql_value = vals.table(name).sql() or f"SELECT * FROM {name}"
                 sql_code = f"```sql\n{sql_value}\n```"
                 return output_markdown_stream(
                     "sql_code",

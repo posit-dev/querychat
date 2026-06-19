@@ -129,6 +129,9 @@ class ServerValues(Generic[IntoFrameT]):
         Per-table reactive state dict. Keys are table names.
     client
         Session chat client.
+    current_table
+        The name of the most recently queried table, or ``None`` if no query
+        has been run yet. Call ``.current_table()`` to read reactively.
 
     """
 
@@ -141,6 +144,7 @@ class ServerValues(Generic[IntoFrameT]):
         tables: dict[str, TableState[IntoFrameT]],
         client: ServerClient,
         data_sources: dict[str, DataSource[IntoFrameT]],
+        current_table: ReactiveStringOrNone,
     ):
         self.df = df
         self.sql = sql
@@ -148,6 +152,7 @@ class ServerValues(Generic[IntoFrameT]):
         self.tables = tables
         self.client = client
         self._data_sources = data_sources
+        self._current_table_rv = current_table
 
     def table(self, name: str) -> TableAccessor:
         """
@@ -173,6 +178,10 @@ class ServerValues(Generic[IntoFrameT]):
         """Return the names of all registered tables."""
         return list(self.tables.keys())
 
+    def current_table(self) -> str | None:
+        """Return the name of the most recently queried table, or None (reactive)."""
+        return self._current_table_rv.get()
+
 
 @module.server
 def mod_server(
@@ -193,6 +202,7 @@ def mod_server(
         raise TypeError("mod_server() requires a callable client factory.")
 
     table_states: dict[str, TableState[IntoFrameT]] = {}
+    _current_table: ReactiveStringOrNone = ReactiveStringOrNone(None)
 
     def _make_table_state(
         source: DataSource[IntoFrameT], exec: QueryExecutor
@@ -214,11 +224,13 @@ def mod_server(
         if table_name in table_states:
             table_states[table_name].sql.set(data["query"])
             table_states[table_name].title.set(data["title"])
+            _current_table.set(table_name)
 
     def reset_dashboard(table_name: str):
         if table_name in table_states:
             table_states[table_name].sql.set(None)
             table_states[table_name].title.set(None)
+            _current_table.set(table_name)
 
     viz_widgets: list[VizWidgetEntry] = []
 
@@ -251,6 +263,7 @@ def mod_server(
             tables={},
             client=stub_client,
             data_sources=data_sources or {},
+            current_table=ReactiveStringOrNone(None),
         )
 
     # Real session requires data_sources and executor
@@ -321,6 +334,7 @@ def mod_server(
                 table_states[table_name].sql.set(new_query)
             if new_title is not None:
                 table_states[table_name].title.set(new_title)
+            _current_table.set(table_name)
 
     if enable_bookmarking:
         chat_ui.enable_bookmarking(chat)
@@ -340,11 +354,16 @@ def mod_server(
             vals = x.values
             if "querychat_has_greeted" in vals:
                 has_greeted.set(vals["querychat_has_greeted"])
+            last_restored: str | None = None
             for name, state in table_states.items():
                 if f"querychat_sql_{name}" in vals:
                     state.sql.set(vals[f"querychat_sql_{name}"])
+                    if vals[f"querychat_sql_{name}"] is not None:
+                        last_restored = name
                 if f"querychat_title_{name}" in vals:
                     state.title.set(vals[f"querychat_title_{name}"])
+            if last_restored is not None:
+                _current_table.set(last_restored)
             if "querychat_viz_widgets" in vals:
                 restored = restore_viz_widgets(
                     executor, vals["querychat_viz_widgets"]
@@ -360,6 +379,7 @@ def mod_server(
             tables=table_states,
             client=chat,
             data_sources=data_sources,
+            current_table=_current_table,
         )
 
     table_list = ", ".join(f"'{n}'" for n in table_states)
@@ -377,6 +397,7 @@ def mod_server(
         tables=table_states,
         client=chat,
         data_sources=data_sources,
+        current_table=_current_table,
     )
 
 

@@ -152,9 +152,12 @@ def app_ui(request):
                 full_screen=True,
             ),
         ),
-        ui.card(
-            ui.card_header(ui.output_text("foods_title")),
-            ui.output_data_frame("foods_table"),
+        ui.navset_card_underline(
+            *[
+                ui.nav_panel(name, ui.output_data_frame(f"dt_{name}"))
+                for name in qc.table_names()
+            ],
+            id="table_tabs",
             full_screen=True,
         ),
         title="USDA Foundation Foods",
@@ -262,40 +265,25 @@ def server(input, output, session):
         )
         return fig
 
-    @render.text
-    def foods_title():
-        title = qc_vals.tables["foods"].title.get()
-        n = current_subset().height
-        return title or f"Foods ({n})"
+    # Auto-switch tab when LLM queries a table
+    @reactive.effect
+    def _switch_tab():
+        name = qc_vals.current_table()
+        if name is not None:
+            ui.update_navs("table_tabs", selected=name)
 
-    @render.data_frame
-    def foods_table():
-        return (
-            current_subset()
-            .select(
-                [
-                    "description",
-                    "category",
-                    "protein_g",
-                    "fat_g",
-                    "carbs_g",
-                    "fiber_g",
-                    "energy_kcal",
-                ]
-            )
-            .rename(
-                {
-                    "description": "Food",
-                    "category": "Category",
-                    "protein_g": "Protein (g)",
-                    "fat_g": "Fat (g)",
-                    "carbs_g": "Carbs (g)",
-                    "fiber_g": "Fiber (g)",
-                    "energy_kcal": "Calories (kcal)",
-                }
-            )
-            .to_pandas()
-        )
+    # Register one data frame render per table.
+    # Value boxes and charts above remain tied to the `foods` table — they
+    # use foods-specific wide-format joins and are not generic per-table views.
+    def _make_dt_renderer(table_name: str):
+        @render.data_frame
+        def _renderer():
+            return qc_vals.table(table_name).df()
+
+        return _renderer
+
+    for _tname in qc.table_names():
+        output[f"dt_{_tname}"] = _make_dt_renderer(_tname)
 
 
 app = App(app_ui, server)

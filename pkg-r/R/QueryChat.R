@@ -153,9 +153,12 @@ QueryChat <- R6::R6Class(
       client_spec = NULL,
       tools = NA,
       session = NULL,
-      update_dashboard = function(query, title, table) {},
-      reset_dashboard = function(table) {},
-      visualize = function(data) {}
+      update_dashboard = function(query, title, table) {
+      },
+      reset_dashboard = function(table) {
+      },
+      visualize = function(data) {
+      }
     ) {
       spec <- client_spec %||% private$.client_spec
       chat <- as_querychat_client(spec)
@@ -526,9 +529,12 @@ QueryChat <- R6::R6Class(
     #'   as Shiny outputs.
     client = function(
       tools = NA,
-      update_dashboard = function(query, title, table) {},
-      reset_dashboard = function(table) {},
-      visualize = function(data) {},
+      update_dashboard = function(query, title, table) {
+      },
+      reset_dashboard = function(table) {
+      },
+      visualize = function(data) {
+      },
       session = NULL
     ) {
       private$require_initialized("$client")
@@ -599,14 +605,14 @@ QueryChat <- R6::R6Class(
       check_installed("DT")
       check_dots_empty()
 
-      table_name <- names(private$.data_sources)[[1]]
+      first_table_name <- names(private$.data_sources)[[1]]
 
       ui <- function(req) {
         bslib::page_sidebar(
           title = shiny::HTML(
             sprintf(
               "<span>querychat with <code>%s</code></span>",
-              table_name
+              first_table_name
             )
           ),
           class = "bslib-page-dashboard",
@@ -632,7 +638,11 @@ QueryChat <- R6::R6Class(
           ),
           bslib::card(
             full_screen = TRUE,
-            bslib::card_header(bsicons::bs_icon("table"), "Data"),
+            bslib::card_header(
+              bsicons::bs_icon("table"),
+              "Data — ",
+              shiny::textOutput("data_card_header_text", inline = TRUE)
+            ),
             DT::DTOutput("dt")
           ),
           shiny::actionButton(
@@ -648,17 +658,22 @@ QueryChat <- R6::R6Class(
         enable_bookmarking <- bookmark_store %in% c("url", "server")
         qc_vals <- self$server(enable_bookmarking = enable_bookmarking)
 
+        active_table_name <- shiny::reactive({
+          ct <- qc_vals$current_table()
+          if (!is.null(ct)) ct else first_table_name
+        })
+
+        output$data_card_header_text <- shiny::renderText({
+          active_table_name()
+        })
+
         output$query_title <- shiny::renderText({
-          if (shiny::isTruthy(qc_vals$title())) {
-            qc_vals$title()
-          } else {
-            "SQL Query"
-          }
+          title <- qc_vals$.tables[[active_table_name()]]$title()
+          if (shiny::isTruthy(title)) title else "SQL Query"
         })
 
         output$ui_reset <- shiny::renderUI({
-          shiny::req(qc_vals$sql())
-
+          shiny::req(qc_vals$.tables[[active_table_name()]]$sql())
           shiny::actionButton(
             "reset_query",
             label = "Reset Query",
@@ -667,16 +682,16 @@ QueryChat <- R6::R6Class(
         })
 
         shiny::observeEvent(input$reset_query, label = "on_reset_query", {
-          qc_vals$sql(NULL)
-          qc_vals$title(NULL)
+          name <- active_table_name()
+          qc_vals$.tables[[name]]$sql(NULL)
+          qc_vals$.tables[[name]]$title(NULL)
         })
 
         output$dt <- DT::renderDT({
-          df <- qc_vals$df()
+          df <- qc_vals$.tables[[active_table_name()]]$df()
           if (inherits(df, "tbl_sql")) {
             df <- dplyr::collect(df)
           }
-
           DT::datatable(
             df,
             fillContainer = TRUE,
@@ -685,14 +700,14 @@ QueryChat <- R6::R6Class(
         })
 
         output$sql_output <- shiny::renderUI({
-          sql <- if (shiny::isTruthy(qc_vals$sql())) {
-            qc_vals$sql()
+          name <- active_table_name()
+          sql <- qc_vals$.tables[[name]]$sql()
+          sql_text <- if (shiny::isTruthy(sql)) {
+            sql
           } else {
-            paste("SELECT * FROM", table_name)
+            paste("SELECT * FROM", name)
           }
-
-          sql_code <- paste(c("```sql", sql, "```"), collapse = "\n")
-
+          sql_code <- paste(c("```sql", sql_text, "```"), collapse = "\n")
           shinychat::output_markdown_stream(
             "sql_code",
             content = sql_code,
@@ -702,11 +717,12 @@ QueryChat <- R6::R6Class(
         })
 
         shiny::observeEvent(input$close_btn, label = "on_close_btn", {
+          name <- active_table_name()
           shiny::stopApp(
             list(
-              df = qc_vals$df(),
-              sql = qc_vals$sql(),
-              title = qc_vals$title(),
+              df = qc_vals$.tables[[name]]$df(),
+              sql = qc_vals$.tables[[name]]$sql(),
+              title = qc_vals$.tables[[name]]$title(),
               client = qc_vals$client
             )
           )
@@ -774,6 +790,8 @@ QueryChat <- R6::R6Class(
     #'   client. For single-table usage, includes `df`, `sql`, `title` directly.
     #'   For multi-table, use `$table("name")` to get a [TableAccessor] with
     #'   per-table reactive state. Also includes `table_names()` to list tables.
+    #'   `current_table()` returns the name of the most recently queried table,
+    #'   or `NULL` before any query.
     server = function(
       data_source = NULL,
       client = NULL,

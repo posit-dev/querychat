@@ -614,9 +614,8 @@ class TestMultiTableGuardrails:
         )
 
         # First access warns and delegates to primary table
-        with reactive.isolate():
-            with pytest.warns(FutureWarning, match="multiple tables"):
-                result = vals.sql()
+        with reactive.isolate(), pytest.warns(FutureWarning, match="multiple tables"):
+            result = vals.sql()
         assert result is None  # primary table has no SQL set
 
         # Subsequent accesses on the same instance don't re-warn
@@ -630,9 +629,8 @@ class TestMultiTableGuardrails:
             assert orders_sql.get() == "SELECT 1"
 
         # title is a separate instance — first access warns independently
-        with reactive.isolate():
-            with pytest.warns(FutureWarning, match="multiple tables"):
-                assert vals.title() is None
+        with reactive.isolate(), pytest.warns(FutureWarning, match="multiple tables"):
+            assert vals.title() is None
 
     def test_shiny_server_values_tables_still_works(self, orders_df, customers_df):
         from querychat._shiny_module import (

@@ -744,6 +744,14 @@ class StateDictQueryChat(QueryChatBase[IntoFrameT]):
         """Create a chat client with dashboard callbacks."""
         return self.client(update_dashboard=update_cb, reset_dashboard=reset_cb)
 
+    def _df_for_source(
+        self, data_source: DataSource[IntoFrameT], sql: str | None
+    ) -> IntoFrameT:
+        if sql:
+            with contextlib.suppress(Exception):
+                return self._require_query_executor("df").execute_query(sql)
+        return data_source.get_data()
+
     def df(self, state: AppStateDict | None, *, table: str | None = None) -> IntoFrameT:
         """
         Get the current DataFrame from state.
@@ -763,37 +771,18 @@ class StateDictQueryChat(QueryChatBase[IntoFrameT]):
 
         """
         if table is not None:
-            data_source = self._data_sources[table]
-            sql = _get_table_sql(state, table)
-            if sql:
-                try:
-                    query_executor = self._require_query_executor("df")
-                    return query_executor.execute_query(sql)
-                except Exception:
-                    return data_source.get_data()
-            return data_source.get_data()
+            return self._df_for_source(
+                self._data_sources[table], _get_table_sql(state, table)
+            )
         if len(self._data_sources) > 1:
             primary_name = next(iter(self._data_sources))
             table_list = ", ".join(f"'{n}'" for n in self._data_sources)
             warn_multi_table_flat_accessor("df", primary_name, table_list)
-            data_source = self._data_sources[primary_name]
-            sql = _get_table_sql(state, primary_name)
-            if sql:
-                try:
-                    query_executor = self._require_query_executor("df")
-                    return query_executor.execute_query(sql)
-                except Exception:
-                    return data_source.get_data()
-            return data_source.get_data()
+            return self._df_for_source(
+                self._data_sources[primary_name], _get_table_sql(state, primary_name)
+            )
         data_source = self._get_state_data_source(state)
-        sql_active = state.get("sql") if state else None
-        if sql_active:
-            try:
-                query_executor = self._require_query_executor("df")
-                return query_executor.execute_query(sql_active)
-            except Exception:
-                return data_source.get_data()
-        return data_source.get_data()
+        return self._df_for_source(data_source, state.get("sql") if state else None)
 
     def _get_state_data_source(
         self, state: AppStateDict | None
@@ -834,6 +823,18 @@ class StateDictQueryChat(QueryChatBase[IntoFrameT]):
             return _get_table_sql(state, primary_name)
         return state.get("sql") if state else None
 
+    def _title_for_table(
+        self, state: AppStateDict | None, table: str
+    ) -> str | None:
+        if state is None:
+            return None
+        per_table = state.get("table_states")
+        if per_table and table in per_table:
+            return per_table[table].get("title")
+        if state.get("table") == table:
+            return state.get("title")
+        return None
+
     def title(self, state: AppStateDict | None, *, table: str | None = None) -> str | None:
         """
         Get the current query title from state.
@@ -852,26 +853,12 @@ class StateDictQueryChat(QueryChatBase[IntoFrameT]):
 
         """
         if table is not None:
-            if state is None:
-                return None
-            per_table = state.get("table_states")
-            if per_table and table in per_table:
-                return per_table[table].get("title")
-            if state.get("table") == table:
-                return state.get("title")
-            return None
+            return self._title_for_table(state, table)
         if len(self._data_sources) > 1:
             primary_name = next(iter(self._data_sources))
             table_list = ", ".join(f"'{n}'" for n in self._data_sources)
             warn_multi_table_flat_accessor("title", primary_name, table_list)
-            if state is None:
-                return None
-            per_table = state.get("table_states")
-            if per_table and primary_name in per_table:
-                return per_table[primary_name].get("title")
-            if state.get("table") == primary_name:
-                return state.get("title")
-            return None
+            return self._title_for_table(state, primary_name)
         return state.get("title") if state else None
 
     def _deserialize_state(self, state_data: AppStateDict | None) -> AppState:

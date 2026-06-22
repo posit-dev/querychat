@@ -55,6 +55,20 @@ class QueryExecutor(ABC):
     def get_schema(self, table_name: str, categorical_threshold: int) -> str:
         return format_schema(table_name, self.get_column_details(table_name, categorical_threshold))
 
+    @staticmethod
+    def _validate_missing_columns(
+        result_columns: set[str], expected_columns: list[str]
+    ) -> None:
+        missing = set(expected_columns) - result_columns
+        if missing:
+            missing_list = ", ".join(f"'{c}'" for c in sorted(missing))
+            original_list = ", ".join(f"'{c}'" for c in expected_columns)
+            raise MissingColumnsError(
+                f"Query result missing required columns: {missing_list}. "
+                f"The query must return all original table columns. "
+                f"Original columns: {original_list}"
+            )
+
 
 class DuckDBExecutor(QueryExecutor):
     """Shared DuckDB connection for multi-table DataFrameSource queries."""
@@ -100,18 +114,7 @@ class DuckDBExecutor(QueryExecutor):
 
         if require_all_columns:
             result_columns = {desc[0] for desc in result.description}
-            expected = set(self._table_columns[table_name])
-            missing = expected - result_columns
-            if missing:
-                missing_list = ", ".join(f"'{c}'" for c in sorted(missing))
-                original_list = ", ".join(
-                    f"'{c}'" for c in self._table_columns[table_name]
-                )
-                raise MissingColumnsError(
-                    f"Query result missing required columns: {missing_list}. "
-                    f"The query must return all original table columns. "
-                    f"Original columns: {original_list}"
-                )
+            self._validate_missing_columns(result_columns, self._table_columns[table_name])
 
     def get_db_type(self) -> str:
         return "DuckDB"
@@ -158,18 +161,7 @@ class PolarsSQLExecutor(QueryExecutor):
         if require_all_columns:
             full_lf = self._ctx.execute(query)
             result_columns = set(full_lf.collect_schema().keys())
-            expected = set(self._table_columns[table_name])
-            missing = expected - result_columns
-            if missing:
-                missing_list = ", ".join(f"'{c}'" for c in sorted(missing))
-                original_list = ", ".join(
-                    f"'{c}'" for c in self._table_columns[table_name]
-                )
-                raise MissingColumnsError(
-                    f"Query result missing required columns: {missing_list}. "
-                    f"The query must return all original table columns. "
-                    f"Original columns: {original_list}"
-                )
+            self._validate_missing_columns(result_columns, self._table_columns[table_name])
 
     def get_db_type(self) -> str:
         return "Polars"

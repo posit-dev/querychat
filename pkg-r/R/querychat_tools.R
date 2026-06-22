@@ -70,7 +70,6 @@ tool_get_schema <- function(
   )
 }
 
-
 # Modifies the data presented in the data dashboard, based on the given SQL
 # query, and also updates the title.
 # @param query A SQL query; must be a SELECT statement.
@@ -79,7 +78,8 @@ tool_get_schema <- function(
 tool_update_dashboard <- function(
   executor,
   table_names,
-  update_fn = function(query, title, table) {}
+  update_fn = function(query, title, table) {
+  }
 ) {
   check_function(update_fn)
   has_args <- intersect(fn_fmls_names(update_fn), c("query", "title", "table"))
@@ -147,7 +147,8 @@ tool_update_dashboard_impl <- function(executor, table_names, update_fn) {
 }
 
 tool_reset_dashboard <- function(
-  reset_fn = function(table) {},
+  reset_fn = function(table) {
+  },
   table_names
 ) {
   check_function(reset_fn)

@@ -153,9 +153,12 @@ QueryChat <- R6::R6Class(
       client_spec = NULL,
       tools = NA,
       session = NULL,
-      update_dashboard = function(query, title, table) {},
-      reset_dashboard = function(table) {},
-      visualize = function(data) {}
+      update_dashboard = function(query, title, table) {
+      },
+      reset_dashboard = function(table) {
+      },
+      visualize = function(data) {
+      }
     ) {
       spec <- client_spec %||% private$.client_spec
       chat <- as_querychat_client(spec)
@@ -451,6 +454,91 @@ QueryChat <- R6::R6Class(
     },
 
     #' @description
+    #' Add multiple tables from a DBI connection in a single call.
+    #'
+    #' Unlike calling `$add_table()` repeatedly, this method builds the
+    #' system prompt exactly once after all tables have been staged, avoiding
+    #' N-1 spurious intermediate rebuilds.
+    #'
+    #' @param conn A DBI connection. Only DBI connections are supported; pass
+    #'   individual data frames or other sources via `$add_table()`.
+    #' @param tables Table names to register. When `NULL`, all tables returned
+    #'   by `DBI::dbListTables(conn)` are used.
+    #' @param replace Whether to replace existing tables with the same name.
+    #'   Default is `FALSE`.
+    #'
+    #' @return Invisibly returns `self` for chaining.
+    add_tables = function(conn, tables = NULL, replace = FALSE) {
+      if (private$.server_initialized) {
+        cli::cli_abort("Cannot add tables after server initialization.")
+      }
+      if (!inherits(conn, "DBIConnection")) {
+        cli::cli_abort(
+          "{.fn add_tables} requires a {.cls DBIConnection}, not {.obj_type_friendly {conn}}.",
+          "i" = "Use {.fn add_table} for data frames and other source types."
+        )
+      }
+      if (is.null(tables)) {
+        tables <- DBI::dbListTables(conn)
+      }
+      if (length(tables) == 0) {
+        cli::cli_abort("No tables found in database.")
+      }
+      for (table_name in tables) {
+        check_sql_table_name(table_name)
+        if (table_name %in% names(private$.data_sources) && !replace) {
+          cli::cli_abort(
+            "Table {.val {table_name}} already exists. Use {.code replace = TRUE} to replace."
+          )
+        }
+      }
+
+      normalized <- stats::setNames(
+        lapply(tables, function(tbl) normalize_data_source(conn, tbl)),
+        tables
+      )
+
+      staged <- list()
+      for (table_name in tables) {
+        other_sources <- private$.data_sources[
+          names(private$.data_sources) != table_name
+        ]
+        check_source_compatibility(
+          c(other_sources, staged),
+          normalized[[table_name]],
+          table_name
+        )
+        staged[[table_name]] <- normalized[[table_name]]
+      }
+
+      next_sources <- private$.data_sources
+      for (table_name in tables) {
+        next_sources[[table_name]] <- normalized[[table_name]]
+      }
+
+      private$auto_fill_data_description(next_sources)
+      private$build_system_prompt(data_sources = next_sources)
+
+      for (table_name in tables) {
+        old_source <- private$.data_sources[[table_name]]
+        if (
+          !is.null(old_source) &&
+            !identical(old_source, normalized[[table_name]])
+        ) {
+          old_source$cleanup()
+        }
+      }
+      private$.data_sources <- next_sources
+
+      if (!is.null(private$.query_executor)) {
+        tryCatch(private$.query_executor$cleanup(), error = function(e) NULL)
+        private$.query_executor <- NULL
+      }
+
+      invisible(self)
+    },
+
+    #' @description
     #' Remove a table from this QueryChat instance.
     #'
     #' @param table_name The name of the table to remove.
@@ -507,9 +595,12 @@ QueryChat <- R6::R6Class(
     #'   as Shiny outputs.
     client = function(
       tools = NA,
-      update_dashboard = function(query, title, table) {},
-      reset_dashboard = function(table) {},
-      visualize = function(data) {},
+      update_dashboard = function(query, title, table) {
+      },
+      reset_dashboard = function(table) {
+      },
+      visualize = function(data) {
+      },
       session = NULL
     ) {
       private$require_initialized("$client")

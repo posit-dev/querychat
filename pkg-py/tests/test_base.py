@@ -284,3 +284,82 @@ class TestDataDict:
             warnings.simplefilter("always")
             QueryChat(df, table_name="t", data_description="some desc")
         assert not any(issubclass(warning.category, DeprecationWarning) for warning in w)
+
+
+@pytest.fixture
+def multi_table_engine():
+    engine = create_engine("sqlite:///:memory:")
+    with engine.connect() as conn:
+        conn.execute(
+            text(
+                "CREATE TABLE orders (id INTEGER PRIMARY KEY, amount REAL)"
+            )
+        )
+        conn.execute(
+            text(
+                "CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT)"
+            )
+        )
+        conn.execute(text("INSERT INTO orders VALUES (1, 99.99), (2, 49.50)"))
+        conn.execute(text("INSERT INTO customers VALUES (1, 'Alice'), (2, 'Bob')"))
+        conn.commit()
+    return engine
+
+
+class TestAddTables:
+    def test_auto_discovery_registers_all_tables(self, multi_table_engine):
+        qc = QueryChatBase()
+        with warnings.catch_warnings(record=True):
+            warnings.simplefilter("always")
+            qc.add_tables(multi_table_engine)
+        assert set(qc.table_names()) == {"orders", "customers"}
+
+    def test_explicit_tables_registers_only_those(self, multi_table_engine):
+        qc = QueryChatBase()
+        qc.add_tables(multi_table_engine, ["orders"])
+        assert qc.table_names() == ["orders"]
+
+    def test_nonexistent_table_raises(self, multi_table_engine):
+        qc = QueryChatBase()
+        with pytest.raises(ValueError, match="'nonexistent' not found"):
+            qc.add_tables(multi_table_engine, ["nonexistent"])
+
+    def test_duplicate_without_replace_raises(self, multi_table_engine):
+        qc = QueryChatBase()
+        qc.add_tables(multi_table_engine, ["orders"])
+        with pytest.raises(ValueError, match="Table 'orders' already exists"):
+            qc.add_tables(multi_table_engine, ["orders"])
+
+    def test_replace_true_succeeds(self, multi_table_engine):
+        qc = QueryChatBase()
+        qc.add_tables(multi_table_engine, ["orders"])
+        qc.add_tables(multi_table_engine, ["orders"], replace=True)
+        assert "orders" in qc.table_names()
+
+    def test_non_engine_raises_type_error(self, sample_df):
+        qc = QueryChatBase()
+        with pytest.raises(TypeError, match=r"sqlalchemy\.Engine"):
+            qc.add_tables(sample_df)  # type: ignore[arg-type]
+
+    def test_empty_list_raises(self, multi_table_engine):
+        qc = QueryChatBase()
+        with pytest.raises(ValueError, match="No tables found"):
+            qc.add_tables(multi_table_engine, [])
+
+    def test_after_server_raises(self, multi_table_engine):
+        qc = QueryChatBase()
+        qc._server_initialized = True
+        with pytest.raises(RuntimeError, match="Cannot add tables after server"):
+            qc.add_tables(multi_table_engine)
+
+    def test_system_prompt_built_exactly_once(self, multi_table_engine):
+        qc = QueryChatBase()
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            qc.add_tables(multi_table_engine)
+        multi_table_warns = [
+            x for x in w
+            if issubclass(x.category, UserWarning)
+            and "Multiple tables" in str(x.message)
+        ]
+        assert len(multi_table_warns) == 1

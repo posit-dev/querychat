@@ -31,11 +31,11 @@ from ._query_executor import (
     validate_source_group_compatibility,
 )
 from ._querychat_core import (
+    GREETING_PROMPT,
     AppState,
     AppStateDict,
-    GREETING_PROMPT,
-    warn_multi_table_flat_accessor,
     create_app_state,
+    warn_multi_table_flat_accessor,
 )
 from ._system_prompt import QueryChatSystemPrompt
 from ._utils import MISSING, MISSING_TYPE, is_ibis_table
@@ -418,6 +418,110 @@ class QueryChatBase(Generic[IntoFrameT]):
         self._data_sources = next_data_sources
         if old_source is not None and old_source is not normalized:
             old_source.cleanup()
+        if self._query_executor is not None:
+            with contextlib.suppress(Exception):
+                self._query_executor.cleanup()
+            self._query_executor = None
+
+    def add_tables(
+        self,
+        data_source: sqlalchemy.Engine,
+        tables: list[str] | None = None,
+        *,
+        replace: bool = False,
+    ) -> None:
+        """
+        Add multiple tables from a SQLAlchemy engine in a single call.
+
+        Unlike calling :meth:`add_table` repeatedly, this method builds the
+        system prompt exactly once after all tables have been staged, avoiding
+        N-1 spurious intermediate rebuilds.
+
+        Parameters
+        ----------
+        data_source
+            A SQLAlchemy engine. Only engines are supported; pass individual
+            DataFrames or other sources via :meth:`add_table`.
+        tables
+            Table names to register. When ``None``, all tables returned by
+            ``sqlalchemy.inspect(data_source).get_table_names()`` are used.
+        replace
+            If ``True``, replace any existing table whose name appears in
+            ``tables``. If ``False`` (default), raise ``ValueError`` if any
+            name already exists.
+
+        Raises
+        ------
+        TypeError
+            If ``data_source`` is not a ``sqlalchemy.Engine``.
+        ValueError
+            If the resolved table list is empty, any name is invalid, or any
+            name already exists (and ``replace=False``).
+        RuntimeError
+            If called after :meth:`server` has been invoked.
+
+        Examples
+        --------
+        Register all tables from an engine:
+
+        >>> qc = QueryChat()
+        >>> qc.add_tables(engine)
+
+        Register a specific subset:
+
+        >>> qc.add_tables(engine, ["orders", "customers"])
+
+        """
+        if self._server_initialized:
+            raise RuntimeError(
+                "Cannot add tables after server initialization. "
+                "Add all tables before calling .server() or .app()."
+            )
+
+        if not isinstance(data_source, sqlalchemy.Engine):
+            raise TypeError(
+                f"add_tables() requires a sqlalchemy.Engine, got {type(data_source).__name__}. "
+                "Use add_table() for DataFrames and other source types."
+            )
+
+        if tables is None:
+            tables = sqlalchemy.inspect(data_source).get_table_names()
+
+        if not tables:
+            raise ValueError("No tables found in database")
+
+        for table_name in tables:
+            if not re.match(r"^[a-zA-Z][a-zA-Z0-9_]*$", table_name):
+                raise ValueError(
+                    "Table name must begin with a letter and contain only "
+                    "letters, numbers, and underscores"
+                )
+            if table_name in self._data_sources and not replace:
+                raise ValueError(f"Table '{table_name}' already exists")
+
+        normalized = {
+            name: normalize_data_source(data_source, name) for name in tables
+        }
+
+        staged: dict[str, DataSource] = {}
+        for name, source in normalized.items():
+            other_sources = {
+                n: s
+                for n, s in self._data_sources.items()
+                if n != name
+            }
+            check_source_compatibility({**other_sources, **staged}, source, name)
+            staged[name] = source
+
+        next_data_sources = {**self._data_sources, **normalized}
+        self._build_system_prompt(data_sources=next_data_sources)
+
+        for name, normalized_source in normalized.items():
+            old_source = self._data_sources.get(name)
+            if old_source is not None and old_source is not normalized_source:
+                old_source.cleanup()
+
+        self._data_sources = next_data_sources
         if self._query_executor is not None:
             with contextlib.suppress(Exception):
                 self._query_executor.cleanup()

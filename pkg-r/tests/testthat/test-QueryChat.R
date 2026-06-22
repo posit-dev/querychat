@@ -876,7 +876,8 @@ test_that("querychat_app() only cleans up data frame sources on exit", {
         # have to use an option because the code is evaluated in a far-away env
         options(.test_cleanup = cleanup)
       },
-      app = function(...) {}
+      app = function(...) {
+      }
     )
   )
   withr::local_options(rlang_interactive = TRUE)
@@ -935,5 +936,107 @@ describe("QueryChat deferred client with $server()", {
       qc$server(data_source = new_users_df()),
       "must be called within a Shiny server function"
     )
+  })
+})
+
+describe("QueryChat$add_tables()", {
+  local_multi_table_conn <- function(env = parent.frame()) {
+    skip_if_not_installed("RSQLite")
+    conn <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
+    withr::defer(DBI::dbDisconnect(conn), envir = env)
+    DBI::dbWriteTable(
+      conn,
+      "orders",
+      data.frame(id = 1:2, amount = c(9.99, 4.50))
+    )
+    DBI::dbWriteTable(
+      conn,
+      "customers",
+      data.frame(id = 1:2, name = c("Alice", "Bob"))
+    )
+    conn
+  }
+
+  it("auto-discovery registers all tables", {
+    conn <- local_multi_table_conn()
+    qc <- QueryChat$new(NULL, "placeholder", greeting = "Test")
+    suppressWarnings(qc$add_tables(conn))
+    expect_setequal(qc$table_names(), c("orders", "customers"))
+  })
+
+  it("explicit tables registers only those", {
+    conn <- local_multi_table_conn()
+    qc <- QueryChat$new(NULL, "placeholder", greeting = "Test")
+    qc$add_tables(conn, tables = "orders")
+    expect_equal(qc$table_names(), "orders")
+  })
+
+  it("nonexistent table name raises error", {
+    conn <- local_multi_table_conn()
+    qc <- QueryChat$new(NULL, "placeholder", greeting = "Test")
+    expect_error(
+      qc$add_tables(conn, tables = "nonexistent"),
+      "not found"
+    )
+  })
+
+  it("duplicate without replace raises error", {
+    conn <- local_multi_table_conn()
+    qc <- QueryChat$new(NULL, "placeholder", greeting = "Test")
+    qc$add_tables(conn, tables = "orders")
+    expect_error(
+      qc$add_tables(conn, tables = "orders"),
+      "already exists"
+    )
+  })
+
+  it("replace = TRUE on existing table succeeds", {
+    conn <- local_multi_table_conn()
+    qc <- QueryChat$new(NULL, "placeholder", greeting = "Test")
+    qc$add_tables(conn, tables = "orders")
+    expect_no_error(qc$add_tables(conn, tables = "orders", replace = TRUE))
+    expect_true("orders" %in% qc$table_names())
+  })
+
+  it("non-DBI argument raises error", {
+    qc <- QueryChat$new(NULL, "placeholder", greeting = "Test")
+    expect_error(
+      qc$add_tables(new_test_df()),
+      "DBIConnection"
+    )
+  })
+
+  it("empty tables vector raises error", {
+    conn <- local_multi_table_conn()
+    qc <- QueryChat$new(NULL, "placeholder", greeting = "Test")
+    expect_error(
+      qc$add_tables(conn, tables = character(0)),
+      "No tables found"
+    )
+  })
+
+  it("calling after server initialization raises error", {
+    conn <- local_multi_table_conn()
+    qc <- QueryChat$new(NULL, "placeholder", greeting = "Test")
+    qc$.__enclos_env__$private$.server_initialized <- TRUE
+    expect_error(
+      qc$add_tables(conn),
+      "after server initialization"
+    )
+  })
+
+  it("system prompt built exactly once for multiple tables", {
+    conn <- local_multi_table_conn()
+    qc <- QueryChat$new(NULL, "placeholder", greeting = "Test")
+    warns <- character(0)
+    withCallingHandlers(
+      qc$add_tables(conn),
+      warning = function(w) {
+        warns <<- c(warns, conditionMessage(w))
+        invokeRestart("muffleWarning")
+      }
+    )
+    multi_table_warns <- warns[grepl("Multiple tables", warns)]
+    expect_length(multi_table_warns, 1L)
   })
 })

@@ -2,7 +2,7 @@
 
 import pandas as pd
 import pytest
-from chatlas import ChatOpenAI
+from chatlas import ChatOpenAI, Turn
 from querychat._querychat_base import QueryChatBase
 
 
@@ -134,3 +134,40 @@ class TestBackwardCompatibility:
 
         prompt = qc.system_prompt
         assert "test_table" in prompt
+
+
+@pytest.fixture
+def other_df():
+    return pd.DataFrame({"order_id": [1, 2], "amount": [100, 200]})
+
+
+class TestPromptRebuildWarning:
+    """Warns when system prompt is rebuilt after a client already has chat history."""
+
+    def test_warns_when_client_spec_has_history(self, sample_df, monkeypatch):
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-key-for-testing")
+        chat = ChatOpenAI()
+        chat.set_turns([Turn(role="user", contents=["hello"])])
+
+        qc = QueryChatBase(None, "users", client=chat)
+
+        with pytest.warns(UserWarning, match="chat history"):
+            qc.add_table(sample_df, "users")
+
+    def test_warns_when_console_client_has_history(self, sample_df, other_df, monkeypatch):
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-key-for-testing")
+        qc = QueryChatBase(sample_df, "users")
+
+        console_chat = ChatOpenAI()
+        console_chat.set_turns([Turn(role="user", contents=["hello"])])
+        qc._client_console = console_chat
+
+        with pytest.warns(UserWarning, match="chat history"):
+            qc.add_table(other_df, "orders")
+
+    def test_no_warning_without_history(self, sample_df, other_df, recwarn, monkeypatch):
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-key-for-testing")
+        qc = QueryChatBase(sample_df, "users")
+        qc.add_table(other_df, "orders")
+        chat_history_warnings = [w for w in recwarn.list if "chat history" in str(w.message)]
+        assert len(chat_history_warnings) == 0

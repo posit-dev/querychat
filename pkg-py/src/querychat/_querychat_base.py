@@ -6,6 +6,7 @@ import contextlib
 import copy
 import os
 import re
+import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Generic, Literal, Optional
 
@@ -132,6 +133,20 @@ class QueryChatBase(Generic[IntoFrameT]):
 
         if not next_data_sources:
             raise RuntimeError("Cannot build system prompt without data_source")
+
+        client_has_history = (
+            isinstance(self._client_spec, chatlas.Chat) and bool(self._client_spec.get_turns())
+        ) or (
+            self._client_console is not None and bool(self._client_console.get_turns())
+        )
+        if client_has_history:
+            warnings.warn(
+                "System prompt rebuilt after chat history exists. "
+                "This invalidates any prompt caching from prior turns. "
+                "Configure all tables before starting a conversation.",
+                UserWarning,
+                stacklevel=3,
+            )
 
         self._system_prompt = QueryChatSystemPrompt(
             prompt_template=self._prompt_template,

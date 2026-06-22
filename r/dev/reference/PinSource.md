@@ -1,14 +1,17 @@
 # Pin Source
 
 A DataSource implementation that reads data from a
-[pins](https://pins.rstudio.com/) board. For pin types that DuckDB can
-read natively (parquet, CSV, JSON), the data is loaded directly from the
-cached pin files into DuckDB without deserializing into R. For other pin
-types (e.g. RDS), the data is deserialized via `pin_read()` and must
-produce a data frame (or tibble) to be registered with DuckDB.
+[pins](https://pins.rstudio.com/) board. When the `"duckdb"` engine is
+used and the pin type is one DuckDB can read natively (parquet, CSV,
+JSON), the data is loaded directly from the cached pin files into DuckDB
+without deserializing into R. For other pin types (e.g. RDS), or when
+the `"sqlite"` engine is used, the data is deserialized via `pin_read()`
+and must produce a data frame (or tibble), which is then registered with
+the chosen engine just like
+[DataFrameSource](https://posit-dev.github.io/querychat/dev/reference/DataFrameSource.md).
 
-After loading, DuckDB's external file access is locked down so that
-LLM-generated SQL cannot reach the filesystem.
+When loaded into DuckDB, the connection's external file access is locked
+down so that LLM-generated SQL cannot reach the filesystem.
 
 If the pin has a title, description, or tags,
 [QueryChat](https://posit-dev.github.io/querychat/dev/reference/QueryChat.md)
@@ -72,7 +75,14 @@ Create a new PinSource
 
 #### Usage
 
-    PinSource$new(board, name, ..., table_name = name, version = NULL)
+    PinSource$new(
+      board,
+      name,
+      ...,
+      table_name = name,
+      version = NULL,
+      engine = getOption("querychat.DataFrameSource.engine", NULL)
+    )
 
 #### Arguments
 
@@ -98,6 +108,15 @@ Create a new PinSource
 - `version`:
 
   Pin version to read. If `NULL` (default), reads the latest version.
+
+- `engine`:
+
+  Database engine to use: `"duckdb"` or `"sqlite"`. Set the global
+  option `querychat.DataFrameSource.engine` to specify the default
+  engine. If `NULL` (default), uses the first available engine from
+  duckdb or RSQLite (in that order). Parquet, CSV, and JSON pins are
+  read most efficiently with the `"duckdb"` engine; with `"sqlite"` they
+  are deserialized via `pin_read()` instead.
 
 #### Returns
 
@@ -151,6 +170,6 @@ if (rlang::is_installed(c("pins", "duckdb"))) {
 
   ps$cleanup()
 }
-#> Creating new version '20260612T172818Z-c0340'
+#> Creating new version '20260622T150102Z-c0340'
 #> Writing to pin 'mtcars'
 ```

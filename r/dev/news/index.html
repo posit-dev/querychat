@@ -52,6 +52,11 @@
 
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="development version" id="querychat-development-version">querychat (development version)<a class="anchor" aria-label="anchor" href="#querychat-development-version"></a></h2>
+<div class="section level3">
+<h3 id="new-features-development-version">New features<a class="anchor" aria-label="anchor" href="#new-features-development-version"></a></h3>
+<ul><li><p>Added <code>PinSource</code>, a data source for chatting with datasets pinned to a <a href="https://pins.rstudio.com/" class="external-link">pins</a> board. Works with parquet, CSV, JSON, and RDS pins, and uses the pin’s title, description, and tags as the default data description. (<a href="https://github.com/posit-dev/querychat/issues/246" class="external-link">#246</a>)</p></li>
+<li><p>File attachments are now enabled by default in the Shiny chat UI. Users can attach images, PDFs, and text files to their messages and the LLM will receive them. Disable with <code>allow_attachments = FALSE</code> in <code>mod_ui()</code> or <code>QueryChat$ui()</code>. (<a href="https://github.com/posit-dev/querychat/issues/253" class="external-link">#253</a>)</p></li>
+</ul></div>
 </div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.3.0" id="querychat-030">querychat 0.3.0<a class="anchor" aria-label="anchor" href="#querychat-030"></a></h2><p class="text-muted">CRAN release: 2026-06-01</p>

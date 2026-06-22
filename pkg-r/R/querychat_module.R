@@ -1,5 +1,11 @@
 # Main module UI function
-mod_ui <- function(id, ..., greeting = NULL, enable_cancel = TRUE, allow_attachments = TRUE) {
+mod_ui <- function(
+  id,
+  ...,
+  greeting = NULL,
+  enable_cancel = TRUE,
+  allow_attachments = TRUE
+) {
   ns <- shiny::NS(id)
 
   if (!is.null(greeting) && any(nzchar(greeting))) {

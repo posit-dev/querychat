@@ -184,7 +184,7 @@ server <- function(input, output, session) {
     plot_ly(
       df,
       x = ~protein_g,
-      y = ~reorder(label, protein_g),
+      y = ~ reorder(label, protein_g),
       type = "bar",
       orientation = "h",
       marker = list(color = "#2196F3")
@@ -216,7 +216,7 @@ server <- function(input, output, session) {
     plot_ly(
       agg,
       x = ~avg_protein,
-      y = ~reorder(category, avg_protein),
+      y = ~ reorder(category, avg_protein),
       type = "bar",
       orientation = "h",
       marker = list(color = "#4CAF50")

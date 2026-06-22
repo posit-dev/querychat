@@ -153,12 +153,9 @@ QueryChat <- R6::R6Class(
       client_spec = NULL,
       tools = NA,
       session = NULL,
-      update_dashboard = function(query, title, table) {
-      },
-      reset_dashboard = function(table) {
-      },
-      visualize = function(data) {
-      }
+      update_dashboard = function(query, title, table) {},
+      reset_dashboard = function(table) {},
+      visualize = function(data) {}
     ) {
       spec <- client_spec %||% private$.client_spec
       chat <- as_querychat_client(spec)
@@ -595,12 +592,9 @@ QueryChat <- R6::R6Class(
     #'   as Shiny outputs.
     client = function(
       tools = NA,
-      update_dashboard = function(query, title, table) {
-      },
-      reset_dashboard = function(table) {
-      },
-      visualize = function(data) {
-      },
+      update_dashboard = function(query, title, table) {},
+      reset_dashboard = function(table) {},
+      visualize = function(data) {},
       session = NULL
     ) {
       private$require_initialized("$client")

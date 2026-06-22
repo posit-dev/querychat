@@ -312,8 +312,7 @@ build_column_details_impl <- function(
         result <- DBI::dbGetQuery(conn, prep_query(stats_query))
         if (nrow(result) > 0) column_stats <- as.list(result[1, ])
       },
-      error = function(e) {
-      }
+      error = function(e) {}
     )
   }
 
@@ -351,8 +350,7 @@ build_column_details_impl <- function(
           result <- DBI::dbGetQuery(conn, prep_query(cat_query))
           if (nrow(result) > 0) categorical_values[[col_name]] <- result[[1]]
         },
-        error = function(e) {
-        }
+        error = function(e) {}
       )
     }
   }

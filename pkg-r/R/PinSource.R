@@ -2,14 +2,16 @@
 #'
 #' @description
 #' A DataSource implementation that reads data from a
-#' [pins](https://pins.rstudio.com/) board. For pin types that DuckDB can read
-#' natively (parquet, CSV, JSON), the data is loaded directly from the cached
-#' pin files into DuckDB without deserializing into R. For other pin types
-#' (e.g. RDS), the data is deserialized via `pin_read()` and must produce
-#' a data frame (or tibble) to be registered with DuckDB.
+#' [pins](https://pins.rstudio.com/) board. When the `"duckdb"` engine is used
+#' and the pin type is one DuckDB can read natively (parquet, CSV, JSON), the
+#' data is loaded directly from the cached pin files into DuckDB without
+#' deserializing into R. For other pin types (e.g. RDS), or when the `"sqlite"`
+#' engine is used, the data is deserialized via `pin_read()` and must produce
+#' a data frame (or tibble), which is then registered with the chosen engine
+#' just like [DataFrameSource].
 #'
-#' After loading, DuckDB's external file access is locked down so that
-#' LLM-generated SQL cannot reach the filesystem.
+#' When loaded into DuckDB, the connection's external file access is locked
+#' down so that LLM-generated SQL cannot reach the filesystem.
 #'
 #' If the pin has a title, description, or tags, [QueryChat] uses them as
 #' the default `data_description`, which you can override.
@@ -68,24 +70,43 @@ PinSource <- R6::R6Class(
     #'   the pin name.
     #' @param version Pin version to read. If `NULL` (default), reads the
     #'   latest version.
+    #' @param engine Database engine to use: `"duckdb"` or `"sqlite"`. Set the
+    #'   global option `querychat.DataFrameSource.engine` to specify the default
+    #'   engine. If `NULL` (default), uses the first available engine from
+    #'   duckdb or RSQLite (in that order). Parquet, CSV, and JSON pins are read
+    #'   most efficiently with the `"duckdb"` engine; with `"sqlite"` they are
+    #'   deserialized via `pin_read()` instead.
     #'
     #' @return A new PinSource object
-    initialize = function(board, name, ..., table_name = name, version = NULL) {
+    initialize = function(
+      board,
+      name,
+      ...,
+      table_name = name,
+      version = NULL,
+      engine = getOption("querychat.DataFrameSource.engine", NULL)
+    ) {
       rlang::check_installed("pins", reason = "to use PinSource.")
-      rlang::check_installed("duckdb", reason = "to use PinSource.")
       rlang::check_dots_empty()
+
+      engine <- engine %||% get_default_dataframe_engine()
+      engine <- tolower(engine)
+      arg_match(engine, c("duckdb", "sqlite"))
 
       table_name <- sanitize_table_name(table_name)
       private$.pin_meta <- pins::pin_meta(board, name, version = version)
 
       pin_type <- private$.pin_meta$type
-      con <- DBI::dbConnect(duckdb::duckdb())
-      con_owned <- FALSE
-      on.exit(if (!con_owned) DBI::dbDisconnect(con), add = TRUE)
-
       duckdb_file_types <- c("parquet", "csv", "json")
+      use_duckdb_file_read <- engine == "duckdb" &&
+        pin_type %in% duckdb_file_types
 
-      if (pin_type %in% duckdb_file_types) {
+      if (use_duckdb_file_read) {
+        check_installed("duckdb")
+        con <- DBI::dbConnect(duckdb::duckdb())
+        con_owned <- FALSE
+        on.exit(if (!con_owned) DBI::dbDisconnect(con), add = TRUE)
+
         paths <- pins::pin_download(board, name, version = version)
         if (length(paths) != 1) {
           cli::cli_abort(
@@ -110,17 +131,24 @@ PinSource <- R6::R6Class(
           quoted_path
         )
         DBI::dbExecute(con, sql)
+        duckdb_lock_down(con)
       } else {
+        if (engine == "sqlite" && pin_type %in% duckdb_file_types) {
+          cli::cli_warn(c(
+            "Reading {pin_type} pin {.val {name}} into SQLite.",
+            "i" = "The {.pkg duckdb} engine reads {pin_type} pins more efficiently. Install {.pkg duckdb} or pass {.code engine = \"duckdb\"} to read the pin files directly."
+          ))
+        }
         data <- pins::pin_read(board, name, version = version)
         if (!is.data.frame(data)) {
           cli::cli_abort(
             "Pin {.val {name}} contains {.obj_type_friendly {data}}, not a data frame."
           )
         }
-        duckdb::dbWriteTable(con, table_name, data)
+        con <- new_dataframe_connection(data, table_name, engine)
+        con_owned <- FALSE
+        on.exit(if (!con_owned) DBI::dbDisconnect(con), add = TRUE)
       }
-
-      duckdb_lock_down(con)
 
       super$initialize(con, table_name)
       con_owned <- TRUE

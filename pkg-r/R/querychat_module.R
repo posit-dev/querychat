@@ -210,7 +210,7 @@ mod_server <- function(
         if (!is.null(state$values$querychat_viz_widgets)) {
           restored <- restore_viz_widgets(
             data_source,
-            state$values$querychat_viz_widgets,
+            restore_record_list(state$values$querychat_viz_widgets),
             session
           )
           viz_widgets <<- restored
@@ -233,6 +233,27 @@ GREETING_PROMPT <- paste(
   "Include a few sample suggestions grouped under ##### headings,",
   "using the suggestion card format from your instructions."
 )
+
+# A list of records (named lists) bookmarked to the URL comes back from Shiny's
+# decoder as a data.frame, because jsonlite simplifies a JSON array of objects
+# (simplifyDataFrame = TRUE). Rebuild the list-of-lists shape row by row,
+# dropping absent (NA) optional fields. A value restored from a server-side
+# store (or already a list) is passed through unchanged.
+restore_record_list <- function(x) {
+  if (is.null(x)) {
+    return(NULL)
+  }
+  if (is.data.frame(x)) {
+    return(lapply(seq_len(nrow(x)), function(i) {
+      row <- as.list(x[i, , drop = FALSE])
+      row <- lapply(row, function(v) {
+        if (length(v) == 1 && is.na(v)) NULL else v
+      })
+      row[!vapply(row, is.null, logical(1))]
+    }))
+  }
+  as.list(x)
+}
 
 restore_viz_widgets <- function(data_source, saved_widgets, session) {
   if (!rlang::is_installed("ggsql")) {

@@ -8,12 +8,11 @@ from chatlas import Turn
 from narwhals.stable.v1.typing import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
 
 from ._dash_ui import IDs, card_ui, chat_container_ui, chat_messages_ui
-from ._querychat_base import TOOL_GROUPS, QueryChatBase
+from ._querychat_base import TOOL_GROUPS, StateDictQueryChat
 from ._querychat_core import (
     GREETING_PROMPT,
     AppState,
     AppStateDict,
-    StateDictAccessorMixin,
     create_app_state,
     stream_response_async,
 )
@@ -36,7 +35,7 @@ if TYPE_CHECKING:
     from ._data_dict import DataDict
 
 
-class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
+class QueryChat(StateDictQueryChat[IntoFrameT]):
     """
     QueryChat for Dash applications.
 

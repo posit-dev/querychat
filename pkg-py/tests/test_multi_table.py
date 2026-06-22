@@ -869,12 +869,12 @@ class TestMultiTableGuardrails:
         from unittest.mock import MagicMock
 
         from querychat import QueryChat
-        from querychat._querychat_core import StateDictAccessorMixin
+        from querychat._querychat_base import StateDictQueryChat
 
         qc = QueryChat(orders_df, "orders")
         qc.add_table(customers_df, "customers")
 
-        class DummyAccessor(StateDictAccessorMixin):
+        class DummyAccessor(StateDictQueryChat):
             def __init__(self):
                 self._data_sources = dict(qc._data_sources)
                 self._query_executor = qc._query_executor
@@ -897,12 +897,12 @@ class TestMultiTableGuardrails:
         from unittest.mock import MagicMock
 
         from querychat import QueryChat
-        from querychat._querychat_core import StateDictAccessorMixin
+        from querychat._querychat_base import StateDictQueryChat
 
         qc = QueryChat(orders_df, "orders")
         qc.add_table(customers_df, "customers")
 
-        class DummyAccessor(StateDictAccessorMixin):
+        class DummyAccessor(StateDictQueryChat):
             def __init__(self):
                 self._data_sources = dict(qc._data_sources)
                 self._query_executor = qc._query_executor
@@ -925,12 +925,12 @@ class TestMultiTableGuardrails:
         from unittest.mock import MagicMock
 
         from querychat import QueryChat
-        from querychat._querychat_core import StateDictAccessorMixin
+        from querychat._querychat_base import StateDictQueryChat
 
         qc = QueryChat(orders_df, "orders")
         qc.add_table(customers_df, "customers")
 
-        class DummyAccessor(StateDictAccessorMixin):
+        class DummyAccessor(StateDictQueryChat):
             def __init__(self):
                 self._data_sources = dict(qc._data_sources)
                 self._query_executor = qc._query_executor
@@ -953,12 +953,12 @@ class TestMultiTableGuardrails:
         from unittest.mock import MagicMock
 
         from querychat import QueryChat
-        from querychat._querychat_core import StateDictAccessorMixin
+        from querychat._querychat_base import StateDictQueryChat
 
         qc = QueryChat(orders_df, "orders")
         qc.add_table(customers_df, "customers")
 
-        class DummyAccessor(StateDictAccessorMixin):
+        class DummyAccessor(StateDictQueryChat):
             def __init__(self):
                 self._data_sources = dict(qc._data_sources)
                 self._query_executor = qc._query_executor

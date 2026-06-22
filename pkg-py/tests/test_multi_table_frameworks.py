@@ -89,17 +89,17 @@ class TestStreamlitMultiTable:
             assert qc.table("customers").sql() is None
 
 
-class TestStateDictAccessorMixinMultiTable:
-    """Tests for table= parameter on StateDictAccessorMixin."""
+class TestStateDictQueryChatMultiTable:
+    """Tests for table= parameter on StateDictQueryChat."""
 
     def _make_accessor(self, orders_df, customers_df):
         from querychat import QueryChat
-        from querychat._querychat_core import StateDictAccessorMixin
+        from querychat._querychat_base import StateDictQueryChat
 
         qc = QueryChat(orders_df, "orders")
         qc.add_table(customers_df, "customers")
 
-        class DummyAccessor(StateDictAccessorMixin):
+        class DummyAccessor(StateDictQueryChat):
             def __init__(self):
                 self._data_sources = dict(qc._data_sources)
                 self._query_executor = qc._require_query_executor("test")

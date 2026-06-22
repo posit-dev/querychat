@@ -10,11 +10,10 @@ from narwhals.stable.v1.typing import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
 if TYPE_CHECKING:
     import narwhals.stable.v1 as nw
 
-from ._querychat_base import TOOL_GROUPS, QueryChatBase
+from ._querychat_base import TOOL_GROUPS, StateDictQueryChat
 from ._querychat_core import (
     GREETING_PROMPT,
     AppStateDict,
-    StateDictAccessorMixin,
     create_app_state,
     stream_response,
 )
@@ -34,7 +33,7 @@ if TYPE_CHECKING:
     from ._data_dict import DataDict
 
 
-class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
+class QueryChat(StateDictQueryChat[IntoFrameT]):
     """
     QueryChat for Gradio applications.
 

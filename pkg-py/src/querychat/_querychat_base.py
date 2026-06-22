@@ -30,7 +30,7 @@ from ._query_executor import (
     check_source_compatibility,
     validate_source_group_compatibility,
 )
-from ._querychat_core import GREETING_PROMPT
+from ._querychat_core import AppState, AppStateDict, create_app_state, GREETING_PROMPT
 from ._system_prompt import QueryChatSystemPrompt
 from ._utils import MISSING, MISSING_TYPE, is_ibis_table
 from ._viz_utils import has_viz_deps, has_viz_tool
@@ -593,3 +593,159 @@ def _normalize_data_dicts(
     if isinstance(data_dict, (str, Path)):
         return [_DataDict.from_yaml(data_dict)]
     return [data_dict]
+
+
+def _get_table_sql(state: AppStateDict | None, table: str) -> str | None:
+    """Extract the SQL for a specific table from a serialized state dict."""
+    if state is None:
+        return None
+    per_table = state.get("table_states")
+    if per_table and table in per_table:
+        return per_table[table].get("sql")
+    # Backward compat: if table matches the active table and no table_states key exists
+    if state.get("table") == table:
+        return state.get("sql")
+    return None
+
+
+class StateDictQueryChat(QueryChatBase[IntoFrameT]):
+    """Base for Dash and Gradio adapters that pass serialized state dicts per request."""
+
+    def _client_factory(
+        self,
+        update_cb: Callable[[UpdateDashboardData], None],
+        reset_cb: Callable[[str], None],
+    ) -> chatlas.Chat:
+        """Create a chat client with dashboard callbacks."""
+        return self.client(update_dashboard=update_cb, reset_dashboard=reset_cb)
+
+    def df(self, state: AppStateDict | None, *, table: str | None = None) -> IntoFrameT:
+        """
+        Get the current DataFrame from state.
+
+        Parameters
+        ----------
+        state
+            The state dictionary from a framework callback.
+        table
+            Table name to read. Defaults to the active table when None.
+
+        Returns
+        -------
+        :
+            The filtered data if a SQL query is active, otherwise the full dataset.
+            Returns a LazyFrame if the data source is lazy.
+
+        """
+        if table is not None:
+            data_source = self._data_sources[table]
+            sql = _get_table_sql(state, table)
+            if sql:
+                try:
+                    query_executor = self._require_query_executor("df")
+                    return query_executor.execute_query(sql)
+                except Exception:
+                    return data_source.get_data()
+            return data_source.get_data()
+        if len(self._data_sources) > 1:
+            table_list = ", ".join(f"'{n}'" for n in self._data_sources)
+            raise AttributeError(
+                f"Cannot use .df(state) with multiple tables ({table_list}). "
+                "Pass table='name' to specify which table."
+            )
+        data_source = self._get_state_data_source(state)
+        sql_active = state.get("sql") if state else None
+        if sql_active:
+            try:
+                query_executor = self._require_query_executor("df")
+                return query_executor.execute_query(sql_active)
+            except Exception:
+                return data_source.get_data()
+        return data_source.get_data()
+
+    def _get_state_data_source(
+        self, state: AppStateDict | None
+    ) -> DataSource[IntoFrameT]:
+        """Resolve the full-data source for a serialized state payload."""
+        self._require_initialized("_get_state_data_source")
+        first_source: DataSource[IntoFrameT] = next(iter(self._data_sources.values()))
+        if not state:
+            return first_source
+        table_name = state.get("table")
+        if table_name is not None and table_name in self._data_sources:
+            return self._data_sources[table_name]
+        return first_source
+
+    def sql(self, state: AppStateDict | None, *, table: str | None = None) -> str | None:
+        """
+        Get the current SQL query from state.
+
+        Parameters
+        ----------
+        state
+            The state dictionary from a framework callback.
+        table
+            Table name. Defaults to the active table when None.
+
+        Returns
+        -------
+        :
+            The current SQL query, or None if showing full dataset.
+
+        """
+        if table is not None:
+            return _get_table_sql(state, table)
+        if len(self._data_sources) > 1:
+            table_list = ", ".join(f"'{n}'" for n in self._data_sources)
+            raise AttributeError(
+                f"Cannot use .sql(state) with multiple tables ({table_list}). "
+                "Pass table='name' to specify which table."
+            )
+        return state.get("sql") if state else None
+
+    def title(self, state: AppStateDict | None, *, table: str | None = None) -> str | None:
+        """
+        Get the current query title from state.
+
+        Parameters
+        ----------
+        state
+            The state dictionary from a framework callback.
+        table
+            Table name. Defaults to the active table when None.
+
+        Returns
+        -------
+        :
+            A short description of the current filter, or None if showing full dataset.
+
+        """
+        if table is not None:
+            if state is None:
+                return None
+            per_table = state.get("table_states")
+            if per_table and table in per_table:
+                return per_table[table].get("title")
+            if state.get("table") == table:
+                return state.get("title")
+            return None
+        if len(self._data_sources) > 1:
+            table_list = ", ".join(f"'{n}'" for n in self._data_sources)
+            raise AttributeError(
+                f"Cannot use .title(state) with multiple tables ({table_list}). "
+                "Pass table='name' to specify which table."
+            )
+        return state.get("title") if state else None
+
+    def _deserialize_state(self, state_data: AppStateDict | None) -> AppState:
+        """Reconstruct AppState from a serialized state dict."""
+        self._require_initialized("_deserialize_state")
+        state = create_app_state(
+            data_sources=dict(self._data_sources),
+            client_factory=self._client_factory,
+            greeting=self.greeting,
+            query_executor=self._require_query_executor("_deserialize_state"),
+        )
+        if state_data:
+            state.update_from_dict(state_data)
+        return state

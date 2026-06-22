@@ -9,9 +9,9 @@ import pandas as pd
 import pytest
 from querychat import QueryChat
 from querychat._datasource import DataFrameSource
+from querychat._querychat_base import StateDictQueryChat
 from querychat._querychat_core import (
     AppState,
-    StateDictAccessorMixin,
     create_app_state,
     stream_response,
 )
@@ -363,7 +363,7 @@ class TestCreateAppState:
         assert state.title is None
 
 
-class DummyStateAccessor(StateDictAccessorMixin[pd.DataFrame]):
+class DummyStateAccessor(StateDictQueryChat[pd.DataFrame]):
     def __init__(self, qc: QueryChat):
         self._data_sources = dict(qc._data_sources)
         self._query_executor = qc._require_query_executor("test")
@@ -379,7 +379,7 @@ class DummyStateAccessor(StateDictAccessorMixin[pd.DataFrame]):
         return MagicMock()
 
 
-class TestStateDictAccessorMixin:
+class TestStateDictQueryChat:
     def test_df_uses_query_executor_for_multi_table_dashboard_sql(self):
         orders = pd.DataFrame(
             {

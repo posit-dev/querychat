@@ -439,7 +439,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             A UI component.
 
         """
-        return mod_ui(id or self.id, preload_viz=has_viz_tool(self.tools), **kwargs)
+        return mod_ui(id or self.id, preload_viz=has_viz_tool(self.tools), greeting=self.greeting, **kwargs)
 
     def server(
         self,
@@ -882,7 +882,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             A UI component.
 
         """
-        result = mod_ui(id or self.id, preload_viz=has_viz_tool(self.tools), **kwargs)
+        result = mod_ui(id or self.id, preload_viz=has_viz_tool(self.tools), greeting=self.greeting, **kwargs)
         self._ensure_server_started()
         return result
 

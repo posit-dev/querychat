@@ -37,7 +37,8 @@ class Test02PromptApp:
     def test_custom_greeting_appears(self) -> None:
         """INIT-02: Custom greeting from greeting.md is shown."""
         # The custom greeting should contain content from greeting.md
-        expect(self.chat.loc_messages).to_contain_text("Hello", timeout=30000)
+        greeting = self.chat.loc.locator(".shiny-chat-greeting")
+        expect(greeting).to_contain_text("Hello", timeout=30000)
 
     def test_default_sql_query_shown(self) -> None:
         """INIT-03: SQL panel shows default query."""

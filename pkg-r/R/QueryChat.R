@@ -839,7 +839,7 @@ QueryChat <- R6::R6Class(
 
       id <- id %||% namespaced_id(self$id)
 
-      mod_ui(id, ...)
+      mod_ui(id, ..., greeting = self$greeting)
     },
 
     #' @description

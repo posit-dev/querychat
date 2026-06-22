@@ -78,9 +78,8 @@ class TestVizBookmarkRestore:
 
         page.goto(app_viz_bookmark)
         page.wait_for_selector("shiny-chat-container", timeout=30_000)
-        expect(chat_viz_bookmark.loc_latest_message).to_contain_text(
-            "Welcome", timeout=30_000
-        )
+        greeting = chat_viz_bookmark.loc.locator(".shiny-chat-greeting")
+        expect(greeting).to_contain_text("Welcome", timeout=30_000)
 
         self.pre_viz_url = page.url
 

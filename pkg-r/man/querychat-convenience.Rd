@@ -35,6 +35,7 @@ querychat_app(
   prompt_template = NULL,
   data_dict = NULL,
   cleanup = NA,
+  bookmark_enable = TRUE,
   bookmark_store = "url"
 )
 }
@@ -75,9 +76,23 @@ values to consider as a categorical variable. Default is 20.}
 \item{data_dict}{Optional data dictionary. A path to a YAML file or a list of paths.}
 
 \item{cleanup}{Whether or not to automatically run \verb{$cleanup()} when the
-Shiny session/app stops.}
+Shiny session/app stops. By default, cleanup only occurs if \code{QueryChat}
+is created within a Shiny app. Set to \code{TRUE} to always clean up, or
+\code{FALSE} to never clean up automatically.
 
-\item{bookmark_store}{The bookmarking storage method. Default is \code{"url"}.}
+In \code{querychat_app()}, in-memory databases created for data frames are
+always cleaned up.}
+
+\item{bookmark_enable}{Which categories of state to bookmark. Passed to
+\code{QueryChat$server()}; see its documentation for accepted values. Default is
+\code{TRUE} (bookmark everything). Nothing is bookmarked when this is \code{FALSE} or
+when \code{bookmark_store} is \code{"disable"}.}
+
+\item{bookmark_store}{Where bookmarked state is stored. Passed to
+\code{\link[shiny:enableBookmarking]{shiny::enableBookmarking()}}: \code{"url"} stores state in the URL, \code{"server"}
+stores it server-side, and \code{"disable"} turns off bookmarking entirely.
+Default is \code{"url"}. Use \code{bookmark_enable} to choose \emph{which} state is
+saved.}
 }
 \value{
 A \code{QueryChat} object. See \link{QueryChat} for available methods.

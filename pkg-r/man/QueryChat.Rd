@@ -410,16 +410,22 @@ By default, only the \code{"query"} tool is included, regardless of the
   Create and run a Shiny gadget for chatting with data
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
-    \preformatted{QueryChat$app(..., bookmark_store = "url")}
+    \preformatted{QueryChat$app(..., bookmark_enable = TRUE, bookmark_store = "url")}
     \if{html}{\out{</div>}}
   }
   \subsection{Arguments}{
     \if{html}{\out{<div class="arguments">}}
     \describe{
       \item{\code{...}}{Arguments passed to \verb{$app_obj()}.}
-      \item{\code{bookmark_store}}{The bookmarking storage method. Passed to
-\code{\link[shiny:enableBookmarking]{shiny::enableBookmarking()}}. If \code{"url"} or \code{"server"}, the chat state
-(including current query) will be bookmarked. Default is \code{"url"}.}
+      \item{\code{bookmark_enable}}{Which categories of state to bookmark. Passed to
+\verb{$server()}; see its documentation for accepted values. Default is
+\code{TRUE} (bookmark everything). Nothing is bookmarked when this is \code{FALSE}
+or when \code{bookmark_store} is \code{"disable"}.}
+      \item{\code{bookmark_store}}{Where bookmarked state is stored. Passed to
+\code{\link[shiny:enableBookmarking]{shiny::enableBookmarking()}}: \code{"url"} stores state in the URL, \code{"server"}
+stores it server-side, and \code{"disable"} turns off bookmarking entirely.
+Default is \code{"url"}. Use \code{bookmark_enable} to choose \emph{which} state is
+saved.}
     }
     \if{html}{\out{</div>}}
   }
@@ -451,15 +457,22 @@ shiny::runApp(app)
 }\if{html}{\out{</div>}}
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
-    \preformatted{QueryChat$app_obj(..., bookmark_store = "url")}
+    \preformatted{QueryChat$app_obj(..., bookmark_enable = TRUE, bookmark_store = "url")}
     \if{html}{\out{</div>}}
   }
   \subsection{Arguments}{
     \if{html}{\out{<div class="arguments">}}
     \describe{
       \item{\code{...}}{Additional arguments (currently unused).}
-      \item{\code{bookmark_store}}{The bookmarking storage method. Passed to
-\code{\link[shiny:enableBookmarking]{shiny::enableBookmarking()}}. Default is \code{"url"}.}
+      \item{\code{bookmark_enable}}{Which categories of state to bookmark. Passed to
+\verb{$server()}; see its documentation for accepted values. Default is
+\code{TRUE} (bookmark everything). Nothing is bookmarked when this is \code{FALSE}
+or when \code{bookmark_store} is \code{"disable"}.}
+      \item{\code{bookmark_store}}{Where bookmarked state is stored. Passed to
+\code{\link[shiny:enableBookmarking]{shiny::enableBookmarking()}}: \code{"url"} stores state in the URL, \code{"server"}
+stores it server-side, and \code{"disable"} turns off bookmarking entirely.
+Default is \code{"url"}. Use \code{bookmark_enable} to choose \emph{which} state is
+saved.}
     }
     \if{html}{\out{</div>}}
   }
@@ -569,16 +582,32 @@ the namespacing function from \code{\link[shiny:NS]{shiny::NS()}}.}
 \if{latex}{\out{\hypertarget{method-QueryChat-server}{}}}
 \subsection{\code{QueryChat$server()}}{
   Initialize the querychat server logic.
+
+This method must be called within a Shiny server function. It sets up the
+reactive logic for the chat interface and returns session-specific
+reactive values.
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{qc <- QueryChat$new(mtcars)
+
+server <- function(input, output, session) \{
+  qc_vals <- qc$server(bookmark_enable = TRUE)
+
+  output$data <- renderDataTable(qc_vals$df())
+  output$query <- renderText(qc_vals$sql())
+  output$title <- renderText(qc_vals$title() \%||\% "No Query")
+\}
+}\if{html}{\out{</div>}}
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
     \preformatted{QueryChat$server(
   data_source = NULL,
   client = NULL,
-  enable_bookmarking = FALSE,
+  bookmark_enable = FALSE,
   card_placeholder = "Insights will appear here",
   ...,
   id = NULL,
-  session = shiny::getDefaultReactiveDomain()
+  session = shiny::getDefaultReactiveDomain(),
+  enable_bookmarking = lifecycle::deprecated()
 )}
     \if{html}{\out{</div>}}
   }
@@ -595,7 +624,7 @@ specific authentication).}
 overrides the client set at initialization for this session only —
 other sessions are unaffected. This is useful when the client must be
 created within a session scope (e.g., Posit Connect managed credentials).}
-      \item{\code{enable_bookmarking}}{Which categories of state to bookmark. Default
+      \item{\code{bookmark_enable}}{Which categories of state to bookmark. Default
 is \code{FALSE} (no bookmarking). Accepts:
 \itemize{
 \item \code{TRUE} to bookmark everything (equivalent to
@@ -609,7 +638,7 @@ created with the \code{querychat_card} tool.
 }
 
 Bookmarking categories independently enables share patterns such as
-\code{enable_bookmarking = "cards"}, which produces links that open the app
+\code{bookmark_enable = "cards"}, which produces links that open the app
 with the same insights but a fresh conversation.
 
 This requires that the Shiny app has bookmarking enabled via
@@ -620,6 +649,8 @@ cards exist. Set to \code{NULL} for no placeholder.}
       \item{\code{...}}{Ignored.}
       \item{\code{id}}{Optional module ID override.}
       \item{\code{session}}{The Shiny session object.}
+      \item{\code{enable_bookmarking}}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}} Renamed to
+\code{bookmark_enable}.}
     }
     \if{html}{\out{</div>}}
   }

@@ -152,7 +152,7 @@ test_that("mod_server() passes visualize callback and tools to client factory", 
       greeting = "Hello",
       client = client_factory,
       tools = c("query", "visualize"),
-      enable_bookmarking = FALSE
+      bookmark_enable = FALSE
     ),
     {
       expect_type(captured, "list")
@@ -314,7 +314,7 @@ test_that("restored viz widgets survive a second bookmark cycle", {
       greeting = "Hello",
       client = client_factory,
       tools = c("query", "visualize"),
-      enable_bookmarking = TRUE
+      bookmark_enable = TRUE
     ),
     {
       expect_true(is.function(bookmark_fn))

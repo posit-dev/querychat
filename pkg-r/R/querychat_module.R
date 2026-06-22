@@ -54,30 +54,30 @@ mod_ui_cards <- function(id, ...) {
 # Valid bookmark categories
 BOOKMARK_CATEGORIES <- c("conversation", "cards")
 
-# Normalize the `enable_bookmarking` argument to a character vector of
+# Normalize the `bookmark_enable` argument to a character vector of
 # categories. Accepts TRUE (all), FALSE/NULL (none), or a character subset of
 # `BOOKMARK_CATEGORIES`.
-normalize_bookmark_categories <- function(enable_bookmarking) {
-  if (is.null(enable_bookmarking) || length(enable_bookmarking) == 0) {
+normalize_bookmark_categories <- function(bookmark_enable) {
+  if (is.null(bookmark_enable) || length(bookmark_enable) == 0) {
     return(character(0))
   }
-  if (is.logical(enable_bookmarking)) {
-    if (length(enable_bookmarking) != 1 || is.na(enable_bookmarking)) {
+  if (is.logical(bookmark_enable)) {
+    if (length(bookmark_enable) != 1 || is.na(bookmark_enable)) {
       cli::cli_abort(
-        "{.arg enable_bookmarking} must be {.code TRUE}, {.code FALSE}, or a character vector of {.or {.val {BOOKMARK_CATEGORIES}}}."
+        "{.arg bookmark_enable} must be {.code TRUE}, {.code FALSE}, or a character vector of {.or {.val {BOOKMARK_CATEGORIES}}}."
       )
     }
-    return(if (enable_bookmarking) BOOKMARK_CATEGORIES else character(0))
+    return(if (bookmark_enable) BOOKMARK_CATEGORIES else character(0))
   }
-  if (is.character(enable_bookmarking)) {
+  if (is.character(bookmark_enable)) {
     return(rlang::arg_match(
-      enable_bookmarking,
+      bookmark_enable,
       BOOKMARK_CATEGORIES,
       multiple = TRUE
     ))
   }
   cli::cli_abort(
-    "{.arg enable_bookmarking} must be {.code TRUE}, {.code FALSE}, or a character vector of {.or {.val {BOOKMARK_CATEGORIES}}}."
+    "{.arg bookmark_enable} must be {.code TRUE}, {.code FALSE}, or a character vector of {.or {.val {BOOKMARK_CATEGORIES}}}."
   )
 }
 
@@ -91,10 +91,10 @@ mod_server <- function(
   tools,
   greeter = NULL,
   greeting_base = NULL,
-  enable_bookmarking = FALSE,
+  bookmark_enable = FALSE,
   card_placeholder = "Insights will appear here"
 ) {
-  bookmark_cats <- normalize_bookmark_categories(enable_bookmarking)
+  bookmark_cats <- normalize_bookmark_categories(bookmark_enable)
   shiny::moduleServer(id, function(input, output, session) {
     current_table_val <- shiny::reactiveVal(NULL, label = "current_table")
     # Holds a generated greeting so it can be saved and restored on bookmark.

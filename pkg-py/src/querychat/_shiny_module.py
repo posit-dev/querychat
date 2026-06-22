@@ -12,7 +12,7 @@ from shinychat import Attachment, attachment_to_content
 
 from shiny import module, reactive, ui
 
-from ._querychat_core import GREETING_PROMPT
+from ._querychat_core import GREETING_PROMPT, warn_multi_table_flat_accessor
 from ._table_accessor import TableAccessor
 from ._viz_altair_widget import AltairWidget
 from ._viz_ggsql import execute_ggsql
@@ -88,23 +88,39 @@ def mod_ui(*, preload_viz: bool = False, **kwargs):
     )
 
 
-class _MultiTableBlockedReactive:
-    """Sentinel that raises on any access, directing users to per-table API."""
+class _MultiTableWarnReactive:
+    """Proxy that warns once per session and delegates to the primary table's reactive value."""
 
-    def __init__(self, table_list: str, attr_name: str) -> None:
-        self._msg = (
-            f"Cannot use .{attr_name}() with multiple tables ({table_list}). "
-            f"Use .table('name').{attr_name}() for per-table access."
-        )
+    def __init__(
+        self,
+        primary: ReactiveStringOrNone,
+        accessor_name: str,
+        primary_table: str,
+        table_list: str,
+    ) -> None:
+        self._primary = primary
+        self._accessor_name = accessor_name
+        self._primary_table = primary_table
+        self._table_list = table_list
+        self._warned = False
 
-    def __call__(self, *_args: object, **_kwargs: object) -> object:
-        raise AttributeError(self._msg)
+    def _warn(self) -> None:
+        if not self._warned:
+            self._warned = True
+            warn_multi_table_flat_accessor(
+                self._accessor_name, self._primary_table, self._table_list, stacklevel=4
+            )
 
-    def get(self, *_args: object, **_kwargs: object) -> object:
-        raise AttributeError(self._msg)
+    def __call__(self) -> str | None:
+        self._warn()
+        return self._primary.get()
 
-    def set(self, *_args: object, **_kwargs: object) -> None:
-        raise AttributeError(self._msg)
+    def get(self) -> str | None:
+        self._warn()
+        return self._primary.get()
+
+    def set(self, value: str | None) -> None:
+        self._primary.set(value)
 
 
 class ServerValues(Generic[IntoFrameT]):
@@ -118,13 +134,13 @@ class ServerValues(Generic[IntoFrameT]):
     ----------
     df
         Reactive Calc returning the current filtered data frame.
-        Raises ``AttributeError`` with multiple tables; use ``.table('name').df()``.
+        With multiple tables, warns and defaults to the primary table; use ``.table('name').df()``.
     sql
         Reactive Value for the current SQL query string.
-        Raises ``AttributeError`` with multiple tables; use ``.table('name').sql``.
+        With multiple tables, warns and defaults to the primary table; use ``.table('name').sql``.
     title
         Reactive Value for the current title.
-        Raises ``AttributeError`` with multiple tables; use ``.table('name').title``.
+        With multiple tables, warns and defaults to the primary table; use ``.table('name').title``.
     tables
         Per-table reactive state dict. Keys are table names.
     client
@@ -381,18 +397,24 @@ def mod_server(
             current_table=_current_table,
         )
 
+    primary_name = next(iter(table_states))
+    primary_state = table_states[primary_name]
     table_list = ", ".join(f"'{n}'" for n in table_states)
 
+    df_warned = False
+
+    @reactive.calc
     def _multi_table_df() -> IntoFrameT:
-        raise AttributeError(
-            f"Cannot use .df() with multiple tables ({table_list}). "
-            "Use .table('name').df() for per-table access."
-        )
+        nonlocal df_warned
+        if not df_warned:
+            df_warned = True
+            warn_multi_table_flat_accessor("df", primary_name, table_list)
+        return primary_state.df()
 
     return ServerValues(
         df=_multi_table_df,
-        sql=_MultiTableBlockedReactive(table_list, "sql"),  # type: ignore[arg-type]
-        title=_MultiTableBlockedReactive(table_list, "title"),  # type: ignore[arg-type]
+        sql=_MultiTableWarnReactive(primary_state.sql, "sql", primary_name, table_list),  # type: ignore[arg-type]
+        title=_MultiTableWarnReactive(primary_state.title, "title", primary_name, table_list),  # type: ignore[arg-type]
         tables=table_states,
         client=chat,
         data_sources=data_sources,

@@ -12,6 +12,7 @@ __all__ = [
     "stream_response_async",
 ]
 
+import warnings
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Optional, TypedDict, Union
@@ -43,6 +44,20 @@ ClientFactory = Callable[
     Chat,
 ]
 """Factory that creates a Chat client with update_dashboard and reset_dashboard callbacks."""
+
+
+def warn_multi_table_flat_accessor(
+    accessor_name: str, primary_table: str, table_list: str, stacklevel: int = 3
+) -> None:
+    """Emit a FutureWarning when a flat accessor is used with multiple tables registered."""
+    warnings.warn(
+        f".{accessor_name}() called without a table name, but multiple tables are registered "
+        f"({table_list}). Defaulting to primary table '{primary_table}'. "
+        f"Use .table('{primary_table}').{accessor_name}() to suppress this warning. "
+        f"In a future version of querychat, this will raise an error.",
+        FutureWarning,
+        stacklevel=stacklevel,
+    )
 
 
 class TableStateData(TypedDict):

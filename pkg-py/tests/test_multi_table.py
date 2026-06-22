@@ -581,78 +581,78 @@ class TestBuildQueryExecutor:
 
 
 class TestMultiTableGuardrails:
-    """Top-level accessors raise when multiple tables are registered."""
+    """Top-level flat accessors warn and delegate to the primary table with multiple tables."""
 
-    def test_shiny_server_values_df_raises(self, orders_df, customers_df):
+    def test_shiny_server_values_flat_accessor_warns(self, orders_df, customers_df):
+        import warnings
+
         from querychat._shiny_module import (
             ServerValues,
             TableState,
-            _MultiTableBlockedReactive,
+            _MultiTableWarnReactive,
         )
 
         from shiny import reactive
 
-        orders_sql = reactive.Value(None)
-        orders_title = reactive.Value(None)
-        customers_sql = reactive.Value(None)
-        customers_title = reactive.Value(None)
-
-        def orders_df_calc():
-            return orders_df
-
-        def customers_df_calc():
-            return customers_df
+        orders_sql: reactive.Value[str | None] = reactive.Value(None)
+        orders_title: reactive.Value[str | None] = reactive.Value(None)
+        customers_sql: reactive.Value[str | None] = reactive.Value(None)
+        customers_title: reactive.Value[str | None] = reactive.Value(None)
 
         table_list = "'orders', 'customers'"
         vals = ServerValues(
-            df=lambda: (_ for _ in ()).throw(
-                AttributeError(
-                    f"Cannot use .df() with multiple tables ({table_list}). "
-                    "Use .table('name').df() for per-table access."
-                )
-            ),
-            sql=_MultiTableBlockedReactive(table_list, "sql"),  # type: ignore[arg-type]
-            title=_MultiTableBlockedReactive(table_list, "title"),  # type: ignore[arg-type]
+            df=lambda: orders_df,
+            sql=_MultiTableWarnReactive(orders_sql, "sql", "orders", table_list),  # type: ignore[arg-type]
+            title=_MultiTableWarnReactive(orders_title, "title", "orders", table_list),  # type: ignore[arg-type]
             tables={
-                "orders": TableState(sql=orders_sql, title=orders_title, df=orders_df_calc),
-                "customers": TableState(sql=customers_sql, title=customers_title, df=customers_df_calc),
+                "orders": TableState(sql=orders_sql, title=orders_title, df=lambda: orders_df),
+                "customers": TableState(sql=customers_sql, title=customers_title, df=lambda: customers_df),
             },
             client=None,  # type: ignore[arg-type]
             data_sources={},
             current_table=reactive.Value(None),
         )
 
-        with pytest.raises(AttributeError, match="multiple tables"):
-            vals.sql()
+        # First access warns and delegates to primary table
+        with reactive.isolate():
+            with pytest.warns(FutureWarning, match="multiple tables"):
+                result = vals.sql()
+        assert result is None  # primary table has no SQL set
 
-        with pytest.raises(AttributeError, match="multiple tables"):
-            vals.sql.get()
+        # Subsequent accesses on the same instance don't re-warn
+        with reactive.isolate(), warnings.catch_warnings():
+            warnings.simplefilter("error")
+            assert vals.sql.get() is None
 
-        with pytest.raises(AttributeError, match="multiple tables"):
-            vals.sql.set("SELECT 1")
+        # .set() delegates to the primary reactive
+        vals.sql.set("SELECT 1")
+        with reactive.isolate():
+            assert orders_sql.get() == "SELECT 1"
 
-        with pytest.raises(AttributeError, match="multiple tables"):
-            vals.title()
+        # title is a separate instance — first access warns independently
+        with reactive.isolate():
+            with pytest.warns(FutureWarning, match="multiple tables"):
+                assert vals.title() is None
 
     def test_shiny_server_values_tables_still_works(self, orders_df, customers_df):
         from querychat._shiny_module import (
             ServerValues,
             TableState,
-            _MultiTableBlockedReactive,
+            _MultiTableWarnReactive,
         )
 
         from shiny import reactive
 
-        orders_sql = reactive.Value(None)
-        orders_title = reactive.Value(None)
-        customers_sql = reactive.Value(None)
-        customers_title = reactive.Value(None)
+        orders_sql: reactive.Value[str | None] = reactive.Value(None)
+        orders_title: reactive.Value[str | None] = reactive.Value(None)
+        customers_sql: reactive.Value[str | None] = reactive.Value(None)
+        customers_title: reactive.Value[str | None] = reactive.Value(None)
 
         table_list = "'orders', 'customers'"
         vals = ServerValues(
             df=lambda: None,  # type: ignore[return-value]
-            sql=_MultiTableBlockedReactive(table_list, "sql"),  # type: ignore[arg-type]
-            title=_MultiTableBlockedReactive(table_list, "title"),  # type: ignore[arg-type]
+            sql=_MultiTableWarnReactive(orders_sql, "sql", "orders", table_list),  # type: ignore[arg-type]
+            title=_MultiTableWarnReactive(orders_title, "title", "orders", table_list),  # type: ignore[arg-type]
             tables={
                 "orders": TableState(sql=orders_sql, title=orders_title, df=lambda: orders_df),
                 "customers": TableState(sql=customers_sql, title=customers_title, df=lambda: customers_df),
@@ -672,7 +672,7 @@ class TestMultiTableGuardrails:
         from querychat._shiny_module import (
             ServerValues,
             TableState,
-            _MultiTableBlockedReactive,
+            _MultiTableWarnReactive,
         )
 
         from shiny import reactive
@@ -682,8 +682,8 @@ class TestMultiTableGuardrails:
         table_list = "'orders', 'customers'"
         vals = ServerValues(
             df=lambda: None,  # type: ignore[return-value]
-            sql=_MultiTableBlockedReactive(table_list, "sql"),  # type: ignore[arg-type]
-            title=_MultiTableBlockedReactive(table_list, "title"),  # type: ignore[arg-type]
+            sql=_MultiTableWarnReactive(reactive.Value(None), "sql", "orders", table_list),  # type: ignore[arg-type]
+            title=_MultiTableWarnReactive(reactive.Value(None), "title", "orders", table_list),  # type: ignore[arg-type]
             tables={
                 "orders": TableState(sql=reactive.Value(None), title=reactive.Value(None), df=lambda: orders_df),
                 "customers": TableState(sql=reactive.Value(None), title=reactive.Value(None), df=lambda: customers_df),
@@ -775,17 +775,17 @@ class TestMultiTableGuardrails:
         from querychat._shiny_module import (
             ServerValues,
             TableState,
-            _MultiTableBlockedReactive,
+            _MultiTableWarnReactive,
         )
 
         from shiny import reactive
 
-        ct_rv = reactive.Value(None)
+        ct_rv: reactive.Value[str | None] = reactive.Value(None)
         table_list = "'orders', 'customers'"
         vals = ServerValues(
             df=lambda: None,  # type: ignore[return-value]
-            sql=_MultiTableBlockedReactive(table_list, "sql"),  # type: ignore[arg-type]
-            title=_MultiTableBlockedReactive(table_list, "title"),  # type: ignore[arg-type]
+            sql=_MultiTableWarnReactive(reactive.Value(None), "sql", "orders", table_list),  # type: ignore[arg-type]
+            title=_MultiTableWarnReactive(reactive.Value(None), "title", "orders", table_list),  # type: ignore[arg-type]
             tables={
                 "orders": TableState(sql=reactive.Value(None), title=reactive.Value(None), df=lambda: orders_df),
                 "customers": TableState(sql=reactive.Value(None), title=reactive.Value(None), df=lambda: customers_df),
@@ -865,7 +865,7 @@ class TestMultiTableGuardrails:
             result = qc.table("customers").df()
         assert result["id"].tolist() == [101, 102, 103]
 
-    def test_state_dict_mixin_df_raises_multi_table(self, orders_df, customers_df):
+    def test_state_dict_mixin_df_warns_multi_table(self, orders_df, customers_df):
         from unittest.mock import MagicMock
 
         from querychat import QueryChat
@@ -890,10 +890,11 @@ class TestMultiTableGuardrails:
                 return MagicMock()
 
         acc = DummyAccessor()
-        with pytest.raises(AttributeError, match="multiple tables"):
-            acc.df({"sql": None, "title": None, "error": None, "turns": []})
+        with pytest.warns(FutureWarning, match="multiple tables"):
+            result = acc.df({"sql": None, "title": None, "error": None, "turns": []})
+        assert result["id"].tolist() == [1, 2, 3]  # primary table, no filter
 
-    def test_state_dict_mixin_sql_raises_multi_table(self, orders_df, customers_df):
+    def test_state_dict_mixin_sql_warns_multi_table(self, orders_df, customers_df):
         from unittest.mock import MagicMock
 
         from querychat import QueryChat
@@ -918,10 +919,19 @@ class TestMultiTableGuardrails:
                 return MagicMock()
 
         acc = DummyAccessor()
-        with pytest.raises(AttributeError, match="multiple tables"):
-            acc.sql({"sql": "SELECT 1", "title": None, "error": None, "turns": []})
+        state = {
+            "sql": "SELECT 1",
+            "title": None,
+            "error": None,
+            "table": "orders",
+            "table_states": {"orders": {"sql": "SELECT 1", "title": None, "error": None}},
+            "turns": [],
+        }
+        with pytest.warns(FutureWarning, match="multiple tables"):
+            result = acc.sql(state)
+        assert result == "SELECT 1"
 
-    def test_state_dict_mixin_title_raises_multi_table(self, orders_df, customers_df):
+    def test_state_dict_mixin_title_warns_multi_table(self, orders_df, customers_df):
         from unittest.mock import MagicMock
 
         from querychat import QueryChat
@@ -946,8 +956,17 @@ class TestMultiTableGuardrails:
                 return MagicMock()
 
         acc = DummyAccessor()
-        with pytest.raises(AttributeError, match="multiple tables"):
-            acc.title({"sql": None, "title": "hi", "error": None, "turns": []})
+        state = {
+            "sql": None,
+            "title": None,
+            "error": None,
+            "table": "orders",
+            "table_states": {"orders": {"sql": None, "title": "Big orders", "error": None}},
+            "turns": [],
+        }
+        with pytest.warns(FutureWarning, match="multiple tables"):
+            result = acc.title(state)
+        assert result == "Big orders"
 
     def test_state_dict_mixin_with_table_kwarg_still_works(self, orders_df, customers_df):
         from unittest.mock import MagicMock

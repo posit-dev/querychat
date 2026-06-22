@@ -30,7 +30,13 @@ from ._query_executor import (
     check_source_compatibility,
     validate_source_group_compatibility,
 )
-from ._querychat_core import AppState, AppStateDict, create_app_state, GREETING_PROMPT
+from ._querychat_core import (
+    AppState,
+    AppStateDict,
+    GREETING_PROMPT,
+    warn_multi_table_flat_accessor,
+    create_app_state,
+)
 from ._system_prompt import QueryChatSystemPrompt
 from ._utils import MISSING, MISSING_TYPE, is_ibis_table
 from ._viz_utils import has_viz_deps, has_viz_tool
@@ -648,11 +654,18 @@ class StateDictQueryChat(QueryChatBase[IntoFrameT]):
                     return data_source.get_data()
             return data_source.get_data()
         if len(self._data_sources) > 1:
+            primary_name = next(iter(self._data_sources))
             table_list = ", ".join(f"'{n}'" for n in self._data_sources)
-            raise AttributeError(
-                f"Cannot use .df(state) with multiple tables ({table_list}). "
-                "Pass table='name' to specify which table."
-            )
+            warn_multi_table_flat_accessor("df", primary_name, table_list)
+            data_source = self._data_sources[primary_name]
+            sql = _get_table_sql(state, primary_name)
+            if sql:
+                try:
+                    query_executor = self._require_query_executor("df")
+                    return query_executor.execute_query(sql)
+                except Exception:
+                    return data_source.get_data()
+            return data_source.get_data()
         data_source = self._get_state_data_source(state)
         sql_active = state.get("sql") if state else None
         if sql_active:
@@ -696,11 +709,10 @@ class StateDictQueryChat(QueryChatBase[IntoFrameT]):
         if table is not None:
             return _get_table_sql(state, table)
         if len(self._data_sources) > 1:
+            primary_name = next(iter(self._data_sources))
             table_list = ", ".join(f"'{n}'" for n in self._data_sources)
-            raise AttributeError(
-                f"Cannot use .sql(state) with multiple tables ({table_list}). "
-                "Pass table='name' to specify which table."
-            )
+            warn_multi_table_flat_accessor("sql", primary_name, table_list)
+            return _get_table_sql(state, primary_name)
         return state.get("sql") if state else None
 
     def title(self, state: AppStateDict | None, *, table: str | None = None) -> str | None:
@@ -730,11 +742,17 @@ class StateDictQueryChat(QueryChatBase[IntoFrameT]):
                 return state.get("title")
             return None
         if len(self._data_sources) > 1:
+            primary_name = next(iter(self._data_sources))
             table_list = ", ".join(f"'{n}'" for n in self._data_sources)
-            raise AttributeError(
-                f"Cannot use .title(state) with multiple tables ({table_list}). "
-                "Pass table='name' to specify which table."
-            )
+            warn_multi_table_flat_accessor("title", primary_name, table_list)
+            if state is None:
+                return None
+            per_table = state.get("table_states")
+            if per_table and primary_name in per_table:
+                return per_table[primary_name].get("title")
+            if state.get("table") == primary_name:
+                return state.get("title")
+            return None
         return state.get("title") if state else None
 
     def _deserialize_state(self, state_data: AppStateDict | None) -> AppState:

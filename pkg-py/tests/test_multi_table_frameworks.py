@@ -191,4 +191,39 @@ class TestStateDictQueryChatMultiTable:
         # Non-active table with no table_states → None
         assert acc.sql(old_state, table="customers") is None
 
+    def test_df_no_table_warns_and_returns_primary(self, orders_df, customers_df):
+        acc = self._make_accessor(orders_df, customers_df)
+        state = self._state(active="orders")
+
+        with pytest.warns(FutureWarning, match="multiple tables"):
+            result = acc.df(state)
+        # No filter on primary table → full orders dataset
+        assert result["id"].tolist() == [1, 2, 3]
+
+    def test_sql_no_table_warns_and_returns_primary(self, orders_df, customers_df):
+        acc = self._make_accessor(orders_df, customers_df)
+        state = self._state(orders_sql="SELECT * FROM orders WHERE amount > 100")
+
+        with pytest.warns(FutureWarning, match="multiple tables"):
+            result = acc.sql(state)
+        assert result == "SELECT * FROM orders WHERE amount > 100"
+
+    def test_title_no_table_warns_and_returns_primary(self, orders_df, customers_df):
+        acc = self._make_accessor(orders_df, customers_df)
+        state = {
+            "table": "orders",
+            "sql": None,
+            "title": None,
+            "error": None,
+            "table_states": {
+                "orders": {"sql": None, "title": "Big orders", "error": None},
+                "customers": {"sql": None, "title": None, "error": None},
+            },
+            "turns": [],
+        }
+
+        with pytest.warns(FutureWarning, match="multiple tables"):
+            result = acc.title(state)
+        assert result == "Big orders"
+
 

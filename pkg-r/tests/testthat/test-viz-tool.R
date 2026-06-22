@@ -134,10 +134,10 @@ describe("tool_visualize_dashboard()", {
         callback_data <<- data
       }
     )
-    tool(
+    suppressWarnings(tool(
       ggsql = "SELECT * FROM test_table VISUALISE value AS x DRAW histogram",
       title = "Test"
-    )
+    ))
     expect_type(callback_data, "list")
     expect_true(all(c("ggsql", "title", "widget_id") %in% names(callback_data)))
     expect_identical(footer_data$dom_widget_id, footer_data[[3]])
@@ -365,10 +365,10 @@ describe("tool_visualize_dashboard()", {
       update_fn = function(data) {}
     )
 
-    tool(
+    suppressWarnings(tool(
       ggsql = "SELECT * FROM test_table VISUALISE value AS x DRAW histogram",
       title = "Test"
-    )
+    ))
 
     expect_identical(
       footer_data$dom_widget_id,

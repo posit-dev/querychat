@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Generic, TypedDict, Union
 import chatlas
 import shinychat
 from narwhals.stable.v1.typing import IntoFrameT
+from shinychat import Attachment, attachment_to_content
 
 from shiny import module, reactive, ui
 
@@ -61,6 +62,7 @@ def mod_ui(*, preload_viz: bool = False, **kwargs):
     js_path = Path(__file__).parent / "static" / "js" / "querychat.js"
 
     kwargs.setdefault("enable_cancel", True)
+    kwargs.setdefault("allow_attachments", True)
     tag = shinychat.chat_ui(CHAT_ID, **kwargs)
     tag.add_class("querychat")
 
@@ -196,10 +198,12 @@ def mod_server(
     chat_ui = shinychat.Chat(CHAT_ID)
     ctrl = chatlas.StreamController()
 
-    # Handle user input
     @chat_ui.on_user_submit
-    async def _(user_input: str):
-        stream = await chat.stream_async(user_input, echo="none", content="all", controller=ctrl)
+    async def _(user_input: str, attachments: list[Attachment]):
+        contents = [attachment_to_content(a) for a in attachments]
+        stream = await chat.stream_async(
+            user_input, *contents, echo="none", content="all", controller=ctrl
+        )
         await chat_ui.append_message_stream(stream)
 
     @reactive.effect
@@ -246,6 +250,7 @@ def mod_server(
 
     if enable_bookmarking:
         chat_ui.enable_bookmarking(chat)
+        session.bookmark.exclude.append("chat_update")
 
         @session.bookmark.on_bookmark
         def _on_bookmark(x: BookmarkState) -> None:

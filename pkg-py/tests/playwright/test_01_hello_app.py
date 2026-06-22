@@ -61,7 +61,7 @@ class Test01HelloApp:
         """INIT-06: Chat input is visible with placeholder."""
         expect(self.chat.loc_input).to_be_visible()
         expect(self.chat.loc_input).to_have_attribute(
-            "placeholder", "Enter a message..."
+            "data-placeholder", "Enter a message..."
         )
 
     def test_suggestion_links_present(self) -> None:

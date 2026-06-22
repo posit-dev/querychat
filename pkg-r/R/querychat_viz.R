@@ -143,13 +143,13 @@ visualize_result <- function(
   )
   extra <- list(
     display = list(
-      html = viz_container,
+      html = freeze_tags(viz_container),
       title = if (nzchar(title)) title else "Query Visualization",
       show_request = FALSE,
       open = querychat_tool_starts_open("visualize"),
       full_screen = TRUE,
       icon = viz_icon(),
-      footer = footer
+      footer = freeze_tags(footer)
     )
   )
 

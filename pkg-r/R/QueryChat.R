@@ -1101,6 +1101,12 @@ QueryChat <- R6::R6Class(
       check_dots_empty()
 
       if (lifecycle::is_present(enable_bookmarking)) {
+        if (!missing(bookmark_enable)) {
+          cli::cli_abort(c(
+            "Can't supply both {.arg bookmark_enable} and the deprecated {.arg enable_bookmarking}.",
+            "i" = "Use only {.arg bookmark_enable}."
+          ))
+        }
         lifecycle::deprecate_warn(
           when = "0.4.0",
           what = "QueryChat$server(enable_bookmarking = )",

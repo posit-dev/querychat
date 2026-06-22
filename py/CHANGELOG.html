@@ -191,7 +191,8 @@ ul.task-list li input[type="checkbox"] {
 <section id="new-features" class="level3">
 <h3 class="anchored" data-anchor-id="new-features">New features</h3>
 <ul>
-<li>File attachments are now enabled by default in the Shiny chat UI. Users can attach images, PDFs, and text files to their messages and the LLM will receive them. Disable with <code>allow_attachments=False</code> in <code>mod_ui()</code> or <code>QueryChat.ui()</code>. (#253)</li>
+<li><p>Added <code>PinSource</code>, a data source for chatting with datasets pinned to a <a href="https://pins.rstudio.com/">pins</a> board. Works with parquet, CSV, JSON, and Arrow pins, and uses the pin’s title, description, and tags as the default data description. Install the optional dependency with <code>pip install querychat[pins]</code>. (#246)</p></li>
+<li><p>File attachments are now enabled by default in the Shiny chat UI. Users can attach images, PDFs, and text files to their messages and the LLM will receive them. Disable with <code>allow_attachments=False</code> in <code>mod_ui()</code> or <code>QueryChat.ui()</code>. (#253)</p></li>
 </ul>
 </section>
 <section id="improvements" class="level3">

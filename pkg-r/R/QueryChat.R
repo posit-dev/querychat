@@ -531,6 +531,7 @@ QueryChat <- R6::R6Class(
       }
 
       server <- function(input, output, session) {
+        shiny::setBookmarkExclude(c("close_btn", "reset_query"))
         # Enable bookmarking if bookmark_store is enabled
         enable_bookmarking <- bookmark_store %in% c("url", "server")
         qc_vals <- self$server(enable_bookmarking = enable_bookmarking)

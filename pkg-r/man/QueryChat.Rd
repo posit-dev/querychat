@@ -120,6 +120,7 @@ qc <- QueryChat$new(con, "mtcars")
   \itemize{
     \item \href{#method-QueryChat-initialize}{\code{QueryChat$new()}}
     \item \href{#method-QueryChat-add_table}{\code{QueryChat$add_table()}}
+    \item \href{#method-QueryChat-add_tables}{\code{QueryChat$add_tables()}}
     \item \href{#method-QueryChat-remove_table}{\code{QueryChat$remove_table()}}
     \item \href{#method-QueryChat-table_names}{\code{QueryChat$table_names()}}
     \item \href{#method-QueryChat-client}{\code{QueryChat$client()}}
@@ -235,6 +236,37 @@ or \code{FALSE} to never clean up automatically.}
       \item{\code{data_source}}{A data frame, database connection, or DataSource object.}
       \item{\code{table_name}}{The SQL table name for this data source.}
       \item{\code{replace}}{Whether to replace an existing table with this name.
+Default is \code{FALSE}.}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    Invisibly returns \code{self} for chaining.
+  }
+}
+
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-QueryChat-add_tables"></a>}}
+\if{latex}{\out{\hypertarget{method-QueryChat-add_tables}{}}}
+\subsection{\code{QueryChat$add_tables()}}{
+  Add multiple tables from a DBI connection in a single call.
+
+Unlike calling \verb{$add_table()} repeatedly, this method builds the
+system prompt exactly once after all tables have been staged, avoiding
+N-1 spurious intermediate rebuilds.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{QueryChat$add_tables(conn, tables = NULL, replace = FALSE)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{conn}}{A DBI connection. Only DBI connections are supported; pass
+individual data frames or other sources via \verb{$add_table()}.}
+      \item{\code{tables}}{Table names to register. When \code{NULL}, all tables returned
+by \code{DBI::dbListTables(conn)} are used.}
+      \item{\code{replace}}{Whether to replace existing tables with the same name.
 Default is \code{FALSE}.}
     }
     \if{html}{\out{</div>}}

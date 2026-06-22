@@ -146,6 +146,7 @@ mod_server <- function(
 
     if (enable_bookmarking) {
       shinychat::chat_restore("chat", chat, session = session)
+      shiny::setBookmarkExclude("chat_update", session = session)
 
       shiny::onBookmark(function(state) {
         state$values$querychat_sql <- current_query()

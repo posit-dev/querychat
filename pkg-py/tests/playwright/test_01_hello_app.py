@@ -40,7 +40,8 @@ class Test01HelloApp:
 
     def test_welcome_message_appears(self) -> None:
         """INIT-02: Chat shows LLM greeting."""
-        expect(self.chat.loc_messages).to_contain_text("Hello", timeout=30000)
+        greeting = self.chat.loc.locator(".shiny-chat-greeting")
+        expect(greeting).to_contain_text("Hello", timeout=30000)
 
     def test_default_sql_query_shown(self) -> None:
         """INIT-03: SQL panel shows default query."""
@@ -66,7 +67,8 @@ class Test01HelloApp:
 
     def test_suggestion_links_present(self) -> None:
         """INIT-07: Suggestions are visible in greeting."""
-        expect(self.chat.loc_messages).to_contain_text(
+        greeting = self.chat.loc.locator(".shiny-chat-greeting")
+        expect(greeting).to_contain_text(
             re.compile(r"survived|class|age", re.IGNORECASE), timeout=30000
         )
 

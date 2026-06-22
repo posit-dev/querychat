@@ -44,7 +44,8 @@ class Test03SidebarExpress:
 
     def test_welcome_message_appears(self) -> None:
         """Chat shows LLM greeting."""
-        expect(self.chat.loc_messages).to_contain_text("Hello", timeout=30000)
+        greeting = self.chat.loc.locator(".shiny-chat-greeting")
+        expect(greeting).to_contain_text("Hello", timeout=30000)
 
     def test_card_header_initial(self) -> None:
         """Card header shows 'Titanic Dataset' initially."""
@@ -127,7 +128,8 @@ class Test03SidebarCore:
 
     def test_welcome_message_appears(self) -> None:
         """Chat shows LLM greeting."""
-        expect(self.chat.loc_messages).to_contain_text("Hello", timeout=30000)
+        greeting = self.chat.loc.locator(".shiny-chat-greeting")
+        expect(greeting).to_contain_text("Hello", timeout=30000)
 
     def test_card_header_initial(self) -> None:
         """Card header shows 'Titanic Dataset' initially."""

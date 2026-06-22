@@ -69,25 +69,7 @@ DataFrameSource <- R6::R6Class(
       self$table_name <- table_name
       private$colnames <- colnames(df)
 
-      # Create in-memory connection and register the data frame
-      if (engine == "duckdb") {
-        check_installed("duckdb")
-
-        private$conn <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
-
-        duckdb::duckdb_register(
-          private$conn,
-          table_name,
-          df,
-          experimental = FALSE
-        )
-
-        duckdb_lock_down(private$conn)
-      } else if (engine == "sqlite") {
-        check_installed("RSQLite")
-        private$conn <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
-        DBI::dbWriteTable(private$conn, table_name, df)
-      }
+      private$conn <- new_dataframe_connection(df, table_name, engine)
     },
 
     #' @description
@@ -106,6 +88,23 @@ DataFrameSource <- R6::R6Class(
     }
   )
 )
+
+# Create an in-memory connection and register `df` as `table_name` using the
+# given engine ("duckdb" or "sqlite"). The engine must already be resolved and
+# validated by the caller. Returns the DBI connection.
+new_dataframe_connection <- function(df, table_name, engine) {
+  if (engine == "duckdb") {
+    check_installed("duckdb")
+    conn <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
+    duckdb::duckdb_register(conn, table_name, df, experimental = FALSE)
+    duckdb_lock_down(conn)
+  } else {
+    check_installed("RSQLite")
+    conn <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
+    DBI::dbWriteTable(conn, table_name, df)
+  }
+  conn
+}
 
 get_default_dataframe_engine <- function() {
   if (is_installed("duckdb")) {

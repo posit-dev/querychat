@@ -320,6 +320,8 @@ class QueryChat(QueryChatBase[IntoFrameT]):
 
         def app_server(input: Inputs, output: Outputs, session: Session):
             self._mark_server_initialized()
+            if enable_bookmarking:
+                session.bookmark.exclude.append("reset_query")
             vals = mod_server(
                 self.id,
                 data_sources=dict(self._data_sources),

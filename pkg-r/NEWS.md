@@ -19,6 +19,8 @@
   QueryChat$new(data_dict = "data_dict.yaml")
   ```
 
+* Added `PinSource`, a data source for chatting with datasets pinned to a [pins](https://pins.rstudio.com/) board. Works with parquet, CSV, JSON, and RDS pins, and uses the pin's title, description, and tags as the default data description. (#246)
+
 * File attachments are now enabled by default in the Shiny chat UI. Users can attach images, PDFs, and text files to their messages and the LLM will receive them. Disable with `allow_attachments = FALSE` in `mod_ui()` or `QueryChat$ui()`. (#253)
 
 ## Breaking changes

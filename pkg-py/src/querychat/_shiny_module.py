@@ -336,6 +336,7 @@ def mod_server(
 
     if enable_bookmarking:
         chat_ui.enable_bookmarking(chat)
+        session.bookmark.exclude.append("chat_update")
 
         @session.bookmark.on_bookmark
         def _on_bookmark(x: BookmarkState) -> None:

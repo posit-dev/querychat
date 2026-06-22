@@ -187,6 +187,7 @@ mod_server <- function(
         restore_ui = FALSE,
         session = session
       )
+      shiny::setBookmarkExclude("chat_update", session = session)
 
       shiny::onBookmark(function(state) {
         table_states <- list()

@@ -141,7 +141,8 @@ visualize_result <- function(
     ggsql_str,
     title,
     widget_id,
-    dom_widget_id = session$ns(widget_id)
+    dom_widget_id = session$ns(widget_id),
+    session = session
   )
   extra <- list(
     display = list(
@@ -177,11 +178,15 @@ build_viz_footer <- function(
   ggsql_str,
   title,
   widget_id,
-  dom_widget_id
+  dom_widget_id,
+  session = NULL
 ) {
   footer_id <- paste0("querychat_footer_", random_hex())
   query_section_id <- paste0(footer_id, "_query")
   code_editor_id <- paste0(footer_id, "_code")
+  if (!is.null(session)) {
+    shiny::setBookmarkExclude(code_editor_id, session = session)
+  }
 
   code_editor <- bslib::input_code_editor(
     id = code_editor_id,

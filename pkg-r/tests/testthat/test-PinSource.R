@@ -5,11 +5,18 @@ local_pin_source <- function(
   ...,
   table_name = name,
   version = NULL,
+  engine = NULL,
   env = parent.frame()
 ) {
   board <- pins::board_temp()
   suppressMessages(pins::pin_write(board, data, name, type = type, ...))
-  ps <- PinSource$new(board, name, table_name = table_name, version = version)
+  ps <- PinSource$new(
+    board,
+    name,
+    table_name = table_name,
+    version = version,
+    engine = engine
+  )
   withr::defer(ps$cleanup(), envir = env)
   ps
 }
@@ -101,6 +108,34 @@ describe("PinSource$new() — in-memory path (rds)", {
       PinSource$new(board, "list_pin"),
       "not a data frame"
     )
+  })
+})
+
+describe("PinSource$new() — engine argument", {
+  skip_if_not_installed("pins")
+  skip_if_not_installed("RSQLite")
+
+  it("uses SQLite for a data-frame (rds) pin", {
+    ps <- local_pin_source(name = "rds_data", type = "rds", engine = "sqlite")
+
+    expect_equal(ps$get_db_type(), "SQLite")
+    result <- ps$execute_query("SELECT * FROM rds_data")
+    expect_s3_class(result, "data.frame")
+    expect_equal(nrow(result), 10)
+  })
+
+  it("warns and falls back to pin_read for a file-type pin", {
+    expect_warning(
+      ps <- local_pin_source(
+        name = "csv_data",
+        type = "csv",
+        engine = "sqlite"
+      ),
+      "more efficiently"
+    )
+
+    expect_equal(ps$get_db_type(), "SQLite")
+    expect_equal(nrow(ps$execute_query("SELECT * FROM csv_data")), 10)
   })
 })
 

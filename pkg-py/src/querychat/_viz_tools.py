@@ -11,6 +11,7 @@ from uuid import uuid4
 from chatlas import ContentToolResult, Tool, content_image_url
 from htmltools import HTMLDependency, TagList, tags
 from shiny.module import resolve_id
+from shiny.session import get_current_session
 from shinychat.types import ToolResultDisplay
 
 from shiny import ui
@@ -252,6 +253,9 @@ def build_viz_footer(
     footer_id = f"querychat_footer_{uuid4().hex[:8]}"
     query_section_id = f"{footer_id}_query"
     code_editor_id = f"{footer_id}_code"
+    sess = get_current_session()
+    if sess is not None:
+        sess.root_scope().bookmark.exclude.append(code_editor_id)
 
     # Read-only code editor for query display
     code_editor = ui.input_code_editor(

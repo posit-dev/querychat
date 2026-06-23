@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import copy
 import io
+import warnings
 from typing import TYPE_CHECKING, Any, TypedDict
 from uuid import uuid4
 
@@ -151,6 +152,35 @@ class VisualizeResult(ContentToolResult):
 # ---------------------------------------------------------------------------
 
 
+def warn_viz_url_bookmarking() -> bool:
+    """
+    Warn (once) when URL bookmarking is active.
+
+    With URL bookmarking each chart embeds a base64 PNG preview (for LLM
+    feedback) that can push the bookmarked state past URL length limits and
+    corrupt it on restore. Server-side bookmarking has no such limit. This
+    check is best-effort and must never interrupt chart creation.
+    """
+    try:
+        session = get_current_session()
+        is_url = session is not None and session.bookmark.store == "url"
+    except Exception:
+        return False
+    if not is_url:
+        return False
+    try:
+        warnings.warn(
+            "URL bookmarking may not reliably restore visualizations. Each "
+            "chart embeds a PNG preview that can exceed URL length limits and "
+            "corrupt the saved state on restore. Consider server-side "
+            'bookmarking instead: App(..., bookmark_store="server").',
+            stacklevel=2,
+        )
+    except Exception:
+        return False
+    return True
+
+
 def visualize_impl(
     executor: QueryExecutor,
     update_fn: Callable[[VisualizeData], None],
@@ -187,6 +217,8 @@ def visualize_impl(
                 png_bytes = render_chart_to_png(raw_chart)
             except Exception:
                 png_bytes = None
+
+            warn_viz_url_bookmarking()
 
             update_fn(
                 {"ggsql": ggsql, "title": title, "widget_id": altair_widget.widget_id}

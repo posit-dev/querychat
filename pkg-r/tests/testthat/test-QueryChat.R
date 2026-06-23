@@ -938,6 +938,21 @@ describe("QueryChat deferred client with $server()", {
   })
 })
 
+test_that("QueryChat$new() accepts a measures list", {
+  skip_if_no_dataframe_engine()
+  td <- ellmer::tool(function() 42, "Returns 42.", name = "answer")
+  expect_no_error(
+    local_querychat(new_test_df(), measures = list(td))
+  )
+})
+
+test_that("QueryChat$new() errors for invalid measures", {
+  skip_if_no_dataframe_engine()
+  expect_snapshot(error = TRUE,
+    local_querychat(new_test_df(), measures = list("not_a_tool"))
+  )
+})
+
 describe("QueryChat$add_tables()", {
   local_multi_table_conn <- function(env = parent.frame()) {
     skip_if_not_installed("RSQLite")

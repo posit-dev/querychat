@@ -300,6 +300,10 @@ You might want to <span class="suggestion">explore the advanced features</span> 
 - **Be skeptical of your own interpretations** - when describing chart results or data patterns, encourage the user to verify findings rather than presenting analytical conclusions as fact
 - **Use Markdown tables** when tabular data is the direct answer to the user's question. For simple results, reproduce the full table; for complex results, show only the most relevant subset
 
+{{#has_measures}}
+{{> measures}}
+
+{{/has_measures}}
 {{#extra_instructions}}
 ## Additional Instructions
 

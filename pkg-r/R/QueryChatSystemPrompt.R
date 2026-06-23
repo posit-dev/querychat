@@ -32,6 +32,9 @@ QueryChatSystemPrompt <- R6::R6Class(
     #' @field data_dicts List of data dict lists (from [read_data_dict()]).
     data_dicts = NULL,
 
+    #' @field has_measures Whether measures are registered.
+    has_measures = NULL,
+
     #' @description
     #' Create a new QueryChatSystemPrompt object.
     #'
@@ -49,7 +52,8 @@ QueryChatSystemPrompt <- R6::R6Class(
       data_description = NULL,
       extra_instructions = NULL,
       categorical_threshold = 10,
-      data_dicts = NULL
+      data_dicts = NULL,
+      has_measures = FALSE
     ) {
       self$template <- read_text(prompt_template)
 
@@ -64,6 +68,7 @@ QueryChatSystemPrompt <- R6::R6Class(
       self$categorical_threshold <- categorical_threshold
       self$data_sources <- data_sources
       self$data_dicts <- data_dicts %||% list()
+      self$has_measures <- has_measures
 
       if (length(data_sources) > 1 && length(self$data_dicts) == 0) {
         cli::cli_warn(
@@ -118,7 +123,8 @@ QueryChatSystemPrompt <- R6::R6Class(
         has_tool_query = if ("query" %in% tools) "true",
         has_tool_visualize = if ("visualize" %in% tools) "true",
         include_query_guidelines = if (length(tools) > 0) "true",
-        multi_table = length(self$data_sources) > 1
+        multi_table = length(self$data_sources) > 1,
+        has_measures = if (isTRUE(self$has_measures)) "true"
       )
 
       partials <- list()
@@ -132,6 +138,10 @@ QueryChatSystemPrompt <- R6::R6Class(
           readLines(syntax_path),
           collapse = "\n"
         )
+      }
+      measures_path <- system.file("prompts", "measures.md", package = "querychat")
+      if (nzchar(measures_path)) {
+        partials[["measures"]] <- paste(readLines(measures_path, warn = FALSE), collapse = "\n")
       }
 
       whisker::whisker.render(self$template, context, partials = partials)

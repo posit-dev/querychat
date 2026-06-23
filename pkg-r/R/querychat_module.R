@@ -43,7 +43,8 @@ mod_server <- function(
   greeting,
   client,
   tools,
-  enable_bookmarking = FALSE
+  enable_bookmarking = FALSE,
+  has_measures = FALSE
 ) {
   shiny::moduleServer(id, function(input, output, session) {
     current_table_val <- shiny::reactiveVal(NULL, label = "current_table")

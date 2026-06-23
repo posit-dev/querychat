@@ -62,3 +62,11 @@
       Error in `normalize_data_source()`:
       ! `data_source` must be a <DataSource>, <data.frame>, or <DBIConnection>, not NULL.
 
+# QueryChat$new() errors for invalid measures
+
+    Code
+      local_querychat(new_test_df(), measures = list("not_a_tool"))
+    Condition
+      Error in `initialize()`:
+      ! Every item in `measures` must be an <ellmer::ToolDef> created by `ellmer::tool()`.
+

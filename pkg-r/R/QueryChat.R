@@ -103,6 +103,7 @@ QueryChat <- R6::R6Class(
     .extra_instructions = NULL,
     .categorical_threshold = NULL,
     .data_dicts = list(),
+    .measures = list(),
 
     require_initialized = function(method_name) {
       if (length(private$.data_sources) == 0) {
@@ -145,7 +146,8 @@ QueryChat <- R6::R6Class(
         data_description = private$.data_description,
         extra_instructions = private$.extra_instructions,
         categorical_threshold = private$.categorical_threshold,
-        data_dicts = private$.data_dicts
+        data_dicts = private$.data_dicts,
+        has_measures = length(private$.measures) > 0
       )
     },
 
@@ -221,6 +223,24 @@ QueryChat <- R6::R6Class(
             has_tool_query = "query" %in% tools
           )
         )
+      }
+
+      if (length(private$.measures) > 0) {
+        chat$register_tool(tool_search_measures(private$.measures))
+        chat$register_tool(tool_call_measure(private$.measures))
+        if (rlang::is_installed("duckdb")) {
+          ephemeral_db <- new_ephemeral_db()
+          if (!is.null(session)) {
+            session$onSessionEnded(function() ephemeral_db$cleanup())
+          }
+          chat$register_tool(tool_run_measures(private$.measures, ephemeral_db))
+          chat$register_tool(tool_prepare_visualization(ephemeral_db))
+          if (rlang::is_installed("ggsql")) {
+            chat$register_tool(
+              tool_visualize_measures(ephemeral_db, session, update_fn = visualize)
+            )
+          }
+        }
       }
 
       chat
@@ -302,7 +322,8 @@ QueryChat <- R6::R6Class(
       extra_instructions = NULL,
       prompt_template = NULL,
       data_dict = NULL,
-      cleanup = NA
+      cleanup = NA,
+      measures = NULL
     ) {
       check_dots_empty()
 
@@ -323,6 +344,13 @@ QueryChat <- R6::R6Class(
 
       # Normalize data_dicts
       private$.data_dicts <- normalize_data_dicts(data_dict)
+
+      # Validate and store measures
+      if (!is.null(measures)) {
+        validate_measures(measures)
+        names(measures) <- vapply(measures, td_name, character(1))
+      }
+      private$.measures <- measures %||% list()
 
       # Store init parameters for deferred system prompt building
       private$.prompt_template <- prompt_template
@@ -900,7 +928,8 @@ QueryChat <- R6::R6Class(
         greeting = self$greeting,
         client = create_session_client,
         tools = self$tools,
-        enable_bookmarking = enable_bookmarking
+        enable_bookmarking = enable_bookmarking,
+        has_measures = length(private$.measures) > 0
       )
       result
     },

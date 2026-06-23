@@ -517,3 +517,26 @@ describe("viz prompt conditionals", {
     expect_no_match(rendered, "Avoid redundant expanded results")
   })
 })
+
+test_that("rendered prompt includes measures block when has_measures is TRUE", {
+  skip_if_no_dataframe_engine()
+  sp <- QueryChatSystemPrompt$new(
+    prompt_template = system.file("prompts", "prompt.md", package = "querychat"),
+    data_sources = list(test = local_data_frame_source(new_test_df())),
+    has_measures = TRUE
+  )
+  rendered <- sp$render(tools = "query")
+  expect_match(rendered, "trusted measure", ignore.case = TRUE)
+  expect_match(rendered, "querychat_search_measures")
+})
+
+test_that("rendered prompt does not include measures block when has_measures is FALSE", {
+  skip_if_no_dataframe_engine()
+  sp <- QueryChatSystemPrompt$new(
+    prompt_template = system.file("prompts", "prompt.md", package = "querychat"),
+    data_sources = list(test = local_data_frame_source(new_test_df())),
+    has_measures = FALSE
+  )
+  rendered <- sp$render(tools = "query")
+  expect_false(grepl("querychat_search_measures", rendered))
+})

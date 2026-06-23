@@ -39,7 +39,7 @@ from ._querychat_core import (
     warn_multi_table_flat_accessor,
 )
 from ._system_prompt import QueryChatSystemPrompt
-from ._utils import MISSING, MISSING_TYPE, is_ibis_table
+from ._utils import MISSING, MISSING_TYPE, is_ibis_backend, is_ibis_table
 from ._viz_utils import has_viz_deps, has_viz_tool
 from .tools import (
     ResetDashboardCallback,
@@ -54,6 +54,7 @@ from .tools import (
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from ibis.backends.sql import SQLBackend
     from narwhals.stable.v1.typing import IntoFrame
     from pins.boards import BaseBoard
 
@@ -440,13 +441,13 @@ class QueryChatBase(Generic[IntoFrameT]):
 
     def add_tables(
         self,
-        data_source: sqlalchemy.Engine,
+        data_source: sqlalchemy.Engine | SQLBackend,
         tables: list[str] | None = None,
         *,
         replace: bool = False,
     ) -> None:
         """
-        Add multiple tables from a SQLAlchemy engine in a single call.
+        Add multiple tables from a SQLAlchemy engine or Ibis backend in a single call.
 
         Unlike calling :meth:`add_table` repeatedly, this method builds the
         system prompt exactly once after all tables have been staged, avoiding
@@ -455,11 +456,11 @@ class QueryChatBase(Generic[IntoFrameT]):
         Parameters
         ----------
         data_source
-            A SQLAlchemy engine. Only engines are supported; pass individual
-            DataFrames or other sources via :meth:`add_table`.
+            A SQLAlchemy engine or Ibis SQL backend. Pass individual DataFrames
+            or other sources via :meth:`add_table`.
         tables
             Table names to register. When ``None``, all tables returned by
-            ``sqlalchemy.inspect(data_source).get_table_names()`` are used.
+            the backend's table-discovery method are used.
         replace
             If ``True``, replace any existing table whose name appears in
             ``tables``. If ``False`` (default), raise ``ValueError`` if any
@@ -468,7 +469,7 @@ class QueryChatBase(Generic[IntoFrameT]):
         Raises
         ------
         TypeError
-            If ``data_source`` is not a ``sqlalchemy.Engine``.
+            If ``data_source`` is not a ``sqlalchemy.Engine`` or Ibis SQL backend.
         ValueError
             If the resolved table list is empty, any name is invalid, or any
             name already exists (and ``replace=False``).
@@ -477,7 +478,7 @@ class QueryChatBase(Generic[IntoFrameT]):
 
         Examples
         --------
-        Register all tables from an engine:
+        Register all tables from a SQLAlchemy engine:
 
         >>> qc = QueryChat()
         >>> qc.add_tables(engine)
@@ -486,6 +487,12 @@ class QueryChatBase(Generic[IntoFrameT]):
 
         >>> qc.add_tables(engine, ["orders", "customers"])
 
+        Register all tables from an Ibis backend:
+
+        >>> import ibis
+        >>> backend = ibis.duckdb.connect("mydb.duckdb")
+        >>> qc.add_tables(backend)
+
         """
         if self._server_initialized:
             raise RuntimeError(
@@ -493,14 +500,7 @@ class QueryChatBase(Generic[IntoFrameT]):
                 "Add all tables before calling .server() or .app()."
             )
 
-        if not isinstance(data_source, sqlalchemy.Engine):
-            raise TypeError(
-                f"add_tables() requires a sqlalchemy.Engine, got {type(data_source).__name__}. "
-                "Use add_table() for DataFrames and other source types."
-            )
-
-        if tables is None:
-            tables = sqlalchemy.inspect(data_source).get_table_names()
+        tables = _enumerate_bulk_tables(data_source, tables)
 
         if not tables:
             raise ValueError("No tables found in database")
@@ -514,9 +514,7 @@ class QueryChatBase(Generic[IntoFrameT]):
             if table_name in self._data_sources and not replace:
                 raise ValueError(f"Table '{table_name}' already exists")
 
-        normalized = {
-            name: normalize_data_source(data_source, name) for name in tables
-        }
+        normalized = _build_bulk_sources(data_source, tables)
 
         staged: dict[str, DataSource] = {}
         for name, source in normalized.items():
@@ -640,6 +638,36 @@ def normalize_data_source(
         "If you believe this type should be supported, please open an issue at "
         "https://github.com/posit-dev/querychat/issues"
     )
+
+
+def _enumerate_bulk_tables(
+    data_source: sqlalchemy.Engine | SQLBackend,
+    tables: list[str] | None,
+) -> list[str]:
+    """Enumerate table names for add_tables(), applying type-specific discovery and validation."""
+    if isinstance(data_source, sqlalchemy.Engine):
+        if tables is not None:
+            return tables
+        return sqlalchemy.inspect(data_source).get_table_names()
+    if is_ibis_backend(data_source):
+        if tables is None:
+            return data_source.list_tables()
+        return tables
+    raise TypeError(
+        f"add_tables() requires a sqlalchemy.Engine or ibis SQLBackend, "
+        f"got {type(data_source).__name__}. "
+        "Use add_table() for DataFrames and other source types."
+    )
+
+
+def _build_bulk_sources(
+    data_source: sqlalchemy.Engine | SQLBackend,
+    tables: list[str],
+) -> dict[str, DataSource]:
+    """Build a DataSource dict from a shared engine or Ibis backend."""
+    if is_ibis_backend(data_source):
+        return {name: normalize_data_source(data_source.table(name), name) for name in tables}
+    return {name: normalize_data_source(data_source, name) for name in tables}  # type: ignore[arg-type]
 
 
 def cleanup_failed_staged_source(

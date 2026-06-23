@@ -338,7 +338,7 @@ class TestAddTables:
 
     def test_non_engine_raises_type_error(self, sample_df):
         qc = QueryChatBase()
-        with pytest.raises(TypeError, match=r"sqlalchemy\.Engine"):
+        with pytest.raises(TypeError, match=r"sqlalchemy\.Engine or ibis SQLBackend"):
             qc.add_tables(sample_df)  # type: ignore[arg-type]
 
     def test_empty_list_raises(self, multi_table_engine):
@@ -357,6 +357,77 @@ class TestAddTables:
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             qc.add_tables(multi_table_engine)
+        multi_table_warns = [
+            x for x in w
+            if issubclass(x.category, UserWarning)
+            and "Multiple tables" in str(x.message)
+        ]
+        assert len(multi_table_warns) == 1
+
+
+ibis = pytest.importorskip("ibis", reason="ibis not installed")
+
+
+@pytest.fixture
+def ibis_backend_with_tables():
+    """Ibis DuckDB backend with orders/customers tables."""
+    conn = ibis.duckdb.connect()
+    conn.create_table(
+        "orders",
+        {"id": [1, 2], "amount": [100.0, 200.0]},
+    )
+    conn.create_table(
+        "customers",
+        {"id": [1, 2], "name": ["Alice", "Bob"]},
+    )
+    yield conn
+    conn.disconnect()
+
+
+class TestAddTablesIbis:
+    def test_auto_discovery_registers_all_tables(self, ibis_backend_with_tables):
+        qc = QueryChatBase()
+        with warnings.catch_warnings(record=True):
+            warnings.simplefilter("always")
+            qc.add_tables(ibis_backend_with_tables)
+        assert set(qc.table_names()) == {"orders", "customers"}
+
+    def test_explicit_tables_registers_only_those(self, ibis_backend_with_tables):
+        qc = QueryChatBase()
+        qc.add_tables(ibis_backend_with_tables, ["orders"])
+        assert qc.table_names() == ["orders"]
+
+    def test_nonexistent_table_raises(self, ibis_backend_with_tables):
+        from ibis.common.exceptions import TableNotFound
+
+        qc = QueryChatBase()
+        with pytest.raises(TableNotFound):
+            qc.add_tables(ibis_backend_with_tables, ["nonexistent"])
+
+    def test_duplicate_without_replace_raises(self, ibis_backend_with_tables):
+        qc = QueryChatBase()
+        qc.add_tables(ibis_backend_with_tables, ["orders"])
+        with pytest.raises(ValueError, match="Table 'orders' already exists"):
+            qc.add_tables(ibis_backend_with_tables, ["orders"])
+
+    def test_replace_true_succeeds(self, ibis_backend_with_tables):
+        qc = QueryChatBase()
+        qc.add_tables(ibis_backend_with_tables, ["orders"])
+        qc.add_tables(ibis_backend_with_tables, ["orders"], replace=True)
+        assert "orders" in qc.table_names()
+
+    def test_registered_sources_are_ibis(self, ibis_backend_with_tables):
+        from querychat._datasource import IbisSource
+
+        qc = QueryChatBase()
+        qc.add_tables(ibis_backend_with_tables, ["orders"])
+        assert isinstance(qc._data_sources["orders"], IbisSource)
+
+    def test_system_prompt_built_exactly_once(self, ibis_backend_with_tables):
+        qc = QueryChatBase()
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            qc.add_tables(ibis_backend_with_tables)
         multi_table_warns = [
             x for x in w
             if issubclass(x.category, UserWarning)

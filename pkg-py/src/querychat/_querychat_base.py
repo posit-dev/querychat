@@ -8,7 +8,7 @@ import os
 import re
 import warnings
 from pathlib import Path
-from typing import TYPE_CHECKING, Generic, Literal, Optional
+from typing import TYPE_CHECKING, Generic, Literal, Optional, cast
 
 import chatlas
 import narwhals.stable.v1 as nw
@@ -39,7 +39,7 @@ from ._querychat_core import (
     warn_multi_table_flat_accessor,
 )
 from ._system_prompt import QueryChatSystemPrompt
-from ._utils import MISSING, MISSING_TYPE, is_ibis_backend, is_ibis_table
+from ._utils import MISSING, MISSING_TYPE, is_ibis_table
 from ._viz_utils import has_viz_deps, has_viz_tool
 from .tools import (
     ResetDashboardCallback,
@@ -63,6 +63,7 @@ if TYPE_CHECKING:
 
 TOOL_GROUPS = Literal["filter", "update", "query", "visualize"]
 DEFAULT_TOOLS: tuple[TOOL_GROUPS, ...] = ("filter", "query")
+
 
 class QueryChatBase(Generic[IntoFrameT]):
     """
@@ -136,7 +137,8 @@ class QueryChatBase(Generic[IntoFrameT]):
             raise RuntimeError("Cannot build system prompt without data_source")
 
         client_has_history = (
-            isinstance(self._client_spec, chatlas.Chat) and bool(self._client_spec.get_turns())
+            isinstance(self._client_spec, chatlas.Chat)
+            and bool(self._client_spec.get_turns())
         ) or (
             self._client_console is not None and bool(self._client_console.get_turns())
         )
@@ -220,7 +222,9 @@ class QueryChatBase(Generic[IntoFrameT]):
         visualize: Callable[[VisualizeData], None] | None = None,
     ) -> chatlas.Chat:
         """Create a fresh, fully-configured Chat."""
-        spec = self._client_spec if isinstance(client_spec, MISSING_TYPE) else client_spec
+        spec = (
+            self._client_spec if isinstance(client_spec, MISSING_TYPE) else client_spec
+        )
         chat = create_client(spec)
 
         resolved_tools = normalize_tools(tools, default=self.tools)
@@ -267,7 +271,9 @@ class QueryChatBase(Generic[IntoFrameT]):
         if "visualize" in resolved_tools:
             viz_fn = visualize or (lambda _: None)
             chat.register_tool(
-                tool_visualize(executor, viz_fn, multi_table=len(self._data_sources) > 1)
+                tool_visualize(
+                    executor, viz_fn, multi_table=len(self._data_sources) > 1
+                )
             )
 
         return chat
@@ -439,7 +445,7 @@ class QueryChatBase(Generic[IntoFrameT]):
                 self._query_executor.cleanup()
             self._query_executor = None
 
-    def add_tables(
+    def add_tables(  # noqa: PLR0912
         self,
         data_source: sqlalchemy.Engine | SQLBackend,
         tables: list[str] | None = None,
@@ -500,7 +506,31 @@ class QueryChatBase(Generic[IntoFrameT]):
                 "Add all tables before calling .server() or .app()."
             )
 
-        tables = _enumerate_bulk_tables(data_source, tables)
+        is_sqlalchemy_engine = isinstance(data_source, sqlalchemy.Engine)
+        ibis_backend: SQLBackend | None = None
+
+        if not is_sqlalchemy_engine:
+            try:
+                import ibis.backends.sql as ibis_backends_sql
+            except ImportError:
+                ibis_backends_sql = None
+
+            if ibis_backends_sql is not None and isinstance(
+                data_source, ibis_backends_sql.SQLBackend
+            ):
+                ibis_backend = cast("SQLBackend", data_source)
+            else:
+                raise TypeError(
+                    f"add_tables() requires a sqlalchemy.Engine or ibis SQLBackend, "
+                    f"got {type(data_source).__name__}. "
+                    "Use add_table() for DataFrames and other source types."
+                )
+
+        if tables is None:
+            if is_sqlalchemy_engine:
+                tables = sqlalchemy.inspect(data_source).get_table_names()
+            else:
+                tables = cast("SQLBackend", ibis_backend).list_tables()
 
         if not tables:
             raise ValueError("No tables found in database")
@@ -514,15 +544,21 @@ class QueryChatBase(Generic[IntoFrameT]):
             if table_name in self._data_sources and not replace:
                 raise ValueError(f"Table '{table_name}' already exists")
 
-        normalized = _build_bulk_sources(data_source, tables)
+        if is_sqlalchemy_engine:
+            normalized = {
+                name: normalize_data_source(data_source, name) for name in tables
+            }
+        else:
+            normalized = {
+                name: normalize_data_source(
+                    cast("SQLBackend", ibis_backend).table(name), name
+                )
+                for name in tables
+            }
 
         staged: dict[str, DataSource] = {}
         for name, source in normalized.items():
-            other_sources = {
-                n: s
-                for n, s in self._data_sources.items()
-                if n != name
-            }
+            other_sources = {n: s for n, s in self._data_sources.items() if n != name}
             check_source_compatibility({**other_sources, **staged}, source, name)
             staged[name] = source
 
@@ -638,36 +674,6 @@ def normalize_data_source(
         "If you believe this type should be supported, please open an issue at "
         "https://github.com/posit-dev/querychat/issues"
     )
-
-
-def _enumerate_bulk_tables(
-    data_source: sqlalchemy.Engine | SQLBackend,
-    tables: list[str] | None,
-) -> list[str]:
-    """Enumerate table names for add_tables(), applying type-specific discovery and validation."""
-    if isinstance(data_source, sqlalchemy.Engine):
-        if tables is not None:
-            return tables
-        return sqlalchemy.inspect(data_source).get_table_names()
-    if is_ibis_backend(data_source):
-        if tables is None:
-            return data_source.list_tables()
-        return tables
-    raise TypeError(
-        f"add_tables() requires a sqlalchemy.Engine or ibis SQLBackend, "
-        f"got {type(data_source).__name__}. "
-        "Use add_table() for DataFrames and other source types."
-    )
-
-
-def _build_bulk_sources(
-    data_source: sqlalchemy.Engine | SQLBackend,
-    tables: list[str],
-) -> dict[str, DataSource]:
-    """Build a DataSource dict from a shared engine or Ibis backend."""
-    if is_ibis_backend(data_source):
-        return {name: normalize_data_source(data_source.table(name), name) for name in tables}
-    return {name: normalize_data_source(data_source, name) for name in tables}  # type: ignore[arg-type]
 
 
 def cleanup_failed_staged_source(
@@ -825,7 +831,9 @@ class StateDictQueryChat(QueryChatBase[IntoFrameT]):
             return self._data_sources[table_name]
         return first_source
 
-    def sql(self, state: AppStateDict | None, *, table: str | None = None) -> str | None:
+    def sql(
+        self, state: AppStateDict | None, *, table: str | None = None
+    ) -> str | None:
         """
         Get the current SQL query from state.
 
@@ -851,9 +859,7 @@ class StateDictQueryChat(QueryChatBase[IntoFrameT]):
             return _get_table_sql(state, primary_name)
         return state.get("sql") if state else None
 
-    def _title_for_table(
-        self, state: AppStateDict | None, table: str
-    ) -> str | None:
+    def _title_for_table(self, state: AppStateDict | None, table: str) -> str | None:
         if state is None:
             return None
         per_table = state.get("table_states")
@@ -863,7 +869,9 @@ class StateDictQueryChat(QueryChatBase[IntoFrameT]):
             return state.get("title")
         return None
 
-    def title(self, state: AppStateDict | None, *, table: str | None = None) -> str | None:
+    def title(
+        self, state: AppStateDict | None, *, table: str | None = None
+    ) -> str | None:
         """
         Get the current query title from state.
 

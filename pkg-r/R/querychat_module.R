@@ -43,6 +43,8 @@ mod_server <- function(
   greeting,
   client,
   tools,
+  greeting_tables = NULL,
+  categorical_threshold = 20,
   enable_bookmarking = FALSE
 ) {
   shiny::moduleServer(id, function(input, output, session) {
@@ -156,7 +158,12 @@ mod_server <- function(
             "i" = "You can use your {.help querychat::QueryChat} object's {.fn $generate_greeting} method to generate a greeting."
           ))
           greeting_client <- client(tools = NULL)
-          stream <- greeting_client$stream_async(GREETING_PROMPT)
+          greeting_prompt <- build_greeting_prompt(
+            data_sources,
+            categorical_threshold,
+            greeting_tables
+          )
+          stream <- greeting_client$stream_async(greeting_prompt)
           p <- shinychat::chat_set_greeting(
             "chat",
             shinychat::chat_greeting(stream, dismissible = FALSE)
@@ -322,12 +329,58 @@ mod_server <- function(
   })
 }
 
-# TODO: Make this dependent on enabled tools
-GREETING_PROMPT <- paste(
+GREETING_MARKER <- "<!-- querychat:greeting -->\n"
+
+GREETING_BASE_TEXT <- paste(
   "Please give me a friendly greeting.",
   "Include a few sample suggestions grouped under ##### headings,",
   "using the suggestion card format from your instructions."
 )
+
+GREETING_EXPLORE_ADDENDUM <- paste(
+  "Include at least one suggestion encouraging the user to explore what",
+  "data and questions are available — for example, asking which tables or",
+  "columns exist, or what kinds of analysis are possible."
+)
+
+# TODO: Make this dependent on enabled tools
+GREETING_PROMPT <- GREETING_BASE_TEXT
+
+build_greeting_prompt <- function(data_sources, categorical_threshold, greeting_tables) {
+  table_names <- resolve_greeting_tables(data_sources, greeting_tables)
+
+  if (length(table_names) > 0) {
+    multi <- length(table_names) > 1
+    schema_sections <- character()
+    for (name in table_names) {
+      source <- data_sources[[name]]
+      schema <- source$get_schema(categorical_threshold = categorical_threshold)
+      section <- if (multi) paste0("Table '", name, "':\n", schema) else schema
+      schema_sections <- c(schema_sections, section)
+    }
+    schema_block <- paste(schema_sections, collapse = "\n\n")
+    body <- paste0("<schema>\n", schema_block, "\n</schema>\n\n", GREETING_BASE_TEXT)
+  } else {
+    body <- paste(GREETING_BASE_TEXT, GREETING_EXPLORE_ADDENDUM)
+  }
+
+  paste0(GREETING_MARKER, body)
+}
+
+resolve_greeting_tables <- function(data_sources, greeting_tables) {
+  all_names <- names(data_sources)
+  if (isTRUE(greeting_tables)) {
+    return(all_names)
+  }
+  if (identical(greeting_tables, FALSE)) {
+    return(character())
+  }
+  if (is.character(greeting_tables)) {
+    return(intersect(greeting_tables, all_names))
+  }
+  # Auto (NULL): single table → include; multi-table → none
+  if (length(all_names) == 1L) all_names else character()
+}
 
 # A list of records (named lists) bookmarked to the URL comes back from Shiny's
 # decoder as a data.frame, because jsonlite simplifies a JSON array of objects

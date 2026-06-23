@@ -7,6 +7,7 @@ import polars as pl
 import pytest
 from querychat import QueryChat
 from querychat._datasource import IbisSource, PolarsLazySource
+from querychat._querychat_core import GREETING_MARKER, build_greeting_prompt
 
 
 @pytest.fixture(autouse=True)
@@ -194,3 +195,97 @@ def test_querychat_with_ibis_table():
         assert executed["name"].iloc[0] == "Bob"
     finally:
         conn.disconnect()
+
+
+def test_build_greeting_prompt_single_table_includes_schema(sample_df):
+    """Single table with greeting_tables=None loads schema automatically."""
+    import narwhals.stable.v1 as nw
+    from querychat._datasource import DataFrameSource
+
+    source = DataFrameSource(nw.from_native(sample_df), "people")
+    prompt = build_greeting_prompt(
+        data_sources={"people": source},
+        categorical_threshold=20,
+        greeting_tables=None,
+    )
+    assert prompt.startswith(GREETING_MARKER)
+    assert "<schema>" in prompt
+    assert "people" in prompt  # schema content references table
+
+
+def test_build_greeting_prompt_multi_table_no_signal_omits_schema():
+    """Multi-table with greeting_tables=None omits schema, adds explorer hint."""
+    import narwhals.stable.v1 as nw
+    from querychat._datasource import DataFrameSource
+
+    sources = {
+        "orders": DataFrameSource(nw.from_native(pd.DataFrame({"id": [1]})), "orders"),
+        "customers": DataFrameSource(nw.from_native(pd.DataFrame({"id": [1]})), "customers"),
+    }
+    prompt = build_greeting_prompt(
+        data_sources=sources,
+        categorical_threshold=20,
+        greeting_tables=None,
+    )
+    assert prompt.startswith(GREETING_MARKER)
+    assert "<schema>" not in prompt
+    # Should encourage exploration of available data
+    assert "available" in prompt.lower() or "explore" in prompt.lower()
+
+
+def test_build_greeting_prompt_explicit_tables_includes_only_those():
+    """greeting_tables list loads schema for specified tables only."""
+    import narwhals.stable.v1 as nw
+    from querychat._datasource import DataFrameSource
+
+    sources = {
+        "orders": DataFrameSource(nw.from_native(pd.DataFrame({"amount": [10.0]})), "orders"),
+        "customers": DataFrameSource(nw.from_native(pd.DataFrame({"name": ["Alice"]})), "customers"),
+    }
+    prompt = build_greeting_prompt(
+        data_sources=sources,
+        categorical_threshold=20,
+        greeting_tables=["orders"],
+    )
+    assert prompt.startswith(GREETING_MARKER)
+    assert "<schema>" in prompt
+    assert "orders" in prompt
+    # customers schema should not appear (only the orders schema section)
+    # The prompt should contain "orders" but we check for column content distinction
+    assert "amount" in prompt  # orders column
+    assert "name" not in prompt  # customers column excluded
+
+
+def test_build_greeting_prompt_true_includes_all_tables():
+    """greeting_tables=True loads schema for all tables."""
+    import narwhals.stable.v1 as nw
+    from querychat._datasource import DataFrameSource
+
+    sources = {
+        "orders": DataFrameSource(nw.from_native(pd.DataFrame({"amount": [10.0]})), "orders"),
+        "customers": DataFrameSource(nw.from_native(pd.DataFrame({"name": ["Alice"]})), "customers"),
+    }
+    prompt = build_greeting_prompt(
+        data_sources=sources,
+        categorical_threshold=20,
+        greeting_tables=True,
+    )
+    assert prompt.startswith(GREETING_MARKER)
+    assert "<schema>" in prompt
+    assert "amount" in prompt  # orders column
+    assert "name" in prompt  # customers column
+
+
+def test_build_greeting_prompt_false_omits_schema_adds_explorer():
+    """greeting_tables=False skips schema entirely and adds explorer hint."""
+    import narwhals.stable.v1 as nw
+    from querychat._datasource import DataFrameSource
+
+    source = DataFrameSource(nw.from_native(pd.DataFrame({"id": [1]})), "t")
+    prompt = build_greeting_prompt(
+        data_sources={"t": source},
+        categorical_threshold=20,
+        greeting_tables=False,
+    )
+    assert prompt.startswith(GREETING_MARKER)
+    assert "<schema>" not in prompt

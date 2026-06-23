@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 __all__ = [
-    "GREETING_PROMPT",
+    "GREETING_MARKER",
+    "GREETING_PROMPT",  # keep for backward compat (equals _GREETING_BASE_TEXT)
     "AppState",
     "AppStateDict",
     "ClientFactory",
+    "build_greeting_prompt",
     "create_app_state",
     "stream_response",
     "stream_response_async",
@@ -23,11 +25,23 @@ from typing_extensions import NotRequired
 
 from .tools import UpdateDashboardData
 
-GREETING_PROMPT: str = (
+GREETING_MARKER: str = "<!-- querychat:greeting -->\n"
+"""Sentinel prepended to every greeting prompt turn; used to skip it in display."""
+
+_GREETING_BASE_TEXT: str = (
     "Please give me a friendly greeting. "
     "Include a few sample suggestions grouped under ##### headings, "
     "using the suggestion card format from your instructions."
 )
+
+_GREETING_EXPLORE_ADDENDUM: str = (
+    " Include at least one suggestion encouraging the user to explore what "
+    "data and questions are available — for example, asking which tables or "
+    "columns exist, or what kinds of analysis are possible."
+)
+
+# Keep the old name as an alias so any external code that imported it still works.
+GREETING_PROMPT: str = _GREETING_BASE_TEXT
 """Prompt used to generate the initial greeting message."""
 
 if TYPE_CHECKING:
@@ -44,6 +58,63 @@ ClientFactory = Callable[
     Chat,
 ]
 """Factory that creates a Chat client with update_dashboard and reset_dashboard callbacks."""
+
+
+def build_greeting_prompt(
+    data_sources: dict[str, DataSource],
+    categorical_threshold: int,
+    greeting_tables: list[str] | bool | None,  # noqa: FBT001 — bool is a sentinel, not a flag
+) -> str:
+    """
+    Build a greeting prompt, optionally embedding table schema.
+
+    Parameters
+    ----------
+    data_sources
+        All registered data sources keyed by table name.
+    categorical_threshold
+        Passed to ``get_schema`` for each included table.
+    greeting_tables
+        Which tables to include schema for:
+        - ``None``: auto — single table gets full schema; multi-table gets none.
+        - ``True``: all tables.
+        - ``False``: no tables (explorer hint only).
+        - list of names: only the named tables.
+
+    """
+    table_names = resolve_greeting_tables(data_sources, greeting_tables)
+
+    if table_names:
+        schema_sections: list[str] = []
+        multi = len(table_names) > 1
+        for name in table_names:
+            source = data_sources[name]
+            schema = source.get_schema(categorical_threshold=categorical_threshold)
+            section = f"Table '{name}':\n{schema}" if multi else schema
+            schema_sections.append(section)
+        schema_block = "\n\n".join(schema_sections)
+        body = f"<schema>\n{schema_block}\n</schema>\n\n{_GREETING_BASE_TEXT}"
+    else:
+        body = _GREETING_BASE_TEXT + _GREETING_EXPLORE_ADDENDUM
+
+    return f"{GREETING_MARKER}{body}"
+
+
+def resolve_greeting_tables(
+    data_sources: dict[str, DataSource],
+    greeting_tables: list[str] | bool | None,  # noqa: FBT001 — bool is a sentinel, not a flag
+) -> list[str]:
+    """Return the list of table names whose schema to include in the greeting."""
+    if greeting_tables is True:
+        return list(data_sources.keys())
+    if greeting_tables is False:
+        return []
+    if isinstance(greeting_tables, list):
+        return [t for t in greeting_tables if t in data_sources]
+    # Auto (None): single table → include schema; multi-table → no schema
+    if len(data_sources) == 1:
+        return list(data_sources.keys())
+    return []
 
 
 def warn_multi_table_flat_accessor(
@@ -246,7 +317,7 @@ class AppState:
             if text_parts:
                 text = "\n\n".join(text_parts)
                 # Skip the greeting prompt - it's an internal message
-                if turn.role == "user" and text == GREETING_PROMPT:
+                if turn.role == "user" and text.startswith(GREETING_MARKER):
                     continue
                 messages.append({"role": turn.role, "content": text})
 

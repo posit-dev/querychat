@@ -348,3 +348,41 @@ test_that("restored viz widgets survive a second bookmark cycle", {
     }
   )
 })
+
+test_that("build_greeting_prompt includes schema for single table", {
+  skip_if_no_dataframe_engine()
+  source <- local_data_frame_source(new_test_df(), "people")
+  data_sources <- list(people = source)
+
+  prompt <- querychat:::build_greeting_prompt(data_sources, 20, NULL)
+
+  expect_true(startsWith(prompt, querychat:::GREETING_MARKER))
+  expect_match(prompt, "<schema>")
+})
+
+test_that("build_greeting_prompt omits schema for multi-table with no signal", {
+  skip_if_no_dataframe_engine()
+  s1 <- local_data_frame_source(new_test_df(), "t1")
+  s2 <- local_data_frame_source(new_test_df(), "t2")
+  data_sources <- list(t1 = s1, t2 = s2)
+
+  prompt <- querychat:::build_greeting_prompt(data_sources, 20, NULL)
+
+  expect_true(startsWith(prompt, querychat:::GREETING_MARKER))
+  expect_false(grepl("<schema>", prompt))
+  # Should mention exploration
+  expect_match(prompt, "available|explore", ignore.case = TRUE)
+})
+
+test_that("build_greeting_prompt includes schema for explicit greeting_tables", {
+  skip_if_no_dataframe_engine()
+  s1 <- local_data_frame_source(data.frame(amount = c(10, 20)), "orders")
+  s2 <- local_data_frame_source(data.frame(name = c("A")), "customers")
+  data_sources <- list(orders = s1, customers = s2)
+
+  prompt <- querychat:::build_greeting_prompt(data_sources, 20, "orders")
+
+  expect_match(prompt, "<schema>")
+  expect_match(prompt, "amount")
+  expect_false(grepl("name", prompt))
+})

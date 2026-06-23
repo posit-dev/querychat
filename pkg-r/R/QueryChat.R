@@ -808,6 +808,7 @@ QueryChat <- R6::R6Class(
 
         data_nav <- bslib::nav_panel(
           title = list(bsicons::bs_icon("table"), "Data"),
+          value = "data",
           class = "bslib-page-dashboard",
           sql_card,
           bslib::card(
@@ -819,6 +820,7 @@ QueryChat <- R6::R6Class(
         insights_nav <- if (cards_enabled) {
           bslib::nav_panel(
             title = list(bsicons::bs_icon("lightbulb"), "Insights"),
+            value = "insights",
             class = "bslib-page-dashboard",
             self$ui_cards(),
             shiny::uiOutput("cards_share_link")
@@ -844,6 +846,7 @@ QueryChat <- R6::R6Class(
             )
           ),
           window_title = paste("querychat with", first_table_name),
+          id = "querychat_navbar",
           sidebar = self$sidebar(),
           header = shiny::useBusyIndicators(pulse = TRUE, spinners = FALSE),
           bslib::nav_spacer(),
@@ -939,13 +942,13 @@ QueryChat <- R6::R6Class(
             }
             url <- self$cards_url(current_cards)
             htmltools::div(
-              class = "mt-2 text-end",
+              class = "mt-auto pt-2 text-center border-top",
               htmltools::a(
                 href = url,
                 target = "_blank",
                 rel = "noopener",
+                "Share these insights",
                 bsicons::bs_icon("box-arrow-up-right"),
-                "Open these insights in a new tab"
               )
             )
           })

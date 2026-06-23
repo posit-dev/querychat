@@ -302,7 +302,9 @@ mod_server <- function(
     # which is the key written by $cards_url() / $cards_set_url().
     url_cards_seeded <- FALSE
     local({
-      qs <- shiny::parseQueryString(session$clientData$url_search)
+      qs <- shiny::isolate(
+        shiny::parseQueryString(session$clientData$url_search)
+      )
       key <- session$ns("querychat_cards")
       raw <- qs[[key]]
       if (!is.null(raw) && nzchar(raw)) {

@@ -1014,6 +1014,10 @@ QueryChat <- R6::R6Class(
 #' @param data_dict Optional data dictionary. A path to a YAML file or a list of paths.
 #' @param cleanup Whether or not to automatically run `$cleanup()` when the
 #'   Shiny session/app stops.
+#' @param measures Optional list of `\link[ellmer]{tool}` definitions — trusted,
+#'   pre-vetted R functions the model is instructed to prefer over ad-hoc SQL.
+#'   Scalar and data frame results are both supported. Set to `NULL` (default)
+#'   to disable trusted measures.
 #'
 #' @return A `QueryChat` object. See [QueryChat] for available methods.
 #'
@@ -1032,7 +1036,8 @@ querychat <- function(
   extra_instructions = NULL,
   prompt_template = NULL,
   data_dict = NULL,
-  cleanup = NA
+  cleanup = NA,
+  measures = NULL
 ) {
   if (is_missing(table_name)) {
     if (inherits(data_source, "DataSource")) {
@@ -1059,7 +1064,8 @@ querychat <- function(
     extra_instructions = extra_instructions,
     prompt_template = prompt_template,
     data_dict = data_dict,
-    cleanup = cleanup
+    cleanup = cleanup,
+    measures = measures
   )
 }
 

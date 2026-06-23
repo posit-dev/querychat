@@ -259,3 +259,48 @@ describe("tool_prepare_visualization()", {
     expect_false(tbl %in% tables)  # _run_ tables dropped
   })
 })
+
+describe("derive_measure_tag()", {
+  it("returns 'A' when only measure tools called", {
+    calls <- c("querychat_search_measures", "querychat_call_measure")
+    expect_equal(derive_measure_tag(calls), "A")
+  })
+
+  it("returns 'A' for run/prepare/visualize pipeline", {
+    calls <- c("querychat_search_measures", "querychat_run_measures",
+               "querychat_prepare_visualization", "querychat_visualize_measures")
+    expect_equal(derive_measure_tag(calls), "A")
+  })
+
+  it("returns 'B' when querychat_query was called", {
+    calls <- c("querychat_search_measures", "querychat_query")
+    expect_equal(derive_measure_tag(calls), "B")
+  })
+
+  it("returns 'B' when querychat_update_dashboard was called", {
+    calls <- c("querychat_update_dashboard")
+    expect_equal(derive_measure_tag(calls), "B")
+  })
+
+  it("returns 'B' when both measures and SQL were called", {
+    calls <- c("querychat_call_measure", "querychat_query")
+    expect_equal(derive_measure_tag(calls), "B")
+  })
+
+  it("returns NA for pure conversation (no data tools)", {
+    expect_true(is.na(derive_measure_tag(character(0))))
+    expect_true(is.na(derive_measure_tag("querychat_get_schema")))
+  })
+})
+
+test_that("provenance_pill_html() returns a tag for 'A' and 'B'", {
+  pill_a <- provenance_pill_html("A")
+  expect_s3_class(pill_a, "shiny.tag")
+
+  pill_b <- provenance_pill_html("B")
+  expect_s3_class(pill_b, "shiny.tag")
+})
+
+test_that("provenance_pill_html() returns NULL for NA", {
+  expect_null(provenance_pill_html(NA_character_))
+})

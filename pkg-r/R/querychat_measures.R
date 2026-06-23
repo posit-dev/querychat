@@ -162,10 +162,52 @@ format_measure_value <- function(value) {
 }
 
 df_to_markdown <- function(df, max_rows = 50) {
+  rlang::check_installed("knitr", reason = "to format data frame results as markdown tables.")
   if (nrow(df) > max_rows) {
     df <- head(df, max_rows)
   }
   paste(knitr::kable(df, format = "markdown"), collapse = "\n")
+}
+
+derive_measure_tag <- function(turn_calls) {
+  measure_tools <- c(
+    "querychat_search_measures", "querychat_call_measure",
+    "querychat_run_measures", "querychat_prepare_visualization",
+    "querychat_visualize_measures"
+  )
+  sql_tools <- c("querychat_query", "querychat_update_dashboard")
+  if (any(sql_tools %in% turn_calls)) return("B")
+  if (any(measure_tools %in% turn_calls)) return("A")
+  NA_character_
+}
+
+trusted_icon_svg <- function() {
+  '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path d="M5.338 1.59a61 61 0 0 0-2.837.856.48.48 0 0 0-.328.39c-.554 4.157.726 7.19 2.253 9.188a10.7 10.7 0 0 0 2.287 2.233c.346.244.652.42.893.533q.18.085.293.118a1 1 0 0 0 .201 0q.114-.034.294-.118c.24-.113.547-.29.893-.533a10.7 10.7 0 0 0 2.287-2.233c1.527-1.997 2.807-5.031 2.253-9.188a.48.48 0 0 0-.328-.39c-.651-.213-1.75-.56-2.837-.855C9.552 1.29 8.531 1.067 8 1.067c-.53 0-1.552.223-2.662.524z"/><path d="M10.854 5.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7.5 7.793l2.646-2.647a.5.5 0 0 1 .708 0z"/></svg>'
+}
+
+warning_icon_svg <- function() {
+  '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16"><path d="M7.938 2.016A.13.13 0 0 1 8.002 2a.13.13 0 0 1 .063.016.15.15 0 0 1 .054.057l6.857 11.667c.036.06.035.124.002.183a.2.2 0 0 1-.054.06.1.1 0 0 1-.066.017H1.146a.1.1 0 0 1-.066-.017.2.2 0 0 1-.054-.06.18.18 0 0 1 .002-.183L7.884 2.073a.15.15 0 0 1 .054-.057m1.044-.45a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767z"/><path d="M7.002 12a1 1 0 1 1 2 0 1 1 0 0 1-2 0M7.1 5.995a.905.905 0 1 1 1.8 0l-.35 3.507a.552.552 0 0 1-1.1 0z"/></svg>'
+}
+
+provenance_pill_html <- function(tag) {
+  if (is.na(tag)) return(NULL)
+  switch(
+    tag,
+    A = htmltools::tags$span(
+      class = "querychat-answer-pill querychat-answer-pill-trusted",
+      `data-querychat-tooltip` = "This answer comes from a trusted measure registered by a domain expert.",
+      tabindex = "0",
+      htmltools::HTML(trusted_icon_svg()),
+      htmltools::tags$span("Verified answer")
+    ),
+    B = htmltools::tags$span(
+      class = "querychat-answer-pill querychat-answer-pill-caution",
+      `data-querychat-tooltip` = "This answer was generated from available data, but was not produced by a trusted measure.",
+      htmltools::HTML(warning_icon_svg()),
+      htmltools::tags$span("AI can be wrong.")
+    ),
+    NULL
+  )
 }
 
 # Icons (inline SVG strings)
@@ -228,6 +270,9 @@ tool_run_measures <- function(measures, ephemeral_db) {
           formatted <- format_measure_value(value)
           lines <- c(lines, sprintf("Measure '%s' → %s", name, formatted))
         }
+      }
+      if (length(lines) == 0) {
+        lines <- "No measures were executed."
       }
       summary <- paste(lines, collapse = "\n\n")
       ellmer::ContentToolResult(

@@ -135,6 +135,13 @@ mod_server <- function(
       session = session
     )
 
+    turn_calls <- character()
+    if (has_measures) {
+      chat$on_tool_request(function(request) {
+        turn_calls <<- c(turn_calls, request@name)
+      })
+    }
+
     if (is.null(greeting)) {
       shiny::observeEvent(
         input$chat_greeting_requested,
@@ -186,9 +193,27 @@ mod_server <- function(
         )
 
         p <- promises::promise_resolve(stream)
-        promises::then(p, function(stream) {
+        p <- promises::then(p, function(stream) {
           shinychat::chat_append("chat", stream)
         })
+        if (has_measures) {
+          p <- promises::then(p, function(...) {
+            tag <- derive_measure_tag(turn_calls)
+            turn_calls <<- character()
+            pill <- provenance_pill_html(tag)
+            if (!is.null(pill)) {
+              pill_html <- as.character(htmltools::renderTags(pill)$html)
+              shinychat::chat_append_message(
+                "chat",
+                list(role = "assistant", content = pill_html),
+                chunk = TRUE,
+                operation = "append",
+                session = session
+              )
+            }
+          })
+        }
+        p
       }
     )
 

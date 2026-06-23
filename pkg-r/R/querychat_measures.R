@@ -29,10 +29,14 @@ lexical_rank <- function(query, catalog, n = 5) {
   query_words <- unique(tolower(strsplit(query, "\\W+")[[1]]))
   query_words <- query_words[nzchar(query_words)]
   if (length(query_words) == 0) return(integer(0))
-  scores <- vapply(catalog, function(text) {
-    text_words <- unique(tolower(strsplit(text, "\\W+")[[1]]))
-    sum(query_words %in% text_words)
-  }, numeric(1))
+  scores <- vapply(
+    catalog,
+    function(text) {
+      text_words <- unique(tolower(strsplit(text, "\\W+")[[1]]))
+      sum(query_words %in% text_words)
+    },
+    numeric(1)
+  )
   idx <- order(scores, decreasing = TRUE)
   idx <- idx[scores[idx] > 0]
   head(idx, n)
@@ -40,8 +44,12 @@ lexical_rank <- function(query, catalog, n = 5) {
 
 measure_arg_line <- function(name, type) {
   cls <- class(type)[[1]]
-  kind <- switch(cls,
-    "ellmer::TypeEnum" = sprintf("one of {%s}", paste(S7::prop(type, "values"), collapse = ", ")),
+  kind <- switch(
+    cls,
+    "ellmer::TypeEnum" = sprintf(
+      "one of {%s}",
+      paste(S7::prop(type, "values"), collapse = ", ")
+    ),
     "ellmer::TypeBasic" = S7::prop(type, "type"),
     "string"
   )
@@ -56,7 +64,11 @@ measure_schema_text <- function(td) {
     "  (no arguments)"
   } else {
     paste(
-      vapply(names(props), function(nm) measure_arg_line(nm, props[[nm]]), character(1)),
+      vapply(
+        names(props),
+        function(nm) measure_arg_line(nm, props[[nm]]),
+        character(1)
+      ),
       collapse = "\n"
     )
   }
@@ -88,7 +100,9 @@ tool_search_measures <- function(measures) {
     interpolate_package("tool-search-measures.md"),
     name = "querychat_search_measures",
     arguments = list(
-      query = ellmer::type_string("What you want to compute, in plain language.")
+      query = ellmer::type_string(
+        "What you want to compute, in plain language."
+      )
     ),
     annotations = ellmer::tool_annotations(
       title = "Search measures",
@@ -104,28 +118,34 @@ tool_call_measure <- function(measures) {
       td <- measures[[name]]
       if (is.null(td)) {
         available <- paste0('"', names(measures), '"', collapse = ", ")
-        cli::cli_abort(c(
-          "No measure named {.val {name}}.",
-          "i" = "Registered measures: {available}."
-        ))
+        cli::cli_abort(
+          c(
+            "No measure named {.val {name}}.",
+            "i" = "Registered measures: {available}."
+          )
+        )
       }
       args <- parse_measure_args(arguments)
       result <- do.call(td, args)
       body <- format_measure_value(result)
       ellmer::ContentToolResult(
         value = body,
-        extra = list(display = list(
-          title = sprintf("Measure: %s", td_title(td)),
-          icon = shield_check_icon(),
-          open = TRUE,
-          show_request = FALSE
-        ))
+        extra = list(
+          display = list(
+            title = sprintf("Measure: %s", td_title(td)),
+            icon = shield_check_icon(),
+            open = TRUE,
+            show_request = FALSE
+          )
+        )
       )
     },
     interpolate_package("tool-call-measure.md"),
     name = "querychat_call_measure",
     arguments = list(
-      name = ellmer::type_string("The measure name exactly as returned by querychat_search_measures."),
+      name = ellmer::type_string(
+        "The measure name exactly as returned by querychat_search_measures."
+      ),
       arguments = ellmer::type_string(
         'A JSON object of the measure\'s arguments, e.g. {"region": "West"}. Use {} for no arguments.',
         required = FALSE
@@ -162,7 +182,10 @@ format_measure_value <- function(value) {
 }
 
 df_to_markdown <- function(df, max_rows = 50) {
-  rlang::check_installed("knitr", reason = "to format data frame results as markdown tables.")
+  rlang::check_installed(
+    "knitr",
+    reason = "to format data frame results as markdown tables."
+  )
   if (nrow(df) > max_rows) {
     df <- head(df, max_rows)
   }
@@ -171,8 +194,9 @@ df_to_markdown <- function(df, max_rows = 50) {
 
 derive_measure_tag <- function(turn_calls) {
   measure_tools <- c(
-    "querychat_search_measures", "querychat_call_measure",
-    "querychat_run_measures", "querychat_prepare_visualization",
+    "querychat_search_measures",
+    "querychat_call_measure",
+    "querychat_run_measures",
     "querychat_visualize_measures"
   )
   sql_tools <- c("querychat_query", "querychat_update_dashboard")
@@ -246,6 +270,7 @@ tool_run_measures <- function(measures, ephemeral_db) {
     function(calls) {
       call_list <- parse_calls_json(calls)
       lines <- character()
+      name_counts <- list()
       for (entry in call_list) {
         name <- entry[["name"]]
         args <- parse_measure_args(entry[["arguments"]] %||% list())
@@ -260,12 +285,21 @@ tool_run_measures <- function(measures, ephemeral_db) {
           value <- dplyr::collect(value)
         }
         if (is.data.frame(value)) {
-          tbl_name <- ephemeral_db$register(value)
+          count <- (name_counts[[name]] %||% 0L) + 1L
+          name_counts[[name]] <- count
+          tbl_name <- if (count == 1L) name else paste0(name, "_", count)
+          ephemeral_db$register(value, tbl_name)
           schema <- col_schema_text(value)
-          lines <- c(lines, sprintf(
-            "Measure '%s' → table `%s` (%d rows)\nColumns:\n%s",
-            name, tbl_name, nrow(value), schema
-          ))
+          lines <- c(
+            lines,
+            sprintf(
+              "Measure '%s' → table `%s` (%d rows)\nColumns:\n%s",
+              name,
+              tbl_name,
+              nrow(value),
+              schema
+            )
+          )
         } else {
           formatted <- format_measure_value(value)
           lines <- c(lines, sprintf("Measure '%s' → %s", name, formatted))
@@ -277,12 +311,14 @@ tool_run_measures <- function(measures, ephemeral_db) {
       summary <- paste(lines, collapse = "\n\n")
       ellmer::ContentToolResult(
         value = summary,
-        extra = list(display = list(
-          title = "Run measures",
-          icon = shield_check_icon(),
-          open = TRUE,
-          show_request = FALSE
-        ))
+        extra = list(
+          display = list(
+            title = "Run measures",
+            icon = shield_check_icon(),
+            open = TRUE,
+            show_request = FALSE
+          )
+        )
       )
     },
     interpolate_package("tool-run-measures.md"),
@@ -299,57 +335,20 @@ tool_run_measures <- function(measures, ephemeral_db) {
   )
 }
 
-tool_prepare_visualization <- function(ephemeral_db) {
-  force(ephemeral_db)
-  ellmer::tool(
-    function(preparations) {
-      prep_list <- parse_calls_json(preparations)
-      staged <- character()
-      run_tables <- grep("^_run_", ephemeral_db$list_tables(), value = TRUE)
-      for (entry in prep_list) {
-        name <- entry[["name"]]
-        query <- entry[["query"]]
-        ephemeral_db$create_table(name, query)
-        staged <- c(staged, name)
-      }
-      ephemeral_db$drop_tables(run_tables)
-      summary <- if (length(staged) > 0) {
-        sprintf(
-          "Staged tables ready for visualization: %s",
-          paste0('"', staged, '"', collapse = ", ")
-        )
-      } else {
-        "No tables staged."
-      }
-      ellmer::ContentToolResult(
-        value = summary,
-        extra = list(display = list(
-          title = "Prepare visualization",
-          open = FALSE,
-          show_request = FALSE
-        ))
-      )
-    },
-    interpolate_package("tool-prepare-visualization.md"),
-    name = "querychat_prepare_visualization",
-    arguments = list(
-      preparations = ellmer::type_string(
-        'JSON array of {"name": "<table_name>", "query": "<SELECT ...>"} objects.'
-      )
-    ),
-    annotations = ellmer::tool_annotations(title = "Prepare visualization")
-  )
-}
-
-tool_visualize_measures <- function(ephemeral_db, session, update_fn = function(data) {}) {
+tool_visualize_measures <- function(
+  ephemeral_db,
+  session,
+  update_fn = function(data) {
+  }
+) {
   force(ephemeral_db)
   force(session)
   force(update_fn)
   ellmer::tool(
     function(ggsql, title = "") {
       rlang::check_installed("ggsql", reason = "for measure visualization.")
-      staged_tables <- grep("^_run_", ephemeral_db$list_tables(), invert = TRUE, value = TRUE)
-      on.exit(ephemeral_db$drop_tables(staged_tables), add = TRUE, after = TRUE)
+      all_tables <- ephemeral_db$list_tables()
+      on.exit(ephemeral_db$drop_tables(all_tables), add = TRUE, after = TRUE)
 
       validated <- ggsql::ggsql_validate(ggsql)
       has_visual <- ggsql::ggsql_has_visual(validated)
@@ -391,29 +390,33 @@ tool_visualize_measures <- function(ephemeral_db, session, update_fn = function(
         error = function(e) NULL
       )
 
-      title_display <- if (nzchar(title)) sprintf(" with title '%s'", title) else ""
+      title_display <- if (nzchar(title))
+        sprintf(" with title '%s'", title) else ""
       text <- sprintf("Chart displayed%s.", title_display)
-      value <- if (!is.null(png_content)) list(ellmer::ContentText(text), png_content) else text
+      value <- if (!is.null(png_content))
+        list(ellmer::ContentText(text), png_content) else text
 
       update_fn(list(ggsql = ggsql, title = title, widget_id = widget_id))
 
       ellmer::ContentToolResult(
         value = value,
-        extra = list(display = list(
-          html = viz_container,
-          title = if (nzchar(title)) title else "Measure Visualization",
-          show_request = FALSE,
-          open = querychat_tool_starts_open("visualize"),
-          full_screen = TRUE,
-          icon = viz_icon()
-        ))
+        extra = list(
+          display = list(
+            html = viz_container,
+            title = if (nzchar(title)) title else "Measure Visualization",
+            show_request = FALSE,
+            open = querychat_tool_starts_open("visualize"),
+            full_screen = TRUE,
+            icon = viz_icon()
+          )
+        )
       )
     },
     interpolate_package("tool-visualize-measures.md"),
     name = "querychat_visualize_measures",
     arguments = list(
       ggsql = ellmer::type_string(
-        "A full ggsql query referencing the tables created by querychat_prepare_visualization."
+        "A full ggsql query referencing the measure tables registered by querychat_run_measures. You may SELECT, filter, or join those tables, but avoid aggregating or computing new values in the SQL portion."
       ),
       title = ellmer::type_string(
         "A brief title for the visualization card.",
@@ -428,26 +431,19 @@ tool_visualize_measures <- function(ephemeral_db, session, update_fn = function(
 }
 
 new_ephemeral_db <- function() {
-  rlang::check_installed("duckdb", reason = "for measure visualization support.")
+  rlang::check_installed(
+    "duckdb",
+    reason = "for measure visualization support."
+  )
   con <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
-  run_counter <- 0L
 
   list(
-    register = function(df) {
-      run_counter <<- run_counter + 1L
-      name <- paste0("_run_", run_counter)
+    register = function(df, name) {
       duckdb::duckdb_register(con, name, df)
       name
     },
     execute = function(sql) {
       DBI::dbGetQuery(con, sql)
-    },
-    create_table = function(name, sql) {
-      DBI::dbExecute(
-        con,
-        sprintf('CREATE OR REPLACE TABLE "%s" AS %s', name, sql)
-      )
-      invisible(NULL)
     },
     drop_tables = function(names) {
       for (nm in names) {

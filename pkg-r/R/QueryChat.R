@@ -155,9 +155,12 @@ QueryChat <- R6::R6Class(
       client_spec = NULL,
       tools = NA,
       session = NULL,
-      update_dashboard = function(query, title, table) {},
-      reset_dashboard = function(table) {},
-      visualize = function(data) {}
+      update_dashboard = function(query, title, table) {
+      },
+      reset_dashboard = function(table) {
+      },
+      visualize = function(data) {
+      }
     ) {
       spec <- client_spec %||% private$.client_spec
       chat <- as_querychat_client(spec)
@@ -234,10 +237,13 @@ QueryChat <- R6::R6Class(
             session$onSessionEnded(function() ephemeral_db$cleanup())
           }
           chat$register_tool(tool_run_measures(private$.measures, ephemeral_db))
-          chat$register_tool(tool_prepare_visualization(ephemeral_db))
           if (rlang::is_installed("ggsql")) {
             chat$register_tool(
-              tool_visualize_measures(ephemeral_db, session, update_fn = visualize)
+              tool_visualize_measures(
+                ephemeral_db,
+                session,
+                update_fn = visualize
+              )
             )
           }
         }
@@ -620,9 +626,12 @@ QueryChat <- R6::R6Class(
     #'   as Shiny outputs.
     client = function(
       tools = NA,
-      update_dashboard = function(query, title, table) {},
-      reset_dashboard = function(table) {},
-      visualize = function(data) {},
+      update_dashboard = function(query, title, table) {
+      },
+      reset_dashboard = function(table) {
+      },
+      visualize = function(data) {
+      },
       session = NULL
     ) {
       private$require_initialized("$client")

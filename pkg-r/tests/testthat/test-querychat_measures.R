@@ -26,7 +26,9 @@ test_that("td_name() and td_description() extract S7 props", {
 
 test_that("td_title() returns annotation title when set", {
   td <- ellmer::tool(
-    function() 1, "desc", name = "my_measure",
+    function() 1,
+    "desc",
+    name = "my_measure",
     annotations = ellmer::tool_annotations(title = "Custom Title")
   )
   expect_equal(td_title(td), "Custom Title")
@@ -38,7 +40,11 @@ test_that("td_title() humanizes name when no annotation title", {
 })
 
 test_that("lexical_rank() returns indices of matching items", {
-  catalog <- c("revenue by region", "order count total", "revenue trend over time")
+  catalog <- c(
+    "revenue by region",
+    "order count total",
+    "revenue trend over time"
+  )
   result <- lexical_rank("revenue", catalog, n = 5)
   expect_true(1 %in% result)
   expect_true(3 %in% result)
@@ -53,7 +59,9 @@ test_that("lexical_rank() returns empty when no overlap", {
 
 test_that("measures_search_text() returns match block for relevant query", {
   td <- ellmer::tool(
-    function() 1, "Count of orders placed.", name = "order_count"
+    function() 1,
+    "Count of orders placed.",
+    name = "order_count"
   )
   result <- measures_search_text(list(order_count = td), "how many orders")
   expect_match(result, "order_count")
@@ -85,7 +93,7 @@ test_that("format_measure_value() formats scalars as comma-separated string", {
 test_that("format_measure_value() formats data frames as markdown", {
   df <- data.frame(x = 1:2, y = c("a", "b"), stringsAsFactors = FALSE)
   result <- format_measure_value(df)
-  expect_match(result, "\\|")  # markdown table has pipes
+  expect_match(result, "\\|") # markdown table has pipes
   expect_match(result, "x")
   expect_match(result, "y")
 })
@@ -98,7 +106,11 @@ test_that("tool_search_measures() returns a ToolDef named querychat_search_measu
 })
 
 test_that("tool_search_measures() function searches and returns text", {
-  td <- ellmer::tool(function() 1, "Count of orders placed.", name = "order_count")
+  td <- ellmer::tool(
+    function() 1,
+    "Count of orders placed.",
+    name = "order_count"
+  )
   tool <- tool_search_measures(list(order_count = td))
   result <- tool(query = "orders")
   expect_match(result, "order_count")
@@ -122,7 +134,10 @@ test_that("tool_call_measure() function executes measure and returns ContentTool
 test_that("tool_call_measure() errors informatively for unknown measure name", {
   td <- ellmer::tool(function() 1, "A measure.", name = "my_measure")
   tool <- tool_call_measure(list(my_measure = td))
-  expect_snapshot(error = TRUE, tool(name = "unknown_measure", arguments = "{}"))
+  expect_snapshot(
+    error = TRUE,
+    tool(name = "unknown_measure", arguments = "{}")
+  )
 })
 
 test_that("tool_call_measure() collects tbl_sql before formatting", {
@@ -143,41 +158,30 @@ test_that("tool_call_measure() collects tbl_sql before formatting", {
 })
 
 describe("new_ephemeral_db()", {
-  it("registers a data frame and makes it queryable", {
+  it("registers a data frame under a caller-supplied name and makes it queryable", {
     skip_if_not_installed("duckdb")
     db <- new_ephemeral_db()
     withr::defer(db$cleanup())
 
     df <- data.frame(x = 1:3, y = c("a", "b", "c"), stringsAsFactors = FALSE)
-    tbl_name <- db$register(df)
-    expect_match(tbl_name, "^_run_")
+    tbl_name <- db$register(df, "my_measure")
+    expect_equal(tbl_name, "my_measure")
 
-    result <- db$execute(sprintf("SELECT * FROM %s", tbl_name))
+    result <- db$execute("SELECT * FROM my_measure")
     expect_equal(nrow(result), 3)
     expect_equal(names(result), c("x", "y"))
   })
 
-  it("assigns incrementing names for multiple registrations", {
+  it("supports multiple registrations with distinct names", {
     skip_if_not_installed("duckdb")
     db <- new_ephemeral_db()
     withr::defer(db$cleanup())
 
-    name1 <- db$register(data.frame(x = 1))
-    name2 <- db$register(data.frame(x = 2))
-    expect_equal(name1, "_run_1")
-    expect_equal(name2, "_run_2")
-  })
-
-  it("creates a named table from a SELECT query", {
-    skip_if_not_installed("duckdb")
-    db <- new_ephemeral_db()
-    withr::defer(db$cleanup())
-
-    tbl <- db$register(data.frame(x = 1:3, stringsAsFactors = FALSE))
-    db$create_table("my_output", sprintf("SELECT x * 2 AS x2 FROM %s", tbl))
-
-    result <- db$execute("SELECT * FROM my_output")
-    expect_equal(result$x2, c(2L, 4L, 6L))
+    db$register(data.frame(x = 1), "measure_a")
+    db$register(data.frame(x = 2), "measure_b")
+    tables <- db$list_tables()
+    expect_true("measure_a" %in% tables)
+    expect_true("measure_b" %in% tables)
   })
 
   it("drops tables", {
@@ -185,10 +189,10 @@ describe("new_ephemeral_db()", {
     db <- new_ephemeral_db()
     withr::defer(db$cleanup())
 
-    tbl <- db$register(data.frame(x = 1))
-    db$drop_tables(tbl)
+    db$register(data.frame(x = 1), "my_measure")
+    db$drop_tables("my_measure")
     tables_after <- db$list_tables()
-    expect_false(tbl %in% tables_after)
+    expect_false("my_measure" %in% tables_after)
   })
 
   it("cleanup() disconnects without error", {
@@ -205,7 +209,8 @@ describe("tool_run_measures()", {
     withr::defer(db$cleanup())
 
     td <- ellmer::tool(
-      function() data.frame(region = "West", revenue = 100, stringsAsFactors = FALSE),
+      function()
+        data.frame(region = "West", revenue = 100, stringsAsFactors = FALSE),
       "Returns regional revenue. Columns: region (string), revenue (number).",
       name = "revenue_by_region"
     )
@@ -216,7 +221,7 @@ describe("tool_run_measures()", {
     result <- tool(calls = calls_json)
     expect_s3_class(result, "ellmer::ContentToolResult")
     value <- S7::prop(result, "value")
-    expect_match(value, "_run_1")
+    expect_match(value, "revenue_by_region")
     expect_match(value, "region")
     expect_match(value, "revenue")
   })
@@ -226,7 +231,11 @@ describe("tool_run_measures()", {
     db <- new_ephemeral_db()
     withr::defer(db$cleanup())
 
-    td <- ellmer::tool(function() 42L, "Total order count.", name = "order_count")
+    td <- ellmer::tool(
+      function() 42L,
+      "Total order count.",
+      name = "order_count"
+    )
     tool <- tool_run_measures(list(order_count = td), db)
 
     calls_json <- '[{"name": "order_count", "arguments": {}}]'
@@ -236,39 +245,18 @@ describe("tool_run_measures()", {
   })
 })
 
-describe("tool_prepare_visualization()", {
-  it("creates named table from SELECT query referencing _run tables", {
-    skip_if_not_installed("duckdb")
-    db <- new_ephemeral_db()
-    withr::defer(db$cleanup())
-
-    df <- data.frame(x = 1:3, y = c(10, 20, 30), stringsAsFactors = FALSE)
-    tbl <- db$register(df)
-
-    tool <- tool_prepare_visualization(db)
-
-    preps_json <- sprintf(
-      '[{"name": "my_data", "query": "SELECT * FROM %s"}]',
-      tbl
-    )
-    result <- tool(preparations = preps_json)
-    expect_s3_class(result, "ellmer::ContentToolResult")
-
-    tables <- db$list_tables()
-    expect_true("my_data" %in% tables)
-    expect_false(tbl %in% tables)  # _run_ tables dropped
-  })
-})
-
 describe("derive_measure_tag()", {
   it("returns 'A' when only measure tools called", {
     calls <- c("querychat_search_measures", "querychat_call_measure")
     expect_equal(derive_measure_tag(calls), "A")
   })
 
-  it("returns 'A' for run/prepare/visualize pipeline", {
-    calls <- c("querychat_search_measures", "querychat_run_measures",
-               "querychat_prepare_visualization", "querychat_visualize_measures")
+  it("returns 'A' for run/visualize pipeline", {
+    calls <- c(
+      "querychat_search_measures",
+      "querychat_run_measures",
+      "querychat_visualize_measures"
+    )
     expect_equal(derive_measure_tag(calls), "A")
   })
 

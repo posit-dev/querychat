@@ -935,6 +935,20 @@ QueryChat <- R6::R6Class(
         })
 
         if (cards_enabled) {
+          # Open the Insights tab on startup when it is seeded with cards,
+          # regardless of how they were seeded (author `cards=`, the
+          # `?querychat_cards=` URL param, or bookmark restore). onFlushed fires
+          # after the first reactive flush, by which point all three paths have
+          # applied to `qc_vals$cards()`.
+          shiny::onFlushed(
+            function() {
+              if (length(shiny::isolate(qc_vals$cards())) > 0) {
+                bslib::nav_select("querychat_navbar", "insights")
+              }
+            },
+            once = TRUE
+          )
+
           output$cards_share_link <- shiny::renderUI({
             current_cards <- qc_vals$cards()
             if (length(current_cards) == 0) {

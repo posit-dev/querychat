@@ -288,9 +288,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#default-prompt" id="toc-default-prompt" class="nav-link active" data-scroll-target="#default-prompt">Default prompt</a></li>
+  <li><a href="#data-dictionary" id="toc-data-dictionary" class="nav-link active" data-scroll-target="#data-dictionary">Data dictionary</a>
+  <ul class="collapse">
+  <li><a href="#format" id="toc-format" class="nav-link" data-scroll-target="#format">Format</a></li>
+  </ul></li>
   <li><a href="#data-description" id="toc-data-description" class="nav-link" data-scroll-target="#data-description">Data description</a></li>
   <li><a href="#extra-instructions" id="toc-extra-instructions" class="nav-link" data-scroll-target="#extra-instructions">Additional instructions</a></li>
+  <li><a href="#default-prompt" id="toc-default-prompt" class="nav-link" data-scroll-target="#default-prompt">Default prompt</a></li>
   <li><a href="#custom-template" id="toc-custom-template" class="nav-link" data-scroll-target="#custom-template">Custom template</a></li>
   </ul>
 <div class="toc-actions"><ul><li><a href="https://github.com/posit-dev/querychat/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li><li><a href="https://github.com/posit-dev/querychat/edit/main/pkg-py/docs/context.qmd" class="toc-action"><i class="bi empty"></i>Edit this page</a></li></ul></div></nav>
@@ -317,86 +321,152 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 
-<p>querychat automatically gathers information about your table to help the LLM write accurate SQL queries. This includes column names and types, numerical ranges, and categorical value examples.<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a></p>
+<p>querychat automatically gathers schema information about your tables — column names, types, numerical ranges, and categorical values — and makes it available to the LLM on demand via the <code>querychat_get_schema</code> <a href="./tools.html#schema-retrieval">tool</a>. The LLM calls this tool before writing SQL to understand the structure of the tables it’s querying.</p>
 <p>Importantly, we are <strong>not</strong> sending your raw data to the LLM and asking it to do complicated math. The LLM only needs to understand the structure and schema of your data in order to write SQL queries.</p>
-<p>You can get even better results by customizing the system prompt in three ways:</p>
+<p>You can get even better results by providing additional context:</p>
 <ol type="1">
-<li>Add a <a href="#data-description">data description</a> to provide more context about what the data represents</li>
+<li>Add a <a href="#data-dictionary">data dictionary</a> to describe tables, columns, relationships, and domain terminology (recommended)</li>
+<li>Add a <a href="#data-description">data description</a> for a simpler alternative when working with a single, straightforward table</li>
 <li>Add <a href="#extra-instructions">custom instructions</a> to guide the LLM’s behavior</li>
-<li>Use a fully <a href="#custom-template">custom prompt template</a> if you want complete control (useful if you want to be certain the model cannot see any literal values from your data)</li>
+<li>Use a fully <a href="#custom-template">custom prompt template</a> if you want complete control</li>
 </ol>
-<section id="default-prompt" class="level2">
-<h2 class="anchored" data-anchor-id="default-prompt">Default prompt</h2>
-<p>For full visibility into the system prompt that querychat generates for the LLM, you can inspect the <code>system_prompt</code> property. This is useful for debugging and understanding exactly what context the LLM is using:</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat <span class="im">import</span> QueryChat</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat.data <span class="im">import</span> titanic</span>
+<section id="data-dictionary" class="level2">
+<h2 class="anchored" data-anchor-id="data-dictionary">Data dictionary</h2>
+<p>A <strong>data dictionary</strong> is a YAML file that describes your tables, columns, relationships, and domain-specific terminology. It’s the recommended way to provide context, especially when working with <a href="./build.html#multiple-tables">multiple tables</a> or when your data has domain-specific meaning that isn’t obvious from column names alone.</p>
+<div class="code-with-filename">
+<div class="code-with-filename-file">
+<pre><strong>app.py</strong></pre>
+</div>
+<div class="sourceCode" id="cb1" data-filename="app.py"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat <span class="im">import</span> QueryChat</span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(titanic(), <span class="st">"titanic"</span>)</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(qc.system_prompt)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>By default, the system prompt contains the following components:</p>
-<ol type="1">
-<li>The basic set of behaviors and guidelines the LLM must follow in order for querychat to work properly, including how to use <a href="./tools.html">tools</a> to execute queries and update the app.</li>
-<li>The SQL schema of the data frame you provided. This includes:
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    orders, <span class="st">"orders"</span>,</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    data_dict<span class="op">=</span>Path(<span class="st">"data-dict.yaml"</span>)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>qc.add_table(customers, <span class="st">"customers"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<section id="format" class="level3">
+<h3 class="anchored" data-anchor-id="format">Format</h3>
+<p>A data dictionary has three top-level sections: <code>tables</code>, <code>relationships</code>, and <code>glossary</code>.</p>
+<div class="code-with-filename">
+<div class="code-with-filename-file">
+<pre><strong>data-dict.yaml</strong></pre>
+</div>
+<div class="sourceCode" id="cb2" data-filename="data-dict.yaml"><pre class="sourceCode yaml code-with-copy"><code class="sourceCode yaml"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">version</span><span class="kw">:</span><span class="at"> </span><span class="st">"0.2.0"</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a><span class="fu">tables</span><span class="kw">:</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">orders</span><span class="kw">:</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">description</span><span class="kw">:</span><span class="at"> One row per customer order.</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">columns</span><span class="kw">:</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> order_id</span></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">type</span><span class="kw">:</span><span class="at"> number(id)</span></span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">constraints</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="at">primary_key</span><span class="kw">]</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">description</span><span class="kw">:</span><span class="at"> Unique order identifier.</span></span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> customer_id</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">type</span><span class="kw">:</span><span class="at"> number(id)</span></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">constraints</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="at">foreign_key</span><span class="kw">]</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">description</span><span class="kw">:</span><span class="at"> References customers.id.</span></span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> total</span></span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">type</span><span class="kw">:</span><span class="at"> number(quantity)</span></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">description</span><span class="kw">:</span><span class="at"> Order total in USD.</span></span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> status</span></span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">type</span><span class="kw">:</span><span class="at"> enum</span></span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">values</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="at">pending</span><span class="kw">,</span><span class="at"> shipped</span><span class="kw">,</span><span class="at"> delivered</span><span class="kw">,</span><span class="at"> cancelled</span><span class="kw">]</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">description</span><span class="kw">:</span><span class="at"> Current order status.</span></span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">customers</span><span class="kw">:</span></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">description</span><span class="kw">:</span><span class="at"> One row per customer.</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">columns</span><span class="kw">:</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> id</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">type</span><span class="kw">:</span><span class="at"> number(id)</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">constraints</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="at">primary_key</span><span class="kw">]</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">description</span><span class="kw">:</span><span class="at"> Unique customer identifier.</span></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> name</span></span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">type</span><span class="kw">:</span><span class="at"> string</span></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">description</span><span class="kw">:</span><span class="at"> Full name.</span></span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> region</span></span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">type</span><span class="kw">:</span><span class="at"> string</span></span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a><span class="at">        </span><span class="fu">description</span><span class="kw">:</span><span class="at"> Geographic sales region.</span></span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a><span class="fu">relationships</span><span class="kw">:</span></span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="fu">description</span><span class="kw">:</span><span class="at"> Each order belongs to one customer.</span></span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">cardinality</span><span class="kw">:</span><span class="at"> many-to-one</span></span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">join</span><span class="kw">:</span><span class="at"> orders.customer_id = customers.id</span></span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a><span class="fu">glossary</span><span class="kw">:</span></span>
+<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">AOV</span><span class="kw">:</span><span class="at"> Average order value — total revenue divided by number of orders.</span></span>
+<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">churn</span><span class="kw">:</span><span class="at"> A customer who has not placed an order in the last 90 days.</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<section id="tables" class="level4">
+<h4 class="anchored" data-anchor-id="tables">Tables</h4>
+<p>Each entry under <code>tables</code> describes one table. The key must match the table name you pass to <code>QueryChat</code> or <code>.add_table()</code>.</p>
 <ul>
-<li>Column names</li>
-<li>Data types (integer, float, boolean, datetime, text)</li>
-<li>For text columns with less than 10 unique values, we assume they are categorical variables and include the list of values</li>
-<li>For integer and float columns, we include the range</li>
+<li><strong><code>description</code></strong>: What this table represents (one sentence is usually enough).</li>
+<li><strong><code>columns</code></strong>: A list of column annotations. Each column can have:
+<ul>
+<li><code>name</code>: Column name (must match the actual column)</li>
+<li><code>type</code>: Semantic type hint — <code>string</code>, <code>number</code>, <code>number(id)</code>, <code>number(quantity)</code>, <code>date</code>, <code>enum</code></li>
+<li><code>constraints</code>: Optional list — <code>primary_key</code>, <code>foreign_key</code></li>
+<li><code>description</code>: What this column means in plain English</li>
+<li><code>values</code>: For <code>enum</code> columns, the list of possible values</li>
 </ul></li>
-<li>A <a href="#data-description">data description</a> (if provided via <code>data_description</code>)</li>
-<li><a href="#additional-instructions">Additional instructions</a> you want to use to guide querychat’s behavior (if provided via <code>extra_instructions</code>).</li>
-</ol>
+</ul>
+<p>Columns listed in the data dictionary are excluded from the auto-generated schema (since your description supersedes the auto-detected metadata). Columns not listed are still auto-detected as usual.</p>
+</section>
+<section id="relationships" class="level4">
+<h4 class="anchored" data-anchor-id="relationships">Relationships</h4>
+<p>The <code>relationships</code> section tells the LLM how to join tables. Each entry has:</p>
+<ul>
+<li><code>description</code>: A plain-English description of the relationship</li>
+<li><code>cardinality</code>: <code>one-to-one</code>, <code>one-to-many</code>, or <code>many-to-one</code></li>
+<li><code>join</code>: The join condition (e.g., <code>orders.customer_id = customers.id</code>)</li>
+</ul>
+</section>
+<section id="glossary" class="level4">
+<h4 class="anchored" data-anchor-id="glossary">Glossary</h4>
+<p>The <code>glossary</code> section defines domain-specific terms that users might use in their questions. This helps the LLM translate business language into correct SQL.</p>
+</section>
+</section>
 </section>
 <section id="data-description" class="level2">
 <h2 class="anchored" data-anchor-id="data-description">Data description</h2>
-<p>If your column names are descriptive, querychat may already work well without additional context. However, if your columns are named <code>x</code>, <code>V1</code>, <code>value</code>, etc., you should provide a data description. Use the <code>data_description</code> parameter for this:</p>
-<div class="code-with-filename">
-<div class="code-with-filename-file">
-<pre><strong>titanic-app.py</strong></pre>
-</div>
-<div class="sourceCode" id="cb2" data-filename="titanic-app.py"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat <span class="im">import</span> QueryChat</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(</span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>    titanic,</span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">"titanic"</span>,</span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>    data_description<span class="op">=</span>Path(<span class="st">"data_description.md"</span>)</span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>app <span class="op">=</span> qc.app()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<p>querychat doesn’t need this information in any particular format – just provide what a human would find helpful:</p>
+<p>For simple single-table use cases where a full data dictionary would be overkill, you can provide a <strong>data description</strong> — a free-form markdown file or string that describes what the data represents. Use the <code>data_description</code> parameter:</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    titanic,</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">"titanic"</span>,</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    data_description<span class="op">=</span>Path(<span class="st">"data_description.md"</span>)</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>querychat doesn’t need this in any particular format — just provide what a human would find helpful:</p>
 <div class="code-with-filename">
 <div class="code-with-filename-file">
 <pre><strong>data_description.md</strong></pre>
 </div>
-<div class="sourceCode" id="cb3" data-filename="data_description.md"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>This dataset contains information about Titanic passengers, collected for predicting survival.</span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>survived: Survival (0 = No, 1 = Yes)</span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>pclass: Ticket class (1 = 1st, 2 = 2nd, 3 = 3rd)</span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>sex: Sex of passenger</span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>age: Age in years</span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>sibsp: Number of siblings/spouses aboard</span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>parch: Number of parents/children aboard</span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>fare: Passenger fare</span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>embarked: Port of embarkation (C = Cherbourg, Q = Queenstown, S = Southampton)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb4" data-filename="data_description.md"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>This dataset contains information about Titanic passengers.</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>survived: Survival (0 = No, 1 = Yes)</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>pclass: Ticket class (1 = 1st, 2 = 2nd, 3 = 3rd)</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>embarked: Port of embarkation (C = Cherbourg, Q = Queenstown, S = Southampton)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </section>
 <section id="extra-instructions" class="level2">
 <h2 class="anchored" data-anchor-id="extra-instructions">Additional instructions</h2>
 <p>You can add custom instructions to guide the LLM’s behavior using the <code>extra_instructions</code> parameter:</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(</span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    titanic,</span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">"titanic"</span>,</span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    extra_instructions<span class="op">=</span>Path(<span class="st">"instructions.md"</span>)</span>
-<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    titanic,</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">"titanic"</span>,</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    extra_instructions<span class="op">=</span>Path(<span class="st">"instructions.md"</span>)</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Or as a string:</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>instructions <span class="op">=</span> <span class="st">"""</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="st">- Use British spelling conventions</span></span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="st">- Stay on topic and only discuss the data dashboard</span></span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="st">- Refuse to answer unrelated questions</span></span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="st">"""</span></span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(titanic, <span class="st">"titanic"</span>, extra_instructions<span class="op">=</span>instructions)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>instructions <span class="op">=</span> <span class="st">"""</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="st">- Use British spelling conventions</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="st">- Stay on topic and only discuss the data</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="st">- Refuse to answer unrelated questions</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="st">"""</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(titanic, <span class="st">"titanic"</span>, extra_instructions<span class="op">=</span>instructions)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="callout callout-style-default callout-warning callout-titled">
 <div class="callout-header d-flex align-content-center">
 <div class="callout-icon-container">
@@ -411,6 +481,15 @@ Warning
 </div>
 </div>
 </section>
+<section id="default-prompt" class="level2">
+<h2 class="anchored" data-anchor-id="default-prompt">Default prompt</h2>
+<p>For full visibility into the system prompt that querychat generates for the LLM, you can inspect the <code>system_prompt</code> property. This is useful for debugging and understanding exactly what context the LLM is working with:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat <span class="im">import</span> QueryChat</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat.data <span class="im">import</span> titanic</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(titanic(), <span class="st">"titanic"</span>)</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(qc.system_prompt)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
 <section id="custom-template" class="level2">
 <h2 class="anchored" data-anchor-id="custom-template">Custom template</h2>
 <p>If you want more control over the system prompt, you can provide a custom prompt template using the <code>prompt_template</code> parameter. This is for more advanced users who want to fully customize the LLM’s behavior. See the <a href="reference/querychat.qmd#attributes">API reference</a> for details on the available template variables.</p>
@@ -418,13 +497,7 @@ Warning
 
 </section>
 
-
-<div id="quarto-appendix" class="default"><section id="footnotes" class="footnotes footnotes-end-of-document" role="doc-endnotes"><h2 class="anchored quarto-appendix-heading">Footnotes</h2>
-
-<ol>
-<li id="fn1"><p>All of this information is provided to the LLM as part of the <strong>system prompt</strong> – a string of text containing instructions and context for the LLM to consider when responding to user queries.<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
-</ol>
-</section></div></main> <!-- /main -->
+</main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
     const icon = "";

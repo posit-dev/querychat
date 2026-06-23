@@ -309,7 +309,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <section id="querychat.tools.tool_query" class="level1">
 <h1>tools.tool_query</h1>
-<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>tool_query(data_source)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>tool_query(executor, <span class="op">*</span>, multi_table<span class="op">=</span><span class="va">False</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Create a tool that performs a SQL query on the data.</p>
 <section id="parameters" class="level2 doc-section doc-section-parameters">
 <h2 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h2>
@@ -324,10 +324,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </thead>
 <tbody>
 <tr class="odd">
-<td>data_source</td>
-<td><a href="../reference/types.DataSource.html#querychat.types.DataSource">DataSource</a></td>
-<td>The data source to query against</td>
+<td>executor</td>
+<td><code>QueryExecutor</code></td>
+<td>The query executor to use for running queries.</td>
 <td><em>required</em></td>
+</tr>
+<tr class="even">
+<td>multi_table</td>
+<td><a href="https://docs.python.org/3/library/functions.html#bool">bool</a></td>
+<td>Whether multiple tables are registered. When True, multi-table query guidance is included in the tool description.</td>
+<td><code>False</code></td>
 </tr>
 </tbody>
 </table>
@@ -338,7 +344,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <colgroup>
 <col style="width: 10%">
 <col style="width: 31%">
-<col style="width: 57%">
+<col style="width: 58%">
 </colgroup>
 <thead>
 <tr class="header">
@@ -351,7 +357,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr class="odd">
 <td></td>
 <td><code>Tool</code></td>
-<td>A tool that can be registered with chatlas</td>
+<td>A tool that can be registered with chatlas.</td>
 </tr>
 </tbody>
 </table>

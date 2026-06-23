@@ -282,20 +282,14 @@ ul.task-list li input[type="checkbox"] {
 
 
 <p>While the <code>.app()</code> method is a great <a href="./index.html#quick-start">quick start</a> for exploring data, building custom apps with querychat unlocks the full power of integrating natural language data exploration with custom visualizations, layouts, and interactivity.</p>
-<p>querychat is a particularly good fit for apps that have:</p>
-<ol type="1">
-<li><strong>A single data source</strong> (or a set of related tables that can be joined)</li>
-<li><strong>Multiple filters</strong> that let users slice and explore the data in different ways</li>
-<li><strong>Several visualizations and outputs</strong> that all depend on the same filtered data</li>
-</ol>
-<p>In these apps, querychat can replace or augment your filtering UI by allowing users to describe what they want to see in natural language. Instead of building complex filter controls, users can simply ask questions like “show me customers from California who spent over $1000 last quarter” and querychat will generate the appropriate SQL query.</p>
+<p>querychat lets users ask questions of their data in plain language — filtering, sorting, summarizing, joining across tables, and creating visualizations — all without needing to write SQL or navigate complex filter UIs. You can use it as the primary exploration interface in a standalone app, or embed it alongside curated views in an existing dashboard to let users go deeper than the views you designed.</p>
 <p>This is especially valuable when:</p>
 <ul>
 <li>Your data has many columns and building a UI for all possible filters would be overwhelming</li>
 <li>Users want to explore ad-hoc combinations of filters that you didn’t anticipate</li>
-<li>You want to make data exploration more accessible to users who aren’t comfortable with traditional filtering UIs</li>
+<li>You have multiple related tables that users may want to query and join</li>
+<li>You want to make data exploration more accessible to non-technical users</li>
 </ul>
-<p>If you have an existing app with a data frame that flows through multiple outputs, querychat can be a natural addition to provide an alternative way to filter that data.</p>
 <section id="general-pattern" class="level2">
 <h2 class="anchored" data-anchor-id="general-pattern">General pattern</h2>
 <p>Regardless of framework, building a custom querychat app follows the same pattern:</p>

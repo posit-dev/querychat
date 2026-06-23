@@ -296,6 +296,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#querychat.types.ServerValues" id="toc-querychat.types.ServerValues" class="nav-link active" data-scroll-target="#querychat.types.ServerValues">types.ServerValues</a>
   <ul class="collapse">
   <li><a href="#attributes" id="toc-attributes" class="nav-link" data-scroll-target="#attributes">Attributes</a></li>
+  <li><a href="#methods" id="toc-methods" class="nav-link" data-scroll-target="#methods">Methods</a>
+  <ul class="collapse">
+  <li><a href="#querychat.types.ServerValues.current_table" id="toc-querychat.types.ServerValues.current_table" class="nav-link" data-scroll-target="#querychat.types.ServerValues.current_table">current_table</a></li>
+  <li><a href="#querychat.types.ServerValues.table" id="toc-querychat.types.ServerValues.table" class="nav-link" data-scroll-target="#querychat.types.ServerValues.table">table</a></li>
+  <li><a href="#querychat.types.ServerValues.table_names" id="toc-querychat.types.ServerValues.table_names" class="nav-link" data-scroll-target="#querychat.types.ServerValues.table_names">table_names</a></li>
+  </ul></li>
   </ul></li>
   </ul>
 <div class="toc-actions"><ul><li><a href="https://github.com/posit-dev/querychat/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li><li><a href="https://github.com/posit-dev/querychat/edit/main/pkg-py/docs/reference/types.ServerValues.qmd" class="toc-action"><i class="bi empty"></i>Edit this page</a></li></ul></div></nav>
@@ -308,9 +314,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <section id="querychat.types.ServerValues" class="level1">
 <h1>types.ServerValues</h1>
-<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>types.ServerValues(df, sql, title, client)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>types.ServerValues(df, sql, title, tables, client, data_sources, current_table)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Session-specific reactive values and client returned by QueryChat.server().</p>
-<p>This dataclass contains all the session-specific reactive state for a QueryChat instance. Each session gets its own ServerValues to ensure proper isolation between concurrent sessions.</p>
+<p>Each session gets its own ServerValues to ensure proper isolation between concurrent sessions.</p>
 <section id="attributes" class="level2 doc-section doc-section-attributes">
 <h2 class="doc-section doc-section-attributes anchored" data-anchor-id="attributes">Attributes</h2>
 <table class="caption-top table">
@@ -324,28 +330,123 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td>df</td>
-<td><a href="https://docs.python.org/3/library/collections.abc.html#collections.abc.Callable">Callable</a>[[], <code>IntoFrameT</code>]</td>
-<td>A reactive Calc that returns the current filtered data frame or lazy frame. If the data source is lazy, returns a LazyFrame. If no SQL query has been set, this returns the unfiltered data from the data source. Call it like <code>.df()</code> to reactively read the current data.</td>
+<td></td>
+<td>Reactive Calc returning the current filtered data frame. With multiple tables, warns and defaults to the primary table; use <code>.table('name').df()</code>.</td>
 </tr>
 <tr class="even">
 <td>sql</td>
-<td><code>ReactiveStringOrNone</code></td>
-<td>A reactive Value containing the current SQL query string. Access the value by calling <code>.sql()</code>, or set it with <code>.sql.set("SELECT ...")</code>. Returns <code>None</code> if no query has been set.</td>
+<td></td>
+<td>Reactive Value for the current SQL query string. With multiple tables, warns and defaults to the primary table; use <code>.table('name').sql</code>.</td>
 </tr>
 <tr class="odd">
 <td>title</td>
-<td><code>ReactiveStringOrNone</code></td>
-<td>A reactive Value containing the current title for the query. The LLM provides this title when generating a new SQL query. Access it with <code>.title()</code>, or set it with <code>.title.set("...")</code>. Returns <code>None</code> if no title has been set.</td>
+<td></td>
+<td>Reactive Value for the current title. With multiple tables, warns and defaults to the primary table; use <code>.table('name').title</code>.</td>
 </tr>
 <tr class="even">
+<td>tables</td>
+<td></td>
+<td>Per-table reactive state dict. Keys are table names.</td>
+</tr>
+<tr class="odd">
 <td>client</td>
-<td><code>ServerClient</code></td>
-<td>Session chat client value. For real sessions this is a <code>chatlas.Chat</code> created by the client factory. For deferred stub sessions (where <code>data_source</code> is not set yet), this is a placeholder client that raises when accessed.</td>
+<td></td>
+<td>Session chat client.</td>
+</tr>
+<tr class="even">
+<td>current_table</td>
+<td><a href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | None</td>
+<td>The name of the most recently queried table, or <code>None</code> if no query has been run yet. Call <code>.current_table()</code> to read reactively.</td>
 </tr>
 </tbody>
 </table>
+</section>
+<section id="methods" class="level2">
+<h2 class="anchored" data-anchor-id="methods">Methods</h2>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="#querychat.types.ServerValues.current_table">current_table</a></td>
+<td>Return the name of the most recently queried table, or None (reactive).</td>
+</tr>
+<tr class="even">
+<td><a href="#querychat.types.ServerValues.table">table</a></td>
+<td>Get a per-table accessor with reactive state.</td>
+</tr>
+<tr class="odd">
+<td><a href="#querychat.types.ServerValues.table_names">table_names</a></td>
+<td>Return the names of all registered tables.</td>
+</tr>
+</tbody>
+</table>
+<section id="querychat.types.ServerValues.current_table" class="level3">
+<h3 class="anchored" data-anchor-id="querychat.types.ServerValues.current_table">current_table</h3>
+<div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>types.ServerValues.current_table()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Return the name of the most recently queried table, or None (reactive).</p>
+</section>
+<section id="querychat.types.ServerValues.table" class="level3">
+<h3 class="anchored" data-anchor-id="querychat.types.ServerValues.table">table</h3>
+<div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>types.ServerValues.table(name)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Get a per-table accessor with reactive state.</p>
+<section id="parameters" class="level4 doc-section doc-section-parameters">
+<h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters">Parameters</h4>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>name</td>
+<td><a href="https://docs.python.org/3/library/stdtypes.html#str">str</a></td>
+<td>Table name.</td>
+<td><em>required</em></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="returns" class="level4 doc-section doc-section-returns">
+<h4 class="doc-section doc-section-returns anchored" data-anchor-id="returns">Returns</h4>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 6%">
+<col style="width: 45%">
+<col style="width: 48%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td></td>
+<td><code>TableAccessor</code></td>
+<td>Accessor with df(), sql(), title() backed by per-session state.</td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="querychat.types.ServerValues.table_names" class="level3">
+<h3 class="anchored" data-anchor-id="querychat.types.ServerValues.table_names">table_names</h3>
+<div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>types.ServerValues.table_names()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Return the names of all registered tables.</p>
 
 
+</section>
 </section>
 </section>
 

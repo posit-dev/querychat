@@ -306,7 +306,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#data-views" id="toc-data-views" class="nav-link" data-scroll-target="#data-views">Data views</a>
   <ul class="collapse">
   <li><a href="#resetting-filters" id="toc-resetting-filters" class="nav-link" data-scroll-target="#resetting-filters">Resetting filters</a></li>
-  <li><a href="#advanced-patterns" id="toc-advanced-patterns" class="nav-link" data-scroll-target="#advanced-patterns">Advanced patterns</a></li>
+  <li><a href="#programmatic-updates" id="toc-programmatic-updates" class="nav-link" data-scroll-target="#programmatic-updates">Programmatic updates</a></li>
+  </ul></li>
+  <li><a href="#multiple-tables" id="toc-multiple-tables" class="nav-link" data-scroll-target="#multiple-tables">Multiple tables</a>
+  <ul class="collapse">
+  <li><a href="#registering-tables" id="toc-registering-tables" class="nav-link" data-scroll-target="#registering-tables">Registering tables</a></li>
+  <li><a href="#per-table-reactive-access" id="toc-per-table-reactive-access" class="nav-link" data-scroll-target="#per-table-reactive-access">Per-table reactive access</a></li>
+  <li><a href="#tracking-the-active-table" id="toc-tracking-the-active-table" class="nav-link" data-scroll-target="#tracking-the-active-table">Tracking the active table</a></li>
+  <li><a href="#data-dictionary" id="toc-data-dictionary" class="nav-link" data-scroll-target="#data-dictionary">Data dictionary</a></li>
+  <li><a href="#separate-chat-interfaces" id="toc-separate-chat-interfaces" class="nav-link" data-scroll-target="#separate-chat-interfaces">Separate chat interfaces</a></li>
   </ul></li>
   <li><a href="#see-also" id="toc-see-also" class="nav-link" data-scroll-target="#see-also">See also</a></li>
   </ul>
@@ -671,7 +679,7 @@ Custom Shiny chat UIs
 <p>When users filter data through the chat (e.g., “show only children”), both charts update automatically.</p>
 <p><a href="./images/plotly-data-view.png" class="lightbox" data-gallery="quarto-lightbox-gallery-2"><img src="./images/plotly-data-view.png" class="shadow rounded mb-3 img-fluid" alt="Screenshot of a querychat app showing both a data table and a bar chart of survival by class."></a></p>
 <p>A more complete example adds metrics, tabs, and multiple views:</p>
-<div id="1c4ab66b" class="cell" data-execution_count="1">
+<div id="84cf7afa" class="cell" data-execution_count="1">
 <details class="code-fold">
 <summary>titanic-dashboard.py</summary>
 <div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> plotly.express <span class="im">as</span> px</span>
@@ -805,83 +813,121 @@ Tip
 </div>
 </div>
 </section>
-<section id="advanced-patterns" class="level3">
-<h3 class="anchored" data-anchor-id="advanced-patterns">Advanced patterns</h3>
-<section id="programmatic-updates" class="level4">
-<h4 class="anchored" data-anchor-id="programmatic-updates">Programmatic updates</h4>
+<section id="programmatic-updates" class="level3">
+<h3 class="anchored" data-anchor-id="programmatic-updates">Programmatic updates</h3>
 <p>You can update the query state programmatically using <code>.sql()</code> and <code>.title()</code> as setters. This is useful for adding preset filter buttons or linking filters to other UI controls.</p>
 </section>
-<section id="multiple-datasets" class="level4">
-<h4 class="anchored" data-anchor-id="multiple-datasets">Multiple datasets</h4>
-<p>To explore multiple datasets, use separate <code>QueryChat</code> instances (i.e., separate chat interfaces).</p>
-<div class="callout callout-style-default callout-note callout-titled">
-<div class="callout-header d-flex align-content-center">
-<div class="callout-icon-container">
-<i class="callout-icon"></i>
+</section>
+<section id="multiple-tables" class="level2">
+<h2 class="anchored" data-anchor-id="multiple-tables">Multiple tables</h2>
+<p>querychat can work with multiple related tables in a single chat interface, letting users query across tables, join data, and filter any table independently. Register additional tables with <code>.add_table()</code> after creating the <code>QueryChat</code> instance, then access per-table state through the <code>.table()</code> method.</p>
+<section id="registering-tables" class="level3">
+<h3 class="anchored" data-anchor-id="registering-tables">Registering tables</h3>
+<p>Pass the first table when creating <code>QueryChat</code>, then call <code>.add_table()</code> for each additional table:</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat <span class="im">import</span> QueryChat</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(orders, <span class="st">"orders"</span>)</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>qc.add_table(customers, <span class="st">"customers"</span>)</span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>qc.add_table(products, <span class="st">"products"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>The LLM can query any registered table and write joins across them. You can inspect which tables are registered with <code>qc.table_names()</code>.</p>
+</section>
+<section id="per-table-reactive-access" class="level3">
+<h3 class="anchored" data-anchor-id="per-table-reactive-access">Per-table reactive access</h3>
+<p>When working with multiple tables, access filtered data and SQL for each table individually using <code>.table()</code>:</p>
+<div class="tabset-margin-container"></div><div class="panel-tabset" data-group="shiny-mode">
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-4-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-4-1" role="tab" aria-controls="tabset-4-1" aria-selected="true">Express</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-4-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-4-2" role="tab" aria-controls="tabset-4-2" aria-selected="false">Core</a></li></ul>
+<div class="tab-content" data-group="shiny-mode">
+<div id="tabset-4-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-4-1-tab">
+<div class="sourceCode" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> shiny.express <span class="im">import</span> render</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>qc.sidebar()</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a><span class="at">@render.data_frame</span></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> orders_table():</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> qc.table(<span class="st">"orders"</span>).df()</span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a><span class="at">@render.data_frame</span></span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> customers_table():</span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> qc.table(<span class="st">"customers"</span>).df()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
-<div class="callout-title-container flex-fill">
-Multiple tables in one chat?
+<div id="tabset-4-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-4-2-tab">
+<div class="sourceCode" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> server(<span class="bu">input</span>, output, session):</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>    qc_vals <span class="op">=</span> qc.server()</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">@render.data_frame</span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> orders_table():</span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> qc_vals.table(<span class="st">"orders"</span>).df()</span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">@render.data_frame</span></span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> customers_table():</span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> qc_vals.table(<span class="st">"customers"</span>).df()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </div>
-<div class="callout-body-container callout-body">
-<p>In some cases, you might be able to “pre-join” datasets into a single table and use one <code>QueryChat</code> instance to explore them together. In the future, we may support multiple filtered tables in one chat interface, but this is not currently available. Please upvote <a href="https://github.com/posit-dev/querychat/issues/6">the relevant issue</a> if this is a feature you’d like to see!</p>
 </div>
-</div>
-<div id="576757e5" class="cell" data-execution_count="2">
+<p>Each table has its own <code>.df()</code>, <code>.sql()</code>, and <code>.title()</code> reactives that update independently when the user filters that specific table.</p>
+</section>
+<section id="tracking-the-active-table" class="level3">
+<h3 class="anchored" data-anchor-id="tracking-the-active-table">Tracking the active table</h3>
+<p>Use <code>.current_table()</code> to find out which table the LLM most recently queried. This is useful for auto-switching a tabbed UI to the relevant table:</p>
+<div class="sourceCode" id="cb19"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="at">@reactive.effect</span></span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> _():</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>    name <span class="op">=</span> qc_vals.current_table()</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> name:</span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>        ui.update_navs(<span class="st">"table_tabs"</span>, selected<span class="op">=</span>name)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</section>
+<section id="data-dictionary" class="level3">
+<h3 class="anchored" data-anchor-id="data-dictionary">Data dictionary</h3>
+<p>When working with multiple related tables, providing a <a href="./context.html#data-dictionary">data dictionary</a> is strongly recommended. It tells the LLM how tables relate to each other, which columns are keys, and what domain terms mean — all of which help it write accurate joins and queries.</p>
+<div class="sourceCode" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> pathlib <span class="im">import</span> Path</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(orders, <span class="st">"orders"</span>, data_dict<span class="op">=</span>Path(<span class="st">"data-dict.yaml"</span>))</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>qc.add_table(customers, <span class="st">"customers"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>See <a href="./context.html#data-dictionary">Provide context</a> for the full data dictionary format.</p>
+</section>
+<section id="separate-chat-interfaces" class="level3">
+<h3 class="anchored" data-anchor-id="separate-chat-interfaces">Separate chat interfaces</h3>
+<p>If your tables are truly independent (not related), you may prefer separate <code>QueryChat</code> instances, each with its own chat interface:</p>
+<div id="1754d3e6" class="cell" data-execution_count="2">
 <details class="code-fold">
 <summary>multiple-datasets.py</summary>
-<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat.data <span class="im">import</span> titanic</span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat.express <span class="im">import</span> QueryChat</span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> seaborn <span class="im">import</span> load_dataset</span>
-<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> shiny.express <span class="im">import</span> render, ui</span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a>penguins <span class="op">=</span> load_dataset(<span class="st">"penguins"</span>)</span>
-<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a>qc_titanic <span class="op">=</span> QueryChat(titanic(), <span class="st">"titanic"</span>)</span>
-<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a>qc_penguins <span class="op">=</span> QueryChat(penguins, <span class="st">"penguins"</span>)</span>
-<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> ui.sidebar():</span>
-<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">with</span> ui.panel_conditional(<span class="st">"input.navbar == 'Titanic'"</span>):</span>
-<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a>        qc_titanic.ui()</span>
-<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">with</span> ui.panel_conditional(<span class="st">"input.navbar == 'Penguins'"</span>):</span>
-<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a>        qc_penguins.ui()</span>
-<span id="cb16-16"><a href="#cb16-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-17"><a href="#cb16-17" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> ui.nav_panel(<span class="st">"Titanic"</span>):</span>
-<span id="cb16-18"><a href="#cb16-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-19"><a href="#cb16-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">@render.data_frame</span></span>
-<span id="cb16-20"><a href="#cb16-20" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> titanic_table():</span>
-<span id="cb16-21"><a href="#cb16-21" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> qc_titanic.df()</span>
-<span id="cb16-22"><a href="#cb16-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-23"><a href="#cb16-23" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-24"><a href="#cb16-24" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> ui.nav_panel(<span class="st">"Penguins"</span>):</span>
-<span id="cb16-25"><a href="#cb16-25" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-26"><a href="#cb16-26" aria-hidden="true" tabindex="-1"></a>    <span class="at">@render.data_frame</span></span>
-<span id="cb16-27"><a href="#cb16-27" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> penguins_table():</span>
-<span id="cb16-28"><a href="#cb16-28" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> qc_penguins.df()</span>
-<span id="cb16-29"><a href="#cb16-29" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-30"><a href="#cb16-30" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb16-31"><a href="#cb16-31" aria-hidden="true" tabindex="-1"></a>ui.page_opts(</span>
-<span id="cb16-32"><a href="#cb16-32" aria-hidden="true" tabindex="-1"></a>    <span class="bu">id</span><span class="op">=</span><span class="st">"navbar"</span>,</span>
-<span id="cb16-33"><a href="#cb16-33" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="st">"Multiple Datasets with querychat"</span>,</span>
-<span id="cb16-34"><a href="#cb16-34" aria-hidden="true" tabindex="-1"></a>    fillable<span class="op">=</span><span class="va">True</span>,</span>
-<span id="cb16-35"><a href="#cb16-35" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat.data <span class="im">import</span> titanic</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> querychat.express <span class="im">import</span> QueryChat</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> seaborn <span class="im">import</span> load_dataset</span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> shiny.express <span class="im">import</span> render, ui</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>penguins <span class="op">=</span> load_dataset(<span class="st">"penguins"</span>)</span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>qc_titanic <span class="op">=</span> QueryChat(titanic(), <span class="st">"titanic"</span>)</span>
+<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>qc_penguins <span class="op">=</span> QueryChat(penguins, <span class="st">"penguins"</span>)</span>
+<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> ui.sidebar():</span>
+<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a>    <span class="cf">with</span> ui.panel_conditional(<span class="st">"input.navbar == 'Titanic'"</span>):</span>
+<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a>        qc_titanic.ui()</span>
+<span id="cb21-14"><a href="#cb21-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">with</span> ui.panel_conditional(<span class="st">"input.navbar == 'Penguins'"</span>):</span>
+<span id="cb21-15"><a href="#cb21-15" aria-hidden="true" tabindex="-1"></a>        qc_penguins.ui()</span>
+<span id="cb21-16"><a href="#cb21-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-17"><a href="#cb21-17" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> ui.nav_panel(<span class="st">"Titanic"</span>):</span>
+<span id="cb21-18"><a href="#cb21-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-19"><a href="#cb21-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">@render.data_frame</span></span>
+<span id="cb21-20"><a href="#cb21-20" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> titanic_table():</span>
+<span id="cb21-21"><a href="#cb21-21" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> qc_titanic.df()</span>
+<span id="cb21-22"><a href="#cb21-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-23"><a href="#cb21-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-24"><a href="#cb21-24" aria-hidden="true" tabindex="-1"></a><span class="cf">with</span> ui.nav_panel(<span class="st">"Penguins"</span>):</span>
+<span id="cb21-25"><a href="#cb21-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-26"><a href="#cb21-26" aria-hidden="true" tabindex="-1"></a>    <span class="at">@render.data_frame</span></span>
+<span id="cb21-27"><a href="#cb21-27" aria-hidden="true" tabindex="-1"></a>    <span class="kw">def</span> penguins_table():</span>
+<span id="cb21-28"><a href="#cb21-28" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> qc_penguins.df()</span>
+<span id="cb21-29"><a href="#cb21-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-30"><a href="#cb21-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb21-31"><a href="#cb21-31" aria-hidden="true" tabindex="-1"></a>ui.page_opts(</span>
+<span id="cb21-32"><a href="#cb21-32" aria-hidden="true" tabindex="-1"></a>    <span class="bu">id</span><span class="op">=</span><span class="st">"navbar"</span>,</span>
+<span id="cb21-33"><a href="#cb21-33" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="st">"Multiple Datasets with querychat"</span>,</span>
+<span id="cb21-34"><a href="#cb21-34" aria-hidden="true" tabindex="-1"></a>    fillable<span class="op">=</span><span class="va">True</span>,</span>
+<span id="cb21-35"><a href="#cb21-35" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </details>
 </div>
 <p><a href="./images/multiple-datasets.png" class="lightbox" data-gallery="quarto-lightbox-gallery-4"><img src="./images/multiple-datasets.png" class="shadow rounded mb-3 img-fluid" alt="Screenshot of a querychat app with two datasets: titanic and penguins."></a></p>
-<div class="callout callout-style-default callout-note callout-titled">
-<div class="callout-header d-flex align-content-center">
-<div class="callout-icon-container">
-<i class="callout-icon"></i>
-</div>
-<div class="callout-title-container flex-fill">
-Note
-</div>
-</div>
-<div class="callout-body-container callout-body">
-<p>Each dataset gets its own chat interface and maintains separate state.</p>
-</div>
-</div>
-</section>
 </section>
 </section>
 <section id="see-also" class="level2">

@@ -23,7 +23,7 @@
   QueryChat$new(data_dict = "data_dict.yaml")
   ```
 
-* `QueryChat$new()` (and `querychat()`) now supports **trusted measures** via a new `measures` argument. Pass a list of `ellmer::tool()` definitions — pre-vetted R functions registered by a domain expert — and the model is instructed to prefer them over ad-hoc SQL. Supports scalar and data frame returns; a three-step visualization pipeline (`querychat_run_measures` → `querychat_prepare_visualization` → `querychat_visualize_measures`) lets the model stage measure results in a temporary DuckDB instance and visualize them with ggsql. Each response is tagged with a provenance pill: green "Verified answer" when only trusted measures were used, amber "AI can be wrong." when any ad-hoc SQL was involved.
+* `QueryChat$new()` (and `querychat()`) now supports **trusted measures** via a new `measures` argument. Pass a list of `ellmer::tool()` definitions — pre-vetted R functions registered by a domain expert — and the model is instructed to prefer them over ad-hoc SQL. Supports scalar and data frame returns; a two-step visualization pipeline (`querychat_run_measures` → `querychat_visualize_measures`) lets the model stage measure results in a temporary DuckDB instance and visualize them with ggsql. Each response is tagged with a provenance pill: green "Verified answer" when only trusted measures were used, amber "AI can be wrong." when any ad-hoc SQL was involved.
 
 * Added `PinSource`, a data source for chatting with datasets pinned to a [pins](https://pins.rstudio.com/) board. Works with parquet, CSV, JSON, and RDS pins, and uses the pin's title, description, and tags as the default data description. (#246)
 

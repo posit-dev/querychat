@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     import ibis
     import pandas as pd
     import polars as pl
+    from ibis.backends.sql import SQLBackend
     from narwhals.stable.v1.typing import IntoFrame
 
 
@@ -220,9 +221,7 @@ def get_tool_details_setting() -> Optional[Literal["expanded", "collapsed", "def
 
 
 def querychat_tool_starts_open(
-    action: Literal[
-        "update", "query", "reset", "visualize"
-    ],
+    action: Literal["update", "query", "reset", "visualize"],
 ) -> bool:
     """
     Determine whether a tool card should be open based on action and setting.
@@ -256,6 +255,15 @@ def is_ibis_table(obj: Any) -> TypeGuard[ibis.Table]:
         import ibis
 
         return isinstance(obj, ibis.Table)
+    except ImportError:
+        return False
+
+
+def is_ibis_backend(obj: Any) -> TypeGuard[SQLBackend]:
+    try:
+        from ibis.backends.sql import SQLBackend
+
+        return isinstance(obj, SQLBackend)
     except ImportError:
         return False
 

@@ -9,11 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
-* `QueryChat()` now supports **multiple related tables**. Register additional tables with `add_table()` and the LLM can reason across all of them — joins, cross-table filters, aggregations. Per-table reactive state (`df()`, `sql()`, `title()`) is accessible via `qc_vals.table("name")` on the value returned by `server()`. (#195)
+* `QueryChat()` now supports **multiple related tables**. Register additional tables with `add_table()` and the LLM can reason across all of them — joins, cross-table filters, aggregations. Per-table reactive state (`df()`, `sql()`, `title()`) is accessible via `qc_vals.table("name")` on the value returned by `server()`. For SQLAlchemy engines and Ibis backends, `add_tables()` registers all tables (or a named subset) in a single call. (#195)
 
   ```python
   qc = QueryChat(orders_df, "orders")
   qc.add_table(customers_df, "customers")
+
+  # Or, register all tables from a SQLAlchemy engine or Ibis backend at once:
+  qc = QueryChat()
+  qc.add_tables(engine)       # SQLAlchemy engine
+  qc.add_tables(ibis_backend) # Ibis backend
 
   qc_vals = qc.server()
   qc_vals.table("orders").df()

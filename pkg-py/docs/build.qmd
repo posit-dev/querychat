@@ -323,6 +323,25 @@ qc.add_table(customers, "customers")
 qc.add_table(products, "products")
 ```
 
+If your data lives in a SQLAlchemy engine or Ibis backend, use `.add_tables()` to register all tables in a single call:
+
+```python
+from sqlalchemy import create_engine
+import ibis
+
+# SQLAlchemy
+engine = create_engine("sqlite:///store.db")
+qc = QueryChat()
+qc.add_tables(engine)                        # all tables
+qc.add_tables(engine, ["orders", "customers"])  # specific subset
+
+# Ibis
+backend = ibis.duckdb.connect("store.duckdb")
+qc = QueryChat()
+qc.add_tables(backend)                          # all tables
+qc.add_tables(backend, ["orders", "customers"]) # specific subset
+```
+
 The LLM can query any registered table and write joins across them. You can inspect which tables are registered with `qc.table_names()`.
 
 ### Per-table reactive access

@@ -132,6 +132,16 @@ class TestClientMethod:
         # Callback should be registered
         assert client is not None
 
+    def test_client_prompt_requires_table_for_reset_dashboard(self, sample_df):
+        """Reset guidance in the prompt should match the tool contract."""
+        qc = QueryChat(sample_df, "test_table", greeting="Hello!")
+
+        prompt = qc.client().system_prompt
+
+        assert "querychat_reset_dashboard()" not in prompt
+        assert "querychat_reset_dashboard" in prompt
+        assert "relevant `table`" in prompt
+
     def test_client_respects_initialization_tools(self, sample_df):
         """Test that client() respects tools set at initialization."""
         qc = QueryChat(sample_df, "test_table", greeting="Hello!", tools="query")

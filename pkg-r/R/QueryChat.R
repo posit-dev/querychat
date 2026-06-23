@@ -15,7 +15,7 @@
 #' - Initialize server logic that returns session-specific reactive values (via
 #'   `$server()`)
 #' - Access reactive data, SQL queries, and titles through the returned server
-#'   values
+#'   values (use `qc_vals$table("name")` for multi-table access)
 #'
 #' @section Usage in Shiny Apps:
 #' ```r
@@ -89,9 +89,10 @@
 QueryChat <- R6::R6Class(
   "QueryChat",
   private = list(
-    server_values = NULL,
-    .data_source = NULL,
-    .table_name = NULL,
+    .data_sources = list(),
+    .deferred_table_name = NULL,
+    .query_executor = NULL,
+    .server_initialized = FALSE,
     .client_spec = NULL,
     .client_console = NULL,
     .system_prompt = NULL,
@@ -101,24 +102,27 @@ QueryChat <- R6::R6Class(
     .data_description_mode = "empty", # "supplied", "inferred", or "empty"
     .extra_instructions = NULL,
     .categorical_threshold = NULL,
+    .data_dicts = list(),
 
-    require_data_source = function(method_name) {
-      if (is.null(private$.data_source)) {
+    require_initialized = function(method_name) {
+      if (length(private$.data_sources) == 0) {
         cli::cli_abort(
           "{.arg data_source} must be set before calling {.fn ${method_name}}.
-           Either pass {.arg data_source} to {.fn $new}, set the
-           {.field $data_source} property, or pass {.arg data_source} to {.fn $server}."
+           Either pass {.arg data_source} to {.fn $new}, or call {.fn $add_table}."
         )
       }
     },
 
-    auto_fill_data_description = function() {
+    auto_fill_data_description = function(sources = private$.data_sources) {
+      if (length(sources) != 1) {
+        return()
+      }
       if (private$.data_description_mode == "inferred") {
         private$.data_description <- NULL
         private$.data_description_mode <- "empty"
       }
       if (private$.data_description_mode == "empty") {
-        desc <- private$.data_source$get_data_description()
+        desc <- sources[[1]]$get_data_description()
         if (nzchar(desc %||% "")) {
           private$.data_description <- desc
           private$.data_description_mode <- "inferred"
@@ -126,26 +130,22 @@ QueryChat <- R6::R6Class(
       }
     },
 
-    build_system_prompt = function() {
-      if (is.null(private$.data_source)) {
-        cli::cli_abort("Cannot build system prompt without data_source")
+    build_system_prompt = function(data_sources = NULL) {
+      sources <- data_sources %||% private$.data_sources
+      if (length(sources) == 0) {
+        cli::cli_abort("Cannot build system prompt without data sources")
       }
 
-      prompt_template <- private$.prompt_template
-      if (is.null(prompt_template)) {
-        prompt_template <- system.file(
-          "prompts",
-          "prompt.md",
-          package = "querychat"
-        )
-      }
+      prompt_template <- private$.prompt_template %||%
+        system.file("prompts", "prompt.md", package = "querychat")
 
       private$.system_prompt <- QueryChatSystemPrompt$new(
         prompt_template = prompt_template,
-        data_source = private$.data_source,
+        data_sources = sources,
         data_description = private$.data_description,
         extra_instructions = private$.extra_instructions,
-        categorical_threshold = private$.categorical_threshold
+        categorical_threshold = private$.categorical_threshold,
+        data_dicts = private$.data_dicts
       )
     },
 
@@ -153,8 +153,8 @@ QueryChat <- R6::R6Class(
       client_spec = NULL,
       tools = NA,
       session = NULL,
-      update_dashboard = function(query, title) {},
-      reset_dashboard = function() {},
+      update_dashboard = function(query, title, table) {},
+      reset_dashboard = function(table) {},
       visualize = function(data) {}
     ) {
       spec <- client_spec %||% private$.client_spec
@@ -172,18 +172,40 @@ QueryChat <- R6::R6Class(
         return(chat)
       }
 
+      # Build executor lazily
+      if (is.null(private$.query_executor)) {
+        private$.query_executor <- build_query_executor(private$.data_sources)
+      }
+      executor <- private$.query_executor
+      tbl_names <- names(private$.data_sources)
+
+      # Always register get_schema tool
+      chat$register_tool(
+        tool_get_schema(
+          private$.data_dicts,
+          executor,
+          tbl_names,
+          private$.categorical_threshold
+        )
+      )
+
       if ("update" %in% tools) {
         chat$register_tool(
           tool_update_dashboard(
-            private$.data_source,
+            executor,
+            tbl_names,
             update_fn = update_dashboard
           )
         )
-        chat$register_tool(tool_reset_dashboard(reset_dashboard))
+        chat$register_tool(
+          tool_reset_dashboard(reset_dashboard, table_names = tbl_names)
+        )
       }
 
       if ("query" %in% tools) {
-        chat$register_tool(tool_query(private$.data_source))
+        chat$register_tool(
+          tool_query(executor, multi_table = length(tbl_names) > 1)
+        )
       }
 
       if ("visualize" %in% tools) {
@@ -193,7 +215,7 @@ QueryChat <- R6::R6Class(
         )
         chat$register_tool(
           tool_visualize_dashboard(
-            private$.data_source,
+            executor,
             session = session,
             update_fn = visualize,
             has_tool_query = "query" %in% tools
@@ -209,6 +231,8 @@ QueryChat <- R6::R6Class(
     greeting = NULL,
     #' @field id ID for the QueryChat instance.
     id = NULL,
+    #' @field id_override Whether the ID was explicitly set by the user.
+    id_override = NULL,
     #' @field tools The allowed tools for the chat client.
     tools = c("filter", "query"),
 
@@ -217,8 +241,8 @@ QueryChat <- R6::R6Class(
     #'
     #' @param data_source Either a data.frame, a database connection (e.g., DBI
     #'   connection), or `NULL` to defer setting the data source until later.
-    #'   When `NULL`, the data source must be set via the `$data_source` property
-    #'   or passed to `$server()` before calling methods that require data access.
+    #'   When `NULL`, the data source must be added via `$add_table()` or passed
+    #'   to `$server()` before calling methods that require data access.
     #' @param table_name A string specifying the table name to use in SQL
     #'   queries. If `data_source` is a data.frame, this is the name to refer to
     #'   it by in queries (typically the variable name). If not provided, will
@@ -257,6 +281,8 @@ QueryChat <- R6::R6Class(
     #'   template file. If not provided, the default querychat template will be
     #'   used. See the package prompts directory for the default template
     #'   format.
+    #' @param data_dict Optional data dictionary. A path to a YAML file, or a
+    #'   list of YAML file paths. See [read_data_dict()] for the expected format.
     #' @param cleanup Whether or not to automatically run `$cleanup()` when the
     #'   Shiny session/app stops. By default, cleanup only occurs if `QueryChat`
     #'   gets created within a Shiny session. Set to `TRUE` to always clean up,
@@ -275,6 +301,7 @@ QueryChat <- R6::R6Class(
       categorical_threshold = 20,
       extra_instructions = NULL,
       prompt_template = NULL,
+      data_dict = NULL,
       cleanup = NA
     ) {
       check_dots_empty()
@@ -294,28 +321,8 @@ QueryChat <- R6::R6Class(
       check_string(prompt_template, allow_null = TRUE)
       check_bool(cleanup, allow_na = TRUE)
 
-      # Handle table_name inference for non-NULL data sources
-      if (is_missing(table_name)) {
-        if (is.null(data_source)) {
-          cli::cli_abort(
-            "{.arg table_name} is required when {.arg data_source} is {.val NULL}."
-          )
-        }
-        if (inherits(data_source, "DataSource")) {
-          table_name <- data_source$table_name
-        } else if (
-          is.data.frame(data_source) || inherits(data_source, "tbl_sql")
-        ) {
-          table_name <- deparse1(substitute(data_source))
-        } else if (inherits(data_source, "pins_board")) {
-          cli::cli_abort(
-            "{.arg table_name} (the pin name) is required when {.arg data_source} is a pins board."
-          )
-        }
-      }
-
-      # Store table_name for later normalization (needed for deferred pattern)
-      private$.table_name <- table_name
+      # Normalize data_dicts
+      private$.data_dicts <- normalize_data_dicts(data_dict)
 
       # Store init parameters for deferred system prompt building
       private$.prompt_template <- prompt_template
@@ -328,24 +335,47 @@ QueryChat <- R6::R6Class(
       private$.extra_instructions <- extra_instructions
       private$.categorical_threshold <- categorical_threshold
 
-      self$id <- id %||% sprintf("querychat_%s", table_name)
       self$tools <- tools
+      private$.client_spec <- client
 
       if (!is.null(greeting) && file.exists(greeting)) {
         greeting <- read_utf8(greeting)
       }
       self$greeting <- greeting
 
-      # Initialize data source (may be NULL for deferred pattern)
+      # Track whether id was explicitly set
+      self$id_override <- id
+
+      # Handle table_name inference for non-NULL data sources
       if (!is.null(data_source)) {
-        private$.data_source <- normalize_data_source(data_source, table_name)
-        private$.table_name <- private$.data_source$table_name
-        self$id <- id %||% sprintf("querychat_%s", private$.table_name)
+        if (is_missing(table_name)) {
+          if (inherits(data_source, "DataSource")) {
+            table_name <- data_source$table_name
+          } else if (
+            is.data.frame(data_source) || inherits(data_source, "tbl_sql")
+          ) {
+            table_name <- deparse1(substitute(data_source))
+          } else if (inherits(data_source, "pins_board")) {
+            cli::cli_abort(
+              "{.arg table_name} (the pin name) is required when {.arg data_source} is a pins board."
+            )
+          }
+        }
+        normalized <- normalize_data_source(data_source, table_name)
+        private$.data_sources[[normalized$table_name]] <- normalized
         private$auto_fill_data_description()
         private$build_system_prompt()
+        self$id <- id %||% sprintf("querychat_%s", normalized$table_name)
+      } else {
+        # Deferred pattern: data_source is NULL
+        if (is_missing(table_name)) {
+          cli::cli_abort(
+            "{.arg table_name} is required when {.arg data_source} is {.val NULL}."
+          )
+        }
+        private$.deferred_table_name <- table_name
+        self$id <- id %||% sprintf("querychat_%s", table_name)
       }
-
-      private$.client_spec <- client
 
       # By default, only close automatically if a Shiny session is active
       if (is.na(cleanup)) {
@@ -361,6 +391,187 @@ QueryChat <- R6::R6Class(
     },
 
     #' @description
+    #' Add a table to this QueryChat instance.
+    #'
+    #' @param data_source A data frame, database connection, or DataSource object.
+    #' @param table_name The SQL table name for this data source.
+    #' @param replace Whether to replace an existing table with this name.
+    #'   Default is `FALSE`.
+    #'
+    #' @return Invisibly returns `self` for chaining.
+    add_table = function(data_source, table_name, replace = FALSE) {
+      if (private$.server_initialized) {
+        cli::cli_abort("Cannot add tables after server initialization.")
+      }
+      check_sql_table_name(table_name)
+      if (table_name %in% names(private$.data_sources) && !replace) {
+        cli::cli_abort(
+          "Table {.val {table_name}} already exists. Use {.code replace = TRUE} to replace."
+        )
+      }
+      normalized <- normalize_data_source(data_source, table_name)
+
+      other_sources <- private$.data_sources[
+        names(private$.data_sources) != table_name
+      ]
+      check_source_compatibility(other_sources, normalized, table_name)
+
+      next_sources <- private$.data_sources
+      next_sources[[table_name]] <- normalized
+
+      private$auto_fill_data_description(next_sources)
+      tryCatch(
+        {
+          private$build_system_prompt(data_sources = next_sources)
+        },
+        error = function(e) {
+          if (!inherits(data_source, "DataSource")) {
+            normalized$cleanup()
+          }
+          stop(e)
+        }
+      )
+
+      old_source <- private$.data_sources[[table_name]]
+      private$.data_sources <- next_sources
+      if (!is.null(old_source) && !identical(old_source, normalized)) {
+        old_source$cleanup()
+      }
+
+      if (!is.null(private$.query_executor)) {
+        tryCatch(private$.query_executor$cleanup(), error = function(e) NULL)
+        private$.query_executor <- NULL
+      }
+
+      if (length(private$.data_sources) == 1 && is.null(self$id_override)) {
+        self$id <- sprintf("querychat_%s", table_name)
+      }
+
+      invisible(self)
+    },
+
+    #' @description
+    #' Add multiple tables from a DBI connection in a single call.
+    #'
+    #' Unlike calling `$add_table()` repeatedly, this method builds the
+    #' system prompt exactly once after all tables have been staged, avoiding
+    #' N-1 spurious intermediate rebuilds.
+    #'
+    #' @param conn A DBI connection. Only DBI connections are supported; pass
+    #'   individual data frames or other sources via `$add_table()`.
+    #' @param tables Table names to register. When `NULL`, all tables returned
+    #'   by `DBI::dbListTables(conn)` are used.
+    #' @param replace Whether to replace existing tables with the same name.
+    #'   Default is `FALSE`.
+    #'
+    #' @return Invisibly returns `self` for chaining.
+    add_tables = function(conn, tables = NULL, replace = FALSE) {
+      if (private$.server_initialized) {
+        cli::cli_abort("Cannot add tables after server initialization.")
+      }
+      if (!inherits(conn, "DBIConnection")) {
+        cli::cli_abort(
+          "{.fn add_tables} requires a {.cls DBIConnection}, not {.obj_type_friendly {conn}}.",
+          "i" = "Use {.fn add_table} for data frames and other source types."
+        )
+      }
+      if (is.null(tables)) {
+        tables <- DBI::dbListTables(conn)
+      }
+      if (length(tables) == 0) {
+        cli::cli_abort("No tables found in database.")
+      }
+      for (table_name in tables) {
+        check_sql_table_name(table_name)
+        if (table_name %in% names(private$.data_sources) && !replace) {
+          cli::cli_abort(
+            "Table {.val {table_name}} already exists. Use {.code replace = TRUE} to replace."
+          )
+        }
+      }
+
+      normalized <- stats::setNames(
+        lapply(tables, function(tbl) normalize_data_source(conn, tbl)),
+        tables
+      )
+
+      staged <- list()
+      for (table_name in tables) {
+        other_sources <- private$.data_sources[
+          names(private$.data_sources) != table_name
+        ]
+        check_source_compatibility(
+          c(other_sources, staged),
+          normalized[[table_name]],
+          table_name
+        )
+        staged[[table_name]] <- normalized[[table_name]]
+      }
+
+      next_sources <- private$.data_sources
+      for (table_name in tables) {
+        next_sources[[table_name]] <- normalized[[table_name]]
+      }
+
+      private$auto_fill_data_description(next_sources)
+      private$build_system_prompt(data_sources = next_sources)
+
+      for (table_name in tables) {
+        old_source <- private$.data_sources[[table_name]]
+        if (
+          !is.null(old_source) &&
+            !identical(old_source, normalized[[table_name]])
+        ) {
+          old_source$cleanup()
+        }
+      }
+      private$.data_sources <- next_sources
+
+      if (!is.null(private$.query_executor)) {
+        tryCatch(private$.query_executor$cleanup(), error = function(e) NULL)
+        private$.query_executor <- NULL
+      }
+
+      invisible(self)
+    },
+
+    #' @description
+    #' Remove a table from this QueryChat instance.
+    #'
+    #' @param table_name The name of the table to remove.
+    #'
+    #' @return Invisibly returns `self` for chaining.
+    remove_table = function(table_name) {
+      if (private$.server_initialized) {
+        cli::cli_abort("Cannot remove tables after server initialization.")
+      }
+      if (!table_name %in% names(private$.data_sources)) {
+        cli::cli_abort("Table {.val {table_name}} not found.")
+      }
+      if (length(private$.data_sources) == 1) {
+        cli::cli_abort(
+          "Cannot remove last table. At least one table is required."
+        )
+      }
+      removed <- private$.data_sources[[table_name]]
+      next_sources <- private$.data_sources[
+        names(private$.data_sources) != table_name
+      ]
+      private$build_system_prompt(data_sources = next_sources)
+      private$.data_sources <- next_sources
+      if (!is.null(private$.query_executor)) {
+        tryCatch(private$.query_executor$cleanup(), error = function(e) NULL)
+        private$.query_executor <- NULL
+      }
+      removed$cleanup()
+      invisible(self)
+    },
+
+    #' @description
+    #' Return the names of all registered tables.
+    table_names = function() names(private$.data_sources),
+
+    #' @description
     #' Create a chat client, complete with registered tools, for the current
     #' data source.
     #'
@@ -369,10 +580,10 @@ QueryChat <- R6::R6Class(
     #'   and `"query"` includes the tool for executing SQL queries. By default,
     #'   when `tools = NA`, the values provided at initialization are used.
     #'   The legacy name `"update"` is still accepted as an alias for `"filter"`.
-    #' @param update_dashboard Optional function to call with the `query` and
-    #'   `title` generated by the LLM for the `update_dashboard` tool.
+    #' @param update_dashboard Optional function to call with the `query`,
+    #'   `title`, and `table` generated by the LLM for the `update_dashboard` tool.
     #' @param reset_dashboard Optional function to call when the
-    #'   `reset_dashboard` tool is called.
+    #'   `reset_dashboard` tool is called. Takes a `table` argument.
     #' @param visualize Optional function to call with a list containing
     #'   `ggsql`, `title`, and `widget_id` when a visualization succeeds.
     #' @param session A Shiny session object. Required when `"visualize"` is
@@ -381,12 +592,12 @@ QueryChat <- R6::R6Class(
     #'   as Shiny outputs.
     client = function(
       tools = NA,
-      update_dashboard = function(query, title) {},
-      reset_dashboard = function() {},
+      update_dashboard = function(query, title, table) {},
+      reset_dashboard = function(table) {},
       visualize = function(data) {},
       session = NULL
     ) {
-      private$require_data_source("$client")
+      private$require_initialized("$client")
 
       if (!is_na(tools) && !is.null(tools)) {
         tools <- arg_match(
@@ -417,7 +628,7 @@ QueryChat <- R6::R6Class(
     #'   By default, only the `"query"` tool is included, regardless of the
     #'   `tools` set at initialization.
     console = function(new = FALSE, ..., tools = "query") {
-      private$require_data_source("$console")
+      private$require_initialized("$console")
       check_bool(new)
       if (new || is.null(private$.client_console)) {
         private$.client_console <- self$client(tools = tools, ...)
@@ -429,28 +640,12 @@ QueryChat <- R6::R6Class(
     #' @description
     #' Create and run a Shiny gadget for chatting with data
     #'
-    #' Runs a Shiny gadget (designed for interactive use) that provides a
-    #' complete interface for chatting with your data using natural language. If
-    #' you're looking to deploy this app or run it through some other means, see
-    #' `$app_obj()`.
-    #'
-    #' ```r
-    #' library(querychat)
-    #'
-    #' qc <- QueryChat$new(mtcars)
-    #' qc$app()
-    #' ```
-    #'
     #' @param ... Arguments passed to `$app_obj()`.
     #' @param bookmark_store The bookmarking storage method. Passed to
     #'   [shiny::enableBookmarking()]. If `"url"` or `"server"`, the chat state
     #'   (including current query) will be bookmarked. Default is `"url"`.
     #'
-    #' @return Invisibly returns a list of session-specific values:
-    #'  - `df`: The final filtered data frame
-    #'  - `sql`: The final SQL query string
-    #'  - `title`: The final title
-    #'  - `client`: The session-specific chat client instance
+    #' @return Invisibly returns a list of session-specific values.
     app = function(..., bookmark_store = "url") {
       app <- self$app_obj(..., bookmark_store = bookmark_store)
       vals <- tryCatch(shiny::runGadget(app), interrupt = function(cnd) NULL)
@@ -460,39 +655,24 @@ QueryChat <- R6::R6Class(
     #' @description
     #' A streamlined Shiny app for chatting with data
     #'
-    #' Creates a Shiny app designed for chatting with data, with:
-    #' - A sidebar containing the chat interface
-    #' - A card displaying the current SQL query
-    #' - A card displaying the filtered data table
-    #' - A reset button to clear the query
-    #'
-    #' ```r
-    #' library(querychat)
-    #'
-    #' qc <- QueryChat$new(mtcars)
-    #' app <- qc$app_obj()
-    #' shiny::runApp(app)
-    #' ```
-    #'
     #' @param ... Additional arguments (currently unused).
     #' @param bookmark_store The bookmarking storage method. Passed to
-    #'  [shiny::enableBookmarking()]. If `"url"` or `"server"`, the chat state
-    #'  (including current query) will be bookmarked. Default is `"url"`.
+    #'  [shiny::enableBookmarking()]. Default is `"url"`.
     #'
     #' @return A Shiny app object that can be run with `shiny::runApp()`.
     app_obj = function(..., bookmark_store = "url") {
-      private$require_data_source("$app_obj")
+      private$require_initialized("$app_obj")
       check_installed("DT")
       check_dots_empty()
 
-      table_name <- private$.data_source$table_name
+      first_table_name <- names(private$.data_sources)[[1]]
 
       ui <- function(req) {
         bslib::page_sidebar(
           title = shiny::HTML(
             sprintf(
               "<span>querychat with <code>%s</code></span>",
-              table_name
+              first_table_name
             )
           ),
           class = "bslib-page-dashboard",
@@ -518,7 +698,11 @@ QueryChat <- R6::R6Class(
           ),
           bslib::card(
             full_screen = TRUE,
-            bslib::card_header(bsicons::bs_icon("table"), "Data"),
+            bslib::card_header(
+              bsicons::bs_icon("table"),
+              "Data \u2014 ",
+              shiny::textOutput("data_card_header_text", inline = TRUE)
+            ),
             DT::DTOutput("dt")
           ),
           shiny::actionButton(
@@ -532,21 +716,25 @@ QueryChat <- R6::R6Class(
 
       server <- function(input, output, session) {
         shiny::setBookmarkExclude(c("close_btn", "reset_query"))
-        # Enable bookmarking if bookmark_store is enabled
         enable_bookmarking <- bookmark_store %in% c("url", "server")
         qc_vals <- self$server(enable_bookmarking = enable_bookmarking)
 
+        active_table_name <- shiny::reactive({
+          ct <- qc_vals$current_table()
+          if (!is.null(ct)) ct else first_table_name
+        })
+
+        output$data_card_header_text <- shiny::renderText({
+          active_table_name()
+        })
+
         output$query_title <- shiny::renderText({
-          if (shiny::isTruthy(qc_vals$title())) {
-            qc_vals$title()
-          } else {
-            "SQL Query"
-          }
+          title <- qc_vals$.tables[[active_table_name()]]$title()
+          if (shiny::isTruthy(title)) title else "SQL Query"
         })
 
         output$ui_reset <- shiny::renderUI({
-          shiny::req(qc_vals$sql())
-
+          shiny::req(qc_vals$.tables[[active_table_name()]]$sql())
           shiny::actionButton(
             "reset_query",
             label = "Reset Query",
@@ -555,17 +743,16 @@ QueryChat <- R6::R6Class(
         })
 
         shiny::observeEvent(input$reset_query, label = "on_reset_query", {
-          qc_vals$sql(NULL)
-          qc_vals$title(NULL)
+          name <- active_table_name()
+          qc_vals$.tables[[name]]$sql(NULL)
+          qc_vals$.tables[[name]]$title(NULL)
         })
 
         output$dt <- DT::renderDT({
-          df <- qc_vals$df()
+          df <- qc_vals$.tables[[active_table_name()]]$df()
           if (inherits(df, "tbl_sql")) {
-            # Materialize the query for DT, {dplyr} guaranteed by TblSqlSource
             df <- dplyr::collect(df)
           }
-
           DT::datatable(
             df,
             fillContainer = TRUE,
@@ -574,14 +761,14 @@ QueryChat <- R6::R6Class(
         })
 
         output$sql_output <- shiny::renderUI({
-          sql <- if (shiny::isTruthy(qc_vals$sql())) {
-            qc_vals$sql()
+          name <- active_table_name()
+          sql <- qc_vals$.tables[[name]]$sql()
+          sql_text <- if (shiny::isTruthy(sql)) {
+            sql
           } else {
-            paste("SELECT * FROM", table_name)
+            paste("SELECT * FROM", name)
           }
-
-          sql_code <- paste(c("```sql", sql, "```"), collapse = "\n")
-
+          sql_code <- paste(c("```sql", sql_text, "```"), collapse = "\n")
           shinychat::output_markdown_stream(
             "sql_code",
             content = sql_code,
@@ -591,11 +778,12 @@ QueryChat <- R6::R6Class(
         })
 
         shiny::observeEvent(input$close_btn, label = "on_close_btn", {
+          name <- active_table_name()
           shiny::stopApp(
             list(
-              df = qc_vals$df(),
-              sql = qc_vals$sql(),
-              title = qc_vals$title(),
+              df = qc_vals$.tables[[name]]$df(),
+              sql = qc_vals$.tables[[name]]$sql(),
+              title = qc_vals$.tables[[name]]$title(),
               client = qc_vals$client
             )
           )
@@ -608,28 +796,12 @@ QueryChat <- R6::R6Class(
     #' @description
     #' Create a sidebar containing the querychat UI.
     #'
-    #' This method generates a [bslib::sidebar()] component containing the chat
-    #' interface, suitable for use with [bslib::page_sidebar()] or similar
-    #' layouts.
-    #'
-    #' ```r
-    #' qc <- QueryChat$new(mtcars)
-    #'
-    #' ui <- page_sidebar(
-    #'   qc$sidebar(),
-    #'   # Main content here
-    #' )
-    #' ```
-    #'
     #' @param ... Additional arguments passed to [bslib::sidebar()].
     #' @param width Width of the sidebar in pixels. Default is 400.
     #' @param height Height of the sidebar. Default is "100%".
     #' @param fillable Whether the sidebar should be fillable. Default is
     #'   `TRUE`.
-    #' @param id Optional ID for the QueryChat instance. If not provided, will
-    #'   use the ID provided at initialization. If using `$sidebar()` in a Shiny
-    #'   module, you'll need to provide `id = ns("your_id")` where `ns` is the
-    #'   namespacing function from [shiny::NS()].
+    #' @param id Optional ID for the QueryChat instance.
     #'
     #' @return A [bslib::sidebar()] UI component.
     sidebar = function(
@@ -652,33 +824,13 @@ QueryChat <- R6::R6Class(
     #' @description
     #' Create the UI for the querychat chat interface.
     #'
-    #' This method generates the chat UI component. Typically you'll use
-    #' `$sidebar()` instead, which wraps this in a sidebar layout.
-    #'
-    #' ```r
-    #' qc <- QueryChat$new(mtcars)
-    #'
-    #' ui <- fluidPage(
-    #'   qc$ui()
-    #' )
-    #' ```
-    #'
     #' @param ... Additional arguments passed to [shinychat::chat_ui()].
-    #' @param id Optional ID for the QueryChat instance. If not provided,
-    #'   will use the ID provided at initialization. If using `$ui()` in a Shiny
-    #'   module, you'll need to provide `id = ns("your_id")` where `ns` is the
-    #'   namespacing function from [shiny::NS()].
+    #' @param id Optional ID for the QueryChat instance.
     #'
     #' @return A UI component containing the chat interface.
     ui = function(..., id = NULL) {
       check_string(id, allow_null = TRUE, allow_empty = FALSE)
 
-      # If called within another module, the UI id needs to be namespaced
-      # by that "parent" module. If called in a module *server* context, we
-      # can infer the namespace from the session, but if not, the user
-      # will need to provide it.
-      # NOTE: this isn't a problem for Python since id namespacing is handled
-      # implicitly by UI functions like shinychat.chat_ui().
       id <- id %||% namespaced_id(self$id)
 
       mod_ui(id, ..., greeting = self$greeting)
@@ -687,53 +839,20 @@ QueryChat <- R6::R6Class(
     #' @description
     #' Initialize the querychat server logic.
     #'
-    #' This method must be called within a Shiny server function. It sets up the
-    #' reactive logic for the chat interface and returns session-specific
-    #' reactive values.
-    #'
-    #' ```r
-    #' qc <- QueryChat$new(mtcars)
-    #'
-    #' server <- function(input, output, session) {
-    #'   qc_vals <- qc$server(enable_bookmarking = TRUE)
-    #'
-    #'   output$data <- renderDataTable(qc_vals$df())
-    #'   output$query <- renderText(qc_vals$sql())
-    #'   output$title <- renderText(qc_vals$title() %||% "No Query")
-    #' }
-    #' ```
-    #'
-    #' @param data_source Optional data source to use. If provided, sets the
-    #'   data_source property before initializing server logic. This is useful
-    #'   for the deferred pattern where data_source is not known at
-    #'   initialization time (e.g., when the data source depends on session-
-    #'   specific authentication).
-    #' @param client Optional chat client override for this session. Can be an
-    #'   [ellmer::Chat] object or a string (e.g., `"openai/gpt-4o"`). If provided,
-    #'   overrides the client set at initialization for this session only —
-    #'   other sessions are unaffected. This is useful when the client must be
-    #'   created within a session scope (e.g., Posit Connect managed credentials).
-    #' @param enable_bookmarking Whether to enable bookmarking for the chat
-    #'   state. Default is `FALSE`. When enabled, the chat state (including
-    #'   current query, title, and chat history) will be saved and restored
-    #'   with Shiny bookmarks. This requires that the Shiny app has bookmarking
-    #'   enabled via `shiny::enableBookmarking()` or the `enableBookmarking`
-    #'   parameter of `shiny::shinyApp()`.
+    #' @param data_source Optional data source for backward compatibility.
+    #'   If provided, calls `$add_table()` before initializing server logic.
+    #' @param client Optional chat client override for this session.
+    #' @param enable_bookmarking Whether to enable bookmarking. Default is `FALSE`.
     #' @param ... Ignored.
-    #' @param id Optional module ID for the QueryChat instance. If not provided,
-    #'   will use the ID provided at initialization. When used in Shiny modules,
-    #'   this `id` should match the `id` used in the corresponding UI function
-    #'   (i.e., `qc$ui(id = ns("your_id"))` pairs with `qc$server(id =
-    #'   "your_id")`).
+    #' @param id Optional module ID override.
     #' @param session The Shiny session object.
     #'
     #' @return A list containing session-specific reactive values and the chat
-    #'   client with the following elements:
-    #'   - `df`: Reactive expression returning the current filtered data frame
-    #'   - `sql`: Reactive value for the current SQL query string
-    #'   - `title`: Reactive value for the current title
-    #'   - `client`: The session-specific chat client instance
-    #'
+    #'   client. For single-table usage, includes `df`, `sql`, `title` directly.
+    #'   For multi-table, use `qc_vals$table("name")` to get a [TableAccessor]
+    #'   with per-table reactive state. Also includes `table_names()` to list tables.
+    #'   `current_table()` returns the name of the most recently queried table,
+    #'   or `NULL` before any query.
     server = function(
       data_source = NULL,
       client = NULL,
@@ -752,10 +871,18 @@ QueryChat <- R6::R6Class(
       }
 
       if (!is.null(data_source)) {
-        self$data_source <- data_source
+        tbl_name <- private$.deferred_table_name %||%
+          names(private$.data_sources)[[1]]
+        self$add_table(data_source, tbl_name, replace = TRUE)
       }
 
-      private$require_data_source("$server")
+      private$require_initialized("$server")
+
+      private$.server_initialized <- TRUE
+
+      if (is.null(private$.query_executor)) {
+        private$.query_executor <- build_query_executor(private$.data_sources)
+      }
 
       resolved_client_spec <- client %||% private$.client_spec
 
@@ -766,42 +893,26 @@ QueryChat <- R6::R6Class(
         )
       }
 
-      mod_server(
+      result <- mod_server(
         id %||% self$id,
-        data_source = private$.data_source,
+        data_sources = private$.data_sources,
+        executor = private$.query_executor,
         greeting = self$greeting,
         client = create_session_client,
         tools = self$tools,
         enable_bookmarking = enable_bookmarking
       )
+      result
     },
 
     #' @description
     #' Generate a welcome greeting for the chat.
     #'
-    #' By default, `QueryChat$new()` generates a greeting at the start of every
-    #' new conversation, which is convenient for getting started and
-    #' development, but also might add unnecessary latency and cost. Use this
-    #' method to generate a greeting once and save it for reuse.
-    #'
-    #' ```r
-    #' # Create QueryChat object
-    #' qc <- QueryChat$new(mtcars)
-    #'
-    #' # Generate a greeting and save it
-    #' greeting <- qc$generate_greeting()
-    #' writeLines(greeting, "mtcars_greeting.md")
-    #'
-    #' # Later, use the saved greeting
-    #' qc2 <- QueryChat$new(mtcars, greeting = "mtcars_greeting.md")
-    #' ```
-    #'
-    #' @param echo Whether to print the greeting to the console. Options are
-    #'   `"none"` (default, no output) or `"output"` (print to console).
+    #' @param echo Whether to print the greeting to the console.
     #'
     #' @return The greeting string in Markdown format.
     generate_greeting = function(echo = c("none", "output")) {
-      private$require_data_source("$generate_greeting")
+      private$require_initialized("$generate_greeting")
       chat <- private$create_session_client()
       as.character(chat$chat(GREETING_PROMPT, echo = echo))
     },
@@ -809,17 +920,13 @@ QueryChat <- R6::R6Class(
     #' @description
     #' Clean up resources associated with the data source.
     #'
-    #' This method releases any resources (e.g., database connections)
-    #' associated with the data source. Call this when you are done using the
-    #' QueryChat object to avoid resource leaks.
-    #'
-    #' Note: If `auto_cleanup` was set to `TRUE` in the constructor, this will
-    #' be called automatically when the Shiny app stops.
-    #'
     #' @return Invisibly returns `NULL`. Resources are cleaned up internally.
     cleanup = function() {
-      if (!is.null(private$.data_source)) {
-        private$.data_source$cleanup()
+      if (!is.null(private$.query_executor)) {
+        private$.query_executor$cleanup()
+      }
+      for (source in private$.data_sources) {
+        source$cleanup()
       }
       invisible(NULL)
     }
@@ -827,29 +934,27 @@ QueryChat <- R6::R6Class(
   active = list(
     #' @field system_prompt Get the system prompt.
     system_prompt = function() {
-      private$require_data_source("$system_prompt")
+      private$require_initialized("$system_prompt")
       private$.system_prompt$render(tools = self$tools)
     },
 
-    #' @field data_source Get or set the current data source. When setting,
-    #'   the value is normalized and the system prompt is rebuilt.
+    #' @field data_source Removed. Use `$add_table()` and `$remove_table()` to manage tables.
     data_source = function(value) {
       if (missing(value)) {
-        private$.data_source
-      } else {
-        old_source <- private$.data_source
-        private$.data_source <- normalize_data_source(
-          value,
-          private$.table_name
+        cli::cli_abort(
+          c(
+            "The {.field $data_source} property has been removed.",
+            "i" = "Use {.code qc$add_table(df, 'name')} to add a new table."
+          )
         )
-        if (
-          !is.null(old_source) && !identical(old_source, private$.data_source)
-        ) {
-          old_source$cleanup()
-        }
-        private$auto_fill_data_description()
-        private$build_system_prompt()
-        invisible(self)
+      } else {
+        cli::cli_abort(
+          c(
+            "The {.field $data_source} setter has been removed.",
+            "i" = "Use {.code qc$add_table(df, 'name')} to add a new table.",
+            "i" = "Use {.code qc$add_table(df, 'name', replace = TRUE)} to replace one."
+          )
+        )
       }
     }
   )
@@ -864,70 +969,22 @@ QueryChat <- R6::R6Class(
 #' # Quick start - chat with mtcars dataset in one line
 #' querychat_app(mtcars)
 #'
-#' # Add options
-#' querychat_app(
-#'   mtcars,
-#'   greeting = "Welcome to the mtcars explorer!",
-#'   client = "openai/gpt-4o"
-#' )
-#'
-#' # Chat with a database table (table_name required)
-#' con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
-#' DBI::dbWriteTable(con, "mtcars", mtcars)
-#' querychat_app(con, "mtcars")
-#'
-#' # Create QueryChat class object
-#' qc <- querychat(mtcars, greeting = "Welcome to the mtcars explorer!")
-#'
-#' # Run the app later
-#' qc$app()
-#'
 #' @param data_source Either a data.frame or a database connection (e.g., DBI
 #'   connection).
 #' @param table_name A string specifying the table name to use in SQL queries.
-#'   If `data_source` is a data.frame, this is the name to refer to it by in
-#'   queries (typically the variable name). If not provided, will be inferred
-#'   from the variable name for data.frame inputs. For database connections,
-#'   this parameter is required.
 #' @param ... Additional arguments (currently unused).
-#' @param id Optional module ID for the QueryChat instance. If not provided,
-#'   will be auto-generated from `table_name`. The ID is used to namespace
-#'   the Shiny module.
-#' @param greeting Optional initial message to display to users. Can be a
-#'   character string (in Markdown format) or a file path. If not provided,
-#'   a greeting will be generated at the start of each conversation using the
-#'   LLM, which adds latency and cost. Use `$generate_greeting()` to create
-#'   a greeting to save and reuse.
-#' @param client Optional chat client. Can be:
-#'   - An [ellmer::Chat] object
-#'   - A string to pass to [ellmer::chat()] (e.g., `"openai/gpt-4o"`)
-#'   - `NULL` (default): Uses the `querychat.client` option, the
-#'     `QUERYCHAT_CLIENT` environment variable, or defaults to
-#'     [ellmer::chat_openai()]
-#' @param tools Which querychat tools to include in the chat client, by
-#'   default. `"filter"` includes the tools for filtering and resetting the
-#'   dashboard and `"query"` includes the tool for executing SQL queries.
-#'   Use `tools = "filter"` when you only want the dashboard filtering tools,
-#'   or when you want to disable the querying tool entirely to prevent the
-#'   LLM from seeing any of the data in your dataset. The legacy name
-#'   `"update"` is still accepted as an alias for `"filter"`.
-#' @param data_description Optional description of the data in plain text or
-#'   Markdown. Can be a string or a file path. This provides context to the
-#'   LLM about what the data represents.
+#' @param id Optional module ID for the QueryChat instance.
+#' @param greeting Optional initial message to display to users.
+#' @param client Optional chat client.
+#' @param tools Which querychat tools to include in the chat client.
+#' @param data_description Optional description of the data.
 #' @param categorical_threshold For text columns, the maximum number of unique
 #'   values to consider as a categorical variable. Default is 20.
-#' @param extra_instructions Optional additional instructions for the chat
-#'   model in plain text or Markdown. Can be a string or a file path.
-#' @param prompt_template Optional path to or string of a custom prompt
-#'   template file. If not provided, the default querychat template will be
-#'   used. See the package prompts directory for the default template format.
+#' @param extra_instructions Optional additional instructions for the chat model.
+#' @param prompt_template Optional path to or string of a custom prompt template.
+#' @param data_dict Optional data dictionary. A path to a YAML file or a list of paths.
 #' @param cleanup Whether or not to automatically run `$cleanup()` when the
-#'   Shiny session/app stops. By default, cleanup only occurs if `QueryChat`
-#'   is created within a Shiny app. Set to `TRUE` to always clean up, or
-#'   `FALSE` to never clean up automatically.
-#'
-#'   In `querychat_app()`, in-memory databases created for data frames are
-#'   always cleaned up.
+#'   Shiny session/app stops.
 #'
 #' @return A `QueryChat` object. See [QueryChat] for available methods.
 #'
@@ -945,6 +1002,7 @@ querychat <- function(
   categorical_threshold = 20,
   extra_instructions = NULL,
   prompt_template = NULL,
+  data_dict = NULL,
   cleanup = NA
 ) {
   if (is_missing(table_name)) {
@@ -971,14 +1029,13 @@ querychat <- function(
     categorical_threshold = categorical_threshold,
     extra_instructions = extra_instructions,
     prompt_template = prompt_template,
+    data_dict = data_dict,
     cleanup = cleanup
   )
 }
 
 #' @rdname querychat-convenience
-#' @param bookmark_store The bookmarking storage method. Passed to
-#'   [shiny::enableBookmarking()]. If `"url"` or `"server"`, the chat state
-#'   (including current query) will be bookmarked. Default is `"url"`.
+#' @param bookmark_store The bookmarking storage method. Default is `"url"`.
 #' @return Invisibly returns the chat object after the app stops.
 #'
 #' @export
@@ -994,6 +1051,7 @@ querychat_app <- function(
   categorical_threshold = 20,
   extra_instructions = NULL,
   prompt_template = NULL,
+  data_dict = NULL,
   cleanup = NA,
   bookmark_store = "url"
 ) {
@@ -1034,6 +1092,7 @@ querychat_app <- function(
     categorical_threshold = categorical_threshold,
     extra_instructions = extra_instructions,
     prompt_template = prompt_template,
+    data_dict = data_dict,
     cleanup = cleanup
   )
 
@@ -1077,6 +1136,31 @@ normalize_data_source <- function(data_source, table_name) {
 
   cli::cli_abort(
     "{.arg data_source} must be a {.cls DataSource}, {.cls data.frame}, or {.cls DBIConnection}, not {.obj_type_friendly {data_source}}."
+  )
+}
+
+normalize_data_dicts <- function(data_dict) {
+  if (is.null(data_dict)) {
+    return(list())
+  }
+  if (is.character(data_dict)) {
+    return(list(read_data_dict(data_dict)))
+  }
+  if (is.list(data_dict)) {
+    result <- vector("list", length(data_dict))
+    for (i in seq_along(data_dict)) {
+      item <- data_dict[[i]]
+      if (!is.character(item)) {
+        cli::cli_abort(
+          "Each element of {.arg data_dict} must be a file path string."
+        )
+      }
+      result[[i]] <- read_data_dict(item)
+    }
+    return(result)
+  }
+  cli::cli_abort(
+    "{.arg data_dict} must be a file path or a list of file paths."
   )
 }
 

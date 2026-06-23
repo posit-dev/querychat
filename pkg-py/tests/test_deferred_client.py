@@ -2,7 +2,7 @@
 
 import pandas as pd
 import pytest
-from chatlas import ChatOpenAI
+from chatlas import ChatOpenAI, Turn
 from querychat._querychat_base import QueryChatBase
 
 
@@ -55,21 +55,21 @@ class TestClientMethodRequirements:
         """client() should raise if data_source is not set."""
         qc = QueryChatBase(None, "users")
 
-        with pytest.raises(RuntimeError, match="data_source must be set"):
+        with pytest.raises(RuntimeError, match="At least one data source"):
             qc.client()
 
     def test_console_requires_data_source(self):
         """console() should raise if data_source is not set."""
         qc = QueryChatBase(None, "users")
 
-        with pytest.raises(RuntimeError, match="data_source must be set"):
+        with pytest.raises(RuntimeError, match="At least one data source"):
             qc.console()
 
     def test_generate_greeting_requires_data_source(self):
         """generate_greeting() should raise if data_source is not set."""
         qc = QueryChatBase(None, "users")
 
-        with pytest.raises(RuntimeError, match="data_source must be set"):
+        with pytest.raises(RuntimeError, match="At least one data source"):
             qc.generate_greeting()
 
 
@@ -81,10 +81,10 @@ class TestDeferredClientIntegration:
         monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-key-for-testing")
 
         qc = QueryChatBase(None, "users")
-        assert qc.data_source is None
+        assert len(qc.table_names()) == 0
         assert qc._client_spec is None
 
-        qc.data_source = sample_df
+        qc.add_table(sample_df, "users")
 
         client = qc.client()
         assert client is not None
@@ -95,7 +95,7 @@ class TestDeferredClientIntegration:
         monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-key-for-testing")
 
         qc = QueryChatBase(None, "users", client="openai")
-        qc.data_source = sample_df
+        qc.add_table(sample_df, "users")
 
         client = qc.client()
         assert client is not None
@@ -111,7 +111,7 @@ class TestDeferredClientIntegration:
     def test_invalid_explicit_client_raises_when_client_is_resolved(self, sample_df):
         """Invalid explicit client specs should fail when a live client is requested."""
         qc = QueryChatBase(None, "users", client="not_a_real_provider_xyz123")
-        qc.data_source = sample_df
+        qc.add_table(sample_df, "users")
 
         with pytest.raises(ValueError, match="is not a known chatlas provider"):
             qc.client()
@@ -125,7 +125,7 @@ class TestBackwardCompatibility:
         monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-key-for-testing")
         qc = QueryChatBase(sample_df, "test_table")
 
-        assert qc.data_source is not None
+        assert len(qc.table_names()) > 0
         # _client_spec is None (will use env default at resolution time)
         assert qc._client_spec is None
 
@@ -134,3 +134,40 @@ class TestBackwardCompatibility:
 
         prompt = qc.system_prompt
         assert "test_table" in prompt
+
+
+@pytest.fixture
+def other_df():
+    return pd.DataFrame({"order_id": [1, 2], "amount": [100, 200]})
+
+
+class TestPromptRebuildWarning:
+    """Warns when system prompt is rebuilt after a client already has chat history."""
+
+    def test_warns_when_client_spec_has_history(self, sample_df, monkeypatch):
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-key-for-testing")
+        chat = ChatOpenAI()
+        chat.set_turns([Turn(role="user", contents=["hello"])])
+
+        qc = QueryChatBase(None, "users", client=chat)
+
+        with pytest.warns(UserWarning, match="chat history"):
+            qc.add_table(sample_df, "users")
+
+    def test_warns_when_console_client_has_history(self, sample_df, other_df, monkeypatch):
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-key-for-testing")
+        qc = QueryChatBase(sample_df, "users")
+
+        console_chat = ChatOpenAI()
+        console_chat.set_turns([Turn(role="user", contents=["hello"])])
+        qc._client_console = console_chat
+
+        with pytest.warns(UserWarning, match="chat history"):
+            qc.add_table(other_df, "orders")
+
+    def test_no_warning_without_history(self, sample_df, other_df, recwarn, monkeypatch):
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-key-for-testing")
+        qc = QueryChatBase(sample_df, "users")
+        qc.add_table(other_df, "orders")
+        chat_history_warnings = [w for w in recwarn.list if "chat history" in str(w.message)]
+        assert len(chat_history_warnings) == 0

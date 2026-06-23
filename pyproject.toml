@@ -29,6 +29,7 @@ dependencies = [
     "chevron",
     "sqlalchemy>=2.0.0", # Using 2.0+ for improved type hints and API
     "great-tables>=0.16.0",
+    "pyyaml",
 ]
 classifiers = [
     "Programming Language :: Python",

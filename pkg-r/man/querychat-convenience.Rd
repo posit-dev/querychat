@@ -17,6 +17,7 @@ querychat(
   categorical_threshold = 20,
   extra_instructions = NULL,
   prompt_template = NULL,
+  data_dict = NULL,
   cleanup = NA
 )
 
@@ -32,6 +33,7 @@ querychat_app(
   categorical_threshold = 20,
   extra_instructions = NULL,
   prompt_template = NULL,
+  data_dict = NULL,
   cleanup = NA,
   bookmark_store = "url"
 )
@@ -40,66 +42,33 @@ querychat_app(
 \item{data_source}{Either a data.frame or a database connection (e.g., DBI
 connection).}
 
-\item{table_name}{A string specifying the table name to use in SQL queries.
-If \code{data_source} is a data.frame, this is the name to refer to it by in
-queries (typically the variable name). If not provided, will be inferred
-from the variable name for data.frame inputs. For database connections,
-this parameter is required.}
+\item{table_name}{A string specifying the table name to use in SQL queries.}
 
 \item{...}{Additional arguments (currently unused).}
 
-\item{id}{Optional module ID for the QueryChat instance. If not provided,
-will be auto-generated from \code{table_name}. The ID is used to namespace
-the Shiny module.}
+\item{id}{Optional module ID for the QueryChat instance.}
 
-\item{greeting}{Optional initial message to display to users. Can be a
-character string (in Markdown format) or a file path. If not provided,
-a greeting will be generated at the start of each conversation using the
-LLM, which adds latency and cost. Use \verb{$generate_greeting()} to create
-a greeting to save and reuse.}
+\item{greeting}{Optional initial message to display to users.}
 
-\item{client}{Optional chat client. Can be:
-\itemize{
-\item An \link[ellmer:Chat]{ellmer::Chat} object
-\item A string to pass to \code{\link[ellmer:chat]{ellmer::chat()}} (e.g., \code{"openai/gpt-4o"})
-\item \code{NULL} (default): Uses the \code{querychat.client} option, the
-\code{QUERYCHAT_CLIENT} environment variable, or defaults to
-\code{\link[ellmer:chat_openai]{ellmer::chat_openai()}}
-}}
+\item{client}{Optional chat client.}
 
-\item{tools}{Which querychat tools to include in the chat client, by
-default. \code{"filter"} includes the tools for filtering and resetting the
-dashboard and \code{"query"} includes the tool for executing SQL queries.
-Use \code{tools = "filter"} when you only want the dashboard filtering tools,
-or when you want to disable the querying tool entirely to prevent the
-LLM from seeing any of the data in your dataset. The legacy name
-\code{"update"} is still accepted as an alias for \code{"filter"}.}
+\item{tools}{Which querychat tools to include in the chat client.}
 
-\item{data_description}{Optional description of the data in plain text or
-Markdown. Can be a string or a file path. This provides context to the
-LLM about what the data represents.}
+\item{data_description}{Optional description of the data.}
 
 \item{categorical_threshold}{For text columns, the maximum number of unique
 values to consider as a categorical variable. Default is 20.}
 
-\item{extra_instructions}{Optional additional instructions for the chat
-model in plain text or Markdown. Can be a string or a file path.}
+\item{extra_instructions}{Optional additional instructions for the chat model.}
 
-\item{prompt_template}{Optional path to or string of a custom prompt
-template file. If not provided, the default querychat template will be
-used. See the package prompts directory for the default template format.}
+\item{prompt_template}{Optional path to or string of a custom prompt template.}
+
+\item{data_dict}{Optional data dictionary. A path to a YAML file or a list of paths.}
 
 \item{cleanup}{Whether or not to automatically run \verb{$cleanup()} when the
-Shiny session/app stops. By default, cleanup only occurs if \code{QueryChat}
-is created within a Shiny app. Set to \code{TRUE} to always clean up, or
-\code{FALSE} to never clean up automatically.
+Shiny session/app stops.}
 
-In \code{querychat_app()}, in-memory databases created for data frames are
-always cleaned up.}
-
-\item{bookmark_store}{The bookmarking storage method. Passed to
-\code{\link[shiny:enableBookmarking]{shiny::enableBookmarking()}}. If \code{"url"} or \code{"server"}, the chat state
-(including current query) will be bookmarked. Default is \code{"url"}.}
+\item{bookmark_store}{The bookmarking storage method. Default is \code{"url"}.}
 }
 \value{
 A \code{QueryChat} object. See \link{QueryChat} for available methods.
@@ -114,23 +83,5 @@ and app launching (i.e., \code{querychat_app()}).
 \dontshow{if (rlang::is_interactive() && rlang::is_installed("RSQLite")) withAutoprint(\{ # examplesIf}
 # Quick start - chat with mtcars dataset in one line
 querychat_app(mtcars)
-
-# Add options
-querychat_app(
-  mtcars,
-  greeting = "Welcome to the mtcars explorer!",
-  client = "openai/gpt-4o"
-)
-
-# Chat with a database table (table_name required)
-con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
-DBI::dbWriteTable(con, "mtcars", mtcars)
-querychat_app(con, "mtcars")
-
-# Create QueryChat class object
-qc <- querychat(mtcars, greeting = "Welcome to the mtcars explorer!")
-
-# Run the app later
-qc$app()
 \dontshow{\}) # examplesIf}
 }

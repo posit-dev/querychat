@@ -1,34 +1,107 @@
+#' @noRd
+GetSchemaResult <- S7::new_class(
+  "GetSchemaResult",
+  parent = ellmer::ContentToolResult,
+  properties = list(
+    table_name = S7::class_character,
+    columns_json = S7::new_property(S7::class_character, default = "")
+  )
+)
+
+#' @importFrom shinychat contents_shinychat
+rlang::on_load({
+  S7::method(contents_shinychat, GetSchemaResult) <- get_schema_result_display
+
+  orig_request_contents <- S7::method(
+    contents_shinychat,
+    ellmer::ContentToolRequest
+  )
+  S7::method(contents_shinychat, ellmer::ContentToolRequest) <- function(
+    content
+  ) {
+    if (identical(content@name, "querychat_get_schema")) {
+      return(NULL)
+    }
+    orig_request_contents(content)
+  }
+})
+
+tool_get_schema <- function(
+  data_dicts,
+  executor,
+  table_names,
+  categorical_threshold
+) {
+  ellmer::tool(
+    function(table_name) {
+      if (!table_name %in% table_names) {
+        available <- paste0("'", table_names, "'", collapse = ", ")
+        cli::cli_abort(
+          "Table {.val {table_name}} not found. Available: {available}"
+        )
+      }
+      table_spec <- NULL
+      for (dd in data_dicts) {
+        if (!is.null(dd[["tables"]][[table_name]])) {
+          table_spec <- dd[["tables"]][[table_name]]
+          break
+        }
+      }
+      schema_result <- executor$get_schema_result(
+        table_name,
+        categorical_threshold,
+        table_spec = table_spec
+      )
+      columns_json <- jsonlite::toJSON(schema_result$columns, auto_unbox = TRUE)
+      GetSchemaResult(
+        value = schema_result$text,
+        table_name = table_name,
+        columns_json = as.character(columns_json)
+      )
+    },
+    name = "querychat_get_schema",
+    description = interpolate_package("tool-get-schema.md"),
+    arguments = list(
+      table_name = ellmer::type_string(
+        "The name of the table to retrieve schema for."
+      )
+    ),
+    annotations = ellmer::tool_annotations(title = "Get Schema")
+  )
+}
+
 # Modifies the data presented in the data dashboard, based on the given SQL
 # query, and also updates the title.
 # @param query A SQL query; must be a SELECT statement.
 # @param title A title to display at the top of the data dashboard,
 #   summarizing the intent of the SQL query.
 tool_update_dashboard <- function(
-  data_source,
-  update_fn = function(query, title) {}
+  executor,
+  table_names,
+  update_fn = function(query, title, table) {}
 ) {
-  check_data_source(data_source)
-
   check_function(update_fn)
-  has_args <- intersect(fn_fmls_names(update_fn), c("query", "title"))
-  if (length(has_args) != 2) {
-    missing_args <- setdiff(c("query", "title"), has_args)
+  has_args <- intersect(fn_fmls_names(update_fn), c("query", "title", "table"))
+  if (length(has_args) != 3) {
+    missing_args <- setdiff(c("query", "title", "table"), has_args)
     cli::cli_abort(
       c(
-        "{.arg update_fn} must accept at least two named arguments: {.val query} and {.val title}.",
+        "{.arg update_fn} must accept at least three named arguments: {.val query}, {.val title}, and {.val table}.",
         "x" = "{.val {missing_args}} argument{?s} {?was/were} missing."
       )
     )
   }
 
-  db_type <- data_source$get_db_type()
+  db_type <- executor$get_db_type()
+  multi_table <- length(table_names) > 1
 
   ellmer::tool(
-    tool_update_dashboard_impl(data_source, update_fn),
+    tool_update_dashboard_impl(executor, table_names, update_fn),
     name = "querychat_update_dashboard",
     description = interpolate_package(
       "tool-update-dashboard.md",
-      db_type = db_type
+      db_type = db_type,
+      multi_table = multi_table
     ),
     arguments = list(
       query = ellmer::type_string(
@@ -39,6 +112,9 @@ tool_update_dashboard <- function(
       ),
       title = ellmer::type_string(
         "A brief title for display purposes, summarizing the intent of the SQL query."
+      ),
+      table = ellmer::type_string(
+        "The name of the table to update the dashboard for."
       )
     ),
     annotations = ellmer::tool_annotations(
@@ -48,34 +124,50 @@ tool_update_dashboard <- function(
   )
 }
 
-tool_update_dashboard_impl <- function(data_source, update_fn) {
-  force(data_source)
+tool_update_dashboard_impl <- function(executor, table_names, update_fn) {
+  force(executor)
+  force(table_names)
 
-  function(query, title) {
+  function(query, title, table) {
     res <- querychat_tool_result(
-      data_source,
+      executor,
       query = query,
       title = title,
-      action = "update"
+      action = "update",
+      table_name = table
     )
 
     if (is.null(res@error)) {
-      update_fn(query, title)
+      update_fn(query, title, table)
     }
 
     res
   }
 }
 
-
-tool_reset_dashboard <- function(reset_fn = identity) {
+tool_reset_dashboard <- function(
+  reset_fn = function(table) {},
+  table_names
+) {
   check_function(reset_fn)
 
   ellmer::tool(
-    reset_fn,
+    function(table) {
+      if (!table %in% table_names) {
+        available <- paste0("'", table_names, "'", collapse = ", ")
+        cli::cli_abort(
+          "Table {.val {table}} not found. Available: {available}"
+        )
+      }
+      reset_fn(table)
+    },
     name = "querychat_reset_dashboard",
     description = interpolate_package("tool-reset-dashboard.md"),
-    arguments = list(),
+    arguments = list(
+      table = ellmer::type_string(
+        "The name of the table to reset the dashboard for."
+      )
+    ),
     annotations = ellmer::tool_annotations(
       title = "Reset Dashboard",
       icon = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" class="bi bi-arrow-counterclockwise " style="height:1em;width:1em;fill:currentColor;vertical-align:-0.125em;" aria-hidden="true" role="img" ><path fill-rule="evenodd" d="M8 3a5 5 0 1 1-4.546 2.914.5.5 0 0 0-.908-.417A6 6 0 1 0 8 2v1z"></path><path d="M8 4.466V.534a.25.25 0 0 0-.41-.192L5.23 2.308a.25.25 0 0 0 0 .384l2.36 1.966A.25.25 0 0 0 8 4.466z"></path></svg>'
@@ -86,22 +178,24 @@ tool_reset_dashboard <- function(reset_fn = identity) {
 # Perform a SQL query on the data, and return the results as JSON.
 # @param query A SQL query; must be a SELECT statement.
 # @return The results of the query as a data frame.
-tool_query <- function(data_source) {
-  check_data_source(data_source)
-
-  db_type <- data_source$get_db_type()
+tool_query <- function(executor, multi_table = FALSE) {
+  db_type <- executor$get_db_type()
 
   ellmer::tool(
     function(query, collapsed = NULL, `_intent` = "") {
       querychat_tool_result(
-        data_source,
+        executor,
         query,
         action = "query",
         collapsed = collapsed
       )
     },
     name = "querychat_query",
-    description = interpolate_package("tool-query.md", db_type = db_type),
+    description = interpolate_package(
+      "tool-query.md",
+      db_type = db_type,
+      multi_table = multi_table
+    ),
     arguments = list(
       query = ellmer::type_string(
         ellmer::interpolate(
@@ -141,10 +235,12 @@ querychat_tool_details_option <- function() {
   valid_settings <- c("expanded", "collapsed", "default")
 
   if (!setting %in% valid_settings) {
-    cli::cli_warn(c(
-      "Invalid value for {.code querychat.tool_details} option or {.envvar QUERYCHAT_TOOL_DETAILS} environment variable: {.val {setting}}",
-      "i" = "Must be one of: {.or {.val {valid_settings}}}"
-    ))
+    cli::cli_warn(
+      c(
+        "Invalid value for {.code querychat.tool_details} option or {.envvar QUERYCHAT_TOOL_DETAILS} environment variable: {.val {setting}}",
+        "i" = "Must be one of: {.or {.val {valid_settings}}}"
+      )
+    )
     return(NULL)
   }
 
@@ -167,10 +263,11 @@ querychat_tool_starts_open <- function(action) {
 }
 
 querychat_tool_result <- function(
-  data_source,
+  executor,
   query,
   title = NULL,
   action = "update",
+  table_name = NULL,
   collapsed = NULL
 ) {
   action <- arg_match(action, c("update", "query", "reset"))
@@ -184,10 +281,14 @@ querychat_tool_result <- function(
     switch(
       action,
       update = {
-        data_source$test_query(query, require_all_columns = TRUE)
+        executor$test_query(
+          query,
+          table_name = table_name,
+          require_all_columns = TRUE
+        )
         NULL
       },
-      query = data_source$execute_query(query),
+      query = executor$execute_query(query),
       reset = "The dashboard has been reset to show all data."
     ),
     error = function(err) err
@@ -214,6 +315,7 @@ querychat_tool_result <- function(
         class = "btn btn-outline-primary btn-sm float-end mt-3 querychat-update-dashboard-btn",
         "data-query" = query,
         "data-title" = title,
+        "data-table" = table_name,
         switch(action, update = "Apply Filter", reset = "Reset Filter")
       )
     )
@@ -248,5 +350,28 @@ querychat_tool_result <- function(
         }
       )
     )
+  )
+}
+
+schema_dep <- function() {
+  htmltools::htmlDependency(
+    name = "querychat-schema-display",
+    version = utils::packageVersion("querychat"),
+    package = "querychat",
+    src = "htmldep",
+    script = "schema-display.js"
+  )
+}
+
+get_schema_result_display <- function(content) {
+  htmltools::tagList(
+    htmltools::tags$span(
+      class = "qc-schema-collector",
+      `data-table` = content@table_name,
+      `data-schema` = content@value,
+      `data-schema-json` = content@columns_json,
+      style = "display:none"
+    ),
+    schema_dep()
   )
 }

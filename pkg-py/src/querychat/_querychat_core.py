@@ -7,19 +7,19 @@ __all__ = [
     "AppState",
     "AppStateDict",
     "ClientFactory",
-    "StateDictAccessorMixin",
     "create_app_state",
     "stream_response",
     "stream_response_async",
 ]
 
+import warnings
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Generic, Optional, TypedDict, Union
+from typing import TYPE_CHECKING, Optional, TypedDict, Union
 
 from chatlas import Chat, ContentToolRequest, ContentToolResult
 from chatlas.types import Content
-from narwhals.stable.v1.typing import IntoFrameT
+from typing_extensions import NotRequired
 
 from .tools import UpdateDashboardData
 
@@ -36,21 +36,46 @@ if TYPE_CHECKING:
     from narwhals.stable.v1.typing import IntoFrame
 
     from ._datasource import DataSource
+    from ._query_executor import QueryExecutor
 
 
 ClientFactory = Callable[
-    [Callable[[UpdateDashboardData], None], Callable[[], None]],
+    [Callable[[UpdateDashboardData], None], Callable[[str], None]],
     Chat,
 ]
 """Factory that creates a Chat client with update_dashboard and reset_dashboard callbacks."""
 
 
-class AppStateDict(TypedDict):
-    """Serialized AppState for framework state stores."""
+def warn_multi_table_flat_accessor(
+    accessor_name: str, primary_table: str, table_list: str, stacklevel: int = 3
+) -> None:
+    """Emit a FutureWarning when a flat accessor is used with multiple tables registered."""
+    warnings.warn(
+        f".{accessor_name}() called without a table name, but multiple tables are registered "
+        f"({table_list}). Defaulting to primary table '{primary_table}'. "
+        f"Use .table('{primary_table}').{accessor_name}() to suppress this warning. "
+        f"In a future version of querychat, this will raise an error.",
+        FutureWarning,
+        stacklevel=stacklevel,
+    )
+
+
+class TableStateData(TypedDict):
+    """Per-table state for serialization."""
 
     sql: str | None
     title: str | None
     error: str | None
+
+
+class AppStateDict(TypedDict):
+    """Serialized AppState for framework state stores."""
+
+    table: NotRequired[str | None]
+    sql: str | None
+    title: str | None
+    error: str | None
+    table_states: NotRequired[dict[str, TableStateData]]
     turns: list[dict]  # Serialized chatlas Turns via model_dump()
 
 
@@ -59,91 +84,6 @@ class DisplayMessage(TypedDict):
 
     role: str
     content: str
-
-
-class StateDictAccessorMixin(Generic[IntoFrameT]):
-    """Mixin providing df/sql/title accessors for frameworks using serialized state dicts."""
-
-    _data_source: DataSource[IntoFrameT] | None
-
-    def _client_factory(
-        self,
-        update_cb: Callable[[UpdateDashboardData], None],
-        reset_cb: Callable[[], None],
-    ) -> Chat:
-        """Create a chat client with dashboard callbacks."""
-        return self.client(update_dashboard=update_cb, reset_dashboard=reset_cb)  # type: ignore[attr-defined]
-
-    def df(self, state: AppStateDict | None) -> IntoFrameT:
-        """
-        Get the current DataFrame from state.
-
-        Parameters
-        ----------
-        state
-            The state dictionary from a framework callback.
-
-        Returns
-        -------
-        :
-            The filtered data if a SQL query is active, otherwise the full dataset.
-            Returns a LazyFrame if the data source is lazy.
-
-        """
-        data_source = self._require_data_source("df")  # type: ignore[attr-defined]
-        sql = state.get("sql") if state else None
-        if sql:
-            try:
-                return data_source.execute_query(sql)
-            except Exception:
-                return data_source.get_data()
-        return data_source.get_data()
-
-    def sql(self, state: AppStateDict | None) -> str | None:
-        """
-        Get the current SQL query from state.
-
-        Parameters
-        ----------
-        state
-            The state dictionary from a framework callback.
-
-        Returns
-        -------
-        :
-            The current SQL query, or None if showing full dataset.
-
-        """
-        return state.get("sql") if state else None
-
-    def title(self, state: AppStateDict | None) -> str | None:
-        """
-        Get the current query title from state.
-
-        Parameters
-        ----------
-        state
-            The state dictionary from a framework callback.
-
-        Returns
-        -------
-        :
-            A short description of the current filter, or None if showing full dataset.
-
-        """
-        return state.get("title") if state else None
-
-    def _deserialize_state(self, state_data: AppStateDict | None) -> AppState:
-        """Reconstruct AppState from a serialized state dict."""
-        data_source = self._require_data_source("_deserialize_state")  # type: ignore[attr-defined]
-        state = create_app_state(
-            data_source,
-            self._client_factory,
-            self.greeting,  # type: ignore[attr-defined]
-        )
-        if state_data:
-            state.update_from_dict(state_data)
-        return state
 
 
 def format_chunk(chunk: Union[str, Content]) -> str:
@@ -163,7 +103,9 @@ def format_tool_result(result: ContentToolResult) -> str:
     display_info = result.extra.get("display") if result.extra else None
     if display_info and hasattr(display_info, "markdown"):
         return display_info.markdown
-    return str(result)
+    if result.value is not None:
+        return str(result.value)
+    return ""
 
 
 
@@ -199,41 +141,93 @@ def format_query_error(e: Exception) -> str:
 class AppState:
     """Framework-agnostic application state for a querychat session."""
 
-    data_source: DataSource
+    data_sources: dict[str, DataSource]
     client: Chat
+    query_executor: QueryExecutor | None = None
     greeting: Optional[str] = None
 
-    sql: Optional[str] = None
-    title: Optional[str] = None
-    error: Optional[str] = None
+    active_table: str | None = None
+    # sql, title, error are per-table properties backed by _table_states
+
+    def __post_init__(self) -> None:
+        if self.active_table is None:
+            self.active_table = next(iter(self.data_sources))
+        self._table_states: dict[str, dict[str, str | None]] = {
+            name: {"sql": None, "title": None, "error": None}
+            for name in self.data_sources
+        }
+
+    def _get_active_state(self) -> dict[str, str | None]:
+        table = self.active_table or next(iter(self.data_sources))
+        if table not in self._table_states:
+            self._table_states[table] = {"sql": None, "title": None, "error": None}
+        return self._table_states[table]
+
+    @property
+    def sql(self) -> str | None:
+        return self._get_active_state()["sql"]
+
+    @sql.setter
+    def sql(self, value: str | None) -> None:
+        self._get_active_state()["sql"] = value
+
+    @property
+    def title(self) -> str | None:
+        return self._get_active_state()["title"]
+
+    @title.setter
+    def title(self, value: str | None) -> None:
+        self._get_active_state()["title"] = value
+
+    @property
+    def error(self) -> str | None:
+        return self._get_active_state()["error"]
+
+    @error.setter
+    def error(self, value: str | None) -> None:
+        self._get_active_state()["error"] = value
 
     def update_dashboard(self, data: UpdateDashboardData) -> None:
-        self.sql = data["query"]
-        self.title = data["title"]
-        self.error = None  # Clear any previous error on successful update
+        table_name = data["table"]
+        self.active_table = table_name
+        if table_name not in self._table_states:
+            self._table_states[table_name] = {"sql": None, "title": None, "error": None}
+        self._table_states[table_name]["sql"] = data["query"]
+        self._table_states[table_name]["title"] = data["title"]
+        self._table_states[table_name]["error"] = None
 
-    def reset_dashboard(self) -> None:
+    def reset_dashboard(self, table: str | None = None) -> None:
+        if table is not None:
+            self.active_table = table
         self.sql = None
         self.title = None
         self.error = None
 
+    def get_active_data_source(self) -> DataSource:
+        """Return the current full-data source for the active table."""
+        if self.active_table is not None and self.active_table in self.data_sources:
+            return self.data_sources[self.active_table]
+        return next(iter(self.data_sources.values()))
+
     def get_current_data(self) -> IntoFrame:
         """Get current data, falling back to default if query fails."""
+        data_source = self.get_active_data_source()
         if self.sql:
             try:
-                result = self.data_source.execute_query(self.sql)
+                query_runner = self.query_executor or data_source
+                result = query_runner.execute_query(self.sql)
                 self.error = None  # Clear error on success
                 return result
             except Exception as e:
                 self.error = format_query_error(e)
                 self.sql = None
                 self.title = None
-                return self.data_source.get_data()
-        self.error = None
-        return self.data_source.get_data()
+                return data_source.get_data()
+        return data_source.get_data()
 
     def get_display_sql(self) -> str:
-        return self.sql or f"SELECT * FROM {self.data_source.table_name}"
+        table_name = self.active_table or next(iter(self.data_sources))
+        return self.sql or f"SELECT * FROM {table_name}"
 
     def get_display_messages(self) -> list[DisplayMessage]:
         """
@@ -280,9 +274,14 @@ class AppState:
     def to_dict(self) -> AppStateDict:
         """Serialize state to dict for framework state stores."""
         return {
+            "table": self.active_table,
             "sql": self.sql,
             "title": self.title,
             "error": self.error,
+            "table_states": {
+                name: {"sql": ts["sql"], "title": ts["title"], "error": ts["error"]}
+                for name, ts in self._table_states.items()
+            },
             "turns": [turn.model_dump() for turn in self.client.get_turns()],
         }
 
@@ -290,9 +289,22 @@ class AppState:
         """Restore state from serialized dict."""
         from chatlas import Turn
 
-        self.sql = data["sql"]
-        self.title = data["title"]
-        self.error = data["error"]
+        self.active_table = data.get("table", next(iter(self.data_sources)))
+
+        per_table = data.get("table_states")
+        if per_table:
+            for name, ts in per_table.items():
+                if name in self._table_states:
+                    self._table_states[name]["sql"] = ts.get("sql")
+                    self._table_states[name]["title"] = ts.get("title")
+                    self._table_states[name]["error"] = ts.get("error")
+        else:
+            # Backward compat: restore single active-table state from flat fields.
+            active = self.active_table or next(iter(self.data_sources))
+            if active in self._table_states:
+                self._table_states[active]["sql"] = data["sql"]
+                self._table_states[active]["title"] = data["title"]
+                self._table_states[active]["error"] = data["error"]
 
         turns_data = data["turns"]
         turns = [Turn.model_validate(t) for t in turns_data]
@@ -300,9 +312,11 @@ class AppState:
 
 
 def create_app_state(
-    data_source: DataSource,
+    *,
+    data_sources: dict[str, DataSource],
     client_factory: ClientFactory,
     greeting: Optional[str] = None,
+    query_executor: QueryExecutor | None = None,
 ) -> AppState:
     """Create AppState with callbacks connected via holder pattern."""
     state_holder: dict[str, AppState | None] = {"state": None}
@@ -313,16 +327,17 @@ def create_app_state(
             raise RuntimeError("Callback invoked before state initialization")
         state.update_dashboard(data)
 
-    def reset_callback() -> None:
+    def reset_callback(_table: str) -> None:
         state = state_holder["state"]
         if state is None:
             raise RuntimeError("Callback invoked before state initialization")
-        state.reset_dashboard()
+        state.reset_dashboard(_table)
 
     client = client_factory(update_callback, reset_callback)
     state = AppState(
-        data_source=data_source,
+        data_sources=dict(data_sources),
         client=client,
+        query_executor=query_executor,
         greeting=greeting,
     )
     state_holder["state"] = state

@@ -70,6 +70,21 @@ DataFrameSource <- R6::R6Class(
       private$colnames <- colnames(df)
 
       private$conn <- new_dataframe_connection(df, table_name, engine)
+    },
+
+    #' @description
+    #' Disconnect from the database and shut down the DuckDB instance if used.
+    #'
+    #' @return NULL (invisibly)
+    cleanup = function() {
+      if (!is.null(private$conn) && DBI::dbIsValid(private$conn)) {
+        if (inherits(private$conn, "duckdb_connection")) {
+          DBI::dbDisconnect(private$conn, shutdown = TRUE)
+        } else {
+          DBI::dbDisconnect(private$conn)
+        }
+      }
+      invisible(NULL)
     }
   )
 )
@@ -98,10 +113,12 @@ get_default_dataframe_engine <- function() {
   if (is_installed("RSQLite")) {
     return("sqlite")
   }
-  cli::cli_abort(c(
-    "No compatible database engine installed for DataFrameSource",
-    "i" = "Install either {.pkg duckdb} or {.pkg RSQLite}:",
-    " " = "{.run install.packages(\"duckdb\")}",
-    " " = "{.run install.packages(\"RSQLite\")}"
-  ))
+  cli::cli_abort(
+    c(
+      "No compatible database engine installed for DataFrameSource",
+      "i" = "Install either {.pkg duckdb} or {.pkg RSQLite}:",
+      " " = "{.run install.packages(\"duckdb\")}",
+      " " = "{.run install.packages(\"RSQLite\")}"
+    )
+  )
 }

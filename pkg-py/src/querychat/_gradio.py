@@ -10,11 +10,10 @@ from narwhals.stable.v1.typing import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
 if TYPE_CHECKING:
     import narwhals.stable.v1 as nw
 
-from ._querychat_base import TOOL_GROUPS, QueryChatBase
+from ._querychat_base import TOOL_GROUPS, StateDictQueryChat
 from ._querychat_core import (
     GREETING_PROMPT,
     AppStateDict,
-    StateDictAccessorMixin,
     create_app_state,
     stream_response,
 )
@@ -31,8 +30,10 @@ if TYPE_CHECKING:
 
     import gradio as gr
 
+    from ._data_dict import DataDict
 
-class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
+
+class QueryChat(StateDictQueryChat[IntoFrameT]):
     """
     QueryChat for Gradio applications.
 
@@ -86,16 +87,17 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
     @overload
     def __init__(
         self: QueryChat[Any],
-        data_source: None,
-        table_name: str,
+        data_source: None = None,
+        table_name: str | None = None,
         *,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("filter", "query"),
-        data_description: Optional[str | Path] = None,
-        categorical_threshold: int = 20,
+        data_dict: DataDict | str | Path | None = None,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
     ) -> None: ...
 
     @overload
@@ -107,10 +109,11 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("filter", "query"),
-        data_description: Optional[str | Path] = None,
-        categorical_threshold: int = 20,
+        data_dict: DataDict | str | Path | None = None,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
     ) -> None: ...
 
     @overload
@@ -122,10 +125,11 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("filter", "query"),
-        data_description: Optional[str | Path] = None,
-        categorical_threshold: int = 20,
+        data_dict: DataDict | str | Path | None = None,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
     ) -> None: ...
 
     @overload
@@ -137,10 +141,11 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("filter", "query"),
-        data_description: Optional[str | Path] = None,
-        categorical_threshold: int = 20,
+        data_dict: DataDict | str | Path | None = None,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
     ) -> None: ...
 
     @overload
@@ -152,24 +157,26 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("filter", "query"),
-        data_description: Optional[str | Path] = None,
-        categorical_threshold: int = 20,
+        data_dict: DataDict | str | Path | None = None,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
     ) -> None: ...
 
     def __init__(
         self,
-        data_source: IntoFrame | sqlalchemy.Engine | ibis.Table | None,
-        table_name: str,
+        data_source: IntoFrame | sqlalchemy.Engine | ibis.Table | None = None,
+        table_name: str | None = None,
         *,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("filter", "query"),
-        data_description: Optional[str | Path] = None,
-        categorical_threshold: int = 20,
+        data_dict: DataDict | str | Path | None = None,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
     ):
         super().__init__(
             data_source,
@@ -178,6 +185,7 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
             client=client,
             tools=tools,
             data_description=data_description,
+            data_dict=data_dict,
             categorical_threshold=categorical_threshold,
             extra_instructions=extra_instructions,
             prompt_template=prompt_template,
@@ -247,11 +255,14 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
         >>> app.launch(css=qc.css, head=qc.head)
 
         """
-        data_source = self._require_data_source("ui")
+        self._require_initialized("ui")
         import gradio as gr
 
         initial_state = create_app_state(
-            data_source, self._client_factory, self.greeting
+            data_sources=dict(self._data_sources),
+            client_factory=self._client_factory,
+            greeting=self.greeting,
+            query_executor=self._require_query_executor("ui"),
         )
 
         state_holder = gr.State(value=initial_state.to_dict())
@@ -328,12 +339,12 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
             querychat CSS/JS at launch time for Gradio 6.0+ compatibility.
 
         """
-        data_source = self._require_data_source("app")
+        self._require_initialized("app")
         from gradio.themes import Soft
 
         import gradio as gr
 
-        table_name = data_source.table_name
+        table_name = next(iter(self._data_sources))
 
         with gr.Blocks(
             title=f"querychat with {table_name}",
@@ -368,17 +379,14 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
 
             def update_displays(state_dict: AppStateDict):
                 """Update SQL and data displays based on state."""
-                title = state_dict.get("title") if state_dict else None
-                error = state_dict.get("error") if state_dict else None
+                state = self._deserialize_state(state_dict)
+                df = state.get_current_data()
+                title = state.title
+                error = state.error
 
                 sql_title_text = f"### {title or 'SQL Query'}"
-                sql_code = (
-                    state_dict.get("sql")
-                    if state_dict and state_dict.get("sql")
-                    else f"SELECT * FROM {table_name}"
-                )
+                sql_code = state.get_display_sql()
 
-                df = self.df(state_dict)
                 nw_df = as_narwhals(df)
                 nrow, ncol = nw_df.shape
                 native_df = nw_df.to_native()

@@ -9,11 +9,11 @@
     if (!chatContainer) return;
 
     const chatId = chatContainer.id;
-    const { query, title } = event.target.dataset;
+    const { query, title, table } = event.target.dataset;
 
     window.Shiny.setInputValue(
       chatId + "_update",
-      { query, title },
+      { query, title, table },
       { priority: "event" }
     );
   });

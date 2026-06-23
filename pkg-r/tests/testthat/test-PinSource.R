@@ -391,7 +391,7 @@ describe("QueryChat + PinSource integration", {
     prompt_before <- qc$system_prompt
     expect_match(prompt_before, "Motor Trend Cars")
 
-    qc$data_source <- new_test_df()
+    qc$add_table(new_test_df(), 'cars', replace = TRUE)
     prompt_after <- qc$system_prompt
     expect_no_match(prompt_after, "Motor Trend Cars")
 

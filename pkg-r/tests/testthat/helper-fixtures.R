@@ -1,5 +1,10 @@
 # Test fixture constructors for data source tests
 
+# Access the internal data source for a named table (test helper only)
+qc_data_source <- function(qc, table_name) {
+  qc$.__enclos_env__$private$.data_sources[[table_name]]
+}
+
 # Simple data frame with id, name, and value columns
 new_test_df <- function(rows = 5) {
   data.frame(

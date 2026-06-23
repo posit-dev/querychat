@@ -7,10 +7,13 @@ import duckdb
 import narwhals.stable.v1 as nw
 
 from ._datasource import (
+    ColumnMeta,
     DataSource,
     MissingColumnsError,
-    duckdb_get_schema,
+    duckdb_column_meta,
+    duckdb_column_stats,
     duckdb_lock_down,
+    format_schema,
 )
 from ._utils import check_query
 
@@ -186,7 +189,18 @@ class PinSource(DataSource[nw.DataFrame]):
         return "DuckDB"
 
     def get_schema(self, *, categorical_threshold: int) -> str:
-        return duckdb_get_schema(self._conn, self.table_name, categorical_threshold)
+        metas = self.get_column_metas()
+        self.populate_column_stats(metas, categorical_threshold)
+        return format_schema(self.table_name, metas)
+
+    def get_column_metas(self) -> list[ColumnMeta]:
+        result = self._conn.execute(f'SELECT * FROM "{self.table_name}" LIMIT 0')
+        return [duckdb_column_meta(desc[0], desc[1]) for desc in result.description]
+
+    def populate_column_stats(
+        self, columns: list[ColumnMeta], categorical_threshold: int
+    ) -> None:
+        duckdb_column_stats(self._conn, self.table_name, columns, categorical_threshold)
 
     def execute_query(self, query: str) -> nw.DataFrame:
         check_query(query)

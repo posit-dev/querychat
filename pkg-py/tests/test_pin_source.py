@@ -259,7 +259,7 @@ class TestQueryChatPinSourceIntegration:
             data_description="Custom description",
         )
         try:
-            qc.data_source = sample_df
+            qc.add_table(sample_df, "cars", replace=True)
             prompt = qc._system_prompt.render(qc.tools)
             assert "Custom description" in prompt
             assert "Motor Trend Cars" not in prompt
@@ -278,7 +278,7 @@ class TestQueryChatPinSourceIntegration:
             prompt_before = qc._system_prompt.render(qc.tools)
             assert "Motor Trend Cars" in prompt_before
 
-            qc.data_source = sample_df
+            qc.add_table(sample_df, "cars", replace=True)
             prompt_after = qc._system_prompt.render(qc.tools)
             assert "Motor Trend Cars" not in prompt_after
         finally:

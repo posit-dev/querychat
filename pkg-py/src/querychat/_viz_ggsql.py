@@ -10,20 +10,20 @@ from ._utils import to_polars
 if TYPE_CHECKING:
     import ggsql
 
-    from ._datasource import DataSource
+    from ._query_executor import QueryExecutor
 
 
-def execute_ggsql(data_source: DataSource, validated: ggsql.Validated) -> ggsql.Spec:
+def execute_ggsql(executor: QueryExecutor, validated: ggsql.Validated) -> ggsql.Spec:
     """
-    Execute a pre-validated ggsql query against a DataSource, returning a Spec.
+    Execute a pre-validated ggsql query against a QueryExecutor, returning a Spec.
 
-    Executes the SQL portion through DataSource (preserving database pushdown),
+    Executes the SQL portion through the executor (preserving database pushdown),
     then feeds the result into a ggsql DuckDBReader to produce a Spec.
 
     Parameters
     ----------
-    data_source
-        The querychat DataSource to execute the SQL portion against.
+    executor
+        The querychat QueryExecutor to execute the SQL portion against.
     validated
         A pre-validated ggsql query (from ``ggsql.validate()``).
 
@@ -47,7 +47,7 @@ def execute_ggsql(data_source: DataSource, validated: ggsql.Validated) -> ggsql.
             "result."
         )
 
-    pl_df = to_polars(data_source.execute_query(validated.sql()))
+    pl_df = to_polars(executor.execute_query(validated.sql()))
 
     reader = DuckDBReader("duckdb://memory")
     table = extract_visualise_table(visual)

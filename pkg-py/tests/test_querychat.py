@@ -1,6 +1,7 @@
 import os
 from unittest.mock import patch
 
+import ibis
 import pandas as pd
 import polars as pl
 import pytest
@@ -45,7 +46,7 @@ def test_querychat_init(sample_df):
     assert qc.id == "querychat_test_table"
 
     # Even without server initialization, we should be able to query the data source
-    result = qc.data_source.execute_query(
+    result = qc._data_sources["test_table"].execute_query(
         "SELECT * FROM test_table WHERE id = 2",
     )
 
@@ -86,6 +87,10 @@ def test_querychat_client_has_system_prompt(sample_df):
 
     # The system_prompt should contain the table name since it includes schema info
     assert "test_table" in client.system_prompt
+
+    # The system_prompt property should also return the prompt with table info
+    assert qc.system_prompt is not None
+    assert "test_table" in qc.system_prompt
 
 
 def test_generate_greeting_uses_querychat_system_prompt(sample_df):
@@ -144,10 +149,10 @@ def test_querychat_with_polars_lazyframe():
     )
 
     # Should have created a PolarsLazySource
-    assert isinstance(qc.data_source, PolarsLazySource)
+    assert isinstance(qc._data_sources["test_table"], PolarsLazySource)
 
     # Query should return a native polars LazyFrame
-    result = qc.data_source.execute_query("SELECT * FROM test_table WHERE id = 2")
+    result = qc._data_sources["test_table"].execute_query("SELECT * FROM test_table WHERE id = 2")
     assert isinstance(result, pl.LazyFrame)
 
     # Collect to verify
@@ -158,8 +163,6 @@ def test_querychat_with_polars_lazyframe():
 
 def test_querychat_with_ibis_table():
     """Test that QueryChat accepts an Ibis Table."""
-    ibis = pytest.importorskip("ibis")
-
     conn = ibis.duckdb.connect()
     try:
         conn.create_table(
@@ -179,10 +182,10 @@ def test_querychat_with_ibis_table():
         )
 
         # Should have created an IbisSource
-        assert isinstance(qc.data_source, IbisSource)
+        assert isinstance(qc._data_sources["test_table"], IbisSource)
 
         # Query should return an ibis.Table
-        result = qc.data_source.execute_query("SELECT * FROM test_table WHERE id = 2")
+        result = qc._data_sources["test_table"].execute_query("SELECT * FROM test_table WHERE id = 2")
         assert isinstance(result, ibis.Table)
 
         # Execute to verify results

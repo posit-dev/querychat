@@ -79,6 +79,7 @@ visualize_result <- function(
 
   viz_container <- NULL
   if (!is.null(session)) {
+    warn_viz_url_bookmarking()
     session$output[[widget_id]] <- ggsql::renderGgsql(spec)
     viz_container <- htmltools::div(
       class = "querychat-viz-container",
@@ -154,6 +155,34 @@ visualize_result <- function(
   )
 
   ellmer::ContentToolResult(value = value, extra = extra)
+}
+
+# Best-effort, additive-only check: with URL bookmarking each chart embeds a
+# base64 PNG preview (for LLM feedback) that can push the bookmarked state past
+# URL length limits and corrupt it on restore. Recommend server-side
+# bookmarking, which has no such limit. Detection and the warning are wrapped so
+# this never interrupts chart creation, and the warning fires only once.
+warn_viz_url_bookmarking <- function() {
+  is_url <- tryCatch(
+    identical(shiny::getShinyOption("bookmarkStore", ""), "url"),
+    error = function(e) FALSE
+  )
+  if (!isTRUE(is_url)) {
+    return(invisible(FALSE))
+  }
+  tryCatch(
+    cli::cli_warn(
+      c(
+        "URL bookmarking may not reliably restore visualizations.",
+        "i" = "Each chart embeds a PNG preview that can exceed URL length limits and corrupt the saved state on restore.",
+        "i" = "Consider server-side bookmarking instead: {.code shiny::enableBookmarking(\"server\")}."
+      ),
+      .frequency = "once",
+      .frequency_id = "querychat_viz_url_bookmarking"
+    ),
+    error = function(e) NULL
+  )
+  invisible(TRUE)
 }
 
 collapse_validation_errors <- function(validated) {

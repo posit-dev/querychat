@@ -388,6 +388,49 @@ test_that("normalize_bookmark_categories() rejects invalid input", {
   expect_error(normalize_bookmark_categories(1))
 })
 
+test_that("resolve_bookmark_store() disables when no categories", {
+  expect_equal(resolve_bookmark_store(NULL, character(0)), "disable")
+  expect_equal(resolve_bookmark_store("url", character(0)), "disable")
+})
+
+test_that("resolve_bookmark_store() honors an explicit store", {
+  expect_equal(resolve_bookmark_store("url", "cards"), "url")
+  expect_equal(resolve_bookmark_store("server", "cards"), "server")
+  expect_equal(resolve_bookmark_store("disable", "conversation"), "disable")
+  expect_error(resolve_bookmark_store("nonsense", "cards"))
+})
+
+test_that("resolve_bookmark_store() defers to an existing enableBookmarking()", {
+  withr::defer(shiny::shinyOptions(bookmarkStore = NULL))
+  shiny::shinyOptions(bookmarkStore = "server")
+  expect_null(resolve_bookmark_store(NULL, "cards"))
+  expect_null(resolve_bookmark_store(NULL, "conversation"))
+})
+
+test_that("resolve_bookmark_store() picks server for conversation bookmarks", {
+  withr::local_envvar(R_CONFIG_ACTIVE = "")
+  shiny::shinyOptions(bookmarkStore = NULL)
+  expect_equal(resolve_bookmark_store(NULL, "conversation"), "server")
+  expect_equal(
+    resolve_bookmark_store(NULL, c("cards", "conversation")),
+    "server"
+  )
+})
+
+test_that("resolve_bookmark_store() picks server on a hosting platform", {
+  shiny::shinyOptions(bookmarkStore = NULL)
+  withr::local_envvar(R_CONFIG_ACTIVE = "connect")
+  expect_equal(resolve_bookmark_store(NULL, "cards"), "server")
+  withr::local_envvar(R_CONFIG_ACTIVE = "SHINYAPPS")
+  expect_equal(resolve_bookmark_store(NULL, "cards"), "server")
+})
+
+test_that("resolve_bookmark_store() picks url for local cards-only", {
+  shiny::shinyOptions(bookmarkStore = NULL)
+  withr::local_envvar(R_CONFIG_ACTIVE = "")
+  expect_equal(resolve_bookmark_store(NULL, "cards"), "url")
+})
+
 test_that("restore_record_list() rebuilds list-of-lists from a data.frame", {
   cards <- list(
     list(

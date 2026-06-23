@@ -410,7 +410,7 @@ By default, only the \code{"query"} tool is included, regardless of the
   Create and run a Shiny gadget for chatting with data
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
-    \preformatted{QueryChat$app(..., bookmark_enable = TRUE, bookmark_store = "url")}
+    \preformatted{QueryChat$app(..., bookmark_enable = TRUE, bookmark_store = NULL)}
     \if{html}{\out{</div>}}
   }
   \subsection{Arguments}{
@@ -424,13 +424,22 @@ or when \code{bookmark_store} is \code{"disable"}.}
       \item{\code{bookmark_store}}{Where bookmarked state is stored. Passed to
 \code{\link[shiny:enableBookmarking]{shiny::enableBookmarking()}}: \code{"url"} stores state in the URL, \code{"server"}
 stores it server-side, and \code{"disable"} turns off bookmarking entirely.
-Default is \code{"url"}. Use \code{bookmark_enable} to choose \emph{which} state is
-saved.}
+Default is \code{NULL}, which defers to a store set via
+\code{\link[shiny:enableBookmarking]{shiny::enableBookmarking()}} if present, otherwise picks a sensible
+default (\code{"server"} when the conversation is bookmarked or when running
+on a hosting platform, \code{"url"} otherwise). Use \code{bookmark_enable} to
+choose \emph{which} state is saved.}
     }
     \if{html}{\out{</div>}}
   }
   \subsection{Returns}{
-    Invisibly returns a list of session-specific values.
+    Invisibly returns a list of session-specific values:
+\itemize{
+\item \code{df}: The final filtered data frame
+\item \code{sql}: The final SQL query string
+\item \code{title}: The final title
+\item \code{client}: The session-specific chat client instance
+}
   }
 }
 
@@ -457,7 +466,7 @@ shiny::runApp(app)
 }\if{html}{\out{</div>}}
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
-    \preformatted{QueryChat$app_obj(..., bookmark_enable = TRUE, bookmark_store = "url")}
+    \preformatted{QueryChat$app_obj(..., bookmark_enable = TRUE, bookmark_store = NULL)}
     \if{html}{\out{</div>}}
   }
   \subsection{Arguments}{
@@ -471,8 +480,11 @@ or when \code{bookmark_store} is \code{"disable"}.}
       \item{\code{bookmark_store}}{Where bookmarked state is stored. Passed to
 \code{\link[shiny:enableBookmarking]{shiny::enableBookmarking()}}: \code{"url"} stores state in the URL, \code{"server"}
 stores it server-side, and \code{"disable"} turns off bookmarking entirely.
-Default is \code{"url"}. Use \code{bookmark_enable} to choose \emph{which} state is
-saved.}
+Default is \code{NULL}, which defers to a store set via
+\code{\link[shiny:enableBookmarking]{shiny::enableBookmarking()}} if present, otherwise picks a sensible
+default (\code{"server"} when the conversation is bookmarked or when running
+on a hosting platform, \code{"url"} otherwise). Use \code{bookmark_enable} to
+choose \emph{which} state is saved.}
     }
     \if{html}{\out{</div>}}
   }

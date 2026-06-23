@@ -81,6 +81,42 @@ normalize_bookmark_categories <- function(bookmark_enable) {
   )
 }
 
+# Resolve the Shiny bookmark store from the (possibly NULL) `bookmark_store`
+# argument and the normalized bookmark categories. Returns one of "url",
+# "server", "disable", or NULL. NULL means "defer to whatever the app author
+# already set via shiny::enableBookmarking()" -- passing NULL to
+# shiny::shinyApp(enableBookmarking=) makes Shiny latch that existing option.
+#
+# Only meaningful at the app level (the layer that owns the shinyApp() call);
+# `$server()` never sets a store.
+resolve_bookmark_store <- function(bookmark_store, bookmark_cats) {
+  # Nothing to save.
+  if (length(bookmark_cats) == 0) {
+    return("disable")
+  }
+  # The author chose a store explicitly.
+  if (!is.null(bookmark_store)) {
+    return(rlang::arg_match0(bookmark_store, c("url", "server", "disable")))
+  }
+  # The author already called shiny::enableBookmarking(); defer to it.
+  if (!is.null(shiny::getShinyOption("bookmarkStore"))) {
+    return(NULL)
+  }
+  # The chat transcript is unbounded and overflows URL length limits, so a
+  # conversation bookmark needs server storage.
+  if ("conversation" %in% bookmark_cats) {
+    return("server")
+  }
+  # On a hosting platform, server storage is available and reliable.
+  hosted <- tolower(Sys.getenv("R_CONFIG_ACTIVE")) %in%
+    c("connect", "shinyapps", "rsconnect", "connect_cloud", "rstudio_cloud")
+  if (hosted) {
+    return("server")
+  }
+  # Cards-only, run locally: small payload that is shareable via the URL.
+  "url"
+}
+
 # Main module server function
 mod_server <- function(
   id,
@@ -331,7 +367,12 @@ mod_server <- function(
       if (bookmark_conversation) {
         # shinychat owns the transcript state and the bookmark trigger
         # (observes chat input/response -> doBookmark) plus updateQueryString.
-        shinychat::chat_restore("chat", chat, restore_ui = FALSE, session = session)
+        shinychat::chat_restore(
+          "chat",
+          chat,
+          restore_ui = FALSE,
+          session = session
+        )
       } else {
         # Cards-only: drive the bookmark trigger ourselves when cards change,
         # mirroring shinychat's onBookmarked -> updateQueryString.

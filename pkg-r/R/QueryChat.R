@@ -707,15 +707,18 @@ QueryChat <- R6::R6Class(
     #' @param bookmark_store Where bookmarked state is stored. Passed to
     #'   [shiny::enableBookmarking()]: `"url"` stores state in the URL, `"server"`
     #'   stores it server-side, and `"disable"` turns off bookmarking entirely.
-    #'   Default is `"url"`. Use `bookmark_enable` to choose *which* state is
-    #'   saved.
+    #'   Default is `NULL`, which defers to a store set via
+    #'   [shiny::enableBookmarking()] if present, otherwise picks a sensible
+    #'   default (`"server"` when the conversation is bookmarked or when running
+    #'   on a hosting platform, `"url"` otherwise). Use `bookmark_enable` to
+    #'   choose *which* state is saved.
     #'
     #' @return Invisibly returns a list of session-specific values:
     #'  - `df`: The final filtered data frame
     #'  - `sql`: The final SQL query string
     #'  - `title`: The final title
     #'  - `client`: The session-specific chat client instance
-    app = function(..., bookmark_enable = TRUE, bookmark_store = "url") {
+    app = function(..., bookmark_enable = TRUE, bookmark_store = NULL) {
       app <- self$app_obj(
         ...,
         bookmark_enable = bookmark_enable,
@@ -751,11 +754,14 @@ QueryChat <- R6::R6Class(
     #' @param bookmark_store Where bookmarked state is stored. Passed to
     #'  [shiny::enableBookmarking()]: `"url"` stores state in the URL, `"server"`
     #'  stores it server-side, and `"disable"` turns off bookmarking entirely.
-    #'  Default is `"url"`. Use `bookmark_enable` to choose *which* state is
-    #'  saved.
+    #'  Default is `NULL`, which defers to a store set via
+    #'  [shiny::enableBookmarking()] if present, otherwise picks a sensible
+    #'  default (`"server"` when the conversation is bookmarked or when running
+    #'  on a hosting platform, `"url"` otherwise). Use `bookmark_enable` to
+    #'  choose *which* state is saved.
     #'
     #' @return A Shiny app object that can be run with `shiny::runApp()`.
-    app_obj = function(..., bookmark_enable = TRUE, bookmark_store = "url") {
+    app_obj = function(..., bookmark_enable = TRUE, bookmark_store = NULL) {
       private$require_initialized("$app_obj")
       check_installed("DT")
       check_dots_empty()
@@ -829,15 +835,11 @@ QueryChat <- R6::R6Class(
       }
 
       # `bookmark_store` selects where state is stored; `bookmark_enable`
-      # selects whether and what is stored. Nothing is bookmarked unless there
-      # is a storage location and at least one category is requested.
+      # selects whether and what is stored. `resolve_bookmark_store()` picks a
+      # default when `bookmark_store` is NULL and defers to a store the author
+      # already set via shiny::enableBookmarking() (returning NULL in that case).
       bookmark_cats <- normalize_bookmark_categories(bookmark_enable)
-      has_store <- bookmark_store %in% c("url", "server")
-      effective_store <- if (has_store && length(bookmark_cats) > 0) {
-        bookmark_store
-      } else {
-        "disable"
-      }
+      effective_store <- resolve_bookmark_store(bookmark_store, bookmark_cats)
 
       server <- function(input, output, session) {
         shiny::setBookmarkExclude(c(
@@ -846,7 +848,7 @@ QueryChat <- R6::R6Class(
           "sql_editor"
         ))
         qc_vals <- self$server(
-          bookmark_enable = if (effective_store == "disable") {
+          bookmark_enable = if (identical(effective_store, "disable")) {
             FALSE
           } else {
             bookmark_enable
@@ -1358,8 +1360,11 @@ querychat <- function(
 #' @param bookmark_store Where bookmarked state is stored. Passed to
 #'   [shiny::enableBookmarking()]: `"url"` stores state in the URL, `"server"`
 #'   stores it server-side, and `"disable"` turns off bookmarking entirely.
-#'   Default is `"url"`. Use `bookmark_enable` to choose *which* state is
-#'   saved.
+#'   Default is `NULL`, which defers to a store set via
+#'   [shiny::enableBookmarking()] if present, otherwise picks a sensible default
+#'   (`"server"` when the conversation is bookmarked or when running on a
+#'   hosting platform, `"url"` otherwise). Use `bookmark_enable` to choose
+#'   *which* state is saved.
 #' @return Invisibly returns the chat object after the app stops.
 #'
 #' @export
@@ -1378,7 +1383,7 @@ querychat_app <- function(
   data_dict = NULL,
   cleanup = NA,
   bookmark_enable = TRUE,
-  bookmark_store = "url"
+  bookmark_store = NULL
 ) {
   if (shiny::isRunning()) {
     cli::cli_abort(

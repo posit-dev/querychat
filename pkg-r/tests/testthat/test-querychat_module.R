@@ -35,7 +35,7 @@ test_that("mod_server() return includes table() and table_names() for single-tab
       greeting = "Hello",
       client = client_factory,
       tools = "query",
-      enable_bookmarking = FALSE
+      bookmark_enable = FALSE
     ),
     {
       # table_names_fn() returns the table name vector
@@ -95,7 +95,7 @@ test_that("mod_server() return includes table() and table_names() for multi-tabl
       greeting = "Hello",
       client = client_factory,
       tools = "query",
-      enable_bookmarking = FALSE
+      bookmark_enable = FALSE
     ),
     {
       # table_names_fn() returns all registered table names
@@ -182,7 +182,7 @@ test_that("mod_server() exposes current_table() starting as NULL", {
       greeting = "Hello",
       client = client_factory,
       tools = "query",
-      enable_bookmarking = FALSE
+      bookmark_enable = FALSE
     ),
     {
       expect_true(is.function(session$returned$current_table))
@@ -215,7 +215,7 @@ test_that("mod_server() current_table() updates on update_dashboard and reset_qu
       greeting = "Hello",
       client = client_factory,
       tools = "query",
-      enable_bookmarking = FALSE
+      bookmark_enable = FALSE
     ),
     {
       # Initially NULL

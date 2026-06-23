@@ -410,6 +410,53 @@ describe("tool_card_impl() get action", {
   })
 })
 
+describe("normalize_seed_cards()", {
+  it("returns NULL for NULL input", {
+    expect_null(normalize_seed_cards(NULL))
+  })
+
+  it("returns a list as-is", {
+    cards <- list(
+      list(display = "markdown", title = "Hi", value = "**x**"),
+      list(display = "table", title = "T", value = "SELECT 1")
+    )
+    result <- normalize_seed_cards(cards)
+    expect_equal(result, cards)
+  })
+
+  it("parses a JSON string", {
+    json <- '[{"display":"markdown","title":"Hi","value":"**x**"}]'
+    result <- normalize_seed_cards(json)
+    expect_length(result, 1)
+    expect_equal(result[[1]]$display, "markdown")
+    expect_equal(result[[1]]$title, "Hi")
+  })
+
+  it("reads and parses a JSON file path", {
+    tmp <- withr::local_tempfile(fileext = ".json")
+    writeLines('[{"display":"markdown","title":"From file","value":"text"}]', tmp)
+    result <- normalize_seed_cards(tmp)
+    expect_length(result, 1)
+    expect_equal(result[[1]]$title, "From file")
+  })
+
+  it("aborts with index on a non-list element", {
+    cards <- list(
+      list(display = "markdown", title = "Ok", value = "text"),
+      "not a list"
+    )
+    expect_error(normalize_seed_cards(cards), "2")
+  })
+
+  it("aborts on invalid JSON", {
+    expect_error(normalize_seed_cards("{not valid json"), "parsed as JSON")
+  })
+
+  it("aborts for non-list, non-character input", {
+    expect_error(normalize_seed_cards(42), "list")
+  })
+})
+
 describe("cards_to_payload() / payload_to_cards()", {
   it("round-trips a value_box card with all optional fields", {
     cards <- list(

@@ -305,3 +305,49 @@ payload_to_cards <- function(payload) {
 card_icon <- function() {
   '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-grid-1x2-fill" viewBox="0 0 16 16"><path d="M0 1a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H1a1 1 0 0 1-1-1zm9 0a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1zm0 9a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1z"/></svg>'
 }
+
+# Normalize the `cards` constructor argument into a list of field-lists.
+# Accepts NULL (returns NULL), a list (used as-is), or a character scalar
+# (parsed as JSON or read from a file path). Performs light structural checks
+# only — authoritative field/query validation happens later in mod_server()
+# where the executor is available.
+normalize_seed_cards <- function(cards) {
+  if (is.null(cards)) {
+    return(NULL)
+  }
+
+  if (is.character(cards) && length(cards) == 1) {
+    json <- if (file.exists(cards)) read_utf8(cards) else cards
+    cards <- tryCatch(
+      jsonlite::fromJSON(json, simplifyVector = FALSE),
+      error = function(e) {
+        cli::cli_abort(
+          c(
+            "{.arg cards} could not be parsed as JSON.",
+            "x" = "{conditionMessage(e)}"
+          ),
+          call = NULL
+        )
+      }
+    )
+  }
+
+  if (!is.list(cards)) {
+    cli::cli_abort(
+      "{.arg cards} must be a list, a JSON string, or a path to a JSON file.",
+      call = NULL
+    )
+  }
+
+  # Each element must be a named list (field-list for one card).
+  for (i in seq_along(cards)) {
+    if (!is.list(cards[[i]])) {
+      cli::cli_abort(
+        "Element {i} of {.arg cards} must be a named list of card fields, not {.obj_type_friendly cards[[i]]}.",
+        call = NULL
+      )
+    }
+  }
+
+  cards
+}

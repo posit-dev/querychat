@@ -104,6 +104,7 @@ QueryChat <- R6::R6Class(
     .categorical_threshold = NULL,
     .data_dicts = list(),
     .greeter = NULL,
+    .seed_cards = NULL,
 
     require_initialized = function(method_name) {
       if (length(private$.data_sources) == 0) {
@@ -289,6 +290,17 @@ QueryChat <- R6::R6Class(
     #'   format.
     #' @param data_dict Optional data dictionary. A path to a YAML file, or a
     #'   list of YAML file paths. See [read_data_dict()] for the expected format.
+    #' @param cards Optional initial set of cards to display in the Insights
+    #'   panel before any LLM interaction. Accepts:
+    #'   - A list of named lists, where each named list contains the card fields
+    #'     (`display`, `title`, `value`, and optionally `caption`, `theme`,
+    #'     `icon`).
+    #'   - A JSON string encoding such a list.
+    #'   - A path to a `.json` file containing such a list.
+    #'
+    #'   Structural checks (e.g. each element is a named list) run at
+    #'   construction time. Full field and query validation runs at app startup
+    #'   and aborts loudly naming the 1-based card index on failure.
     #' @param cleanup Whether or not to automatically run `$cleanup()` when the
     #'   Shiny session/app stops. By default, cleanup only occurs if `QueryChat`
     #'   gets created within a Shiny session. Set to `TRUE` to always clean up,
@@ -308,6 +320,7 @@ QueryChat <- R6::R6Class(
       extra_instructions = NULL,
       prompt_template = NULL,
       data_dict = NULL,
+      cards = NULL,
       cleanup = NA
     ) {
       check_dots_empty()
@@ -329,6 +342,10 @@ QueryChat <- R6::R6Class(
 
       # Normalize data_dicts
       private$.data_dicts <- normalize_data_dicts(data_dict)
+
+      # Normalize and structurally validate seed cards; full field/query
+      # validation is deferred to mod_server() where the executor is available.
+      private$.seed_cards <- normalize_seed_cards(cards)
 
       # Store init parameters for deferred system prompt building
       private$.prompt_template <- prompt_template
@@ -1227,7 +1244,8 @@ QueryChat <- R6::R6Class(
         greeter = self$greeter,
         greeting_base = base_client,
         bookmark_enable = bookmark_enable,
-        card_placeholder = card_placeholder
+        card_placeholder = card_placeholder,
+        seed_cards = private$.seed_cards
       )
       result
     },
@@ -1366,6 +1384,9 @@ QueryChat <- R6::R6Class(
 #' @param extra_instructions Optional additional instructions for the chat model.
 #' @param prompt_template Optional path to or string of a custom prompt template.
 #' @param data_dict Optional data dictionary. A path to a YAML file or a list of paths.
+#' @param cards Optional initial set of cards to display in the Insights panel
+#'   before any LLM interaction. A list of named card field-lists, a JSON
+#'   string, or a path to a `.json` file. See `QueryChat$new()` for details.
 #' @param cleanup Whether or not to automatically run `$cleanup()` when the
 #'   Shiny session/app stops.
 #'
@@ -1386,6 +1407,7 @@ querychat <- function(
   extra_instructions = NULL,
   prompt_template = NULL,
   data_dict = NULL,
+  cards = NULL,
   cleanup = NA
 ) {
   if (is_missing(table_name)) {
@@ -1413,6 +1435,7 @@ querychat <- function(
     extra_instructions = extra_instructions,
     prompt_template = prompt_template,
     data_dict = data_dict,
+    cards = cards,
     cleanup = cleanup
   )
 }

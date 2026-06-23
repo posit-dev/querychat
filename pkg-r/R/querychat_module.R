@@ -128,7 +128,8 @@ mod_server <- function(
   greeter = NULL,
   greeting_base = NULL,
   bookmark_enable = FALSE,
-  card_placeholder = "Insights will appear here"
+  card_placeholder = "Insights will appear here",
+  seed_cards = NULL
 ) {
   bookmark_cats <- normalize_bookmark_categories(bookmark_enable)
   shiny::moduleServer(id, function(input, output, session) {
@@ -140,7 +141,53 @@ mod_server <- function(
     # the last_turn() capture below, and the greeting handling in
     # onBookmark/onRestore can be dropped (and the shinychat minimum bumped).
     current_greeting <- shiny::reactiveVal(NULL, label = "current_greeting")
-    cards <- shiny::reactiveVal(list(), label = "cards")
+
+    # Build the initial card list from seed_cards (author-supplied at $new()
+    # time). This is the INITIAL state only; the URL reader and onRestore both
+    # call cards(...) and will overwrite it when they fire.
+    initial_cards <- if (is.null(seed_cards)) {
+      list()
+    } else {
+      # Validate each seed card and assign unique ids within this batch.
+      # We can't use new_card_id() here because it reads from the live cards
+      # store (via manage_card), which doesn't exist yet. Instead, we track
+      # used ids ourselves and generate unique ones via random_hex(2).
+      used_ids <- character(0)
+      validated <- vector("list", length(seed_cards))
+      for (i in seq_along(seed_cards)) {
+        card <- tryCatch(
+          validate_and_build_card(executor, seed_cards[[i]]),
+          error = function(e) {
+            cli::cli_abort(
+              "Seed card {i} is invalid: {conditionMessage(e)}",
+              call = NULL
+            )
+          }
+        )
+        # Prefer the card's own id if supplied and not already used; otherwise
+        # generate a fresh one.
+        preferred_id <- seed_cards[[i]][["id"]]
+        id <- if (
+          !is.null(preferred_id) &&
+            is.character(preferred_id) &&
+            nzchar(preferred_id) &&
+            !preferred_id %in% used_ids
+        ) {
+          preferred_id
+        } else {
+          repeat {
+            candidate <- random_hex(2)
+            if (!candidate %in% used_ids) break
+          }
+          candidate
+        }
+        used_ids <- c(used_ids, id)
+        card$id <- id
+        validated[[i]] <- card
+      }
+      validated
+    }
+    cards <- shiny::reactiveVal(initial_cards, label = "cards")
 
     # Per-table reactive state
     tables <- list()

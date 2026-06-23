@@ -133,6 +133,8 @@ access its \verb{$tables} and \verb{$prompt}.}
     \item \href{#method-QueryChat-sidebar}{\code{QueryChat$sidebar()}}
     \item \href{#method-QueryChat-ui}{\code{QueryChat$ui()}}
     \item \href{#method-QueryChat-ui_cards}{\code{QueryChat$ui_cards()}}
+    \item \href{#method-QueryChat-cards_url}{\code{QueryChat$cards_url()}}
+    \item \href{#method-QueryChat-cards_set_url}{\code{QueryChat$cards_set_url()}}
     \item \href{#method-QueryChat-server}{\code{QueryChat$server()}}
     \item \href{#method-QueryChat-generate_greeting}{\code{QueryChat$generate_greeting()}}
     \item \href{#method-QueryChat-cleanup}{\code{QueryChat$cleanup()}}
@@ -159,6 +161,7 @@ access its \verb{$tables} and \verb{$prompt}.}
   extra_instructions = NULL,
   prompt_template = NULL,
   data_dict = NULL,
+  cards = NULL,
   cleanup = NA
 )}
     \if{html}{\out{</div>}}
@@ -212,6 +215,19 @@ used. See the package prompts directory for the default template
 format.}
       \item{\code{data_dict}}{Optional data dictionary. A path to a YAML file, or a
 list of YAML file paths. See \code{\link[=read_data_dict]{read_data_dict()}} for the expected format.}
+      \item{\code{cards}}{Optional initial set of cards to display in the Insights
+panel before any LLM interaction. Accepts:
+\itemize{
+\item A list of named lists, where each named list contains the card fields
+(\code{display}, \code{title}, \code{value}, and optionally \code{caption}, \code{theme},
+\code{icon}).
+\item A JSON string encoding such a list.
+\item A path to a \code{.json} file containing such a list.
+}
+
+Structural checks (e.g. each element is a named list) run at
+construction time. Full field and query validation runs at app startup
+and aborts loudly naming the 1-based card index on failure.}
       \item{\code{cleanup}}{Whether or not to automatically run \verb{$cleanup()} when the
 Shiny session/app stops. By default, cleanup only occurs if \code{QueryChat}
 gets created within a Shiny session. Set to \code{TRUE} to always clean up,
@@ -586,6 +602,65 @@ the namespacing function from \code{\link[shiny:NS]{shiny::NS()}}.}
   }
   \subsection{Returns}{
     A UI component containing the cards output area.
+  }
+}
+
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-QueryChat-cards_url"></a>}}
+\if{latex}{\out{\hypertarget{method-QueryChat-cards_url}{}}}
+\subsection{\code{QueryChat$cards_url()}}{
+  Build a shareable URL that opens the app with the given cards pre-loaded.
+
+The cards list is encoded as a compact gzip+base64 query parameter.
+When visited, \verb{$server()} seeds the cards reactive from this parameter
+before the first render — so the app opens with the shared insight cards
+already visible, without requiring a bookmark.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{QueryChat$cards_url(cards = NULL, ..., id = NULL)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{cards}}{A list of card field-lists, or a JSON string that encodes
+such a list. Required; there is no default.}
+      \item{\code{...}}{Must be empty.}
+      \item{\code{id}}{Optional module ID override. Defaults to \code{self$id}.}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    A URL string (absolute when called from a session, relative
+otherwise).
+  }
+}
+
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-QueryChat-cards_set_url"></a>}}
+\if{latex}{\out{\hypertarget{method-QueryChat-cards_set_url}{}}}
+\subsection{\code{QueryChat$cards_set_url()}}{
+  Update the browser URL to a shareable cards link.
+
+A thin wrapper around \verb{$cards_url()} that calls
+\code{\link[shiny:updateQueryString]{shiny::updateQueryString()}} with the resulting URL. Must be called
+from within a Shiny server function.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{QueryChat$cards_set_url(cards = NULL, ..., id = NULL)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{cards}}{A list of card field-lists, or a JSON string. Required.}
+      \item{\code{...}}{Passed to \verb{$cards_url()}.}
+      \item{\code{id}}{Optional module ID override.}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    Invisibly returns the URL string.
   }
 }
 

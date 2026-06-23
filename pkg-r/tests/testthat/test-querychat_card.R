@@ -434,7 +434,10 @@ describe("normalize_seed_cards()", {
 
   it("reads and parses a JSON file path", {
     tmp <- withr::local_tempfile(fileext = ".json")
-    writeLines('[{"display":"markdown","title":"From file","value":"text"}]', tmp)
+    writeLines(
+      '[{"display":"markdown","title":"From file","value":"text"}]',
+      tmp
+    )
     result <- normalize_seed_cards(tmp)
     expect_length(result, 1)
     expect_equal(result[[1]]$title, "From file")

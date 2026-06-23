@@ -29,6 +29,8 @@
 
 * File attachments are now enabled by default in the Shiny chat UI. Users can attach images, PDFs, and text files to their messages and the LLM will receive them. Disable with `allow_attachments = FALSE` in `mod_ui()` or `QueryChat$ui()`. (#253)
 
+* Card dashboards can now be **shared and author-seeded** without the LLM. `$cards_url()` encodes the current cards into a compact URL, and `$cards_set_url()` updates the address bar to that link; opening such a URL seeds the dashboard with exactly those cards and a fresh conversation. The new `cards` argument to `QueryChat$new()` (and `querychat()`) seeds an initial dashboard from a list of cards, a JSON string, or a path to a `.json` file. The bundled `querychat_app()` Insights panel shows an "open in new tab" link for the current cards.
+
 ## Breaking changes
 
 * The `$data_source` property has been removed. Use `qc$table("name")$data_source` to read a table's data source, and `qc$add_table(df, "name", replace = TRUE)` to replace it. The `data_source` parameter to `$server()` has also been removed; call `$add_table()` before `$server()` instead. (#195)

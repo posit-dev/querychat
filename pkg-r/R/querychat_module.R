@@ -540,7 +540,11 @@ mod_server <- function(
           }
         }
         # URL param takes precedence: skip bookmark restore when URL seeded cards.
-        if (bookmark_cards && !is.null(state$values[[key_cards]]) && !isTRUE(url_cards_seeded)) {
+        if (
+          bookmark_cards &&
+            !is.null(state$values[[key_cards]]) &&
+            !isTRUE(url_cards_seeded)
+        ) {
           cards(restore_record_list(state$values[[key_cards]]))
         }
       })

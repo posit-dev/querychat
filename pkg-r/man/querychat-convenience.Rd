@@ -18,6 +18,7 @@ querychat(
   extra_instructions = NULL,
   prompt_template = NULL,
   data_dict = NULL,
+  cards = NULL,
   cleanup = NA
 )
 
@@ -89,6 +90,10 @@ values to consider as a categorical variable. Default is 20.}
 \item{prompt_template}{Optional path to or string of a custom prompt template.}
 
 \item{data_dict}{Optional data dictionary. A path to a YAML file or a list of paths.}
+
+\item{cards}{Optional initial set of cards to display in the Insights panel
+before any LLM interaction. A list of named card field-lists, a JSON
+string, or a path to a \code{.json} file. See \code{QueryChat$new()} for details.}
 
 \item{cleanup}{Whether or not to automatically run \verb{$cleanup()} when the
 Shiny session/app stops.}

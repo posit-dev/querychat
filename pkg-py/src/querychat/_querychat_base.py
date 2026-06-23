@@ -8,7 +8,7 @@ import os
 import re
 import warnings
 from pathlib import Path
-from typing import TYPE_CHECKING, Generic, Literal, Optional, cast
+from typing import TYPE_CHECKING, Generic, Literal, Optional
 
 import chatlas
 import narwhals.stable.v1 as nw
@@ -39,7 +39,7 @@ from ._querychat_core import (
     warn_multi_table_flat_accessor,
 )
 from ._system_prompt import QueryChatSystemPrompt
-from ._utils import MISSING, MISSING_TYPE, is_ibis_table
+from ._utils import MISSING, MISSING_TYPE, is_ibis_backend, is_ibis_table
 from ._viz_utils import has_viz_deps, has_viz_tool
 from .tools import (
     ResetDashboardCallback,
@@ -506,31 +506,24 @@ class QueryChatBase(Generic[IntoFrameT]):
                 "Add all tables before calling .server() or .app()."
             )
 
-        is_sqlalchemy_engine = isinstance(data_source, sqlalchemy.Engine)
-        ibis_backend: SQLBackend | None = None
-
-        if not is_sqlalchemy_engine:
-            try:
-                import ibis.backends.sql as ibis_backends_sql
-            except ImportError:
-                ibis_backends_sql = None
-
-            if ibis_backends_sql is not None and isinstance(
-                data_source, ibis_backends_sql.SQLBackend
-            ):
-                ibis_backend = cast("SQLBackend", data_source)
-            else:
-                raise TypeError(
-                    f"add_tables() requires a sqlalchemy.Engine or ibis SQLBackend, "
-                    f"got {type(data_source).__name__}. "
-                    "Use add_table() for DataFrames and other source types."
-                )
-
-        if tables is None:
-            if is_sqlalchemy_engine:
+        if isinstance(data_source, sqlalchemy.Engine):
+            if tables is None:
                 tables = sqlalchemy.inspect(data_source).get_table_names()
-            else:
-                tables = cast("SQLBackend", ibis_backend).list_tables()
+
+            def normalized_builder(name: str) -> DataSource:
+                return normalize_data_source(data_source, name)
+        elif is_ibis_backend(data_source):
+            if tables is None:
+                tables = data_source.list_tables()
+
+            def normalized_builder(name: str) -> DataSource:
+                return normalize_data_source(data_source.table(name), name)
+        else:
+            raise TypeError(
+                f"add_tables() requires a sqlalchemy.Engine or ibis SQLBackend, "
+                f"got {type(data_source).__name__}. "
+                "Use add_table() for DataFrames and other source types."
+            )
 
         if not tables:
             raise ValueError("No tables found in database")
@@ -544,17 +537,7 @@ class QueryChatBase(Generic[IntoFrameT]):
             if table_name in self._data_sources and not replace:
                 raise ValueError(f"Table '{table_name}' already exists")
 
-        if is_sqlalchemy_engine:
-            normalized = {
-                name: normalize_data_source(data_source, name) for name in tables
-            }
-        else:
-            normalized = {
-                name: normalize_data_source(
-                    cast("SQLBackend", ibis_backend).table(name), name
-                )
-                for name in tables
-            }
+        normalized = {name: normalized_builder(name) for name in tables}
 
         staged: dict[str, DataSource] = {}
         for name, source in normalized.items():

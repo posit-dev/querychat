@@ -341,7 +341,7 @@ GREETING_BASE_TEXT <- paste(
 
 GREETING_EXPLORE_ADDENDUM <- paste(
   "Include at least one suggestion encouraging the user to explore what",
-  "data and questions are available — for example, asking which tables or",
+  "data and questions are available - for example, asking which tables or",
   "columns exist, or what kinds of analysis are possible."
 )
 
@@ -389,7 +389,7 @@ resolve_greeting_tables <- function(data_sources, greeting_tables) {
   if (is.character(greeting_tables)) {
     return(intersect(greeting_tables, all_names))
   }
-  # Auto (NULL): single table → include; multi-table → none
+  # Auto (NULL): single table -> include; multi-table -> none
   if (length(all_names) == 1L) all_names else character()
 }
 

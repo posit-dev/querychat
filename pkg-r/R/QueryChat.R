@@ -1027,6 +1027,71 @@ QueryChat <- R6::R6Class(
     },
 
     #' @description
+    #' Build a shareable URL that opens the app with the given cards pre-loaded.
+    #'
+    #' The cards list is encoded as a compact gzip+base64 query parameter.
+    #' When visited, `$server()` seeds the cards reactive from this parameter
+    #' before the first render — so the app opens with the shared insight cards
+    #' already visible, without requiring a bookmark.
+    #'
+    #' @param cards A list of card field-lists, or a JSON string that encodes
+    #'   such a list. Required; there is no default.
+    #' @param ... Must be empty.
+    #' @param id Optional module ID override. Defaults to `self$id`.
+    #'
+    #' @return A URL string (absolute when called from a session, relative
+    #'   otherwise).
+    cards_url = function(cards = NULL, ..., id = NULL) {
+      rlang::check_dots_empty()
+      if (is.null(cards)) {
+        cli::cli_abort(
+          "{.arg cards} is required: pass a list of cards or a JSON string."
+        )
+      }
+      if (is.character(cards) && length(cards) == 1) {
+        cards <- jsonlite::fromJSON(cards, simplifyVector = FALSE)
+      }
+      id <- id %||% self$id
+      # shiny::NS(id)("querychat_cards") == paste0(id, "-querychat_cards")
+      key <- paste0(id, "-querychat_cards")
+      payload <- cards_to_payload(cards)
+      encoded_key <- utils::URLencode(key, reserved = TRUE)
+      encoded_val <- utils::URLencode(payload, reserved = TRUE)
+      qs <- sprintf("?%s=%s", encoded_key, encoded_val)
+      session <- shiny::getDefaultReactiveDomain()
+      if (!is.null(session)) {
+        cd <- session$clientData
+        port <- cd$url_port
+        host <- if (nzchar(port %||% "")) {
+          paste0(cd$url_hostname, ":", port)
+        } else {
+          cd$url_hostname
+        }
+        paste0(cd$url_protocol, "//", host, cd$url_pathname, qs)
+      } else {
+        qs
+      }
+    },
+
+    #' @description
+    #' Update the browser URL to a shareable cards link.
+    #'
+    #' A thin wrapper around `$cards_url()` that calls
+    #' [shiny::updateQueryString()] with the resulting URL. Must be called
+    #' from within a Shiny server function.
+    #'
+    #' @param cards A list of card field-lists, or a JSON string. Required.
+    #' @param ... Passed to `$cards_url()`.
+    #' @param id Optional module ID override.
+    #'
+    #' @return Invisibly returns the URL string.
+    cards_set_url = function(cards = NULL, ..., id = NULL) {
+      url <- self$cards_url(cards, ..., id = id)
+      shiny::updateQueryString(url)
+      invisible(url)
+    },
+
+    #' @description
     #' Initialize the querychat server logic.
     #'
     #' This method must be called within a Shiny server function. It sets up the

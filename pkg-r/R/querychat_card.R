@@ -272,6 +272,36 @@ card_public <- function(card) {
   card[intersect(ordered, names(card))]
 }
 
+# Encode a list of cards to a URL-safe payload string.
+# Each card is passed through card_public(), serialized to JSON, compressed
+# with gzip, base64-encoded, then made URL-safe (RFC 4648 §5 alphabet).
+cards_to_payload <- function(cards) {
+  public_cards <- lapply(cards, card_public)
+  json <- jsonlite::toJSON(public_cards, auto_unbox = TRUE)
+  compressed <- memCompress(charToRaw(json), "gzip")
+  b64 <- jsonlite::base64_enc(compressed)
+  # base64_enc may insert newlines; strip all whitespace before conversion
+  b64 <- gsub("[[:space:]]", "", b64)
+  # Convert standard base64 to URL-safe base64: + -> -, / -> _, strip = padding
+  b64 <- gsub("+", "-", b64, fixed = TRUE)
+  b64 <- gsub("/", "_", b64, fixed = TRUE)
+  b64 <- gsub("=", "", b64, fixed = TRUE)
+  b64
+}
+
+# Decode a URL-safe payload string back to a list of card field-lists.
+# Structural decode only — does not run query validation.
+payload_to_cards <- function(payload) {
+  # Restore URL-safe base64 to standard base64 and re-add = padding
+  b64 <- gsub("-", "+", payload, fixed = TRUE)
+  b64 <- gsub("_", "/", b64, fixed = TRUE)
+  pad <- (4L - nchar(b64) %% 4L) %% 4L
+  b64 <- paste0(b64, strrep("=", pad))
+  raw_bytes <- jsonlite::base64_dec(b64)
+  json <- rawToChar(memDecompress(raw_bytes, "gzip"))
+  jsonlite::fromJSON(json, simplifyVector = FALSE)
+}
+
 card_icon <- function() {
   '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-grid-1x2-fill" viewBox="0 0 16 16"><path d="M0 1a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H1a1 1 0 0 1-1-1zm9 0a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1zm0 9a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-5a1 1 0 0 1-1-1z"/></svg>'
 }

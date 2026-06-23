@@ -409,3 +409,112 @@ describe("tool_card_impl() get action", {
     )
   })
 })
+
+describe("cards_to_payload() / payload_to_cards()", {
+  it("round-trips a value_box card with all optional fields", {
+    cards <- list(
+      list(
+        id = "ab12",
+        display = "value_box",
+        title = "Total Sales",
+        value = "SELECT '$1,234' AS val",
+        caption = "All time",
+        theme = "success",
+        icon = "currency-dollar"
+      )
+    )
+    payload <- cards_to_payload(cards)
+    expect_type(payload, "character")
+    expect_length(payload, 1)
+    # URL-safe: no +, /, or = characters
+    expect_false(grepl("[+/=]", payload))
+
+    result <- payload_to_cards(payload)
+    expect_length(result, 1)
+    card <- result[[1]]
+    expect_equal(card$id, "ab12")
+    expect_equal(card$display, "value_box")
+    expect_equal(card$title, "Total Sales")
+    expect_equal(card$value, "SELECT '$1,234' AS val")
+    expect_equal(card$caption, "All time")
+    expect_equal(card$theme, "success")
+    expect_equal(card$icon, "currency-dollar")
+  })
+
+  it("round-trips a table card without optional fields", {
+    cards <- list(
+      list(
+        id = "cc00",
+        display = "table",
+        title = "Top Products",
+        value = "SELECT * FROM test_table"
+      )
+    )
+    result <- payload_to_cards(cards_to_payload(cards))
+    expect_length(result, 1)
+    card <- result[[1]]
+    expect_equal(card$id, "cc00")
+    expect_equal(card$display, "table")
+    expect_equal(card$title, "Top Products")
+    expect_equal(card$value, "SELECT * FROM test_table")
+    expect_null(card$caption)
+    expect_null(card$theme)
+    expect_null(card$icon)
+  })
+
+  it("round-trips a markdown card", {
+    cards <- list(
+      list(
+        id = "dd01",
+        display = "markdown",
+        title = "Notes",
+        value = "**Key insight**: sales are up."
+      )
+    )
+    result <- payload_to_cards(cards_to_payload(cards))
+    card <- result[[1]]
+    expect_equal(card$display, "markdown")
+    expect_equal(card$value, "**Key insight**: sales are up.")
+  })
+
+  it("round-trips a mixed list of multiple cards", {
+    cards <- list(
+      list(
+        id = "aa01",
+        display = "value_box",
+        title = "Count",
+        value = "SELECT COUNT(*) FROM t",
+        caption = "Rows"
+      ),
+      list(
+        id = "bb02",
+        display = "table",
+        title = "Detail",
+        value = "SELECT * FROM t"
+      ),
+      list(
+        id = "cc03",
+        display = "markdown",
+        title = "Summary",
+        value = "All good."
+      )
+    )
+    result <- payload_to_cards(cards_to_payload(cards))
+    expect_length(result, 3)
+    expect_equal(result[[1]]$display, "value_box")
+    expect_equal(result[[1]]$caption, "Rows")
+    expect_equal(result[[2]]$display, "table")
+    expect_equal(result[[3]]$display, "markdown")
+  })
+
+  it("payload_to_cards() returns plain lists, not data.frames", {
+    cards <- list(
+      list(id = "e1", display = "table", title = "T", value = "SELECT 1"),
+      list(id = "e2", display = "markdown", title = "M", value = "Text")
+    )
+    result <- payload_to_cards(cards_to_payload(cards))
+    expect_true(is.list(result))
+    expect_true(is.list(result[[1]]))
+    expect_false(is.data.frame(result[[1]]))
+  })
+})

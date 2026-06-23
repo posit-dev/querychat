@@ -250,6 +250,54 @@ mod_server <- function(
       session = session
     )
 
+    # Seed cards from the `querychat_cards` query parameter if present.
+    # session$ns("querychat_cards") == paste0(module_id, "-querychat_cards"),
+    # which is the key written by $cards_url() / $cards_set_url().
+    url_cards_seeded <- FALSE
+    local({
+      qs <- shiny::parseQueryString(session$clientData$url_search)
+      key <- session$ns("querychat_cards")
+      raw <- qs[[key]]
+      if (!is.null(raw) && nzchar(raw)) {
+        decoded <- tryCatch(
+          payload_to_cards(raw),
+          error = function(e) {
+            cli::cli_warn(
+              c(
+                "Could not decode {.arg querychat_cards} URL parameter.",
+                "x" = conditionMessage(e)
+              )
+            )
+            NULL
+          }
+        )
+        if (!is.null(decoded)) {
+          validated <- vector("list", length(decoded))
+          n_valid <- 0L
+          for (i in seq_along(decoded)) {
+            tryCatch(
+              {
+                card <- validate_and_build_card(executor, decoded[[i]])
+                card$id <- new_card_id(manage_card)
+                n_valid <- n_valid + 1L
+                validated[[n_valid]] <- card
+              },
+              error = function(e) {
+                cli::cli_warn(
+                  "Skipping URL card {i}: {conditionMessage(e)}",
+                  .envir = parent.env(environment())
+                )
+              }
+            )
+          }
+          if (n_valid > 0L) {
+            cards(validated[seq_len(n_valid)])
+            url_cards_seeded <<- TRUE
+          }
+        }
+      }
+    })
+
     if (is.null(greeting)) {
       shiny::observeEvent(
         input$chat_greeting_requested,
@@ -444,7 +492,8 @@ mod_server <- function(
             viz_widgets <<- restored
           }
         }
-        if (bookmark_cards && !is.null(state$values[[key_cards]])) {
+        # URL param takes precedence: skip bookmark restore when URL seeded cards.
+        if (bookmark_cards && !is.null(state$values[[key_cards]]) && !isTRUE(url_cards_seeded)) {
           cards(restore_record_list(state$values[[key_cards]]))
         }
       })

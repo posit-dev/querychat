@@ -535,6 +535,15 @@ method.</p>
 <span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/QueryChat.html">QueryChat</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">orders</span>, <span class="st">"orders"</span><span class="op">)</span></span>
 <span><span class="va">qc</span><span class="op">$</span><span class="fu">add_table</span><span class="op">(</span><span class="va">customers</span>, <span class="st">"customers"</span><span class="op">)</span></span>
 <span><span class="va">qc</span><span class="op">$</span><span class="fu">add_table</span><span class="op">(</span><span class="va">products</span>, <span class="st">"products"</span><span class="op">)</span></span></code></pre></div>
+<p>If your data lives in a DBI connection, use
+<code>$add_tables()</code> to register all tables in a single call:</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dbi.r-dbi.org" class="external-link">DBI</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">con</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://dbi.r-dbi.org/reference/dbConnect.html" class="external-link">dbConnect</a></span><span class="op">(</span><span class="fu">RSQLite</span><span class="fu">::</span><span class="fu"><a href="https://rsqlite.r-dbi.org/reference/SQLite.html" class="external-link">SQLite</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"store.db"</span><span class="op">)</span></span>
+<span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/QueryChat.html">QueryChat</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">qc</span><span class="op">$</span><span class="fu">add_tables</span><span class="op">(</span><span class="va">con</span><span class="op">)</span>                            <span class="co"># all tables</span></span>
+<span><span class="va">qc</span><span class="op">$</span><span class="fu">add_tables</span><span class="op">(</span><span class="va">con</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"orders"</span>, <span class="st">"customers"</span><span class="op">)</span><span class="op">)</span>  <span class="co"># specific subset</span></span></code></pre></div>
 <p>The LLM can query any registered table and write joins across them.
 You can inspect which tables are registered with
 <code>qc$table_names()</code>.</p>
@@ -544,7 +553,7 @@ You can inspect which tables are registered with
 </h3>
 <p>When working with multiple tables, access filtered data and SQL for
 each table individually using <code>$table()</code>:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">server</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">input</span>, <span class="va">output</span>, <span class="va">session</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">qc_vals</span> <span class="op">&lt;-</span> <span class="va">qc</span><span class="op">$</span><span class="fu">server</span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
@@ -570,7 +579,7 @@ filters that specific table.</p>
 <p>Use <code>$current_table()</code> to find out which table the LLM
 most recently queried. This is useful for auto-switching a tabbed UI to
 the relevant table:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/pkg/shiny/man/observe.html" class="external-link">observe</a></span><span class="op">(</span><span class="op">{</span></span>
 <span>  <span class="va">tbl</span> <span class="op">&lt;-</span> <span class="va">qc_vals</span><span class="op">$</span><span class="fu">current_table</span><span class="op">(</span><span class="op">)</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/pkg/shiny/man/req.html" class="external-link">req</a></span><span class="op">(</span><span class="va">tbl</span><span class="op">)</span></span>
@@ -584,7 +593,7 @@ the relevant table:</p>
 recommended. It tells the LLM how tables relate to each other, which
 columns are keys, and what domain terms mean — all of which help it
 write accurate joins and queries.</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/QueryChat.html">QueryChat</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span></span>
 <span>  <span class="va">orders</span>, <span class="st">"orders"</span>,</span>
 <span>  data_dict <span class="op">=</span> <span class="st">"data-dict.yaml"</span></span>
@@ -600,7 +609,7 @@ the full data dictionary format.</p>
 separate <code>QueryChat</code> instances, each with its own chat
 interface:</p>
 <details><summary><code>app.R </code>
-</summary><div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+</summary><div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://shiny.posit.co/" class="external-link">shiny</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rstudio.github.io/bslib/" class="external-link">bslib</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://allisonhorst.github.io/palmerpenguins/" class="external-link">palmerpenguins</a></span><span class="op">)</span></span>

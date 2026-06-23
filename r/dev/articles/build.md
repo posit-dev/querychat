@@ -473,6 +473,19 @@ qc$add_table(customers, "customers")
 qc$add_table(products, "products")
 ```
 
+If your data lives in a DBI connection, use `$add_tables()` to register
+all tables in a single call:
+
+``` r
+
+library(DBI)
+
+con <- dbConnect(RSQLite::SQLite(), "store.db")
+qc <- QueryChat$new()
+qc$add_tables(con)                            # all tables
+qc$add_tables(con, c("orders", "customers"))  # specific subset
+```
+
 The LLM can query any registered table and write joins across them. You
 can inspect which tables are registered with `qc$table_names()`.
 

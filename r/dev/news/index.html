@@ -55,10 +55,14 @@
 <div class="section level3">
 <h3 id="new-features-development-version">New features<a class="anchor" aria-label="anchor" href="#new-features-development-version"></a></h3>
 <ul><li>
-<p><code>QueryChat$new()</code> now supports <strong>multiple related tables</strong>. Register additional tables with <code>$add_table()</code> and the LLM can reason across all of them — joins, cross-table filters, aggregations. Per-table reactive state (<code>$df()</code>, <code>$sql()</code>, <code>$title()</code>) is accessible via <code>qc_vals$table("name")</code> on the list returned by <code>$server()</code>. (<a href="https://github.com/posit-dev/querychat/issues/195" class="external-link">#195</a>)</p>
+<p><code>QueryChat$new()</code> now supports <strong>multiple related tables</strong>. Register additional tables with <code>$add_table()</code> and the LLM can reason across all of them — joins, cross-table filters, aggregations. Per-table reactive state (<code>$df()</code>, <code>$sql()</code>, <code>$title()</code>) is accessible via <code>qc_vals$table("name")</code> on the list returned by <code>$server()</code>. For DBI connections, <code>$add_tables()</code> registers all tables (or a named subset) in a single call. (<a href="https://github.com/posit-dev/querychat/issues/195" class="external-link">#195</a>)</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/QueryChat.html">QueryChat</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">orders_df</span>, <span class="st">"orders"</span><span class="op">)</span></span>
 <span><span class="va">qc</span><span class="op">$</span><span class="fu">add_table</span><span class="op">(</span><span class="va">customers_df</span>, <span class="st">"customers"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># Or, register all tables from a DBI connection at once:</span></span>
+<span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/QueryChat.html">QueryChat</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">qc</span><span class="op">$</span><span class="fu">add_tables</span><span class="op">(</span><span class="va">con</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">qc_vals</span> <span class="op">&lt;-</span> <span class="va">qc</span><span class="op">$</span><span class="fu">server</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="va">qc_vals</span><span class="op">$</span><span class="fu">table</span><span class="op">(</span><span class="st">"orders"</span><span class="op">)</span><span class="op">$</span><span class="fu">df</span><span class="op">(</span><span class="op">)</span></span>

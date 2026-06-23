@@ -8,13 +8,19 @@
   additional tables with `$add_table()` and the LLM can reason across
   all of them — joins, cross-table filters, aggregations. Per-table
   reactive state (`$df()`, `$sql()`, `$title()`) is accessible via
-  `qc_vals$table("name")` on the list returned by `$server()`.
+  `qc_vals$table("name")` on the list returned by `$server()`. For DBI
+  connections, `$add_tables()` registers all tables (or a named subset)
+  in a single call.
   ([\#195](https://github.com/posit-dev/querychat/issues/195))
 
   ``` r
 
   qc <- QueryChat$new(orders_df, "orders")
   qc$add_table(customers_df, "customers")
+
+  # Or, register all tables from a DBI connection at once:
+  qc <- QueryChat$new()
+  qc$add_tables(con)
 
   qc_vals <- qc$server()
   qc_vals$table("orders")$df()

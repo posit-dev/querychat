@@ -98,6 +98,8 @@ qc <- QueryChat$new(con, "mtcars")
   \describe{
     \item{\code{greeting}}{The greeting message displayed to users.}
 
+    \item{\code{greeting_tables}}{Controls which tables' schema to include in greeting.}
+
     \item{\code{id}}{ID for the QueryChat instance.}
 
     \item{\code{id_override}}{Whether the ID was explicitly set by the user.}
@@ -148,6 +150,7 @@ qc <- QueryChat$new(con, "mtcars")
   ...,
   id = NULL,
   greeting = NULL,
+  greeting_tables = NULL,
   client = NULL,
   tools = c("filter", "query"),
   data_description = NULL,
@@ -180,6 +183,7 @@ character string (in Markdown format) or a file path. If not provided,
 a greeting will be generated at the start of each conversation using
 the LLM, which adds latency and cost. Use \verb{$generate_greeting()} to
 create a greeting to save and reuse.}
+      \item{\code{greeting_tables}}{Controls which tables' schema to include in greeting.}
       \item{\code{client}}{Optional chat client. Can be:
 \itemize{
 \item An \link[ellmer:Chat]{ellmer::Chat} object

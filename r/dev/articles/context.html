@@ -91,122 +91,221 @@
 
     
     
-<p>querychat automatically gathers information about your table to help
-the LLM write accurate SQL queries. This includes column names and
-types, numerical ranges, and categorical value examples. (All of this
-information is provided to the LLM as part of the <strong>system
-prompt</strong> – a string of text containing instructions and context
-for the LLM to consider when responding to user queries.)</p>
+<p>querychat automatically gathers schema information about your tables
+— column names, types, numerical ranges, and categorical values — and
+makes it available to the LLM on demand via the
+<code>querychat_get_schema</code> <a href="tools.html#schema-retrieval">tool</a>. The LLM calls this tool
+before writing SQL to understand the structure of the tables it’s
+querying.</p>
 <p>Importantly, we are <strong>not</strong> sending your raw data to the
 LLM and asking it to do complicated math. The LLM only needs to
 understand the structure and schema of your data in order to write SQL
 queries.</p>
-<p>You can get even better results by customizing the system prompt in
-three ways:</p>
+<p>You can get even better results by providing additional context:</p>
 <ol style="list-style-type: decimal">
-<li>Add a <a href="#data-description">data description</a> to provide
-more context about what the data represents</li>
+<li>Add a <a href="#data-dictionary">data dictionary</a> to describe
+tables, columns, relationships, and domain terminology
+(recommended)</li>
+<li>Add a <a href="#data-description">data description</a> for a simpler
+alternative when working with a single, straightforward table</li>
 <li>Add <a href="#extra-instructions">custom instructions</a> to guide
 the LLM’s behavior</li>
 <li>Use a fully <a href="#custom-template">custom prompt template</a> if
-you want complete control (useful if you want to be certain the model
-cannot see any literal values from your data)</li>
+you want complete control</li>
 </ol>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://posit-dev.github.io/querychat/r/">querychat</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://allisonhorst.github.io/palmerpenguins/" class="external-link">palmerpenguins</a></span><span class="op">)</span></span></code></pre></div>
 <div class="section level2">
-<h2 id="default-prompt">Default prompt<a class="anchor" aria-label="anchor" href="#default-prompt"></a>
+<h2 id="data-dictionary">Data dictionary<a class="anchor" aria-label="anchor" href="#data-dictionary"></a>
 </h2>
-<p>For full visibility into the system prompt that querychat generates
-for the LLM, you can inspect the <code>system_prompt</code> field. This
-is useful for debugging and understanding exactly what context the LLM
-is using:</p>
+<p>A <strong>data dictionary</strong> is a YAML file that describes your
+tables, columns, relationships, and domain-specific terminology. It’s
+the recommended way to provide context, especially when working with <a href="build.html#multiple-tables">multiple tables</a> or when your data
+has domain-specific meaning that isn’t obvious from column names
+alone.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/querychat-convenience.html">querychat</a></span><span class="op">(</span><span class="va">penguins</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="va">qc</span><span class="op">$</span><span class="va">system_prompt</span><span class="op">)</span></span></code></pre></div>
-<p>By default, the system prompt contains the following components:</p>
-<ol style="list-style-type: decimal">
-<li>The basic set of behaviors and guidelines the LLM must follow in
-order for querychat to work properly, including how to use <a href="tools.html">tools</a> to execute queries and update the app.</li>
-<li>The SQL schema of the data frame you provided. This includes:
+<code class="sourceCode R"><span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/QueryChat.html">QueryChat</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span></span>
+<span>  <span class="va">orders</span>, <span class="st">"orders"</span>,</span>
+<span>  data_dict <span class="op">=</span> <span class="st">"data-dict.yaml"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">qc</span><span class="op">$</span><span class="fu">add_table</span><span class="op">(</span><span class="va">customers</span>, <span class="st">"customers"</span><span class="op">)</span></span></code></pre></div>
+<div class="section level3">
+<h3 id="format">Format<a class="anchor" aria-label="anchor" href="#format"></a>
+</h3>
+<p>A data dictionary has three top-level sections: <code>tables</code>,
+<code>relationships</code>, and <code>glossary</code>.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="co"># data-dict.yaml</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="fu">version</span><span class="kw">:</span><span class="at"> </span><span class="st">"0.2.0"</span></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="fu">tables</span><span class="kw">:</span></span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a><span class="at">  </span><span class="fu">orders</span><span class="kw">:</span></span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a><span class="at">    </span><span class="fu">description</span><span class="kw">:</span><span class="at"> One row per customer order.</span></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a><span class="at">    </span><span class="fu">columns</span><span class="kw">:</span></span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> order_id</span></span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a><span class="at">        </span><span class="fu">type</span><span class="kw">:</span><span class="at"> number(id)</span></span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="at">        </span><span class="fu">constraints</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="at">primary_key</span><span class="kw">]</span></span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a><span class="at">        </span><span class="fu">description</span><span class="kw">:</span><span class="at"> Unique order identifier.</span></span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> customer_id</span></span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a><span class="at">        </span><span class="fu">type</span><span class="kw">:</span><span class="at"> number(id)</span></span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a><span class="at">        </span><span class="fu">constraints</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="at">foreign_key</span><span class="kw">]</span></span>
+<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a><span class="at">        </span><span class="fu">description</span><span class="kw">:</span><span class="at"> References customers.id.</span></span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> total</span></span>
+<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a><span class="at">        </span><span class="fu">type</span><span class="kw">:</span><span class="at"> number(quantity)</span></span>
+<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a><span class="at">        </span><span class="fu">description</span><span class="kw">:</span><span class="at"> Order total in USD.</span></span>
+<span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> status</span></span>
+<span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a><span class="at">        </span><span class="fu">type</span><span class="kw">:</span><span class="at"> enum</span></span>
+<span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a><span class="at">        </span><span class="fu">values</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="at">pending</span><span class="kw">,</span><span class="at"> shipped</span><span class="kw">,</span><span class="at"> delivered</span><span class="kw">,</span><span class="at"> cancelled</span><span class="kw">]</span></span>
+<span id="cb3-22"><a href="#cb3-22" tabindex="-1"></a><span class="at">        </span><span class="fu">description</span><span class="kw">:</span><span class="at"> Current order status.</span></span>
+<span id="cb3-23"><a href="#cb3-23" tabindex="-1"></a></span>
+<span id="cb3-24"><a href="#cb3-24" tabindex="-1"></a><span class="at">  </span><span class="fu">customers</span><span class="kw">:</span></span>
+<span id="cb3-25"><a href="#cb3-25" tabindex="-1"></a><span class="at">    </span><span class="fu">description</span><span class="kw">:</span><span class="at"> One row per customer.</span></span>
+<span id="cb3-26"><a href="#cb3-26" tabindex="-1"></a><span class="at">    </span><span class="fu">columns</span><span class="kw">:</span></span>
+<span id="cb3-27"><a href="#cb3-27" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> id</span></span>
+<span id="cb3-28"><a href="#cb3-28" tabindex="-1"></a><span class="at">        </span><span class="fu">type</span><span class="kw">:</span><span class="at"> number(id)</span></span>
+<span id="cb3-29"><a href="#cb3-29" tabindex="-1"></a><span class="at">        </span><span class="fu">constraints</span><span class="kw">:</span><span class="at"> </span><span class="kw">[</span><span class="at">primary_key</span><span class="kw">]</span></span>
+<span id="cb3-30"><a href="#cb3-30" tabindex="-1"></a><span class="at">        </span><span class="fu">description</span><span class="kw">:</span><span class="at"> Unique customer identifier.</span></span>
+<span id="cb3-31"><a href="#cb3-31" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> name</span></span>
+<span id="cb3-32"><a href="#cb3-32" tabindex="-1"></a><span class="at">        </span><span class="fu">type</span><span class="kw">:</span><span class="at"> string</span></span>
+<span id="cb3-33"><a href="#cb3-33" tabindex="-1"></a><span class="at">        </span><span class="fu">description</span><span class="kw">:</span><span class="at"> Full name.</span></span>
+<span id="cb3-34"><a href="#cb3-34" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="fu">name</span><span class="kw">:</span><span class="at"> region</span></span>
+<span id="cb3-35"><a href="#cb3-35" tabindex="-1"></a><span class="at">        </span><span class="fu">type</span><span class="kw">:</span><span class="at"> string</span></span>
+<span id="cb3-36"><a href="#cb3-36" tabindex="-1"></a><span class="at">        </span><span class="fu">description</span><span class="kw">:</span><span class="at"> Geographic sales region.</span></span>
+<span id="cb3-37"><a href="#cb3-37" tabindex="-1"></a></span>
+<span id="cb3-38"><a href="#cb3-38" tabindex="-1"></a><span class="fu">relationships</span><span class="kw">:</span></span>
+<span id="cb3-39"><a href="#cb3-39" tabindex="-1"></a><span class="at">  </span><span class="kw">-</span><span class="at"> </span><span class="fu">description</span><span class="kw">:</span><span class="at"> Each order belongs to one customer.</span></span>
+<span id="cb3-40"><a href="#cb3-40" tabindex="-1"></a><span class="at">    </span><span class="fu">cardinality</span><span class="kw">:</span><span class="at"> many-to-one</span></span>
+<span id="cb3-41"><a href="#cb3-41" tabindex="-1"></a><span class="at">    </span><span class="fu">join</span><span class="kw">:</span><span class="at"> orders.customer_id = customers.id</span></span>
+<span id="cb3-42"><a href="#cb3-42" tabindex="-1"></a></span>
+<span id="cb3-43"><a href="#cb3-43" tabindex="-1"></a><span class="fu">glossary</span><span class="kw">:</span></span>
+<span id="cb3-44"><a href="#cb3-44" tabindex="-1"></a><span class="at">  </span><span class="fu">AOV</span><span class="kw">:</span><span class="at"> Average order value — total revenue divided by number of orders.</span></span>
+<span id="cb3-45"><a href="#cb3-45" tabindex="-1"></a><span class="at">  </span><span class="fu">churn</span><span class="kw">:</span><span class="at"> A customer who has not placed an order in the last 90 days.</span></span></code></pre></div>
+<div class="section level4">
+<h4 id="tables">Tables<a class="anchor" aria-label="anchor" href="#tables"></a>
+</h4>
+<p>Each entry under <code>tables</code> describes one table. The key
+must match the table name you pass to <code>QueryChat$new()</code> or
+<code>$add_table()</code>.</p>
 <ul>
-<li>Column names</li>
-<li>Data types (integer, real, boolean, date/datetime, text)</li>
-<li>For text columns with less than 10 unique values, we assume they are
-categorical variables and include the list of values</li>
-<li>For integer and real columns, we include the range</li>
+<li>
+<strong><code>description</code></strong>: What this table
+represents (one sentence is usually enough).</li>
+<li>
+<strong><code>columns</code></strong>: A list of column annotations.
+Each column can have:
+<ul>
+<li>
+<code>name</code>: Column name (must match the actual column)</li>
+<li>
+<code>type</code>: Semantic type hint — <code>string</code>,
+<code>number</code>, <code>number(id)</code>,
+<code>number(quantity)</code>, <code>date</code>, <code>enum</code>
+</li>
+<li>
+<code>constraints</code>: Optional list — <code>primary_key</code>,
+<code>foreign_key</code>
+</li>
+<li>
+<code>description</code>: What this column means in plain
+English</li>
+<li>
+<code>values</code>: For <code>enum</code> columns, the list of
+possible values</li>
 </ul>
 </li>
-<li>A <a href="#data-description">data description</a> (if provided via
-<code>data_description</code>)</li>
+</ul>
+<p>Columns listed in the data dictionary are excluded from the
+auto-generated schema (since your description supersedes the
+auto-detected metadata). Columns not listed are still auto-detected as
+usual.</p>
+</div>
+<div class="section level4">
+<h4 id="relationships">Relationships<a class="anchor" aria-label="anchor" href="#relationships"></a>
+</h4>
+<p>The <code>relationships</code> section tells the LLM how to join
+tables. Each entry has:</p>
+<ul>
 <li>
-<a href="#additional-instructions">Additional instructions</a> you
-want to use to guide querychat’s behavior (if provided via
-<code>extra_instructions</code>).</li>
-</ol>
+<code>description</code>: A plain-English description of the
+relationship</li>
+<li>
+<code>cardinality</code>: <code>one-to-one</code>,
+<code>one-to-many</code>, or <code>many-to-one</code>
+</li>
+<li>
+<code>join</code>: The join condition (e.g.,
+<code>orders.customer_id = customers.id</code>)</li>
+</ul>
+</div>
+<div class="section level4">
+<h4 id="glossary">Glossary<a class="anchor" aria-label="anchor" href="#glossary"></a>
+</h4>
+<p>The <code>glossary</code> section defines domain-specific terms that
+users might use in their questions. This helps the LLM translate
+business language into correct SQL.</p>
+</div>
+</div>
 </div>
 <div class="section level2">
 <h2 id="data-description">Data description<a class="anchor" aria-label="anchor" href="#data-description"></a>
 </h2>
-<p>If your column names are descriptive, querychat may already work well
-without additional context. However, if your columns are named
-<code>x</code>, <code>V1</code>, <code>value</code>, etc., you should
-provide a data description. Use the <code>data_description</code>
-parameter for this:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/querychat-convenience.html">querychat</a></span><span class="op">(</span></span>
+<p>For simple single-table use cases where a full data dictionary would
+be overkill, you can provide a <strong>data description</strong> — a
+free-form markdown file or string that describes what the data
+represents. Use the <code>data_description</code> parameter:</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/QueryChat.html">QueryChat</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span></span>
 <span>  <span class="va">penguins</span>,</span>
 <span>  data_description <span class="op">=</span> <span class="st">"data_description.md"</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="va">qc</span><span class="op">$</span><span class="va">system_prompt</span><span class="op">)</span></span></code></pre></div>
-<p>querychat doesn’t need this information in any particular format –
-just provide what a human would find helpful:</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode markdown"><code class="sourceCode markdown"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="co">&lt;!-- data_description.md --&gt;</span></span>
-<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a></span>
-<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>This dataset contains information about Palmer Archipelago penguins,</span>
-<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>collected for studying penguin populations.</span>
-<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a></span>
-<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a><span class="ss">- </span>species: Penguin species (Adelie, Chinstrap, Gentoo)</span>
-<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="ss">- </span>island: Island where observed (Torgersen, Biscoe, Dream)</span>
-<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a><span class="ss">- </span>bill_length_mm: Bill length in millimeters</span>
-<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="ss">- </span>bill_depth_mm: Bill depth in millimeters</span>
-<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a><span class="ss">- </span>flipper_length_mm: Flipper length in millimeters</span>
-<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a><span class="ss">- </span>body_mass_g: Body mass in grams</span>
-<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a><span class="ss">- </span>sex: Penguin sex (male, female)</span>
-<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a><span class="ss">- </span>year: Year of observation</span></code></pre></div>
+<span><span class="op">)</span></span></code></pre></div>
+<p>querychat doesn’t need this in any particular format — just provide
+what a human would find helpful:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode markdown"><code class="sourceCode markdown"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="co">&lt;!-- data_description.md --&gt;</span></span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>This dataset contains information about Palmer Archipelago penguins.</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a><span class="ss">- </span>species: Penguin species (Adelie, Chinstrap, Gentoo)</span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a><span class="ss">- </span>island: Island where observed (Torgersen, Biscoe, Dream)</span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a><span class="ss">- </span>bill_length_mm: Bill length in millimeters</span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a><span class="ss">- </span>body_mass_g: Body mass in grams</span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="extra-instructions">Additional instructions<a class="anchor" aria-label="anchor" href="#extra-instructions"></a>
 </h2>
 <p>You can add custom instructions to guide the LLM’s behavior using the
 <code>extra_instructions</code> parameter:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/querychat-convenience.html">querychat</a></span><span class="op">(</span></span>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/QueryChat.html">QueryChat</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span></span>
 <span>  <span class="va">penguins</span>,</span>
 <span>  extra_instructions <span class="op">=</span> <span class="st">"instructions.md"</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="va">qc</span><span class="op">$</span><span class="va">system_prompt</span><span class="op">)</span></span></code></pre></div>
+<span><span class="op">)</span></span></code></pre></div>
 <p>Or as a string:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">instructions</span> <span class="op">&lt;-</span> <span class="st">"</span></span>
 <span><span class="st">- Use British spelling conventions</span></span>
-<span><span class="st">- Stay on topic and only discuss the data dashboard</span></span>
+<span><span class="st">- Stay on topic and only discuss the data</span></span>
 <span><span class="st">- Refuse to answer unrelated questions</span></span>
 <span><span class="st">"</span></span>
 <span></span>
-<span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/querychat-convenience.html">querychat</a></span><span class="op">(</span></span>
+<span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/QueryChat.html">QueryChat</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span></span>
 <span>  <span class="va">penguins</span>,</span>
 <span>  extra_instructions <span class="op">=</span> <span class="va">instructions</span></span>
-<span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="va">qc</span><span class="op">$</span><span class="va">system_prompt</span><span class="op">)</span></span></code></pre></div>
+<span><span class="op">)</span></span></code></pre></div>
 <div class="alert alert-warning">
 <p>LLMs may not always follow your instructions perfectly. Test
 extensively when changing instructions or models.</p>
 </div>
+</div>
+<div class="section level2">
+<h2 id="default-prompt">Default prompt<a class="anchor" aria-label="anchor" href="#default-prompt"></a>
+</h2>
+<p>For full visibility into the system prompt that querychat generates
+for the LLM, you can inspect the <code>system_prompt</code> field. This
+is useful for debugging and understanding exactly what context the LLM
+is working with:</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/QueryChat.html">QueryChat</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">penguins</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="va">qc</span><span class="op">$</span><span class="va">system_prompt</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="custom-template">Custom template<a class="anchor" aria-label="anchor" href="#custom-template"></a>

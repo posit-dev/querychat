@@ -28,6 +28,8 @@ or [`dplyr::sql()`](https://dplyr.tidyverse.org/reference/sql.html).
 
 - [`TblSqlSource$get_schema()`](#method-TblSqlSource-get_schema)
 
+- [`TblSqlSource$get_schema_result()`](#method-TblSqlSource-get_schema_result)
+
 - [`TblSqlSource$execute_query()`](#method-TblSqlSource-execute_query)
 
 - [`TblSqlSource$test_query()`](#method-TblSqlSource-test_query)
@@ -95,7 +97,7 @@ Get schema information about the table
 
 #### Usage
 
-    TblSqlSource$get_schema(categorical_threshold = 20)
+    TblSqlSource$get_schema(categorical_threshold = 20, table_spec = NULL)
 
 #### Arguments
 
@@ -107,6 +109,14 @@ Get schema information about the table
 #### Returns
 
 A string containing schema information formatted for LLM prompts
+
+------------------------------------------------------------------------
+
+### `TblSqlSource$get_schema_result()`
+
+#### Usage
+
+    TblSqlSource$get_schema_result(categorical_threshold = 20, table_spec = NULL)
 
 ------------------------------------------------------------------------
 
@@ -257,9 +267,9 @@ dplyr::count(result, cyl, gear)
 #>   <dbl> <dbl> <dbl>
 #> 1     6     3     2
 #> 2     6     5     1
-#> 3     6     4     4
-#> 4     8     3    12
-#> 5     8     5     2
+#> 3     8     5     2
+#> 4     6     4     4
+#> 5     8     3    12
 
 # Or collect the entire data frame into local memory
 dplyr::collect(result)

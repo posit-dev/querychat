@@ -64,6 +64,7 @@ Inherited methods
 - [`DBISource$get_data()`](https://posit-dev.github.io/querychat/dev/reference/DBISource.html#method-get_data)
 - [`DBISource$get_db_type()`](https://posit-dev.github.io/querychat/dev/reference/DBISource.html#method-get_db_type)
 - [`DBISource$get_schema()`](https://posit-dev.github.io/querychat/dev/reference/DBISource.html#method-get_schema)
+- [`DBISource$get_schema_result()`](https://posit-dev.github.io/querychat/dev/reference/DBISource.html#method-get_schema_result)
 - [`DBISource$get_semantic_views_description()`](https://posit-dev.github.io/querychat/dev/reference/DBISource.html#method-get_semantic_views_description)
 - [`DBISource$test_query()`](https://posit-dev.github.io/querychat/dev/reference/DBISource.html#method-test_query)
 
@@ -170,6 +171,6 @@ if (rlang::is_installed(c("pins", "duckdb"))) {
 
   ps$cleanup()
 }
-#> Creating new version '20260622T150102Z-c0340'
+#> Creating new version '20260623T141200Z-c0340'
 #> Writing to pin 'mtcars'
 ```

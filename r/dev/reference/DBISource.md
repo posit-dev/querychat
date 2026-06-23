@@ -19,6 +19,8 @@ SQL query execution against a single table in the database.
 
 - [`DBISource$get_schema()`](#method-DBISource-get_schema)
 
+- [`DBISource$get_schema_result()`](#method-DBISource-get_schema_result)
+
 - [`DBISource$get_semantic_views_description()`](#method-DBISource-get_semantic_views_description)
 
 - [`DBISource$execute_query()`](#method-DBISource-execute_query)
@@ -83,7 +85,7 @@ Get schema information for the database table
 
 #### Usage
 
-    DBISource$get_schema(categorical_threshold = 20)
+    DBISource$get_schema(categorical_threshold = 20, table_spec = NULL)
 
 #### Arguments
 
@@ -95,6 +97,14 @@ Get schema information for the database table
 #### Returns
 
 A string describing the schema
+
+------------------------------------------------------------------------
+
+### `DBISource$get_schema_result()`
+
+#### Usage
+
+    DBISource$get_schema_result(categorical_threshold = 20, table_spec = NULL)
 
 ------------------------------------------------------------------------
 

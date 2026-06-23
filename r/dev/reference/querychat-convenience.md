@@ -20,6 +20,7 @@ querychat(
   categorical_threshold = 20,
   extra_instructions = NULL,
   prompt_template = NULL,
+  data_dict = NULL,
   cleanup = NA
 )
 
@@ -35,6 +36,7 @@ querychat_app(
   categorical_threshold = 20,
   extra_instructions = NULL,
   prompt_template = NULL,
+  data_dict = NULL,
   cleanup = NA,
   bookmark_store = "url"
 )
@@ -48,11 +50,7 @@ querychat_app(
 
 - table_name:
 
-  A string specifying the table name to use in SQL queries. If
-  `data_source` is a data.frame, this is the name to refer to it by in
-  queries (typically the variable name). If not provided, will be
-  inferred from the variable name for data.frame inputs. For database
-  connections, this parameter is required.
+  A string specifying the table name to use in SQL queries.
 
 - ...:
 
@@ -60,48 +58,23 @@ querychat_app(
 
 - id:
 
-  Optional module ID for the QueryChat instance. If not provided, will
-  be auto-generated from `table_name`. The ID is used to namespace the
-  Shiny module.
+  Optional module ID for the QueryChat instance.
 
 - greeting:
 
-  Optional initial message to display to users. Can be a character
-  string (in Markdown format) or a file path. If not provided, a
-  greeting will be generated at the start of each conversation using the
-  LLM, which adds latency and cost. Use `$generate_greeting()` to create
-  a greeting to save and reuse.
+  Optional initial message to display to users.
 
 - client:
 
-  Optional chat client. Can be:
-
-  - An [ellmer::Chat](https://ellmer.tidyverse.org/reference/Chat.html)
-    object
-
-  - A string to pass to
-    [`ellmer::chat()`](https://ellmer.tidyverse.org/reference/chat-any.html)
-    (e.g., `"openai/gpt-4o"`)
-
-  - `NULL` (default): Uses the `querychat.client` option, the
-    `QUERYCHAT_CLIENT` environment variable, or defaults to
-    [`ellmer::chat_openai()`](https://ellmer.tidyverse.org/reference/chat_openai.html)
+  Optional chat client.
 
 - tools:
 
-  Which querychat tools to include in the chat client, by default.
-  `"filter"` includes the tools for filtering and resetting the
-  dashboard and `"query"` includes the tool for executing SQL queries.
-  Use `tools = "filter"` when you only want the dashboard filtering
-  tools, or when you want to disable the querying tool entirely to
-  prevent the LLM from seeing any of the data in your dataset. The
-  legacy name `"update"` is still accepted as an alias for `"filter"`.
+  Which querychat tools to include in the chat client.
 
 - data_description:
 
-  Optional description of the data in plain text or Markdown. Can be a
-  string or a file path. This provides context to the LLM about what the
-  data represents.
+  Optional description of the data.
 
 - categorical_threshold:
 
@@ -110,31 +83,24 @@ querychat_app(
 
 - extra_instructions:
 
-  Optional additional instructions for the chat model in plain text or
-  Markdown. Can be a string or a file path.
+  Optional additional instructions for the chat model.
 
 - prompt_template:
 
-  Optional path to or string of a custom prompt template file. If not
-  provided, the default querychat template will be used. See the package
-  prompts directory for the default template format.
+  Optional path to or string of a custom prompt template.
+
+- data_dict:
+
+  Optional data dictionary. A path to a YAML file or a list of paths.
 
 - cleanup:
 
   Whether or not to automatically run `$cleanup()` when the Shiny
-  session/app stops. By default, cleanup only occurs if `QueryChat` is
-  created within a Shiny app. Set to `TRUE` to always clean up, or
-  `FALSE` to never clean up automatically.
-
-  In `querychat_app()`, in-memory databases created for data frames are
-  always cleaned up.
+  session/app stops.
 
 - bookmark_store:
 
-  The bookmarking storage method. Passed to
-  [`shiny::enableBookmarking()`](https://rdrr.io/pkg/shiny/man/enableBookmarking.html).
-  If `"url"` or `"server"`, the chat state (including current query)
-  will be bookmarked. Default is `"url"`.
+  The bookmarking storage method. Default is `"url"`.
 
 ## Value
 
@@ -150,23 +116,5 @@ Invisibly returns the chat object after the app stops.
 if (FALSE) { # rlang::is_interactive() && rlang::is_installed("RSQLite")
 # Quick start - chat with mtcars dataset in one line
 querychat_app(mtcars)
-
-# Add options
-querychat_app(
-  mtcars,
-  greeting = "Welcome to the mtcars explorer!",
-  client = "openai/gpt-4o"
-)
-
-# Chat with a database table (table_name required)
-con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
-DBI::dbWriteTable(con, "mtcars", mtcars)
-querychat_app(con, "mtcars")
-
-# Create QueryChat class object
-qc <- querychat(mtcars, greeting = "Welcome to the mtcars explorer!")
-
-# Run the app later
-qc$app()
 }
 ```

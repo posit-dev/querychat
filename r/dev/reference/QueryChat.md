@@ -16,7 +16,7 @@ connection) as input and provides methods to:
   (via `$server()`)
 
 - Access reactive data, SQL queries, and titles through the returned
-  server values
+  server values (use `qc_vals$table("name")` for multi-table access)
 
 ## Usage in Shiny Apps
 
@@ -54,6 +54,10 @@ connection) as input and provides methods to:
 
   ID for the QueryChat instance.
 
+- `id_override`:
+
+  Whether the ID was explicitly set by the user.
+
 - `tools`:
 
   The allowed tools for the chat client.
@@ -66,14 +70,21 @@ connection) as input and provides methods to:
 
 - `data_source`:
 
-  Get or set the current data source. When setting, the value is
-  normalized and the system prompt is rebuilt.
+  Removed. Use `$add_table()` and `$remove_table()` to manage tables.
 
 ## Methods
 
 ### Public methods
 
 - [`QueryChat$new()`](#method-QueryChat-initialize)
+
+- [`QueryChat$add_table()`](#method-QueryChat-add_table)
+
+- [`QueryChat$add_tables()`](#method-QueryChat-add_tables)
+
+- [`QueryChat$remove_table()`](#method-QueryChat-remove_table)
+
+- [`QueryChat$table_names()`](#method-QueryChat-table_names)
 
 - [`QueryChat$client()`](#method-QueryChat-client)
 
@@ -115,6 +126,7 @@ Create a new QueryChat object.
       categorical_threshold = 20,
       extra_instructions = NULL,
       prompt_template = NULL,
+      data_dict = NULL,
       cleanup = NA
     )
 
@@ -124,8 +136,8 @@ Create a new QueryChat object.
 
   Either a data.frame, a database connection (e.g., DBI connection), or
   `NULL` to defer setting the data source until later. When `NULL`, the
-  data source must be set via the `$data_source` property or passed to
-  `$server()` before calling methods that require data access.
+  data source must be added via `$add_table()` or passed to `$server()`
+  before calling methods that require data access.
 
 - `table_name`:
 
@@ -200,6 +212,13 @@ Create a new QueryChat object.
   provided, the default querychat template will be used. See the package
   prompts directory for the default template format.
 
+- `data_dict`:
+
+  Optional data dictionary. A path to a YAML file, or a list of YAML
+  file paths. See
+  [`read_data_dict()`](https://posit-dev.github.io/querychat/dev/reference/read_data_dict.md)
+  for the expected format.
+
 - `cleanup`:
 
   Whether or not to automatically run `$cleanup()` when the Shiny
@@ -213,6 +232,100 @@ A new `QueryChat` object.
 
 ------------------------------------------------------------------------
 
+### `QueryChat$add_table()`
+
+Add a table to this QueryChat instance.
+
+#### Usage
+
+    QueryChat$add_table(data_source, table_name, replace = FALSE)
+
+#### Arguments
+
+- `data_source`:
+
+  A data frame, database connection, or DataSource object.
+
+- `table_name`:
+
+  The SQL table name for this data source.
+
+- `replace`:
+
+  Whether to replace an existing table with this name. Default is
+  `FALSE`.
+
+#### Returns
+
+Invisibly returns `self` for chaining.
+
+------------------------------------------------------------------------
+
+### `QueryChat$add_tables()`
+
+Add multiple tables from a DBI connection in a single call.
+
+Unlike calling `$add_table()` repeatedly, this method builds the system
+prompt exactly once after all tables have been staged, avoiding N-1
+spurious intermediate rebuilds.
+
+#### Usage
+
+    QueryChat$add_tables(conn, tables = NULL, replace = FALSE)
+
+#### Arguments
+
+- `conn`:
+
+  A DBI connection. Only DBI connections are supported; pass individual
+  data frames or other sources via `$add_table()`.
+
+- `tables`:
+
+  Table names to register. When `NULL`, all tables returned by
+  `DBI::dbListTables(conn)` are used.
+
+- `replace`:
+
+  Whether to replace existing tables with the same name. Default is
+  `FALSE`.
+
+#### Returns
+
+Invisibly returns `self` for chaining.
+
+------------------------------------------------------------------------
+
+### `QueryChat$remove_table()`
+
+Remove a table from this QueryChat instance.
+
+#### Usage
+
+    QueryChat$remove_table(table_name)
+
+#### Arguments
+
+- `table_name`:
+
+  The name of the table to remove.
+
+#### Returns
+
+Invisibly returns `self` for chaining.
+
+------------------------------------------------------------------------
+
+### `QueryChat$table_names()`
+
+Return the names of all registered tables.
+
+#### Usage
+
+    QueryChat$table_names()
+
+------------------------------------------------------------------------
+
 ### `QueryChat$client()`
 
 Create a chat client, complete with registered tools, for the current
@@ -222,9 +335,9 @@ data source.
 
     QueryChat$client(
       tools = NA,
-      update_dashboard = function(query, title) {
+      update_dashboard = function(query, title, table) {
      },
-      reset_dashboard = function() {
+      reset_dashboard = function(table) {
      },
       visualize = function(data) {
      },
@@ -243,12 +356,13 @@ data source.
 
 - `update_dashboard`:
 
-  Optional function to call with the `query` and `title` generated by
-  the LLM for the `update_dashboard` tool.
+  Optional function to call with the `query`, `title`, and `table`
+  generated by the LLM for the `update_dashboard` tool.
 
 - `reset_dashboard`:
 
   Optional function to call when the `reset_dashboard` tool is called.
+  Takes a `table` argument.
 
 - `visualize`:
 
@@ -295,16 +409,6 @@ Launch a console-based chat interface with the data source.
 
 Create and run a Shiny gadget for chatting with data
 
-Runs a Shiny gadget (designed for interactive use) that provides a
-complete interface for chatting with your data using natural language.
-If you're looking to deploy this app or run it through some other means,
-see `$app_obj()`.
-
-    library(querychat)
-
-    qc <- QueryChat$new(mtcars)
-    qc$app()
-
 #### Usage
 
     QueryChat$app(..., bookmark_store = "url")
@@ -324,37 +428,13 @@ see `$app_obj()`.
 
 #### Returns
 
-Invisibly returns a list of session-specific values:
-
-- `df`: The final filtered data frame
-
-- `sql`: The final SQL query string
-
-- `title`: The final title
-
-- `client`: The session-specific chat client instance
+Invisibly returns a list of session-specific values.
 
 ------------------------------------------------------------------------
 
 ### `QueryChat$app_obj()`
 
 A streamlined Shiny app for chatting with data
-
-Creates a Shiny app designed for chatting with data, with:
-
-- A sidebar containing the chat interface
-
-- A card displaying the current SQL query
-
-- A card displaying the filtered data table
-
-- A reset button to clear the query
-
-    library(querychat)
-
-    qc <- QueryChat$new(mtcars)
-    app <- qc$app_obj()
-    shiny::runApp(app)
 
 #### Usage
 
@@ -370,8 +450,7 @@ Creates a Shiny app designed for chatting with data, with:
 
   The bookmarking storage method. Passed to
   [`shiny::enableBookmarking()`](https://rdrr.io/pkg/shiny/man/enableBookmarking.html).
-  If `"url"` or `"server"`, the chat state (including current query)
-  will be bookmarked. Default is `"url"`.
+  Default is `"url"`.
 
 #### Returns
 
@@ -383,19 +462,6 @@ A Shiny app object that can be run with
 ### `QueryChat$sidebar()`
 
 Create a sidebar containing the querychat UI.
-
-This method generates a
-[`bslib::sidebar()`](https://rstudio.github.io/bslib/reference/sidebar.html)
-component containing the chat interface, suitable for use with
-[`bslib::page_sidebar()`](https://rstudio.github.io/bslib/reference/page_sidebar.html)
-or similar layouts.
-
-    qc <- QueryChat$new(mtcars)
-
-    ui <- page_sidebar(
-      qc$sidebar(),
-      # Main content here
-    )
 
 #### Usage
 
@@ -428,11 +494,7 @@ or similar layouts.
 
 - `id`:
 
-  Optional ID for the QueryChat instance. If not provided, will use the
-  ID provided at initialization. If using `$sidebar()` in a Shiny
-  module, you'll need to provide `id = ns("your_id")` where `ns` is the
-  namespacing function from
-  [`shiny::NS()`](https://rdrr.io/pkg/shiny/man/NS.html).
+  Optional ID for the QueryChat instance.
 
 #### Returns
 
@@ -445,15 +507,6 @@ UI component.
 ### `QueryChat$ui()`
 
 Create the UI for the querychat chat interface.
-
-This method generates the chat UI component. Typically you'll use
-`$sidebar()` instead, which wraps this in a sidebar layout.
-
-    qc <- QueryChat$new(mtcars)
-
-    ui <- fluidPage(
-      qc$ui()
-    )
 
 #### Usage
 
@@ -468,11 +521,7 @@ This method generates the chat UI component. Typically you'll use
 
 - `id`:
 
-  Optional ID for the QueryChat instance. If not provided, will use the
-  ID provided at initialization. If using `$ui()` in a Shiny module,
-  you'll need to provide `id = ns("your_id")` where `ns` is the
-  namespacing function from
-  [`shiny::NS()`](https://rdrr.io/pkg/shiny/man/NS.html).
+  Optional ID for the QueryChat instance.
 
 #### Returns
 
@@ -483,20 +532,6 @@ A UI component containing the chat interface.
 ### `QueryChat$server()`
 
 Initialize the querychat server logic.
-
-This method must be called within a Shiny server function. It sets up
-the reactive logic for the chat interface and returns session-specific
-reactive values.
-
-    qc <- QueryChat$new(mtcars)
-
-    server <- function(input, output, session) {
-      qc_vals <- qc$server(enable_bookmarking = TRUE)
-
-      output$data <- renderDataTable(qc_vals$df())
-      output$query <- renderText(qc_vals$sql())
-      output$title <- renderText(qc_vals$title() %||% "No Query")
-    }
 
 #### Usage
 
@@ -513,31 +548,16 @@ reactive values.
 
 - `data_source`:
 
-  Optional data source to use. If provided, sets the data_source
-  property before initializing server logic. This is useful for the
-  deferred pattern where data_source is not known at initialization time
-  (e.g., when the data source depends on session- specific
-  authentication).
+  Optional data source for backward compatibility. If provided, calls
+  `$add_table()` before initializing server logic.
 
 - `client`:
 
-  Optional chat client override for this session. Can be an
-  [ellmer::Chat](https://ellmer.tidyverse.org/reference/Chat.html)
-  object or a string (e.g., `"openai/gpt-4o"`). If provided, overrides
-  the client set at initialization for this session only — other
-  sessions are unaffected. This is useful when the client must be
-  created within a session scope (e.g., Posit Connect managed
-  credentials).
+  Optional chat client override for this session.
 
 - `enable_bookmarking`:
 
-  Whether to enable bookmarking for the chat state. Default is `FALSE`.
-  When enabled, the chat state (including current query, title, and chat
-  history) will be saved and restored with Shiny bookmarks. This
-  requires that the Shiny app has bookmarking enabled via
-  [`shiny::enableBookmarking()`](https://rdrr.io/pkg/shiny/man/enableBookmarking.html)
-  or the `enableBookmarking` parameter of
-  [`shiny::shinyApp()`](https://rdrr.io/pkg/shiny/man/shinyApp.html).
+  Whether to enable bookmarking. Default is `FALSE`.
 
 - `...`:
 
@@ -545,11 +565,7 @@ reactive values.
 
 - `id`:
 
-  Optional module ID for the QueryChat instance. If not provided, will
-  use the ID provided at initialization. When used in Shiny modules,
-  this `id` should match the `id` used in the corresponding UI function
-  (i.e., `qc$ui(id = ns("your_id"))` pairs with
-  `qc$server(id = "your_id")`).
+  Optional module ID override.
 
 - `session`:
 
@@ -557,37 +573,19 @@ reactive values.
 
 #### Returns
 
-A list containing session-specific reactive values and the chat client
-with the following elements:
-
-- `df`: Reactive expression returning the current filtered data frame
-
-- `sql`: Reactive value for the current SQL query string
-
-- `title`: Reactive value for the current title
-
-- `client`: The session-specific chat client instance
+A list containing session-specific reactive values and the chat client.
+For single-table usage, includes `df`, `sql`, `title` directly. For
+multi-table, use `qc_vals$table("name")` to get a
+[TableAccessor](https://posit-dev.github.io/querychat/dev/reference/TableAccessor.md)
+with per-table reactive state. Also includes `table_names()` to list
+tables. `current_table()` returns the name of the most recently queried
+table, or `NULL` before any query.
 
 ------------------------------------------------------------------------
 
 ### `QueryChat$generate_greeting()`
 
 Generate a welcome greeting for the chat.
-
-By default, `QueryChat$new()` generates a greeting at the start of every
-new conversation, which is convenient for getting started and
-development, but also might add unnecessary latency and cost. Use this
-method to generate a greeting once and save it for reuse.
-
-    # Create QueryChat object
-    qc <- QueryChat$new(mtcars)
-
-    # Generate a greeting and save it
-    greeting <- qc$generate_greeting()
-    writeLines(greeting, "mtcars_greeting.md")
-
-    # Later, use the saved greeting
-    qc2 <- QueryChat$new(mtcars, greeting = "mtcars_greeting.md")
 
 #### Usage
 
@@ -597,8 +595,7 @@ method to generate a greeting once and save it for reuse.
 
 - `echo`:
 
-  Whether to print the greeting to the console. Options are `"none"`
-  (default, no output) or `"output"` (print to console).
+  Whether to print the greeting to the console.
 
 #### Returns
 
@@ -609,13 +606,6 @@ The greeting string in Markdown format.
 ### `QueryChat$cleanup()`
 
 Clean up resources associated with the data source.
-
-This method releases any resources (e.g., database connections)
-associated with the data source. Call this when you are done using the
-QueryChat object to avoid resource leaks.
-
-Note: If `auto_cleanup` was set to `TRUE` in the constructor, this will
-be called automatically when the Shiny app stops.
 
 #### Usage
 

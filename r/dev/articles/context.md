@@ -1,26 +1,26 @@
 # Provide Context
 
-querychat automatically gathers information about your table to help the
-LLM write accurate SQL queries. This includes column names and types,
-numerical ranges, and categorical value examples. (All of this
-information is provided to the LLM as part of the **system prompt** – a
-string of text containing instructions and context for the LLM to
-consider when responding to user queries.)
+querychat automatically gathers schema information about your tables —
+column names, types, numerical ranges, and categorical values — and
+makes it available to the LLM on demand via the `querychat_get_schema`
+[tool](https://posit-dev.github.io/querychat/dev/articles/tools.html#schema-retrieval).
+The LLM calls this tool before writing SQL to understand the structure
+of the tables it’s querying.
 
 Importantly, we are **not** sending your raw data to the LLM and asking
 it to do complicated math. The LLM only needs to understand the
 structure and schema of your data in order to write SQL queries.
 
-You can get even better results by customizing the system prompt in
-three ways:
+You can get even better results by providing additional context:
 
-1.  Add a [data description](#data-description) to provide more context
-    about what the data represents
-2.  Add [custom instructions](#extra-instructions) to guide the LLM’s
+1.  Add a [data dictionary](#data-dictionary) to describe tables,
+    columns, relationships, and domain terminology (recommended)
+2.  Add a [data description](#data-description) for a simpler
+    alternative when working with a single, straightforward table
+3.  Add [custom instructions](#extra-instructions) to guide the LLM’s
     behavior
-3.  Use a fully [custom prompt template](#custom-template) if you want
-    complete control (useful if you want to be certain the model cannot
-    see any literal values from your data)
+4.  Use a fully [custom prompt template](#custom-template) if you want
+    complete control
 
 ``` r
 
@@ -28,70 +28,140 @@ library(querychat)
 library(palmerpenguins)
 ```
 
-## Default prompt
+## Data dictionary
 
-For full visibility into the system prompt that querychat generates for
-the LLM, you can inspect the `system_prompt` field. This is useful for
-debugging and understanding exactly what context the LLM is using:
+A **data dictionary** is a YAML file that describes your tables,
+columns, relationships, and domain-specific terminology. It’s the
+recommended way to provide context, especially when working with
+[multiple
+tables](https://posit-dev.github.io/querychat/dev/articles/build.html#multiple-tables)
+or when your data has domain-specific meaning that isn’t obvious from
+column names alone.
 
 ``` r
 
-qc <- querychat(penguins)
-cat(qc$system_prompt)
+qc <- QueryChat$new(
+  orders, "orders",
+  data_dict = "data-dict.yaml"
+)
+qc$add_table(customers, "customers")
 ```
 
-By default, the system prompt contains the following components:
+### Format
 
-1.  The basic set of behaviors and guidelines the LLM must follow in
-    order for querychat to work properly, including how to use
-    [tools](https://posit-dev.github.io/querychat/dev/articles/tools.md)
-    to execute queries and update the app.
-2.  The SQL schema of the data frame you provided. This includes:
-    - Column names
-    - Data types (integer, real, boolean, date/datetime, text)
-    - For text columns with less than 10 unique values, we assume they
-      are categorical variables and include the list of values
-    - For integer and real columns, we include the range
-3.  A [data description](#data-description) (if provided via
-    `data_description`)
-4.  [Additional instructions](#additional-instructions) you want to use
-    to guide querychat’s behavior (if provided via
-    `extra_instructions`).
+A data dictionary has three top-level sections: `tables`,
+`relationships`, and `glossary`.
+
+``` yaml
+# data-dict.yaml
+version: "0.2.0"
+
+tables:
+  orders:
+    description: One row per customer order.
+    columns:
+      - name: order_id
+        type: number(id)
+        constraints: [primary_key]
+        description: Unique order identifier.
+      - name: customer_id
+        type: number(id)
+        constraints: [foreign_key]
+        description: References customers.id.
+      - name: total
+        type: number(quantity)
+        description: Order total in USD.
+      - name: status
+        type: enum
+        values: [pending, shipped, delivered, cancelled]
+        description: Current order status.
+
+  customers:
+    description: One row per customer.
+    columns:
+      - name: id
+        type: number(id)
+        constraints: [primary_key]
+        description: Unique customer identifier.
+      - name: name
+        type: string
+        description: Full name.
+      - name: region
+        type: string
+        description: Geographic sales region.
+
+relationships:
+  - description: Each order belongs to one customer.
+    cardinality: many-to-one
+    join: orders.customer_id = customers.id
+
+glossary:
+  AOV: Average order value — total revenue divided by number of orders.
+  churn: A customer who has not placed an order in the last 90 days.
+```
+
+#### Tables
+
+Each entry under `tables` describes one table. The key must match the
+table name you pass to `QueryChat$new()` or `$add_table()`.
+
+- **`description`**: What this table represents (one sentence is usually
+  enough).
+- **`columns`**: A list of column annotations. Each column can have:
+  - `name`: Column name (must match the actual column)
+  - `type`: Semantic type hint — `string`, `number`, `number(id)`,
+    `number(quantity)`, `date`, `enum`
+  - `constraints`: Optional list — `primary_key`, `foreign_key`
+  - `description`: What this column means in plain English
+  - `values`: For `enum` columns, the list of possible values
+
+Columns listed in the data dictionary are excluded from the
+auto-generated schema (since your description supersedes the
+auto-detected metadata). Columns not listed are still auto-detected as
+usual.
+
+#### Relationships
+
+The `relationships` section tells the LLM how to join tables. Each entry
+has:
+
+- `description`: A plain-English description of the relationship
+- `cardinality`: `one-to-one`, `one-to-many`, or `many-to-one`
+- `join`: The join condition (e.g., `orders.customer_id = customers.id`)
+
+#### Glossary
+
+The `glossary` section defines domain-specific terms that users might
+use in their questions. This helps the LLM translate business language
+into correct SQL.
 
 ## Data description
 
-If your column names are descriptive, querychat may already work well
-without additional context. However, if your columns are named `x`,
-`V1`, `value`, etc., you should provide a data description. Use the
-`data_description` parameter for this:
+For simple single-table use cases where a full data dictionary would be
+overkill, you can provide a **data description** — a free-form markdown
+file or string that describes what the data represents. Use the
+`data_description` parameter:
 
 ``` r
 
-qc <- querychat(
+qc <- QueryChat$new(
   penguins,
   data_description = "data_description.md"
 )
-
-cat(qc$system_prompt)
 ```
 
-querychat doesn’t need this information in any particular format – just
-provide what a human would find helpful:
+querychat doesn’t need this in any particular format — just provide what
+a human would find helpful:
 
 ``` markdown
 <!-- data_description.md -->
 
-This dataset contains information about Palmer Archipelago penguins,
-collected for studying penguin populations.
+This dataset contains information about Palmer Archipelago penguins.
 
 - species: Penguin species (Adelie, Chinstrap, Gentoo)
 - island: Island where observed (Torgersen, Biscoe, Dream)
 - bill_length_mm: Bill length in millimeters
-- bill_depth_mm: Bill depth in millimeters
-- flipper_length_mm: Flipper length in millimeters
 - body_mass_g: Body mass in grams
-- sex: Penguin sex (male, female)
-- year: Year of observation
 ```
 
 ## Additional instructions
@@ -101,12 +171,10 @@ You can add custom instructions to guide the LLM’s behavior using the
 
 ``` r
 
-qc <- querychat(
+qc <- QueryChat$new(
   penguins,
   extra_instructions = "instructions.md"
 )
-
-cat(qc$system_prompt)
 ```
 
 Or as a string:
@@ -115,20 +183,31 @@ Or as a string:
 
 instructions <- "
 - Use British spelling conventions
-- Stay on topic and only discuss the data dashboard
+- Stay on topic and only discuss the data
 - Refuse to answer unrelated questions
 "
 
-qc <- querychat(
+qc <- QueryChat$new(
   penguins,
   extra_instructions = instructions
 )
-
-cat(qc$system_prompt)
 ```
 
 LLMs may not always follow your instructions perfectly. Test extensively
 when changing instructions or models.
+
+## Default prompt
+
+For full visibility into the system prompt that querychat generates for
+the LLM, you can inspect the `system_prompt` field. This is useful for
+debugging and understanding exactly what context the LLM is working
+with:
+
+``` r
+
+qc <- QueryChat$new(penguins)
+cat(qc$system_prompt)
+```
 
 ## Custom template
 

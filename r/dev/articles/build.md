@@ -7,22 +7,14 @@ apps with querychat unlocks the full power of integrating natural
 language data exploration with custom visualizations, layouts, and
 interactivity. This guide shows you how to integrate querychat into your
 own Shiny applications and leverage its reactive data outputs to create
-rich, interactive dashboards.
+rich, interactive experiences.
 
-querychat is a particularly good fit for Shiny apps that have:
-
-1.  **A single data source** (or a set of related tables that can be
-    joined)
-2.  **Multiple filters** that let users slice and explore the data in
-    different ways
-3.  **Several visualizations and outputs** that all depend on the same
-    filtered data
-
-In these apps, querychat can replace or augment your filtering UI by
-allowing users to describe what they want to see in natural language.
-Instead of building complex filter controls, users can simply ask
-questions like “show me customers from California who spent over \$1000
-last quarter” and querychat will generate the appropriate SQL query.
+querychat lets users ask questions of their data in plain language —
+filtering, sorting, summarizing, joining across tables, and creating
+visualizations — all without needing to write SQL or navigate complex
+filter UIs. You can use it as the primary exploration interface in a
+standalone app, or embed it alongside curated views in an existing
+dashboard to let users go deeper than the views you designed.
 
 This is especially valuable when:
 
@@ -30,12 +22,9 @@ This is especially valuable when:
   would be overwhelming
 - Users want to explore ad-hoc combinations of filters that you didn’t
   anticipate
-- You want to make data exploration more accessible to users who aren’t
-  comfortable with traditional filtering UIs
-
-If you have an existing app with a reactive data frame that flows
-through multiple outputs, querychat can be a natural addition to provide
-an alternative way to filter that data.
+- You have multiple related tables that users may want to query and join
+- You want to make data exploration more accessible to non-technical
+  users
 
 ## Starter template
 
@@ -464,21 +453,96 @@ data”.
 
 ## Multiple tables
 
-Currently, you have two options for exploring multiple tables in
-querychat:
+querychat can work with multiple related tables in a single chat
+interface, letting users query across tables, join data, and filter any
+table independently. Register additional tables with `$add_table()`
+after creating the `QueryChat` instance, then access per-table state
+through the `$table()` method.
 
-1.  Join the tables into a single table before passing to querychat
-2.  Use multiple querychat instances in the same app
+### Registering tables
 
-The first option makes it possible to chat with multiple tables inside a
-single chat interface, whereas the second option requires a separate
-chat interface for each table.
+Pass the first table when creating `QueryChat`, then call `$add_table()`
+for each additional table:
 
-### Multiple filtered tables
+``` r
 
-We do intend on supporting multiple filtered tables in a future release
-– if you’re interested in this feature, please upvote [the relevant
-issue](https://github.com/posit-dev/querychat/issues/6)
+library(querychat)
+
+qc <- QueryChat$new(orders, "orders")
+qc$add_table(customers, "customers")
+qc$add_table(products, "products")
+```
+
+The LLM can query any registered table and write joins across them. You
+can inspect which tables are registered with `qc$table_names()`.
+
+### Per-table reactive access
+
+When working with multiple tables, access filtered data and SQL for each
+table individually using `$table()`:
+
+``` r
+
+server <- function(input, output, session) {
+  qc_vals <- qc$server()
+
+  output$orders_table <- renderDataTable({
+    qc_vals$table("orders")$df()
+  })
+
+  output$orders_sql <- renderText({
+    qc_vals$table("orders")$sql()
+  })
+
+  output$customers_table <- renderDataTable({
+    qc_vals$table("customers")$df()
+  })
+}
+```
+
+Each table has its own `$df()`, `$sql()`, and `$title()` reactives that
+update independently when the user filters that specific table.
+
+### Tracking the active table
+
+Use `$current_table()` to find out which table the LLM most recently
+queried. This is useful for auto-switching a tabbed UI to the relevant
+table:
+
+``` r
+
+observe({
+  tbl <- qc_vals$current_table()
+  req(tbl)
+  nav_select("table_tabs", selected = tbl)
+})
+```
+
+### Data dictionary
+
+When working with multiple related tables, providing a [data
+dictionary](https://posit-dev.github.io/querychat/dev/articles/context.html#data-dictionary)
+is strongly recommended. It tells the LLM how tables relate to each
+other, which columns are keys, and what domain terms mean — all of which
+help it write accurate joins and queries.
+
+``` r
+
+qc <- QueryChat$new(
+  orders, "orders",
+  data_dict = "data-dict.yaml"
+)
+qc$add_table(customers, "customers")
+```
+
+See [Provide
+context](https://posit-dev.github.io/querychat/dev/articles/context.html#data-dictionary)
+for the full data dictionary format.
+
+### Separate chat interfaces
+
+If your tables are truly independent (not related), you may prefer
+separate `QueryChat` instances, each with its own chat interface:
 
 `app.R `
 

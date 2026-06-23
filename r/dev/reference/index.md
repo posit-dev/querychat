@@ -13,6 +13,10 @@
   : QueryChat convenience functions
 - [`QueryChat`](https://posit-dev.github.io/querychat/dev/reference/QueryChat.md)
   : QueryChat: Interactive Data Querying with Natural Language
+- [`TableAccessor`](https://posit-dev.github.io/querychat/dev/reference/TableAccessor.md)
+  : Table Accessor
+- [`read_data_dict()`](https://posit-dev.github.io/querychat/dev/reference/read_data_dict.md)
+  : Read a Data Dictionary from YAML
 
 ## Data sources
 

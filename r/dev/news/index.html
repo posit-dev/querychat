@@ -54,8 +54,32 @@
 <h2 class="pkg-version" data-toc-text="development version" id="querychat-development-version">querychat (development version)<a class="anchor" aria-label="anchor" href="#querychat-development-version"></a></h2>
 <div class="section level3">
 <h3 id="new-features-development-version">New features<a class="anchor" aria-label="anchor" href="#new-features-development-version"></a></h3>
-<ul><li><p>Added <code>PinSource</code>, a data source for chatting with datasets pinned to a <a href="https://pins.rstudio.com/" class="external-link">pins</a> board. Works with parquet, CSV, JSON, and RDS pins, and uses the pin’s title, description, and tags as the default data description. (<a href="https://github.com/posit-dev/querychat/issues/246" class="external-link">#246</a>)</p></li>
+<ul><li>
+<p><code>QueryChat$new()</code> now supports <strong>multiple related tables</strong>. Register additional tables with <code>$add_table()</code> and the LLM can reason across all of them — joins, cross-table filters, aggregations. Per-table reactive state (<code>$df()</code>, <code>$sql()</code>, <code>$title()</code>) is accessible via <code>qc_vals$table("name")</code> on the list returned by <code>$server()</code>. (<a href="https://github.com/posit-dev/querychat/issues/195" class="external-link">#195</a>)</p>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/QueryChat.html">QueryChat</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">orders_df</span>, <span class="st">"orders"</span><span class="op">)</span></span>
+<span><span class="va">qc</span><span class="op">$</span><span class="fu">add_table</span><span class="op">(</span><span class="va">customers_df</span>, <span class="st">"customers"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">qc_vals</span> <span class="op">&lt;-</span> <span class="va">qc</span><span class="op">$</span><span class="fu">server</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">qc_vals</span><span class="op">$</span><span class="fu">table</span><span class="op">(</span><span class="st">"orders"</span><span class="op">)</span><span class="op">$</span><span class="fu">df</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">qc_vals</span><span class="op">$</span><span class="fu">table</span><span class="op">(</span><span class="st">"customers"</span><span class="op">)</span><span class="op">$</span><span class="fu">sql</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+</li>
+<li>
+<p>A new <strong><code>data_dict</code></strong> parameter — integrating with the <a href="https://data-dict.tidyverse.org/" class="external-link">data-dict</a> spec — lets you annotate tables and columns with plain-English descriptions loaded from a YAML file. This is the preferred way to provide additional context for the data, especially when multiple tables are relevant. The LLM receives these descriptions when it fetches the schema, helping it interpret ambiguous or domain-specific column names without any extra prompting. (<a href="https://github.com/posit-dev/querychat/issues/195" class="external-link">#195</a>)</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va"><a href="../reference/QueryChat.html">QueryChat</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span>data_dict <span class="op">=</span> <span class="st">"data_dict.yaml"</span><span class="op">)</span></span></code></pre></div>
+</li>
+<li><p>Added <code>PinSource</code>, a data source for chatting with datasets pinned to a <a href="https://pins.rstudio.com/" class="external-link">pins</a> board. Works with parquet, CSV, JSON, and RDS pins, and uses the pin’s title, description, and tags as the default data description. (<a href="https://github.com/posit-dev/querychat/issues/246" class="external-link">#246</a>)</p></li>
 <li><p>File attachments are now enabled by default in the Shiny chat UI. Users can attach images, PDFs, and text files to their messages and the LLM will receive them. Disable with <code>allow_attachments = FALSE</code> in <code>mod_ui()</code> or <code>QueryChat$ui()</code>. (<a href="https://github.com/posit-dev/querychat/issues/253" class="external-link">#253</a>)</p></li>
+</ul></div>
+<div class="section level3">
+<h3 id="breaking-changes-development-version">Breaking changes<a class="anchor" aria-label="anchor" href="#breaking-changes-development-version"></a></h3>
+<ul><li>The <code>$data_source</code> property has been removed. Use <code>qc$table("name")$data_source</code> to read a table’s data source, and <code>qc$add_table(df, "name", replace = TRUE)</code> to replace it. The <code>data_source</code> parameter to <code>$server()</code> has also been removed; call <code>$add_table()</code> before <code>$server()</code> instead. (<a href="https://github.com/posit-dev/querychat/issues/195" class="external-link">#195</a>)</li>
+</ul></div>
+<div class="section level3">
+<h3 id="improvements-development-version">Improvements<a class="anchor" aria-label="anchor" href="#improvements-development-version"></a></h3>
+<ul><li><p>Chat greetings now use shinychat’s greeting API (requires shinychat &gt;= 0.4.0). A provided <code>greeting</code> renders instantly when the app loads, and when no <code>greeting</code> is given one is generated on demand without being added to the conversation history. Generated greetings are now preserved across bookmark/restore. (<a href="https://github.com/posit-dev/querychat/issues/249" class="external-link">#249</a>)</p></li>
+<li><p>The system prompt is now lighter: full schema is no longer embedded upfront. Instead the LLM fetches per-table schema on demand via the new <code>querychat_get_schema</code> tool — and only when it needs to. When a <code>data_dict</code> is provided, the tool skips columns that already have descriptions, so the LLM only pays for what isn’t already documented. (<a href="https://github.com/posit-dev/querychat/issues/195" class="external-link">#195</a>)</p></li>
 </ul></div>
 </div>
     <div class="section level2">

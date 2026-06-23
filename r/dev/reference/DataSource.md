@@ -21,6 +21,8 @@ or
 
 - [`DataSource$get_schema()`](#method-DataSource-get_schema)
 
+- [`DataSource$get_schema_result()`](#method-DataSource-get_schema_result)
+
 - [`DataSource$execute_query()`](#method-DataSource-execute_query)
 
 - [`DataSource$test_query()`](#method-DataSource-test_query)
@@ -55,7 +57,7 @@ Get schema information about the table
 
 #### Usage
 
-    DataSource$get_schema(categorical_threshold = 20)
+    DataSource$get_schema(categorical_threshold = 20, table_spec = NULL)
 
 #### Arguments
 
@@ -67,6 +69,14 @@ Get schema information about the table
 #### Returns
 
 A string containing schema information formatted for LLM prompts
+
+------------------------------------------------------------------------
+
+### `DataSource$get_schema_result()`
+
+#### Usage
+
+    DataSource$get_schema_result(categorical_threshold = 20, table_spec = NULL)
 
 ------------------------------------------------------------------------
 

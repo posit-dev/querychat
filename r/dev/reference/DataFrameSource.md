@@ -31,16 +31,18 @@ be installed.
 
 - [`DataFrameSource$new()`](#method-DataFrameSource-initialize)
 
+- [`DataFrameSource$cleanup()`](#method-DataFrameSource-cleanup)
+
 - [`DataFrameSource$clone()`](#method-DataFrameSource-clone)
 
 Inherited methods
 
 - [`DataSource$get_data_description()`](https://posit-dev.github.io/querychat/dev/reference/DataSource.html#method-get_data_description)
-- [`DBISource$cleanup()`](https://posit-dev.github.io/querychat/dev/reference/DBISource.html#method-cleanup)
 - [`DBISource$execute_query()`](https://posit-dev.github.io/querychat/dev/reference/DBISource.html#method-execute_query)
 - [`DBISource$get_data()`](https://posit-dev.github.io/querychat/dev/reference/DBISource.html#method-get_data)
 - [`DBISource$get_db_type()`](https://posit-dev.github.io/querychat/dev/reference/DBISource.html#method-get_db_type)
 - [`DBISource$get_schema()`](https://posit-dev.github.io/querychat/dev/reference/DBISource.html#method-get_schema)
+- [`DBISource$get_schema_result()`](https://posit-dev.github.io/querychat/dev/reference/DBISource.html#method-get_schema_result)
 - [`DBISource$get_semantic_views_description()`](https://posit-dev.github.io/querychat/dev/reference/DBISource.html#method-get_semantic_views_description)
 - [`DBISource$test_query()`](https://posit-dev.github.io/querychat/dev/reference/DBISource.html#method-test_query)
 
@@ -79,6 +81,20 @@ Create a new DataFrameSource
 #### Returns
 
 A new DataFrameSource object
+
+------------------------------------------------------------------------
+
+### `DataFrameSource$cleanup()`
+
+Disconnect from the database and shut down the DuckDB instance if used.
+
+#### Usage
+
+    DataFrameSource$cleanup()
+
+#### Returns
+
+NULL (invisibly)
 
 ------------------------------------------------------------------------
 

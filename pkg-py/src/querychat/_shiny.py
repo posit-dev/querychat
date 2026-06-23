@@ -24,6 +24,9 @@ if TYPE_CHECKING:
     import sqlalchemy
     from narwhals.stable.v1.typing import IntoFrame
 
+    from ._data_dict import DataDict
+    from ._table_accessor import TableAccessor
+
 
 class QueryChat(QueryChatBase[IntoFrameT]):
     """
@@ -112,13 +115,13 @@ class QueryChat(QueryChatBase[IntoFrameT]):
 
         The tools can be overridden per-client by passing a different `tools`
         parameter to the `.client()` method.
-    data_description
-        Description of the data in plain text or Markdown. If a pathlib.Path
-        object is passed, querychat will read the contents of the path into a
-        string with `.read_text()`.
-    categorical_threshold
-        Threshold for determining if a column is categorical based on number of
-        unique values.
+    data_dict
+        A :class:`~querychat.DataDict` instance, or a path (``str`` or
+        ``pathlib.Path``) to a YAML file, that provides rich per-table and
+        per-column metadata. When set, documented columns use the dict's
+        ``values``, ``range``, and ``description`` fields instead of querying
+        the data source for statistics, which speeds up schema generation and
+        improves LLM context. Supersedes ``data_description``.
     extra_instructions
         Additional instructions for the chat model. If a pathlib.Path object is
         passed, querychat will read the contents of the path into a string with
@@ -133,23 +136,30 @@ class QueryChat(QueryChatBase[IntoFrameT]):
           `data_source.get_schema()`
         - `{{data_description}}`: The optional data description provided
         - `{{extra_instructions}}`: Any additional instructions provided
+    categorical_threshold
+        Threshold for determining if a column is categorical based on number of
+        unique values.
+    data_description
+        Optional plain-text or Markdown description of the data, as a string or
+        file path. Superseded by ``data_dict`` for new code.
 
     """
 
     @overload
     def __init__(
         self: QueryChat[Any],
-        data_source: None,
-        table_name: str,
+        data_source: None = None,
+        table_name: str | None = None,
         *,
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("filter", "query"),
-        data_description: Optional[str | Path] = None,
-        categorical_threshold: int = 20,
+        data_dict: DataDict | str | Path | None = None,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
     ) -> None: ...
 
     @overload
@@ -162,10 +172,11 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
-        data_description: Optional[str | Path] = None,
-        categorical_threshold: int = 20,
+        data_dict: DataDict | str | Path | None = None,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
     ) -> None: ...
 
     @overload
@@ -178,10 +189,11 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
-        data_description: Optional[str | Path] = None,
-        categorical_threshold: int = 20,
+        data_dict: DataDict | str | Path | None = None,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
     ) -> None: ...
 
     @overload
@@ -194,10 +206,11 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
-        data_description: Optional[str | Path] = None,
-        categorical_threshold: int = 20,
+        data_dict: DataDict | str | Path | None = None,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
     ) -> None: ...
 
     @overload
@@ -210,25 +223,27 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
-        data_description: Optional[str | Path] = None,
-        categorical_threshold: int = 20,
+        data_dict: DataDict | str | Path | None = None,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
     ) -> None: ...
 
     def __init__(
         self,
-        data_source: IntoFrame | sqlalchemy.Engine | ibis.Table | None,
-        table_name: str,
+        data_source: IntoFrame | sqlalchemy.Engine | ibis.Table | None = None,
+        table_name: str | None = None,
         *,
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
-        data_description: Optional[str | Path] = None,
-        categorical_threshold: int = 20,
+        data_dict: DataDict | str | Path | None = None,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
     ):
         super().__init__(
             data_source,
@@ -237,12 +252,12 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             client=client,
             tools=tools,
             data_description=data_description,
+            data_dict=data_dict,
             categorical_threshold=categorical_threshold,
             extra_instructions=extra_instructions,
             prompt_template=prompt_template,
         )
-        # Use table_name for ID since data_source might be None
-        self.id = id or f"querychat_{table_name}"
+        self.id = id or (f"querychat_{table_name}" if table_name else "querychat")
 
     def app(
         self, *, bookmark_store: Literal["url", "server", "disable"] = "url"
@@ -267,9 +282,9 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             A Shiny App object that can be run with `app.run()` or served with `shiny run`.
 
         """
-        data_source = self._require_data_source("app")
+        self._require_initialized("app")
         enable_bookmarking = bookmark_store != "disable"
-        table_name = data_source.table_name
+        first_table_name = next(iter(self._data_sources))
 
         def app_ui(request):
             return ui.page_sidebar(
@@ -291,33 +306,47 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                     style="max-height: 33%;",
                 ),
                 ui.card(
-                    ui.card_header(bs_icon("table"), " Data"),
+                    ui.card_header(
+                        bs_icon("table"),
+                        " Data — ",
+                        ui.output_text("data_card_header_text", inline=True),
+                    ),
                     ui.output_data_frame("dt"),
                 ),
-                title=ui.span("querychat with ", ui.code(table_name)),
+                title=ui.span("querychat with ", ui.code(first_table_name)),
                 class_="bslib-page-dashboard",
                 fillable=True,
             )
 
         def app_server(input: Inputs, output: Outputs, session: Session):
+            self._mark_server_initialized()
             if enable_bookmarking:
                 session.bookmark.exclude.append("reset_query")
             vals = mod_server(
                 self.id,
-                data_source=data_source,
+                data_sources=dict(self._data_sources),
+                executor=self._require_query_executor("server"),
                 greeting=self.greeting,
                 client=self._create_session_client,
                 enable_bookmarking=enable_bookmarking,
                 tools=self.tools,
             )
 
+            @reactive.calc
+            def active_table_name() -> str:
+                return vals.current_table() or first_table_name
+
+            @render.text
+            def data_card_header_text():
+                return active_table_name()
+
             @render.text
             def query_title():
-                return vals.title() or "SQL Query"
+                return vals.table(active_table_name()).title() or "SQL Query"
 
             @render.ui
             def ui_reset():
-                req(vals.sql())
+                req(vals.table(active_table_name()).sql())
                 return ui.input_action_button(
                     "reset_query",
                     "Reset Query",
@@ -327,17 +356,20 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             @reactive.effect
             @reactive.event(input.reset_query)
             def _():
-                vals.sql.set(None)
-                vals.title.set(None)
+                name = active_table_name()
+                # TableAccessor is read-only; mutation requires direct TableState access
+                vals._tables[name].sql.set(None)
+                vals._tables[name].title.set(None)
 
             @render.data_frame
             def dt():
                 # Collect lazy sources (LazyFrame, Ibis Table) to eager DataFrame
-                return as_narwhals(vals.df())
+                return as_narwhals(vals.table(active_table_name()).df())
 
             @render.ui
             def sql_output():
-                sql_value = vals.sql() or f"SELECT * FROM {table_name}"
+                name = active_table_name()
+                sql_value = vals.table(name).sql() or f"SELECT * FROM {name}"
                 sql_code = f"```sql\n{sql_value}\n```"
                 return output_markdown_stream(
                     "sql_code",
@@ -412,7 +444,6 @@ class QueryChat(QueryChatBase[IntoFrameT]):
     def server(
         self,
         *,
-        data_source: Optional[IntoFrame | sqlalchemy.Engine | ibis.Table] = None,
         client: str | chatlas.Chat | MISSING_TYPE = MISSING,
         enable_bookmarking: bool = False,
         id: Optional[str] = None,
@@ -427,10 +458,6 @@ class QueryChat(QueryChatBase[IntoFrameT]):
 
         Parameters
         ----------
-        data_source
-            Optional data source to use. If provided, sets the data_source property
-            before initializing server logic. This is useful for the deferred pattern
-            where data_source is not known at initialization time.
         client
             Optional chat client to use for this session. If provided, overrides
             any client set at initialization time for this call only. This is useful
@@ -497,10 +524,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 ".server() must be called within an active Shiny session (i.e., within the server function). "
             )
 
-        if data_source is not None:
-            self.data_source = data_source
-
-        resolved_data_source = self._require_data_source("server")
+        self._require_initialized("server")
         resolved_client_spec = self._client_spec if isinstance(client, MISSING_TYPE) else client
 
         def create_session_client(**kwargs) -> chatlas.Chat:
@@ -508,9 +532,11 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 client_spec=resolved_client_spec, **kwargs
             )
 
+        self._mark_server_initialized()
         return mod_server(
             id or self.id,
-            data_source=resolved_data_source,
+            data_sources=dict(self._data_sources),
+            executor=self._require_query_executor("server"),
             greeting=self.greeting,
             client=create_session_client,
             enable_bookmarking=enable_bookmarking,
@@ -589,13 +615,13 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         If `client` is not provided, querychat consults the
         `QUERYCHAT_CLIENT` environment variable. If that is not set, it
         defaults to `"openai"`.
-    data_description
-        Description of the data in plain text or Markdown. If a pathlib.Path
-        object is passed, querychat will read the contents of the path into a
-        string with `.read_text()`.
-    categorical_threshold
-        Threshold for determining if a column is categorical based on number of
-        unique values.
+    data_dict
+        A :class:`~querychat.DataDict` instance, or a path (``str`` or
+        ``pathlib.Path``) to a YAML file, that provides rich per-table and
+        per-column metadata. When set, documented columns use the dict's
+        ``values``, ``range``, and ``description`` fields instead of querying
+        the data source for statistics, which speeds up schema generation and
+        improves LLM context. Supersedes ``data_description``.
     extra_instructions
         Additional instructions for the chat model. If a pathlib.Path object is
         passed, querychat will read the contents of the path into a string with
@@ -610,6 +636,12 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
           `data_source.get_schema()`
         - `{{data_description}}`: The optional data description provided
         - `{{extra_instructions}}`: Any additional instructions provided
+    categorical_threshold
+        Threshold for determining if a column is categorical based on number of
+        unique values.
+    data_description
+        Optional plain-text or Markdown description of the data, as a string or
+        file path. Superseded by ``data_dict`` for new code.
 
     """
 
@@ -619,17 +651,18 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
     @overload
     def __init__(
         self: QueryChatExpress[Any],
-        data_source: None,
-        table_name: str,
+        data_source: None = None,
+        table_name: str | None = None,
         *,
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("filter", "query"),
-        data_description: Optional[str | Path] = None,
-        categorical_threshold: int = 20,
+        data_dict: DataDict | str | Path | None = None,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
         enable_bookmarking: Literal["auto", True, False] = "auto",
     ) -> None: ...
 
@@ -643,10 +676,11 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
-        data_description: Optional[str | Path] = None,
-        categorical_threshold: int = 20,
+        data_dict: DataDict | str | Path | None = None,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
         enable_bookmarking: Literal["auto", True, False] = "auto",
     ) -> None: ...
 
@@ -660,10 +694,11 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
-        data_description: Optional[str | Path] = None,
-        categorical_threshold: int = 20,
+        data_dict: DataDict | str | Path | None = None,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
         enable_bookmarking: Literal["auto", True, False] = "auto",
     ) -> None: ...
 
@@ -677,10 +712,11 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
-        data_description: Optional[str | Path] = None,
-        categorical_threshold: int = 20,
+        data_dict: DataDict | str | Path | None = None,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
         enable_bookmarking: Literal["auto", True, False] = "auto",
     ) -> None: ...
 
@@ -694,26 +730,28 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
-        data_description: Optional[str | Path] = None,
-        categorical_threshold: int = 20,
+        data_dict: DataDict | str | Path | None = None,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
         enable_bookmarking: Literal["auto", True, False] = "auto",
     ) -> None: ...
 
     def __init__(
         self,
-        data_source: IntoFrame | sqlalchemy.Engine | ibis.Table | None,
-        table_name: str,
+        data_source: IntoFrame | sqlalchemy.Engine | ibis.Table | None = None,
+        table_name: str | None = None,
         *,
         id: Optional[str] = None,
         greeting: Optional[str | Path] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = DEFAULT_TOOLS,
-        data_description: Optional[str | Path] = None,
-        categorical_threshold: int = 20,
+        data_dict: DataDict | str | Path | None = None,
         extra_instructions: Optional[str | Path] = None,
         prompt_template: Optional[str | Path] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | Path] = None,
         enable_bookmarking: Literal["auto", True, False] = "auto",
     ):
         # Sanity check: Express should always have a (stub/real) session
@@ -731,11 +769,12 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             client=client,
             tools=tools,
             data_description=data_description,
+            data_dict=data_dict,
             categorical_threshold=categorical_threshold,
             extra_instructions=extra_instructions,
             prompt_template=prompt_template,
         )
-        self.id = id or f"querychat_{table_name}"
+        self.id = id or (f"querychat_{table_name}" if table_name else "querychat")
 
         # Determine bookmarking setting
         # During stub session: detect from app_opts and cache in class variable
@@ -753,12 +792,34 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         else:
             enable = enable_bookmarking
 
+        self._enable_bookmarking = enable
+        self._vals: ServerValues[IntoFrameT] | None = None
+
+    def _ensure_server_started(self) -> None:
+        """
+        Start the Shiny module server if not already started.
+
+        Called lazily from ui()/sidebar() and the reactive accessors so that
+        module-level add_table() calls (which happen after __init__ but before
+        sidebar()/ui()) can complete before server initialization locks the
+        table set.
+        """
+        if self._server_initialized:
+            return
+        session = get_current_session()
+        if isinstance(session, ExpressStubSession):
+            return
+        if not self._data_sources:
+            return
+        self._require_initialized("_ensure_server_started")
+        self._mark_server_initialized()
         self._vals = mod_server(
             self.id,
-            data_source=self._data_source,
+            data_sources=dict(self._data_sources),
+            executor=self._require_query_executor("_ensure_server_started"),
             greeting=self.greeting,
             client=self._create_session_client,
-            enable_bookmarking=enable,
+            enable_bookmarking=self._enable_bookmarking,
             tools=self.tools,
         )
 
@@ -821,7 +882,18 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             A UI component.
 
         """
-        return mod_ui(id or self.id, preload_viz=has_viz_tool(self.tools), greeting=self.greeting, **kwargs)
+        result = mod_ui(id or self.id, preload_viz=has_viz_tool(self.tools), greeting=self.greeting, **kwargs)
+        self._ensure_server_started()
+        return result
+
+    def _require_vals(self) -> ServerValues[IntoFrameT]:
+        self._ensure_server_started()
+        if self._vals is None:
+            raise RuntimeError(
+                "QueryChat server is not initialized. "
+                "Ensure add_table() is called and sidebar()/ui() has been rendered."
+            )
+        return self._vals
 
     def df(self) -> IntoFrameT:
         """
@@ -836,7 +908,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             data source.
 
         """
-        return self._vals.df()
+        return self._require_vals().df()
 
     @overload
     def sql(self, query: None = None) -> str | None: ...
@@ -863,9 +935,9 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
 
         """
         if query is None:
-            return self._vals.sql()
+            return self._require_vals().sql()
         else:
-            return self._vals.sql.set(query)
+            return self._require_vals().sql.set(query)
 
     @overload
     def title(self, value: None = None) -> str | None: ...
@@ -897,6 +969,58 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
 
         """
         if value is None:
-            return self._vals.title()
+            return self._require_vals().title()
         else:
-            return self._vals.title.set(value)
+            return self._require_vals().title.set(value)
+
+    def table(self, name: str) -> TableAccessor:
+        """
+        Get a per-table accessor with reactive state.
+
+        Parameters
+        ----------
+        name
+            Table name (must match a name passed to ``add_table()``).
+
+        Returns
+        -------
+        TableAccessor
+            Accessor with ``df()``, ``sql()``, and ``title()`` backed by
+            per-session reactive state.
+
+        Examples
+        --------
+        ```python
+        from querychat.express import QueryChat
+        from shiny.express import render
+
+        qc = QueryChat(orders, "orders")
+        qc.add_table(customers, "customers")
+        qc.sidebar()
+
+        @render.data_frame
+        def orders_table():
+            return qc.table("orders").df()
+
+        @render.data_frame
+        def customers_table():
+            return qc.table("customers").df()
+        ```
+
+        """
+        return self._require_vals().table(name)
+
+    def current_table(self) -> str | None:
+        """
+        Reactively read the name of the most recently queried table.
+
+        Returns ``None`` if no query has run yet in this session. Useful for
+        auto-switching a tabbed UI to the active table.
+
+        Returns
+        -------
+        str or None
+            Table name, or ``None``.
+
+        """
+        return self._require_vals().current_table()

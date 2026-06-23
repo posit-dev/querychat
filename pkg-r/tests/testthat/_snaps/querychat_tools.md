@@ -1,44 +1,29 @@
-# tool_update_dashboard() checks inputs
+# tool_update_dashboard() checks update_fn inputs
 
     Code
-      tool_update_dashboard("foo")
-    Condition
-      Error in `tool_update_dashboard()`:
-      ! `data_source` must be a <DataSource> object, not a string.
-
----
-
-    Code
-      tool_update_dashboard(df_source, update_fn = NULL)
+      tool_update_dashboard(executor, "test_table", update_fn = NULL)
     Condition
       Error in `tool_update_dashboard()`:
       ! `update_fn` must be a function, not `NULL`.
     Code
-      tool_update_dashboard(df_source, update_fn = function(query) { })
+      tool_update_dashboard(executor, "test_table", update_fn = function(query) { })
     Condition
       Error in `tool_update_dashboard()`:
-      ! `update_fn` must accept at least two named arguments: "query" and "title".
-      x "title" argument was missing.
+      ! `update_fn` must accept at least three named arguments: "query", "title", and "table".
+      x "title" and "table" arguments were missing.
     Code
-      tool_update_dashboard(df_source, update_fn = function(title, extra) { })
+      tool_update_dashboard(executor, "test_table", update_fn = function(title, extra)
+        { })
     Condition
       Error in `tool_update_dashboard()`:
-      ! `update_fn` must accept at least two named arguments: "query" and "title".
-      x "query" argument was missing.
+      ! `update_fn` must accept at least three named arguments: "query", "title", and "table".
+      x "query" and "table" arguments were missing.
 
 # tool_reset_dashboard() checks inputs
 
     Code
-      tool_reset_dashboard("not_a_function")
+      tool_reset_dashboard("not_a_function", table_names = "t")
     Condition
       Error in `tool_reset_dashboard()`:
       ! `reset_fn` must be a function, not the string "not_a_function".
-
-# tool_query() checks inputs
-
-    Code
-      tool_query("invalid_source")
-    Condition
-      Error in `tool_query()`:
-      ! `data_source` must be a <DataSource> object, not a string.
 

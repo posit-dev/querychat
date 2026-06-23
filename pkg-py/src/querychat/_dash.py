@@ -8,12 +8,11 @@ from chatlas import Turn
 from narwhals.stable.v1.typing import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
 
 from ._dash_ui import IDs, card_ui, chat_container_ui, chat_messages_ui
-from ._querychat_base import TOOL_GROUPS, QueryChatBase
+from ._querychat_base import TOOL_GROUPS, StateDictQueryChat
 from ._querychat_core import (
     GREETING_PROMPT,
     AppState,
     AppStateDict,
-    StateDictAccessorMixin,
     create_app_state,
     stream_response_async,
 )
@@ -33,8 +32,10 @@ if TYPE_CHECKING:
     import dash
     from dash import html
 
+    from ._data_dict import DataDict
 
-class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
+
+class QueryChat(StateDictQueryChat[IntoFrameT]):
     """
     QueryChat for Dash applications.
 
@@ -92,16 +93,17 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
     @overload
     def __init__(
         self: QueryChat[Any],
-        data_source: None,
-        table_name: str,
+        data_source: None = None,
+        table_name: str | None = None,
         *,
         greeting: Optional[str | PathType] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("filter", "query"),
-        data_description: Optional[str | PathType] = None,
-        categorical_threshold: int = 20,
+        data_dict: DataDict | str | PathType | None = None,
         extra_instructions: Optional[str | PathType] = None,
         prompt_template: Optional[str | PathType] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | PathType] = None,
         storage_type: Literal["memory", "session", "local"] = "memory",
     ) -> None: ...
 
@@ -114,10 +116,11 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
         greeting: Optional[str | PathType] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("filter", "query"),
-        data_description: Optional[str | PathType] = None,
-        categorical_threshold: int = 20,
+        data_dict: DataDict | str | PathType | None = None,
         extra_instructions: Optional[str | PathType] = None,
         prompt_template: Optional[str | PathType] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | PathType] = None,
         storage_type: Literal["memory", "session", "local"] = "memory",
     ) -> None: ...
 
@@ -130,10 +133,11 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
         greeting: Optional[str | PathType] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("filter", "query"),
-        data_description: Optional[str | PathType] = None,
-        categorical_threshold: int = 20,
+        data_dict: DataDict | str | PathType | None = None,
         extra_instructions: Optional[str | PathType] = None,
         prompt_template: Optional[str | PathType] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | PathType] = None,
         storage_type: Literal["memory", "session", "local"] = "memory",
     ) -> None: ...
 
@@ -146,10 +150,11 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
         greeting: Optional[str | PathType] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("filter", "query"),
-        data_description: Optional[str | PathType] = None,
-        categorical_threshold: int = 20,
+        data_dict: DataDict | str | PathType | None = None,
         extra_instructions: Optional[str | PathType] = None,
         prompt_template: Optional[str | PathType] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | PathType] = None,
         storage_type: Literal["memory", "session", "local"] = "memory",
     ) -> None: ...
 
@@ -162,25 +167,27 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
         greeting: Optional[str | PathType] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("filter", "query"),
-        data_description: Optional[str | PathType] = None,
-        categorical_threshold: int = 20,
+        data_dict: DataDict | str | PathType | None = None,
         extra_instructions: Optional[str | PathType] = None,
         prompt_template: Optional[str | PathType] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | PathType] = None,
         storage_type: Literal["memory", "session", "local"] = "memory",
     ) -> None: ...
 
     def __init__(
         self,
-        data_source: IntoFrame | sqlalchemy.Engine | ibis.Table | None,
-        table_name: str,
+        data_source: IntoFrame | sqlalchemy.Engine | ibis.Table | None = None,
+        table_name: str | None = None,
         *,
         greeting: Optional[str | PathType] = None,
         client: Optional[str | chatlas.Chat] = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None = ("filter", "query"),
-        data_description: Optional[str | PathType] = None,
-        categorical_threshold: int = 20,
+        data_dict: DataDict | str | PathType | None = None,
         extra_instructions: Optional[str | PathType] = None,
         prompt_template: Optional[str | PathType] = None,
+        categorical_threshold: int = 20,
+        data_description: Optional[str | PathType] = None,
         storage_type: Literal["memory", "session", "local"] = "memory",
     ):
         super().__init__(
@@ -190,12 +197,13 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
             client=client,
             tools=tools,
             data_description=data_description,
+            data_dict=data_dict,
             categorical_threshold=categorical_threshold,
             extra_instructions=extra_instructions,
             prompt_template=prompt_template,
         )
         self._storage_type: Literal["memory", "session", "local"] = storage_type
-        self._ids = IDs.from_table_name(table_name)
+        self._ids = IDs.from_table_name(table_name or "querychat")
         self._initialized_apps: set[int] = set()
 
     @property
@@ -217,12 +225,18 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
             A Dash app ready to run.
 
         """
-        data_source = self._require_data_source("app")
+        self._require_initialized("app")
+        if len(self._data_sources) > 1:
+            table_list = ", ".join(f"'{n}'" for n in self._data_sources)
+            raise RuntimeError(
+                f"app() does not support multiple tables ({table_list}). "
+                "Build a custom layout using ui() and table('name') instead."
+            )
         import dash_bootstrap_components as dbc
 
         import dash
 
-        table_name = data_source.table_name
+        table_name = next(iter(self._data_sources))
 
         app = dash.Dash(
             __name__,
@@ -235,7 +249,7 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
         register_app_callbacks(
             app,
             self._ids,
-            data_source.table_name,
+            table_name,
             self._deserialize_state,
         )
 
@@ -276,13 +290,14 @@ class QueryChat(QueryChatBase[IntoFrameT], StateDictAccessorMixin[IntoFrameT]):
         ...     return f"Current SQL: {sql}"
 
         """
-        data_source = self._require_data_source("ui")
+        self._require_initialized("ui")
         from dash import dcc, html
 
         initial_state = create_app_state(
-            data_source,
-            self._client_factory,
-            self.greeting,
+            data_sources=dict(self._data_sources),
+            client_factory=self._client_factory,
+            greeting=self.greeting,
+            query_executor=self._require_query_executor("ui"),
         )
 
         return html.Div(

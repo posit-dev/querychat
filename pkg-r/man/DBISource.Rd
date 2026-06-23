@@ -37,6 +37,7 @@ db_source$cleanup()
     \item \href{#method-DBISource-initialize}{\code{DBISource$new()}}
     \item \href{#method-DBISource-get_db_type}{\code{DBISource$get_db_type()}}
     \item \href{#method-DBISource-get_schema}{\code{DBISource$get_schema()}}
+    \item \href{#method-DBISource-get_schema_result}{\code{DBISource$get_schema_result()}}
     \item \href{#method-DBISource-get_semantic_views_description}{\code{DBISource$get_semantic_views_description()}}
     \item \href{#method-DBISource-execute_query}{\code{DBISource$execute_query()}}
     \item \href{#method-DBISource-test_query}{\code{DBISource$test_query()}}
@@ -96,7 +97,7 @@ string or a \code{\link[DBI:Id]{DBI::Id()}} object for tables in catalogs/schema
   Get schema information for the database table
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
-    \preformatted{DBISource$get_schema(categorical_threshold = 20)}
+    \preformatted{DBISource$get_schema(categorical_threshold = 20, table_spec = NULL)}
     \if{html}{\out{</div>}}
   }
   \subsection{Arguments}{
@@ -109,6 +110,17 @@ column to be considered categorical (default: 20)}
   }
   \subsection{Returns}{
     A string describing the schema
+  }
+}
+
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-DBISource-get_schema_result"></a>}}
+\if{latex}{\out{\hypertarget{method-DBISource-get_schema_result}{}}}
+\subsection{\code{DBISource$get_schema_result()}}{
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{DBISource$get_schema_result(categorical_threshold = 20, table_spec = NULL)}
+    \if{html}{\out{</div>}}
   }
 }
 

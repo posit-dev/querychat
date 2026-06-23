@@ -200,6 +200,40 @@ class Test01HelloApp:
             re.compile(r"WHERE.*sex.*=.*['\"]?male['\"]?", re.IGNORECASE), timeout=60000
         )
 
+    # ==================== Filter Button Tests ====================
+
+    def test_apply_filter_button_re_applies_filter(self) -> None:
+        """FILTER-01: Apply Filter button re-applies the filter after a reset."""
+        self.chat.set_user_input("Show only first class passengers")
+        self.chat.send_user_input(method="click")
+
+        sql_code = self.page.locator("pre code").first
+        expect(sql_code).to_contain_text(
+            re.compile(r"WHERE.*(p?class).*=.*(1|['\"]First['\"])", re.IGNORECASE),
+            timeout=60000,
+        )
+
+        apply_btn = self.page.locator(".querychat-update-dashboard-btn").first
+        expect(apply_btn).to_be_visible(timeout=10000)
+        assert apply_btn.get_attribute("data-table") == "titanic"
+        assert apply_btn.get_attribute("data-query") not in (None, "")
+
+        # Reset the filter directly via Shiny JS (no second LLM call)
+        self.page.evaluate(
+            """
+            window.Shiny.setInputValue(
+                'querychat_titanic-chat_update',
+                {table: 'titanic', query: '', title: ''},
+                {priority: 'event'}
+            );
+            """
+        )
+        expect(self.page.locator("text=891")).to_be_visible(timeout=10000)
+
+        apply_btn.click()
+
+        expect(self.page.locator("text=891")).not_to_be_visible(timeout=5000)
+
     # ==================== Stream Cancellation Tests ====================
 
     def test_stop_button_appears_during_streaming(self) -> None:

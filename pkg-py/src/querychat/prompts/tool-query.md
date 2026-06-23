@@ -25,6 +25,11 @@ Always use SQL for counting, averaging, summing, and other calculations—NEVER 
 - When using `collapsed=false`, avoid duplicating the same rows/values in both the tool result and your response text
 - Do not reproduce large result sets in your response — summarize the key takeaways instead
 
+{{#multi_table}}
+
+**Multi-table queries:** Your schema includes multiple tables. You can reference any table in your queries and use JOINs when the data spans tables. Use the relationships described in the schema to determine join conditions.
+
+{{/multi_table}}
 Parameters
 ----------
 query :

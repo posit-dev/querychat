@@ -5,7 +5,9 @@ from pathlib import Path
 
 import narwhals.stable.v1 as nw
 import pandas as pd
+import polars as pl
 import pytest
+from querychat._data_dict import DataDict, RelationshipSpec, TableSpec
 from querychat._datasource import DataFrameSource
 from querychat._system_prompt import QueryChatSystemPrompt
 
@@ -29,13 +31,87 @@ def sample_data_source():
 def sample_prompt_template():
     """Create a sample prompt template for testing."""
     return """Database Type: {{db_type}}
-Schema: {{schema}}
+Tables: {{{tables_overview}}}
 {{#data_description}}Data: {{data_description}}{{/data_description}}
 {{#extra_instructions}}Instructions: {{extra_instructions}}{{/extra_instructions}}
 {{#has_tool_update}}UPDATE TOOL ENABLED{{/has_tool_update}}
 {{#has_tool_query}}QUERY TOOL ENABLED{{/has_tool_query}}
 {{#include_query_guidelines}}QUERY GUIDELINES{{/include_query_guidelines}}
 """
+
+
+def _make_system_prompt(
+    data_sources: dict,
+    data_dicts: list[DataDict] | None = None,
+    **kwargs,
+) -> QueryChatSystemPrompt:
+    return QueryChatSystemPrompt(
+        prompt_template=None,
+        data_sources=data_sources,
+        data_dicts=data_dicts or [],
+        **kwargs,
+    )
+
+
+def test_system_prompt_contains_table_names(sample_data_source) -> None:
+    sp = _make_system_prompt({"mytable": sample_data_source})
+    rendered = sp.render({"query"})
+    assert "mytable" in rendered
+
+
+def test_system_prompt_no_schema_block(sample_data_source) -> None:
+    sp = _make_system_prompt({"mytable": sample_data_source})
+    rendered = sp.render({"query"})
+    # Schema block should be gone — no "Columns:" section in prompt
+    assert "Columns:" not in rendered
+
+
+def test_system_prompt_includes_table_description() -> None:
+    df = nw.from_native(pl.DataFrame({"x": [1]}))
+    source = DataFrameSource(df, "orders")
+    dd = DataDict(
+        tables={"orders": TableSpec(description="Order records.")},
+    )
+    sp = _make_system_prompt({"orders": source}, data_dicts=[dd])
+    rendered = sp.render({"query"})
+    assert "Order records." in rendered
+
+
+def test_system_prompt_includes_glossary() -> None:
+    df = nw.from_native(pl.DataFrame({"x": [1]}))
+    source = DataFrameSource(df, "orders")
+    dd = DataDict(
+        tables={"orders": TableSpec(columns=[])},
+        glossary={"churn": "No orders in 90 days."},
+    )
+    sp = _make_system_prompt({"orders": source}, data_dicts=[dd])
+    rendered = sp.render({"query"})
+    assert "churn" in rendered
+    assert "No orders in 90 days." in rendered
+
+
+def test_system_prompt_includes_relationships() -> None:
+    df = nw.from_native(pl.DataFrame({"x": [1]}))
+    source = DataFrameSource(df, "orders")
+    dd = DataDict(
+        tables={"orders": TableSpec(columns=[])},
+        relationships=[
+            RelationshipSpec(
+                join="orders.customer_id = customers.id",
+                cardinality="many-to-one",
+                description="Order placed by customer.",
+            )
+        ],
+    )
+    sp = _make_system_prompt({"orders": source}, data_dicts=[dd])
+    rendered = sp.render({"query"})
+    assert "orders.customer_id = customers.id" in rendered
+
+
+def test_system_prompt_no_glossary_section_when_empty(sample_data_source) -> None:
+    sp = _make_system_prompt({"t": sample_data_source})
+    rendered = sp.render({"query"})
+    assert "<glossary>" not in rendered
 
 
 class TestQueryChatSystemPromptInit:
@@ -54,8 +130,7 @@ class TestQueryChatSystemPromptInit:
         assert prompt.data_source == sample_data_source
         assert prompt.data_description is None
         assert prompt.extra_instructions is None
-        assert prompt.schema is not None
-        assert prompt.categorical_threshold == 10
+        assert prompt.categorical_threshold == 20
 
     def test_init_with_path_template(self, sample_data_source):
         """Test initialization with Path template."""
@@ -164,7 +239,7 @@ class TestQueryChatSystemPromptRender:
         assert "QUERY TOOL ENABLED" in rendered
         assert "QUERY GUIDELINES" in rendered
         assert "Database Type:" in rendered
-        assert "Schema:" in rendered
+        assert "Tables:" in rendered
 
     def test_render_with_query_only(self, sample_data_source, sample_prompt_template):
         """Test rendering with only query tool enabled."""
@@ -233,8 +308,10 @@ class TestQueryChatSystemPromptRender:
 
         assert "Instructions: Be very concise" in rendered
 
-    def test_render_includes_schema(self, sample_data_source, sample_prompt_template):
-        """Test that rendering includes schema information."""
+    def test_render_includes_table_name(
+        self, sample_data_source, sample_prompt_template
+    ):
+        """Test that rendering includes the table name in the overview."""
         prompt = QueryChatSystemPrompt(
             prompt_template=sample_prompt_template,
             data_source=sample_data_source,
@@ -242,9 +319,8 @@ class TestQueryChatSystemPromptRender:
 
         rendered = prompt.render(tools=("query",))
 
-        assert "Schema:" in rendered
-        # Schema should contain table information
-        assert prompt.schema in rendered
+        assert "Tables:" in rendered
+        assert "test_table" in rendered
 
     def test_render_includes_db_type(self, sample_data_source, sample_prompt_template):
         """Test that rendering includes database type."""
@@ -259,47 +335,6 @@ class TestQueryChatSystemPromptRender:
         assert sample_data_source.get_db_type() in rendered
 
 
-class TestSchemaInferenceSkip:
-    """Tests that schema inference is skipped when template doesn't reference {{schema}}."""
-
-    def test_schema_skipped_when_not_in_template(self, sample_data_source):
-        """Schema should be empty string when template doesn't use {{schema}}."""
-        prompt = QueryChatSystemPrompt(
-            prompt_template="No schema here: {{db_type}}",
-            data_source=sample_data_source,
-        )
-
-        assert prompt.schema == ""
-
-    def test_schema_computed_when_in_template(self, sample_data_source):
-        """Schema should be computed when template uses {{schema}}."""
-        prompt = QueryChatSystemPrompt(
-            prompt_template="Schema: {{schema}}",
-            data_source=sample_data_source,
-        )
-
-        assert prompt.schema != ""
-        assert "test_table" in prompt.schema
-
-    def test_schema_computed_for_triple_braces(self, sample_data_source):
-        """Schema should be computed for unescaped {{{schema}}} syntax."""
-        prompt = QueryChatSystemPrompt(
-            prompt_template="Schema: {{{schema}}}",
-            data_source=sample_data_source,
-        )
-
-        assert prompt.schema != ""
-
-    def test_schema_computed_for_conditional_section(self, sample_data_source):
-        """Schema should be computed for {{#schema}} conditional sections."""
-        prompt = QueryChatSystemPrompt(
-            prompt_template="{{#schema}}Has schema{{/schema}}",
-            data_source=sample_data_source,
-        )
-
-        assert prompt.schema != ""
-
-
 class TestVizPromptConditionals:
     """Tests for visualization-related conditional rendering in the real prompt."""
 
@@ -310,8 +345,6 @@ class TestVizPromptConditionals:
         When only visualize is enabled (no query tool), the fallback
         to querychat_query should not appear in the rendered prompt.
         """
-        from pathlib import Path
-
         template_path = (
             Path(__file__).parent.parent
             / "src"
@@ -335,8 +368,6 @@ class TestVizPromptConditionals:
         When both query and visualize are enabled, the collapsed query
         guidance should appear in the system prompt.
         """
-        from pathlib import Path
-
         template_path = (
             Path(__file__).parent.parent
             / "src"
@@ -359,8 +390,6 @@ class TestVizPromptConditionals:
         should NOT contain "cannot query or analyze" and SHOULD contain
         "Visualizing Data".
         """
-        from pathlib import Path
-
         template_path = (
             Path(__file__).parent.parent
             / "src"
@@ -383,8 +412,6 @@ class TestVizPromptConditionals:
         The "Avoid redundant expanded results" guidance should only appear
         when both query and visualize are enabled.
         """
-        from pathlib import Path
-
         template_path = (
             Path(__file__).parent.parent
             / "src"
@@ -404,3 +431,93 @@ class TestVizPromptConditionals:
         assert "Avoid redundant expanded results" in rendered_both
         assert "Avoid redundant expanded results" not in rendered_query_only
         assert "Avoid redundant expanded results" not in rendered_viz_only
+
+
+class TestDataDictYamlRendering:
+    """Tests for YAML-based data dict rendering in the system prompt."""
+
+    def _make_source(self, table_name: str) -> DataFrameSource:
+        df = nw.from_native(pl.DataFrame({"x": [1]}))
+        return DataFrameSource(df, table_name)
+
+    def test_no_dict_renders_flat_tables_block(self) -> None:
+        sp = _make_system_prompt({"mytable": self._make_source("mytable")})
+        rendered = sp.render({"query"})
+        assert "<tables>" in rendered
+        assert "<data-dict" not in rendered
+
+    def test_single_dict_renders_xml_tag_with_name(self) -> None:
+        dd = DataDict(name="sales", tables={"orders": TableSpec(description="Orders.")})
+        sp = _make_system_prompt(
+            {"orders": self._make_source("orders")}, data_dicts=[dd]
+        )
+        rendered = sp.render({"query"})
+        assert '<data-dict name="sales">' in rendered
+        assert "Orders." in rendered
+
+    def test_xml_tag_includes_description_attribute(self) -> None:
+        dd = DataDict(name="sales", description="Sales domain data", tables={})
+        sp = _make_system_prompt(
+            {"orders": self._make_source("orders")}, data_dicts=[dd]
+        )
+        rendered = sp.render({"query"})
+        assert 'description="Sales domain data"' in rendered
+
+    def test_xml_tag_omits_description_when_absent(self) -> None:
+        dd = DataDict(name="sales", tables={})
+        sp = _make_system_prompt(
+            {"orders": self._make_source("orders")}, data_dicts=[dd]
+        )
+        rendered = sp.render({"query"})
+        assert "description=" not in rendered
+
+    def test_yaml_body_excludes_name_and_description(self) -> None:
+        dd = DataDict(name="sales", description="Sales domain data", tables={})
+        sp = _make_system_prompt(
+            {"orders": self._make_source("orders")}, data_dicts=[dd]
+        )
+        rendered = sp.render({"query"})
+        # name and description belong in the XML tag, not the YAML body
+        assert "name: sales" not in rendered
+        assert "description: Sales domain data" not in rendered
+
+    def test_yaml_body_includes_tables_relationships_glossary(self) -> None:
+        dd = DataDict(
+            name="sales",
+            tables={"orders": TableSpec(description="Order records.")},
+            relationships=[RelationshipSpec(join="orders.customer_id = customers.id")],
+            glossary={"churn": "No orders in 90 days."},
+        )
+        sp = _make_system_prompt(
+            {"orders": self._make_source("orders")}, data_dicts=[dd]
+        )
+        rendered = sp.render({"query"})
+        assert "orders.customer_id = customers.id" in rendered
+        assert "churn" in rendered
+        assert "Order records." in rendered
+
+    def test_multiple_dicts_render_sibling_xml_tags(self) -> None:
+        dd1 = DataDict(name="sales", tables={"orders": TableSpec(description="Orders")})
+        dd2 = DataDict(
+            name="catalog", tables={"products": TableSpec(description="Products")}
+        )
+        sp = _make_system_prompt(
+            {
+                "orders": self._make_source("orders"),
+                "products": self._make_source("products"),
+            },
+            data_dicts=[dd1, dd2],
+        )
+        rendered = sp.render({"query"})
+        assert '<data-dict name="sales">' in rendered
+        assert '<data-dict name="catalog">' in rendered
+        assert rendered.count("<data-dict") == 2
+
+    def test_multi_table_no_dict_emits_warning(self) -> None:
+        with pytest.warns(UserWarning, match="data_dict"):
+            _make_system_prompt(
+                {
+                    "orders": self._make_source("orders"),
+                    "products": self._make_source("products"),
+                }
+            )

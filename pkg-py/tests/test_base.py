@@ -1,12 +1,16 @@
 """Tests for QueryChatBase and normalization functions."""
 
 import os
+import warnings
+from pathlib import Path
 from typing import Any
 
 import chatlas
 import narwhals.stable.v1 as nw
 import pandas as pd
+import polars as pl
 import pytest
+from querychat._data_dict import DataDict, TableSpec
 from querychat._datasource import DataFrameSource, SQLAlchemySource
 from querychat._querychat_base import (
     QueryChatBase,
@@ -14,6 +18,7 @@ from querychat._querychat_base import (
     normalize_data_source,
     normalize_tools,
 )
+from querychat._shiny import QueryChat
 from querychat._utils import MISSING
 from sqlalchemy import create_engine, text
 
@@ -170,9 +175,18 @@ class TestNormalizeTools:
 
 
 class TestQueryChatBase:
+    def test_init_no_args(self):
+        qc = QueryChatBase()
+        assert qc.table_names() == []
+
+    def test_init_no_args_then_add_table(self, sample_df):
+        qc = QueryChatBase()
+        qc.add_table(sample_df, "test_table")
+        assert qc.table_names() == ["test_table"]
+
     def test_init_with_dataframe(self, sample_df):
         qc = QueryChatBase(sample_df, "test_table")
-        assert isinstance(qc.data_source, DataFrameSource)
+        assert isinstance(qc._data_sources["test_table"], DataFrameSource)
         assert qc.tools == {"update", "query"}
 
     def test_init_with_custom_greeting(self, sample_df):
@@ -194,10 +208,6 @@ class TestQueryChatBase:
         with pytest.raises(ValueError, match="Table name must begin with a letter"):
             QueryChatBase(sample_df, "table-with-dash")
 
-    def test_data_source_property(self, sample_df):
-        qc = QueryChatBase(sample_df, "test_table")
-        assert qc.data_source is qc._data_source
-
     def test_system_prompt_property(self, sample_df):
         qc = QueryChatBase(sample_df, "test_table")
         prompt = qc.system_prompt
@@ -213,6 +223,7 @@ class TestQueryChatBase:
         qc = QueryChatBase(sample_df, "test_table")
         client = qc.client(tools=None)
         assert isinstance(client, chatlas.Chat)
+        assert client.get_tools() == []
 
     def test_client_with_callbacks(self, sample_df):
         qc = QueryChatBase(sample_df, "test_table")
@@ -234,3 +245,121 @@ class TestQueryChatBase:
     def test_cleanup(self, sample_df):
         qc = QueryChatBase(sample_df, "test_table")
         qc.cleanup()
+
+
+class TestDataDict:
+    def test_data_dict_path_accepted(self, tmp_path: Path) -> None:
+        f = tmp_path / "spec.yaml"
+        f.write_text('version: "0.1.0"\ntables:\n  t:\n    columns: []\n')
+        df = pl.DataFrame({"x": [1]})
+        qc = QueryChat(df, table_name="t", data_dict=str(f))
+        assert len(qc._data_dicts) == 1
+        assert "t" in qc._data_dicts[0].tables
+
+    def test_data_dict_instance_accepted(self) -> None:
+        dd = DataDict(tables={"t": TableSpec(columns=[])})
+        df = pl.DataFrame({"x": [1]})
+        qc = QueryChat(df, table_name="t", data_dict=dd)
+        assert qc._data_dicts[0] is dd
+
+    def test_data_dict_table_not_in_dict_is_allowed(self) -> None:
+        dd = DataDict(tables={"other": TableSpec(columns=[])})
+        df = pl.DataFrame({"x": [1]})
+        qc = QueryChat(df, table_name="t", data_dict=dd)
+        assert "t" in qc._data_sources
+
+    def test_add_table_not_in_data_dict_is_allowed(self) -> None:
+        dd = DataDict(
+            tables={"t1": TableSpec(columns=[])},
+        )
+        df = pl.DataFrame({"x": [1]})
+        qc = QueryChat(df, table_name="t1", data_dict=dd)
+        df2 = pl.DataFrame({"y": [2]})
+        qc.add_table(df2, "t2")
+        assert "t2" in qc._data_sources
+
+    def test_data_description_accepted(self) -> None:
+        df = pl.DataFrame({"x": [1]})
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            QueryChat(df, table_name="t", data_description="some desc")
+        assert not any(issubclass(warning.category, DeprecationWarning) for warning in w)
+
+
+@pytest.fixture
+def multi_table_engine():
+    engine = create_engine("sqlite:///:memory:")
+    with engine.connect() as conn:
+        conn.execute(
+            text(
+                "CREATE TABLE orders (id INTEGER PRIMARY KEY, amount REAL)"
+            )
+        )
+        conn.execute(
+            text(
+                "CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT)"
+            )
+        )
+        conn.execute(text("INSERT INTO orders VALUES (1, 99.99), (2, 49.50)"))
+        conn.execute(text("INSERT INTO customers VALUES (1, 'Alice'), (2, 'Bob')"))
+        conn.commit()
+    return engine
+
+
+class TestAddTables:
+    def test_auto_discovery_registers_all_tables(self, multi_table_engine):
+        qc = QueryChatBase()
+        with warnings.catch_warnings(record=True):
+            warnings.simplefilter("always")
+            qc.add_tables(multi_table_engine)
+        assert set(qc.table_names()) == {"orders", "customers"}
+
+    def test_explicit_tables_registers_only_those(self, multi_table_engine):
+        qc = QueryChatBase()
+        qc.add_tables(multi_table_engine, ["orders"])
+        assert qc.table_names() == ["orders"]
+
+    def test_nonexistent_table_raises(self, multi_table_engine):
+        qc = QueryChatBase()
+        with pytest.raises(ValueError, match="'nonexistent' not found"):
+            qc.add_tables(multi_table_engine, ["nonexistent"])
+
+    def test_duplicate_without_replace_raises(self, multi_table_engine):
+        qc = QueryChatBase()
+        qc.add_tables(multi_table_engine, ["orders"])
+        with pytest.raises(ValueError, match="Table 'orders' already exists"):
+            qc.add_tables(multi_table_engine, ["orders"])
+
+    def test_replace_true_succeeds(self, multi_table_engine):
+        qc = QueryChatBase()
+        qc.add_tables(multi_table_engine, ["orders"])
+        qc.add_tables(multi_table_engine, ["orders"], replace=True)
+        assert "orders" in qc.table_names()
+
+    def test_non_engine_raises_type_error(self, sample_df):
+        qc = QueryChatBase()
+        with pytest.raises(TypeError, match=r"sqlalchemy\.Engine"):
+            qc.add_tables(sample_df)  # type: ignore[arg-type]
+
+    def test_empty_list_raises(self, multi_table_engine):
+        qc = QueryChatBase()
+        with pytest.raises(ValueError, match="No tables found"):
+            qc.add_tables(multi_table_engine, [])
+
+    def test_after_server_raises(self, multi_table_engine):
+        qc = QueryChatBase()
+        qc._server_initialized = True
+        with pytest.raises(RuntimeError, match="Cannot add tables after server"):
+            qc.add_tables(multi_table_engine)
+
+    def test_system_prompt_built_exactly_once(self, multi_table_engine):
+        qc = QueryChatBase()
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            qc.add_tables(multi_table_engine)
+        multi_table_warns = [
+            x for x in w
+            if issubclass(x.category, UserWarning)
+            and "Multiple tables" in str(x.message)
+        ]
+        assert len(multi_table_warns) == 1

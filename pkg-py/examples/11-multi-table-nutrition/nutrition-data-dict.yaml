@@ -1,0 +1,161 @@
+version: "0.2.0"
+
+tables:
+  foods:
+    description: >
+      One row per USDA Foundation Food item. Nutrient values are not stored here —
+      see food_nutrients. All nutrient amounts in food_nutrients are per 100g of the food.
+    columns:
+      - name: fdc_id
+        type: number(id)
+        constraints: [primary_key]
+        description: Unique food identifier from USDA FoodData Central.
+      - name: description
+        type: string
+        description: Full name of the food item (e.g., "Broccoli, raw").
+      - name: food_category_id
+        type: number(id)
+        constraints: [foreign_key]
+        description: Category of the food. Joins to food_categories.id.
+      - name: publication_date
+        type: date
+        description: Date the food record was published by USDA.
+
+  food_categories:
+    description: Lookup table of USDA food categories. One row per category.
+    columns:
+      - name: id
+        type: number(id)
+        constraints: [primary_key]
+        description: Unique category identifier.
+      - name: code
+        type: number
+        description: USDA numeric category code (e.g., 1100 for Vegetables).
+      - name: description
+        type: string
+        description: Human-readable category name (e.g., "Vegetables and Vegetable Products").
+
+  nutrients:
+    description: >
+      Registry of the 12 key nutritional compounds tracked in this dataset.
+      One row per nutrient type. See the glossary for the full list of nutrient IDs.
+    columns:
+      - name: id
+        type: number(id)
+        constraints: [primary_key]
+        description: USDA nutrient identifier (e.g., 1003 for Protein).
+      - name: name
+        type: string
+        description: >
+          Official USDA nutrient name (e.g., "Protein", "Total lipid (fat)",
+          "Carbohydrate, by difference").
+      - name: unit_name
+        type: enum
+        values: [G, KCAL, MG]
+        description: Unit of measurement. G = grams, KCAL = kilocalories, MG = milligrams.
+
+  food_nutrients:
+    description: >
+      Nutrient content per 100g of food. One row per food–nutrient combination.
+      Only the 12 key nutrients are included (see nutrients table and glossary).
+      To get nutrient values for a food, join on fdc_id.
+      To get nutrient names and units, join nutrients on nutrient_id.
+    columns:
+      - name: fdc_id
+        type: number(id)
+        constraints: [foreign_key]
+        description: Identifies the food. Joins to foods.fdc_id.
+      - name: nutrient_id
+        type: number(id)
+        constraints: [foreign_key]
+        description: Identifies the nutrient. Joins to nutrients.id.
+      - name: amount
+        type: number(quantity)
+        description: >
+          Amount of the nutrient per 100g of food, in the unit given by
+          nutrients.unit_name. May be null if the nutrient was not measured
+          for this food.
+
+  food_portions:
+    description: >
+      Common serving sizes for foods. One row per portion definition.
+      A single food may have multiple portions (e.g., "1 cup" and "1 oz").
+      Not all foods have portion data — only 116 of the 436 foods are covered.
+    columns:
+      - name: fdc_id
+        type: number(id)
+        constraints: [foreign_key]
+        description: Identifies the food. Joins to foods.fdc_id.
+      - name: seq_num
+        type: number
+        description: Sequence number ordering multiple portions for the same food.
+      - name: amount
+        type: number(quantity)
+        description: >
+          The number of measure units in this portion (e.g., 1.0 for "1 cup",
+          2.0 for "2 tablespoons").
+      - name: measure_unit_id
+        type: number(id)
+        constraints: [foreign_key]
+        description: Unit of the portion. Joins to measure_units.id.
+      - name: gram_weight
+        type: number(quantity)
+        description: Weight in grams of this portion (e.g., 240 for 1 cup of milk).
+      - name: modifier
+        type: string
+        description: >
+          Optional preparation note for the portion (e.g., "chopped", "drained",
+          "cooked"). Null when no modifier applies.
+
+  measure_units:
+    description: >
+      Lookup table of measurement unit names used in food_portions.
+      Only units that appear in food_portions are included (~32 of the 123 total).
+    columns:
+      - name: id
+        type: number(id)
+        constraints: [primary_key]
+        description: Unique unit identifier.
+      - name: name
+        type: string
+        description: >
+          Human-readable unit name (e.g., "cup", "tablespoon", "oz", "slice",
+          "piece", "package").
+
+relationships:
+  - description: Each food belongs to one category.
+    cardinality: many-to-one
+    join: foods.food_category_id = food_categories.id
+  - description: Each food has one row per tracked nutrient.
+    cardinality: one-to-many
+    join: foods.fdc_id = food_nutrients.fdc_id
+  - description: Each nutrient type appears in many food measurements.
+    cardinality: one-to-many
+    join: nutrients.id = food_nutrients.nutrient_id
+  - description: Each food may have one or more common portion sizes.
+    cardinality: one-to-many
+    join: foods.fdc_id = food_portions.fdc_id
+  - description: Each portion references a measurement unit.
+    cardinality: many-to-one
+    join: food_portions.measure_unit_id = measure_units.id
+
+glossary:
+  per 100g: All nutrient amounts in food_nutrients are normalized to a 100-gram serving for fair comparison across foods.
+  fdc_id: USDA FoodData Central identifier — the primary key for food items in this dataset.
+  energy: Total caloric value, measured in kilocalories (kcal). Nutrient ID 1008.
+  macronutrient: One of the three main energy-providing nutrients — protein (ID 1003), fat (ID 1004), or carbohydrates (ID 1005).
+  nutrient IDs: >
+    Key nutrient IDs in this dataset:
+    1003 = Protein (G),
+    1004 = Total lipid / fat (G),
+    1005 = Carbohydrate by difference (G),
+    1008 = Energy (KCAL),
+    1063 = Sugars Total (G),
+    1079 = Fiber total dietary (G),
+    1258 = Fatty acids total saturated (G),
+    1087 = Calcium Ca (MG),
+    1089 = Iron Fe (MG),
+    1093 = Sodium Na (MG),
+    1162 = Vitamin C total ascorbic acid (MG),
+    1092 = Potassium K (MG).
+  gram_weight: The actual weight in grams of a described portion. Use this to convert per-100g nutrient values to per-serving values by multiplying by (gram_weight / 100).

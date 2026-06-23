@@ -1,5 +1,4 @@
-interpolate_package <- function(path, ..., .envir = parent.frame()) {
-  # This helper replicates ellmer::interpolate_package() to work with load_all()
+interpolate_package <- function(path, ...) {
   stopifnot(
     "`path` must be a single string" = is.character(path),
     "`path` must be a single string" = length(path) == 1
@@ -11,9 +10,9 @@ interpolate_package <- function(path, ..., .envir = parent.frame()) {
     "`path` does not exist" = file.exists(path)
   )
 
-  ellmer::interpolate_file(path, ..., .envir = .envir)
+  template <- read_utf8(path)
+  whisker::whisker.render(template, list(...))
 }
-
 
 as_querychat_client <- function(client = NULL) {
   if (is.null(client)) {

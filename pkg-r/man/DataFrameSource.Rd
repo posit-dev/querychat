@@ -45,17 +45,18 @@ df_sqlite$cleanup()
 \subsection{Public methods}{
   \itemize{
     \item \href{#method-DataFrameSource-initialize}{\code{DataFrameSource$new()}}
+    \item \href{#method-DataFrameSource-cleanup}{\code{DataFrameSource$cleanup()}}
     \item \href{#method-DataFrameSource-clone}{\code{DataFrameSource$clone()}}
   }
 }
 \if{html}{\out{<details><summary>Inherited methods</summary>
 <ul>
   <li><span class="pkg-link" data-pkg="querychat" data-topic="DataSource" data-id="get_data_description"><a href='../../querychat/html/DataSource.html#method-DataSource-get_data_description'><code>DataSource$get_data_description()</code></a></span></li>
-  <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="cleanup"><a href='../../querychat/html/DBISource.html#method-DBISource-cleanup'><code>DBISource$cleanup()</code></a></span></li>
   <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="execute_query"><a href='../../querychat/html/DBISource.html#method-DBISource-execute_query'><code>DBISource$execute_query()</code></a></span></li>
   <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_data"><a href='../../querychat/html/DBISource.html#method-DBISource-get_data'><code>DBISource$get_data()</code></a></span></li>
   <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_db_type"><a href='../../querychat/html/DBISource.html#method-DBISource-get_db_type'><code>DBISource$get_db_type()</code></a></span></li>
   <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_schema"><a href='../../querychat/html/DBISource.html#method-DBISource-get_schema'><code>DBISource$get_schema()</code></a></span></li>
+  <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_schema_result"><a href='../../querychat/html/DBISource.html#method-DBISource-get_schema_result'><code>DBISource$get_schema_result()</code></a></span></li>
   <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_semantic_views_description"><a href='../../querychat/html/DBISource.html#method-DBISource-get_semantic_views_description'><code>DBISource$get_semantic_views_description()</code></a></span></li>
   <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="test_query"><a href='../../querychat/html/DBISource.html#method-DBISource-test_query'><code>DBISource$test_query()</code></a></span></li>
 </ul>
@@ -90,6 +91,21 @@ engine from duckdb or RSQLite (in that order).}
   }
   \subsection{Returns}{
     A new DataFrameSource object
+  }
+}
+
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-DataFrameSource-cleanup"></a>}}
+\if{latex}{\out{\hypertarget{method-DataFrameSource-cleanup}{}}}
+\subsection{\code{DataFrameSource$cleanup()}}{
+  Disconnect from the database and shut down the DuckDB instance if used.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{DataFrameSource$cleanup()}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    NULL (invisibly)
   }
 }
 

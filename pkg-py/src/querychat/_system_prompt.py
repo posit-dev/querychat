@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-import re
+import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import chevron
+import yaml
 
 from ._viz_utils import has_viz_tool
 
-_SCHEMA_TAG_RE = re.compile(r"\{\{[{#^/]?\s*schema\b")
-
 if TYPE_CHECKING:
+    from ._data_dict import DataDict
     from ._datasource import DataSource
 
 
@@ -19,47 +19,106 @@ class QueryChatSystemPrompt:
 
     def __init__(
         self,
-        prompt_template: str | Path,
-        data_source: DataSource,
+        *,
+        prompt_template: str | Path | None,
+        data_source: DataSource | None = None,
+        data_sources: dict[str, DataSource] | None = None,
         data_description: str | Path | None = None,
         extra_instructions: str | Path | None = None,
-        categorical_threshold: int = 10,
+        categorical_threshold: int = 20,
+        data_dicts: list[DataDict] | None = None,
     ):
-        """
-        Initialize with prompt components.
-
-        Args:
-            prompt_template: Mustache template string or path to template file
-            data_source: DataSource instance for schema generation
-            data_description: Optional data context (string or path)
-            extra_instructions: Optional custom LLM instructions (string or path)
-            categorical_threshold: Threshold for categorical column detection
-
-        """
-        if isinstance(prompt_template, Path):
-            self.template = prompt_template.read_text()
+        if data_sources is not None:
+            self._data_sources = data_sources
+        elif data_source is not None:
+            self._data_sources = {data_source.table_name: data_source}
         else:
-            self.template = prompt_template
+            raise ValueError("Either data_source or data_sources must be provided")
 
-        if isinstance(data_description, Path):
-            self.data_description = data_description.read_text()
-        else:
-            self.data_description = data_description
+        self._data_dicts: list[DataDict] = data_dicts or []
 
-        if isinstance(extra_instructions, Path):
-            self.extra_instructions = extra_instructions.read_text()
-        else:
-            self.extra_instructions = extra_instructions
-
-        if _SCHEMA_TAG_RE.search(self.template):
-            self.schema = data_source.get_schema(
-                categorical_threshold=categorical_threshold
+        if len(self._data_sources) > 1 and not self._data_dicts:
+            warnings.warn(
+                "Multiple tables registered without a data_dict. "
+                "Providing a data_dict with table descriptions and relationships "
+                "gives the LLM better context for multi-table queries.",
+                UserWarning,
+                stacklevel=3,
             )
-        else:
-            self.schema = ""
 
+        if prompt_template is None:
+            prompt_template = Path(__file__).parent / "prompts" / "prompt.md"
+        self.template = (
+            prompt_template.read_text()
+            if isinstance(prompt_template, Path)
+            else prompt_template
+        )
+
+        self.data_description = (
+            data_description.read_text()
+            if isinstance(data_description, Path)
+            else data_description
+        )
+        self.extra_instructions = (
+            extra_instructions.read_text()
+            if isinstance(extra_instructions, Path)
+            else extra_instructions
+        )
         self.categorical_threshold = categorical_threshold
-        self.data_source = data_source
+
+    def _generate_tables_overview(self) -> str:
+        lines = []
+        for name, source in self._data_sources.items():
+            desc: str | None = source.get_data_description() or None
+            if desc and not self.data_description:
+                lines.append(f"- {name}: {desc}")
+            else:
+                lines.append(f"- {name}")
+        return "\n".join(lines)
+
+    def _generate_data_dicts_yaml(self) -> str:
+        def escape_attr(val: str) -> str:
+            return val.replace('"', "&quot;")
+
+        blocks: list[str] = []
+        all_claimed: set[str] = set()
+
+        for dd in self._data_dicts:
+            d = dd.to_prompt_dict()
+            # Name and description belong in the XML tag, not the YAML body
+            d.pop("name", None)
+            d.pop("description", None)
+
+            claimed = {n for n in self._data_sources if n in dd.tables}
+            all_claimed.update(claimed)
+            if "tables" in d:
+                d["tables"] = {
+                    n: v for n, v in d["tables"].items() if n in self._data_sources
+                }
+                if not d["tables"]:
+                    del d["tables"]
+
+            attrs = f'name="{escape_attr(dd.name)}"' if dd.name else ""
+            if dd.description:
+                attrs += f' description="{escape_attr(dd.description)}"'
+
+            body = yaml.dump(d, default_flow_style=False, allow_unicode=True, sort_keys=False).rstrip() if d else ""
+            blocks.append(f"<data-dict {attrs}>\n{body}\n</data-dict>" if body else f"<data-dict {attrs}/>")
+
+        unclaimed = [n for n in self._data_sources if n not in all_claimed]
+        if unclaimed:
+            tables: dict = {}
+            for name in unclaimed:
+                desc = (
+                    self._data_sources[name].get_data_description() or None
+                    if not self.data_description
+                    else None
+                )
+                tables[name] = {"description": desc} if desc else None
+            yaml_str = yaml.dump({"tables": tables}, default_flow_style=False, allow_unicode=True, sort_keys=False).rstrip()
+            blocks.append(f"<tables>\n{yaml_str}\n</tables>")
+
+        return "\n\n".join(blocks)
 
     def render(self, tools: set[str] | None) -> str:
         """
@@ -72,20 +131,24 @@ class QueryChatSystemPrompt:
             Fully rendered system prompt string
 
         """
-        db_type = self.data_source.get_db_type()
-        is_duck_db = db_type.lower() == "duckdb"
+        first_source = next(iter(self._data_sources.values()))
+        db_type = first_source.get_db_type()
+        has_dicts = bool(self._data_dicts)
 
         context = {
             "db_type": db_type,
-            "is_duck_db": is_duck_db,
-            "semantic_views": self.data_source.get_semantic_views_description(),
-            "schema": self.schema,
+            "is_duck_db": db_type.lower() == "duckdb",
+            "semantic_views": first_source.get_semantic_views_description(),
+            "has_data_dicts": has_dicts,
+            "data_dicts": self._generate_data_dicts_yaml() if has_dicts else "",
+            "tables_overview": "" if has_dicts else self._generate_tables_overview(),
             "data_description": self.data_description,
             "extra_instructions": self.extra_instructions,
             "has_tool_update": "update" in tools if tools else False,
             "has_tool_query": "query" in tools if tools else False,
             "has_tool_visualize": has_viz_tool(tools),
             "include_query_guidelines": len(tools or ()) > 0,
+            "multi_table": len(self._data_sources) > 1,
         }
 
         prompts_dir = str(Path(__file__).parent / "prompts")
@@ -95,3 +158,10 @@ class QueryChatSystemPrompt:
             partials_path=prompts_dir,
             partials_ext="md",
         )
+
+    @property
+    def data_source(self) -> DataSource:
+        """Return single data source for backwards compatibility."""
+        if len(self._data_sources) == 1:
+            return next(iter(self._data_sources.values()))
+        raise ValueError("Multiple data sources present; use _data_sources instead")

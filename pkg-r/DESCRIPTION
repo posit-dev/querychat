@@ -28,15 +28,17 @@ Imports:
     DBI,
     ellmer (>= 0.4.1),
     htmltools,
+    jsonlite,
     lifecycle,
     promises,
     R6,
     rlang (>= 1.1.0),
     S7,
     shiny,
-    shinychat (>= 0.4.0),
+    shinychat (> 0.4.0),
     utils,
-    whisker
+    whisker,
+    yaml
 Suggests:
     dbplyr,
     dplyr,
@@ -56,6 +58,8 @@ Suggests:
     withr
 VignetteBuilder:
     knitr
+Remotes:
+    posit-dev/shinychat/pkg-r
 Config/roxygen2/version: 8.0.0
 Config/testthat/edition: 3
 Config/testthat/parallel: true

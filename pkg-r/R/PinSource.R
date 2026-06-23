@@ -134,10 +134,12 @@ PinSource <- R6::R6Class(
         duckdb_lock_down(con)
       } else {
         if (engine == "sqlite" && pin_type %in% duckdb_file_types) {
-          cli::cli_warn(c(
-            "Reading {pin_type} pin {.val {name}} into SQLite.",
-            "i" = "The {.pkg duckdb} engine reads {pin_type} pins more efficiently. Install {.pkg duckdb} or pass {.code engine = \"duckdb\"} to read the pin files directly."
-          ))
+          cli::cli_warn(
+            c(
+              "Reading {pin_type} pin {.val {name}} into SQLite.",
+              "i" = "The {.pkg duckdb} engine reads {pin_type} pins more efficiently. Install {.pkg duckdb} or pass {.code engine = \"duckdb\"} to read the pin files directly."
+            )
+          )
         }
         data <- pins::pin_read(board, name, version = version)
         if (!is.data.frame(data)) {

@@ -79,11 +79,11 @@ def test_ggsql_syntax_reference_does_not_repeat_charts_vs_tables_note():
 
 def test_main_prompt_render_includes_ggsql_reference(data_source):
     system_prompt = QueryChatSystemPrompt(
-        PROMPTS_DIR / "prompt.md",
+        prompt_template=PROMPTS_DIR / "prompt.md",
         data_source=data_source,
     )
 
-    prompt = system_prompt.render(("visualize",))
+    prompt = system_prompt.render({"visualize"})
 
     assert "querychat_visualize" in prompt
     assert "## ggsql Syntax Reference" in prompt

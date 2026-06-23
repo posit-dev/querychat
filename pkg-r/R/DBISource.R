@@ -58,10 +58,12 @@ DBISource <- R6::R6Class(
 
       # Check if table exists
       if (!DBI::dbExistsTable(conn, table_name)) {
-        cli::cli_abort(c(
-          "Table {.val {DBI::dbQuoteIdentifier(conn, table_name)}} not found in database",
-          "i" = "If you're using a table in a catalog or schema, pass a {.fn DBI::Id} object to {.arg table_name}"
-        ))
+        cli::cli_abort(
+          c(
+            "Table {.val {DBI::dbQuoteIdentifier(conn, table_name)}} not found in database",
+            "i" = "If you're using a table in a catalog or schema, pass a {.fn DBI::Id} object to {.arg table_name}"
+          )
+        )
       }
 
       private$conn <- conn
@@ -69,13 +71,15 @@ DBISource <- R6::R6Class(
 
       # Store original column names for validation
       # Use WHERE 1=0 instead of LIMIT 0 for SQL Server compatibility
-      private$colnames <- colnames(DBI::dbGetQuery(
-        conn,
-        sprintf(
-          "SELECT * FROM %s WHERE 1=0",
-          DBI::dbQuoteIdentifier(conn, table_name)
+      private$colnames <- colnames(
+        DBI::dbGetQuery(
+          conn,
+          sprintf(
+            "SELECT * FROM %s WHERE 1=0",
+            DBI::dbQuoteIdentifier(conn, table_name)
+          )
         )
-      ))
+      )
     },
 
     #' @description Get the database type
@@ -103,9 +107,34 @@ DBISource <- R6::R6Class(
     #' @param categorical_threshold Maximum number of unique values for a text
     #'   column to be considered categorical (default: 20)
     #' @return A string describing the schema
-    get_schema = function(categorical_threshold = 20) {
+    get_schema = function(categorical_threshold = 20, table_spec = NULL) {
       check_number_whole(categorical_threshold, min = 1)
-      get_schema_impl(private$conn, self$table_name, categorical_threshold)
+      get_schema_impl(
+        private$conn,
+        self$table_name,
+        categorical_threshold,
+        table_spec = table_spec
+      )
+    },
+
+    get_schema_result = function(
+      categorical_threshold = 20,
+      table_spec = NULL
+    ) {
+      check_number_whole(categorical_threshold, min = 1)
+      details <- build_column_details_impl(
+        private$conn,
+        self$table_name,
+        categorical_threshold,
+        table_spec = table_spec
+      )
+      list(
+        text = format_schema_from_details(
+          as.character(DBI::dbQuoteIdentifier(private$conn, self$table_name)),
+          details
+        ),
+        columns = details
+      )
     },
 
     #' @description
@@ -196,30 +225,29 @@ DBISource <- R6::R6Class(
   )
 )
 
-
-get_schema_impl <- function(
+# Returns a list of named lists (one per column) with all schema metadata.
+# Used by both format_schema_from_details() (LLM text) and JSON serialization (UI).
+build_column_details_impl <- function(
   conn,
   table_name,
   categorical_threshold = 20,
   columns = NULL,
-  prep_query = identity
+  prep_query = identity,
+  table_spec = NULL
 ) {
   check_function(prep_query)
 
-  # Get column information
+  documented <- list()
+  for (spec in table_spec[["columns"]] %||% list()) {
+    documented[[spec[["name"]]]] <- spec
+  }
+
   columns <- columns %||% DBI::dbListFields(conn, table_name)
 
-  schema_lines <- c(
-    paste("Table:", DBI::dbQuoteIdentifier(conn, table_name)),
-    "Columns:"
-  )
-
-  # Build single query to get column statistics
   select_parts <- character(0)
   numeric_columns <- character(0)
   text_columns <- character(0)
 
-  # Get sample of data to determine types
   # Use dbFetch(n=1) instead of LIMIT 1 for SQL Server compatibility
   sample_query <- paste0(
     "SELECT * FROM ",
@@ -230,6 +258,7 @@ get_schema_impl <- function(
   DBI::dbClearResult(rs)
 
   for (col in columns) {
+    spec <- documented[[col]]
     col_class <- class(sample_data[[col]])[1]
 
     if (
@@ -237,36 +266,39 @@ get_schema_impl <- function(
         c("integer", "numeric", "double", "Date", "POSIXct", "POSIXt")
     ) {
       numeric_columns <- c(numeric_columns, col)
-      select_parts <- c(
-        select_parts,
-        paste0(
-          "MIN(",
-          DBI::dbQuoteIdentifier(conn, col),
-          ") as ",
-          DBI::dbQuoteIdentifier(conn, paste0(col, '__min'))
-        ),
-        paste0(
-          "MAX(",
-          DBI::dbQuoteIdentifier(conn, col),
-          ") as ",
-          DBI::dbQuoteIdentifier(conn, paste0(col, '__max'))
+      if (is.null(spec[["range"]])) {
+        select_parts <- c(
+          select_parts,
+          paste0(
+            "MIN(",
+            DBI::dbQuoteIdentifier(conn, col),
+            ") as ",
+            DBI::dbQuoteIdentifier(conn, paste0(col, "__min"))
+          ),
+          paste0(
+            "MAX(",
+            DBI::dbQuoteIdentifier(conn, col),
+            ") as ",
+            DBI::dbQuoteIdentifier(conn, paste0(col, "__max"))
+          )
         )
-      )
+      }
     } else if (col_class %in% c("character", "factor")) {
       text_columns <- c(text_columns, col)
-      select_parts <- c(
-        select_parts,
-        paste0(
-          "COUNT(DISTINCT ",
-          DBI::dbQuoteIdentifier(conn, col),
-          ") as ",
-          DBI::dbQuoteIdentifier(conn, paste0(col, '__distinct_count'))
+      if (is.null(spec[["values"]])) {
+        select_parts <- c(
+          select_parts,
+          paste0(
+            "COUNT(DISTINCT ",
+            DBI::dbQuoteIdentifier(conn, col),
+            ") as ",
+            DBI::dbQuoteIdentifier(conn, paste0(col, "__distinct_count"))
+          )
         )
-      )
+      }
     }
   }
 
-  # Execute statistics query
   column_stats <- list()
   if (length(select_parts) > 0) {
     tryCatch(
@@ -278,21 +310,18 @@ get_schema_impl <- function(
           DBI::dbQuoteIdentifier(conn, table_name)
         )
         result <- DBI::dbGetQuery(conn, prep_query(stats_query))
-        if (nrow(result) > 0) {
-          column_stats <- as.list(result[1, ])
-        }
+        if (nrow(result) > 0) column_stats <- as.list(result[1, ])
       },
-      error = function(e) {
-        # Fall back to no statistics if query fails
-      }
+      error = function(e) {}
     )
   }
 
-  # Get categorical values for text columns below threshold
   categorical_values <- list()
   text_cols_to_query <- character(0)
-
   for (col_name in text_columns) {
+    if (!is.null(documented[[col_name]][["values"]])) {
+      next
+    }
     distinct_count_key <- paste0(col_name, "__distinct_count")
     if (
       distinct_count_key %in%
@@ -303,11 +332,7 @@ get_schema_impl <- function(
       text_cols_to_query <- c(text_cols_to_query, col_name)
     }
   }
-
-  # Remove duplicates
   text_cols_to_query <- unique(text_cols_to_query)
-
-  # Get categorical values
   if (length(text_cols_to_query) > 0) {
     for (col_name in text_cols_to_query) {
       tryCatch(
@@ -323,61 +348,131 @@ get_schema_impl <- function(
             DBI::dbQuoteIdentifier(conn, col_name)
           )
           result <- DBI::dbGetQuery(conn, prep_query(cat_query))
-          if (nrow(result) > 0) {
-            categorical_values[[col_name]] <- result[[1]]
-          }
+          if (nrow(result) > 0) categorical_values[[col_name]] <- result[[1]]
         },
-        error = function(e) {
-          # Skip categorical values if query fails
-        }
+        error = function(e) {}
       )
     }
   }
 
-  # Build schema description
-  for (col in columns) {
+  # Build structured column details (NA_character_ serialises to JSON null via jsonlite)
+  lapply(columns, function(col) {
+    spec <- documented[[col]]
     col_class <- class(sample_data[[col]])[1]
-    sql_type <- r_class_to_sql_type(col_class)
+    sql_type <- spec[["type"]] %||% r_class_to_sql_type(col_class)
 
-    column_info <- paste0("- ", col, " (", sql_type, ")")
+    min_val <- NA_character_
+    max_val <- NA_character_
+    categories <- list()
+    constraints <- if (length(spec[["constraints"]]) > 0) {
+      as.list(spec[["constraints"]])
+    } else {
+      list()
+    }
 
-    # Add range info for numeric columns
     if (col %in% numeric_columns) {
-      min_key <- paste0(col, "__min")
-      max_key <- paste0(col, "__max")
-      if (
-        min_key %in%
-          names(column_stats) &&
-          max_key %in% names(column_stats) &&
-          !is.na(column_stats[[min_key]]) &&
-          !is.na(column_stats[[max_key]])
-      ) {
-        range_info <- paste0(
-          "  Range: ",
-          column_stats[[min_key]],
-          " to ",
-          column_stats[[max_key]]
-        )
-        column_info <- paste(column_info, range_info, sep = "\n")
+      if (!is.null(spec[["range"]])) {
+        min_val <- as.character(spec[["range"]][["min"]] %||% "?")
+        max_val <- as.character(spec[["range"]][["max"]] %||% "?")
+      } else {
+        min_key <- paste0(col, "__min")
+        max_key <- paste0(col, "__max")
+        if (
+          min_key %in%
+            names(column_stats) &&
+            max_key %in% names(column_stats) &&
+            !is.na(column_stats[[min_key]]) &&
+            !is.na(column_stats[[max_key]])
+        ) {
+          min_val <- as.character(column_stats[[min_key]])
+          max_val <- as.character(column_stats[[max_key]])
+        }
+      }
+    } else if (col %in% text_columns) {
+      if (!is.null(spec[["values"]])) {
+        categories <- as.list(as.character(spec[["values"]]))
+      } else if (col %in% names(categorical_values)) {
+        vals <- categorical_values[[col]]
+        if (length(vals) > 0) categories <- as.list(as.character(vals))
       }
     }
 
-    # Add categorical values for text columns
-    if (col %in% names(categorical_values)) {
-      values <- categorical_values[[col]]
-      if (length(values) > 0) {
-        values_str <- paste0("'", values, "'", collapse = ", ")
-        cat_info <- paste0("  Categorical values: ", values_str)
-        column_info <- paste(column_info, cat_info, sep = "\n")
-      }
-    }
+    list(
+      name = col,
+      sql_type = sql_type,
+      units = spec[["units"]] %||% NA_character_,
+      description = spec[["description"]] %||% NA_character_,
+      min_val = min_val,
+      max_val = max_val,
+      categories = categories,
+      constraints = constraints
+    )
+  })
+}
 
-    schema_lines <- c(schema_lines, column_info)
+# Format a list of column details (from build_column_details_impl) into LLM schema text.
+format_schema_from_details <- function(table_name_display, details) {
+  schema_lines <- c(paste("Table:", table_name_display), "Columns:")
+  for (col in details) {
+    line <- paste0("- ", col$name, " (", col$sql_type, ")")
+    if (!is.na(col$units)) {
+      line <- paste0(line, " [", col$units, "]")
+    }
+    if (!is.na(col$description)) {
+      line <- paste(
+        line,
+        paste0("  Description: ", col$description),
+        sep = "\n"
+      )
+    }
+    if (length(col$constraints) > 0) {
+      line <- paste(
+        line,
+        paste0("  Constraints: ", paste(col$constraints, collapse = ", ")),
+        sep = "\n"
+      )
+    }
+    if (!is.na(col$min_val) && !is.na(col$max_val)) {
+      line <- paste(
+        line,
+        paste0("  Range: ", col$min_val, " to ", col$max_val),
+        sep = "\n"
+      )
+    } else if (length(col$categories) > 0) {
+      values_str <- paste0("'", col$categories, "'", collapse = ", ")
+      line <- paste(
+        line,
+        paste0("  Categorical values: ", values_str),
+        sep = "\n"
+      )
+    }
+    schema_lines <- c(schema_lines, line)
   }
-
   paste(schema_lines, collapse = "\n")
 }
 
+get_schema_impl <- function(
+  conn,
+  table_name,
+  categorical_threshold = 20,
+  columns = NULL,
+  prep_query = identity,
+  table_spec = NULL
+) {
+  check_function(prep_query)
+  details <- build_column_details_impl(
+    conn,
+    table_name,
+    categorical_threshold,
+    columns = columns,
+    prep_query = prep_query,
+    table_spec = table_spec
+  )
+  format_schema_from_details(
+    as.character(DBI::dbQuoteIdentifier(conn, table_name)),
+    details
+  )
+}
 
 # nocov start
 # Map R classes to SQL types

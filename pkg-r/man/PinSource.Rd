@@ -77,6 +77,7 @@ if (rlang::is_installed(c("pins", "duckdb"))) {
   <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_data"><a href='../../querychat/html/DBISource.html#method-DBISource-get_data'><code>DBISource$get_data()</code></a></span></li>
   <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_db_type"><a href='../../querychat/html/DBISource.html#method-DBISource-get_db_type'><code>DBISource$get_db_type()</code></a></span></li>
   <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_schema"><a href='../../querychat/html/DBISource.html#method-DBISource-get_schema'><code>DBISource$get_schema()</code></a></span></li>
+  <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_schema_result"><a href='../../querychat/html/DBISource.html#method-DBISource-get_schema_result'><code>DBISource$get_schema_result()</code></a></span></li>
   <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_semantic_views_description"><a href='../../querychat/html/DBISource.html#method-DBISource-get_semantic_views_description'><code>DBISource$get_semantic_views_description()</code></a></span></li>
   <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="test_query"><a href='../../querychat/html/DBISource.html#method-DBISource-test_query'><code>DBISource$test_query()</code></a></span></li>
 </ul>

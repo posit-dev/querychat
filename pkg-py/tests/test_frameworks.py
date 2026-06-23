@@ -37,7 +37,7 @@ class TestGradioQueryChat:
 
         qc = QueryChat(sample_df, "tips")
         assert qc is not None
-        assert qc.data_source is not None
+        assert len(qc.table_names()) > 0
 
     def test_app_returns_blocks(self, sample_df):
         from querychat.gradio import QueryChat
@@ -56,6 +56,35 @@ class TestGradioQueryChat:
             result = qc.ui()
         assert isinstance(result, gr.State)
 
+    def test_app_uses_active_table_for_fallback_sql_display(self):
+        import pandas as pd
+        from querychat.gradio import QueryChat
+
+        qc = QueryChat(pd.DataFrame({"id": [1, 2], "amount": [10, 20]}), "orders")
+        qc.add_table(pd.DataFrame({"id": [101, 102], "state": ["CA", "NY"]}), "customers")
+
+        app = qc.app()._blocks
+        update_displays = next(
+            block_fn.fn
+            for block_fn in app.fns.values()
+            if getattr(block_fn.fn, "__name__", "") == "update_displays"
+        )
+
+        _, sql_code, native_df, data_info_text = update_displays(
+            {
+                "table": "customers",
+                "sql": None,
+                "title": None,
+                "error": "Query syntax error: missing column",
+                "turns": [],
+            }
+        )
+
+        assert sql_code == "SELECT * FROM customers"
+        assert native_df["id"].tolist() == [101, 102]
+        assert native_df["state"].tolist() == ["CA", "NY"]
+        assert "⚠️ Query syntax error: missing column" in data_info_text
+
 
 class TestDashQueryChat:
     @pytest.fixture(autouse=True)
@@ -72,7 +101,7 @@ class TestDashQueryChat:
 
         qc = QueryChat(sample_df, "tips")
         assert qc is not None
-        assert qc.data_source is not None
+        assert len(qc.table_names()) > 0
 
     def test_app_returns_dash_app(self, sample_df):
         from querychat.dash import QueryChat
@@ -154,7 +183,7 @@ class TestStreamlitQueryChat:
 
         qc = QueryChat(sample_df, "tips")
         assert qc is not None
-        assert qc.data_source is not None
+        assert len(qc.table_names()) > 0
 
     def test_system_prompt_generated(self, sample_df):
         from querychat.streamlit import QueryChat
@@ -191,6 +220,6 @@ class TestStreamlitQueryChat:
         from querychat.streamlit import QueryChat
 
         qc = QueryChat(sample_df, "tips")
-        ds = qc.data_source
+        ds = qc.table("tips").data_source
         assert ds is not None
         assert ds.table_name == "tips"

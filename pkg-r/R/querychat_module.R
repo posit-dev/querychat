@@ -38,15 +38,15 @@ mod_ui <- function(
 # Main module server function
 mod_server <- function(
   id,
-  data_source,
+  data_sources,
+  executor,
   greeting,
   client,
   tools,
   enable_bookmarking = FALSE
 ) {
   shiny::moduleServer(id, function(input, output, session) {
-    current_title <- shiny::reactiveVal(NULL, label = "current_title")
-    current_query <- shiny::reactiveVal(NULL, label = "current_query")
+    current_table_val <- shiny::reactiveVal(NULL, label = "current_table")
     # Holds a generated greeting so it can be saved and restored on bookmark.
     # Static greetings live in the UI (chat_ui(greeting=)) and persist already.
     # Workaround for posit-dev/shinychat#253: shinychat does not bookmark
@@ -54,9 +54,32 @@ mod_server <- function(
     # the last_turn() capture below, and the greeting handling in
     # onBookmark/onRestore can be dropped (and the shinychat minimum bumped).
     current_greeting <- shiny::reactiveVal(NULL, label = "current_greeting")
-    filtered_df <- shiny::reactive(label = "filtered_df", {
-      data_source$execute_query(query = current_query())
-    })
+
+    # Per-table reactive state
+    tables <- list()
+    for (name in names(data_sources)) {
+      local({
+        tbl_name <- name
+        sql_val <- shiny::reactiveVal(NULL, label = paste0(tbl_name, "_sql"))
+        title_val <- shiny::reactiveVal(
+          NULL,
+          label = paste0(tbl_name, "_title")
+        )
+        df_val <- shiny::reactive(label = paste0(tbl_name, "_df"), {
+          q <- sql_val()
+          if (is.null(q)) {
+            data_sources[[tbl_name]]$get_data()
+          } else {
+            executor$execute_query(q)
+          }
+        })
+        tables[[tbl_name]] <<- list(
+          sql = sql_val,
+          title = title_val,
+          df = df_val
+        )
+      })
+    }
 
     append_output <- function(...) {
       txt <- paste0(...)
@@ -69,19 +92,26 @@ mod_server <- function(
       )
     }
 
-    update_dashboard <- function(query, title) {
+    update_dashboard <- function(query, title, table) {
       if (!is.null(query)) {
-        current_query(query)
+        tables[[table]]$sql(query)
       }
       if (!is.null(title)) {
-        current_title(title)
+        tables[[table]]$title(title)
       }
+      current_table_val(table)
     }
 
-    reset_query <- function() {
-      current_query(NULL)
-      current_title(NULL)
-      querychat_tool_result(action = "reset")
+    reset_query <- function(table) {
+      tables[[table]]$sql(NULL)
+      tables[[table]]$title(NULL)
+      current_table_val(table)
+      querychat_tool_result(
+        executor,
+        query = NULL,
+        action = "reset",
+        table_name = table
+      )
     }
 
     # Non-reactive bookkeeping for bookmark save/restore of viz widgets
@@ -170,17 +200,34 @@ mod_server <- function(
     })
 
     shiny::observeEvent(input$chat_update, label = "on_chat_update", {
-      current_query(input$chat_update$query)
-      current_title(input$chat_update$title)
+      tbl <- input$chat_update$table
+      if (!is.null(tbl) && tbl %in% names(tables)) {
+        q <- input$chat_update$query
+        ttl <- input$chat_update$title
+        tables[[tbl]]$sql(if (nzchar(q %||% "")) q else NULL)
+        tables[[tbl]]$title(if (nzchar(ttl %||% "")) ttl else NULL)
+        current_table_val(tbl)
+      }
     })
 
     if (enable_bookmarking) {
-      shinychat::chat_restore("chat", chat, session = session)
+      shinychat::chat_restore(
+        "chat",
+        chat,
+        restore_ui = FALSE,
+        session = session
+      )
       shiny::setBookmarkExclude("chat_update", session = session)
 
       shiny::onBookmark(function(state) {
-        state$values$querychat_sql <- current_query()
-        state$values$querychat_title <- current_title()
+        table_states <- list()
+        for (name in names(tables)) {
+          table_states[[name]] <- list(
+            sql = tables[[name]]$sql(),
+            title = tables[[name]]$title()
+          )
+        }
+        state$values$querychat_tables <- table_states
         if (!is.null(current_greeting())) {
           state$values$querychat_greeting <- current_greeting()
         }
@@ -190,11 +237,21 @@ mod_server <- function(
       })
 
       shiny::onRestore(function(state) {
-        if (!is.null(state$values$querychat_sql)) {
-          current_query(state$values$querychat_sql)
-        }
-        if (!is.null(state$values$querychat_title)) {
-          current_title(state$values$querychat_title)
+        if (!is.null(state$values$querychat_tables)) {
+          last_restored <- NULL
+          for (name in names(state$values$querychat_tables)) {
+            tbl_state <- state$values$querychat_tables[[name]]
+            if (!is.null(tbl_state$sql)) {
+              tables[[name]]$sql(tbl_state$sql)
+              last_restored <- name
+            }
+            if (!is.null(tbl_state$title)) {
+              tables[[name]]$title(tbl_state$title)
+            }
+          }
+          if (!is.null(last_restored)) {
+            current_table_val(last_restored)
+          }
         }
         if (!is.null(state$values$querychat_greeting)) {
           current_greeting(state$values$querychat_greeting)
@@ -209,7 +266,7 @@ mod_server <- function(
         }
         if (!is.null(state$values$querychat_viz_widgets)) {
           restored <- restore_viz_widgets(
-            data_source,
+            executor,
             state$values$querychat_viz_widgets,
             session
           )
@@ -218,12 +275,50 @@ mod_server <- function(
       })
     }
 
-    list(
-      client = chat,
-      sql = current_query,
-      title = current_title,
-      df = filtered_df
-    )
+    table_fn <- function(name) {
+      if (!name %in% names(tables)) {
+        available <- paste0("'", names(tables), "'", collapse = ", ")
+        cli::cli_abort(
+          "Table {.val {name}} not found. Available: {available}"
+        )
+      }
+      TableAccessor$new(name, data_sources[[name]], state = tables[[name]])
+    }
+
+    table_names_fn <- function() names(tables)
+
+    # Backward compat: for single-table, expose sql/title/df directly
+    if (length(data_sources) == 1) {
+      first <- tables[[1]]
+      list(
+        client = chat,
+        sql = first$sql,
+        title = first$title,
+        df = first$df,
+        table = table_fn,
+        table_names = table_names_fn,
+        current_table = current_table_val,
+        .tables = tables
+      )
+    } else {
+      single_table_error <- function(method) {
+        function(...) {
+          cli::cli_abort(
+            "Multiple tables registered. Use {.code qc_vals$table('name')${method}()} instead."
+          )
+        }
+      }
+      list(
+        client = chat,
+        sql = single_table_error("sql"),
+        title = single_table_error("title"),
+        df = single_table_error("df"),
+        table = table_fn,
+        table_names = table_names_fn,
+        current_table = current_table_val,
+        .tables = tables
+      )
+    }
   })
 }
 
@@ -234,7 +329,7 @@ GREETING_PROMPT <- paste(
   "using the suggestion card format from your instructions."
 )
 
-restore_viz_widgets <- function(data_source, saved_widgets, session) {
+restore_viz_widgets <- function(executor, saved_widgets, session) {
   if (!rlang::is_installed("ggsql")) {
     warning(
       "ggsql is not installed; skipping restoration of visualization widgets.",
@@ -248,7 +343,7 @@ restore_viz_widgets <- function(data_source, saved_widgets, session) {
     tryCatch(
       {
         validated <- ggsql::ggsql_validate(entry$ggsql)
-        spec <- execute_ggsql(data_source, validated)
+        spec <- execute_ggsql(executor, validated)
         session$output[[entry$widget_id]] <- ggsql::renderGgsql(spec)
         restored <- c(restored, list(entry))
       },

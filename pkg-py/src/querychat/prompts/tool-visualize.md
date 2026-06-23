@@ -10,6 +10,11 @@ Render a ggsql query (SQL with a VISUALISE clause) as an Altair chart displayed 
 - Do NOT include `LABEL title => ...` in the query — use the `title` parameter instead.
 - If a visualization fails, read the error message carefully and retry with a corrected query. Common fixes: correcting column names, adding `SCALE DISCRETE` for integer categories, moving SQL expressions out of `VISUALISE` into the `SELECT` clause, and using `DRAW range` for interval-style marks instead of deprecated `errorbar`.{{#has_tool_query}} If the error persists, fall back to `querychat_query` for a tabular answer.{{/has_tool_query}}
 
+{{#multi_table}}
+
+**Multi-table queries:** The SELECT portion of your ggsql query can reference any table from the schema and use JOINs.
+
+{{/multi_table}}
 Parameters
 ----------
 ggsql :

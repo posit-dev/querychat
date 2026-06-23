@@ -303,5 +303,5 @@ You might want to <span class="suggestion">explore the advanced features</span> 
 {{#extra_instructions}}
 ## Additional Instructions
 
-{{extra_instructions}}
+{{{extra_instructions}}}
 {{/extra_instructions}}

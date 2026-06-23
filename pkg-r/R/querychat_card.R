@@ -169,7 +169,7 @@ tool_card_impl <- function(executor, manage_card) {
       }
     } else if (display == "table") {
       tryCatch(
-        executor$test_query(value),
+        executor$validate_query(value),
         error = function(e) rlang::abort(conditionMessage(e))
       )
     } else if (display == "visualization") {

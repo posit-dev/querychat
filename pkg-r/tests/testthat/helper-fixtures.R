@@ -95,6 +95,24 @@ local_data_frame_source <- function(
   df_source
 }
 
+# Create a QueryExecutor over a single DataFrameSource with automatic cleanup.
+# Mirrors what QueryChat builds at runtime, so tests exercise the executor's
+# method signatures (e.g. validate_query) rather than a bare DataFrameSource.
+local_query_executor <- function(
+  data = new_test_df(),
+  table_name = "test_table",
+  engine = "duckdb",
+  env = parent.frame()
+) {
+  df_source <- local_data_frame_source(
+    data,
+    table_name,
+    engine = engine,
+    env = env
+  )
+  build_query_executor(rlang::set_names(list(df_source), table_name))
+}
+
 local_querychat <- function(
   data_source = new_test_df(),
   table_name = "test_table",

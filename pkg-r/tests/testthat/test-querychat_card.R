@@ -11,7 +11,7 @@ describe("tool_card()", {
   skip_if_no_dataframe_engine()
 
   it("creates a tool with the correct name", {
-    ds <- local_data_frame_source(new_test_df())
+    ds <- local_query_executor(new_test_df())
     tool <- tool_card(ds, function(...) {})
     expect_equal(tool@name, "querychat_card")
   })
@@ -38,7 +38,7 @@ describe("tool_card_impl()", {
   }
 
   it("adds a table card and calls manage_card", {
-    ds <- local_data_frame_source(new_test_df())
+    ds <- local_query_executor(new_test_df())
     mock <- new_mock()
     impl <- tool_card_impl(ds, mock$mock_manage)
 
@@ -60,7 +60,7 @@ describe("tool_card_impl()", {
   })
 
   it("adds a markdown card without query execution", {
-    ds <- local_data_frame_source(new_test_df())
+    ds <- local_query_executor(new_test_df())
     mock <- new_mock()
     impl <- tool_card_impl(ds, mock$mock_manage)
 
@@ -78,7 +78,7 @@ describe("tool_card_impl()", {
   })
 
   it("adds a value_box card for a 1x1 query", {
-    ds <- local_data_frame_source(new_test_df())
+    ds <- local_query_executor(new_test_df())
     mock <- new_mock()
     impl <- tool_card_impl(ds, mock$mock_manage)
 
@@ -96,7 +96,7 @@ describe("tool_card_impl()", {
   })
 
   it("errors for value_box query returning more than 1 row x 1 column", {
-    ds <- local_data_frame_source(new_test_df())
+    ds <- local_query_executor(new_test_df())
     mock <- new_mock()
     impl <- tool_card_impl(ds, mock$mock_manage)
 
@@ -113,7 +113,7 @@ describe("tool_card_impl()", {
   })
 
   it("errors for replace action when id is missing", {
-    ds <- local_data_frame_source(new_test_df())
+    ds <- local_query_executor(new_test_df())
     mock <- new_mock()
     impl <- tool_card_impl(ds, mock$mock_manage)
 
@@ -129,7 +129,7 @@ describe("tool_card_impl()", {
   })
 
   it("patches an existing card by overlaying supplied fields", {
-    ds <- local_data_frame_source(new_test_df())
+    ds <- local_query_executor(new_test_df())
     existing <- list(
       id = "abcd",
       display = "table",
@@ -166,7 +166,7 @@ describe("tool_card_impl()", {
   })
 
   it("errors for patch action when the card does not exist", {
-    ds <- local_data_frame_source(new_test_df())
+    ds <- local_query_executor(new_test_df())
     mock_manage <- function(action, id = NULL, card = NULL) {
       if (action == "get") {
         return(NULL)
@@ -182,7 +182,7 @@ describe("tool_card_impl()", {
   })
 
   it("removes a card by id without validation", {
-    ds <- local_data_frame_source(new_test_df())
+    ds <- local_query_executor(new_test_df())
     mock <- new_mock()
     impl <- tool_card_impl(ds, mock$mock_manage)
 
@@ -196,7 +196,7 @@ describe("tool_card_impl()", {
   })
 
   it("errors when value is missing on add", {
-    ds <- local_data_frame_source(new_test_df())
+    ds <- local_query_executor(new_test_df())
     mock <- new_mock()
     impl <- tool_card_impl(ds, mock$mock_manage)
 
@@ -211,7 +211,7 @@ describe("tool_card_impl()", {
   })
 
   it("errors when display is missing on add", {
-    ds <- local_data_frame_source(new_test_df())
+    ds <- local_query_executor(new_test_df())
     mock <- new_mock()
     impl <- tool_card_impl(ds, mock$mock_manage)
 
@@ -226,7 +226,7 @@ describe("tool_card_impl()", {
   })
 
   it("validates icon for table display", {
-    ds <- local_data_frame_source(new_test_df())
+    ds <- local_query_executor(new_test_df())
     mock <- new_mock()
     impl <- tool_card_impl(ds, mock$mock_manage)
 
@@ -243,7 +243,7 @@ describe("tool_card_impl()", {
   })
 
   it("validates icon for markdown display", {
-    ds <- local_data_frame_source(new_test_df())
+    ds <- local_query_executor(new_test_df())
     mock <- new_mock()
     impl <- tool_card_impl(ds, mock$mock_manage)
 
@@ -260,7 +260,7 @@ describe("tool_card_impl()", {
   })
 
   it("validates icon for value_box display", {
-    ds <- local_data_frame_source(new_test_df())
+    ds <- local_query_executor(new_test_df())
     mock <- new_mock()
     impl <- tool_card_impl(ds, mock$mock_manage)
 
@@ -277,7 +277,7 @@ describe("tool_card_impl()", {
   })
 
   it("stores caption field in the card", {
-    ds <- local_data_frame_source(new_test_df())
+    ds <- local_query_executor(new_test_df())
     mock <- new_mock()
     impl <- tool_card_impl(ds, mock$mock_manage)
 
@@ -294,7 +294,7 @@ describe("tool_card_impl()", {
   })
 
   it("stores caption field for value_box", {
-    ds <- local_data_frame_source(new_test_df())
+    ds <- local_query_executor(new_test_df())
     mock <- new_mock()
     impl <- tool_card_impl(ds, mock$mock_manage)
 
@@ -365,7 +365,7 @@ describe("tool_card_impl() get action", {
   skip_if_no_dataframe_engine()
 
   it("returns all cards when id is omitted", {
-    ds <- local_data_frame_source(new_test_df())
+    ds <- local_query_executor(new_test_df())
     all_cards <- list(
       list(id = "aaa", display = "table", title = "One", value = "SELECT 1"),
       list(id = "bbb", display = "markdown", title = "Two", value = "Note")
@@ -385,7 +385,7 @@ describe("tool_card_impl() get action", {
   })
 
   it("returns a single card when id is supplied", {
-    ds <- local_data_frame_source(new_test_df())
+    ds <- local_query_executor(new_test_df())
     mock_manage <- function(action, id = NULL, card = NULL) {
       expect_equal(id, "aaa")
       list(id = "aaa", display = "table", title = "One", value = "SELECT 1")
@@ -399,7 +399,7 @@ describe("tool_card_impl() get action", {
   })
 
   it("errors when the requested card does not exist", {
-    ds <- local_data_frame_source(new_test_df())
+    ds <- local_query_executor(new_test_df())
     mock_manage <- function(action, id = NULL, card = NULL) NULL
     impl <- tool_card_impl(ds, mock_manage)
 

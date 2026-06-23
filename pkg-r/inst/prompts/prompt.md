@@ -14,7 +14,7 @@ You have access to a {{db_type}} SQL database with the following tables:
 {{/has_data_dicts}}
 {{#data_description}}
 <data_description>
-{{data_description}}
+{{{data_description}}}
 </data_description>
 
 {{/data_description}}

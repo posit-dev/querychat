@@ -289,3 +289,61 @@ def test_build_greeting_prompt_false_omits_schema_adds_explorer():
     )
     assert prompt.startswith(GREETING_MARKER)
     assert "<schema>" not in prompt
+    assert "available" in prompt.lower() or "explore" in prompt.lower()
+
+
+def test_generate_greeting_embeds_schema_for_single_table(sample_df):
+    """generate_greeting() sends schema-embedded prompt for a single table."""
+    qc = QueryChat(data_source=sample_df, table_name="people")
+    seen: dict[str, str] = {}
+
+    def fake_chat(self, prompt, *args, **kwargs):
+        seen["prompt"] = prompt
+        seen["system_prompt"] = self.system_prompt or ""
+        return "Hello!"
+
+    with patch("chatlas.Chat.chat", fake_chat):
+        result = qc.generate_greeting()
+
+    assert result == "Hello!"
+    assert seen["prompt"].startswith(GREETING_MARKER)
+    assert "<schema>" in seen["prompt"]
+
+
+def test_generate_greeting_omits_schema_for_multi_table_default():
+    """generate_greeting() with no greeting_tables omits schema for multi-table."""
+    qc = QueryChat()
+    qc.add_table(pd.DataFrame({"a": [1]}), "t1")
+    qc.add_table(pd.DataFrame({"b": [2]}), "t2")
+    seen: dict[str, str] = {}
+
+    def fake_chat(self, prompt, *args, **kwargs):
+        seen["prompt"] = prompt
+        return "Hello!"
+
+    with patch("chatlas.Chat.chat", fake_chat):
+        qc.generate_greeting()
+
+    assert seen["prompt"].startswith(GREETING_MARKER)
+    assert "<schema>" not in seen["prompt"]
+
+
+def test_generate_greeting_respects_greeting_tables_param(sample_df):
+    """generate_greeting() includes schema for tables named in greeting_tables."""
+    qc = QueryChat(greeting_tables=["people"])
+    qc.add_table(sample_df, "people")
+    qc.add_table(pd.DataFrame({"x": [1]}), "other")
+    seen: dict[str, str] = {}
+
+    def fake_chat(self, prompt, *args, **kwargs):
+        seen["prompt"] = prompt
+        return "Hi!"
+
+    with patch("chatlas.Chat.chat", fake_chat):
+        qc.generate_greeting()
+
+    assert seen["prompt"].startswith(GREETING_MARKER)
+    assert "<schema>" in seen["prompt"]
+    # only people schema present: people has 'name', 'age'; other has 'x'
+    assert "age" in seen["prompt"]
+    assert "x" not in seen["prompt"]

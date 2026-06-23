@@ -153,9 +153,12 @@ QueryChat <- R6::R6Class(
       client_spec = NULL,
       tools = NA,
       session = NULL,
-      update_dashboard = function(query, title, table) {},
-      reset_dashboard = function(table) {},
-      visualize = function(data) {}
+      update_dashboard = function(query, title, table) {
+      },
+      reset_dashboard = function(table) {
+      },
+      visualize = function(data) {
+      }
     ) {
       spec <- client_spec %||% private$.client_spec
       chat <- as_querychat_client(spec)
@@ -229,6 +232,8 @@ QueryChat <- R6::R6Class(
   public = list(
     #' @field greeting The greeting message displayed to users.
     greeting = NULL,
+    #' @field greeting_tables Controls which tables' schema to include in greeting.
+    greeting_tables = NULL,
     #' @field id ID for the QueryChat instance.
     id = NULL,
     #' @field id_override Whether the ID was explicitly set by the user.
@@ -295,6 +300,7 @@ QueryChat <- R6::R6Class(
       ...,
       id = NULL,
       greeting = NULL,
+      greeting_tables = NULL,
       client = NULL,
       tools = c("filter", "query"),
       data_description = NULL,
@@ -342,6 +348,7 @@ QueryChat <- R6::R6Class(
         greeting <- read_utf8(greeting)
       }
       self$greeting <- greeting
+      self$greeting_tables <- greeting_tables
 
       # Track whether id was explicitly set
       self$id_override <- id
@@ -592,9 +599,12 @@ QueryChat <- R6::R6Class(
     #'   as Shiny outputs.
     client = function(
       tools = NA,
-      update_dashboard = function(query, title, table) {},
-      reset_dashboard = function(table) {},
-      visualize = function(data) {},
+      update_dashboard = function(query, title, table) {
+      },
+      reset_dashboard = function(table) {
+      },
+      visualize = function(data) {
+      },
       session = NULL
     ) {
       private$require_initialized("$client")
@@ -900,6 +910,8 @@ QueryChat <- R6::R6Class(
         greeting = self$greeting,
         client = create_session_client,
         tools = self$tools,
+        greeting_tables = self$greeting_tables,
+        categorical_threshold = private$.categorical_threshold,
         enable_bookmarking = enable_bookmarking
       )
       result
@@ -914,7 +926,12 @@ QueryChat <- R6::R6Class(
     generate_greeting = function(echo = c("none", "output")) {
       private$require_initialized("$generate_greeting")
       chat <- private$create_session_client()
-      as.character(chat$chat(GREETING_PROMPT, echo = echo))
+      greeting_prompt <- build_greeting_prompt(
+        private$.data_sources,
+        private$.categorical_threshold,
+        self$greeting_tables
+      )
+      as.character(chat$chat(greeting_prompt, echo = echo))
     },
 
     #' @description

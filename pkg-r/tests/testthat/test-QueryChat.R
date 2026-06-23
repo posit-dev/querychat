@@ -657,10 +657,12 @@ describe("QueryChat$client()", {
 })
 
 test_that("QueryChat$generate_greeting() generates a greeting using the LLM client", {
+  skip_if_no_dataframe_engine()
   client <- mock_ellmer_chat_client(
     public = list(
       chat = function(message, ...) {
-        expect_equal(message, GREETING_PROMPT)
+        expect_true(startsWith(message, querychat:::GREETING_MARKER))
+        expect_match(message, "<schema>") # single table → schema included
         "Welcome! This is a mock response for testing."
       }
     )
@@ -668,12 +670,77 @@ test_that("QueryChat$generate_greeting() generates a greeting using the LLM clie
 
   test_df <- new_test_df()
 
-  # Create a mock client that returns a fixed greeting
   qc <- QueryChat$new(test_df, client = client)
   withr::defer(qc$cleanup())
 
   greeting <- qc$generate_greeting()
   expect_equal(greeting, "Welcome! This is a mock response for testing.")
+})
+
+test_that("generate_greeting() sends schema-embedded prompt for single table", {
+  skip_if_no_dataframe_engine()
+  client <- mock_ellmer_chat_client(
+    public = list(
+      chat = function(message, ...) {
+        expect_true(startsWith(message, querychat:::GREETING_MARKER))
+        expect_match(message, "<schema>")
+        "Hello!"
+      }
+    )
+  )
+  test_df <- new_test_df()
+  qc <- QueryChat$new(test_df, client = client)
+  withr::defer(qc$cleanup())
+
+  greeting <- qc$generate_greeting()
+  expect_equal(greeting, "Hello!")
+})
+
+test_that("generate_greeting() omits schema for multi-table with no greeting_tables", {
+  skip_if_no_dataframe_engine()
+  client <- mock_ellmer_chat_client(
+    public = list(
+      chat = function(message, ...) {
+        expect_true(startsWith(message, querychat:::GREETING_MARKER))
+        expect_false(grepl("<schema>", message))
+        "Hello!"
+      }
+    )
+  )
+  qc <- QueryChat$new(
+    data_source = NULL,
+    table_name = "placeholder",
+    client = client
+  )
+  withr::defer(qc$cleanup())
+  qc$add_table(new_test_df(), "t1")
+  qc$add_table(data.frame(x = 1), "t2")
+
+  qc$generate_greeting()
+})
+
+test_that("generate_greeting() includes schema for tables in greeting_tables", {
+  skip_if_no_dataframe_engine()
+  client <- mock_ellmer_chat_client(
+    public = list(
+      chat = function(message, ...) {
+        expect_match(message, "amount")
+        expect_false(grepl("\\bname\\b", message))
+        "Hello!"
+      }
+    )
+  )
+  qc <- QueryChat$new(
+    data_source = NULL,
+    table_name = "placeholder",
+    client = client,
+    greeting_tables = "t1"
+  )
+  withr::defer(qc$cleanup())
+  qc$add_table(data.frame(amount = c(1, 2)), "t1")
+  qc$add_table(data.frame(name = c("A")), "t2")
+
+  qc$generate_greeting()
 })
 
 test_that("QueryChat$server() errors when called outside Shiny context", {
@@ -876,7 +943,8 @@ test_that("querychat_app() only cleans up data frame sources on exit", {
         # have to use an option because the code is evaluated in a far-away env
         options(.test_cleanup = cleanup)
       },
-      app = function(...) {}
+      app = function(...) {
+      }
     )
   )
   withr::local_options(rlang_interactive = TRUE)

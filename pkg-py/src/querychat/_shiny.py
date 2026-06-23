@@ -160,6 +160,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         prompt_template: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         data_description: Optional[str | Path] = None,
+        greeting_tables: list[str] | bool | None = None,
     ) -> None: ...
 
     @overload
@@ -177,6 +178,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         prompt_template: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         data_description: Optional[str | Path] = None,
+        greeting_tables: list[str] | bool | None = None,
     ) -> None: ...
 
     @overload
@@ -194,6 +196,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         prompt_template: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         data_description: Optional[str | Path] = None,
+        greeting_tables: list[str] | bool | None = None,
     ) -> None: ...
 
     @overload
@@ -211,6 +214,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         prompt_template: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         data_description: Optional[str | Path] = None,
+        greeting_tables: list[str] | bool | None = None,
     ) -> None: ...
 
     @overload
@@ -228,6 +232,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         prompt_template: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         data_description: Optional[str | Path] = None,
+        greeting_tables: list[str] | bool | None = None,
     ) -> None: ...
 
     def __init__(
@@ -244,6 +249,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         prompt_template: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         data_description: Optional[str | Path] = None,
+        greeting_tables: list[str] | bool | None = None,
     ):
         super().__init__(
             data_source,
@@ -256,6 +262,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             categorical_threshold=categorical_threshold,
             extra_instructions=extra_instructions,
             prompt_template=prompt_template,
+            greeting_tables=greeting_tables,
         )
         self.id = id or (f"querychat_{table_name}" if table_name else "querychat")
 
@@ -663,6 +670,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         prompt_template: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         data_description: Optional[str | Path] = None,
+        greeting_tables: list[str] | bool | None = None,
         enable_bookmarking: Literal["auto", True, False] = "auto",
     ) -> None: ...
 
@@ -681,6 +689,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         prompt_template: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         data_description: Optional[str | Path] = None,
+        greeting_tables: list[str] | bool | None = None,
         enable_bookmarking: Literal["auto", True, False] = "auto",
     ) -> None: ...
 
@@ -699,6 +708,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         prompt_template: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         data_description: Optional[str | Path] = None,
+        greeting_tables: list[str] | bool | None = None,
         enable_bookmarking: Literal["auto", True, False] = "auto",
     ) -> None: ...
 
@@ -717,6 +727,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         prompt_template: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         data_description: Optional[str | Path] = None,
+        greeting_tables: list[str] | bool | None = None,
         enable_bookmarking: Literal["auto", True, False] = "auto",
     ) -> None: ...
 
@@ -735,6 +746,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         prompt_template: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         data_description: Optional[str | Path] = None,
+        greeting_tables: list[str] | bool | None = None,
         enable_bookmarking: Literal["auto", True, False] = "auto",
     ) -> None: ...
 
@@ -752,6 +764,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         prompt_template: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         data_description: Optional[str | Path] = None,
+        greeting_tables: list[str] | bool | None = None,
         enable_bookmarking: Literal["auto", True, False] = "auto",
     ):
         # Sanity check: Express should always have a (stub/real) session
@@ -773,6 +786,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             categorical_threshold=categorical_threshold,
             extra_instructions=extra_instructions,
             prompt_template=prompt_template,
+            greeting_tables=greeting_tables,
         )
         self.id = id or (f"querychat_{table_name}" if table_name else "querychat")
 

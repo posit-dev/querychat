@@ -152,11 +152,13 @@ mod_server <- function(
             )
             return()
           }
-          cli::cli_warn(c(
-            "No {.arg greeting} provided to {.fn QueryChat}. Using the LLM {.arg client} to generate one now.",
-            "i" = "For faster startup, lower cost, and determinism, consider providing a {.arg greeting} to {.fn QueryChat}.",
-            "i" = "You can use your {.help querychat::QueryChat} object's {.fn $generate_greeting} method to generate a greeting."
-          ))
+          cli::cli_warn(
+            c(
+              "No {.arg greeting} provided to {.fn QueryChat}. Using the LLM {.arg client} to generate one now.",
+              "i" = "For faster startup, lower cost, and determinism, consider providing a {.arg greeting} to {.fn QueryChat}.",
+              "i" = "You can use your {.help querychat::QueryChat} object's {.fn $generate_greeting} method to generate a greeting."
+            )
+          )
           greeting_client <- client(tools = NULL)
           greeting_prompt <- build_greeting_prompt(
             data_sources,
@@ -346,7 +348,11 @@ GREETING_EXPLORE_ADDENDUM <- paste(
 # TODO: Make this dependent on enabled tools
 GREETING_PROMPT <- GREETING_BASE_TEXT
 
-build_greeting_prompt <- function(data_sources, categorical_threshold, greeting_tables) {
+build_greeting_prompt <- function(
+  data_sources,
+  categorical_threshold,
+  greeting_tables
+) {
   table_names <- resolve_greeting_tables(data_sources, greeting_tables)
 
   if (length(table_names) > 0) {
@@ -359,7 +365,12 @@ build_greeting_prompt <- function(data_sources, categorical_threshold, greeting_
       schema_sections <- c(schema_sections, section)
     }
     schema_block <- paste(schema_sections, collapse = "\n\n")
-    body <- paste0("<schema>\n", schema_block, "\n</schema>\n\n", GREETING_BASE_TEXT)
+    body <- paste0(
+      "<schema>\n",
+      schema_block,
+      "\n</schema>\n\n",
+      GREETING_BASE_TEXT
+    )
   } else {
     body <- paste(GREETING_BASE_TEXT, GREETING_EXPLORE_ADDENDUM)
   }
@@ -392,13 +403,15 @@ restore_record_list <- function(x) {
     return(NULL)
   }
   if (is.data.frame(x)) {
-    return(lapply(seq_len(nrow(x)), function(i) {
-      row <- as.list(x[i, , drop = FALSE])
-      row <- lapply(row, function(v) {
-        if (length(v) == 1 && is.na(v)) NULL else v
+    return(
+      lapply(seq_len(nrow(x)), function(i) {
+        row <- as.list(x[i, , drop = FALSE])
+        row <- lapply(row, function(v) {
+          if (length(v) == 1 && is.na(v)) NULL else v
+        })
+        row[!vapply(row, is.null, logical(1))]
       })
-      row[!vapply(row, is.null, logical(1))]
-    }))
+    )
   }
   as.list(x)
 }

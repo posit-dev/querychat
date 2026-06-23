@@ -32,9 +32,9 @@ from ._query_executor import (
     validate_source_group_compatibility,
 )
 from ._querychat_core import (
-    GREETING_PROMPT,
     AppState,
     AppStateDict,
+    build_greeting_prompt,
     create_app_state,
     warn_multi_table_flat_accessor,
 )
@@ -91,6 +91,7 @@ class QueryChatBase(Generic[IntoFrameT]):
         prompt_template: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         data_description: Optional[str | Path] = None,
+        greeting_tables: list[str] | bool | None = None,
     ):
         self._data_dicts: list[DataDict] = _normalize_data_dicts(data_dict)
 
@@ -113,6 +114,7 @@ class QueryChatBase(Generic[IntoFrameT]):
         self._client_spec: str | chatlas.Chat | None = client
         self._client_console = None
 
+        self.greeting_tables: list[str] | bool | None = greeting_tables
         self._system_prompt: QueryChatSystemPrompt | None = None
 
         if data_source is not None:
@@ -322,7 +324,12 @@ class QueryChatBase(Generic[IntoFrameT]):
         chat = create_client(self._client_spec)
         if self._system_prompt is not None:
             chat.system_prompt = self._system_prompt.render(self.tools)
-        return str(chat.chat(GREETING_PROMPT, echo=echo))
+        prompt = build_greeting_prompt(
+            self._data_sources,
+            self._categorical_threshold,
+            self.greeting_tables,
+        )
+        return str(chat.chat(prompt, echo=echo))
 
     def console(
         self,

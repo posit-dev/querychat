@@ -3,8 +3,8 @@ test_that("tool_card() checks inputs", {
 
   expect_snapshot(error = TRUE, tool_card("invalid_source"))
 
-  df_source <- local_data_frame_source(new_test_df())
-  expect_snapshot(error = TRUE, tool_card(df_source, manage_card = NULL))
+  executor <- local_query_executor(new_test_df())
+  expect_snapshot(error = TRUE, tool_card(executor, manage_card = NULL))
 })
 
 describe("tool_card()", {

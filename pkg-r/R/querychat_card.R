@@ -1,4 +1,5 @@
 tool_card <- function(executor, manage_card) {
+  check_query_executor(executor)
   check_function(manage_card)
 
   db_type <- executor$get_db_type()

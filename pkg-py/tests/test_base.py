@@ -365,12 +365,10 @@ class TestAddTables:
         assert len(multi_table_warns) == 1
 
 
-ibis = pytest.importorskip("ibis", reason="ibis not installed")
-
-
 @pytest.fixture
 def ibis_backend_with_tables():
     """Ibis DuckDB backend with orders/customers tables."""
+    ibis = pytest.importorskip("ibis", reason="ibis not installed")
     conn = ibis.duckdb.connect()
     conn.create_table(
         "orders",

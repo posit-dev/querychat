@@ -8,8 +8,8 @@ from narwhals.stable.v1.typing import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
 
 from ._querychat_base import TOOL_GROUPS, QueryChatBase
 from ._querychat_core import (
-    GREETING_PROMPT,
     AppState,
+    build_greeting_prompt,
     create_app_state,
     stream_response,
 )
@@ -298,7 +298,12 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 with st.chat_message("assistant"):
                     placeholder = st.empty()
                     placeholder.markdown("*Preparing your data assistant...*")
-                    for chunk in stream_response(state.client, GREETING_PROMPT):
+                    greeting_prompt = build_greeting_prompt(
+                        state.data_sources,
+                        self._categorical_threshold,
+                        self.greeting_tables,
+                    )
+                    for chunk in stream_response(state.client, greeting_prompt):
                         greeting += chunk
                         placeholder.markdown(greeting, unsafe_allow_html=True)
                 state.set_greeting(greeting)

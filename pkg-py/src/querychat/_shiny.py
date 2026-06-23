@@ -337,6 +337,8 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 client=self._create_session_client,
                 enable_bookmarking=enable_bookmarking,
                 tools=self.tools,
+                greeting_tables=self.greeting_tables,
+                categorical_threshold=self._categorical_threshold,
             )
 
             @reactive.calc
@@ -548,6 +550,8 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             client=create_session_client,
             enable_bookmarking=enable_bookmarking,
             tools=self.tools,
+            greeting_tables=self.greeting_tables,
+            categorical_threshold=self._categorical_threshold,
         )
 
 
@@ -835,6 +839,8 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             client=self._create_session_client,
             enable_bookmarking=self._enable_bookmarking,
             tools=self.tools,
+            greeting_tables=self.greeting_tables,
+            categorical_threshold=self._categorical_threshold,
         )
 
     def sidebar(

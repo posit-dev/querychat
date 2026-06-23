@@ -12,8 +12,8 @@ if TYPE_CHECKING:
 
 from ._querychat_base import TOOL_GROUPS, StateDictQueryChat
 from ._querychat_core import (
-    GREETING_PROMPT,
     AppStateDict,
+    build_greeting_prompt,
     create_app_state,
     stream_response,
 )
@@ -295,7 +295,12 @@ class QueryChat(StateDictQueryChat[IntoFrameT]):
 
             if not state.initialize_greeting_if_preset():
                 greeting = ""
-                for chunk in stream_response(state.client, GREETING_PROMPT):
+                greeting_prompt = build_greeting_prompt(
+                    state.data_sources,
+                    self._categorical_threshold,
+                    self.greeting_tables,
+                )
+                for chunk in stream_response(state.client, greeting_prompt):
                     greeting += chunk
                 state.set_greeting(greeting)
 

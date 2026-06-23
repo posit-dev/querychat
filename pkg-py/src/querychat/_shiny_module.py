@@ -12,7 +12,7 @@ from shinychat import Attachment, attachment_to_content
 
 from shiny import module, reactive, ui
 
-from ._querychat_core import GREETING_PROMPT, warn_multi_table_flat_accessor
+from ._querychat_core import build_greeting_prompt, warn_multi_table_flat_accessor
 from ._table_accessor import TableAccessor
 from ._viz_altair_widget import AltairWidget
 from ._viz_ggsql import execute_ggsql
@@ -215,6 +215,8 @@ def mod_server(
     client: Callable[..., chatlas.Chat],
     enable_bookmarking: bool,
     tools: set[str] | None = None,
+    greeting_tables: list[str] | bool | None = None,
+    categorical_threshold: int = 20,
 ) -> ServerValues[IntoFrameT]:
     # Holds a generated greeting so it can be saved and restored on bookmark.
     # Static greetings live in the UI (chat_ui(greeting=)) and persist already.
@@ -347,8 +349,13 @@ def mod_server(
                 GreetWarning,
                 stacklevel=2,
             )
+            greeting_prompt = build_greeting_prompt(
+                data_sources,
+                categorical_threshold,
+                greeting_tables,
+            )
             greeting_client = client(tools=None)
-            stream = await greeting_client.stream_async(GREETING_PROMPT, echo="none")
+            stream = await greeting_client.stream_async(greeting_prompt, echo="none")
             await chat_ui.set_greeting(
                 shinychat.chat_greeting(stream, dismissible=False)
             )

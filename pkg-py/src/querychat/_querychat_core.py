@@ -4,7 +4,7 @@ from __future__ import annotations
 
 __all__ = [
     "GREETING_MARKER",
-    "GREETING_PROMPT",  # keep for backward compat (equals _GREETING_BASE_TEXT)
+    "GREETING_PROMPT",  # backward compat alias — value unchanged; callers relying on the full prompt should use build_greeting_prompt() instead
     "AppState",
     "AppStateDict",
     "ClientFactory",
@@ -15,7 +15,7 @@ __all__ = [
 ]
 
 import warnings
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Optional, TypedDict, Union
 
@@ -28,20 +28,20 @@ from .tools import UpdateDashboardData
 GREETING_MARKER: str = "<!-- querychat:greeting -->\n"
 """Sentinel prepended to every greeting prompt turn; used to skip it in display."""
 
-_GREETING_BASE_TEXT: str = (
+GREETING_BASE_TEXT: str = (
     "Please give me a friendly greeting. "
     "Include a few sample suggestions grouped under ##### headings, "
     "using the suggestion card format from your instructions."
 )
 
-_GREETING_EXPLORE_ADDENDUM: str = (
+GREETING_EXPLORE_ADDENDUM: str = (
     " Include at least one suggestion encouraging the user to explore what "
     "data and questions are available — for example, asking which tables or "
     "columns exist, or what kinds of analysis are possible."
 )
 
 # Keep the old name as an alias so any external code that imported it still works.
-GREETING_PROMPT: str = _GREETING_BASE_TEXT
+GREETING_PROMPT: str = GREETING_BASE_TEXT
 """Prompt used to generate the initial greeting message."""
 
 if TYPE_CHECKING:
@@ -61,7 +61,7 @@ ClientFactory = Callable[
 
 
 def build_greeting_prompt(
-    data_sources: dict[str, DataSource],
+    data_sources: Mapping[str, DataSource],
     categorical_threshold: int,
     greeting_tables: list[str] | bool | None,  # noqa: FBT001 — bool is a sentinel, not a flag
 ) -> str:
@@ -93,15 +93,15 @@ def build_greeting_prompt(
             section = f"Table '{name}':\n{schema}" if multi else schema
             schema_sections.append(section)
         schema_block = "\n\n".join(schema_sections)
-        body = f"<schema>\n{schema_block}\n</schema>\n\n{_GREETING_BASE_TEXT}"
+        body = f"<schema>\n{schema_block}\n</schema>\n\n{GREETING_BASE_TEXT}"
     else:
-        body = _GREETING_BASE_TEXT + _GREETING_EXPLORE_ADDENDUM
+        body = GREETING_BASE_TEXT + GREETING_EXPLORE_ADDENDUM
 
     return f"{GREETING_MARKER}{body}"
 
 
 def resolve_greeting_tables(
-    data_sources: dict[str, DataSource],
+    data_sources: Mapping[str, DataSource],
     greeting_tables: list[str] | bool | None,  # noqa: FBT001 — bool is a sentinel, not a flag
 ) -> list[str]:
     """Return the list of table names whose schema to include in the greeting."""

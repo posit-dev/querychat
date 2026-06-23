@@ -87,20 +87,14 @@ def test_mod_server_accepts_greeting_tables_and_categorical_threshold():
     assert params["categorical_threshold"].default == 20
 
 
-def test_build_greeting_prompt_called_with_single_table_sources(sample_df):
+def test_build_greeting_prompt_imported_into_shiny_module(sample_df):
     """
-    When greeting=None and one table, mod_server should forward data_sources,
-    categorical_threshold, and greeting_tables to build_greeting_prompt.
+    Checks that build_greeting_prompt is imported into _shiny_module (so the
+    module uses the shared implementation) and that calling it directly with a
+    single-table source produces a schema-embedded prompt.
 
-    This test verifies the wiring by patching build_greeting_prompt inside
-    the module and checking it is called with the correct arguments when the
-    greeting handler fires.
-
-    Note: triggering the reactive event (_handle_greeting_requested) requires
-    a live Shiny session, which is not available in unit tests. This test
-    therefore checks that build_greeting_prompt is imported into _shiny_module
-    and that a single-table QueryChat stores the expected attributes — the
-    combination that ensures the correct prompt is built at runtime.
+    Note: triggering the actual greeting reactive event requires a live Shiny
+    session, which is not available in unit tests.
     """
     import narwhals.stable.v1 as nw
     import querychat._shiny_module as shiny_module

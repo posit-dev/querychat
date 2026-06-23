@@ -14,7 +14,7 @@ You have access to a {{db_type}} SQL database with the following tables:
 {{/has_data_dicts}}
 {{#data_description}}
 <data_description>
-{{data_description}}
+{{{data_description}}}
 </data_description>
 
 {{/data_description}}
@@ -303,5 +303,5 @@ You might want to <span class="suggestion">explore the advanced features</span> 
 {{#extra_instructions}}
 ## Additional Instructions
 
-{{extra_instructions}}
+{{{extra_instructions}}}
 {{/extra_instructions}}

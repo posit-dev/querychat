@@ -5,6 +5,7 @@ README_files/
 README.html
 .DS_Store
 test-results/
+shiny_bookmarks/
 python-package/examples/titanic.db
 .quarto
 *.db

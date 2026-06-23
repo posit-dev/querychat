@@ -45,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * The system prompt is now lighter: full schema is no longer embedded upfront. Instead the LLM fetches per-table schema on demand via the new `querychat_get_schema` tool — and only when it needs to. When a `DataDict` is provided, the tool skips columns that already have descriptions, so the LLM only pays for what isn't already documented. (#195)
 * The query tool result card now starts collapsed by default. Users can still expand it to see the SQL query and results. Set `QUERYCHAT_TOOL_DETAILS=expanded` to restore the previous behavior. (#239)
+* Fixed `data_description` and `extra_instructions` being HTML-escaped in the system prompt. Special characters like `<`, `>`, and `&` in developer-provided descriptions and instructions are now passed to the LLM verbatim. (#258)
 
 ## [0.6.1] - 2026-05-26
 

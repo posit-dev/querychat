@@ -37,6 +37,8 @@
 
 * The system prompt is now lighter: full schema is no longer embedded upfront. Instead the LLM fetches per-table schema on demand via the new `querychat_get_schema` tool — and only when it needs to. When a `data_dict` is provided, the tool skips columns that already have descriptions, so the LLM only pays for what isn't already documented. (#195)
 
+* Fixed `data_description` and `extra_instructions` being HTML-escaped in the system prompt. Special characters like `<`, `>`, and `&` in developer-provided descriptions and instructions are now passed to the LLM verbatim. (#258)
+
 # querychat 0.3.0
 
 ## New features

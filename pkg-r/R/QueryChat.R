@@ -820,7 +820,8 @@ QueryChat <- R6::R6Class(
           bslib::nav_panel(
             title = list(bsicons::bs_icon("lightbulb"), "Insights"),
             class = "bslib-page-dashboard",
-            self$ui_cards()
+            self$ui_cards(),
+            shiny::uiOutput("cards_share_link")
           )
         }
 
@@ -929,6 +930,26 @@ QueryChat <- R6::R6Class(
             height = "auto"
           )
         })
+
+        if (cards_enabled) {
+          output$cards_share_link <- shiny::renderUI({
+            current_cards <- qc_vals$cards()
+            if (length(current_cards) == 0) {
+              return(NULL)
+            }
+            url <- self$cards_url(current_cards)
+            htmltools::div(
+              class = "mt-2 text-end",
+              htmltools::a(
+                href = url,
+                target = "_blank",
+                rel = "noopener",
+                bsicons::bs_icon("box-arrow-up-right"),
+                "Open these insights in a new tab"
+              )
+            )
+          })
+        }
 
         shiny::observe(label = "sync_sql_editor", {
           name <- active_table_name()

@@ -135,67 +135,16 @@ tool_card_impl <- function(executor, manage_card) {
       icon <- merged$icon
     }
 
-    if (is.null(display)) {
-      rlang::abort(
-        "'display' is required for actions 'add', 'replace', and 'patch'."
+    card <- validate_and_build_card(
+      executor,
+      fields = list(
+        display = display,
+        title = title,
+        value = value,
+        caption = caption,
+        theme = theme,
+        icon = icon
       )
-    }
-    if (is.null(title)) {
-      rlang::abort(
-        "'title' is required for actions 'add', 'replace', and 'patch'."
-      )
-    }
-    if (is.null(value)) {
-      rlang::abort(
-        "'value' is required for actions 'add', 'replace', and 'patch'."
-      )
-    }
-
-    # Validate icon (bsicons) for any display that supplies one
-    if (!is.null(icon)) {
-      tryCatch(
-        bsicons::bs_icon(icon),
-        error = function(e) rlang::abort(conditionMessage(e))
-      )
-    }
-
-    if (display == "value_box") {
-      df <- executor$execute_query(value)
-      if (!(nrow(df) == 1 && ncol(df) == 1)) {
-        rlang::abort(sprintf(
-          "Value box query must return exactly 1 row and 1 column. Got %d row(s) and %d column(s).",
-          nrow(df),
-          ncol(df)
-        ))
-      }
-    } else if (display == "table") {
-      tryCatch(
-        executor$validate_query(value),
-        error = function(e) rlang::abort(conditionMessage(e))
-      )
-    } else if (display == "visualization") {
-      rlang::check_installed("ggsql", reason = "for visualization support.")
-      validated <- ggsql::ggsql_validate(value)
-      if (!ggsql::ggsql_has_visual(validated)) {
-        rlang::abort("Visualization query must include a VISUALISE clause.")
-      }
-      if (!isTRUE(validated$valid)) {
-        rlang::abort(collapse_validation_errors(validated))
-      }
-      tryCatch(
-        execute_ggsql(executor, validated),
-        error = function(e) rlang::abort(conditionMessage(e))
-      )
-    }
-    # markdown: no query validation needed
-
-    card <- list(
-      display = display,
-      title = title,
-      value = value,
-      caption = caption,
-      theme = theme,
-      icon = icon
     )
 
     if (action == "add") {
@@ -219,6 +168,79 @@ tool_card_impl <- function(executor, manage_card) {
     )
     card_tool_result(list(id = id, status = status), title)
   }
+}
+
+# Validate fields and return the canonical card list (without id).
+validate_and_build_card <- function(executor, fields) {
+  display <- fields$display
+  title <- fields$title
+  value <- fields$value
+  caption <- fields$caption
+  theme <- fields$theme
+  icon <- fields$icon
+
+  if (is.null(display)) {
+    rlang::abort(
+      "'display' is required for actions 'add', 'replace', and 'patch'."
+    )
+  }
+  if (is.null(title)) {
+    rlang::abort(
+      "'title' is required for actions 'add', 'replace', and 'patch'."
+    )
+  }
+  if (is.null(value)) {
+    rlang::abort(
+      "'value' is required for actions 'add', 'replace', and 'patch'."
+    )
+  }
+
+  # Validate icon (bsicons) for any display that supplies one
+  if (!is.null(icon)) {
+    tryCatch(
+      bsicons::bs_icon(icon),
+      error = function(e) rlang::abort(conditionMessage(e))
+    )
+  }
+
+  if (display == "value_box") {
+    df <- executor$execute_query(value)
+    if (!(nrow(df) == 1 && ncol(df) == 1)) {
+      rlang::abort(sprintf(
+        "Value box query must return exactly 1 row and 1 column. Got %d row(s) and %d column(s).",
+        nrow(df),
+        ncol(df)
+      ))
+    }
+  } else if (display == "table") {
+    tryCatch(
+      executor$validate_query(value),
+      error = function(e) rlang::abort(conditionMessage(e))
+    )
+  } else if (display == "visualization") {
+    rlang::check_installed("ggsql", reason = "for visualization support.")
+    validated <- ggsql::ggsql_validate(value)
+    if (!ggsql::ggsql_has_visual(validated)) {
+      rlang::abort("Visualization query must include a VISUALISE clause.")
+    }
+    if (!isTRUE(validated$valid)) {
+      rlang::abort(collapse_validation_errors(validated))
+    }
+    tryCatch(
+      execute_ggsql(executor, validated),
+      error = function(e) rlang::abort(conditionMessage(e))
+    )
+  }
+  # markdown: no query validation needed
+
+  list(
+    display = display,
+    title = title,
+    value = value,
+    caption = caption,
+    theme = theme,
+    icon = icon
+  )
 }
 
 card_tool_result <- function(value, title) {

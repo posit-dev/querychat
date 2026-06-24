@@ -286,7 +286,7 @@ Default is \code{FALSE}.}
       \item{\code{include_in_greeting}}{Whether to include added tables in the greeting
 context. \code{TRUE} includes all tables; \code{FALSE} (default) includes none;
 a character vector includes only those named tables (intersected with
-the tables being added).}
+the tables being added). Any other type raises an error.}
     }
     \if{html}{\out{</div>}}
   }

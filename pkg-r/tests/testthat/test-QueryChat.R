@@ -1118,6 +1118,15 @@ describe("QueryChatGreeter", {
     expect_false("customers" %in% qc$greeter$tables)
   })
 
+  it("add_tables with non-logical, non-character include_in_greeting errors", {
+    conn <- local_multi_table_conn_greeter()
+    qc <- QueryChat$new(NULL, "placeholder", greeting = "hi")
+    expect_error(
+      suppressWarnings(qc$add_tables(conn, include_in_greeting = 1)),
+      "include_in_greeting"
+    )
+  })
+
   it("generate_greeting() uses greeting system prompt, writes to qc$greeting, returns text", {
     client <- mock_ellmer_chat_client(
       public = list(

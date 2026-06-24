@@ -499,7 +499,7 @@ QueryChat <- R6::R6Class(
     #' @param include_in_greeting Whether to include added tables in the greeting
     #'   context. `TRUE` includes all tables; `FALSE` (default) includes none;
     #'   a character vector includes only those named tables (intersected with
-    #'   the tables being added).
+    #'   the tables being added). Any other type raises an error.
     #'
     #' @return Invisibly returns `self` for chaining.
     add_tables = function(
@@ -574,10 +574,16 @@ QueryChat <- R6::R6Class(
         private$.query_executor <- NULL
       }
 
+      if (
+        !rlang::is_bool(include_in_greeting) &&
+          !is.character(include_in_greeting)
+      ) {
+        cli::cli_abort(
+          "{.arg include_in_greeting} must be {.code TRUE}, {.code FALSE}, or a character vector of table names."
+        )
+      }
       greeting_tbls <- if (isTRUE(include_in_greeting)) {
         tables
-      } else if (identical(include_in_greeting, FALSE)) {
-        character()
       } else if (is.character(include_in_greeting)) {
         intersect(include_in_greeting, tables)
       } else {

@@ -37,10 +37,11 @@ tool_card <- function(executor, manage_card) {
       query = ellmer::type_string(
         ellmer::interpolate(
           paste(
-            "The data query; required for table, visualization, and value_box displays. Its meaning depends on display:",
+            "The data query; required for table, visualization, and value_box displays; optional for markdown (interpolation). Its meaning depends on display:",
             "- table: a {{db_type}} SQL SELECT query.",
             "- visualization: a full ggsql query including a VISUALISE clause. Do NOT include `LABEL title => ...`; use the title parameter instead.",
             "- value_box: a {{db_type}} SQL SELECT query returning exactly 1 row. The displayed number comes from the `value` column (or the first column). Additional columns named title, caption, theme, or icon override the static card fields. Format the displayed value as a human-readable string in SQL (thousands separators, currency, rounding, a % suffix, etc.).",
+            "- markdown (optional): a {{db_type}} SQL SELECT query returning exactly 1 row. Its columns become {{{{var}}}} placeholders in the text body.",
             sep = "\n"
           ),
           db_type = db_type
@@ -48,7 +49,7 @@ tool_card <- function(executor, manage_card) {
         required = FALSE
       ),
       text = ellmer::type_string(
-        "The markdown body; required for markdown display only. Rendered as HTML via markdown.",
+        "The markdown body; required for markdown display only. Rendered as HTML via markdown. If a query is also supplied, its single-row columns are interpolated as {{var}} placeholders.",
         required = FALSE
       ),
       caption = ellmer::type_string(
@@ -280,6 +281,14 @@ validate_and_build_card <- function(executor, fields) {
       execute_ggsql(executor, validated),
       error = function(e) rlang::abort(conditionMessage(e))
     )
+  } else if (display == "markdown" && !is.null(query)) {
+    df <- executor$execute_query(query)
+    if (nrow(df) != 1) {
+      rlang::abort(sprintf(
+        "Markdown interpolation query must return exactly 1 row. Got %d row(s).",
+        nrow(df)
+      ))
+    }
   }
 
   list(

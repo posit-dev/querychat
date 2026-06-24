@@ -7,7 +7,7 @@ Match the display to the finding:
 - **value_box**: a single key metric. The SQL query must return exactly 1 row. The displayed number comes from the `value` column (or the first column if no `value` column). Columns named `title`, `caption`, `theme`, or `icon` override the static card fields, enabling dynamic theming (e.g. `CASE WHEN ... THEN 'danger' ELSE 'success' END AS theme`).
 - **table**: a ranked or comparative result set the user wants to see at a glance.
 - **visualization**: a trend, distribution, or comparison that reads better as a chart.
-- **markdown**: a written takeaway or note with no live query. Use the `text` field for the markdown body.
+- **markdown**: a written takeaway or note. Use the `text` field for the markdown body. Optionally supply a `query` (SQL returning exactly 1 row) whose columns become `{{var}}` placeholders in `text` for live interpolation (e.g. `Revenue grew {{pct}}% to {{total}}`).
 
 For a small set of related metrics (roughly 3-4 or fewer), add a separate value_box for each one; a row of value boxes reads better than one table of headline numbers.
 
@@ -29,12 +29,13 @@ display :
 title :
     A brief card heading shown in the card header. Required for `"add"` and `"replace"`.
 query :
-    The data query; required for table, visualization, and value_box displays. Its meaning depends on `display`:
+    The data query; required for table, visualization, and value_box displays; optional for markdown (interpolation). Its meaning depends on `display`:
     - `"table"`: a valid {{db_type}} SQL SELECT query.
     - `"visualization"`: a full ggsql query including a VISUALISE clause. Do NOT include `LABEL title => ...`; use the `title` parameter instead.
     - `"value_box"`: a {{db_type}} SQL SELECT query returning exactly 1 row. The displayed number comes from the `value` column (or the first column). Additional columns named `title`, `caption`, `theme`, or `icon` override the static card fields. Format the displayed value as a human-readable string in SQL (thousands separators, currency, rounding, a `%` suffix, etc.).
+    - `"markdown"` (optional): a {{db_type}} SQL SELECT query returning exactly 1 row. Its columns become `{{var}}` placeholders in the `text` body.
 text :
-    The markdown body; required for markdown display only. Rendered as HTML via markdown.
+    The markdown body; required for markdown display only. Rendered as HTML via markdown. If a `query` is also supplied, its single-row columns are interpolated as `{{var}}` placeholders.
 caption :
     Optional brief secondary text. Rendered as a footer for table/visualization/markdown cards, and as the subtitle for value_box. Keep it to a few words.
 theme :

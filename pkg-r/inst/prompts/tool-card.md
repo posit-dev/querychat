@@ -7,7 +7,7 @@ Match the display to the finding:
 - **value_box**: a single key metric. The SQL query must return exactly 1 row. The displayed number comes from the `value` column (or the first column if no `value` column). Columns named `title`, `caption`, `theme`, or `icon` override the static card fields, enabling dynamic theming (e.g. `CASE WHEN ... THEN 'danger' ELSE 'success' END AS theme`).
 - **table**: a ranked or comparative result set the user wants to see at a glance.
 - **visualization**: a trend, distribution, or comparison that reads better as a chart.
-- **markdown**: a written takeaway or note with no live query. Use the `text` field for the markdown body.
+- **markdown**: a written takeaway or note. Use the `text` field for the markdown body. Optionally supply a `query` (SQL returning exactly 1 row) whose columns become `{{var}}` placeholders in `text` for live interpolation (e.g. `Revenue grew {{pct}}% to {{total}}`).
 
 For a small set of related metrics (roughly 3-4 or fewer), add a separate value_box for each one; a row of value boxes reads better than one table of headline numbers.
 

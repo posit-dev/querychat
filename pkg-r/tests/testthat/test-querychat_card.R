@@ -360,6 +360,65 @@ describe("tool_card_impl()", {
     expect_equal(call$card$caption, "Some caption text")
   })
 
+  it("adds a markdown card with query for interpolation", {
+    ds <- local_query_executor(new_test_df())
+    mock <- new_mock()
+    impl <- tool_card_impl(ds, mock$mock_manage)
+
+    res <- impl(
+      action = "add",
+      display = "markdown",
+      title = "Summary",
+      text = "There are {{n}} items.",
+      query = "SELECT COUNT(*) AS n FROM test_table"
+    )
+
+    expect_s7_class(res, ellmer::ContentToolResult)
+    expect_length(mock$record$calls, 1)
+    call <- mock$record$calls[[1]]
+    expect_equal(call$card$display, "markdown")
+    expect_equal(call$card$text, "There are {{n}} items.")
+    expect_equal(call$card$query, "SELECT COUNT(*) AS n FROM test_table")
+  })
+
+  it("errors when markdown interpolation query returns multiple rows", {
+    ds <- local_query_executor(new_test_df())
+    mock <- new_mock()
+    impl <- tool_card_impl(ds, mock$mock_manage)
+
+    expect_error(
+      impl(
+        action = "add",
+        display = "markdown",
+        title = "Bad",
+        text = "Count is {{n}}",
+        query = "SELECT * FROM test_table"
+      ),
+      "1 row"
+    )
+    expect_length(mock$record$calls, 0)
+  })
+
+  it("adds a static markdown card without query", {
+    ds <- local_query_executor(new_test_df())
+    mock <- new_mock()
+    impl <- tool_card_impl(ds, mock$mock_manage)
+
+    res <- impl(
+      action = "add",
+      display = "markdown",
+      title = "Note",
+      text = "Just plain text."
+    )
+
+    expect_s7_class(res, ellmer::ContentToolResult)
+    expect_length(mock$record$calls, 1)
+    call <- mock$record$calls[[1]]
+    expect_equal(call$card$display, "markdown")
+    expect_null(call$card$query)
+    expect_equal(call$card$text, "Just plain text.")
+  })
+
   it("stores caption field for value_box", {
     ds <- local_query_executor(new_test_df())
     mock <- new_mock()

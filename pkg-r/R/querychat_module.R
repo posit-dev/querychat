@@ -845,9 +845,40 @@ render_card_visualization <- function(card, data_source, session) {
 }
 
 render_card_markdown <- function(card, data_source, session) {
-  bslib::card(
-    card_header_with_icon(card$title, card$icon),
-    bslib::card_body(shiny::markdown(card$text)),
-    if (!is.null(card$caption)) bslib::card_footer(card$caption)
-  )
+  rendered_text <- if (!is.null(card$query)) {
+    df <- data_source$execute_query(card$query)
+    row <- as.list(df[1, , drop = FALSE])
+    whisker::whisker.render(card$text, row)
+  } else {
+    card$text
+  }
+
+  if (!is.null(card$query)) {
+    bslib::navset_card_underline(
+      title = navset_title_with_icon(card$title, card$icon),
+      full_screen = TRUE,
+      footer = if (!is.null(card$caption)) bslib::card_footer(card$caption),
+      bslib::nav_spacer(),
+      bslib::nav_panel(
+        bsicons::bs_icon("file-text"),
+        bslib::card_body(shiny::markdown(rendered_text))
+      ),
+      bslib::nav_panel(
+        bsicons::bs_icon("code-slash"),
+        bslib::input_code_editor(
+          id = session$ns(paste0("querychat_card_code_", card$id)),
+          value = card$query,
+          language = "sql",
+          read_only = TRUE,
+          height = "auto"
+        )
+      )
+    )
+  } else {
+    bslib::card(
+      card_header_with_icon(card$title, card$icon),
+      bslib::card_body(shiny::markdown(rendered_text)),
+      if (!is.null(card$caption)) bslib::card_footer(card$caption)
+    )
+  }
 }

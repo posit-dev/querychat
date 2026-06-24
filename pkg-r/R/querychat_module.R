@@ -730,12 +730,26 @@ render_card_value_box <- function(card, data_source, session) {
   showcase <- if (!is.null(card$icon)) bsicons::bs_icon(card$icon)
   caption_content <- if (!is.null(card$caption)) shiny::p(card$caption)
 
+  sql_viewer <- htmltools::div(
+    class = "querychat-vb-sql",
+    htmltools::p(class = "h5 mb-2 mt-4", "SQL Query"),
+    bslib::input_code_editor(
+      id = session$ns(paste0("querychat_card_code_", card$id)),
+      value = card$value,
+      language = "sql",
+      read_only = TRUE,
+      height = "200px"
+    )
+  )
+
   bslib::value_box(
     title = card$title,
     value = scalar,
     caption_content,
+    sql_viewer,
     showcase = showcase,
-    theme = card$theme %||% "primary"
+    theme = card$theme %||% "primary",
+    full_screen = TRUE
   )
 }
 

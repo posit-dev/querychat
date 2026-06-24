@@ -83,18 +83,20 @@ QueryChatSystemPrompt <- R6::R6Class(
     #'
     #' @return A character string containing the rendered system prompt.
     render = function(tools) {
-      first_source <- self$data_sources[[1]]
-      db_type <- first_source$get_db_type()
-      has_dicts <- length(self$data_dicts) > 0
+      # data_sources may be empty for a greeting with no included tables.
+      has_sources <- length(self$data_sources) > 0
+      first_source <- if (has_sources) self$data_sources[[1]] else NULL
+      db_type <- if (has_sources) first_source$get_db_type() else "SQL"
+      has_dicts <- has_sources && length(self$data_dicts) > 0
 
       semantic_views <- ""
-      if (inherits(first_source, "DBISource")) {
+      if (has_sources && inherits(first_source, "DBISource")) {
         semantic_views <- first_source$get_semantic_views_description()
       }
 
       # Compute schema for backward compat with templates using {{schema}}
       schema <- ""
-      if (grepl("\\{\\{[{#^/]?\\s*schema\\b", self$template)) {
+      if (has_sources && grepl("\\{\\{[{#^/]?\\s*schema\\b", self$template)) {
         schema <- first_source$get_schema(
           categorical_threshold = self$categorical_threshold
         )

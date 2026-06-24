@@ -108,9 +108,6 @@ QueryChat <- R6::R6Class(
     build_greeting_client = function(client_spec = NULL) {
       data_sources <- private$.data_sources
       tbls <- intersect(self$greeter$tables, names(data_sources))
-      if (length(tbls) == 0) {
-        tbls <- names(data_sources)
-      }
       sources <- data_sources[tbls]
       greeting_prompt_obj <- QueryChatSystemPrompt$new(
         prompt_template = self$greeter$prompt,

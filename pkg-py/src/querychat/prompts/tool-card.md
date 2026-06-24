@@ -4,7 +4,7 @@ Cards live in a developer-placed dashboard area and stay visible across queries.
 
 Match the display to the finding:
 
-- **value_box**: a single key metric. The SQL query must return exactly 1 row and 1 column.
+- **value_box**: a single key metric. The SQL query must return exactly 1 row. The displayed number comes from the `value` column (or the first column if no `value` column). Columns named `title`, `caption`, `theme`, or `icon` override the static card fields, enabling dynamic theming (e.g. `CASE WHEN ... THEN 'danger' ELSE 'success' END AS theme`).
 - **table**: a ranked or comparative result set the user wants to see at a glance.
 - **visualization**: a trend, distribution, or comparison that reads better as a chart.
 - **markdown**: a written takeaway or note with no live query. Use the `text` field for the markdown body.
@@ -32,7 +32,7 @@ query :
     The data query; required for table, visualization, and value_box displays. Its meaning depends on `display`:
     - `"table"`: a valid {{db_type}} SQL SELECT query.
     - `"visualization"`: a full ggsql query including a VISUALISE clause. Do NOT include `LABEL title => ...`; use the `title` parameter instead.
-    - `"value_box"`: a {{db_type}} SQL SELECT query returning exactly 1 row and 1 column. Format the value into a human-readable string in SQL (thousands separators, currency, rounding, a `%` suffix, etc.) so it displays cleanly; don't return a raw float.
+    - `"value_box"`: a {{db_type}} SQL SELECT query returning exactly 1 row. The displayed number comes from the `value` column (or the first column). Additional columns named `title`, `caption`, `theme`, or `icon` override the static card fields. Format the displayed value as a human-readable string in SQL (thousands separators, currency, rounding, a `%` suffix, etc.).
 text :
     The markdown body; required for markdown display only. Rendered as HTML via markdown.
 caption :

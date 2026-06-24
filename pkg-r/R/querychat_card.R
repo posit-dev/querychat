@@ -40,7 +40,7 @@ tool_card <- function(executor, manage_card) {
             "The data query; required for table, visualization, and value_box displays. Its meaning depends on display:",
             "- table: a {{db_type}} SQL SELECT query.",
             "- visualization: a full ggsql query including a VISUALISE clause. Do NOT include `LABEL title => ...`; use the title parameter instead.",
-            "- value_box: a {{db_type}} SQL SELECT query returning exactly 1 row and 1 column. Format the value into a human-readable string in SQL (thousands separators, currency, rounding, a % suffix, etc.) so it displays cleanly; don't return a raw float.",
+            "- value_box: a {{db_type}} SQL SELECT query returning exactly 1 row. The displayed number comes from the `value` column (or the first column). Additional columns named title, caption, theme, or icon override the static card fields. Format the displayed value as a human-readable string in SQL (thousands separators, currency, rounding, a % suffix, etc.).",
             sep = "\n"
           ),
           db_type = db_type
@@ -217,12 +217,50 @@ validate_and_build_card <- function(executor, fields) {
 
   if (display == "value_box") {
     df <- executor$execute_query(query)
-    if (!(nrow(df) == 1 && ncol(df) == 1)) {
+    if (nrow(df) != 1) {
       rlang::abort(sprintf(
-        "Value box query must return exactly 1 row and 1 column. Got %d row(s) and %d column(s).",
-        nrow(df),
-        ncol(df)
+        "Value box query must return exactly 1 row. Got %d row(s).",
+        nrow(df)
       ))
+    }
+    row <- as.list(df[1, , drop = FALSE])
+    vb_cols <- c("value", "title", "caption", "theme", "icon")
+    for (col in intersect(names(row), vb_cols)) {
+      val <- as.character(row[[col]])
+      if (!is.na(val) && nzchar(val)) {
+        if (col == "value") {
+          next
+        }
+        if (col == "theme") {
+          allowed_themes <- c(
+            "primary",
+            "secondary",
+            "success",
+            "danger",
+            "warning",
+            "info"
+          )
+          if (!val %in% allowed_themes) {
+            rlang::abort(sprintf(
+              "Value box query returned theme '%s'; must be one of: %s.",
+              val,
+              paste(allowed_themes, collapse = ", ")
+            ))
+          }
+        }
+        if (col == "icon") {
+          tryCatch(
+            bsicons::bs_icon(val),
+            error = function(e) {
+              rlang::abort(sprintf(
+                "Value box query returned invalid icon '%s': %s",
+                val,
+                conditionMessage(e)
+              ))
+            }
+          )
+        }
+      }
     }
   } else if (display == "table") {
     tryCatch(

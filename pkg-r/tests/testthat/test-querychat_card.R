@@ -95,7 +95,7 @@ describe("tool_card_impl()", {
     expect_equal(call$card$display, "value_box")
   })
 
-  it("errors for value_box query returning more than 1 row x 1 column", {
+  it("errors for value_box query returning more than 1 row", {
     ds <- local_query_executor(new_test_df())
     mock <- new_mock()
     impl <- tool_card_impl(ds, mock$mock_manage)
@@ -110,6 +110,73 @@ describe("tool_card_impl()", {
       "1 row"
     )
     expect_length(mock$record$calls, 0)
+  })
+
+  it("adds a value_box card with multi-column query", {
+    ds <- local_query_executor(new_test_df())
+    mock <- new_mock()
+    impl <- tool_card_impl(ds, mock$mock_manage)
+
+    res <- impl(
+      action = "add",
+      display = "value_box",
+      title = "V",
+      query = "SELECT COUNT(*) AS value, 'Total' AS title FROM test_table"
+    )
+
+    expect_s7_class(res, ellmer::ContentToolResult)
+    expect_length(mock$record$calls, 1)
+    call <- mock$record$calls[[1]]
+    expect_equal(call$card$display, "value_box")
+  })
+
+  it("validates theme column in value_box query", {
+    ds <- local_query_executor(new_test_df())
+    mock <- new_mock()
+    impl <- tool_card_impl(ds, mock$mock_manage)
+
+    expect_error(
+      impl(
+        action = "add",
+        display = "value_box",
+        title = "V",
+        query = "SELECT COUNT(*) AS value, 'not_a_theme' AS theme FROM test_table"
+      ),
+      "theme"
+    )
+    expect_length(mock$record$calls, 0)
+  })
+
+  it("validates icon column in value_box query", {
+    ds <- local_query_executor(new_test_df())
+    mock <- new_mock()
+    impl <- tool_card_impl(ds, mock$mock_manage)
+
+    expect_error(
+      impl(
+        action = "add",
+        display = "value_box",
+        title = "V",
+        query = "SELECT COUNT(*) AS value, 'not-a-real-icon-xyz-99999' AS icon FROM test_table"
+      )
+    )
+    expect_length(mock$record$calls, 0)
+  })
+
+  it("accepts valid theme column in value_box query", {
+    ds <- local_query_executor(new_test_df())
+    mock <- new_mock()
+    impl <- tool_card_impl(ds, mock$mock_manage)
+
+    res <- impl(
+      action = "add",
+      display = "value_box",
+      title = "V",
+      query = "SELECT COUNT(*) AS value, 'success' AS theme FROM test_table"
+    )
+
+    expect_s7_class(res, ellmer::ContentToolResult)
+    expect_length(mock$record$calls, 1)
   })
 
   it("errors for replace action when id is missing", {

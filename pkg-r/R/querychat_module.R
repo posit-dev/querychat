@@ -724,11 +724,37 @@ render_card_error <- function(card, message) {
 }
 
 render_card_value_box <- function(card, data_source, session) {
-  df <- data_source$execute_query(card$query)
-  scalar <- as.character(df[[1]][1])
+  col_or <- function(row, col_name, fallback) {
+    val <- row[[col_name]]
+    if (!is.null(val) && !is.na(val) && nzchar(as.character(val))) {
+      as.character(val)
+    } else {
+      fallback
+    }
+  }
 
-  showcase <- if (!is.null(card$icon)) bsicons::bs_icon(card$icon)
-  caption_content <- if (!is.null(card$caption)) shiny::p(card$caption)
+  df <- data_source$execute_query(card$query)
+  row <- as.list(df[1, , drop = FALSE])
+
+  scalar <- if ("value" %in% names(row)) {
+    as.character(row[["value"]])
+  } else {
+    as.character(row[[1]])
+  }
+
+  effective_title <- col_or(row, "title", card$title)
+  effective_caption <- col_or(row, "caption", card$caption)
+  effective_theme <- col_or(row, "theme", card$theme %||% "primary")
+  effective_icon <- col_or(row, "icon", card$icon)
+
+  showcase <- if (!is.null(effective_icon) && nzchar(effective_icon)) {
+    bsicons::bs_icon(effective_icon)
+  }
+  caption_content <- if (
+    !is.null(effective_caption) && nzchar(effective_caption)
+  ) {
+    shiny::p(effective_caption)
+  }
 
   sql_viewer <- htmltools::div(
     class = "querychat-vb-sql",
@@ -743,12 +769,12 @@ render_card_value_box <- function(card, data_source, session) {
   )
 
   bslib::value_box(
-    title = card$title,
+    title = effective_title,
     value = scalar,
     caption_content,
     sql_viewer,
     showcase = showcase,
-    theme = card$theme %||% "primary",
+    theme = effective_theme,
     full_screen = TRUE
   )
 }

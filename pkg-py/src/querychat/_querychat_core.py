@@ -108,8 +108,6 @@ def format_tool_result(result: ContentToolResult) -> str:
     return ""
 
 
-
-
 def format_query_error(e: Exception) -> str:
     """Format a query error with helpful guidance."""
     error_msg = str(e).lower()
@@ -245,9 +243,6 @@ class AppState:
 
             if text_parts:
                 text = "\n\n".join(text_parts)
-                # Skip the greeting prompt - it's an internal message
-                if turn.role == "user" and text == GREETING_PROMPT:
-                    continue
                 messages.append({"role": turn.role, "content": text})
 
         return messages

@@ -32,12 +32,12 @@ from ._query_executor import (
     validate_source_group_compatibility,
 )
 from ._querychat_core import (
-    GREETING_PROMPT,
     AppState,
     AppStateDict,
     create_app_state,
     warn_multi_table_flat_accessor,
 )
+from ._querychat_greeter import QueryChatGreeter
 from ._system_prompt import QueryChatSystemPrompt
 from ._utils import MISSING, MISSING_TYPE, is_ibis_backend, is_ibis_table
 from ._viz_utils import has_viz_deps, has_viz_tool
@@ -114,6 +114,7 @@ class QueryChatBase(Generic[IntoFrameT]):
         self._client_console = None
 
         self._system_prompt: QueryChatSystemPrompt | None = None
+        self._greeter: QueryChatGreeter | None = None
 
         if data_source is not None:
             if table_name is None:
@@ -123,7 +124,7 @@ class QueryChatBase(Generic[IntoFrameT]):
                     raise ValueError(
                         "table_name is required when data_source is provided"
                     )
-            self.add_table(data_source, table_name)
+            self.add_table(data_source, table_name, include_in_greeting=True)
 
     def _build_system_prompt(
         self,
@@ -319,10 +320,31 @@ class QueryChatBase(Generic[IntoFrameT]):
     def generate_greeting(self, *, echo: Literal["none", "output"] = "none") -> str:
         """Generate a welcome greeting for the chat."""
         self._require_initialized("generate_greeting")
+        return self.greeter.generate(echo=echo)
+
+    @property
+    def greeter(self) -> QueryChatGreeter:
+        """Greeting configuration and generator for this QueryChat instance."""
+        if self._greeter is None:
+            self._greeter = QueryChatGreeter(self)
+        return self._greeter
+
+    def _build_greeting_client(self) -> chatlas.Chat:
+        """Build a fresh chat client configured with the greeting system prompt."""
+        tbls = [n for n in self.greeter.tables if n in self._data_sources]
+        sources = {n: self._data_sources[n] for n in tbls}
+        greeting_prompt_obj = QueryChatSystemPrompt(
+            prompt_template=self.greeter.prompt,
+            data_sources=sources,
+            data_description=self._data_description,
+            extra_instructions=None,
+            categorical_threshold=self._categorical_threshold,
+            data_dicts=self._data_dicts,
+        )
         chat = create_client(self._client_spec)
-        if self._system_prompt is not None:
-            chat.system_prompt = self._system_prompt.render(self.tools)
-        return str(chat.chat(GREETING_PROMPT, echo=echo))
+        chat.set_turns([])
+        chat.system_prompt = greeting_prompt_obj.render(None)
+        return chat
 
     def console(
         self,
@@ -381,6 +403,7 @@ class QueryChatBase(Generic[IntoFrameT]):
         table_name: str,
         *,
         replace: bool = False,
+        include_in_greeting: bool = False,
     ) -> None:
         """
         Add or replace a table in the QueryChat instance.
@@ -394,6 +417,8 @@ class QueryChatBase(Generic[IntoFrameT]):
         replace
             If True, replace an existing table with the same name.
             If False (default), raise ValueError if the table already exists.
+        include_in_greeting
+            If True, include this table's schema in the greeting system prompt.
 
         Raises
         ------
@@ -445,12 +470,16 @@ class QueryChatBase(Generic[IntoFrameT]):
                 self._query_executor.cleanup()
             self._query_executor = None
 
+        if include_in_greeting and table_name not in self.greeter.tables:
+            self.greeter.tables = [*self.greeter.tables, table_name]
+
     def add_tables(  # noqa: PLR0912
         self,
         data_source: sqlalchemy.Engine | SQLBackend,
         tables: list[str] | None = None,
         *,
         replace: bool = False,
+        include_in_greeting: bool | list[str] = False,
     ) -> None:
         """
         Add multiple tables from a SQLAlchemy engine or Ibis backend in a single call.
@@ -471,6 +500,9 @@ class QueryChatBase(Generic[IntoFrameT]):
             If ``True``, replace any existing table whose name appears in
             ``tables``. If ``False`` (default), raise ``ValueError`` if any
             name already exists.
+        include_in_greeting
+            ``True`` to include all added tables in the greeting, ``False`` (default)
+            for none, or a list of table names to include.
 
         Raises
         ------
@@ -558,6 +590,20 @@ class QueryChatBase(Generic[IntoFrameT]):
             with contextlib.suppress(Exception):
                 self._query_executor.cleanup()
             self._query_executor = None
+
+        if include_in_greeting is True:
+            greeting_names = list(tables)
+        elif include_in_greeting is False:
+            greeting_names = []
+        else:
+            greeting_names = [n for n in include_in_greeting if n in tables]
+
+        new_greeting = list(self.greeter.tables)
+        for name in greeting_names:
+            if name not in new_greeting:
+                new_greeting.append(name)
+        if new_greeting != self.greeter.tables:
+            self.greeter.tables = new_greeting
 
     def remove_table(self, table_name: str) -> None:
         """

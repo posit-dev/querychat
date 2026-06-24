@@ -330,6 +330,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 client=self._create_session_client,
                 enable_bookmarking=enable_bookmarking,
                 tools=self.tools,
+                greeting_client_fn=self._build_greeting_client,
             )
 
             @reactive.calc
@@ -439,7 +440,12 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             A UI component.
 
         """
-        return mod_ui(id or self.id, preload_viz=has_viz_tool(self.tools), greeting=self.greeting, **kwargs)
+        return mod_ui(
+            id or self.id,
+            preload_viz=has_viz_tool(self.tools),
+            greeting=self.greeting,
+            **kwargs,
+        )
 
     def server(
         self,
@@ -525,7 +531,9 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             )
 
         self._require_initialized("server")
-        resolved_client_spec = self._client_spec if isinstance(client, MISSING_TYPE) else client
+        resolved_client_spec = (
+            self._client_spec if isinstance(client, MISSING_TYPE) else client
+        )
 
         def create_session_client(**kwargs) -> chatlas.Chat:
             return self._create_session_client(
@@ -541,6 +549,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             client=create_session_client,
             enable_bookmarking=enable_bookmarking,
             tools=self.tools,
+            greeting_client_fn=self._build_greeting_client,
         )
 
 
@@ -821,6 +830,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             client=self._create_session_client,
             enable_bookmarking=self._enable_bookmarking,
             tools=self.tools,
+            greeting_client_fn=self._build_greeting_client,
         )
 
     def sidebar(
@@ -882,7 +892,12 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             A UI component.
 
         """
-        result = mod_ui(id or self.id, preload_viz=has_viz_tool(self.tools), greeting=self.greeting, **kwargs)
+        result = mod_ui(
+            id or self.id,
+            preload_viz=has_viz_tool(self.tools),
+            greeting=self.greeting,
+            **kwargs,
+        )
         self._ensure_server_started()
         return result
 
@@ -998,9 +1013,11 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         qc.add_table(customers, "customers")
         qc.sidebar()
 
+
         @render.data_frame
         def orders_table():
             return qc.table("orders").df()
+
 
         @render.data_frame
         def customers_table():

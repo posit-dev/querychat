@@ -67,7 +67,6 @@ class TableState(Generic[IntoFrameT]):
     df: Callable[[], IntoFrameT]
 
 
-
 @module.ui
 def mod_ui(*, preload_viz: bool = False, greeting: str | None = None, **kwargs):
     css_path = Path(__file__).parent / "static" / "css" / "styles.css"
@@ -215,6 +214,7 @@ def mod_server(
     client: Callable[..., chatlas.Chat],
     enable_bookmarking: bool,
     tools: set[str] | None = None,
+    greeting_client_fn: Callable[[], chatlas.Chat] | None = None,
 ) -> ServerValues[IntoFrameT]:
     # Holds a generated greeting so it can be saved and restored on bookmark.
     # Static greetings live in the UI (chat_ui(greeting=)) and persist already.
@@ -347,7 +347,11 @@ def mod_server(
                 GreetWarning,
                 stacklevel=2,
             )
-            greeting_client = client(tools=None)
+            greeting_client = (
+                greeting_client_fn()
+                if greeting_client_fn is not None
+                else client(tools=None)
+            )
             stream = await greeting_client.stream_async(GREETING_PROMPT, echo="none")
             await chat_ui.set_greeting(
                 shinychat.chat_greeting(stream, dismissible=False)
@@ -409,9 +413,7 @@ def mod_server(
                     )
                 )
             if "querychat_viz_widgets" in vals:
-                restored = restore_viz_widgets(
-                    executor, vals["querychat_viz_widgets"]
-                )
+                restored = restore_viz_widgets(executor, vals["querychat_viz_widgets"])
                 viz_widgets[:] = restored
 
     if len(table_states) == 1:
@@ -443,7 +445,9 @@ def mod_server(
     return ServerValues(
         df=_multi_table_df,
         sql=_MultiTableWarnReactive(primary_state.sql, "sql", primary_name, table_list),  # type: ignore[arg-type]
-        title=_MultiTableWarnReactive(primary_state.title, "title", primary_name, table_list),  # type: ignore[arg-type]
+        title=_MultiTableWarnReactive(
+            primary_state.title, "title", primary_name, table_list
+        ),  # type: ignore[arg-type]
         tables=table_states,
         client=chat,
         data_sources=data_sources,

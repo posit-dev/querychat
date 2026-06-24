@@ -934,6 +934,7 @@ class StateDictQueryChat(QueryChatBase[IntoFrameT]):
             client_factory=self._client_factory,
             greeting=self.greeting,
             query_executor=self._require_query_executor("_deserialize_state"),
+            greeting_client_factory=self._build_greeting_client,
         )
         if state_data:
             state.update_from_dict(state_data)

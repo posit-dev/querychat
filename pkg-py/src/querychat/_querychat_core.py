@@ -143,6 +143,7 @@ class AppState:
     client: Chat
     query_executor: QueryExecutor | None = None
     greeting: Optional[str] = None
+    greeting_client_factory: Optional[Callable[[], Chat]] = None
 
     active_table: str | None = None
     # sql, title, error are per-table properties backed by _table_states
@@ -266,6 +267,15 @@ class AppState:
             return True
         return False
 
+    def build_greeting_client(self) -> Chat:
+        """Build a fresh chat client configured with the greeting system prompt."""
+        if self.greeting_client_factory is None:
+            raise RuntimeError(
+                "greeting_client_factory is not set on this AppState. "
+                "Pass greeting_client_factory to create_app_state()."
+            )
+        return self.greeting_client_factory()
+
     def to_dict(self) -> AppStateDict:
         """Serialize state to dict for framework state stores."""
         return {
@@ -312,6 +322,7 @@ def create_app_state(
     client_factory: ClientFactory,
     greeting: Optional[str] = None,
     query_executor: QueryExecutor | None = None,
+    greeting_client_factory: Optional[Callable[[], Chat]] = None,
 ) -> AppState:
     """Create AppState with callbacks connected via holder pattern."""
     state_holder: dict[str, AppState | None] = {"state": None}
@@ -334,6 +345,7 @@ def create_app_state(
         client=client,
         query_executor=query_executor,
         greeting=greeting,
+        greeting_client_factory=greeting_client_factory,
     )
     state_holder["state"] = state
     return state

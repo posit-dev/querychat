@@ -298,6 +298,7 @@ class QueryChat(StateDictQueryChat[IntoFrameT]):
             client_factory=self._client_factory,
             greeting=self.greeting,
             query_executor=self._require_query_executor("ui"),
+            greeting_client_factory=self._build_greeting_client,
         )
 
         return html.Div(
@@ -569,7 +570,9 @@ def register_chat_callbacks(
 
         if not state.initialize_greeting_if_preset():
             greeting = ""
-            async for chunk in stream_response_async(state.client, GREETING_PROMPT):
+            async for chunk in stream_response_async(
+                state.build_greeting_client(), GREETING_PROMPT
+            ):
                 greeting += chunk
             state.set_greeting(greeting)
 

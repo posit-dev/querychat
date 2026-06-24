@@ -432,6 +432,7 @@ QueryChat <- R6::R6Class(
       if (private$.server_initialized) {
         cli::cli_abort("Cannot add tables after server initialization.")
       }
+      check_bool(include_in_greeting)
       check_sql_table_name(table_name)
       if (table_name %in% names(private$.data_sources) && !replace) {
         cli::cli_abort(

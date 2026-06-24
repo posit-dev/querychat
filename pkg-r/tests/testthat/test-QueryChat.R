@@ -1094,6 +1094,15 @@ describe("QueryChatGreeter", {
     expect_false("hidden_table" %in% qc$greeter$tables)
   })
 
+  it("add_table with non-logical include_in_greeting errors", {
+    qc <- local_querychat(new_test_df(), "base_table", greeting = "hi")
+    extra <- new_test_df()
+    expect_error(
+      qc$add_table(extra, "extra_table", include_in_greeting = "yes"),
+      "include_in_greeting"
+    )
+  })
+
   it("add_tables with include_in_greeting = TRUE adds all tables", {
     conn <- local_multi_table_conn_greeter()
     qc <- QueryChat$new(NULL, "placeholder", greeting = "hi")

@@ -556,6 +556,23 @@ class TestGetDisplayMessages:
         assert messages[0] == {"role": "user", "content": "Question"}
         assert messages[1] == {"role": "assistant", "content": "Answer"}
 
+    def test_legacy_greeting_prompt_turn_is_hidden(self, data_source, mock_client):
+        """
+        State serialized by older releases injected GREETING_PROMPT as a user
+        turn on the shared client; it must stay hidden after restore.
+        """
+        from chatlas import Turn
+        from querychat._querychat_core import GREETING_PROMPT
+
+        turns = [
+            Turn(role="user", contents=GREETING_PROMPT),
+            Turn(role="assistant", contents="Welcome!"),
+        ]
+        mock_client.get_turns.return_value = turns
+        state = AppState(data_sources={"test_table": data_source}, client=mock_client)
+        messages = state.get_display_messages()
+        assert messages == [{"role": "assistant", "content": "Welcome!"}]
+
 
 class TestTypedDicts:
     def test_app_state_dict_structure(self):

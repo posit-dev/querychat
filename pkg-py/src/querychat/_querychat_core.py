@@ -244,6 +244,12 @@ class AppState:
 
             if text_parts:
                 text = "\n\n".join(text_parts)
+                # Hide the synthetic greeting prompt that older releases injected
+                # as a user turn onto the shared client. New sessions generate
+                # greetings on a separate client and never create this turn, but
+                # state serialized by such releases still restores it verbatim.
+                if turn.role == "user" and text == GREETING_PROMPT:
+                    continue
                 messages.append({"role": turn.role, "content": text})
 
         return messages

@@ -334,6 +334,32 @@ def test_greeting_prompt_omits_dicts_for_excluded_tables(sqlite_engine, tmp_path
     assert "CUSTOMERS_DICT_DESC" not in prompt
 
 
+def test_greeting_prompt_keeps_global_dict_desc_drops_global_fields(
+    sqlite_engine, tmp_path
+):
+    """A table-less dict keeps its description; relationships/glossary are dropped."""
+    global_yaml = tmp_path / "global.yaml"
+    global_yaml.write_text(
+        "name: domain\ndescription: GLOBAL_DOMAIN_DESC\nglossary:\n  ARR: GLOSSARY_ARR_DEF\n"
+    )
+    orders_yaml = tmp_path / "orders.yaml"
+    orders_yaml.write_text(
+        "name: orders_dict\ndescription: ORDERS_DICT_DESC\n"
+        "tables:\n  orders:\n    description: Orders info\n"
+        "relationships:\n  - join: orders.id = customers.id\n    description: REL_DESC\n"
+    )
+
+    qc = QueryChat(data_dict=[str(global_yaml), str(orders_yaml)])
+    qc.add_tables(sqlite_engine, include_in_greeting="orders")
+
+    prompt = qc._build_greeting_client().system_prompt
+    assert prompt is not None
+    assert "GLOBAL_DOMAIN_DESC" in prompt
+    assert "ORDERS_DICT_DESC" in prompt
+    assert "GLOSSARY_ARR_DEF" not in prompt
+    assert "REL_DESC" not in prompt
+
+
 def test_generate_greeting_sets_greeting_and_returns_text(sample_df):
     """generate_greeting() returns the mocked text and sets qc.greeting."""
     qc = QueryChat(data_source=sample_df, table_name="test_table")

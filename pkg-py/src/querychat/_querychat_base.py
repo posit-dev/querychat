@@ -341,10 +341,16 @@ class QueryChatBase(Generic[IntoFrameT]):
         """
         tbls = [n for n in self.greeter.tables if n in self._data_sources]
         sources = {n: self._data_sources[n] for n in tbls}
-        # Only keep dicts that describe an included table, so a curated greeting
-        # subset doesn't carry dict-level prose about excluded tables.
+        # Keep a dict if it describes an included table, or if it is a global
+        # (table-less) dict carrying a dict-level description. Drop the
+        # cross-table global fields (relationships, glossary) so a curated
+        # greeting subset can't leak excluded-table prose; per-table entries are
+        # scoped to the included tables at render time.
         greeting_dicts = [
-            dd for dd in self._data_dicts if any(n in tbls for n in dd.tables)
+            dd.model_copy(update={"relationships": [], "glossary": {}})
+            for dd in self._data_dicts
+            if any(n in tbls for n in dd.tables)
+            or (not dd.tables and dd.description)
         ]
         greeting_prompt_obj = QueryChatSystemPrompt(
             prompt_template=self.greeter.prompt,

@@ -278,6 +278,21 @@ def test_add_tables_include_in_greeting_list(sqlite_engine):
     assert "customers" not in qc.greeter.tables
 
 
+def test_add_tables_include_in_greeting_str(sqlite_engine):
+    """add_tables accepts a bare table-name string (parity with R)."""
+    qc = QueryChat()
+    qc.add_tables(sqlite_engine, include_in_greeting="orders")
+    assert "orders" in qc.greeter.tables
+    assert "customers" not in qc.greeter.tables
+
+
+def test_add_tables_include_in_greeting_invalid_type(sqlite_engine):
+    """add_tables rejects non-bool, non-string include_in_greeting."""
+    qc = QueryChat()
+    with pytest.raises(TypeError, match="include_in_greeting"):
+        qc.add_tables(sqlite_engine, include_in_greeting=1)  # type: ignore[arg-type]
+
+
 def test_generate_greeting_sets_greeting_and_returns_text(sample_df):
     """generate_greeting() returns the mocked text and sets qc.greeting."""
     qc = QueryChat(data_source=sample_df, table_name="test_table")

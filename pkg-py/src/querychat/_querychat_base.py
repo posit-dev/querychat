@@ -479,7 +479,7 @@ class QueryChatBase(Generic[IntoFrameT]):
         tables: list[str] | None = None,
         *,
         replace: bool = False,
-        include_in_greeting: bool | list[str] = False,
+        include_in_greeting: bool | str | list[str] = False,
     ) -> None:
         """
         Add multiple tables from a SQLAlchemy engine or Ibis backend in a single call.
@@ -502,7 +502,8 @@ class QueryChatBase(Generic[IntoFrameT]):
             name already exists.
         include_in_greeting
             ``True`` to include all added tables in the greeting, ``False`` (default)
-            for none, or a list of table names to include.
+            for none, or a table name (or list of table names) to include. Any
+            other type raises ``TypeError``.
 
         Raises
         ------
@@ -591,12 +592,22 @@ class QueryChatBase(Generic[IntoFrameT]):
                 self._query_executor.cleanup()
             self._query_executor = None
 
-        if include_in_greeting is True:
-            greeting_names = list(tables)
-        elif include_in_greeting is False:
-            greeting_names = []
+        if isinstance(include_in_greeting, bool):
+            greeting_names = list(tables) if include_in_greeting else []
+        elif isinstance(include_in_greeting, str):
+            greeting_names = (
+                [include_in_greeting] if include_in_greeting in tables else []
+            )
+        elif isinstance(include_in_greeting, list) and all(
+            isinstance(name, str) for name in include_in_greeting
+        ):
+            greeting_names = [name for name in include_in_greeting if name in tables]
         else:
-            greeting_names = [n for n in include_in_greeting if n in tables]
+            raise TypeError(
+                "include_in_greeting must be True, False, or a table name "
+                "(or list of table names), got "
+                f"{type(include_in_greeting).__name__}."
+            )
 
         new_greeting = list(self.greeter.tables)
         for name in greeting_names:

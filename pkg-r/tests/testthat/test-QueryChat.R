@@ -1209,7 +1209,23 @@ describe("QueryChatGreeter", {
     withr::defer(qc$cleanup())
 
     qc$greeter$tables <- character()
+
+    prompt <- qc$.__enclos_env__$private$build_greeting_client()$get_system_prompt()
+    expect_false(grepl("following tables", prompt))
+    expect_false(grepl("SQL SQL", prompt))
+
     expect_no_error(qc$generate_greeting())
     expect_equal(qc$greeting, "Generic greeting with no tables.")
+  })
+
+  it("remove_table prunes the table from greeter$tables", {
+    conn <- local_multi_table_conn_greeter()
+    qc <- QueryChat$new(NULL, "placeholder", greeting = "hi")
+    suppressWarnings(qc$add_tables(conn, include_in_greeting = TRUE))
+    expect_true("orders" %in% qc$greeter$tables)
+
+    qc$remove_table("orders")
+    expect_false("orders" %in% qc$greeter$tables)
+    expect_true("customers" %in% qc$greeter$tables)
   })
 })

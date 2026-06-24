@@ -105,6 +105,7 @@ QueryChatSystemPrompt <- R6::R6Class(
       context <- list(
         db_type = db_type,
         is_duck_db = tolower(db_type) == "duckdb",
+        has_tables = has_sources,
         semantic_views = semantic_views,
         schema = schema,
         has_data_dicts = has_dicts,

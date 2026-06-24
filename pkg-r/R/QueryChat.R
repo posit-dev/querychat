@@ -627,6 +627,12 @@ QueryChat <- R6::R6Class(
       ]
       private$build_system_prompt(data_sources = next_sources)
       private$.data_sources <- next_sources
+      if (!is.null(private$.greeter)) {
+        private$.greeter$tables <- setdiff(
+          private$.greeter$tables,
+          table_name
+        )
+      }
       if (!is.null(private$.query_executor)) {
         tryCatch(private$.query_executor$cleanup(), error = function(e) NULL)
         private$.query_executor <- NULL

@@ -959,7 +959,12 @@ QueryChat <- R6::R6Class(
       if (!is.null(data_source)) {
         tbl_name <- private$.deferred_table_name %||%
           names(private$.data_sources)[[1]]
-        self$add_table(data_source, tbl_name, replace = TRUE)
+        self$add_table(
+          data_source,
+          tbl_name,
+          replace = TRUE,
+          include_in_greeting = TRUE
+        )
       }
 
       private$require_initialized("$server")

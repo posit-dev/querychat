@@ -3,21 +3,23 @@ You are a friendly data assistant. Write a warm welcome greeting for a user who 
 {{#has_tables}}
 You have access to a {{db_type}} database with the following tables:
 
-{{#has_data_dicts}}
-{{{data_dicts}}}
-
-{{/has_data_dicts}}
-{{^has_data_dicts}}
-<tables>
-{{{tables_overview}}}
-</tables>
-
-{{/has_data_dicts}}
 {{/has_tables}}
 {{^has_tables}}
 You have access to a {{db_type}} database.
 
 {{/has_tables}}
+{{#has_data_dicts}}
+{{{data_dicts}}}
+
+{{/has_data_dicts}}
+{{^has_data_dicts}}
+{{#has_tables}}
+<tables>
+{{{tables_overview}}}
+</tables>
+
+{{/has_tables}}
+{{/has_data_dicts}}
 {{#data_description}}
 <data_description>
 {{{data_description}}}

@@ -1274,6 +1274,33 @@ describe("QueryChatGreeter", {
     expect_equal(qc$greeting, "Generic greeting with no tables.")
   })
 
+  it("greeting prompt keeps a global dict description with no tables included", {
+    global_yaml <- withr::local_tempfile(fileext = ".yaml")
+    writeLines(
+      c(
+        "name: domain",
+        "description: GLOBAL_DOMAIN_DESC",
+        "glossary:",
+        "  ARR: GLOSSARY_ARR_DEF"
+      ),
+      global_yaml
+    )
+
+    qc <- QueryChat$new(
+      new_test_df(),
+      "test_table",
+      greeting = "hi",
+      data_dict = list(global_yaml)
+    )
+    withr::defer(qc$cleanup())
+    qc$greeter$tables <- character()
+
+    prompt <- qc$.__enclos_env__$private$build_greeting_client()$get_system_prompt()
+    expect_true(grepl("GLOBAL_DOMAIN_DESC", prompt))
+    expect_false(grepl("GLOSSARY_ARR_DEF", prompt))
+    expect_false(grepl("following tables", prompt))
+  })
+
   it("remove_table prunes the table from greeter$tables", {
     conn <- local_multi_table_conn_greeter()
     qc <- QueryChat$new(NULL, "placeholder", greeting = "hi")

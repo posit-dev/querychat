@@ -87,7 +87,9 @@ QueryChatSystemPrompt <- R6::R6Class(
       has_sources <- length(self$data_sources) > 0
       first_source <- if (has_sources) self$data_sources[[1]] else NULL
       db_type <- if (has_sources) first_source$get_db_type() else "SQL"
-      has_dicts <- has_sources && length(self$data_dicts) > 0
+      # Data dicts can carry global (table-less) descriptions, so they may
+      # render even when no tables are selected (e.g. a generic greeting).
+      has_dicts <- length(self$data_dicts) > 0
 
       semantic_views <- ""
       if (has_sources && inherits(first_source, "DBISource")) {

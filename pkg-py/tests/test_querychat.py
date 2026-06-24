@@ -346,8 +346,24 @@ def test_generate_greeting_with_empty_tables(sample_df):
     qc = QueryChat(data_source=sample_df, table_name="test_table")
     qc.greeter.tables = []
 
+    prompt = qc._build_greeting_client().system_prompt
+    assert prompt is not None
+    assert "following tables" not in prompt
+    assert "SQL SQL" not in prompt
+
     with patch("chatlas.Chat.chat", return_value="Generic greeting"):
         result = qc.generate_greeting()
 
     assert result == "Generic greeting"
     assert qc.greeting == "Generic greeting"
+
+
+def test_remove_table_prunes_greeter_tables(sqlite_engine):
+    """remove_table drops the removed name from greeter.tables."""
+    qc = QueryChat()
+    qc.add_tables(sqlite_engine, include_in_greeting=True)
+    assert "orders" in qc.greeter.tables
+
+    qc.remove_table("orders")
+    assert "orders" not in qc.greeter.tables
+    assert "customers" in qc.greeter.tables

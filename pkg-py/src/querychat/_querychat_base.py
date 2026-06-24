@@ -626,8 +626,7 @@ class QueryChatBase(Generic[IntoFrameT]):
         for name in greeting_names:
             if name not in new_greeting:
                 new_greeting.append(name)
-        if new_greeting != self.greeter.tables:
-            self.greeter.tables = new_greeting
+        self.greeter.tables = new_greeting
 
     def remove_table(self, table_name: str) -> None:
         """
@@ -667,6 +666,10 @@ class QueryChatBase(Generic[IntoFrameT]):
 
         self._build_system_prompt(data_sources=next_data_sources)
         self._data_sources = next_data_sources
+        if self._greeter is not None:
+            self._greeter.tables = [
+                n for n in self._greeter.tables if n != table_name
+            ]
         if self._query_executor is not None:
             with contextlib.suppress(Exception):
                 self._query_executor.cleanup()

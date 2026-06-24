@@ -164,6 +164,7 @@ class QueryChatSystemPrompt:
         context = {
             "db_type": db_type,
             "is_duck_db": db_type.lower() == "duckdb",
+            "has_tables": first_source is not None,
             "semantic_views": semantic_views,
             "has_data_dicts": has_dicts,
             "data_dicts": data_dicts,

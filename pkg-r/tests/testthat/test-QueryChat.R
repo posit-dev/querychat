@@ -1136,6 +1136,20 @@ describe("QueryChatGreeter", {
     )
   })
 
+  it("add_tables leaves state unchanged when include_in_greeting is invalid", {
+    conn <- local_multi_table_conn_greeter()
+    qc <- QueryChat$new(NULL, "placeholder", greeting = "hi")
+    expect_error(
+      suppressWarnings(qc$add_tables(conn, include_in_greeting = 1)),
+      "include_in_greeting"
+    )
+    expect_false("orders" %in% qc$greeter$tables)
+    expect_false("customers" %in% qc$greeter$tables)
+    suppressWarnings(qc$add_tables(conn, include_in_greeting = TRUE))
+    expect_true("orders" %in% qc$greeter$tables)
+    expect_true("customers" %in% qc$greeter$tables)
+  })
+
   it("greeting prompt omits dicts that describe only excluded tables", {
     conn <- local_multi_table_conn_greeter()
     orders_yaml <- withr::local_tempfile(fileext = ".yaml")

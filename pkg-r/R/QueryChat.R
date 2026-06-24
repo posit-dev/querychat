@@ -539,6 +539,22 @@ QueryChat <- R6::R6Class(
         }
       }
 
+      if (
+        !rlang::is_bool(include_in_greeting) &&
+          !is.character(include_in_greeting)
+      ) {
+        cli::cli_abort(
+          "{.arg include_in_greeting} must be {.code TRUE}, {.code FALSE}, or a character vector of table names."
+        )
+      }
+      greeting_tbls <- if (isTRUE(include_in_greeting)) {
+        tables
+      } else if (is.character(include_in_greeting)) {
+        intersect(include_in_greeting, tables)
+      } else {
+        character()
+      }
+
       normalized <- stats::setNames(
         lapply(tables, function(tbl) normalize_data_source(conn, tbl)),
         tables
@@ -581,21 +597,6 @@ QueryChat <- R6::R6Class(
         private$.query_executor <- NULL
       }
 
-      if (
-        !rlang::is_bool(include_in_greeting) &&
-          !is.character(include_in_greeting)
-      ) {
-        cli::cli_abort(
-          "{.arg include_in_greeting} must be {.code TRUE}, {.code FALSE}, or a character vector of table names."
-        )
-      }
-      greeting_tbls <- if (isTRUE(include_in_greeting)) {
-        tables
-      } else if (is.character(include_in_greeting)) {
-        intersect(include_in_greeting, tables)
-      } else {
-        character()
-      }
       if (length(greeting_tbls) > 0) {
         self$greeter$tables <- c(self$greeter$tables, greeting_tbls)
       }

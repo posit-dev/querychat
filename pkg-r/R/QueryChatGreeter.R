@@ -38,23 +38,21 @@ QueryChatGreeter <- R6::R6Class(
   ),
   active = list(
     #' @field tables Character vector of table names whose context to include in
-    #'   the greeting. Set to invalidate the cached greeting.
+    #'   the greeting. Changes affect the next generated greeting.
     tables = function(value) {
       if (missing(value)) {
         return(private$.tables)
       }
       private$.tables <- value
-      private$.parent$greeting <- NULL
     },
 
-    #' @field prompt The greeting template (string or file path). Set to
-    #'   invalidate the cached greeting.
+    #' @field prompt The greeting template (string or file path). Changes affect
+    #'   the next generated greeting.
     prompt = function(value) {
       if (missing(value)) {
         return(private$.prompt)
       }
       private$.prompt <- value
-      private$.parent$greeting <- NULL
     }
   )
 )

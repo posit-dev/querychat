@@ -13,7 +13,7 @@ tool_card <- function(executor, manage_card) {
         c("add", "replace", "patch", "remove", "get"),
         paste(
           "The operation to perform.",
-          "- 'add': create a new card. Requires display, title, and value.",
+          "- 'add': create a new card. Requires display, title, and query (or text for markdown).",
           "- 'patch': the preferred way to edit a card. Send the id and only the fields you are changing; omitted fields keep their current values. Cannot clear an optional field; use 'replace' for that.",
           "- 'replace': fully overwrite a card. Send the id and every field for the new version (same requirements as 'add'; changing display is allowed). Omitted optional fields are cleared.",
           "- 'remove': delete a card. Requires only id.",
@@ -34,18 +34,21 @@ tool_card <- function(executor, manage_card) {
         "A brief card heading shown in the card header. Required for add and replace.",
         required = FALSE
       ),
-      value = ellmer::type_string(
+      query = ellmer::type_string(
         ellmer::interpolate(
           paste(
-            "The card content; required for add and replace. Its meaning depends on display:",
+            "The data query; required for table, visualization, and value_box displays. Its meaning depends on display:",
             "- table: a {{db_type}} SQL SELECT query.",
             "- visualization: a full ggsql query including a VISUALISE clause. Do NOT include `LABEL title => ...`; use the title parameter instead.",
-            "- markdown: markdown text to render.",
             "- value_box: a {{db_type}} SQL SELECT query returning exactly 1 row and 1 column. Format the value into a human-readable string in SQL (thousands separators, currency, rounding, a % suffix, etc.) so it displays cleanly; don't return a raw float.",
             sep = "\n"
           ),
           db_type = db_type
         ),
+        required = FALSE
+      ),
+      text = ellmer::type_string(
+        "The markdown body; required for markdown display only. Rendered as HTML via markdown.",
         required = FALSE
       ),
       caption = ellmer::type_string(
@@ -77,7 +80,8 @@ tool_card_impl <- function(executor, manage_card) {
     id = NULL,
     display = NULL,
     title = NULL,
-    value = NULL,
+    query = NULL,
+    text = NULL,
     caption = NULL,
     theme = NULL,
     icon = NULL
@@ -120,7 +124,8 @@ tool_card_impl <- function(executor, manage_card) {
         list(
           display = display,
           title = title,
-          value = value,
+          query = query,
+          text = text,
           caption = caption,
           theme = theme,
           icon = icon
@@ -129,7 +134,8 @@ tool_card_impl <- function(executor, manage_card) {
       merged <- utils::modifyList(existing, supplied)
       display <- merged$display
       title <- merged$title
-      value <- merged$value
+      query <- merged$query
+      text <- merged$text
       caption <- merged$caption
       theme <- merged$theme
       icon <- merged$icon
@@ -140,7 +146,8 @@ tool_card_impl <- function(executor, manage_card) {
       fields = list(
         display = display,
         title = title,
-        value = value,
+        query = query,
+        text = text,
         caption = caption,
         theme = theme,
         icon = icon
@@ -174,7 +181,8 @@ tool_card_impl <- function(executor, manage_card) {
 validate_and_build_card <- function(executor, fields) {
   display <- fields$display
   title <- fields$title
-  value <- fields$value
+  query <- fields$query
+  text <- fields$text
   caption <- fields$caption
   theme <- fields$theme
   icon <- fields$icon
@@ -189,10 +197,14 @@ validate_and_build_card <- function(executor, fields) {
       "'title' is required for actions 'add', 'replace', and 'patch'."
     )
   }
-  if (is.null(value)) {
-    rlang::abort(
-      "'value' is required for actions 'add', 'replace', and 'patch'."
-    )
+  if (display == "markdown") {
+    if (is.null(text)) {
+      rlang::abort("'text' is required for display 'markdown'.")
+    }
+  } else {
+    if (is.null(query)) {
+      rlang::abort(sprintf("'query' is required for display '%s'.", display))
+    }
   }
 
   # Validate icon (bsicons) for any display that supplies one
@@ -204,7 +216,7 @@ validate_and_build_card <- function(executor, fields) {
   }
 
   if (display == "value_box") {
-    df <- executor$execute_query(value)
+    df <- executor$execute_query(query)
     if (!(nrow(df) == 1 && ncol(df) == 1)) {
       rlang::abort(sprintf(
         "Value box query must return exactly 1 row and 1 column. Got %d row(s) and %d column(s).",
@@ -214,12 +226,12 @@ validate_and_build_card <- function(executor, fields) {
     }
   } else if (display == "table") {
     tryCatch(
-      executor$validate_query(value),
+      executor$validate_query(query),
       error = function(e) rlang::abort(conditionMessage(e))
     )
   } else if (display == "visualization") {
     rlang::check_installed("ggsql", reason = "for visualization support.")
-    validated <- ggsql::ggsql_validate(value)
+    validated <- ggsql::ggsql_validate(query)
     if (!ggsql::ggsql_has_visual(validated)) {
       rlang::abort("Visualization query must include a VISUALISE clause.")
     }
@@ -231,12 +243,12 @@ validate_and_build_card <- function(executor, fields) {
       error = function(e) rlang::abort(conditionMessage(e))
     )
   }
-  # markdown: no query validation needed
 
   list(
     display = display,
     title = title,
-    value = value,
+    query = query,
+    text = text,
     caption = caption,
     theme = theme,
     icon = icon
@@ -268,7 +280,16 @@ new_card_id <- function(manage_card) {
 # the remaining fields with `id` first.
 card_public <- function(card) {
   card <- compact(card)
-  ordered <- c("id", "display", "title", "value", "caption", "theme", "icon")
+  ordered <- c(
+    "id",
+    "display",
+    "title",
+    "query",
+    "text",
+    "caption",
+    "theme",
+    "icon"
+  )
   card[intersect(ordered, names(card))]
 }
 

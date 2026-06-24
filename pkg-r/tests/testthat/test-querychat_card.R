@@ -46,7 +46,7 @@ describe("tool_card_impl()", {
       action = "add",
       display = "table",
       title = "T",
-      value = "SELECT * FROM test_table"
+      query = "SELECT * FROM test_table"
     )
 
     expect_s7_class(res, ellmer::ContentToolResult)
@@ -68,7 +68,7 @@ describe("tool_card_impl()", {
       action = "add",
       display = "markdown",
       title = "M",
-      value = "Some **markdown**"
+      text = "Some **markdown**"
     )
 
     expect_s7_class(res, ellmer::ContentToolResult)
@@ -86,7 +86,7 @@ describe("tool_card_impl()", {
       action = "add",
       display = "value_box",
       title = "V",
-      value = "SELECT COUNT(*) AS n FROM test_table"
+      query = "SELECT COUNT(*) AS n FROM test_table"
     )
 
     expect_s7_class(res, ellmer::ContentToolResult)
@@ -105,7 +105,7 @@ describe("tool_card_impl()", {
         action = "add",
         display = "value_box",
         title = "V",
-        value = "SELECT * FROM test_table"
+        query = "SELECT * FROM test_table"
       ),
       "1 row"
     )
@@ -122,7 +122,7 @@ describe("tool_card_impl()", {
         action = "replace",
         display = "table",
         title = "T",
-        value = "SELECT * FROM test_table"
+        query = "SELECT * FROM test_table"
       ),
       "'id' is required for action 'replace'"
     )
@@ -134,7 +134,7 @@ describe("tool_card_impl()", {
       id = "abcd",
       display = "table",
       title = "Old title",
-      value = "SELECT * FROM test_table",
+      query = "SELECT * FROM test_table",
       caption = "Old caption"
     )
     record <- new.env(parent = emptyenv())
@@ -160,7 +160,7 @@ describe("tool_card_impl()", {
     expect_equal(call$action, "replace")
     expect_equal(call$id, "abcd")
     expect_equal(call$card$title, "New title")
-    expect_equal(call$card$value, existing$value)
+    expect_equal(call$card$query, existing$query)
     expect_equal(call$card$caption, existing$caption)
     expect_equal(jsonlite::fromJSON(res@value)$status, "patched")
   })
@@ -195,7 +195,7 @@ describe("tool_card_impl()", {
     expect_equal(call$id, "abcd")
   })
 
-  it("errors when value is missing on add", {
+  it("errors when query is missing on add for table display", {
     ds <- local_query_executor(new_test_df())
     mock <- new_mock()
     impl <- tool_card_impl(ds, mock$mock_manage)
@@ -206,7 +206,7 @@ describe("tool_card_impl()", {
         display = "table",
         title = "T"
       ),
-      "'value' is required"
+      "'query' is required for display 'table'"
     )
   })
 
@@ -219,7 +219,7 @@ describe("tool_card_impl()", {
       impl(
         action = "add",
         title = "T",
-        value = "SELECT * FROM test_table"
+        query = "SELECT * FROM test_table"
       ),
       "'display' is required"
     )
@@ -235,7 +235,7 @@ describe("tool_card_impl()", {
         action = "add",
         display = "table",
         title = "T",
-        value = "SELECT * FROM test_table",
+        query = "SELECT * FROM test_table",
         icon = "not-a-real-icon-xyz-99999"
       )
     )
@@ -252,7 +252,7 @@ describe("tool_card_impl()", {
         action = "add",
         display = "markdown",
         title = "M",
-        value = "Some text",
+        text = "Some text",
         icon = "not-a-real-icon-xyz-99999"
       )
     )
@@ -269,7 +269,7 @@ describe("tool_card_impl()", {
         action = "add",
         display = "value_box",
         title = "V",
-        value = "SELECT COUNT(*) AS n FROM test_table",
+        query = "SELECT COUNT(*) AS n FROM test_table",
         icon = "not-a-real-icon-xyz-99999"
       )
     )
@@ -285,7 +285,7 @@ describe("tool_card_impl()", {
       action = "add",
       display = "table",
       title = "T",
-      value = "SELECT * FROM test_table",
+      query = "SELECT * FROM test_table",
       caption = "Some caption text"
     )
 
@@ -302,7 +302,7 @@ describe("tool_card_impl()", {
       action = "add",
       display = "value_box",
       title = "V",
-      value = "SELECT COUNT(*) AS n FROM test_table",
+      query = "SELECT COUNT(*) AS n FROM test_table",
       caption = "All time"
     )
 
@@ -345,7 +345,7 @@ describe("card_public()", {
     card <- list(
       display = "table",
       title = "T",
-      value = "SELECT 1",
+      query = "SELECT 1",
       caption = NULL,
       theme = NULL,
       icon = NULL,
@@ -367,8 +367,8 @@ describe("tool_card_impl() get action", {
   it("returns all cards when id is omitted", {
     ds <- local_query_executor(new_test_df())
     all_cards <- list(
-      list(id = "aaa", display = "table", title = "One", value = "SELECT 1"),
-      list(id = "bbb", display = "markdown", title = "Two", value = "Note")
+      list(id = "aaa", display = "table", title = "One", query = "SELECT 1"),
+      list(id = "bbb", display = "markdown", title = "Two", text = "Note")
     )
     mock_manage <- function(action, id = NULL, card = NULL) {
       expect_equal(action, "get")
@@ -388,7 +388,7 @@ describe("tool_card_impl() get action", {
     ds <- local_query_executor(new_test_df())
     mock_manage <- function(action, id = NULL, card = NULL) {
       expect_equal(id, "aaa")
-      list(id = "aaa", display = "table", title = "One", value = "SELECT 1")
+      list(id = "aaa", display = "table", title = "One", query = "SELECT 1")
     }
     impl <- tool_card_impl(ds, mock_manage)
 
@@ -417,15 +417,15 @@ describe("normalize_seed_cards()", {
 
   it("returns a list as-is", {
     cards <- list(
-      list(display = "markdown", title = "Hi", value = "**x**"),
-      list(display = "table", title = "T", value = "SELECT 1")
+      list(display = "markdown", title = "Hi", text = "**x**"),
+      list(display = "table", title = "T", query = "SELECT 1")
     )
     result <- normalize_seed_cards(cards)
     expect_equal(result, cards)
   })
 
   it("parses a JSON string", {
-    json <- '[{"display":"markdown","title":"Hi","value":"**x**"}]'
+    json <- '[{"display":"markdown","title":"Hi","text":"**x**"}]'
     result <- normalize_seed_cards(json)
     expect_length(result, 1)
     expect_equal(result[[1]]$display, "markdown")
@@ -435,7 +435,7 @@ describe("normalize_seed_cards()", {
   it("reads and parses a JSON file path", {
     tmp <- withr::local_tempfile(fileext = ".json")
     writeLines(
-      '[{"display":"markdown","title":"From file","value":"text"}]',
+      '[{"display":"markdown","title":"From file","text":"text"}]',
       tmp
     )
     result <- normalize_seed_cards(tmp)
@@ -445,7 +445,7 @@ describe("normalize_seed_cards()", {
 
   it("aborts with index on a non-list element", {
     cards <- list(
-      list(display = "markdown", title = "Ok", value = "text"),
+      list(display = "markdown", title = "Ok", text = "text"),
       "not a list"
     )
     expect_error(normalize_seed_cards(cards), "2")
@@ -467,7 +467,7 @@ describe("cards_to_payload() / payload_to_cards()", {
         id = "ab12",
         display = "value_box",
         title = "Total Sales",
-        value = "SELECT '$1,234' AS val",
+        query = "SELECT '$1,234' AS val",
         caption = "All time",
         theme = "success",
         icon = "currency-dollar"
@@ -485,7 +485,7 @@ describe("cards_to_payload() / payload_to_cards()", {
     expect_equal(card$id, "ab12")
     expect_equal(card$display, "value_box")
     expect_equal(card$title, "Total Sales")
-    expect_equal(card$value, "SELECT '$1,234' AS val")
+    expect_equal(card$query, "SELECT '$1,234' AS val")
     expect_equal(card$caption, "All time")
     expect_equal(card$theme, "success")
     expect_equal(card$icon, "currency-dollar")
@@ -497,7 +497,7 @@ describe("cards_to_payload() / payload_to_cards()", {
         id = "cc00",
         display = "table",
         title = "Top Products",
-        value = "SELECT * FROM test_table"
+        query = "SELECT * FROM test_table"
       )
     )
     result <- payload_to_cards(cards_to_payload(cards))
@@ -506,7 +506,7 @@ describe("cards_to_payload() / payload_to_cards()", {
     expect_equal(card$id, "cc00")
     expect_equal(card$display, "table")
     expect_equal(card$title, "Top Products")
-    expect_equal(card$value, "SELECT * FROM test_table")
+    expect_equal(card$query, "SELECT * FROM test_table")
     expect_null(card$caption)
     expect_null(card$theme)
     expect_null(card$icon)
@@ -518,13 +518,13 @@ describe("cards_to_payload() / payload_to_cards()", {
         id = "dd01",
         display = "markdown",
         title = "Notes",
-        value = "**Key insight**: sales are up."
+        text = "**Key insight**: sales are up."
       )
     )
     result <- payload_to_cards(cards_to_payload(cards))
     card <- result[[1]]
     expect_equal(card$display, "markdown")
-    expect_equal(card$value, "**Key insight**: sales are up.")
+    expect_equal(card$text, "**Key insight**: sales are up.")
   })
 
   it("round-trips a mixed list of multiple cards", {
@@ -533,20 +533,20 @@ describe("cards_to_payload() / payload_to_cards()", {
         id = "aa01",
         display = "value_box",
         title = "Count",
-        value = "SELECT COUNT(*) FROM t",
+        query = "SELECT COUNT(*) FROM t",
         caption = "Rows"
       ),
       list(
         id = "bb02",
         display = "table",
         title = "Detail",
-        value = "SELECT * FROM t"
+        query = "SELECT * FROM t"
       ),
       list(
         id = "cc03",
         display = "markdown",
         title = "Summary",
-        value = "All good."
+        text = "All good."
       )
     )
     result <- payload_to_cards(cards_to_payload(cards))
@@ -559,8 +559,8 @@ describe("cards_to_payload() / payload_to_cards()", {
 
   it("payload_to_cards() returns plain lists, not data.frames", {
     cards <- list(
-      list(id = "e1", display = "table", title = "T", value = "SELECT 1"),
-      list(id = "e2", display = "markdown", title = "M", value = "Text")
+      list(id = "e1", display = "table", title = "T", query = "SELECT 1"),
+      list(id = "e2", display = "markdown", title = "M", text = "Text")
     )
     result <- payload_to_cards(cards_to_payload(cards))
     expect_true(is.list(result))

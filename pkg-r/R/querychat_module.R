@@ -724,7 +724,7 @@ render_card_error <- function(card, message) {
 }
 
 render_card_value_box <- function(card, data_source, session) {
-  df <- data_source$execute_query(card$value)
+  df <- data_source$execute_query(card$query)
   scalar <- as.character(df[[1]][1])
 
   showcase <- if (!is.null(card$icon)) bsicons::bs_icon(card$icon)
@@ -735,7 +735,7 @@ render_card_value_box <- function(card, data_source, session) {
     htmltools::p(class = "h5 mb-2 mt-4", "SQL Query"),
     bslib::input_code_editor(
       id = session$ns(paste0("querychat_card_code_", card$id)),
-      value = card$value,
+      value = card$query,
       language = "sql",
       read_only = TRUE,
       height = "200px"
@@ -755,7 +755,7 @@ render_card_value_box <- function(card, data_source, session) {
 
 render_card_table <- function(card, data_source, session) {
   rlang::check_installed("DT", reason = "for table cards.")
-  df <- data_source$execute_query(card$value)
+  df <- data_source$execute_query(card$query)
   if (inherits(df, "tbl_sql")) {
     df <- dplyr::collect(df)
   }
@@ -777,7 +777,7 @@ render_card_table <- function(card, data_source, session) {
       bsicons::bs_icon("code-slash"),
       bslib::input_code_editor(
         id = session$ns(paste0("querychat_card_code_", card$id)),
-        value = card$value,
+        value = card$query,
         language = "sql",
         read_only = TRUE,
         height = "auto"
@@ -788,7 +788,7 @@ render_card_table <- function(card, data_source, session) {
 
 render_card_visualization <- function(card, data_source, session) {
   widget_id <- paste0("querychat_card_viz_", card$id)
-  validated <- ggsql::ggsql_validate(card$value)
+  validated <- ggsql::ggsql_validate(card$query)
   spec <- execute_ggsql(data_source, validated)
   session$output[[widget_id]] <- ggsql::renderGgsql(spec)
   content_panel <- htmltools::div(
@@ -809,7 +809,7 @@ render_card_visualization <- function(card, data_source, session) {
       bsicons::bs_icon("code-slash"),
       bslib::input_code_editor(
         id = session$ns(paste0("querychat_card_code_", card$id)),
-        value = card$value,
+        value = card$query,
         language = "ggsql",
         read_only = TRUE,
         height = "auto"
@@ -821,7 +821,7 @@ render_card_visualization <- function(card, data_source, session) {
 render_card_markdown <- function(card, data_source, session) {
   bslib::card(
     card_header_with_icon(card$title, card$icon),
-    bslib::card_body(shiny::markdown(card$value)),
+    bslib::card_body(shiny::markdown(card$text)),
     if (!is.null(card$caption)) bslib::card_footer(card$caption)
   )
 }

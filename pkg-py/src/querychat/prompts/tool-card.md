@@ -7,7 +7,7 @@ Match the display to the finding:
 - **value_box**: a single key metric. The SQL query must return exactly 1 row and 1 column.
 - **table**: a ranked or comparative result set the user wants to see at a glance.
 - **visualization**: a trend, distribution, or comparison that reads better as a chart.
-- **markdown**: a written takeaway or note with no live query.
+- **markdown**: a written takeaway or note with no live query. Use the `text` field for the markdown body.
 
 For a small set of related metrics (roughly 3-4 or fewer), add a separate value_box for each one; a row of value boxes reads better than one table of headline numbers.
 
@@ -17,7 +17,7 @@ Parameters
 ----------
 action :
     The operation to perform.
-    - `"add"`: create a new card. Requires `display`, `title`, and `value`.
+    - `"add"`: create a new card. Requires `display`, `title`, and `query` (or `text` for markdown).
     - `"patch"`: the preferred way to edit a card. Send the `id` and only the fields you are changing; omitted fields keep their current values. Cannot clear an optional field; use `"replace"` for that.
     - `"replace"`: fully overwrite a card. Send the `id` and every field for the new version (same requirements as `"add"`; changing `display` is allowed). Omitted optional fields are cleared.
     - `"remove"`: delete a card. Requires only `id`.
@@ -28,12 +28,13 @@ display :
     Which renderer to use; required for `"add"` and `"replace"`. One of `"table"`, `"visualization"`, `"markdown"`, or `"value_box"`, as described above.
 title :
     A brief card heading shown in the card header. Required for `"add"` and `"replace"`.
-value :
-    The card content; required for `"add"` and `"replace"`. Its meaning depends on `display`:
+query :
+    The data query; required for table, visualization, and value_box displays. Its meaning depends on `display`:
     - `"table"`: a valid {{db_type}} SQL SELECT query.
     - `"visualization"`: a full ggsql query including a VISUALISE clause. Do NOT include `LABEL title => ...`; use the `title` parameter instead.
-    - `"markdown"`: markdown text to render.
     - `"value_box"`: a {{db_type}} SQL SELECT query returning exactly 1 row and 1 column. Format the value into a human-readable string in SQL (thousands separators, currency, rounding, a `%` suffix, etc.) so it displays cleanly; don't return a raw float.
+text :
+    The markdown body; required for markdown display only. Rendered as HTML via markdown.
 caption :
     Optional brief secondary text. Rendered as a footer for table/visualization/markdown cards, and as the subtitle for value_box. Keep it to a few words.
 theme :
@@ -48,7 +49,7 @@ Returns
     affected card's `id` and a `status` (e.g. `{"id": "a3f7", "status": "added"}`).
     For `"get"`: a single card object when an `id` is given, otherwise a JSON array
     of all cards. Each card object holds the card's full definition (`id`, `display`,
-    `title`, `value`, and any optional fields), e.g.
-    `{"id": "a3f7", "display": "value_box", "title": "Total Revenue", "value": "SELECT ..."}`.
+    `title`, `query`/`text`, and any optional fields), e.g.
+    `{"id": "a3f7", "display": "value_box", "title": "Total Revenue", "query": "SELECT ..."}`.
     If a query-backed card fails validation, an error message is returned instead and
     no card is created or changed.

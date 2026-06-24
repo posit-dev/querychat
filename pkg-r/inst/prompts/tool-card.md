@@ -7,7 +7,7 @@ Match the display to the finding:
 - **value_box**: a single key metric. The SQL query must return exactly 1 row and 1 column.
 - **table**: a ranked or comparative result set the user wants to see at a glance.
 - **visualization**: a trend, distribution, or comparison that reads better as a chart.
-- **markdown**: a written takeaway or note with no live query.
+- **markdown**: a written takeaway or note with no live query. Use the `text` field for the markdown body.
 
 For a small set of related metrics (roughly 3-4 or fewer), add a separate value_box for each one; a row of value boxes reads better than one table of headline numbers.
 

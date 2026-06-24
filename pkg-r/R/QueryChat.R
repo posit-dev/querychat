@@ -103,6 +103,30 @@ QueryChat <- R6::R6Class(
     .extra_instructions = NULL,
     .categorical_threshold = NULL,
     .data_dicts = list(),
+    .greeter = NULL,
+
+    build_greeting_client = function(client_spec = NULL) {
+      data_sources <- private$.data_sources
+      tbls <- intersect(self$greeter$tables, names(data_sources))
+      if (length(tbls) == 0) {
+        tbls <- names(data_sources)
+      }
+      sources <- data_sources[tbls]
+      greeting_prompt_obj <- QueryChatSystemPrompt$new(
+        prompt_template = self$greeter$prompt,
+        data_sources = sources,
+        data_description = private$.data_description,
+        extra_instructions = NULL,
+        categorical_threshold = private$.categorical_threshold,
+        data_dicts = private$.data_dicts
+      )
+      spec <- client_spec %||% private$.client_spec
+      chat <- as_querychat_client(spec)
+      chat <- chat$clone()
+      chat$set_turns(list())
+      chat$set_system_prompt(greeting_prompt_obj$render(tools = NULL))
+      chat
+    },
 
     require_initialized = function(method_name) {
       if (length(private$.data_sources) == 0) {
@@ -365,6 +389,7 @@ QueryChat <- R6::R6Class(
         private$.data_sources[[normalized$table_name]] <- normalized
         private$auto_fill_data_description()
         private$build_system_prompt()
+        self$greeter$tables <- c(self$greeter$tables, normalized$table_name)
         self$id <- id %||% sprintf("querychat_%s", normalized$table_name)
       } else {
         # Deferred pattern: data_source is NULL
@@ -397,9 +422,16 @@ QueryChat <- R6::R6Class(
     #' @param table_name The SQL table name for this data source.
     #' @param replace Whether to replace an existing table with this name.
     #'   Default is `FALSE`.
+    #' @param include_in_greeting Whether to include this table in the greeting
+    #'   context. Default is `FALSE`.
     #'
     #' @return Invisibly returns `self` for chaining.
-    add_table = function(data_source, table_name, replace = FALSE) {
+    add_table = function(
+      data_source,
+      table_name,
+      replace = FALSE,
+      include_in_greeting = FALSE
+    ) {
       if (private$.server_initialized) {
         cli::cli_abort("Cannot add tables after server initialization.")
       }
@@ -447,6 +479,10 @@ QueryChat <- R6::R6Class(
         self$id <- sprintf("querychat_%s", table_name)
       }
 
+      if (isTRUE(include_in_greeting)) {
+        self$greeter$tables <- c(self$greeter$tables, table_name)
+      }
+
       invisible(self)
     },
 
@@ -463,9 +499,18 @@ QueryChat <- R6::R6Class(
     #'   by `DBI::dbListTables(conn)` are used.
     #' @param replace Whether to replace existing tables with the same name.
     #'   Default is `FALSE`.
+    #' @param include_in_greeting Whether to include added tables in the greeting
+    #'   context. `TRUE` includes all tables; `FALSE` (default) includes none;
+    #'   a character vector includes only those named tables (intersected with
+    #'   the tables being added).
     #'
     #' @return Invisibly returns `self` for chaining.
-    add_tables = function(conn, tables = NULL, replace = FALSE) {
+    add_tables = function(
+      conn,
+      tables = NULL,
+      replace = FALSE,
+      include_in_greeting = FALSE
+    ) {
       if (private$.server_initialized) {
         cli::cli_abort("Cannot add tables after server initialization.")
       }
@@ -530,6 +575,19 @@ QueryChat <- R6::R6Class(
       if (!is.null(private$.query_executor)) {
         tryCatch(private$.query_executor$cleanup(), error = function(e) NULL)
         private$.query_executor <- NULL
+      }
+
+      greeting_tbls <- if (isTRUE(include_in_greeting)) {
+        tables
+      } else if (identical(include_in_greeting, FALSE)) {
+        character()
+      } else if (is.character(include_in_greeting)) {
+        intersect(include_in_greeting, tables)
+      } else {
+        character()
+      }
+      if (length(greeting_tbls) > 0) {
+        self$greeter$tables <- c(self$greeter$tables, greeting_tbls)
       }
 
       invisible(self)
@@ -893,6 +951,10 @@ QueryChat <- R6::R6Class(
         )
       }
 
+      greeting_client_fn <- function() {
+        private$build_greeting_client(client_spec = resolved_client_spec)
+      }
+
       result <- mod_server(
         id %||% self$id,
         data_sources = private$.data_sources,
@@ -900,6 +962,7 @@ QueryChat <- R6::R6Class(
         greeting = self$greeting,
         client = create_session_client,
         tools = self$tools,
+        greeting_client_fn = greeting_client_fn,
         enable_bookmarking = enable_bookmarking
       )
       result
@@ -913,8 +976,7 @@ QueryChat <- R6::R6Class(
     #' @return The greeting string in Markdown format.
     generate_greeting = function(echo = c("none", "output")) {
       private$require_initialized("$generate_greeting")
-      chat <- private$create_session_client()
-      as.character(chat$chat(GREETING_PROMPT, echo = echo))
+      self$greeter$generate(echo = echo)
     },
 
     #' @description
@@ -932,6 +994,20 @@ QueryChat <- R6::R6Class(
     }
   ),
   active = list(
+    #' @field greeter The QueryChatGreeter controlling greeting generation;
+    #'   access its `$tables` and `$prompt`.
+    greeter = function(value) {
+      if (!missing(value)) {
+        # The greeter is read-only. Sub-field assignments like
+        # `qc$greeter$tables <- x` mutate the greeter by reference and
+        # trigger a write-back of the (unchanged) binding, which we ignore.
+        return(invisible(value))
+      }
+      private$.greeter <- private$.greeter %||%
+        QueryChatGreeter$new(parent = self)
+      private$.greeter
+    },
+
     #' @field system_prompt Get the system prompt.
     system_prompt = function() {
       private$require_initialized("$system_prompt")

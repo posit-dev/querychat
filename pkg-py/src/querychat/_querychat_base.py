@@ -329,8 +329,16 @@ class QueryChatBase(Generic[IntoFrameT]):
             self._greeter = QueryChatGreeter(self)
         return self._greeter
 
-    def _build_greeting_client(self) -> chatlas.Chat:
-        """Build a fresh chat client configured with the greeting system prompt."""
+    def _build_greeting_client(
+        self, client_spec: str | chatlas.Chat | None = None
+    ) -> chatlas.Chat:
+        """
+        Build a fresh chat client configured with the greeting system prompt.
+
+        ``client_spec`` overrides the instance client spec so the greeting is
+        generated with the same provider/model as the session client (for
+        example, when ``server(client=...)`` overrides it).
+        """
         tbls = [n for n in self.greeter.tables if n in self._data_sources]
         sources = {n: self._data_sources[n] for n in tbls}
         # Only keep dicts that describe an included table, so a curated greeting
@@ -346,7 +354,7 @@ class QueryChatBase(Generic[IntoFrameT]):
             categorical_threshold=self._categorical_threshold,
             data_dicts=greeting_dicts,
         )
-        chat = create_client(self._client_spec)
+        chat = create_client(client_spec or self._client_spec)
         chat.set_turns([])
         chat.system_prompt = greeting_prompt_obj.render(None)
         return chat
@@ -583,6 +591,23 @@ class QueryChatBase(Generic[IntoFrameT]):
             if table_name in self._data_sources and not replace:
                 raise ValueError(f"Table '{table_name}' already exists")
 
+        if isinstance(include_in_greeting, bool):
+            greeting_names = list(tables) if include_in_greeting else []
+        elif isinstance(include_in_greeting, str):
+            greeting_names = (
+                [include_in_greeting] if include_in_greeting in tables else []
+            )
+        elif isinstance(include_in_greeting, list) and all(
+            isinstance(name, str) for name in include_in_greeting
+        ):
+            greeting_names = [name for name in include_in_greeting if name in tables]
+        else:
+            raise TypeError(
+                "include_in_greeting must be True, False, or a table name "
+                "(or list of table names), got "
+                f"{type(include_in_greeting).__name__}."
+            )
+
         normalized = {name: normalized_builder(name) for name in tables}
 
         staged: dict[str, DataSource] = {}
@@ -604,23 +629,6 @@ class QueryChatBase(Generic[IntoFrameT]):
             with contextlib.suppress(Exception):
                 self._query_executor.cleanup()
             self._query_executor = None
-
-        if isinstance(include_in_greeting, bool):
-            greeting_names = list(tables) if include_in_greeting else []
-        elif isinstance(include_in_greeting, str):
-            greeting_names = (
-                [include_in_greeting] if include_in_greeting in tables else []
-            )
-        elif isinstance(include_in_greeting, list) and all(
-            isinstance(name, str) for name in include_in_greeting
-        ):
-            greeting_names = [name for name in include_in_greeting if name in tables]
-        else:
-            raise TypeError(
-                "include_in_greeting must be True, False, or a table name "
-                "(or list of table names), got "
-                f"{type(include_in_greeting).__name__}."
-            )
 
         new_greeting = list(self.greeter.tables)
         for name in greeting_names:

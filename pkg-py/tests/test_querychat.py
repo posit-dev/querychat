@@ -300,6 +300,18 @@ def test_add_tables_include_in_greeting_invalid_type(sqlite_engine):
         qc.add_tables(sqlite_engine, include_in_greeting=1)  # type: ignore[arg-type]
 
 
+def test_add_tables_invalid_greeting_leaves_state_unchanged(sqlite_engine):
+    """A rejected include_in_greeting must not register any tables."""
+    qc = QueryChat()
+    with pytest.raises(TypeError, match="include_in_greeting"):
+        qc.add_tables(sqlite_engine, include_in_greeting=1)  # type: ignore[arg-type]
+    assert qc._data_sources == {}
+    assert qc.greeter.tables == []
+    # A subsequent valid call still succeeds (no half-registered tables).
+    qc.add_tables(sqlite_engine, include_in_greeting=True)
+    assert set(qc.greeter.tables) == {"orders", "customers"}
+
+
 def test_greeting_prompt_omits_dicts_for_excluded_tables(sqlite_engine, tmp_path):
     """A dict describing only excluded tables is dropped from the greeting prompt."""
     orders_yaml = tmp_path / "orders.yaml"

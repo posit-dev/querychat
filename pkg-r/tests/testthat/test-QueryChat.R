@@ -1136,6 +1136,44 @@ describe("QueryChatGreeter", {
     )
   })
 
+  it("greeting prompt omits dicts that describe only excluded tables", {
+    conn <- local_multi_table_conn_greeter()
+    orders_yaml <- withr::local_tempfile(fileext = ".yaml")
+    writeLines(
+      c(
+        "name: orders_dict",
+        "description: ORDERS_DICT_DESC",
+        "tables:",
+        "  orders:",
+        "    description: Orders info"
+      ),
+      orders_yaml
+    )
+    customers_yaml <- withr::local_tempfile(fileext = ".yaml")
+    writeLines(
+      c(
+        "name: customers_dict",
+        "description: CUSTOMERS_DICT_DESC",
+        "tables:",
+        "  customers:",
+        "    description: Customers info"
+      ),
+      customers_yaml
+    )
+
+    qc <- QueryChat$new(
+      NULL,
+      "placeholder",
+      greeting = "hi",
+      data_dict = list(orders_yaml, customers_yaml)
+    )
+    qc$add_tables(conn, include_in_greeting = "orders")
+
+    prompt <- qc$.__enclos_env__$private$build_greeting_client()$get_system_prompt()
+    expect_true(grepl("ORDERS_DICT_DESC", prompt))
+    expect_false(grepl("CUSTOMERS_DICT_DESC", prompt))
+  })
+
   it("generate_greeting() uses greeting system prompt, writes to qc$greeting, returns text", {
     client <- mock_ellmer_chat_client(
       public = list(

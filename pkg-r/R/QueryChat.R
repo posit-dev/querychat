@@ -109,13 +109,19 @@ QueryChat <- R6::R6Class(
       data_sources <- private$.data_sources
       tbls <- intersect(self$greeter$tables, names(data_sources))
       sources <- data_sources[tbls]
+      # Only keep dicts that describe an included table, so a curated greeting
+      # subset doesn't carry dict-level prose about excluded tables.
+      greeting_dicts <- Filter(
+        function(dd) length(intersect(names(dd$tables), tbls)) > 0,
+        private$.data_dicts
+      )
       greeting_prompt_obj <- QueryChatSystemPrompt$new(
         prompt_template = self$greeter$prompt,
         data_sources = sources,
         data_description = private$.data_description,
         extra_instructions = NULL,
         categorical_threshold = private$.categorical_threshold,
-        data_dicts = private$.data_dicts
+        data_dicts = greeting_dicts
       )
       spec <- client_spec %||% private$.client_spec
       chat <- as_querychat_client(spec)

@@ -254,6 +254,13 @@ def test_add_table_include_in_greeting(sample_df):
     assert "base_table" not in qc.greeter.tables
 
 
+def test_add_table_include_in_greeting_invalid_type(sample_df):
+    """add_table rejects non-bool include_in_greeting."""
+    qc = QueryChat()
+    with pytest.raises(TypeError, match="include_in_greeting"):
+        qc.add_table(sample_df, "base_table", include_in_greeting="yes")  # type: ignore[arg-type]
+
+
 def test_add_tables_include_in_greeting_true(sqlite_engine):
     """add_tables with include_in_greeting=True adds all tables to greeter."""
     qc = QueryChat()

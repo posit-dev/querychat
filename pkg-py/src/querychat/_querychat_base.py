@@ -422,6 +422,8 @@ class QueryChatBase(Generic[IntoFrameT]):
 
         Raises
         ------
+        TypeError
+            If include_in_greeting is not a bool.
         ValueError
             If table_name already exists (and replace=False) or is invalid.
         RuntimeError
@@ -432,6 +434,12 @@ class QueryChatBase(Generic[IntoFrameT]):
             raise RuntimeError(
                 "Cannot add tables after server initialization. "
                 "Add all tables before calling .server() or .app()."
+            )
+
+        if not isinstance(include_in_greeting, bool):
+            raise TypeError(
+                "include_in_greeting must be True or False, got "
+                f"{type(include_in_greeting).__name__}."
             )
 
         if not is_pins_board(data_source) and not re.match(

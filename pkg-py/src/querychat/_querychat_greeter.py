@@ -26,6 +26,18 @@ class QueryChatGreeter:
 
     @tables.setter
     def tables(self, value: list[str]) -> None:
+        if isinstance(value, str):
+            raise TypeError(
+                "greeter.tables must be a list of table names, not a single "
+                f"string. Did you mean [{value!r}]?"
+            )
+        if not isinstance(value, list) or not all(
+            isinstance(name, str) for name in value
+        ):
+            raise TypeError(
+                "greeter.tables must be a list of table names, got "
+                f"{type(value).__name__}."
+            )
         self._tables = value
 
     @property

@@ -238,6 +238,13 @@ def test_constructor_greeting_survives_greeter_mutations(sample_df):
     assert qc.greeting == "Hello!"
 
 
+def test_greeter_tables_setter_rejects_bare_string(sample_df):
+    """Assigning a bare string to greeter.tables raises instead of char-iterating."""
+    qc = QueryChat(data_source=sample_df, table_name="test_table")
+    with pytest.raises(TypeError, match="list of table names"):
+        qc.greeter.tables = "test_table"  # type: ignore[assignment]
+
+
 def test_add_table_include_in_greeting(sample_df):
     """add_table with include_in_greeting=True adds the name; default False does not."""
     qc = QueryChat()
@@ -285,16 +292,15 @@ def test_add_tables_include_in_greeting_list(sqlite_engine):
     assert "customers" not in qc.greeter.tables
 
 
-def test_add_tables_include_in_greeting_str(sqlite_engine):
-    """add_tables accepts a bare table-name string (parity with R)."""
+def test_add_tables_include_in_greeting_str_rejected(sqlite_engine):
+    """add_tables rejects a bare string; a list of names is required."""
     qc = QueryChat()
-    qc.add_tables(sqlite_engine, include_in_greeting="orders")
-    assert "orders" in qc.greeter.tables
-    assert "customers" not in qc.greeter.tables
+    with pytest.raises(TypeError, match="include_in_greeting"):
+        qc.add_tables(sqlite_engine, include_in_greeting="orders")  # type: ignore[arg-type]
 
 
 def test_add_tables_include_in_greeting_invalid_type(sqlite_engine):
-    """add_tables rejects non-bool, non-string include_in_greeting."""
+    """add_tables rejects non-bool, non-list include_in_greeting."""
     qc = QueryChat()
     with pytest.raises(TypeError, match="include_in_greeting"):
         qc.add_tables(sqlite_engine, include_in_greeting=1)  # type: ignore[arg-type]
@@ -326,7 +332,7 @@ def test_greeting_prompt_omits_dicts_for_excluded_tables(sqlite_engine, tmp_path
     )
 
     qc = QueryChat(data_dict=[str(orders_yaml), str(customers_yaml)])
-    qc.add_tables(sqlite_engine, include_in_greeting="orders")
+    qc.add_tables(sqlite_engine, include_in_greeting=["orders"])
 
     prompt = qc._build_greeting_client().system_prompt
     assert prompt is not None
@@ -350,7 +356,7 @@ def test_greeting_prompt_keeps_global_dict_desc_drops_global_fields(
     )
 
     qc = QueryChat(data_dict=[str(global_yaml), str(orders_yaml)])
-    qc.add_tables(sqlite_engine, include_in_greeting="orders")
+    qc.add_tables(sqlite_engine, include_in_greeting=["orders"])
 
     prompt = qc._build_greeting_client().system_prompt
     assert prompt is not None

@@ -39,6 +39,8 @@
 
 * Fixed `data_description` and `extra_instructions` being HTML-escaped in the system prompt. Special characters like `<`, `>`, and `&` in developer-provided descriptions and instructions are now passed to the LLM verbatim. (#258)
 
+* The close button in `$app()` is now hidden when running in a non-interactive context (e.g. a deployed Shiny app), preventing `stopApp()` from crashing the session for other users. (#259)
+
 # querychat 0.3.0
 
 ## New features

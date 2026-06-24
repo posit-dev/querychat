@@ -1188,6 +1188,48 @@ describe("QueryChatGreeter", {
     expect_false(grepl("CUSTOMERS_DICT_DESC", prompt))
   })
 
+  it("greeting prompt keeps a global dict description but drops relationships/glossary", {
+    conn <- local_multi_table_conn_greeter()
+    global_yaml <- withr::local_tempfile(fileext = ".yaml")
+    writeLines(
+      c(
+        "name: domain",
+        "description: GLOBAL_DOMAIN_DESC",
+        "glossary:",
+        "  ARR: GLOSSARY_ARR_DEF"
+      ),
+      global_yaml
+    )
+    orders_yaml <- withr::local_tempfile(fileext = ".yaml")
+    writeLines(
+      c(
+        "name: orders_dict",
+        "description: ORDERS_DICT_DESC",
+        "tables:",
+        "  orders:",
+        "    description: Orders info",
+        "relationships:",
+        "  - join: orders.id = customers.id",
+        "    description: REL_DESC"
+      ),
+      orders_yaml
+    )
+
+    qc <- QueryChat$new(
+      NULL,
+      "placeholder",
+      greeting = "hi",
+      data_dict = list(global_yaml, orders_yaml)
+    )
+    qc$add_tables(conn, include_in_greeting = "orders")
+
+    prompt <- qc$.__enclos_env__$private$build_greeting_client()$get_system_prompt()
+    expect_true(grepl("GLOBAL_DOMAIN_DESC", prompt))
+    expect_true(grepl("ORDERS_DICT_DESC", prompt))
+    expect_false(grepl("GLOSSARY_ARR_DEF", prompt))
+    expect_false(grepl("REL_DESC", prompt))
+  })
+
   it("generate_greeting() uses greeting system prompt, writes to qc$greeting, returns text", {
     client <- mock_ellmer_chat_client(
       public = list(

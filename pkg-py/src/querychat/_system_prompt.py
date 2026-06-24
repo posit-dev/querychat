@@ -148,7 +148,9 @@ class QueryChatSystemPrompt:
         """
         first_source = next(iter(self._data_sources.values()), None)
         db_type = first_source.get_db_type() if first_source is not None else "SQL"
-        has_dicts = first_source is not None and bool(self._data_dicts)
+        # Data dicts can carry global (table-less) descriptions, so they may
+        # render even when no tables are selected (e.g. a generic greeting).
+        has_dicts = bool(self._data_dicts)
         semantic_views = (
             first_source.get_semantic_views_description()
             if first_source is not None

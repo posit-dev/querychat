@@ -396,6 +396,22 @@ def test_generate_greeting_with_empty_tables(sample_df):
     assert qc.greeting == "Generic greeting"
 
 
+def test_greeting_prompt_keeps_global_dict_desc_with_no_tables(sample_df, tmp_path):
+    """A global dict description renders even in a table-less generic greeting."""
+    global_yaml = tmp_path / "global.yaml"
+    global_yaml.write_text(
+        "name: domain\ndescription: GLOBAL_DOMAIN_DESC\nglossary:\n  ARR: GLOSSARY_ARR_DEF\n"
+    )
+    qc = QueryChat(data_source=sample_df, table_name="test_table", data_dict=str(global_yaml))
+    qc.greeter.tables = []
+
+    prompt = qc._build_greeting_client().system_prompt
+    assert prompt is not None
+    assert "GLOBAL_DOMAIN_DESC" in prompt
+    assert "GLOSSARY_ARR_DEF" not in prompt
+    assert "following tables" not in prompt
+
+
 def test_remove_table_prunes_greeter_tables(sqlite_engine):
     """remove_table drops the removed name from greeter.tables."""
     qc = QueryChat()

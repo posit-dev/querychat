@@ -333,13 +333,18 @@ class QueryChatBase(Generic[IntoFrameT]):
         """Build a fresh chat client configured with the greeting system prompt."""
         tbls = [n for n in self.greeter.tables if n in self._data_sources]
         sources = {n: self._data_sources[n] for n in tbls}
+        # Only keep dicts that describe an included table, so a curated greeting
+        # subset doesn't carry dict-level prose about excluded tables.
+        greeting_dicts = [
+            dd for dd in self._data_dicts if any(n in tbls for n in dd.tables)
+        ]
         greeting_prompt_obj = QueryChatSystemPrompt(
             prompt_template=self.greeter.prompt,
             data_sources=sources,
             data_description=self._data_description,
             extra_instructions=None,
             categorical_threshold=self._categorical_threshold,
-            data_dicts=self._data_dicts,
+            data_dicts=greeting_dicts,
         )
         chat = create_client(self._client_spec)
         chat.set_turns([])

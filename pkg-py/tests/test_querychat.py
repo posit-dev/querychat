@@ -300,6 +300,28 @@ def test_add_tables_include_in_greeting_invalid_type(sqlite_engine):
         qc.add_tables(sqlite_engine, include_in_greeting=1)  # type: ignore[arg-type]
 
 
+def test_greeting_prompt_omits_dicts_for_excluded_tables(sqlite_engine, tmp_path):
+    """A dict describing only excluded tables is dropped from the greeting prompt."""
+    orders_yaml = tmp_path / "orders.yaml"
+    orders_yaml.write_text(
+        "name: orders_dict\ndescription: ORDERS_DICT_DESC\n"
+        "tables:\n  orders:\n    description: Orders info\n"
+    )
+    customers_yaml = tmp_path / "customers.yaml"
+    customers_yaml.write_text(
+        "name: customers_dict\ndescription: CUSTOMERS_DICT_DESC\n"
+        "tables:\n  customers:\n    description: Customers info\n"
+    )
+
+    qc = QueryChat(data_dict=[str(orders_yaml), str(customers_yaml)])
+    qc.add_tables(sqlite_engine, include_in_greeting="orders")
+
+    prompt = qc._build_greeting_client().system_prompt
+    assert prompt is not None
+    assert "ORDERS_DICT_DESC" in prompt
+    assert "CUSTOMERS_DICT_DESC" not in prompt
+
+
 def test_generate_greeting_sets_greeting_and_returns_text(sample_df):
     """generate_greeting() returns the mocked text and sets qc.greeting."""
     qc = QueryChat(data_source=sample_df, table_name="test_table")

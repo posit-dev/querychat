@@ -131,7 +131,7 @@ class TestDeferredPatternIntegration:
     def test_deferred_then_add_table(self, sample_df):
         qc = QueryChatBase(None, "users")
         assert len(qc.table_names()) == 0
-        assert qc._client_spec is None
+        assert qc._base_client is None
 
         qc.add_table(sample_df, "users")
         assert len(qc.table_names()) > 0

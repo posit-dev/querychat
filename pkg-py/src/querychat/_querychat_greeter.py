@@ -53,11 +53,13 @@ class QueryChatGreeter:
     def prompt(self, value: str | Path) -> None:
         self._prompt = value
 
-    def build_client(self, base: str | chatlas.Chat | None = None) -> chatlas.Chat:
+    def build_client(self, base: chatlas.Chat | None = None) -> chatlas.Chat:
         """Build a greeting chat client using the injected factory."""
         return self._client_factory(self._tables, self._prompt, base)
 
-    def generate(self, *, echo: Literal["none", "output"] = "none", base=None) -> str:
+    def generate(
+        self, *, echo: Literal["none", "output"] = "none", base: chatlas.Chat | None = None
+    ) -> str:
         """Generate a greeting using the greeting system prompt."""
         return str(self.build_client(base).chat(GREETING_PROMPT, echo=echo))
 
@@ -66,7 +68,7 @@ class QueryChatGreeter:
         *,
         chat_ui,
         current_greeting: reactive.Value[str | None],
-        base: str | chatlas.Chat | None = None,
+        base: chatlas.Chat | None = None,
     ) -> None:
         """Stream a greeting into the Shiny chat UI and capture the result."""
         import shinychat

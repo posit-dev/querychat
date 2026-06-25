@@ -1,5 +1,6 @@
 """Tests for deferred chat client initialization."""
 
+import chatlas
 import pandas as pd
 import pytest
 from chatlas import ChatOpenAI, Turn
@@ -22,31 +23,33 @@ class TestDeferredClientInit:
     """Tests for initializing QueryChatBase with deferred client."""
 
     def test_init_with_none_data_source_defers_client(self):
-        """When data_source is None and client is not provided, _client_spec should be None."""
+        """When data_source is None and client is not provided, _base_client should be None."""
         qc = QueryChatBase(None, "users")
-        assert qc._client_spec is None
+        assert qc._base_client is None
 
-    def test_init_with_explicit_client_and_none_data_source(self):
-        """When data_source is None but client is provided, _client_spec should be stored."""
+    def test_init_with_explicit_client_and_none_data_source(self, monkeypatch):
+        """When data_source is None but client is provided, _base_client should be resolved."""
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-key-for-testing")
         qc = QueryChatBase(None, "users", client="openai")
-        assert qc._client_spec == "openai"
+        assert isinstance(qc._base_client, chatlas.Chat)
 
     def test_init_with_chat_object_stores_spec(self, monkeypatch):
         """When a Chat object is passed, it should be stored as-is."""
         monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-key-for-testing")
         chat = ChatOpenAI()
         qc = QueryChatBase(None, "users", client=chat)
-        assert qc._client_spec is chat
+        assert qc._base_client is chat
 
     def test_init_with_data_source_no_client(self, sample_df):
-        """When data_source is provided without client, _client_spec should be None."""
+        """When data_source is provided without client, _base_client should be None."""
         qc = QueryChatBase(sample_df, "users")
-        assert qc._client_spec is None
+        assert qc._base_client is None
 
-    def test_init_with_invalid_explicit_client_is_still_lazy(self):
-        """Explicit client specs should be stored lazily and fail only when resolved."""
-        qc = QueryChatBase(None, "users", client="not_a_real_provider_xyz123")
-        assert qc._client_spec == "not_a_real_provider_xyz123"
+    def test_init_with_invalid_explicit_client_raises_immediately(self):
+        """Invalid explicit client specs should fail at init (fail-fast)."""
+        with pytest.raises(ValueError, match="is not a known chatlas provider"):
+            QueryChatBase(None, "users", client="not_a_real_provider_xyz123")
+
 
 class TestClientMethodRequirements:
     """Tests that methods properly require data_source to be set."""
@@ -82,7 +85,7 @@ class TestDeferredClientIntegration:
 
         qc = QueryChatBase(None, "users")
         assert len(qc.table_names()) == 0
-        assert qc._client_spec is None
+        assert qc._base_client is None
 
         qc.add_table(sample_df, "users")
 
@@ -106,15 +109,12 @@ class TestDeferredClientIntegration:
         monkeypatch.delenv("QUERYCHAT_CLIENT", raising=False)
 
         qc = QueryChatBase(None, "users")
-        assert qc._client_spec is None
+        assert qc._base_client is None
 
-    def test_invalid_explicit_client_raises_when_client_is_resolved(self, sample_df):
-        """Invalid explicit client specs should fail when a live client is requested."""
-        qc = QueryChatBase(None, "users", client="not_a_real_provider_xyz123")
-        qc.add_table(sample_df, "users")
-
+    def test_invalid_explicit_client_raises_when_client_is_resolved(self):
+        """Invalid explicit client specs should fail at init (fail-fast)."""
         with pytest.raises(ValueError, match="is not a known chatlas provider"):
-            qc.client()
+            QueryChatBase(None, "users", client="not_a_real_provider_xyz123")
 
 
 class TestBackwardCompatibility:
@@ -126,8 +126,7 @@ class TestBackwardCompatibility:
         qc = QueryChatBase(sample_df, "test_table")
 
         assert len(qc.table_names()) > 0
-        # _client_spec is None (will use env default at resolution time)
-        assert qc._client_spec is None
+        assert qc._base_client is None
 
         client = qc.client()
         assert client is not None
@@ -144,7 +143,7 @@ def other_df():
 class TestPromptRebuildWarning:
     """Warns when system prompt is rebuilt after a client already has chat history."""
 
-    def test_warns_when_client_spec_has_history(self, sample_df, monkeypatch):
+    def test_warns_when_base_client_has_history(self, sample_df, monkeypatch):
         monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-key-for-testing")
         chat = ChatOpenAI()
         chat.set_turns([Turn(role="user", contents=["hello"])])

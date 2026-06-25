@@ -216,7 +216,7 @@ def mod_server(
     enable_bookmarking: bool,
     tools: set[str] | None = None,
     greeter: QueryChatGreeter,
-    greeting_base: str | chatlas.Chat | None = None,
+    greeting_base: chatlas.Chat | None = None,
 ) -> ServerValues[IntoFrameT]:
     # Holds a generated greeting so it can be saved and restored on bookmark.
     # Static greetings live in the UI (chat_ui(greeting=)) and persist already.

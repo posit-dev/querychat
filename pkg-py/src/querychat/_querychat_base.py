@@ -110,7 +110,9 @@ class QueryChatBase(Generic[IntoFrameT]):
         self._extra_instructions = extra_instructions
         self._categorical_threshold = categorical_threshold
 
-        self._client_spec: str | chatlas.Chat | None = client
+        self._base_client: chatlas.Chat | None = (
+            resolve_client(client) if client is not None else None
+        )
         self._client_console = None
 
         self._system_prompt: QueryChatSystemPrompt | None = None
@@ -138,8 +140,8 @@ class QueryChatBase(Generic[IntoFrameT]):
             raise RuntimeError("Cannot build system prompt without data_source")
 
         client_has_history = (
-            isinstance(self._client_spec, chatlas.Chat)
-            and bool(self._client_spec.get_turns())
+            self._base_client is not None
+            and bool(self._base_client.get_turns())
         ) or (
             self._client_console is not None and bool(self._client_console.get_turns())
         )
@@ -213,20 +215,25 @@ class QueryChatBase(Generic[IntoFrameT]):
             self._query_executor = self._build_query_executor()
         return self._query_executor
 
+    def _create_client(self, base: chatlas.Chat | None = None) -> chatlas.Chat:
+        """Clone a Chat from ``base`` or the resolved ``_base_client``."""
+        if base is None:
+            if self._base_client is None:
+                self._base_client = resolve_client(None)
+            base = self._base_client
+        return create_client(base)
+
     def _create_session_client(
         self,
         *,
-        client_spec: str | chatlas.Chat | None | MISSING_TYPE = MISSING,
+        base: chatlas.Chat | None = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None | MISSING_TYPE = MISSING,
         update_dashboard: Callable[[UpdateDashboardData], None] | None = None,
         reset_dashboard: ResetDashboardCallback | None = None,
         visualize: Callable[[VisualizeData], None] | None = None,
     ) -> chatlas.Chat:
         """Create a fresh, fully-configured Chat."""
-        spec = (
-            self._client_spec if isinstance(client_spec, MISSING_TYPE) else client_spec
-        )
-        chat = create_client(spec)
+        chat = self._create_client(base)
 
         resolved_tools = normalize_tools(tools, default=self.tools)
 
@@ -332,7 +339,7 @@ class QueryChatBase(Generic[IntoFrameT]):
             def client_factory(
                 tables: list[str],
                 prompt: str | Path,
-                base: str | chatlas.Chat | None = None,
+                base: chatlas.Chat | None = None,
             ) -> chatlas.Chat:
                 sp = QueryChatSystemPrompt(
                     prompt_template=prompt,
@@ -345,7 +352,7 @@ class QueryChatBase(Generic[IntoFrameT]):
                     include_relationships=False,
                     include_glossary=False,
                 )
-                chat = create_client(base if base is not None else self._client_spec)
+                chat = self._create_client(base)
                 chat.system_prompt = sp.render(None)
                 return chat
 
@@ -744,19 +751,23 @@ def cleanup_failed_staged_source(
         normalized_source.cleanup()
 
 
-def create_client(client: str | chatlas.Chat | None) -> chatlas.Chat:
-    """Resolve a client spec into a fresh Chat with no conversation history."""
+def resolve_client(client: str | chatlas.Chat | None) -> chatlas.Chat:
+    """Resolve a client spec into a Chat object without cloning."""
     if client is None:
         client = os.getenv("QUERYCHAT_CLIENT", None)
 
     if client is None:
         client = "openai"
 
-    if isinstance(client, chatlas.Chat):
-        chat = copy.deepcopy(client)
-    else:
-        chat = chatlas.ChatAuto(provider_model=client)
+    if isinstance(client, str):
+        return chatlas.ChatAuto(provider_model=client)
 
+    return client
+
+
+def create_client(client: chatlas.Chat) -> chatlas.Chat:
+    """Clone a resolved Chat with empty conversation history."""
+    chat = copy.deepcopy(client)
     chat.set_turns([])
     return chat
 

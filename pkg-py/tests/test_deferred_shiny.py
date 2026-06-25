@@ -87,7 +87,7 @@ class TestShinyDeferredDataSource:
 
         assert qc is not None
 
-    def test_server_client_override_does_not_mutate_shared_client_spec(
+    def test_server_client_override_does_not_mutate_base_client(
         self, sample_df, monkeypatch
     ):
         """server(client=...) should stay lazy during the stub session."""
@@ -111,11 +111,11 @@ class TestShinyDeferredDataSource:
 
         assert isinstance(vals.client, chatlas.Chat)
         assert len(recorded_specs) == 1
-        assert recorded_specs[0] is override_client
-        assert qc._client_spec is init_client
+        assert isinstance(recorded_specs[0], chatlas.Chat)
+        assert qc._base_client is init_client
 
     def test_multiple_server_overrides_do_not_leak_into_shared_state(self, sample_df):
-        """Sequential overrides should not overwrite the instance-level client spec."""
+        """Sequential overrides should not overwrite the instance-level base client."""
         init_client = ChatOpenAI(model="gpt-4.1")
         first_override = ChatOpenAI(model="gpt-4.1-mini")
         second_override = ChatOpenAI(model="gpt-4.1-nano")
@@ -131,7 +131,7 @@ class TestShinyDeferredDataSource:
         with session_context(ExpressStubSession()):
             qc.server(client=second_override)
 
-        assert qc._client_spec is init_client
+        assert qc._base_client is init_client
 
 
 class TestExpressMultiTable:

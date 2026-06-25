@@ -6,7 +6,7 @@ if TYPE_CHECKING:
     from shinychat._chat_types import ChatGreeting
 
 
-# TODO: remove once shinychat >= 0.5.0 is the minimum (persistent added in 0.4.0.9000)
+# TODO @gadenbuie: remove once shinychat >= 0.5.0 is the minimum (persistent added in 0.4.0.9000)
 def chat_greeting_persistent(content: Any) -> ChatGreeting:
     from importlib.metadata import version
 

@@ -11,7 +11,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     import chatlas
-
     from shiny import reactive
 
 
@@ -71,11 +70,11 @@ class QueryChatGreeter:
         base: chatlas.Chat | None = None,
     ) -> None:
         """Stream a greeting into the Shiny chat UI and capture the result."""
-        import shinychat
-
         client = self.build_client(base)
         stream = await client.stream_async(GREETING_PROMPT, echo="none")
-        await chat_ui.set_greeting(shinychat.chat_greeting(stream, persistent=True, dismissible=False))  # pyright: ignore[reportArgumentType]
+        from ._utils_shinychat import chat_greeting_persistent
+
+        await chat_ui.set_greeting(chat_greeting_persistent(stream))  # pyright: ignore[reportArgumentType]
         last_turn = client.get_last_turn(role="assistant")
         if last_turn is not None:
             current_greeting.set(last_turn.text)

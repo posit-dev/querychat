@@ -8,12 +8,12 @@ from typing import TYPE_CHECKING, Generic, TypedDict, Union
 import chatlas
 import shinychat
 from narwhals.stable.v1.typing import IntoFrameT
-from shinychat import Attachment, attachment_to_content
-
 from shiny import module, reactive, ui
+from shinychat import Attachment, attachment_to_content
 
 from ._querychat_core import warn_multi_table_flat_accessor
 from ._table_accessor import TableAccessor
+from ._utils_shinychat import chat_greeting_persistent
 from ._viz_altair_widget import AltairWidget
 from ._viz_ggsql import execute_ggsql
 from ._viz_utils import has_viz_tool, preload_viz_deps_server, preload_viz_deps_ui
@@ -21,9 +21,8 @@ from ._viz_utils import has_viz_tool, preload_viz_deps_server, preload_viz_deps_
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from shiny.bookmark import BookmarkState, RestoreState
-
     from shiny import Inputs, Outputs, Session
+    from shiny.bookmark import BookmarkState, RestoreState
 
     from ._datasource import DataSource
     from ._query_executor import QueryExecutor
@@ -77,7 +76,7 @@ def mod_ui(*, preload_viz: bool = False, greeting: str | None = None, **kwargs):
     kwargs.setdefault("allow_attachments", True)
     if greeting:
         kwargs.setdefault(
-            "greeting", shinychat.chat_greeting(greeting, persistent=True, dismissible=False)  # pyright: ignore[reportArgumentType]
+            "greeting", chat_greeting_persistent(greeting)
         )
     tag = shinychat.chat_ui(CHAT_ID, **kwargs)
     tag.add_class("querychat")
@@ -339,7 +338,7 @@ def mod_server(
             existing = current_greeting.get()
             if existing is not None:
                 await chat_ui.set_greeting(
-                    shinychat.chat_greeting(existing, persistent=True, dismissible=False)  # pyright: ignore[reportArgumentType]
+                    chat_greeting_persistent(existing)
                 )
                 return
             warnings.warn(
@@ -402,9 +401,7 @@ def mod_server(
             if "querychat_greeting" in vals:
                 current_greeting.set(vals["querychat_greeting"])
                 await chat_ui.set_greeting(
-                    shinychat.chat_greeting(
-                        vals["querychat_greeting"], persistent=True, dismissible=False  # pyright: ignore[reportArgumentType]
-                    )
+                    chat_greeting_persistent(vals["querychat_greeting"])
                 )
             if "querychat_viz_widgets" in vals:
                 restored = restore_viz_widgets(executor, vals["querychat_viz_widgets"])

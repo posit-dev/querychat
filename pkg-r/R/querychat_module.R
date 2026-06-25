@@ -9,11 +9,7 @@ mod_ui <- function(
   ns <- shiny::NS(id)
 
   if (!is.null(greeting) && any(nzchar(greeting))) {
-    greeting <- shinychat::chat_greeting(
-      greeting,
-      persistent = TRUE,
-      dismissible = FALSE
-    )
+    greeting <- chat_greeting_persistent(greeting)
   } else {
     greeting <- NULL
   }
@@ -152,11 +148,7 @@ mod_server <- function(
           if (!is.null(current_greeting())) {
             shinychat::chat_set_greeting(
               "chat",
-              shinychat::chat_greeting(
-                current_greeting(),
-                persistent = TRUE,
-                dismissible = FALSE
-              )
+              chat_greeting_persistent(current_greeting())
             )
             return()
           }
@@ -261,11 +253,7 @@ mod_server <- function(
           current_greeting(state$values$querychat_greeting)
           shinychat::chat_set_greeting(
             "chat",
-            shinychat::chat_greeting(
-              state$values$querychat_greeting,
-              persistent = TRUE,
-              dismissible = FALSE
-            ),
+            chat_greeting_persistent(state$values$querychat_greeting),
             session = session
           )
         }

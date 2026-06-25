@@ -41,6 +41,12 @@ QueryChatSystemPrompt <- R6::R6Class(
     #' @param extra_instructions Optional path to instructions file or instructions string.
     #' @param categorical_threshold Threshold for categorical column detection (default: 10).
     #' @param data_dicts Optional list of data dict lists (from [read_data_dict()]).
+    #' @param include_tables `TRUE` (all tables), `FALSE` (none), or a character
+    #'   vector of table names to include.
+    #' @param include_relationships Logical; whether to retain relationship entries
+    #'   from data dicts (default `TRUE`).
+    #' @param include_glossary Logical; whether to retain glossary entries from
+    #'   data dicts (default `TRUE`).
     #'
     #' @return A new `QueryChatSystemPrompt` object.
     initialize = function(
@@ -49,7 +55,10 @@ QueryChatSystemPrompt <- R6::R6Class(
       data_description = NULL,
       extra_instructions = NULL,
       categorical_threshold = 10,
-      data_dicts = NULL
+      data_dicts = NULL,
+      include_tables = TRUE,
+      include_relationships = TRUE,
+      include_glossary = TRUE
     ) {
       self$template <- read_text(prompt_template)
 
@@ -65,7 +74,40 @@ QueryChatSystemPrompt <- R6::R6Class(
       self$data_sources <- data_sources
       self$data_dicts <- data_dicts %||% list()
 
-      if (length(data_sources) > 1 && length(self$data_dicts) == 0) {
+      if (!isTRUE(include_tables)) {
+        resolved <- if (isFALSE(include_tables)) {
+          character()
+        } else {
+          intersect(include_tables, names(data_sources))
+        }
+        self$data_sources <- data_sources[resolved]
+        # Keep a dict if it describes an included table, or if it is a global
+        # (table-less) dict carrying a dict-level description.
+        self$data_dicts <- Filter(
+          function(dd) {
+            length(intersect(names(dd$tables), resolved)) > 0 ||
+              (length(dd$tables) == 0 && !is.null(dd$description))
+          },
+          self$data_dicts
+        )
+        if (!include_relationships || !include_glossary) {
+          self$data_dicts <- lapply(self$data_dicts, function(dd) {
+            if (!include_relationships) {
+              dd$relationships <- NULL
+            }
+            if (!include_glossary) {
+              dd$glossary <- NULL
+            }
+            dd
+          })
+        }
+      }
+
+      if (
+        isTRUE(include_tables) &&
+          length(self$data_sources) > 1 &&
+          length(self$data_dicts) == 0
+      ) {
         cli::cli_warn(
           c(
             "Multiple tables registered without a {.arg data_dict}.",

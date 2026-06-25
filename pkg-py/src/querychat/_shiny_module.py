@@ -12,7 +12,7 @@ from shinychat import Attachment, attachment_to_content
 
 from shiny import module, reactive, ui
 
-from ._querychat_core import GREETING_PROMPT, warn_multi_table_flat_accessor
+from ._querychat_core import warn_multi_table_flat_accessor
 from ._table_accessor import TableAccessor
 from ._viz_altair_widget import AltairWidget
 from ._viz_ggsql import execute_ggsql
@@ -215,7 +215,7 @@ def mod_server(
     client: Callable[..., chatlas.Chat],
     enable_bookmarking: bool,
     tools: set[str] | None = None,
-    greeter: QueryChatGreeter | None = None,
+    greeter: QueryChatGreeter,
     greeting_base: str | chatlas.Chat | None = None,
 ) -> ServerValues[IntoFrameT]:
     # Holds a generated greeting so it can be saved and restored on bookmark.
@@ -349,23 +349,11 @@ def mod_server(
                 GreetWarning,
                 stacklevel=2,
             )
-            if greeter is not None:
-                await greeter.generate_stream(
-                    chat_ui=chat_ui,
-                    current_greeting=current_greeting,
-                    base=greeting_base,
-                )
-            else:
-                fallback_client = client(tools=None)
-                stream = await fallback_client.stream_async(
-                    GREETING_PROMPT, echo="none"
-                )
-                await chat_ui.set_greeting(
-                    shinychat.chat_greeting(stream, dismissible=False)
-                )
-                last_turn = fallback_client.get_last_turn(role="assistant")
-                if last_turn is not None:
-                    current_greeting.set(last_turn.text)
+            await greeter.generate_stream(
+                chat_ui=chat_ui,
+                current_greeting=current_greeting,
+                base=greeting_base,
+            )
 
     # Handle update button clicks
     @reactive.effect

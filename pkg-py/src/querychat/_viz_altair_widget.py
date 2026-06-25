@@ -198,15 +198,15 @@ def infer_grid_facet_dims(chart: alt.FacetChart) -> tuple[int, int] | None:
     if not isinstance(chart.data, pd.DataFrame):
         return None
     ncol = (
-        int(chart.data[col_field].nunique())
+        int(chart.data[col_field].nunique())  # type: ignore[arg-type]
         if col_field and col_field in chart.data.columns
         else 1
-    )  # type: ignore[arg-type]
+    )
     nrow = (
-        int(chart.data[row_field].nunique())
+        int(chart.data[row_field].nunique())  # type: ignore[arg-type]
         if row_field and row_field in chart.data.columns
         else 1
-    )  # type: ignore[arg-type]
+    )
     return (max(ncol, 1), max(nrow, 1))
 
 

@@ -105,43 +105,6 @@ QueryChat <- R6::R6Class(
     .data_dicts = list(),
     .greeter = NULL,
 
-    build_greeting_client = function(client_spec = NULL) {
-      data_sources <- private$.data_sources
-      tbls <- intersect(self$greeter$tables, names(data_sources))
-      sources <- data_sources[tbls]
-      # Keep a dict if it describes an included table, or if it is a global
-      # (table-less) dict carrying a dict-level description. Drop the
-      # cross-table global fields (relationships, glossary) so a curated greeting
-      # subset can't leak excluded-table prose; per-table entries are scoped to
-      # the included tables at render time.
-      greeting_dicts <- Filter(
-        function(dd) {
-          length(intersect(names(dd$tables), tbls)) > 0 ||
-            (length(dd$tables) == 0 && !is.null(dd$description))
-        },
-        private$.data_dicts
-      )
-      greeting_dicts <- lapply(greeting_dicts, function(dd) {
-        dd$relationships <- NULL
-        dd$glossary <- NULL
-        dd
-      })
-      greeting_prompt_obj <- QueryChatSystemPrompt$new(
-        prompt_template = self$greeter$prompt,
-        data_sources = sources,
-        data_description = private$.data_description,
-        extra_instructions = NULL,
-        categorical_threshold = private$.categorical_threshold,
-        data_dicts = greeting_dicts
-      )
-      spec <- client_spec %||% private$.client_spec
-      chat <- as_querychat_client(spec)
-      chat <- chat$clone()
-      chat$set_turns(list())
-      chat$set_system_prompt(greeting_prompt_obj$render(tools = NULL))
-      chat
-    },
-
     require_initialized = function(method_name) {
       if (length(private$.data_sources) == 0) {
         cli::cli_abort(
@@ -974,16 +937,13 @@ QueryChat <- R6::R6Class(
       }
 
       resolved_client_spec <- client %||% private$.client_spec
+      base_client <- as_querychat_client(resolved_client_spec)
 
       create_session_client <- function(...) {
         private$create_session_client(
-          client_spec = resolved_client_spec,
+          client_spec = base_client,
           ...
         )
-      }
-
-      greeting_client_fn <- function() {
-        private$build_greeting_client(client_spec = resolved_client_spec)
       }
 
       result <- mod_server(
@@ -993,7 +953,8 @@ QueryChat <- R6::R6Class(
         greeting = self$greeting,
         client = create_session_client,
         tools = self$tools,
-        greeting_client_fn = greeting_client_fn,
+        greeter = self$greeter,
+        greeting_base = base_client,
         enable_bookmarking = enable_bookmarking
       )
       result
@@ -1007,7 +968,9 @@ QueryChat <- R6::R6Class(
     #' @return The greeting string in Markdown format.
     generate_greeting = function(echo = c("none", "output")) {
       private$require_initialized("$generate_greeting")
-      self$greeter$generate(echo = echo)
+      greeting <- self$greeter$generate(echo = echo)
+      self$greeting <- greeting
+      greeting
     },
 
     #' @description
@@ -1034,8 +997,27 @@ QueryChat <- R6::R6Class(
         # trigger a write-back of the (unchanged) binding, which we ignore.
         return(invisible(value))
       }
-      private$.greeter <- private$.greeter %||%
-        QueryChatGreeter$new(parent = self)
+      if (is.null(private$.greeter)) {
+        client_factory <- function(tables, prompt, base = NULL) {
+          sp <- QueryChatSystemPrompt$new(
+            prompt_template = prompt,
+            data_sources = private$.data_sources,
+            data_description = private$.data_description,
+            extra_instructions = NULL,
+            categorical_threshold = private$.categorical_threshold,
+            data_dicts = private$.data_dicts,
+            include_tables = tables,
+            include_relationships = FALSE,
+            include_glossary = FALSE
+          )
+          chat <- create_client(base %||% private$.client_spec)
+          chat$set_system_prompt(sp$render(tools = NULL))
+          chat
+        }
+        private$.greeter <- QueryChatGreeter$new(
+          client_factory = client_factory
+        )
+      }
       private$.greeter
     },
 

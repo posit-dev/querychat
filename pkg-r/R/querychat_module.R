@@ -43,7 +43,8 @@ mod_server <- function(
   greeting,
   client,
   tools,
-  greeting_client_fn = NULL,
+  greeter = NULL,
+  greeting_base = NULL,
   enable_bookmarking = FALSE
 ) {
   shiny::moduleServer(id, function(input, output, session) {
@@ -156,20 +157,10 @@ mod_server <- function(
             "i" = "For faster startup, lower cost, and determinism, consider providing a {.arg greeting} to {.fn QueryChat}.",
             "i" = "You can use your {.help querychat::QueryChat} object's {.fn $generate_greeting} method to generate a greeting."
           ))
-          greeting_client <- if (!is.null(greeting_client_fn)) {
-            greeting_client_fn()
-          } else {
-            client(tools = NULL)
-          }
-          stream <- greeting_client$stream_async(GREETING_PROMPT)
-          p <- shinychat::chat_set_greeting(
-            "chat",
-            shinychat::chat_greeting(stream, dismissible = FALSE)
+          greeter$generate_stream(
+            greeting_reactive = current_greeting,
+            base = greeting_base
           )
-          # Capture the generated greeting so it can be bookmarked and restored.
-          promises::then(p, function(value) {
-            current_greeting(greeting_client$last_turn()@text)
-          })
         }
       )
     }

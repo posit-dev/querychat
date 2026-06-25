@@ -1183,7 +1183,7 @@ describe("QueryChatGreeter", {
     )
     qc$add_tables(conn, include_in_greeting = "orders")
 
-    prompt <- qc$.__enclos_env__$private$build_greeting_client()$get_system_prompt()
+    prompt <- qc$greeter$build_client()$get_system_prompt()
     expect_true(grepl("ORDERS_DICT_DESC", prompt))
     expect_false(grepl("CUSTOMERS_DICT_DESC", prompt))
   })
@@ -1223,7 +1223,7 @@ describe("QueryChatGreeter", {
     )
     qc$add_tables(conn, include_in_greeting = "orders")
 
-    prompt <- qc$.__enclos_env__$private$build_greeting_client()$get_system_prompt()
+    prompt <- qc$greeter$build_client()$get_system_prompt()
     expect_true(grepl("GLOBAL_DOMAIN_DESC", prompt))
     expect_true(grepl("ORDERS_DICT_DESC", prompt))
     expect_false(grepl("GLOSSARY_ARR_DEF", prompt))
@@ -1243,7 +1243,7 @@ describe("QueryChatGreeter", {
     qc <- QueryChat$new(new_test_df(), "test_table", client = client)
     withr::defer(qc$cleanup())
 
-    greeting_client <- qc$.__enclos_env__$private$build_greeting_client()
+    greeting_client <- qc$greeter$build_client()
     greeting_system_prompt <- greeting_client$get_system_prompt()
     expect_false(grepl("querychat_get_schema", greeting_system_prompt))
     expect_true(grepl("test_table", greeting_system_prompt))
@@ -1266,7 +1266,7 @@ describe("QueryChatGreeter", {
 
     qc$greeter$tables <- character()
 
-    prompt <- qc$.__enclos_env__$private$build_greeting_client()$get_system_prompt()
+    prompt <- qc$greeter$build_client()$get_system_prompt()
     expect_false(grepl("following tables", prompt))
     expect_false(grepl("SQL SQL", prompt))
 
@@ -1295,7 +1295,7 @@ describe("QueryChatGreeter", {
     withr::defer(qc$cleanup())
     qc$greeter$tables <- character()
 
-    prompt <- qc$.__enclos_env__$private$build_greeting_client()$get_system_prompt()
+    prompt <- qc$greeter$build_client()$get_system_prompt()
     expect_true(grepl("GLOBAL_DOMAIN_DESC", prompt))
     expect_false(grepl("GLOSSARY_ARR_DEF", prompt))
     expect_false(grepl("following tables", prompt))

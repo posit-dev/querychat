@@ -108,8 +108,6 @@ def format_tool_result(result: ContentToolResult) -> str:
     return ""
 
 
-
-
 def format_query_error(e: Exception) -> str:
     """Format a query error with helpful guidance."""
     error_msg = str(e).lower()

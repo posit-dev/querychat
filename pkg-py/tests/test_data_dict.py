@@ -175,7 +175,7 @@ def test_get_table_schema_mixed_coverage() -> None:
     col_map = {c.name: c for c in cols}
     assert col_map["amount"].min_val == 0  # from data_dict
     assert col_map["amount"].max_val == 999
-    assert "status" in col_map            # from SQL fallback
+    assert "status" in col_map  # from SQL fallback
 
 
 def test_to_prompt_dict_excludes_column_specs() -> None:

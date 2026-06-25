@@ -61,7 +61,9 @@ class TestGradioQueryChat:
         from querychat.gradio import QueryChat
 
         qc = QueryChat(pd.DataFrame({"id": [1, 2], "amount": [10, 20]}), "orders")
-        qc.add_table(pd.DataFrame({"id": [101, 102], "state": ["CA", "NY"]}), "customers")
+        qc.add_table(
+            pd.DataFrame({"id": [101, 102], "state": ["CA", "NY"]}), "customers"
+        )
 
         app = qc.app()._blocks
         update_displays = next(

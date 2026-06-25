@@ -23,9 +23,7 @@ class TestInlineVisualization:
     """Tests for inline chart rendering in tool result cards."""
 
     @pytest.fixture(autouse=True)
-    def setup(
-        self, page: Page, app_10_viz: str, chat_10_viz: ChatController
-    ) -> None:
+    def setup(self, page: Page, app_10_viz: str, chat_10_viz: ChatController) -> None:
         """Navigate to the viz app before each test."""
         page.goto(app_10_viz)
         page.wait_for_selector("shiny-chat-container", timeout=30000)
@@ -72,7 +70,9 @@ class TestInlineVisualization:
         self.chat.send_user_input(method="click")
 
         # Wait for viz tool result
-        tool_result = self.page.locator(".shiny-tool-result:has(.tool-fullscreen-toggle)")
+        tool_result = self.page.locator(
+            ".shiny-tool-result:has(.tool-fullscreen-toggle)"
+        )
         expect(tool_result).to_be_visible(timeout=90000)
 
         # Click fullscreen toggle
@@ -91,7 +91,9 @@ class TestInlineVisualization:
         self.chat.send_user_input(method="click")
 
         # Wait for viz tool result
-        tool_result = self.page.locator(".shiny-tool-result:has(.tool-fullscreen-toggle)")
+        tool_result = self.page.locator(
+            ".shiny-tool-result:has(.tool-fullscreen-toggle)"
+        )
         expect(tool_result).to_be_visible(timeout=90000)
 
         # Enter fullscreen
@@ -116,7 +118,9 @@ class TestInlineVisualization:
         )
         self.chat.send_user_input(method="click")
 
-        tool_result = self.page.locator(".shiny-tool-result:has(.tool-fullscreen-toggle)")
+        tool_result = self.page.locator(
+            ".shiny-tool-result:has(.tool-fullscreen-toggle)"
+        )
         expect(tool_result).to_be_visible(timeout=90000)
 
         tool_result.locator(".tool-fullscreen-toggle").click()
@@ -145,7 +149,9 @@ class TestInlineVisualization:
         )
         self.chat.send_user_input(method="click")
 
-        tool_result = self.page.locator(".shiny-tool-result:has(.tool-fullscreen-toggle)")
+        tool_result = self.page.locator(
+            ".shiny-tool-result:has(.tool-fullscreen-toggle)"
+        )
         expect(tool_result).to_be_visible(timeout=90000)
 
         tool_result.locator(".tool-fullscreen-toggle").click()
@@ -159,4 +165,3 @@ class TestInlineVisualization:
         footer_box = footer.bounding_box()
         assert footer_box is not None
         assert footer_box["height"] < 100
-

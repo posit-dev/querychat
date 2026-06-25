@@ -239,6 +239,7 @@ def visualize_impl(
 
     return visualize
 
+
 PNG_WIDTH = 500
 PNG_HEIGHT = 300
 

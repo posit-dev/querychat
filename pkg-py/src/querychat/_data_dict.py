@@ -223,7 +223,9 @@ class DataDict(BaseModel):
                 undocumented.append(meta)
 
         if undocumented:
-            executor.populate_column_stats(table_name, undocumented, categorical_threshold)
+            executor.populate_column_stats(
+                table_name, undocumented, categorical_threshold
+            )
 
         return metas
 

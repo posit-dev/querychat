@@ -48,6 +48,7 @@ class TestDeferredClientInit:
         qc = QueryChatBase(None, "users", client="not_a_real_provider_xyz123")
         assert qc._client_spec == "not_a_real_provider_xyz123"
 
+
 class TestClientMethodRequirements:
     """Tests that methods properly require data_source to be set."""
 
@@ -90,7 +91,9 @@ class TestDeferredClientIntegration:
         assert client is not None
         assert "users" in qc.system_prompt
 
-    def test_deferred_explicit_client_at_init_then_data_source(self, sample_df, monkeypatch):
+    def test_deferred_explicit_client_at_init_then_data_source(
+        self, sample_df, monkeypatch
+    ):
         """Test an explicit deferred client passed at init still works later."""
         monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-key-for-testing")
 
@@ -154,7 +157,9 @@ class TestPromptRebuildWarning:
         with pytest.warns(UserWarning, match="chat history"):
             qc.add_table(sample_df, "users")
 
-    def test_warns_when_console_client_has_history(self, sample_df, other_df, monkeypatch):
+    def test_warns_when_console_client_has_history(
+        self, sample_df, other_df, monkeypatch
+    ):
         monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-key-for-testing")
         qc = QueryChatBase(sample_df, "users")
 
@@ -165,9 +170,13 @@ class TestPromptRebuildWarning:
         with pytest.warns(UserWarning, match="chat history"):
             qc.add_table(other_df, "orders")
 
-    def test_no_warning_without_history(self, sample_df, other_df, recwarn, monkeypatch):
+    def test_no_warning_without_history(
+        self, sample_df, other_df, recwarn, monkeypatch
+    ):
         monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-key-for-testing")
         qc = QueryChatBase(sample_df, "users")
         qc.add_table(other_df, "orders")
-        chat_history_warnings = [w for w in recwarn.list if "chat history" in str(w.message)]
+        chat_history_warnings = [
+            w for w in recwarn.list if "chat history" in str(w.message)
+        ]
         assert len(chat_history_warnings) == 0

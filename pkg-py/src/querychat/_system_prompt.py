@@ -102,8 +102,18 @@ class QueryChatSystemPrompt:
             if dd.description:
                 attrs += f' description="{escape_attr(dd.description)}"'
 
-            body = yaml.dump(d, default_flow_style=False, allow_unicode=True, sort_keys=False).rstrip() if d else ""
-            blocks.append(f"<data-dict {attrs}>\n{body}\n</data-dict>" if body else f"<data-dict {attrs}/>")
+            body = (
+                yaml.dump(
+                    d, default_flow_style=False, allow_unicode=True, sort_keys=False
+                ).rstrip()
+                if d
+                else ""
+            )
+            blocks.append(
+                f"<data-dict {attrs}>\n{body}\n</data-dict>"
+                if body
+                else f"<data-dict {attrs}/>"
+            )
 
         unclaimed = [n for n in self._data_sources if n not in all_claimed]
         if unclaimed:
@@ -115,7 +125,12 @@ class QueryChatSystemPrompt:
                     else None
                 )
                 tables[name] = {"description": desc} if desc else None
-            yaml_str = yaml.dump({"tables": tables}, default_flow_style=False, allow_unicode=True, sort_keys=False).rstrip()
+            yaml_str = yaml.dump(
+                {"tables": tables},
+                default_flow_style=False,
+                allow_unicode=True,
+                sort_keys=False,
+            ).rstrip()
             blocks.append(f"<tables>\n{yaml_str}\n</tables>")
 
         return "\n\n".join(blocks)

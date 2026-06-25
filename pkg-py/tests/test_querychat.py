@@ -152,7 +152,9 @@ def test_querychat_with_polars_lazyframe():
     assert isinstance(qc._data_sources["test_table"], PolarsLazySource)
 
     # Query should return a native polars LazyFrame
-    result = qc._data_sources["test_table"].execute_query("SELECT * FROM test_table WHERE id = 2")
+    result = qc._data_sources["test_table"].execute_query(
+        "SELECT * FROM test_table WHERE id = 2"
+    )
     assert isinstance(result, pl.LazyFrame)
 
     # Collect to verify
@@ -185,7 +187,9 @@ def test_querychat_with_ibis_table():
         assert isinstance(qc._data_sources["test_table"], IbisSource)
 
         # Query should return an ibis.Table
-        result = qc._data_sources["test_table"].execute_query("SELECT * FROM test_table WHERE id = 2")
+        result = qc._data_sources["test_table"].execute_query(
+            "SELECT * FROM test_table WHERE id = 2"
+        )
         assert isinstance(result, ibis.Table)
 
         # Execute to verify results

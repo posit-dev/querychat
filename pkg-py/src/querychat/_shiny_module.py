@@ -67,7 +67,6 @@ class TableState(Generic[IntoFrameT]):
     df: Callable[[], IntoFrameT]
 
 
-
 @module.ui
 def mod_ui(*, preload_viz: bool = False, greeting: str | None = None, **kwargs):
     css_path = Path(__file__).parent / "static" / "css" / "styles.css"
@@ -409,9 +408,7 @@ def mod_server(
                     )
                 )
             if "querychat_viz_widgets" in vals:
-                restored = restore_viz_widgets(
-                    executor, vals["querychat_viz_widgets"]
-                )
+                restored = restore_viz_widgets(executor, vals["querychat_viz_widgets"])
                 viz_widgets[:] = restored
 
     if len(table_states) == 1:
@@ -443,7 +440,9 @@ def mod_server(
     return ServerValues(
         df=_multi_table_df,
         sql=_MultiTableWarnReactive(primary_state.sql, "sql", primary_name, table_list),  # type: ignore[arg-type]
-        title=_MultiTableWarnReactive(primary_state.title, "title", primary_name, table_list),  # type: ignore[arg-type]
+        title=_MultiTableWarnReactive(
+            primary_state.title, "title", primary_name, table_list
+        ),  # type: ignore[arg-type]
         tables=table_states,
         client=chat,
         data_sources=data_sources,

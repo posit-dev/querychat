@@ -346,11 +346,7 @@ class TestVizPromptConditionals:
         to querychat_query should not appear in the rendered prompt.
         """
         template_path = (
-            Path(__file__).parent.parent
-            / "src"
-            / "querychat"
-            / "prompts"
-            / "prompt.md"
+            Path(__file__).parent.parent / "src" / "querychat" / "prompts" / "prompt.md"
         )
         prompt = QueryChatSystemPrompt(
             prompt_template=template_path,
@@ -361,19 +357,13 @@ class TestVizPromptConditionals:
 
         assert "fall back to" not in rendered
 
-    def test_collapsed_guidance_included_with_both_tools(
-        self, sample_data_source
-    ):
+    def test_collapsed_guidance_included_with_both_tools(self, sample_data_source):
         """
         When both query and visualize are enabled, the collapsed query
         guidance should appear in the system prompt.
         """
         template_path = (
-            Path(__file__).parent.parent
-            / "src"
-            / "querychat"
-            / "prompts"
-            / "prompt.md"
+            Path(__file__).parent.parent / "src" / "querychat" / "prompts" / "prompt.md"
         )
         prompt = QueryChatSystemPrompt(
             prompt_template=template_path,
@@ -391,11 +381,7 @@ class TestVizPromptConditionals:
         "Visualizing Data".
         """
         template_path = (
-            Path(__file__).parent.parent
-            / "src"
-            / "querychat"
-            / "prompts"
-            / "prompt.md"
+            Path(__file__).parent.parent / "src" / "querychat" / "prompts" / "prompt.md"
         )
         prompt = QueryChatSystemPrompt(
             prompt_template=template_path,
@@ -413,11 +399,7 @@ class TestVizPromptConditionals:
         when both query and visualize are enabled.
         """
         template_path = (
-            Path(__file__).parent.parent
-            / "src"
-            / "querychat"
-            / "prompts"
-            / "prompt.md"
+            Path(__file__).parent.parent / "src" / "querychat" / "prompts" / "prompt.md"
         )
         prompt = QueryChatSystemPrompt(
             prompt_template=template_path,

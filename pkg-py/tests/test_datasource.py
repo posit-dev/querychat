@@ -535,7 +535,9 @@ def test_column_meta_has_description_field() -> None:
 
 def test_format_schema_includes_description() -> None:
     cols = [
-        ColumnMeta(name="id", sql_type="INTEGER", kind="numeric", description="Primary key"),
+        ColumnMeta(
+            name="id", sql_type="INTEGER", kind="numeric", description="Primary key"
+        ),
         ColumnMeta(name="name", sql_type="TEXT", kind="text"),
     ]
     result = format_schema("mytable", cols)

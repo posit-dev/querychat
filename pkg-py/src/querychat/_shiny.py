@@ -439,7 +439,12 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             A UI component.
 
         """
-        return mod_ui(id or self.id, preload_viz=has_viz_tool(self.tools), greeting=self.greeting, **kwargs)
+        return mod_ui(
+            id or self.id,
+            preload_viz=has_viz_tool(self.tools),
+            greeting=self.greeting,
+            **kwargs,
+        )
 
     def server(
         self,
@@ -525,7 +530,9 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             )
 
         self._require_initialized("server")
-        resolved_client_spec = self._client_spec if isinstance(client, MISSING_TYPE) else client
+        resolved_client_spec = (
+            self._client_spec if isinstance(client, MISSING_TYPE) else client
+        )
 
         def create_session_client(**kwargs) -> chatlas.Chat:
             return self._create_session_client(
@@ -882,7 +889,12 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             A UI component.
 
         """
-        result = mod_ui(id or self.id, preload_viz=has_viz_tool(self.tools), greeting=self.greeting, **kwargs)
+        result = mod_ui(
+            id or self.id,
+            preload_viz=has_viz_tool(self.tools),
+            greeting=self.greeting,
+            **kwargs,
+        )
         self._ensure_server_started()
         return result
 
@@ -998,9 +1010,11 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         qc.add_table(customers, "customers")
         qc.sidebar()
 
+
         @render.data_frame
         def orders_table():
             return qc.table("orders").df()
+
 
         @render.data_frame
         def customers_table():

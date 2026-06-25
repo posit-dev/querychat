@@ -330,7 +330,8 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 client=self._create_session_client,
                 enable_bookmarking=enable_bookmarking,
                 tools=self.tools,
-                greeting_client_fn=self._build_greeting_client,
+                greeter=self.greeter,
+                greeting_base=None,
             )
 
             @reactive.calc
@@ -540,9 +541,6 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 client_spec=resolved_client_spec, **kwargs
             )
 
-        def create_greeting_client() -> chatlas.Chat:
-            return self._build_greeting_client(client_spec=resolved_client_spec)
-
         self._mark_server_initialized()
         return mod_server(
             id or self.id,
@@ -552,7 +550,8 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             client=create_session_client,
             enable_bookmarking=enable_bookmarking,
             tools=self.tools,
-            greeting_client_fn=create_greeting_client,
+            greeter=self.greeter,
+            greeting_base=resolved_client_spec,
         )
 
 
@@ -833,7 +832,8 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             client=self._create_session_client,
             enable_bookmarking=self._enable_bookmarking,
             tools=self.tools,
-            greeting_client_fn=self._build_greeting_client,
+            greeter=self.greeter,
+            greeting_base=None,
         )
 
     def sidebar(

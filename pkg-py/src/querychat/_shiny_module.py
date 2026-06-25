@@ -27,6 +27,7 @@ if TYPE_CHECKING:
 
     from ._datasource import DataSource
     from ._query_executor import QueryExecutor
+    from ._querychat_greeter import QueryChatGreeter
     from ._viz_tools import VisualizeData
     from .types import UpdateDashboardData
 
@@ -214,7 +215,8 @@ def mod_server(
     client: Callable[..., chatlas.Chat],
     enable_bookmarking: bool,
     tools: set[str] | None = None,
-    greeting_client_fn: Callable[[], chatlas.Chat] | None = None,
+    greeter: QueryChatGreeter | None = None,
+    greeting_base: str | chatlas.Chat | None = None,
 ) -> ServerValues[IntoFrameT]:
     # Holds a generated greeting so it can be saved and restored on bookmark.
     # Static greetings live in the UI (chat_ui(greeting=)) and persist already.
@@ -347,19 +349,23 @@ def mod_server(
                 GreetWarning,
                 stacklevel=2,
             )
-            greeting_client = (
-                greeting_client_fn()
-                if greeting_client_fn is not None
-                else client(tools=None)
-            )
-            stream = await greeting_client.stream_async(GREETING_PROMPT, echo="none")
-            await chat_ui.set_greeting(
-                shinychat.chat_greeting(stream, dismissible=False)
-            )
-            # Capture the generated greeting so it can be bookmarked and restored.
-            last_turn = greeting_client.get_last_turn(role="assistant")
-            if last_turn is not None:
-                current_greeting.set(last_turn.text)
+            if greeter is not None:
+                await greeter.generate_stream(
+                    chat_ui=chat_ui,
+                    current_greeting=current_greeting,
+                    base=greeting_base,
+                )
+            else:
+                fallback_client = client(tools=None)
+                stream = await fallback_client.stream_async(
+                    GREETING_PROMPT, echo="none"
+                )
+                await chat_ui.set_greeting(
+                    shinychat.chat_greeting(stream, dismissible=False)
+                )
+                last_turn = fallback_client.get_last_turn(role="assistant")
+                if last_turn is not None:
+                    current_greeting.set(last_turn.text)
 
     # Handle update button clicks
     @reactive.effect

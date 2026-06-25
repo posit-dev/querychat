@@ -225,7 +225,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 ),
                 greeting=self.greeting,
                 query_executor=self._require_query_executor("_get_state"),
-                greeting_client_factory=self._build_greeting_client,
+                greeting_client_factory=self.greeter.build_client,
             )
         return st.session_state[self._state_key]
 

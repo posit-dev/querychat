@@ -8,14 +8,18 @@ from typing import TYPE_CHECKING, Literal
 from ._querychat_core import GREETING_PROMPT
 
 if TYPE_CHECKING:
-    from ._querychat_base import QueryChatBase
+    from collections.abc import Callable
+
+    import chatlas
+
+    from shiny import reactive
 
 
 class QueryChatGreeter:
     """Controls greeting generation for a QueryChat instance. Access via ``qc.greeter``."""
 
-    def __init__(self, parent: QueryChatBase) -> None:
-        self._parent = parent
+    def __init__(self, client_factory: Callable[..., chatlas.Chat]) -> None:
+        self._client_factory = client_factory
         self._tables: list[str] = []
         self._prompt: str | Path = Path(__file__).parent / "prompts" / "greeting.md"
 
@@ -49,9 +53,27 @@ class QueryChatGreeter:
     def prompt(self, value: str | Path) -> None:
         self._prompt = value
 
-    def generate(self, *, echo: Literal["none", "output"] = "none") -> str:
+    def build_client(self, base: str | chatlas.Chat | None = None) -> chatlas.Chat:
+        """Build a greeting chat client using the injected factory."""
+        return self._client_factory(self._tables, self._prompt, base)
+
+    def generate(self, *, echo: Literal["none", "output"] = "none", base=None) -> str:
         """Generate a greeting using the greeting system prompt."""
-        chat = self._parent._build_greeting_client()
-        txt = str(chat.chat(GREETING_PROMPT, echo=echo))
-        self._parent.greeting = txt
-        return txt
+        return str(self.build_client(base).chat(GREETING_PROMPT, echo=echo))
+
+    async def generate_stream(
+        self,
+        *,
+        chat_ui,
+        current_greeting: reactive.Value[str | None],
+        base: str | chatlas.Chat | None = None,
+    ) -> None:
+        """Stream a greeting into the Shiny chat UI and capture the result."""
+        import shinychat
+
+        client = self.build_client(base)
+        stream = await client.stream_async(GREETING_PROMPT, echo="none")
+        await chat_ui.set_greeting(shinychat.chat_greeting(stream, dismissible=False))
+        last_turn = client.get_last_turn(role="assistant")
+        if last_turn is not None:
+            current_greeting.set(last_turn.text)

@@ -320,50 +320,37 @@ class QueryChatBase(Generic[IntoFrameT]):
     def generate_greeting(self, *, echo: Literal["none", "output"] = "none") -> str:
         """Generate a welcome greeting for the chat."""
         self._require_initialized("generate_greeting")
-        return self.greeter.generate(echo=echo)
+        greeting = self.greeter.generate(echo=echo)
+        self.greeting = greeting
+        return greeting
 
     @property
     def greeter(self) -> QueryChatGreeter:
         """Greeting configuration and generator for this QueryChat instance."""
         if self._greeter is None:
-            self._greeter = QueryChatGreeter(self)
+
+            def client_factory(
+                tables: list[str],
+                prompt: str | Path,
+                base: str | chatlas.Chat | None = None,
+            ) -> chatlas.Chat:
+                sp = QueryChatSystemPrompt(
+                    prompt_template=prompt,
+                    data_sources=self._data_sources,
+                    data_description=self._data_description,
+                    extra_instructions=None,
+                    categorical_threshold=self._categorical_threshold,
+                    data_dicts=self._data_dicts,
+                    include_tables=tables or False,
+                    include_relationships=False,
+                    include_glossary=False,
+                )
+                chat = create_client(base if base is not None else self._client_spec)
+                chat.system_prompt = sp.render(None)
+                return chat
+
+            self._greeter = QueryChatGreeter(client_factory)
         return self._greeter
-
-    def _build_greeting_client(
-        self, client_spec: str | chatlas.Chat | None = None
-    ) -> chatlas.Chat:
-        """
-        Build a fresh chat client configured with the greeting system prompt.
-
-        ``client_spec`` overrides the instance client spec so the greeting is
-        generated with the same provider/model as the session client (for
-        example, when ``server(client=...)`` overrides it).
-        """
-        tbls = [n for n in self.greeter.tables if n in self._data_sources]
-        sources = {n: self._data_sources[n] for n in tbls}
-        # Keep a dict if it describes an included table, or if it is a global
-        # (table-less) dict carrying a dict-level description. Drop the
-        # cross-table global fields (relationships, glossary) so a curated
-        # greeting subset can't leak excluded-table prose; per-table entries are
-        # scoped to the included tables at render time.
-        greeting_dicts = [
-            dd.model_copy(update={"relationships": [], "glossary": {}})
-            for dd in self._data_dicts
-            if any(n in tbls for n in dd.tables)
-            or (not dd.tables and dd.description)
-        ]
-        greeting_prompt_obj = QueryChatSystemPrompt(
-            prompt_template=self.greeter.prompt,
-            data_sources=sources,
-            data_description=self._data_description,
-            extra_instructions=None,
-            categorical_threshold=self._categorical_threshold,
-            data_dicts=greeting_dicts,
-        )
-        chat = create_client(client_spec or self._client_spec)
-        chat.set_turns([])
-        chat.system_prompt = greeting_prompt_obj.render(None)
-        return chat
 
     def console(
         self,
@@ -676,9 +663,7 @@ class QueryChatBase(Generic[IntoFrameT]):
         self._build_system_prompt(data_sources=next_data_sources)
         self._data_sources = next_data_sources
         if self._greeter is not None:
-            self._greeter.tables = [
-                n for n in self._greeter.tables if n != table_name
-            ]
+            self._greeter.tables = [n for n in self._greeter.tables if n != table_name]
         if self._query_executor is not None:
             with contextlib.suppress(Exception):
                 self._query_executor.cleanup()
@@ -970,7 +955,7 @@ class StateDictQueryChat(QueryChatBase[IntoFrameT]):
             client_factory=self._client_factory,
             greeting=self.greeting,
             query_executor=self._require_query_executor("_deserialize_state"),
-            greeting_client_factory=self._build_greeting_client,
+            greeting_client_factory=self.greeter.build_client,
         )
         if state_data:
             state.update_from_dict(state_data)

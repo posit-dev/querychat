@@ -334,7 +334,7 @@ def test_greeting_prompt_omits_dicts_for_excluded_tables(sqlite_engine, tmp_path
     qc = QueryChat(data_dict=[str(orders_yaml), str(customers_yaml)])
     qc.add_tables(sqlite_engine, include_in_greeting=["orders"])
 
-    prompt = qc._build_greeting_client().system_prompt
+    prompt = qc.greeter.build_client().system_prompt
     assert prompt is not None
     assert "ORDERS_DICT_DESC" in prompt
     assert "CUSTOMERS_DICT_DESC" not in prompt
@@ -358,7 +358,7 @@ def test_greeting_prompt_keeps_global_dict_desc_drops_global_fields(
     qc = QueryChat(data_dict=[str(global_yaml), str(orders_yaml)])
     qc.add_tables(sqlite_engine, include_in_greeting=["orders"])
 
-    prompt = qc._build_greeting_client().system_prompt
+    prompt = qc.greeter.build_client().system_prompt
     assert prompt is not None
     assert "GLOBAL_DOMAIN_DESC" in prompt
     assert "ORDERS_DICT_DESC" in prompt
@@ -390,7 +390,7 @@ def test_generate_greeting_with_empty_tables(sample_df):
     qc = QueryChat(data_source=sample_df, table_name="test_table")
     qc.greeter.tables = []
 
-    prompt = qc._build_greeting_client().system_prompt
+    prompt = qc.greeter.build_client().system_prompt
     assert prompt is not None
     assert "following tables" not in prompt
     assert "SQL SQL" not in prompt
@@ -408,10 +408,12 @@ def test_greeting_prompt_keeps_global_dict_desc_with_no_tables(sample_df, tmp_pa
     global_yaml.write_text(
         "name: domain\ndescription: GLOBAL_DOMAIN_DESC\nglossary:\n  ARR: GLOSSARY_ARR_DEF\n"
     )
-    qc = QueryChat(data_source=sample_df, table_name="test_table", data_dict=str(global_yaml))
+    qc = QueryChat(
+        data_source=sample_df, table_name="test_table", data_dict=str(global_yaml)
+    )
     qc.greeter.tables = []
 
-    prompt = qc._build_greeting_client().system_prompt
+    prompt = qc.greeter.build_client().system_prompt
     assert prompt is not None
     assert "GLOBAL_DOMAIN_DESC" in prompt
     assert "GLOSSARY_ARR_DEF" not in prompt

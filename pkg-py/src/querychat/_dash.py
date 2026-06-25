@@ -298,7 +298,7 @@ class QueryChat(StateDictQueryChat[IntoFrameT]):
             client_factory=self._client_factory,
             greeting=self.greeting,
             query_executor=self._require_query_executor("ui"),
-            greeting_client_factory=self._build_greeting_client,
+            greeting_client_factory=self.greeter.build_client,
         )
 
         return html.Div(

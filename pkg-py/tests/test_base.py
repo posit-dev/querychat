@@ -293,23 +293,17 @@ class TestDataDict:
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             QueryChat(df, table_name="t", data_description="some desc")
-        assert not any(issubclass(warning.category, DeprecationWarning) for warning in w)
+        assert not any(
+            issubclass(warning.category, DeprecationWarning) for warning in w
+        )
 
 
 @pytest.fixture
 def multi_table_engine():
     engine = create_engine("sqlite:///:memory:")
     with engine.connect() as conn:
-        conn.execute(
-            text(
-                "CREATE TABLE orders (id INTEGER PRIMARY KEY, amount REAL)"
-            )
-        )
-        conn.execute(
-            text(
-                "CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT)"
-            )
-        )
+        conn.execute(text("CREATE TABLE orders (id INTEGER PRIMARY KEY, amount REAL)"))
+        conn.execute(text("CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT)"))
         conn.execute(text("INSERT INTO orders VALUES (1, 99.99), (2, 49.50)"))
         conn.execute(text("INSERT INTO customers VALUES (1, 'Alice'), (2, 'Bob')"))
         conn.commit()
@@ -368,7 +362,8 @@ class TestAddTables:
             warnings.simplefilter("always")
             qc.add_tables(multi_table_engine)
         multi_table_warns = [
-            x for x in w
+            x
+            for x in w
             if issubclass(x.category, UserWarning)
             and "Multiple tables" in str(x.message)
         ]
@@ -437,7 +432,8 @@ class TestAddTablesIbis:
             warnings.simplefilter("always")
             qc.add_tables(ibis_backend_with_tables)
         multi_table_warns = [
-            x for x in w
+            x
+            for x in w
             if issubclass(x.category, UserWarning)
             and "Multiple tables" in str(x.message)
         ]

@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     import chatlas
+
     from shiny import reactive
 
 
@@ -57,7 +58,10 @@ class QueryChatGreeter:
         return self._client_factory(self._tables, self._prompt, base)
 
     def generate(
-        self, *, echo: Literal["none", "output"] = "none", base: chatlas.Chat | None = None
+        self,
+        *,
+        echo: Literal["none", "output"] = "none",
+        base: chatlas.Chat | None = None,
     ) -> str:
         """Generate a greeting using the greeting system prompt."""
         return str(self.build_client(base).chat(GREETING_PROMPT, echo=echo))

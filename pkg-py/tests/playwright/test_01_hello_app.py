@@ -281,7 +281,5 @@ class Test01HelloApp:
         self.chat.set_user_input("How many rows are in the dataset?")
         self.chat.send_user_input(method="click")
 
-        send_btn = self.page.locator(
-            ".shiny-chat-btn-send:not(.shiny-chat-btn-cancel)"
-        )
+        send_btn = self.page.locator(".shiny-chat-btn-send:not(.shiny-chat-btn-cancel)")
         expect(send_btn).to_be_visible(timeout=60000)

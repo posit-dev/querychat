@@ -29,6 +29,7 @@ def is_pins_board(obj: object) -> TypeGuard[BaseBoard]:
     except ImportError:
         return False
 
+
 DUCKDB_FILE_TYPES = {"parquet", "csv", "json"}
 DUCKDB_READER_FN = {
     "parquet": "read_parquet",
@@ -153,8 +154,7 @@ class PinSource(DataSource[nw.DataFrame]):
                 vname = f"__pin_staging_{effective_table_name}"
                 conn.register(vname, arrow_df)
                 conn.execute(
-                    f'CREATE TABLE "{effective_table_name}" AS '
-                    f'SELECT * FROM "{vname}"'
+                    f'CREATE TABLE "{effective_table_name}" AS SELECT * FROM "{vname}"'
                 )
                 conn.unregister(vname)
             else:
@@ -169,8 +169,7 @@ class PinSource(DataSource[nw.DataFrame]):
                 vname = f"__pin_staging_{effective_table_name}"
                 conn.register(vname, data)
                 conn.execute(
-                    f'CREATE TABLE "{effective_table_name}" AS '
-                    f'SELECT * FROM "{vname}"'
+                    f'CREATE TABLE "{effective_table_name}" AS SELECT * FROM "{vname}"'
                 )
                 conn.unregister(vname)
 
@@ -212,9 +211,7 @@ class PinSource(DataSource[nw.DataFrame]):
         check_query(query)
         normalized = query.rstrip().removesuffix(";")
         result = _convert_result(
-            self._conn.execute(
-                f"SELECT * FROM ({normalized}) AS subquery LIMIT 1"
-            )
+            self._conn.execute(f"SELECT * FROM ({normalized}) AS subquery LIMIT 1")
         )
 
         if require_all_columns:
@@ -232,9 +229,7 @@ class PinSource(DataSource[nw.DataFrame]):
         return result
 
     def get_data(self) -> nw.DataFrame:
-        return _convert_result(
-            self._conn.execute(f'SELECT * FROM "{self.table_name}"')
-        )
+        return _convert_result(self._conn.execute(f'SELECT * FROM "{self.table_name}"'))
 
     def cleanup(self) -> None:
         if self._conn:

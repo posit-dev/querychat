@@ -24,20 +24,24 @@ from sqlalchemy import create_engine, text
 
 @pytest.fixture
 def orders_source():
-    df = pd.DataFrame({
-        "order_id": [1, 2, 3],
-        "customer_id": [10, 20, 10],
-        "amount": [100.0, 200.0, 150.0],
-    })
+    df = pd.DataFrame(
+        {
+            "order_id": [1, 2, 3],
+            "customer_id": [10, 20, 10],
+            "amount": [100.0, 200.0, 150.0],
+        }
+    )
     return DataFrameSource(nw.from_native(df), "orders")
 
 
 @pytest.fixture
 def customers_source():
-    df = pd.DataFrame({
-        "id": [10, 20, 30],
-        "name": ["Alice", "Bob", "Charlie"],
-    })
+    df = pd.DataFrame(
+        {
+            "id": [10, 20, 30],
+            "name": ["Alice", "Bob", "Charlie"],
+        }
+    )
     return DataFrameSource(nw.from_native(df), "customers")
 
 
@@ -48,19 +52,23 @@ def sqlite_sources():
     engine = create_engine(f"sqlite:///{temp_db.name}")
 
     with engine.begin() as conn:
-        conn.execute(text("""
+        conn.execute(
+            text("""
             CREATE TABLE orders (
                 order_id INTEGER,
                 customer_id INTEGER,
                 amount REAL
             )
-        """))
-        conn.execute(text("""
+        """)
+        )
+        conn.execute(
+            text("""
             CREATE TABLE customers (
                 id INTEGER,
                 name TEXT
             )
-        """))
+        """)
+        )
         conn.execute(
             text("""
                 INSERT INTO orders (order_id, customer_id, amount)
@@ -119,20 +127,24 @@ def ibis_sources():
 
 @pytest.fixture
 def orders_polars_dataframe_source():
-    df = pl.DataFrame({
-        "order_id": [1, 2, 3],
-        "customer_id": [10, 20, 10],
-        "amount": [100.0, 200.0, 150.0],
-    })
+    df = pl.DataFrame(
+        {
+            "order_id": [1, 2, 3],
+            "customer_id": [10, 20, 10],
+            "amount": [100.0, 200.0, 150.0],
+        }
+    )
     return DataFrameSource(nw.from_native(df), "orders_polars")
 
 
 class TestDuckDBExecutor:
     def test_cross_table_join(self, orders_source, customers_source):
-        executor = DuckDBExecutor({
-            "orders": orders_source,
-            "customers": customers_source,
-        })
+        executor = DuckDBExecutor(
+            {
+                "orders": orders_source,
+                "customers": customers_source,
+            }
+        )
         result = executor.execute_query(
             "SELECT o.order_id, c.name "
             "FROM orders o JOIN customers c ON o.customer_id = c.id"
@@ -143,10 +155,12 @@ class TestDuckDBExecutor:
         executor.cleanup()
 
     def test_single_table_query(self, orders_source, customers_source):
-        executor = DuckDBExecutor({
-            "orders": orders_source,
-            "customers": customers_source,
-        })
+        executor = DuckDBExecutor(
+            {
+                "orders": orders_source,
+                "customers": customers_source,
+            }
+        )
         result = executor.execute_query("SELECT * FROM orders WHERE amount > 100")
         nw_df = nw.from_native(result, eager_only=True)
         assert nw_df.shape[0] == 2
@@ -183,10 +197,12 @@ class TestDuckDBExecutor:
         executor.cleanup()
 
     def test_test_query_cross_table_join(self, orders_source, customers_source):
-        executor = DuckDBExecutor({
-            "orders": orders_source,
-            "customers": customers_source,
-        })
+        executor = DuckDBExecutor(
+            {
+                "orders": orders_source,
+                "customers": customers_source,
+            }
+        )
         executor.test_query(
             "SELECT o.* FROM orders o "
             "JOIN customers c ON o.customer_id = c.id "
@@ -214,10 +230,12 @@ class TestDuckDBExecutor:
         self, orders_source, orders_polars_dataframe_source
     ):
         with pytest.raises(ValueError, match="same DataFrame backend"):
-            DuckDBExecutor({
-                "orders": orders_source,
-                "orders_polars": orders_polars_dataframe_source,
-            })
+            DuckDBExecutor(
+                {
+                    "orders": orders_source,
+                    "orders_polars": orders_polars_dataframe_source,
+                }
+            )
 
     def test_rejects_mixed_dataframe_backends_before_opening_connection(
         self, monkeypatch, orders_source, orders_polars_dataframe_source
@@ -225,40 +243,50 @@ class TestDuckDBExecutor:
         def fail_if_connect_called(*args, **kwargs):
             raise AssertionError("duckdb.connect should not be called")
 
-        monkeypatch.setattr("querychat._query_executor.duckdb.connect", fail_if_connect_called)
+        monkeypatch.setattr(
+            "querychat._query_executor.duckdb.connect", fail_if_connect_called
+        )
 
         with pytest.raises(ValueError, match="same DataFrame backend"):
-            DuckDBExecutor({
-                "orders": orders_source,
-                "orders_polars": orders_polars_dataframe_source,
-            })
+            DuckDBExecutor(
+                {
+                    "orders": orders_source,
+                    "orders_polars": orders_polars_dataframe_source,
+                }
+            )
 
 
 @pytest.fixture
 def orders_polars_source():
-    lf = pl.LazyFrame({
-        "order_id": [1, 2, 3],
-        "customer_id": [10, 20, 10],
-        "amount": [100.0, 200.0, 150.0],
-    })
+    lf = pl.LazyFrame(
+        {
+            "order_id": [1, 2, 3],
+            "customer_id": [10, 20, 10],
+            "amount": [100.0, 200.0, 150.0],
+        }
+    )
     return PolarsLazySource(nw.from_native(lf), "orders")
 
 
 @pytest.fixture
 def customers_polars_source():
-    lf = pl.LazyFrame({
-        "id": [10, 20, 30],
-        "name": ["Alice", "Bob", "Charlie"],
-    })
+    lf = pl.LazyFrame(
+        {
+            "id": [10, 20, 30],
+            "name": ["Alice", "Bob", "Charlie"],
+        }
+    )
     return PolarsLazySource(nw.from_native(lf), "customers")
 
 
 class TestPolarsSQLExecutor:
     def test_cross_table_join(self, orders_polars_source, customers_polars_source):
-        executor = PolarsSQLExecutor({
-            "orders": orders_polars_source,
-            "customers": customers_polars_source,
-        })
+        executor = PolarsSQLExecutor(
+            {
+                "orders": orders_polars_source,
+                "customers": customers_polars_source,
+            }
+        )
         result = executor.execute_query(
             "SELECT o.order_id, c.name "
             "FROM orders o JOIN customers c ON o.customer_id = c.id"
@@ -298,10 +326,12 @@ class TestDataSourceExecutor:
         assert executor.get_db_type() == "DuckDB"
 
     def test_test_query_routes_by_table(self, orders_source, customers_source):
-        executor = DataSourceExecutor({
-            "orders": orders_source,
-            "customers": customers_source,
-        })
+        executor = DataSourceExecutor(
+            {
+                "orders": orders_source,
+                "customers": customers_source,
+            }
+        )
         # test_query against orders — should check orders columns
         with pytest.raises(MissingColumnsError, match="missing required columns"):
             executor.test_query(
@@ -350,10 +380,12 @@ class TestDataSourceExecutor:
                 )
 
             with pytest.raises(ValueError, match="share the same Engine instance"):
-                DataSourceExecutor({
-                    "orders": SQLAlchemySource(orders_engine, "orders"),
-                    "customers": SQLAlchemySource(customers_engine, "customers"),
-                })
+                DataSourceExecutor(
+                    {
+                        "orders": SQLAlchemySource(orders_engine, "orders"),
+                        "customers": SQLAlchemySource(customers_engine, "customers"),
+                    }
+                )
         finally:
             orders_engine.dispose()
             customers_engine.dispose()
@@ -380,10 +412,14 @@ class TestDataSourceExecutor:
             customers_conn.create_table("customers", {"id": [10], "name": ["Alice"]})
 
             with pytest.raises(ValueError, match="share the same backend instance"):
-                DataSourceExecutor({
-                    "orders": IbisSource(orders_conn.table("orders"), "orders"),
-                    "customers": IbisSource(customers_conn.table("customers"), "customers"),
-                })
+                DataSourceExecutor(
+                    {
+                        "orders": IbisSource(orders_conn.table("orders"), "orders"),
+                        "customers": IbisSource(
+                            customers_conn.table("customers"), "customers"
+                        ),
+                    }
+                )
         finally:
             orders_conn.disconnect()
             customers_conn.disconnect()

@@ -17,9 +17,7 @@ from querychat._datasource import DataFrameSource
 
 @pytest.fixture
 def sample_df():
-    return pl.DataFrame(
-        {"x": [1, 2, 3, 4, 5], "y": [10, 20, 15, 25, 30]}
-    )
+    return pl.DataFrame({"x": [1, 2, 3, 4, 5], "y": [10, 20, 15, 25, 30]})
 
 
 @pytest.fixture
@@ -34,9 +32,7 @@ def _mock_output_widget(widget_id, **kwargs):
 
 @pytest.fixture(autouse=True)
 def _patch_deps(monkeypatch):
-    monkeypatch.setattr(
-        "shinywidgets.register_widget", lambda _widget_id, _chart: None
-    )
+    monkeypatch.setattr("shinywidgets.register_widget", lambda _widget_id, _chart: None)
     monkeypatch.setattr("shinywidgets.output_widget", _mock_output_widget)
 
     mock_spec = MagicMock()
@@ -49,9 +45,7 @@ def _patch_deps(monkeypatch):
     mock_altair_widget.widget_id = "querychat_viz_test1234"
     mock_altair_widget.is_compound = False
 
-    monkeypatch.setattr(
-        "querychat._viz_ggsql.execute_ggsql", lambda _ds, _q: mock_spec
-    )
+    monkeypatch.setattr("querychat._viz_ggsql.execute_ggsql", lambda _ds, _q: mock_spec)
     monkeypatch.setattr(
         "querychat._viz_altair_widget.AltairWidget.from_ggsql",
         staticmethod(lambda _spec: mock_altair_widget),
@@ -99,7 +93,9 @@ class TestVizPreloadMarkup:
 
         rendered = TagList(preload_viz_deps_ui()).render()
         preload_dep = next(
-            dep for dep in rendered["dependencies"] if dep.name == "querychat-viz-preload"
+            dep
+            for dep in rendered["dependencies"]
+            if dep.name == "querychat-viz-preload"
         )
 
         assert PRELOAD_WIDGET_ID in rendered["html"]

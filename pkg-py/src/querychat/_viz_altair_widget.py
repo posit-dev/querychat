@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     import altair as alt
     import ggsql
 
+
 class AltairWidget:
     """
     An Altair chart wrapped in ``alt.JupyterChart`` for display in Shiny.
@@ -110,9 +111,7 @@ class AltairWidget:
 DEFAULT_COMPOUND_WIDTH = 900
 DEFAULT_COMPOUND_HEIGHT = 450
 
-LEGEND_CHANNELS = frozenset(
-    {"color", "fill", "stroke", "shape", "size", "opacity"}
-)
+LEGEND_CHANNELS = frozenset({"color", "fill", "stroke", "shape", "size", "opacity"})
 LEGEND_WIDTH = 120  # approximate space for a right-side legend
 
 
@@ -184,14 +183,30 @@ def infer_grid_facet_dims(chart: alt.FacetChart) -> tuple[int, int] | None:
     import pandas as pd
 
     facet_dict = chart.facet.to_dict()
-    row_field = facet_dict.get("row", {}).get("field") if isinstance(facet_dict.get("row"), dict) else None
-    col_field = facet_dict.get("column", {}).get("field") if isinstance(facet_dict.get("column"), dict) else None
+    row_field = (
+        facet_dict.get("row", {}).get("field")
+        if isinstance(facet_dict.get("row"), dict)
+        else None
+    )
+    col_field = (
+        facet_dict.get("column", {}).get("field")
+        if isinstance(facet_dict.get("column"), dict)
+        else None
+    )
     if row_field is None and col_field is None:
         return None
     if not isinstance(chart.data, pd.DataFrame):
         return None
-    ncol = int(chart.data[col_field].nunique()) if col_field and col_field in chart.data.columns else 1  # type: ignore[arg-type]
-    nrow = int(chart.data[row_field].nunique()) if row_field and row_field in chart.data.columns else 1  # type: ignore[arg-type]
+    ncol = (
+        int(chart.data[col_field].nunique())
+        if col_field and col_field in chart.data.columns
+        else 1
+    )  # type: ignore[arg-type]
+    nrow = (
+        int(chart.data[row_field].nunique())
+        if row_field and row_field in chart.data.columns
+        else 1
+    )  # type: ignore[arg-type]
     return (max(ncol, 1), max(nrow, 1))
 
 

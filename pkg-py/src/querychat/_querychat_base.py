@@ -140,8 +140,7 @@ class QueryChatBase(Generic[IntoFrameT]):
             raise RuntimeError("Cannot build system prompt without data_source")
 
         client_has_history = (
-            self._base_client is not None
-            and bool(self._base_client.get_turns())
+            self._base_client is not None and bool(self._base_client.get_turns())
         ) or (
             self._client_console is not None and bool(self._client_console.get_turns())
         )

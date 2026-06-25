@@ -25,7 +25,9 @@ def orders_df():
 
 @pytest.fixture
 def customers_df():
-    return pd.DataFrame({"id": [101, 102], "name": ["Alice", "Bob"], "state": ["CA", "NY"]})
+    return pd.DataFrame(
+        {"id": [101, 102], "name": ["Alice", "Bob"], "state": ["CA", "NY"]}
+    )
 
 
 class TestStreamlitMultiTable:
@@ -82,7 +84,9 @@ class TestStreamlitMultiTable:
         fake_session = {}
         with patch("streamlit.session_state", fake_session):
             state = qc._get_state()
-            state._table_states["orders"]["sql"] = "SELECT * FROM orders WHERE amount > 100"
+            state._table_states["orders"]["sql"] = (
+                "SELECT * FROM orders WHERE amount > 100"
+            )
             state._table_states["orders"]["title"] = "Big orders"
             assert qc.table("orders").sql() == "SELECT * FROM orders WHERE amount > 100"
             assert qc.table("orders").title() == "Big orders"
@@ -225,5 +229,3 @@ class TestStateDictQueryChatMultiTable:
         with pytest.warns(FutureWarning, match="multiple tables"):
             result = acc.title(state)
         assert result == "Big orders"
-
-

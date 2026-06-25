@@ -59,4 +59,3 @@ class TableAccessor:
     def title(self) -> str | None:
         """Return the current filter title for this table (reactive)."""
         return self._state.title.get()
-

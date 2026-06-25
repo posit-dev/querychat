@@ -24,9 +24,7 @@ VIZ_PROMPT = "Use the visualize tool to create a scatter plot of age vs fare"
 TOOL_RESULT_TIMEOUT = 90_000
 
 
-def _download_from_save_menu(
-    page: Page, export_format: str
-) -> tuple[Download, str]:
+def _download_from_save_menu(page: Page, export_format: str) -> tuple[Download, str]:
     """Open the save menu, click the requested format, and capture the download."""
     page.locator(".querychat-save-btn").click()
 
@@ -40,9 +38,7 @@ def _download_from_save_menu(
 
 
 @pytest.fixture(autouse=True)
-def _send_viz_prompt(
-    page: Page, app_10_viz: str, chat_10_viz: ChatController
-) -> None:
+def _send_viz_prompt(page: Page, app_10_viz: str, chat_10_viz: ChatController) -> None:
     """Navigate to the viz app and trigger a visualization before each test."""
     page.goto(app_10_viz)
     page.wait_for_selector("shiny-chat-container", timeout=30_000)
@@ -57,9 +53,7 @@ def _send_viz_prompt(
         state="visible", timeout=TOOL_RESULT_TIMEOUT
     )
     # Wait for the footer buttons to appear inside the card
-    page.locator(".querychat-footer-buttons").wait_for(
-        state="visible", timeout=10_000
-    )
+    page.locator(".querychat-footer-buttons").wait_for(state="visible", timeout=10_000)
     # Wait for the chat input to re-enable — this signals the LLM turn is
     # complete and shinychat has finished its final re-render of the tool
     # result card.
@@ -99,7 +93,9 @@ class TestShowQueryToggle:
 
         expect(chevron).not_to_have_class("querychat-query-chevron--expanded")
         btn.click()
-        expect(chevron).to_have_class("querychat-query-chevron querychat-query-chevron--expanded")
+        expect(chevron).to_have_class(
+            "querychat-query-chevron querychat-query-chevron--expanded"
+        )
 
     def test_toggle_hides_section_again(self, page: Page) -> None:
         """Clicking the button a second time should hide the query section."""

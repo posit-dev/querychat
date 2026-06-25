@@ -63,19 +63,23 @@ def shared_sqlite_engine():
     engine = create_engine(f"sqlite:///{temp_db.name}")
 
     with engine.begin() as conn:
-        conn.execute(text("""
+        conn.execute(
+            text("""
             CREATE TABLE orders (
                 id INTEGER,
                 customer_id INTEGER,
                 amount REAL
             )
-        """))
-        conn.execute(text("""
+        """)
+        )
+        conn.execute(
+            text("""
             CREATE TABLE customers (
                 id INTEGER,
                 name TEXT
             )
-        """))
+        """)
+        )
         conn.execute(
             text("""
                 INSERT INTO orders (id, customer_id, amount)
@@ -257,7 +261,6 @@ class TestTableAccessor:
     """Tests for table() method and TableAccessor class."""
 
 
-
 class TestMultiTableSystemPrompt:
     """Tests for multi-table system prompt generation."""
 
@@ -381,9 +384,7 @@ class TestSourceCompatibility:
         with pytest.raises(ValueError, match="share the same backend instance"):
             check_source_compatibility({"orders": first}, second, "customers")
 
-    def test_add_table_replace_validates_compatibility(
-        self, orders_qc, customers_df
-    ):
+    def test_add_table_replace_validates_compatibility(self, orders_qc, customers_df):
         """Replacing a table must still respect multi-table compatibility."""
         orders_qc.add_table(customers_df, "customers")
         original_orders = orders_qc._data_sources["orders"]
@@ -460,7 +461,9 @@ class TestBuildQueryExecutor:
         with pytest.raises(ValueError, match="same DataFrame backend"):
             orders_qc._build_query_executor()
 
-    def test_cached_executor_survives_direct_source_mutation(self, orders_qc, customers_df):
+    def test_cached_executor_survives_direct_source_mutation(
+        self, orders_qc, customers_df
+    ):
         """Executor built lazily is not invalidated by direct _data_sources mutation."""
         orders_qc.add_table(customers_df, "customers")
         built = orders_qc._require_query_executor("test")
@@ -500,6 +503,7 @@ class TestBuildQueryExecutor:
             "querychat._querychat_base.normalize_data_source",
             capture_staged_source,
         )
+
         def fail_compat(*a, **kw):
             raise ValueError("compat check failed")
 
@@ -537,6 +541,7 @@ class TestBuildQueryExecutor:
             "querychat._querychat_base.normalize_data_source",
             capture_staged_source,
         )
+
         def fail_compat(*a, **kw):
             raise ValueError("compat check failed")
 
@@ -605,8 +610,12 @@ class TestMultiTableGuardrails:
             sql=_MultiTableWarnReactive(orders_sql, "sql", "orders", table_list),  # type: ignore[arg-type]
             title=_MultiTableWarnReactive(orders_title, "title", "orders", table_list),  # type: ignore[arg-type]
             tables={
-                "orders": TableState(sql=orders_sql, title=orders_title, df=lambda: orders_df),
-                "customers": TableState(sql=customers_sql, title=customers_title, df=lambda: customers_df),
+                "orders": TableState(
+                    sql=orders_sql, title=orders_title, df=lambda: orders_df
+                ),
+                "customers": TableState(
+                    sql=customers_sql, title=customers_title, df=lambda: customers_df
+                ),
             },
             client=None,  # type: ignore[arg-type]
             data_sources={},
@@ -652,8 +661,12 @@ class TestMultiTableGuardrails:
             sql=_MultiTableWarnReactive(orders_sql, "sql", "orders", table_list),  # type: ignore[arg-type]
             title=_MultiTableWarnReactive(orders_title, "title", "orders", table_list),  # type: ignore[arg-type]
             tables={
-                "orders": TableState(sql=orders_sql, title=orders_title, df=lambda: orders_df),
-                "customers": TableState(sql=customers_sql, title=customers_title, df=lambda: customers_df),
+                "orders": TableState(
+                    sql=orders_sql, title=orders_title, df=lambda: orders_df
+                ),
+                "customers": TableState(
+                    sql=customers_sql, title=customers_title, df=lambda: customers_df
+                ),
             },
             client=None,  # type: ignore[arg-type]
             data_sources={},
@@ -680,11 +693,23 @@ class TestMultiTableGuardrails:
         table_list = "'orders', 'customers'"
         vals = ServerValues(
             df=lambda: None,  # type: ignore[return-value]
-            sql=_MultiTableWarnReactive(reactive.Value(None), "sql", "orders", table_list),  # type: ignore[arg-type]
-            title=_MultiTableWarnReactive(reactive.Value(None), "title", "orders", table_list),  # type: ignore[arg-type]
+            sql=_MultiTableWarnReactive(
+                reactive.Value(None), "sql", "orders", table_list
+            ),  # type: ignore[arg-type]
+            title=_MultiTableWarnReactive(
+                reactive.Value(None), "title", "orders", table_list
+            ),  # type: ignore[arg-type]
             tables={
-                "orders": TableState(sql=reactive.Value(None), title=reactive.Value(None), df=lambda: orders_df),
-                "customers": TableState(sql=reactive.Value(None), title=reactive.Value(None), df=lambda: customers_df),
+                "orders": TableState(
+                    sql=reactive.Value(None),
+                    title=reactive.Value(None),
+                    df=lambda: orders_df,
+                ),
+                "customers": TableState(
+                    sql=reactive.Value(None),
+                    title=reactive.Value(None),
+                    df=lambda: customers_df,
+                ),
             },
             client=None,  # type: ignore[arg-type]
             data_sources={"orders": orders_source, "customers": customers_source},
@@ -707,8 +732,16 @@ class TestMultiTableGuardrails:
             sql=reactive.Value(None),
             title=reactive.Value(None),
             tables={
-                "orders": TableState(sql=reactive.Value(None), title=reactive.Value(None), df=lambda: orders_df),
-                "customers": TableState(sql=reactive.Value(None), title=reactive.Value(None), df=lambda: customers_df),
+                "orders": TableState(
+                    sql=reactive.Value(None),
+                    title=reactive.Value(None),
+                    df=lambda: orders_df,
+                ),
+                "customers": TableState(
+                    sql=reactive.Value(None),
+                    title=reactive.Value(None),
+                    df=lambda: customers_df,
+                ),
             },
             client=None,  # type: ignore[arg-type]
             data_sources={"orders": orders_source, "customers": customers_source},
@@ -735,7 +768,11 @@ class TestMultiTableGuardrails:
             sql=reactive.Value(None),
             title=reactive.Value(None),
             tables={
-                "orders": TableState(sql=reactive.Value(None), title=reactive.Value(None), df=lambda: orders_df),
+                "orders": TableState(
+                    sql=reactive.Value(None),
+                    title=reactive.Value(None),
+                    df=lambda: orders_df,
+                ),
             },
             client=None,  # type: ignore[arg-type]
             data_sources={"orders": orders_source},
@@ -769,7 +806,9 @@ class TestMultiTableGuardrails:
         with reactive.isolate():
             assert vals.current_table() is None
 
-    def test_server_values_current_table_reflects_reactive(self, orders_df, customers_df):
+    def test_server_values_current_table_reflects_reactive(
+        self, orders_df, customers_df
+    ):
         from querychat._shiny_module import (
             ServerValues,
             TableState,
@@ -782,11 +821,23 @@ class TestMultiTableGuardrails:
         table_list = "'orders', 'customers'"
         vals = ServerValues(
             df=lambda: None,  # type: ignore[return-value]
-            sql=_MultiTableWarnReactive(reactive.Value(None), "sql", "orders", table_list),  # type: ignore[arg-type]
-            title=_MultiTableWarnReactive(reactive.Value(None), "title", "orders", table_list),  # type: ignore[arg-type]
+            sql=_MultiTableWarnReactive(
+                reactive.Value(None), "sql", "orders", table_list
+            ),  # type: ignore[arg-type]
+            title=_MultiTableWarnReactive(
+                reactive.Value(None), "title", "orders", table_list
+            ),  # type: ignore[arg-type]
             tables={
-                "orders": TableState(sql=reactive.Value(None), title=reactive.Value(None), df=lambda: orders_df),
-                "customers": TableState(sql=reactive.Value(None), title=reactive.Value(None), df=lambda: customers_df),
+                "orders": TableState(
+                    sql=reactive.Value(None),
+                    title=reactive.Value(None),
+                    df=lambda: orders_df,
+                ),
+                "customers": TableState(
+                    sql=reactive.Value(None),
+                    title=reactive.Value(None),
+                    df=lambda: customers_df,
+                ),
             },
             client=None,  # type: ignore[arg-type]
             data_sources={},
@@ -922,7 +973,9 @@ class TestMultiTableGuardrails:
             "title": None,
             "error": None,
             "table": "orders",
-            "table_states": {"orders": {"sql": "SELECT 1", "title": None, "error": None}},
+            "table_states": {
+                "orders": {"sql": "SELECT 1", "title": None, "error": None}
+            },
             "turns": [],
         }
         with pytest.warns(FutureWarning, match="multiple tables"):
@@ -959,14 +1012,18 @@ class TestMultiTableGuardrails:
             "title": None,
             "error": None,
             "table": "orders",
-            "table_states": {"orders": {"sql": None, "title": "Big orders", "error": None}},
+            "table_states": {
+                "orders": {"sql": None, "title": "Big orders", "error": None}
+            },
             "turns": [],
         }
         with pytest.warns(FutureWarning, match="multiple tables"):
             result = acc.title(state)
         assert result == "Big orders"
 
-    def test_state_dict_mixin_with_table_kwarg_still_works(self, orders_df, customers_df):
+    def test_state_dict_mixin_with_table_kwarg_still_works(
+        self, orders_df, customers_df
+    ):
         from unittest.mock import MagicMock
 
         from querychat import QueryChat
@@ -996,7 +1053,10 @@ class TestMultiTableGuardrails:
                 "orders": {"sql": None, "title": None, "error": None},
                 "customers": {"sql": None, "title": None, "error": None},
             },
-            "sql": None, "title": None, "error": None, "turns": [],
+            "sql": None,
+            "title": None,
+            "error": None,
+            "turns": [],
         }
         assert acc.sql(state, table="orders") is None
         assert acc.title(state, table="orders") is None
@@ -1020,7 +1080,9 @@ class TestMultiTableQueryTool:
         ):
             qc.client(tools="query")
 
-        query_tool = next(tool for tool in registered_tools if tool.name == "querychat_query")
+        query_tool = next(
+            tool for tool in registered_tools if tool.name == "querychat_query"
+        )
         result = query_tool.func(
             """
             SELECT customers.name, orders.amount
@@ -1064,9 +1126,7 @@ class TestDataDictListInput:
         qc = QueryChat(orders_df, "orders", data_dict=dd)
         assert qc is not None
 
-    def test_list_dicts_appear_in_system_prompt(
-        self, orders_df, customers_df
-    ) -> None:
+    def test_list_dicts_appear_in_system_prompt(self, orders_df, customers_df) -> None:
         from querychat._data_dict import DataDict, TableSpec
 
         dd1 = DataDict(name="sales", tables={"orders": TableSpec(description="Orders")})

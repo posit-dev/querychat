@@ -27,6 +27,9 @@ class QueryChatSystemPrompt:
         extra_instructions: str | Path | None = None,
         categorical_threshold: int = 20,
         data_dicts: list[DataDict] | None = None,
+        include_tables: bool | list[str] = True,
+        include_relationships: bool = True,
+        include_glossary: bool = True,
     ):
         if data_sources is not None:
             self._data_sources = data_sources
@@ -37,7 +40,34 @@ class QueryChatSystemPrompt:
 
         self._data_dicts: list[DataDict] = data_dicts or []
 
-        if len(self._data_sources) > 1 and not self._data_dicts:
+        if include_tables is not True:
+            resolved = (
+                []
+                if include_tables is False
+                else [n for n in include_tables if n in self._data_sources]
+            )
+            self._data_sources = {n: self._data_sources[n] for n in resolved}
+            self._data_dicts = [
+                dd
+                for dd in self._data_dicts
+                if any(n in resolved for n in dd.tables)
+                or (not dd.tables and dd.description)
+            ]
+            update: dict[str, object] = {}
+            if not include_relationships:
+                update["relationships"] = []
+            if not include_glossary:
+                update["glossary"] = {}
+            if update:
+                self._data_dicts = [
+                    dd.model_copy(update=update) for dd in self._data_dicts
+                ]
+
+        if (
+            include_tables is True
+            and len(self._data_sources) > 1
+            and not self._data_dicts
+        ):
             warnings.warn(
                 "Multiple tables registered without a data_dict. "
                 "Providing a data_dict with table descriptions and relationships "

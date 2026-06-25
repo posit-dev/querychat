@@ -53,7 +53,7 @@ QueryChatGreeter <- R6::R6Class(
       stream <- client$stream_async(GREETING_PROMPT)
       p <- shinychat::chat_set_greeting(
         chat_id,
-        shinychat::chat_greeting(stream, dismissible = FALSE)
+        shinychat::chat_greeting(stream, persistent = TRUE, dismissible = FALSE)
       )
       promises::then(p, function(value) {
         greeting_reactive(client$last_turn()@text)

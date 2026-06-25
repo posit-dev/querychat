@@ -77,7 +77,7 @@ def mod_ui(*, preload_viz: bool = False, greeting: str | None = None, **kwargs):
     kwargs.setdefault("allow_attachments", True)
     if greeting:
         kwargs.setdefault(
-            "greeting", shinychat.chat_greeting(greeting, dismissible=False)
+            "greeting", shinychat.chat_greeting(greeting, persistent=True, dismissible=False)  # pyright: ignore[reportArgumentType]
         )
     tag = shinychat.chat_ui(CHAT_ID, **kwargs)
     tag.add_class("querychat")
@@ -339,7 +339,7 @@ def mod_server(
             existing = current_greeting.get()
             if existing is not None:
                 await chat_ui.set_greeting(
-                    shinychat.chat_greeting(existing, dismissible=False)
+                    shinychat.chat_greeting(existing, persistent=True, dismissible=False)  # pyright: ignore[reportArgumentType]
                 )
                 return
             warnings.warn(
@@ -403,7 +403,7 @@ def mod_server(
                 current_greeting.set(vals["querychat_greeting"])
                 await chat_ui.set_greeting(
                     shinychat.chat_greeting(
-                        vals["querychat_greeting"], dismissible=False
+                        vals["querychat_greeting"], persistent=True, dismissible=False  # pyright: ignore[reportArgumentType]
                     )
                 )
             if "querychat_viz_widgets" in vals:

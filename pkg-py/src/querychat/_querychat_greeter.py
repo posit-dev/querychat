@@ -75,7 +75,7 @@ class QueryChatGreeter:
 
         client = self.build_client(base)
         stream = await client.stream_async(GREETING_PROMPT, echo="none")
-        await chat_ui.set_greeting(shinychat.chat_greeting(stream, dismissible=False))
+        await chat_ui.set_greeting(shinychat.chat_greeting(stream, persistent=True, dismissible=False))  # pyright: ignore[reportArgumentType]
         last_turn = client.get_last_turn(role="assistant")
         if last_turn is not None:
             current_greeting.set(last_turn.text)

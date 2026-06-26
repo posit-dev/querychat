@@ -2,6 +2,8 @@
 
 ## New features
 
+* The SQL panel in `querychat_app()` is now an editable code editor. Users can tweak the generated SQL directly and apply it with Ctrl/Cmd+Enter or by clicking away — no extra button required. The editor stays in sync when the LLM updates the query or the active table changes. (#265)
+
 * `QueryChat$new()` now supports **multiple related tables**. Register additional tables with `$add_table()` and the LLM can reason across all of them — joins, cross-table filters, aggregations. Per-table reactive state (`$df()`, `$sql()`, `$title()`) is accessible via `qc_vals$table("name")` on the list returned by `$server()`. For DBI connections, `$add_tables()` registers all tables (or a named subset) in a single call. (#195)
 
   ```r

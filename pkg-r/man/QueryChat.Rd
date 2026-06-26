@@ -109,6 +109,9 @@ qc <- QueryChat$new(con, "mtcars")
 \section{Active bindings}{
   \if{html}{\out{<div class="r6-active-bindings">}}
   \describe{
+    \item{\code{greeter}}{The QueryChatGreeter controlling greeting generation;
+access its \verb{$tables} and \verb{$prompt}.}
+
     \item{\code{system_prompt}}{Get the system prompt.}
 
     \item{\code{data_source}}{Removed. Use \verb{$add_table()} and \verb{$remove_table()} to manage tables.}
@@ -227,7 +230,12 @@ or \code{FALSE} to never clean up automatically.}
   Add a table to this QueryChat instance.
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
-    \preformatted{QueryChat$add_table(data_source, table_name, replace = FALSE)}
+    \preformatted{QueryChat$add_table(
+  data_source,
+  table_name,
+  replace = FALSE,
+  include_in_greeting = FALSE
+)}
     \if{html}{\out{</div>}}
   }
   \subsection{Arguments}{
@@ -237,6 +245,8 @@ or \code{FALSE} to never clean up automatically.}
       \item{\code{table_name}}{The SQL table name for this data source.}
       \item{\code{replace}}{Whether to replace an existing table with this name.
 Default is \code{FALSE}.}
+      \item{\code{include_in_greeting}}{Whether to include this table in the greeting
+context. Default is \code{FALSE}.}
     }
     \if{html}{\out{</div>}}
   }
@@ -256,7 +266,12 @@ system prompt exactly once after all tables have been staged, avoiding
 N-1 spurious intermediate rebuilds.
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
-    \preformatted{QueryChat$add_tables(conn, tables = NULL, replace = FALSE)}
+    \preformatted{QueryChat$add_tables(
+  conn,
+  tables = NULL,
+  replace = FALSE,
+  include_in_greeting = FALSE
+)}
     \if{html}{\out{</div>}}
   }
   \subsection{Arguments}{
@@ -268,6 +283,10 @@ individual data frames or other sources via \verb{$add_table()}.}
 by \code{DBI::dbListTables(conn)} are used.}
       \item{\code{replace}}{Whether to replace existing tables with the same name.
 Default is \code{FALSE}.}
+      \item{\code{include_in_greeting}}{Whether to include added tables in the greeting
+context. \code{TRUE} includes all tables; \code{FALSE} (default) includes none;
+a character vector includes only those named tables (intersected with
+the tables being added). Any other type raises an error.}
     }
     \if{html}{\out{</div>}}
   }

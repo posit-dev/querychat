@@ -12,8 +12,9 @@ from shinychat import Attachment, attachment_to_content
 
 from shiny import module, reactive, ui
 
-from ._querychat_core import GREETING_PROMPT, warn_multi_table_flat_accessor
+from ._querychat_core import warn_multi_table_flat_accessor
 from ._table_accessor import TableAccessor
+from ._utils_shinychat import chat_greeting_persistent
 from ._viz_altair_widget import AltairWidget
 from ._viz_ggsql import execute_ggsql
 from ._viz_utils import has_viz_tool, preload_viz_deps_server, preload_viz_deps_ui
@@ -27,6 +28,7 @@ if TYPE_CHECKING:
 
     from ._datasource import DataSource
     from ._query_executor import QueryExecutor
+    from ._querychat_greeter import QueryChatGreeter
     from ._viz_tools import VisualizeData
     from .types import UpdateDashboardData
 
@@ -67,7 +69,6 @@ class TableState(Generic[IntoFrameT]):
     df: Callable[[], IntoFrameT]
 
 
-
 @module.ui
 def mod_ui(*, preload_viz: bool = False, greeting: str | None = None, **kwargs):
     css_path = Path(__file__).parent / "static" / "css" / "styles.css"
@@ -76,9 +77,7 @@ def mod_ui(*, preload_viz: bool = False, greeting: str | None = None, **kwargs):
     kwargs.setdefault("enable_cancel", True)
     kwargs.setdefault("allow_attachments", True)
     if greeting:
-        kwargs.setdefault(
-            "greeting", shinychat.chat_greeting(greeting, dismissible=False)
-        )
+        kwargs.setdefault("greeting", chat_greeting_persistent(greeting))
     tag = shinychat.chat_ui(CHAT_ID, **kwargs)
     tag.add_class("querychat")
 
@@ -215,6 +214,8 @@ def mod_server(
     client: Callable[..., chatlas.Chat],
     enable_bookmarking: bool,
     tools: set[str] | None = None,
+    greeter: QueryChatGreeter,
+    greeting_base: chatlas.Chat | None = None,
 ) -> ServerValues[IntoFrameT]:
     # Holds a generated greeting so it can be saved and restored on bookmark.
     # Static greetings live in the UI (chat_ui(greeting=)) and persist already.
@@ -336,9 +337,7 @@ def mod_server(
             # fires, so on_restore is the only path that re-displays.
             existing = current_greeting.get()
             if existing is not None:
-                await chat_ui.set_greeting(
-                    shinychat.chat_greeting(existing, dismissible=False)
-                )
+                await chat_ui.set_greeting(chat_greeting_persistent(existing))
                 return
             warnings.warn(
                 "No greeting provided to `QueryChat()`. Using the LLM `client` to generate one now. "
@@ -347,15 +346,11 @@ def mod_server(
                 GreetWarning,
                 stacklevel=2,
             )
-            greeting_client = client(tools=None)
-            stream = await greeting_client.stream_async(GREETING_PROMPT, echo="none")
-            await chat_ui.set_greeting(
-                shinychat.chat_greeting(stream, dismissible=False)
+            await greeter.generate_stream(
+                chat_ui=chat_ui,
+                current_greeting=current_greeting,
+                base=greeting_base,
             )
-            # Capture the generated greeting so it can be bookmarked and restored.
-            last_turn = greeting_client.get_last_turn(role="assistant")
-            if last_turn is not None:
-                current_greeting.set(last_turn.text)
 
     # Handle update button clicks
     @reactive.effect
@@ -404,14 +399,10 @@ def mod_server(
             if "querychat_greeting" in vals:
                 current_greeting.set(vals["querychat_greeting"])
                 await chat_ui.set_greeting(
-                    shinychat.chat_greeting(
-                        vals["querychat_greeting"], dismissible=False
-                    )
+                    chat_greeting_persistent(vals["querychat_greeting"])
                 )
             if "querychat_viz_widgets" in vals:
-                restored = restore_viz_widgets(
-                    executor, vals["querychat_viz_widgets"]
-                )
+                restored = restore_viz_widgets(executor, vals["querychat_viz_widgets"])
                 viz_widgets[:] = restored
 
     if len(table_states) == 1:
@@ -443,7 +434,9 @@ def mod_server(
     return ServerValues(
         df=_multi_table_df,
         sql=_MultiTableWarnReactive(primary_state.sql, "sql", primary_name, table_list),  # type: ignore[arg-type]
-        title=_MultiTableWarnReactive(primary_state.title, "title", primary_name, table_list),  # type: ignore[arg-type]
+        title=_MultiTableWarnReactive(
+            primary_state.title, "title", primary_name, table_list
+        ),  # type: ignore[arg-type]
         tables=table_states,
         client=chat,
         data_sources=data_sources,

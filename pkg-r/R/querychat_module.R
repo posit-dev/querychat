@@ -9,7 +9,7 @@ mod_ui <- function(
   ns <- shiny::NS(id)
 
   if (!is.null(greeting) && any(nzchar(greeting))) {
-    greeting <- shinychat::chat_greeting(greeting, dismissible = FALSE)
+    greeting <- chat_greeting_persistent(greeting)
   } else {
     greeting <- NULL
   }
@@ -43,6 +43,8 @@ mod_server <- function(
   greeting,
   client,
   tools,
+  greeter = NULL,
+  greeting_base = NULL,
   enable_bookmarking = FALSE
 ) {
   shiny::moduleServer(id, function(input, output, session) {
@@ -146,7 +148,7 @@ mod_server <- function(
           if (!is.null(current_greeting())) {
             shinychat::chat_set_greeting(
               "chat",
-              shinychat::chat_greeting(current_greeting(), dismissible = FALSE)
+              chat_greeting_persistent(current_greeting())
             )
             return()
           }
@@ -155,16 +157,10 @@ mod_server <- function(
             "i" = "For faster startup, lower cost, and determinism, consider providing a {.arg greeting} to {.fn QueryChat}.",
             "i" = "You can use your {.help querychat::QueryChat} object's {.fn $generate_greeting} method to generate a greeting."
           ))
-          greeting_client <- client(tools = NULL)
-          stream <- greeting_client$stream_async(GREETING_PROMPT)
-          p <- shinychat::chat_set_greeting(
-            "chat",
-            shinychat::chat_greeting(stream, dismissible = FALSE)
+          greeter$generate_stream(
+            greeting_reactive = current_greeting,
+            base = greeting_base
           )
-          # Capture the generated greeting so it can be bookmarked and restored.
-          promises::then(p, function(value) {
-            current_greeting(greeting_client$last_turn()@text)
-          })
         }
       )
     }
@@ -257,10 +253,7 @@ mod_server <- function(
           current_greeting(state$values$querychat_greeting)
           shinychat::chat_set_greeting(
             "chat",
-            shinychat::chat_greeting(
-              state$values$querychat_greeting,
-              dismissible = FALSE
-            ),
+            chat_greeting_persistent(state$values$querychat_greeting),
             session = session
           )
         }

@@ -41,7 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Improvements
 
-* Chat greetings now use shinychat's greeting API (requires shinychat >= 0.4.0). A provided `greeting` renders instantly when the app loads, and when no `greeting` is given one is generated on demand without being added to the conversation history. Generated greetings are now preserved across bookmark/restore. (#249)
+* Chat greetings now use shinychat's greeting API (requires shinychat >= 0.4.0). A provided `greeting` renders instantly when the app loads, and when no `greeting` is given one is generated on demand — now **schema-aware**, so it can describe the data it's about to help you explore — without being added to the conversation history. Generated greetings are preserved across bookmark/restore. Tables passed to `QueryChat()` are described in the greeting automatically; opt additional tables in with `include_in_greeting=True` on `add_table()`/`add_tables()`, or fine-tune which tables and which template the greeting uses via `qc.greeter`. (#249, #261)
 
 * The system prompt is now lighter: full schema is no longer embedded upfront. Instead the LLM fetches per-table schema on demand via the new `querychat_get_schema` tool — and only when it needs to. When a `DataDict` is provided, the tool skips columns that already have descriptions, so the LLM only pays for what isn't already documented. (#195)
 * The query tool result card now starts collapsed by default. Users can still expand it to see the SQL query and results. Set `QUERYCHAT_TOOL_DETAILS=expanded` to restore the previous behavior. (#239)

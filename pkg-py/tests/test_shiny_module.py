@@ -46,5 +46,3 @@ def test_mod_ui_allow_attachments_can_be_overridden():
     with patch("querychat._shiny_module.shinychat.chat_ui", side_effect=_fake_chat_ui):
         mod_ui("test", allow_attachments=False)
         assert _fake_chat_ui.last_kwargs.get("allow_attachments") is False
-
-

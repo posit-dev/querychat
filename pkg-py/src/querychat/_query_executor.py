@@ -47,13 +47,17 @@ class QueryExecutor(ABC):
         self, table_name: str, columns: list[ColumnMeta], categorical_threshold: int
     ) -> None: ...
 
-    def get_column_details(self, table_name: str, categorical_threshold: int) -> list[ColumnMeta]:
+    def get_column_details(
+        self, table_name: str, categorical_threshold: int
+    ) -> list[ColumnMeta]:
         metas = self.get_column_metas(table_name)
         self.populate_column_stats(table_name, metas, categorical_threshold)
         return metas
 
     def get_schema(self, table_name: str, categorical_threshold: int) -> str:
-        return format_schema(table_name, self.get_column_details(table_name, categorical_threshold))
+        return format_schema(
+            table_name, self.get_column_details(table_name, categorical_threshold)
+        )
 
     @staticmethod
     def _validate_missing_columns(
@@ -114,7 +118,9 @@ class DuckDBExecutor(QueryExecutor):
 
         if require_all_columns:
             result_columns = {desc[0] for desc in result.description}
-            self._validate_missing_columns(result_columns, self._table_columns[table_name])
+            self._validate_missing_columns(
+                result_columns, self._table_columns[table_name]
+            )
 
     def get_db_type(self) -> str:
         return "DuckDB"
@@ -161,7 +167,9 @@ class PolarsSQLExecutor(QueryExecutor):
         if require_all_columns:
             full_lf = self._ctx.execute(query)
             result_columns = set(full_lf.collect_schema().keys())
-            self._validate_missing_columns(result_columns, self._table_columns[table_name])
+            self._validate_missing_columns(
+                result_columns, self._table_columns[table_name]
+            )
 
     def get_db_type(self) -> str:
         return "Polars"
@@ -213,7 +221,9 @@ class DataSourceExecutor(QueryExecutor):
     def populate_column_stats(
         self, table_name: str, columns: list[ColumnMeta], categorical_threshold: int
     ) -> None:
-        self._data_sources[table_name].populate_column_stats(columns, categorical_threshold)
+        self._data_sources[table_name].populate_column_stats(
+            columns, categorical_threshold
+        )
 
 
 def get_shared_dataframe_backend(sources: dict[str, DataFrameSource]) -> str:

@@ -114,7 +114,9 @@ def _get_schema_impl(
             columns = executor.get_column_details(table_name, categorical_threshold)
 
         schema_text = format_schema(table_name, columns)
-        return GetSchemaResult(value=schema_text, table_name=table_name, columns=columns)
+        return GetSchemaResult(
+            value=schema_text, table_name=table_name, columns=columns
+        )
 
     return get_schema
 

@@ -96,7 +96,9 @@ class TestPinSourceSchema:
         assert lines[1] == "Columns:"
 
     def test_get_schema_categorical_values(self, board):
-        df = pd.DataFrame({"category": ["A", "B", "A", "C", "B"], "value": [1, 2, 3, 4, 5]})
+        df = pd.DataFrame(
+            {"category": ["A", "B", "A", "C", "B"], "value": [1, 2, 3, 4, 5]}
+        )
         board.pin_write(df, "cat_test", type="parquet")
         ps = PinSource(board, "cat_test")
         try:
@@ -200,9 +202,7 @@ class TestPinSourceErrors:
 
 class TestPinSourceSecurity:
     def test_duckdb_locked_down(self, parquet_source):
-        with pytest.raises(
-            duckdb.PermissionException, match="has been disabled"
-        ):
+        with pytest.raises(duckdb.PermissionException, match="has been disabled"):
             parquet_source.execute_query("SELECT * FROM read_csv_auto('/etc/passwd')")
 
     def test_blocks_unsafe_queries(self, parquet_source):
@@ -217,8 +217,11 @@ class TestQueryChatPinSourceIntegration:
         from querychat import QueryChat
 
         board.pin_write(
-            sample_df, "cars", type="parquet",
-            title="Motor Trend Cars", description="Road test data",
+            sample_df,
+            "cars",
+            type="parquet",
+            title="Motor Trend Cars",
+            description="Road test data",
         )
         ps = PinSource(board, "cars")
         qc = QueryChat(data_source=ps, table_name="cars", greeting="Hi")
@@ -233,11 +236,16 @@ class TestQueryChatPinSourceIntegration:
         from querychat import QueryChat
 
         board.pin_write(
-            sample_df, "cars", type="parquet", title="Motor Trend Cars",
+            sample_df,
+            "cars",
+            type="parquet",
+            title="Motor Trend Cars",
         )
         ps = PinSource(board, "cars")
         qc = QueryChat(
-            data_source=ps, table_name="cars", greeting="Hi",
+            data_source=ps,
+            table_name="cars",
+            greeting="Hi",
             data_description="Custom description",
         )
         try:
@@ -251,11 +259,16 @@ class TestQueryChatPinSourceIntegration:
         from querychat import QueryChat
 
         board.pin_write(
-            sample_df, "cars", type="parquet", title="Motor Trend Cars",
+            sample_df,
+            "cars",
+            type="parquet",
+            title="Motor Trend Cars",
         )
         ps = PinSource(board, "cars")
         qc = QueryChat(
-            data_source=ps, table_name="cars", greeting="Hi",
+            data_source=ps,
+            table_name="cars",
+            greeting="Hi",
             data_description="Custom description",
         )
         try:
@@ -270,7 +283,10 @@ class TestQueryChatPinSourceIntegration:
         from querychat import QueryChat
 
         board.pin_write(
-            sample_df, "cars", type="parquet", title="Motor Trend Cars",
+            sample_df,
+            "cars",
+            type="parquet",
+            title="Motor Trend Cars",
         )
         ps = PinSource(board, "cars")
         qc = QueryChat(data_source=ps, table_name="cars", greeting="Hi")

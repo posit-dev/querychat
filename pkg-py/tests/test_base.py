@@ -17,6 +17,7 @@ from querychat._querychat_base import (
     create_client,
     normalize_data_source,
     normalize_tools,
+    resolve_client,
 )
 from querychat._shiny import QueryChat
 from querychat._utils import MISSING
@@ -113,28 +114,37 @@ class TestNormalizeDataSource:
         assert "column.with.dots" in schema
 
 
-class TestNormalizeClient:
+class TestResolveClient:
     def test_with_none_uses_default(self):
-        result = create_client(None)
+        result = resolve_client(None)
         assert isinstance(result, chatlas.Chat)
 
     def test_with_string_provider(self):
-        result = create_client("openai")
+        result = resolve_client("openai")
         assert isinstance(result, chatlas.Chat)
 
     def test_with_chat_instance(self):
         chat = chatlas.ChatOpenAI()
-        result = create_client(chat)
-        assert isinstance(result, chatlas.Chat)
+        result = resolve_client(chat)
+        assert result is chat
 
     def test_respects_env_variable(self, monkeypatch):
         monkeypatch.setenv("QUERYCHAT_CLIENT", "openai")
-        result = create_client(None)
+        result = resolve_client(None)
         assert isinstance(result, chatlas.Chat)
 
     def test_with_invalid_provider_raises(self):
         with pytest.raises(ValueError, match="is not a known chatlas provider"):
-            create_client("not_a_real_provider_xyz123")
+            resolve_client("not_a_real_provider_xyz123")
+
+
+class TestCreateClient:
+    def test_clones_chat(self):
+        chat = chatlas.ChatOpenAI()
+        result = create_client(chat)
+        assert isinstance(result, chatlas.Chat)
+        assert result is not chat
+        assert len(result.get_turns()) == 0
 
 
 class TestNormalizeTools:
@@ -283,23 +293,17 @@ class TestDataDict:
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             QueryChat(df, table_name="t", data_description="some desc")
-        assert not any(issubclass(warning.category, DeprecationWarning) for warning in w)
+        assert not any(
+            issubclass(warning.category, DeprecationWarning) for warning in w
+        )
 
 
 @pytest.fixture
 def multi_table_engine():
     engine = create_engine("sqlite:///:memory:")
     with engine.connect() as conn:
-        conn.execute(
-            text(
-                "CREATE TABLE orders (id INTEGER PRIMARY KEY, amount REAL)"
-            )
-        )
-        conn.execute(
-            text(
-                "CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT)"
-            )
-        )
+        conn.execute(text("CREATE TABLE orders (id INTEGER PRIMARY KEY, amount REAL)"))
+        conn.execute(text("CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT)"))
         conn.execute(text("INSERT INTO orders VALUES (1, 99.99), (2, 49.50)"))
         conn.execute(text("INSERT INTO customers VALUES (1, 'Alice'), (2, 'Bob')"))
         conn.commit()
@@ -358,7 +362,8 @@ class TestAddTables:
             warnings.simplefilter("always")
             qc.add_tables(multi_table_engine)
         multi_table_warns = [
-            x for x in w
+            x
+            for x in w
             if issubclass(x.category, UserWarning)
             and "Multiple tables" in str(x.message)
         ]
@@ -427,7 +432,8 @@ class TestAddTablesIbis:
             warnings.simplefilter("always")
             qc.add_tables(ibis_backend_with_tables)
         multi_table_warns = [
-            x for x in w
+            x
+            for x in w
             if issubclass(x.category, UserWarning)
             and "Multiple tables" in str(x.message)
         ]

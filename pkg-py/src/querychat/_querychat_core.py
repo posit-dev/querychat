@@ -108,8 +108,6 @@ def format_tool_result(result: ContentToolResult) -> str:
     return ""
 
 
-
-
 def format_query_error(e: Exception) -> str:
     """Format a query error with helpful guidance."""
     error_msg = str(e).lower()
@@ -145,6 +143,7 @@ class AppState:
     client: Chat
     query_executor: QueryExecutor | None = None
     greeting: Optional[str] = None
+    greeting_client_factory: Optional[Callable[[], Chat]] = None
 
     active_table: str | None = None
     # sql, title, error are per-table properties backed by _table_states
@@ -245,7 +244,10 @@ class AppState:
 
             if text_parts:
                 text = "\n\n".join(text_parts)
-                # Skip the greeting prompt - it's an internal message
+                # Hide the synthetic greeting prompt that older releases injected
+                # as a user turn onto the shared client. New sessions generate
+                # greetings on a separate client and never create this turn, but
+                # state serialized by such releases still restores it verbatim.
                 if turn.role == "user" and text == GREETING_PROMPT:
                     continue
                 messages.append({"role": turn.role, "content": text})
@@ -270,6 +272,15 @@ class AppState:
             self.set_greeting(self.greeting)
             return True
         return False
+
+    def build_greeting_client(self) -> Chat:
+        """Build a fresh chat client configured with the greeting system prompt."""
+        if self.greeting_client_factory is None:
+            raise RuntimeError(
+                "greeting_client_factory is not set on this AppState. "
+                "Pass greeting_client_factory to create_app_state()."
+            )
+        return self.greeting_client_factory()
 
     def to_dict(self) -> AppStateDict:
         """Serialize state to dict for framework state stores."""
@@ -317,6 +328,7 @@ def create_app_state(
     client_factory: ClientFactory,
     greeting: Optional[str] = None,
     query_executor: QueryExecutor | None = None,
+    greeting_client_factory: Optional[Callable[[], Chat]] = None,
 ) -> AppState:
     """Create AppState with callbacks connected via holder pattern."""
     state_holder: dict[str, AppState | None] = {"state": None}
@@ -339,6 +351,7 @@ def create_app_state(
         client=client,
         query_executor=query_executor,
         greeting=greeting,
+        greeting_client_factory=greeting_client_factory,
     )
     state_holder["state"] = state
     return state

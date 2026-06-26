@@ -10,7 +10,7 @@ from shinychat import output_markdown_stream
 from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 
 from ._icons import bs_icon
-from ._querychat_base import DEFAULT_TOOLS, TOOL_GROUPS, QueryChatBase
+from ._querychat_base import DEFAULT_TOOLS, TOOL_GROUPS, QueryChatBase, resolve_client
 from ._shiny_module import ServerValues, mod_server, mod_ui
 from ._utils import MISSING, MISSING_TYPE, as_narwhals
 from ._viz_utils import has_viz_tool
@@ -330,6 +330,8 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 client=self._create_session_client,
                 enable_bookmarking=enable_bookmarking,
                 tools=self.tools,
+                greeter=self.greeter,
+                greeting_base=None,
             )
 
             @reactive.calc
@@ -439,7 +441,12 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             A UI component.
 
         """
-        return mod_ui(id or self.id, preload_viz=has_viz_tool(self.tools), greeting=self.greeting, **kwargs)
+        return mod_ui(
+            id or self.id,
+            preload_viz=has_viz_tool(self.tools),
+            greeting=self.greeting,
+            **kwargs,
+        )
 
     def server(
         self,
@@ -525,12 +532,12 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             )
 
         self._require_initialized("server")
-        resolved_client_spec = self._client_spec if isinstance(client, MISSING_TYPE) else client
+        resolved_client: chatlas.Chat | None = (
+            None if isinstance(client, MISSING_TYPE) else resolve_client(client)
+        )
 
         def create_session_client(**kwargs) -> chatlas.Chat:
-            return self._create_session_client(
-                client_spec=resolved_client_spec, **kwargs
-            )
+            return self._create_session_client(base=resolved_client, **kwargs)
 
         self._mark_server_initialized()
         return mod_server(
@@ -541,6 +548,8 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             client=create_session_client,
             enable_bookmarking=enable_bookmarking,
             tools=self.tools,
+            greeter=self.greeter,
+            greeting_base=resolved_client,
         )
 
 
@@ -821,6 +830,8 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             client=self._create_session_client,
             enable_bookmarking=self._enable_bookmarking,
             tools=self.tools,
+            greeter=self.greeter,
+            greeting_base=None,
         )
 
     def sidebar(
@@ -882,7 +893,12 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             A UI component.
 
         """
-        result = mod_ui(id or self.id, preload_viz=has_viz_tool(self.tools), greeting=self.greeting, **kwargs)
+        result = mod_ui(
+            id or self.id,
+            preload_viz=has_viz_tool(self.tools),
+            greeting=self.greeting,
+            **kwargs,
+        )
         self._ensure_server_started()
         return result
 
@@ -998,9 +1014,11 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         qc.add_table(customers, "customers")
         qc.sidebar()
 
+
         @render.data_frame
         def orders_table():
             return qc.table("orders").df()
+
 
         @render.data_frame
         def customers_table():

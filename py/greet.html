@@ -290,6 +290,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <ul>
   <li><a href="#provide-a-greeting" id="toc-provide-a-greeting" class="nav-link active" data-scroll-target="#provide-a-greeting">Provide a greeting</a></li>
   <li><a href="#generate-a-greeting" id="toc-generate-a-greeting" class="nav-link" data-scroll-target="#generate-a-greeting">Generate a greeting</a></li>
+  <li><a href="#greetings-with-multiple-tables" id="toc-greetings-with-multiple-tables" class="nav-link" data-scroll-target="#greetings-with-multiple-tables">Greetings with multiple tables</a></li>
   </ul>
 <div class="toc-actions"><ul><li><a href="https://github.com/posit-dev/querychat/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li><li><a href="https://github.com/posit-dev/querychat/edit/main/pkg-py/docs/greet.qmd" class="toc-action"><i class="bi empty"></i>Edit this page</a></li></ul></div></nav>
     </div>
@@ -385,6 +386,22 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>app <span class="op">=</span> qc.app()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
+</section>
+<section id="greetings-with-multiple-tables" class="level3">
+<h3 class="anchored" data-anchor-id="greetings-with-multiple-tables">Greetings with multiple tables</h3>
+<p>The generated greeting is <em>schema-aware</em>: querychat shares the schema of the relevant tables with the model so the opening message can describe the data it’s about to help you explore. Tables passed to <code>QueryChat()</code> are included in the greeting automatically.</p>
+<p>Tables added later with <code>add_table()</code> or <code>add_tables()</code> are <strong>not</strong> included by default — pass <code>include_in_greeting=True</code> to opt them in:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(orders, <span class="st">"orders"</span>)              <span class="co"># included automatically</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>qc.add_table(customers, <span class="st">"customers"</span>)          <span class="co"># not included by default</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>qc.add_table(products, <span class="st">"products"</span>, include_in_greeting<span class="op">=</span><span class="va">True</span>)  <span class="co"># opted in</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>qc.greeter.tables</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; ['orders', 'products']</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>For <code>add_tables()</code>, <code>include_in_greeting</code> can also be a list of names selecting which of the added tables to include:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>qc.add_tables(engine, include_in_greeting<span class="op">=</span>[<span class="st">"orders"</span>, <span class="st">"customers"</span>])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>You can also set the included tables directly, or swap in a custom greeting template, through <code>qc.greeter</code>:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>qc.greeter.tables <span class="op">=</span> [<span class="st">"orders"</span>, <span class="st">"customers"</span>]</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>qc.greeter.prompt <span class="op">=</span> <span class="st">"my-greeting-template.md"</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 
 
 </section>

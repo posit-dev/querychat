@@ -461,6 +461,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>Removed. Use <code>add_table()</code> and <code>remove_table()</code> to manage tables.</td>
 </tr>
 <tr class="even">
+<td><a href="#querychat.QueryChat.greeter">greeter</a></td>
+<td>Greeting configuration and generator for this QueryChat instance.</td>
+</tr>
+<tr class="odd">
 <td><a href="#querychat.QueryChat.system_prompt">system_prompt</a></td>
 <td>Get the system prompt.</td>
 </tr>
@@ -529,7 +533,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </table>
 <section id="querychat.QueryChat.add_table" class="level3">
 <h3 class="anchored" data-anchor-id="querychat.QueryChat.add_table">add_table</h3>
-<div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>QueryChat.add_table(data_source, table_name, <span class="op">*</span>, replace<span class="op">=</span><span class="va">False</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>QueryChat.add_table(</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>    data_source,</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    table_name,</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">*</span>,</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    replace<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>    include_in_greeting<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Add or replace a table in the QueryChat instance.</p>
 <section id="parameters-1" class="level4 doc-section doc-section-parameters">
 <h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-1">Parameters</h4>
@@ -561,6 +571,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>If True, replace an existing table with the same name. If False (default), raise ValueError if the table already exists.</td>
 <td><code>False</code></td>
 </tr>
+<tr class="even">
+<td>include_in_greeting</td>
+<td><a href="https://docs.python.org/3/library/functions.html#bool">bool</a></td>
+<td>If True, include this table’s schema in the greeting system prompt.</td>
+<td><code>False</code></td>
+</tr>
 </tbody>
 </table>
 </section>
@@ -577,10 +593,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td></td>
+<td><a href="https://docs.python.org/3/library/exceptions.html#TypeError">TypeError</a></td>
+<td>If include_in_greeting is not a bool.</td>
+</tr>
+<tr class="even">
+<td></td>
 <td><a href="https://docs.python.org/3/library/exceptions.html#ValueError">ValueError</a></td>
 <td>If table_name already exists (and replace=False) or is invalid.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td></td>
 <td><a href="https://docs.python.org/3/library/exceptions.html#RuntimeError">RuntimeError</a></td>
 <td>If called after server() has been invoked.</td>
@@ -591,7 +612,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="querychat.QueryChat.add_tables" class="level3">
 <h3 class="anchored" data-anchor-id="querychat.QueryChat.add_tables">add_tables</h3>
-<div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>QueryChat.add_tables(data_source, tables<span class="op">=</span><span class="va">None</span>, <span class="op">*</span>, replace<span class="op">=</span><span class="va">False</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>QueryChat.add_tables(</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    data_source,</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    tables<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">*</span>,</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    replace<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    include_in_greeting<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Add multiple tables from a SQLAlchemy engine or Ibis backend in a single call.</p>
 <p>Unlike calling :meth:<code>add_table</code> repeatedly, this method builds the system prompt exactly once after all tables have been staged, avoiding N-1 spurious intermediate rebuilds.</p>
 <section id="parameters-2" class="level4 doc-section doc-section-parameters">
@@ -622,6 +649,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>replace</td>
 <td><a href="https://docs.python.org/3/library/functions.html#bool">bool</a></td>
 <td>If <code>True</code>, replace any existing table whose name appears in <code>tables</code>. If <code>False</code> (default), raise <code>ValueError</code> if any name already exists.</td>
+<td><code>False</code></td>
+</tr>
+<tr class="even">
+<td>include_in_greeting</td>
+<td><a href="https://docs.python.org/3/library/functions.html#bool">bool</a> | <a href="https://docs.python.org/3/library/stdtypes.html#list">list</a>[<a href="https://docs.python.org/3/library/stdtypes.html#str">str</a>]</td>
+<td><code>True</code> to include all added tables in the greeting, <code>False</code> (default) for none, or a list of table names to include. Any other type raises <code>TypeError</code>.</td>
 <td><code>False</code></td>
 </tr>
 </tbody>

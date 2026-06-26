@@ -465,6 +465,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>Removed. Use <code>add_table()</code> and <code>remove_table()</code> to manage tables.</td>
 </tr>
 <tr class="even">
+<td><a href="#querychat.express.QueryChat.greeter">greeter</a></td>
+<td>Greeting configuration and generator for this QueryChat instance.</td>
+</tr>
+<tr class="odd">
 <td><a href="#querychat.express.QueryChat.system_prompt">system_prompt</a></td>
 <td>Get the system prompt.</td>
 </tr>
@@ -545,7 +549,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </table>
 <section id="querychat.express.QueryChat.add_table" class="level3">
 <h3 class="anchored" data-anchor-id="querychat.express.QueryChat.add_table">add_table</h3>
-<div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>express.QueryChat.add_table(data_source, table_name, <span class="op">*</span>, replace<span class="op">=</span><span class="va">False</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>express.QueryChat.add_table(</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    data_source,</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    table_name,</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">*</span>,</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    replace<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    include_in_greeting<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Add or replace a table in the QueryChat instance.</p>
 <section id="parameters-1" class="level4 doc-section doc-section-parameters">
 <h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-1">Parameters</h4>
@@ -577,6 +587,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>If True, replace an existing table with the same name. If False (default), raise ValueError if the table already exists.</td>
 <td><code>False</code></td>
 </tr>
+<tr class="even">
+<td>include_in_greeting</td>
+<td><a href="https://docs.python.org/3/library/functions.html#bool">bool</a></td>
+<td>If True, include this table’s schema in the greeting system prompt.</td>
+<td><code>False</code></td>
+</tr>
 </tbody>
 </table>
 </section>
@@ -593,10 +609,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td></td>
+<td><a href="https://docs.python.org/3/library/exceptions.html#TypeError">TypeError</a></td>
+<td>If include_in_greeting is not a bool.</td>
+</tr>
+<tr class="even">
+<td></td>
 <td><a href="https://docs.python.org/3/library/exceptions.html#ValueError">ValueError</a></td>
 <td>If table_name already exists (and replace=False) or is invalid.</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td></td>
 <td><a href="https://docs.python.org/3/library/exceptions.html#RuntimeError">RuntimeError</a></td>
 <td>If called after server() has been invoked.</td>
@@ -607,7 +628,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="querychat.express.QueryChat.add_tables" class="level3">
 <h3 class="anchored" data-anchor-id="querychat.express.QueryChat.add_tables">add_tables</h3>
-<div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>express.QueryChat.add_tables(data_source, tables<span class="op">=</span><span class="va">None</span>, <span class="op">*</span>, replace<span class="op">=</span><span class="va">False</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>express.QueryChat.add_tables(</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>    data_source,</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>    tables<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>    <span class="op">*</span>,</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    replace<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    include_in_greeting<span class="op">=</span><span class="va">False</span>,</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Add multiple tables from a SQLAlchemy engine or Ibis backend in a single call.</p>
 <p>Unlike calling :meth:<code>add_table</code> repeatedly, this method builds the system prompt exactly once after all tables have been staged, avoiding N-1 spurious intermediate rebuilds.</p>
 <section id="parameters-2" class="level4 doc-section doc-section-parameters">
@@ -638,6 +665,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>replace</td>
 <td><a href="https://docs.python.org/3/library/functions.html#bool">bool</a></td>
 <td>If <code>True</code>, replace any existing table whose name appears in <code>tables</code>. If <code>False</code> (default), raise <code>ValueError</code> if any name already exists.</td>
+<td><code>False</code></td>
+</tr>
+<tr class="even">
+<td>include_in_greeting</td>
+<td><a href="https://docs.python.org/3/library/functions.html#bool">bool</a> | <a href="https://docs.python.org/3/library/stdtypes.html#list">list</a>[<a href="https://docs.python.org/3/library/stdtypes.html#str">str</a>]</td>
+<td><code>True</code> to include all added tables in the greeting, <code>False</code> (default) for none, or a list of table names to include. Any other type raises <code>TypeError</code>.</td>
 <td><code>False</code></td>
 </tr>
 </tbody>
@@ -1055,13 +1088,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>qc.add_table(customers, <span class="st">"customers"</span>)</span>
 <span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>qc.sidebar()</span>
 <span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a><span class="at">@render.data_frame</span></span>
-<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> orders_table():</span>
-<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> qc.table(<span class="st">"orders"</span>).df()</span>
-<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a><span class="at">@render.data_frame</span></span>
-<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> customers_table():</span>
-<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> qc.table(<span class="st">"customers"</span>).df()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a><span class="at">@render.data_frame</span></span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> orders_table():</span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> qc.table(<span class="st">"orders"</span>).df()</span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a><span class="at">@render.data_frame</span></span>
+<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> customers_table():</span>
+<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> qc.table(<span class="st">"customers"</span>).df()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </section>
 </section>
 <section id="querychat.express.QueryChat.table_names" class="level3">

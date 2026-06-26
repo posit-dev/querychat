@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, Optional, overload
 from narwhals.stable.v1.typing import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
 from shiny.express._stub_session import ExpressStubSession
 from shiny.session import get_current_session
-from shinychat import output_markdown_stream
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 
@@ -297,8 +296,11 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                                 ui.output_text("query_title", inline=True),
                                 class_="d-flex align-items-center gap-2",
                             ),
-                            ui.output_ui("ui_reset", inline=True),
-                            class_="hstack gap-3",
+                            ui.div(
+                                ui.output_ui("ui_reset", inline=True),
+                                class_="ms-auto",
+                            ),
+                            class_="hstack gap-3 w-100",
                         ),
                     ),
                     ui.output_ui("sql_output"),
@@ -321,7 +323,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         def app_server(input: Inputs, output: Outputs, session: Session):
             self._mark_server_initialized()
             if enable_bookmarking:
-                session.bookmark.exclude.append("reset_query")
+                session.bookmark.exclude.extend(["reset_query", "sql_editor"])
             vals = mod_server(
                 self.id,
                 data_sources=dict(self._data_sources),
@@ -368,16 +370,35 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 # Collect lazy sources (LazyFrame, Ibis Table) to eager DataFrame
                 return as_narwhals(vals.table(active_table_name()).df())
 
+            def sql_text_for_editor(name: str) -> str:
+                return vals.table(name).sql() or f"SELECT * FROM {name}"
+
             @render.ui
             def sql_output():
                 name = active_table_name()
-                sql_value = vals.table(name).sql() or f"SELECT * FROM {name}"
-                sql_code = f"```sql\n{sql_value}\n```"
-                return output_markdown_stream(
-                    "sql_code",
-                    content=sql_code,
-                    auto_scroll=False,
-                    width="100%",
+                with reactive.isolate():
+                    sql_text = sql_text_for_editor(name)
+                return ui.input_code_editor(
+                    "sql_editor",
+                    value=sql_text,
+                    language="sql",
+                    line_numbers=False,
+                    height="auto",
+                )
+
+            @reactive.effect
+            def sync_sql_editor():
+                name = active_table_name()
+                ui.update_code_editor("sql_editor", value=sql_text_for_editor(name))
+
+            @reactive.effect
+            @reactive.event(input.sql_editor)
+            def _():
+                name = active_table_name()
+                query = input.sql_editor()
+                default_query = f"SELECT * FROM {name}"
+                vals._tables[name].sql.set(
+                    query if query and query.strip() != default_query else None
                 )
 
         return App(app_ui, app_server, bookmark_store=bookmark_store)

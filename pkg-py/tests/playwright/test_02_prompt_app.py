@@ -6,6 +6,7 @@ Tests the example that uses custom greeting and data description files.
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 
 import pytest
@@ -42,8 +43,8 @@ class Test02PromptApp:
 
     def test_default_sql_query_shown(self) -> None:
         """INIT-03: SQL panel shows default query."""
-        sql_code = self.page.locator("pre code").first
-        expect(sql_code).to_contain_text("SELECT * FROM titanic")
+        sql_code = self.page.locator("bslib-code-editor#sql_editor textarea")
+        expect(sql_code).to_have_value(re.compile(r"SELECT \* FROM titanic"))
 
     def test_chat_input_visible(self) -> None:
         """INIT-04: Chat input is visible."""

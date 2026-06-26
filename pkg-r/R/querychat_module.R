@@ -633,7 +633,11 @@ restore_record_list <- function(x) {
 # absent, so bookmarked or server-restored cards created before the rename
 # still render correctly.
 migrate_card_fields <- function(card) {
-  if (!is.null(card$caption) && is.null(card$text) && !identical(card$display, "markdown")) {
+  if (
+    !is.null(card$caption) &&
+      is.null(card$text) &&
+      !identical(card$display, "markdown")
+  ) {
     card$text <- card$caption
   }
   card$caption <- NULL
@@ -767,9 +771,7 @@ render_card_value_box <- function(card, executor, session) {
   showcase <- if (!is.null(effective_icon) && nzchar(effective_icon)) {
     bsicons::bs_icon(effective_icon)
   }
-  subtitle_content <- if (
-    !is.null(effective_text) && nzchar(effective_text)
-  ) {
+  subtitle_content <- if (!is.null(effective_text) && nzchar(effective_text)) {
     shiny::p(effective_text)
   }
 

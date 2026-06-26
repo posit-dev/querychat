@@ -832,7 +832,10 @@ QueryChat <- R6::R6Class(
 
         shiny::observe(label = "sync_sql_editor", {
           name <- active_table_name()
-          bslib::update_code_editor("sql_editor", value = sql_text_for_editor(name))
+          bslib::update_code_editor(
+            "sql_editor",
+            value = sql_text_for_editor(name)
+          )
         })
 
         shiny::observeEvent(input$sql_editor, label = "on_sql_editor", {
@@ -840,7 +843,11 @@ QueryChat <- R6::R6Class(
           query <- input$sql_editor
           default_query <- paste("SELECT * FROM", name)
           qc_vals$.tables[[name]]$sql(
-            if (nzchar(query %||% "") && trimws(query) != default_query) query else NULL
+            if (nzchar(query %||% "") && trimws(query) != default_query) {
+              query
+            } else {
+              NULL
+            }
           )
         })
 

@@ -76,3 +76,40 @@ querychat_app(
   greeting = "penguins_greeting.md"
 )
 ```
+
+## Greetings with multiple tables
+
+The generated greeting is *schema-aware*: querychat shares the schema of
+the relevant tables with the model so the opening message can describe
+the data it’s about to help you explore. Tables passed to
+`QueryChat$new()` are included in the greeting automatically.
+
+Tables added later with `$add_table()` or `$add_tables()` are **not**
+included by default — pass `include_in_greeting = TRUE` to opt them in:
+
+``` r
+
+qc <- QueryChat$new(orders, "orders")             # included automatically
+qc$add_table(customers, "customers")              # not included by default
+qc$add_table(products, "products", include_in_greeting = TRUE)  # opted in
+
+qc$greeter$tables
+#> [1] "orders"   "products"
+```
+
+For `$add_tables()`, `include_in_greeting` can also be a character
+vector naming which of the added tables to include:
+
+``` r
+
+qc$add_tables(con, include_in_greeting = c("orders", "customers"))
+```
+
+You can also set the included tables directly, or swap in a custom
+greeting template, through `qc$greeter`:
+
+``` r
+
+qc$greeter$tables <- c("orders", "customers")
+qc$greeter$prompt <- "my-greeting-template.md"
+```

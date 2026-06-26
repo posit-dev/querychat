@@ -66,10 +66,17 @@
 
 - Chat greetings now use shinychat’s greeting API (requires shinychat
   \>= 0.4.0). A provided `greeting` renders instantly when the app
-  loads, and when no `greeting` is given one is generated on demand
-  without being added to the conversation history. Generated greetings
-  are now preserved across bookmark/restore.
-  ([\#249](https://github.com/posit-dev/querychat/issues/249))
+  loads, and when no `greeting` is given one is generated on demand —
+  now **schema-aware**, so it can describe the data it’s about to help
+  you explore — without being added to the conversation history.
+  Generated greetings are preserved across bookmark/restore. Tables
+  passed to `QueryChat$new()` are described in the greeting
+  automatically; opt additional tables in with
+  `include_in_greeting = TRUE` on `$add_table()`/`$add_tables()`, or
+  fine-tune which tables and which template the greeting uses via
+  `qc$greeter`.
+  ([\#249](https://github.com/posit-dev/querychat/issues/249),
+  [\#261](https://github.com/posit-dev/querychat/issues/261))
 
 - The system prompt is now lighter: full schema is no longer embedded
   upfront. Instead the LLM fetches per-table schema on demand via the
@@ -77,6 +84,12 @@
   `data_dict` is provided, the tool skips columns that already have
   descriptions, so the LLM only pays for what isn’t already documented.
   ([\#195](https://github.com/posit-dev/querychat/issues/195))
+
+- Fixed `data_description` and `extra_instructions` being HTML-escaped
+  in the system prompt. Special characters like `<`, `>`, and `&` in
+  developer-provided descriptions and instructions are now passed to the
+  LLM verbatim.
+  ([\#258](https://github.com/posit-dev/querychat/issues/258))
 
 ## querychat 0.3.0
 

@@ -146,7 +146,12 @@ values (use <code>qc_vals$table("name")</code> for multi-table access)</p></li>
     </div>
     <div class="section level2">
     <h2 id="active-bindings">Active bindings<a class="anchor" aria-label="anchor" href="#active-bindings"></a></h2>
-    <p></p><div class="r6-active-bindings"><dl><dt><code>system_prompt</code></dt>
+    <p></p><div class="r6-active-bindings"><dl><dt><code>greeter</code></dt>
+<dd><p>The QueryChatGreeter controlling greeting generation;
+access its <code>$tables</code> and <code>$prompt</code>.</p></dd>
+
+
+    <dt><code>system_prompt</code></dt>
 <dd><p>Get the system prompt.</p></dd>
 
 
@@ -284,7 +289,12 @@ or <code>FALSE</code> to never clean up automatically.</p></dd>
 <h3 id="querychat-add-table-"><code>QueryChat$add_table()</code><a class="anchor" aria-label="anchor" href="#querychat-add-table-"></a></h3>
 <p>Add a table to this QueryChat instance.</p><div class="section">
 <h4 id="usage-1">Usage<a class="anchor" aria-label="anchor" href="#usage-1"></a></h4>
-<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">QueryChat</span><span class="op">$</span><span class="fu">add_table</span><span class="op">(</span><span class="va">data_source</span>, <span class="va">table_name</span>, replace <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div><p></p></div>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">QueryChat</span><span class="op">$</span><span class="fu">add_table</span><span class="op">(</span></span>
+<span>  <span class="va">data_source</span>,</span>
+<span>  <span class="va">table_name</span>,</span>
+<span>  replace <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  include_in_greeting <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div><p></p><div class="section">
 <h4 id="arguments-1">Arguments<a class="anchor" aria-label="anchor" href="#arguments-1"></a></h4>
 <p></p><div class="arguments"><dl><dt><code>data_source</code></dt>
@@ -296,6 +306,10 @@ or <code>FALSE</code> to never clean up automatically.</p></dd>
       <dt><code>replace</code></dt>
 <dd><p>Whether to replace an existing table with this name.
 Default is <code>FALSE</code>.</p></dd>
+
+      <dt><code>include_in_greeting</code></dt>
+<dd><p>Whether to include this table in the greeting
+context. Default is <code>FALSE</code>.</p></dd>
 
 
 </dl><p></p></div>
@@ -313,7 +327,12 @@ Default is <code>FALSE</code>.</p></dd>
 system prompt exactly once after all tables have been staged, avoiding
 N-1 spurious intermediate rebuilds.</p><div class="section">
 <h4 id="usage-2">Usage<a class="anchor" aria-label="anchor" href="#usage-2"></a></h4>
-<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">QueryChat</span><span class="op">$</span><span class="fu">add_tables</span><span class="op">(</span><span class="va">conn</span>, tables <span class="op">=</span> <span class="cn">NULL</span>, replace <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div><p></p></div>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">QueryChat</span><span class="op">$</span><span class="fu">add_tables</span><span class="op">(</span></span>
+<span>  <span class="va">conn</span>,</span>
+<span>  tables <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  replace <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  include_in_greeting <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div><p></p><div class="section">
 <h4 id="arguments-2">Arguments<a class="anchor" aria-label="anchor" href="#arguments-2"></a></h4>
 <p></p><div class="arguments"><dl><dt><code>conn</code></dt>
@@ -327,6 +346,12 @@ by <code>DBI::dbListTables(conn)</code> are used.</p></dd>
       <dt><code>replace</code></dt>
 <dd><p>Whether to replace existing tables with the same name.
 Default is <code>FALSE</code>.</p></dd>
+
+      <dt><code>include_in_greeting</code></dt>
+<dd><p>Whether to include added tables in the greeting
+context. <code>TRUE</code> includes all tables; <code>FALSE</code> (default) includes none;
+a character vector includes only those named tables (intersected with
+the tables being added). Any other type raises an error.</p></dd>
 
 
 </dl><p></p></div>

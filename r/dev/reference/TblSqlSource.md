@@ -244,7 +244,7 @@ result <- mtcars_source$execute_query("SELECT * FROM mtcars WHERE cyl > 4")
 # Note, the result is not the *full* data frame, but a lazy SQL tibble
 result
 #> # A query:  ?? x 11
-#> # Database: DuckDB 1.5.4 [unknown@Linux 6.17.0-1018-azure:R 4.6.0/:memory:]
+#> # Database: DuckDB 1.5.4 [unknown@Linux 6.17.0-1018-azure:R 4.6.1/:memory:]
 #>      mpg   cyl  disp    hp  drat    wt  qsec    vs    am  gear  carb
 #>    <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl>
 #>  1  21       6  160    110  3.9   2.62  16.5     0     1     4     4
@@ -262,7 +262,7 @@ result
 # You can chain this result into a dplyr pipeline
 dplyr::count(result, cyl, gear)
 #> # A query:  ?? x 3
-#> # Database: DuckDB 1.5.4 [unknown@Linux 6.17.0-1018-azure:R 4.6.0/:memory:]
+#> # Database: DuckDB 1.5.4 [unknown@Linux 6.17.0-1018-azure:R 4.6.1/:memory:]
 #>     cyl  gear     n
 #>   <dbl> <dbl> <dbl>
 #> 1     6     3     2

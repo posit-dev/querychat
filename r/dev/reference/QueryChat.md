@@ -64,6 +64,11 @@ connection) as input and provides methods to:
 
 ## Active bindings
 
+- `greeter`:
+
+  The QueryChatGreeter controlling greeting generation; access its
+  `$tables` and `$prompt`.
+
 - `system_prompt`:
 
   Get the system prompt.
@@ -238,7 +243,12 @@ Add a table to this QueryChat instance.
 
 #### Usage
 
-    QueryChat$add_table(data_source, table_name, replace = FALSE)
+    QueryChat$add_table(
+      data_source,
+      table_name,
+      replace = FALSE,
+      include_in_greeting = FALSE
+    )
 
 #### Arguments
 
@@ -253,6 +263,11 @@ Add a table to this QueryChat instance.
 - `replace`:
 
   Whether to replace an existing table with this name. Default is
+  `FALSE`.
+
+- `include_in_greeting`:
+
+  Whether to include this table in the greeting context. Default is
   `FALSE`.
 
 #### Returns
@@ -271,7 +286,12 @@ spurious intermediate rebuilds.
 
 #### Usage
 
-    QueryChat$add_tables(conn, tables = NULL, replace = FALSE)
+    QueryChat$add_tables(
+      conn,
+      tables = NULL,
+      replace = FALSE,
+      include_in_greeting = FALSE
+    )
 
 #### Arguments
 
@@ -289,6 +309,13 @@ spurious intermediate rebuilds.
 
   Whether to replace existing tables with the same name. Default is
   `FALSE`.
+
+- `include_in_greeting`:
+
+  Whether to include added tables in the greeting context. `TRUE`
+  includes all tables; `FALSE` (default) includes none; a character
+  vector includes only those named tables (intersected with the tables
+  being added). Any other type raises an error.
 
 #### Returns
 

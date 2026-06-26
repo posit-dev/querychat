@@ -730,7 +730,7 @@ QueryChat <- R6::R6Class(
             style = bslib::css(max_height = "33%"),
             bslib::card_header(
               shiny::div(
-                class = "hstack",
+                class = "hstack w-100",
                 shiny::div(
                   bsicons::bs_icon("terminal-fill"),
                   shiny::textOutput("query_title", inline = TRUE)
@@ -764,7 +764,11 @@ QueryChat <- R6::R6Class(
       }
 
       server <- function(input, output, session) {
-        shiny::setBookmarkExclude(c("close_btn", "reset_query"))
+        shiny::setBookmarkExclude(c(
+          "close_btn",
+          "reset_query",
+          "sql_editor"
+        ))
         enable_bookmarking <- bookmark_store %in% c("url", "server")
         qc_vals <- self$server(enable_bookmarking = enable_bookmarking)
 
@@ -809,20 +813,34 @@ QueryChat <- R6::R6Class(
           )
         })
 
+        sql_text_for_editor <- function(name) {
+          sql <- qc_vals$.tables[[name]]$sql()
+          if (shiny::isTruthy(sql)) sql else paste("SELECT * FROM", name)
+        }
+
         output$sql_output <- shiny::renderUI({
           name <- active_table_name()
-          sql <- qc_vals$.tables[[name]]$sql()
-          sql_text <- if (shiny::isTruthy(sql)) {
-            sql
-          } else {
-            paste("SELECT * FROM", name)
-          }
-          sql_code <- paste(c("```sql", sql_text, "```"), collapse = "\n")
-          shinychat::output_markdown_stream(
-            "sql_code",
-            content = sql_code,
-            auto_scroll = FALSE,
-            width = "100%"
+          sql_text <- shiny::isolate(sql_text_for_editor(name))
+          bslib::input_code_editor(
+            "sql_editor",
+            value = sql_text,
+            language = "sql",
+            line_numbers = FALSE,
+            height = "auto"
+          )
+        })
+
+        shiny::observe(label = "sync_sql_editor", {
+          name <- active_table_name()
+          bslib::update_code_editor("sql_editor", value = sql_text_for_editor(name))
+        })
+
+        shiny::observeEvent(input$sql_editor, label = "on_sql_editor", {
+          name <- active_table_name()
+          query <- input$sql_editor
+          default_query <- paste("SELECT * FROM", name)
+          qc_vals$.tables[[name]]$sql(
+            if (nzchar(query %||% "") && trimws(query) != default_query) query else NULL
           )
         })
 

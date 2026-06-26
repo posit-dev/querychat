@@ -43,6 +43,12 @@ as_querychat_client <- function(client = NULL) {
   client
 }
 
+create_client <- function(client = NULL) {
+  chat <- as_querychat_client(client)$clone()
+  chat$set_turns(list())
+  chat
+}
+
 querychat_client_option <- function() {
   opt <- getOption("querychat.client", NULL)
   if (!is.null(opt)) {

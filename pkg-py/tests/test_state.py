@@ -62,7 +62,9 @@ class TestAppState:
 
     def test_with_greeting(self, data_source, mock_client):
         state = AppState(
-            data_sources={"test_table": data_source}, client=mock_client, greeting="Welcome!"
+            data_sources={"test_table": data_source},
+            client=mock_client,
+            greeting="Welcome!",
         )
         assert state.greeting == "Welcome!"
 
@@ -259,14 +261,25 @@ class TestAppState:
         )
 
         state.update_dashboard(
-            {"table": "orders", "query": "SELECT * FROM orders WHERE amount > 100", "title": "Big orders"}
+            {
+                "table": "orders",
+                "query": "SELECT * FROM orders WHERE amount > 100",
+                "title": "Big orders",
+            }
         )
         state.update_dashboard(
-            {"table": "customers", "query": "SELECT * FROM customers WHERE state = 'CA'", "title": "CA customers"}
+            {
+                "table": "customers",
+                "query": "SELECT * FROM customers WHERE state = 'CA'",
+                "title": "CA customers",
+            }
         )
 
         # orders' filter should still be intact
-        assert state._table_states["orders"]["sql"] == "SELECT * FROM orders WHERE amount > 100"
+        assert (
+            state._table_states["orders"]["sql"]
+            == "SELECT * FROM orders WHERE amount > 100"
+        )
         assert state._table_states["orders"]["title"] == "Big orders"
         # customers is now active
         assert state.active_table == "customers"
@@ -286,17 +299,31 @@ class TestAppState:
             query_executor=qc._require_query_executor("test"),
         )
         state.update_dashboard(
-            {"table": "orders", "query": "SELECT * FROM orders WHERE amount > 100", "title": "Big orders"}
+            {
+                "table": "orders",
+                "query": "SELECT * FROM orders WHERE amount > 100",
+                "title": "Big orders",
+            }
         )
         state.update_dashboard(
-            {"table": "customers", "query": "SELECT * FROM customers WHERE state = 'CA'", "title": "CA customers"}
+            {
+                "table": "customers",
+                "query": "SELECT * FROM customers WHERE state = 'CA'",
+                "title": "CA customers",
+            }
         )
 
         result = state.to_dict()
 
         assert "table_states" in result
-        assert result["table_states"]["orders"]["sql"] == "SELECT * FROM orders WHERE amount > 100"
-        assert result["table_states"]["customers"]["sql"] == "SELECT * FROM customers WHERE state = 'CA'"
+        assert (
+            result["table_states"]["orders"]["sql"]
+            == "SELECT * FROM orders WHERE amount > 100"
+        )
+        assert (
+            result["table_states"]["customers"]["sql"]
+            == "SELECT * FROM customers WHERE state = 'CA'"
+        )
 
     def test_update_from_dict_restores_per_table_states(self, mock_client):
         """update_from_dict() should restore all tables' sql/title/error."""
@@ -318,8 +345,16 @@ class TestAppState:
                 "title": "CA customers",
                 "error": None,
                 "table_states": {
-                    "orders": {"sql": "SELECT * FROM orders WHERE amount > 100", "title": "Big orders", "error": None},
-                    "customers": {"sql": "SELECT * FROM customers WHERE state = 'CA'", "title": "CA customers", "error": None},
+                    "orders": {
+                        "sql": "SELECT * FROM orders WHERE amount > 100",
+                        "title": "Big orders",
+                        "error": None,
+                    },
+                    "customers": {
+                        "sql": "SELECT * FROM customers WHERE state = 'CA'",
+                        "title": "CA customers",
+                        "error": None,
+                    },
                 },
                 "turns": [],
             }
@@ -327,7 +362,10 @@ class TestAppState:
 
         assert state.active_table == "customers"
         assert state.sql == "SELECT * FROM customers WHERE state = 'CA'"
-        assert state._table_states["orders"]["sql"] == "SELECT * FROM orders WHERE amount > 100"
+        assert (
+            state._table_states["orders"]["sql"]
+            == "SELECT * FROM orders WHERE amount > 100"
+        )
         assert state._table_states["orders"]["title"] == "Big orders"
 
 
@@ -555,6 +593,23 @@ class TestGetDisplayMessages:
         assert len(messages) == 2
         assert messages[0] == {"role": "user", "content": "Question"}
         assert messages[1] == {"role": "assistant", "content": "Answer"}
+
+    def test_legacy_greeting_prompt_turn_is_hidden(self, data_source, mock_client):
+        """
+        State serialized by older releases injected GREETING_PROMPT as a user
+        turn on the shared client; it must stay hidden after restore.
+        """
+        from chatlas import Turn
+        from querychat._querychat_core import GREETING_PROMPT
+
+        turns = [
+            Turn(role="user", contents=GREETING_PROMPT),
+            Turn(role="assistant", contents="Welcome!"),
+        ]
+        mock_client.get_turns.return_value = turns
+        state = AppState(data_sources={"test_table": data_source}, client=mock_client)
+        messages = state.get_display_messages()
+        assert messages == [{"role": "assistant", "content": "Welcome!"}]
 
 
 class TestTypedDicts:

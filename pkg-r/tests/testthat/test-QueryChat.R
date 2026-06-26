@@ -1039,3 +1039,276 @@ describe("QueryChat$add_tables()", {
     expect_length(multi_table_warns, 1L)
   })
 })
+
+describe("QueryChatGreeter", {
+  skip_if_no_dataframe_engine()
+
+  local_multi_table_conn_greeter <- function(env = parent.frame()) {
+    skip_if_not_installed("RSQLite")
+    conn <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
+    withr::defer(DBI::dbDisconnect(conn), envir = env)
+    DBI::dbWriteTable(
+      conn,
+      "orders",
+      data.frame(id = 1:2, amount = c(9.99, 4.50))
+    )
+    DBI::dbWriteTable(
+      conn,
+      "customers",
+      data.frame(id = 1:2, name = c("Alice", "Bob"))
+    )
+    conn
+  }
+
+  it("constructor table is always present in greeter$tables", {
+    qc <- local_querychat(new_test_df(), "test_table", greeting = "hi")
+    expect_true("test_table" %in% qc$greeter$tables)
+  })
+
+  it("user-supplied greeting survives construction and mutation of greeter fields", {
+    qc <- local_querychat(
+      new_test_df(),
+      "test_table",
+      greeting = "Preset greeting"
+    )
+    expect_equal(qc$greeting, "Preset greeting")
+
+    qc$greeter$tables <- c("test_table", "other")
+    expect_equal(qc$greeting, "Preset greeting")
+
+    qc$greeter$prompt <- "New prompt text"
+    expect_equal(qc$greeting, "Preset greeting")
+  })
+
+  it("add_table with include_in_greeting = TRUE adds to greeter$tables", {
+    qc <- local_querychat(new_test_df(), "base_table", greeting = "hi")
+    extra <- new_test_df()
+    qc$add_table(extra, "extra_table", include_in_greeting = TRUE)
+    expect_true("extra_table" %in% qc$greeter$tables)
+  })
+
+  it("add_table with default include_in_greeting does NOT add to greeter$tables", {
+    qc <- local_querychat(new_test_df(), "base_table", greeting = "hi")
+    extra <- new_test_df()
+    qc$add_table(extra, "hidden_table")
+    expect_false("hidden_table" %in% qc$greeter$tables)
+  })
+
+  it("add_table with non-logical include_in_greeting errors", {
+    qc <- local_querychat(new_test_df(), "base_table", greeting = "hi")
+    extra <- new_test_df()
+    expect_error(
+      qc$add_table(extra, "extra_table", include_in_greeting = "yes"),
+      "include_in_greeting"
+    )
+  })
+
+  it("add_tables with include_in_greeting = TRUE adds all tables", {
+    conn <- local_multi_table_conn_greeter()
+    qc <- QueryChat$new(NULL, "placeholder", greeting = "hi")
+    suppressWarnings(qc$add_tables(conn, include_in_greeting = TRUE))
+    expect_true("orders" %in% qc$greeter$tables)
+    expect_true("customers" %in% qc$greeter$tables)
+  })
+
+  it("add_tables with include_in_greeting = FALSE adds no tables to greeter", {
+    conn <- local_multi_table_conn_greeter()
+    qc <- QueryChat$new(NULL, "placeholder", greeting = "hi")
+    suppressWarnings(qc$add_tables(conn, include_in_greeting = FALSE))
+    expect_false("orders" %in% qc$greeter$tables)
+    expect_false("customers" %in% qc$greeter$tables)
+  })
+
+  it("add_tables with include_in_greeting as character includes only named subset", {
+    conn <- local_multi_table_conn_greeter()
+    qc <- QueryChat$new(NULL, "placeholder", greeting = "hi")
+    suppressWarnings(qc$add_tables(conn, include_in_greeting = "orders"))
+    expect_true("orders" %in% qc$greeter$tables)
+    expect_false("customers" %in% qc$greeter$tables)
+  })
+
+  it("add_tables with non-logical, non-character include_in_greeting errors", {
+    conn <- local_multi_table_conn_greeter()
+    qc <- QueryChat$new(NULL, "placeholder", greeting = "hi")
+    expect_error(
+      suppressWarnings(qc$add_tables(conn, include_in_greeting = 1)),
+      "include_in_greeting"
+    )
+  })
+
+  it("add_tables leaves state unchanged when include_in_greeting is invalid", {
+    conn <- local_multi_table_conn_greeter()
+    qc <- QueryChat$new(NULL, "placeholder", greeting = "hi")
+    expect_error(
+      suppressWarnings(qc$add_tables(conn, include_in_greeting = 1)),
+      "include_in_greeting"
+    )
+    expect_false("orders" %in% qc$greeter$tables)
+    expect_false("customers" %in% qc$greeter$tables)
+    suppressWarnings(qc$add_tables(conn, include_in_greeting = TRUE))
+    expect_true("orders" %in% qc$greeter$tables)
+    expect_true("customers" %in% qc$greeter$tables)
+  })
+
+  it("greeting prompt omits dicts that describe only excluded tables", {
+    conn <- local_multi_table_conn_greeter()
+    orders_yaml <- withr::local_tempfile(fileext = ".yaml")
+    writeLines(
+      c(
+        "name: orders_dict",
+        "description: ORDERS_DICT_DESC",
+        "tables:",
+        "  orders:",
+        "    description: Orders info"
+      ),
+      orders_yaml
+    )
+    customers_yaml <- withr::local_tempfile(fileext = ".yaml")
+    writeLines(
+      c(
+        "name: customers_dict",
+        "description: CUSTOMERS_DICT_DESC",
+        "tables:",
+        "  customers:",
+        "    description: Customers info"
+      ),
+      customers_yaml
+    )
+
+    qc <- QueryChat$new(
+      NULL,
+      "placeholder",
+      greeting = "hi",
+      data_dict = list(orders_yaml, customers_yaml)
+    )
+    qc$add_tables(conn, include_in_greeting = "orders")
+
+    prompt <- qc$greeter$build_client()$get_system_prompt()
+    expect_true(grepl("ORDERS_DICT_DESC", prompt))
+    expect_false(grepl("CUSTOMERS_DICT_DESC", prompt))
+  })
+
+  it("greeting prompt keeps a global dict description but drops relationships/glossary", {
+    conn <- local_multi_table_conn_greeter()
+    global_yaml <- withr::local_tempfile(fileext = ".yaml")
+    writeLines(
+      c(
+        "name: domain",
+        "description: GLOBAL_DOMAIN_DESC",
+        "glossary:",
+        "  ARR: GLOSSARY_ARR_DEF"
+      ),
+      global_yaml
+    )
+    orders_yaml <- withr::local_tempfile(fileext = ".yaml")
+    writeLines(
+      c(
+        "name: orders_dict",
+        "description: ORDERS_DICT_DESC",
+        "tables:",
+        "  orders:",
+        "    description: Orders info",
+        "relationships:",
+        "  - join: orders.id = customers.id",
+        "    description: REL_DESC"
+      ),
+      orders_yaml
+    )
+
+    qc <- QueryChat$new(
+      NULL,
+      "placeholder",
+      greeting = "hi",
+      data_dict = list(global_yaml, orders_yaml)
+    )
+    qc$add_tables(conn, include_in_greeting = "orders")
+
+    prompt <- qc$greeter$build_client()$get_system_prompt()
+    expect_true(grepl("GLOBAL_DOMAIN_DESC", prompt))
+    expect_true(grepl("ORDERS_DICT_DESC", prompt))
+    expect_false(grepl("GLOSSARY_ARR_DEF", prompt))
+    expect_false(grepl("REL_DESC", prompt))
+  })
+
+  it("generate_greeting() uses greeting system prompt, writes to qc$greeting, returns text", {
+    client <- mock_ellmer_chat_client(
+      public = list(
+        chat = function(message, ...) {
+          expect_equal(message, GREETING_PROMPT)
+          "Hello from greeting mock!"
+        }
+      )
+    )
+
+    qc <- QueryChat$new(new_test_df(), "test_table", client = client)
+    withr::defer(qc$cleanup())
+
+    greeting_client <- qc$greeter$build_client()
+    greeting_system_prompt <- greeting_client$get_system_prompt()
+    expect_false(grepl("querychat_get_schema", greeting_system_prompt))
+    expect_true(grepl("test_table", greeting_system_prompt))
+
+    result <- qc$generate_greeting()
+
+    expect_equal(result, "Hello from greeting mock!")
+    expect_equal(qc$greeting, "Hello from greeting mock!")
+  })
+
+  it("generate_greeting() with empty greeter$tables succeeds without error", {
+    client <- mock_ellmer_chat_client(
+      public = list(
+        chat = function(message, ...) "Generic greeting with no tables."
+      )
+    )
+
+    qc <- QueryChat$new(new_test_df(), "test_table", client = client)
+    withr::defer(qc$cleanup())
+
+    qc$greeter$tables <- character()
+
+    prompt <- qc$greeter$build_client()$get_system_prompt()
+    expect_false(grepl("following tables", prompt))
+    expect_false(grepl("SQL SQL", prompt))
+
+    expect_no_error(qc$generate_greeting())
+    expect_equal(qc$greeting, "Generic greeting with no tables.")
+  })
+
+  it("greeting prompt keeps a global dict description with no tables included", {
+    global_yaml <- withr::local_tempfile(fileext = ".yaml")
+    writeLines(
+      c(
+        "name: domain",
+        "description: GLOBAL_DOMAIN_DESC",
+        "glossary:",
+        "  ARR: GLOSSARY_ARR_DEF"
+      ),
+      global_yaml
+    )
+
+    qc <- QueryChat$new(
+      new_test_df(),
+      "test_table",
+      greeting = "hi",
+      data_dict = list(global_yaml)
+    )
+    withr::defer(qc$cleanup())
+    qc$greeter$tables <- character()
+
+    prompt <- qc$greeter$build_client()$get_system_prompt()
+    expect_true(grepl("GLOBAL_DOMAIN_DESC", prompt))
+    expect_false(grepl("GLOSSARY_ARR_DEF", prompt))
+    expect_false(grepl("following tables", prompt))
+  })
+
+  it("remove_table prunes the table from greeter$tables", {
+    conn <- local_multi_table_conn_greeter()
+    qc <- QueryChat$new(NULL, "placeholder", greeting = "hi")
+    suppressWarnings(qc$add_tables(conn, include_in_greeting = TRUE))
+    expect_true("orders" %in% qc$greeter$tables)
+
+    qc$remove_table("orders")
+    expect_false("orders" %in% qc$greeter$tables)
+    expect_true("customers" %in% qc$greeter$tables)
+  })
+})

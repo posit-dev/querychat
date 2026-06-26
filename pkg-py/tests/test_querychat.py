@@ -1,4 +1,6 @@
 import os
+import tempfile
+from pathlib import Path
 from unittest.mock import patch
 
 import ibis
@@ -7,6 +9,7 @@ import polars as pl
 import pytest
 from querychat import QueryChat
 from querychat._datasource import IbisSource, PolarsLazySource
+from sqlalchemy import create_engine, text
 
 
 @pytest.fixture(autouse=True)
@@ -93,8 +96,8 @@ def test_querychat_client_has_system_prompt(sample_df):
     assert "test_table" in qc.system_prompt
 
 
-def test_generate_greeting_uses_querychat_system_prompt(sample_df):
-    """generate_greeting() should use the dataset-aware querychat system prompt."""
+def test_generate_greeting_uses_greeting_system_prompt(sample_df):
+    """generate_greeting() should use the lean greeting prompt, not the main query prompt."""
     qc = QueryChat(
         data_source=sample_df,
         table_name="test_table",
@@ -112,6 +115,7 @@ def test_generate_greeting_uses_querychat_system_prompt(sample_df):
     assert greeting == "Hello from querychat"
     assert seen["system_prompt"] is not None
     assert "test_table" in seen["system_prompt"]
+    assert "data dashboard chatbot" not in seen["system_prompt"]
 
 
 def test_generate_greeting_does_not_register_querychat_tools(sample_df):
@@ -152,7 +156,9 @@ def test_querychat_with_polars_lazyframe():
     assert isinstance(qc._data_sources["test_table"], PolarsLazySource)
 
     # Query should return a native polars LazyFrame
-    result = qc._data_sources["test_table"].execute_query("SELECT * FROM test_table WHERE id = 2")
+    result = qc._data_sources["test_table"].execute_query(
+        "SELECT * FROM test_table WHERE id = 2"
+    )
     assert isinstance(result, pl.LazyFrame)
 
     # Collect to verify
@@ -185,7 +191,9 @@ def test_querychat_with_ibis_table():
         assert isinstance(qc._data_sources["test_table"], IbisSource)
 
         # Query should return an ibis.Table
-        result = qc._data_sources["test_table"].execute_query("SELECT * FROM test_table WHERE id = 2")
+        result = qc._data_sources["test_table"].execute_query(
+            "SELECT * FROM test_table WHERE id = 2"
+        )
         assert isinstance(result, ibis.Table)
 
         # Execute to verify results
@@ -194,3 +202,230 @@ def test_querychat_with_ibis_table():
         assert executed["name"].iloc[0] == "Bob"
     finally:
         conn.disconnect()
+
+
+@pytest.fixture
+def sqlite_engine():
+    """SQLite engine with two tables for add_tables greeting tests."""
+    temp_db = tempfile.NamedTemporaryFile(delete=False, suffix=".db")  # noqa: SIM115
+    temp_db.close()
+    engine = create_engine(f"sqlite:///{temp_db.name}")
+    with engine.begin() as conn:
+        conn.execute(text("CREATE TABLE orders (id INTEGER, amount REAL)"))
+        conn.execute(text("CREATE TABLE customers (id INTEGER, name TEXT)"))
+        conn.execute(text("INSERT INTO orders VALUES (1, 100.0), (2, 200.0)"))
+        conn.execute(text("INSERT INTO customers VALUES (1, 'Alice'), (2, 'Bob')"))
+    yield engine
+    engine.dispose()
+    Path(temp_db.name).unlink()
+
+
+def test_greeter_tables_contains_constructor_table(sample_df):
+    """Constructor table is always present in greeter.tables."""
+    qc = QueryChat(data_source=sample_df, table_name="test_table")
+    assert "test_table" in qc.greeter.tables
+
+
+def test_constructor_greeting_survives_greeter_mutations(sample_df):
+    """Setting greeter.tables or greeter.prompt must not clear qc.greeting."""
+    qc = QueryChat(data_source=sample_df, table_name="test_table", greeting="Hello!")
+    assert qc.greeting == "Hello!"
+
+    qc.greeter.tables = ["test_table"]
+    assert qc.greeting == "Hello!"
+
+    qc.greeter.prompt = "Custom prompt"
+    assert qc.greeting == "Hello!"
+
+
+def test_greeter_tables_setter_rejects_bare_string(sample_df):
+    """Assigning a bare string to greeter.tables raises instead of char-iterating."""
+    qc = QueryChat(data_source=sample_df, table_name="test_table")
+    with pytest.raises(TypeError, match="list of table names"):
+        qc.greeter.tables = "test_table"  # type: ignore[assignment]
+
+
+def test_add_table_include_in_greeting(sample_df):
+    """add_table with include_in_greeting=True adds the name; default False does not."""
+    qc = QueryChat()
+    qc.add_table(sample_df, "base_table", include_in_greeting=False)
+
+    extra = pd.DataFrame({"x": [1, 2]})
+    qc.add_table(extra, "included", include_in_greeting=True)
+
+    extra2 = pd.DataFrame({"y": [3, 4]})
+    qc.add_table(extra2, "excluded")
+
+    assert "included" in qc.greeter.tables
+    assert "excluded" not in qc.greeter.tables
+    assert "base_table" not in qc.greeter.tables
+
+
+def test_add_table_include_in_greeting_invalid_type(sample_df):
+    """add_table rejects non-bool include_in_greeting."""
+    qc = QueryChat()
+    with pytest.raises(TypeError, match="include_in_greeting"):
+        qc.add_table(sample_df, "base_table", include_in_greeting="yes")  # type: ignore[arg-type]
+
+
+def test_add_tables_include_in_greeting_true(sqlite_engine):
+    """add_tables with include_in_greeting=True adds all tables to greeter."""
+    qc = QueryChat()
+    qc.add_tables(sqlite_engine, include_in_greeting=True)
+    assert "orders" in qc.greeter.tables
+    assert "customers" in qc.greeter.tables
+
+
+def test_add_tables_include_in_greeting_false(sqlite_engine):
+    """add_tables with include_in_greeting=False (default) adds no tables to greeter."""
+    qc = QueryChat()
+    qc.add_tables(sqlite_engine, include_in_greeting=False)
+    assert "orders" not in qc.greeter.tables
+    assert "customers" not in qc.greeter.tables
+
+
+def test_add_tables_include_in_greeting_list(sqlite_engine):
+    """add_tables with a list only adds the named subset to greeter.tables."""
+    qc = QueryChat()
+    qc.add_tables(sqlite_engine, include_in_greeting=["orders"])
+    assert "orders" in qc.greeter.tables
+    assert "customers" not in qc.greeter.tables
+
+
+def test_add_tables_include_in_greeting_str_rejected(sqlite_engine):
+    """add_tables rejects a bare string; a list of names is required."""
+    qc = QueryChat()
+    with pytest.raises(TypeError, match="include_in_greeting"):
+        qc.add_tables(sqlite_engine, include_in_greeting="orders")  # type: ignore[arg-type]
+
+
+def test_add_tables_include_in_greeting_invalid_type(sqlite_engine):
+    """add_tables rejects non-bool, non-list include_in_greeting."""
+    qc = QueryChat()
+    with pytest.raises(TypeError, match="include_in_greeting"):
+        qc.add_tables(sqlite_engine, include_in_greeting=1)  # type: ignore[arg-type]
+
+
+def test_add_tables_invalid_greeting_leaves_state_unchanged(sqlite_engine):
+    """A rejected include_in_greeting must not register any tables."""
+    qc = QueryChat()
+    with pytest.raises(TypeError, match="include_in_greeting"):
+        qc.add_tables(sqlite_engine, include_in_greeting=1)  # type: ignore[arg-type]
+    assert qc._data_sources == {}
+    assert qc.greeter.tables == []
+    # A subsequent valid call still succeeds (no half-registered tables).
+    qc.add_tables(sqlite_engine, include_in_greeting=True)
+    assert set(qc.greeter.tables) == {"orders", "customers"}
+
+
+def test_greeting_prompt_omits_dicts_for_excluded_tables(sqlite_engine, tmp_path):
+    """A dict describing only excluded tables is dropped from the greeting prompt."""
+    orders_yaml = tmp_path / "orders.yaml"
+    orders_yaml.write_text(
+        "name: orders_dict\ndescription: ORDERS_DICT_DESC\n"
+        "tables:\n  orders:\n    description: Orders info\n"
+    )
+    customers_yaml = tmp_path / "customers.yaml"
+    customers_yaml.write_text(
+        "name: customers_dict\ndescription: CUSTOMERS_DICT_DESC\n"
+        "tables:\n  customers:\n    description: Customers info\n"
+    )
+
+    qc = QueryChat(data_dict=[str(orders_yaml), str(customers_yaml)])
+    qc.add_tables(sqlite_engine, include_in_greeting=["orders"])
+
+    prompt = qc.greeter.build_client().system_prompt
+    assert prompt is not None
+    assert "ORDERS_DICT_DESC" in prompt
+    assert "CUSTOMERS_DICT_DESC" not in prompt
+
+
+def test_greeting_prompt_keeps_global_dict_desc_drops_global_fields(
+    sqlite_engine, tmp_path
+):
+    """A table-less dict keeps its description; relationships/glossary are dropped."""
+    global_yaml = tmp_path / "global.yaml"
+    global_yaml.write_text(
+        "name: domain\ndescription: GLOBAL_DOMAIN_DESC\nglossary:\n  ARR: GLOSSARY_ARR_DEF\n"
+    )
+    orders_yaml = tmp_path / "orders.yaml"
+    orders_yaml.write_text(
+        "name: orders_dict\ndescription: ORDERS_DICT_DESC\n"
+        "tables:\n  orders:\n    description: Orders info\n"
+        "relationships:\n  - join: orders.id = customers.id\n    description: REL_DESC\n"
+    )
+
+    qc = QueryChat(data_dict=[str(global_yaml), str(orders_yaml)])
+    qc.add_tables(sqlite_engine, include_in_greeting=["orders"])
+
+    prompt = qc.greeter.build_client().system_prompt
+    assert prompt is not None
+    assert "GLOBAL_DOMAIN_DESC" in prompt
+    assert "ORDERS_DICT_DESC" in prompt
+    assert "GLOSSARY_ARR_DEF" not in prompt
+    assert "REL_DESC" not in prompt
+
+
+def test_generate_greeting_sets_greeting_and_returns_text(sample_df):
+    """generate_greeting() returns the mocked text and sets qc.greeting."""
+    qc = QueryChat(data_source=sample_df, table_name="test_table")
+    seen: dict[str, str | None] = {}
+
+    def fake_chat(self, *args, **kwargs):
+        seen["system_prompt"] = self.system_prompt
+        return "Generated greeting"
+
+    with patch("chatlas.Chat.chat", fake_chat):
+        result = qc.generate_greeting()
+
+    assert result == "Generated greeting"
+    assert qc.greeting == "Generated greeting"
+    assert seen["system_prompt"] is not None
+    assert "test_table" in seen["system_prompt"]
+    assert "data dashboard chatbot" not in seen["system_prompt"]
+
+
+def test_generate_greeting_with_empty_tables(sample_df):
+    """Clearing greeter.tables produces a generic greeting without raising."""
+    qc = QueryChat(data_source=sample_df, table_name="test_table")
+    qc.greeter.tables = []
+
+    prompt = qc.greeter.build_client().system_prompt
+    assert prompt is not None
+    assert "following tables" not in prompt
+    assert "SQL SQL" not in prompt
+
+    with patch("chatlas.Chat.chat", return_value="Generic greeting"):
+        result = qc.generate_greeting()
+
+    assert result == "Generic greeting"
+    assert qc.greeting == "Generic greeting"
+
+
+def test_greeting_prompt_keeps_global_dict_desc_with_no_tables(sample_df, tmp_path):
+    """A global dict description renders even in a table-less generic greeting."""
+    global_yaml = tmp_path / "global.yaml"
+    global_yaml.write_text(
+        "name: domain\ndescription: GLOBAL_DOMAIN_DESC\nglossary:\n  ARR: GLOSSARY_ARR_DEF\n"
+    )
+    qc = QueryChat(
+        data_source=sample_df, table_name="test_table", data_dict=str(global_yaml)
+    )
+    qc.greeter.tables = []
+
+    prompt = qc.greeter.build_client().system_prompt
+    assert prompt is not None
+    assert "GLOBAL_DOMAIN_DESC" in prompt
+    assert "GLOSSARY_ARR_DEF" not in prompt
+    assert "following tables" not in prompt
+
+
+def test_remove_table_prunes_greeter_tables(sqlite_engine):
+    """remove_table drops the removed name from greeter.tables."""
+    qc = QueryChat()
+    qc.add_tables(sqlite_engine, include_in_greeting=True)
+    assert "orders" in qc.greeter.tables
+
+    qc.remove_table("orders")
+    assert "orders" not in qc.greeter.tables
+    assert "customers" in qc.greeter.tables

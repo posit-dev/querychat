@@ -225,6 +225,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 ),
                 greeting=self.greeting,
                 query_executor=self._require_query_executor("_get_state"),
+                greeting_client_factory=self.greeter.build_client,
             )
         return st.session_state[self._state_key]
 
@@ -291,7 +292,8 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 with st.chat_message("assistant"):
                     placeholder = st.empty()
                     placeholder.markdown("*Preparing your data assistant...*")
-                    for chunk in stream_response(state.client, GREETING_PROMPT):
+                    greeting_client = state.build_greeting_client()
+                    for chunk in stream_response(greeting_client, GREETING_PROMPT):
                         greeting += chunk
                         placeholder.markdown(greeting, unsafe_allow_html=True)
                 state.set_greeting(greeting)

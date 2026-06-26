@@ -21,7 +21,10 @@ class TestTruncateError:
         assert result == "Something went wrong\n\n(error truncated)"
 
     def test_truncates_at_schema_dump_line(self):
-        msg = "Bad property\nFailed validating 'additionalProperties' in schema[0]:\n" + "x" * 500
+        msg = (
+            "Bad property\nFailed validating 'additionalProperties' in schema[0]:\n"
+            + "x" * 500
+        )
         result = truncate_error(msg)
         assert "Bad property" in result
         assert "(error truncated)" in result
@@ -40,7 +43,10 @@ class TestTruncateError:
 
     def test_preserves_first_line_of_altair_error(self):
         first_line = "Additional properties are not allowed ('offset' was unexpected)"
-        schema_dump = "\n\nFailed validating 'additionalProperties' in schema[0]['properties']['encoding']:\n    {'additionalProperties': False,\n     'properties': {'angle': " + "x" * 10000
+        schema_dump = (
+            "\n\nFailed validating 'additionalProperties' in schema[0]['properties']['encoding']:\n    {'additionalProperties': False,\n     'properties': {'angle': "
+            + "x" * 10000
+        )
         msg = first_line + schema_dump
         result = truncate_error(msg)
         assert result.startswith(first_line)

@@ -288,7 +288,9 @@ class QueryChat(StateDictQueryChat[IntoFrameT]):
 
             if not state.initialize_greeting_if_preset():
                 greeting = ""
-                for chunk in stream_response(state.client, GREETING_PROMPT):
+                for chunk in stream_response(
+                    state.build_greeting_client(), GREETING_PROMPT
+                ):
                     greeting += chunk
                 state.set_greeting(greeting)
 

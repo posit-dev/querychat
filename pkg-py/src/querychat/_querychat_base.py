@@ -32,12 +32,12 @@ from ._query_executor import (
     validate_source_group_compatibility,
 )
 from ._querychat_core import (
-    GREETING_PROMPT,
     AppState,
     AppStateDict,
     create_app_state,
     warn_multi_table_flat_accessor,
 )
+from ._querychat_greeter import QueryChatGreeter
 from ._system_prompt import QueryChatSystemPrompt
 from ._utils import MISSING, MISSING_TYPE, is_ibis_backend, is_ibis_table
 from ._viz_utils import has_viz_deps, has_viz_tool
@@ -110,10 +110,13 @@ class QueryChatBase(Generic[IntoFrameT]):
         self._extra_instructions = extra_instructions
         self._categorical_threshold = categorical_threshold
 
-        self._client_spec: str | chatlas.Chat | None = client
+        self._base_client: chatlas.Chat | None = (
+            resolve_client(client) if client is not None else None
+        )
         self._client_console = None
 
         self._system_prompt: QueryChatSystemPrompt | None = None
+        self._greeter: QueryChatGreeter | None = None
 
         if data_source is not None:
             if table_name is None:
@@ -123,7 +126,7 @@ class QueryChatBase(Generic[IntoFrameT]):
                     raise ValueError(
                         "table_name is required when data_source is provided"
                     )
-            self.add_table(data_source, table_name)
+            self.add_table(data_source, table_name, include_in_greeting=True)
 
     def _build_system_prompt(
         self,
@@ -137,8 +140,7 @@ class QueryChatBase(Generic[IntoFrameT]):
             raise RuntimeError("Cannot build system prompt without data_source")
 
         client_has_history = (
-            isinstance(self._client_spec, chatlas.Chat)
-            and bool(self._client_spec.get_turns())
+            self._base_client is not None and bool(self._base_client.get_turns())
         ) or (
             self._client_console is not None and bool(self._client_console.get_turns())
         )
@@ -212,20 +214,25 @@ class QueryChatBase(Generic[IntoFrameT]):
             self._query_executor = self._build_query_executor()
         return self._query_executor
 
+    def _create_client(self, base: chatlas.Chat | None = None) -> chatlas.Chat:
+        """Clone a Chat from ``base`` or the resolved ``_base_client``."""
+        if base is None:
+            if self._base_client is None:
+                self._base_client = resolve_client(None)
+            base = self._base_client
+        return create_client(base)
+
     def _create_session_client(
         self,
         *,
-        client_spec: str | chatlas.Chat | None | MISSING_TYPE = MISSING,
+        base: chatlas.Chat | None = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None | MISSING_TYPE = MISSING,
         update_dashboard: Callable[[UpdateDashboardData], None] | None = None,
         reset_dashboard: ResetDashboardCallback | None = None,
         visualize: Callable[[VisualizeData], None] | None = None,
     ) -> chatlas.Chat:
         """Create a fresh, fully-configured Chat."""
-        spec = (
-            self._client_spec if isinstance(client_spec, MISSING_TYPE) else client_spec
-        )
-        chat = create_client(spec)
+        chat = self._create_client(base)
 
         resolved_tools = normalize_tools(tools, default=self.tools)
 
@@ -319,10 +326,37 @@ class QueryChatBase(Generic[IntoFrameT]):
     def generate_greeting(self, *, echo: Literal["none", "output"] = "none") -> str:
         """Generate a welcome greeting for the chat."""
         self._require_initialized("generate_greeting")
-        chat = create_client(self._client_spec)
-        if self._system_prompt is not None:
-            chat.system_prompt = self._system_prompt.render(self.tools)
-        return str(chat.chat(GREETING_PROMPT, echo=echo))
+        greeting = self.greeter.generate(echo=echo)
+        self.greeting = greeting
+        return greeting
+
+    @property
+    def greeter(self) -> QueryChatGreeter:
+        """Greeting configuration and generator for this QueryChat instance."""
+        if self._greeter is None:
+
+            def client_factory(
+                tables: list[str],
+                prompt: str | Path,
+                base: chatlas.Chat | None = None,
+            ) -> chatlas.Chat:
+                sp = QueryChatSystemPrompt(
+                    prompt_template=prompt,
+                    data_sources=self._data_sources,
+                    data_description=self._data_description,
+                    extra_instructions=None,
+                    categorical_threshold=self._categorical_threshold,
+                    data_dicts=self._data_dicts,
+                    include_tables=tables or False,
+                    include_relationships=False,
+                    include_glossary=False,
+                )
+                chat = self._create_client(base)
+                chat.system_prompt = sp.render(None)
+                return chat
+
+            self._greeter = QueryChatGreeter(client_factory)
+        return self._greeter
 
     def console(
         self,
@@ -381,6 +415,7 @@ class QueryChatBase(Generic[IntoFrameT]):
         table_name: str,
         *,
         replace: bool = False,
+        include_in_greeting: bool = False,
     ) -> None:
         """
         Add or replace a table in the QueryChat instance.
@@ -394,9 +429,13 @@ class QueryChatBase(Generic[IntoFrameT]):
         replace
             If True, replace an existing table with the same name.
             If False (default), raise ValueError if the table already exists.
+        include_in_greeting
+            If True, include this table's schema in the greeting system prompt.
 
         Raises
         ------
+        TypeError
+            If include_in_greeting is not a bool.
         ValueError
             If table_name already exists (and replace=False) or is invalid.
         RuntimeError
@@ -407,6 +446,12 @@ class QueryChatBase(Generic[IntoFrameT]):
             raise RuntimeError(
                 "Cannot add tables after server initialization. "
                 "Add all tables before calling .server() or .app()."
+            )
+
+        if not isinstance(include_in_greeting, bool):
+            raise TypeError(
+                "include_in_greeting must be True or False, got "
+                f"{type(include_in_greeting).__name__}."
             )
 
         if not is_pins_board(data_source) and not re.match(
@@ -445,12 +490,16 @@ class QueryChatBase(Generic[IntoFrameT]):
                 self._query_executor.cleanup()
             self._query_executor = None
 
+        if include_in_greeting and table_name not in self.greeter.tables:
+            self.greeter.tables = [*self.greeter.tables, table_name]
+
     def add_tables(  # noqa: PLR0912
         self,
         data_source: sqlalchemy.Engine | SQLBackend,
         tables: list[str] | None = None,
         *,
         replace: bool = False,
+        include_in_greeting: bool | list[str] = False,
     ) -> None:
         """
         Add multiple tables from a SQLAlchemy engine or Ibis backend in a single call.
@@ -471,6 +520,10 @@ class QueryChatBase(Generic[IntoFrameT]):
             If ``True``, replace any existing table whose name appears in
             ``tables``. If ``False`` (default), raise ``ValueError`` if any
             name already exists.
+        include_in_greeting
+            ``True`` to include all added tables in the greeting, ``False`` (default)
+            for none, or a list of table names to include. Any other type raises
+            ``TypeError``.
 
         Raises
         ------
@@ -537,6 +590,18 @@ class QueryChatBase(Generic[IntoFrameT]):
             if table_name in self._data_sources and not replace:
                 raise ValueError(f"Table '{table_name}' already exists")
 
+        if isinstance(include_in_greeting, bool):
+            greeting_names = list(tables) if include_in_greeting else []
+        elif isinstance(include_in_greeting, list) and all(
+            isinstance(name, str) for name in include_in_greeting
+        ):
+            greeting_names = [name for name in include_in_greeting if name in tables]
+        else:
+            raise TypeError(
+                "include_in_greeting must be True, False, or a list of table "
+                f"names, got {type(include_in_greeting).__name__}."
+            )
+
         normalized = {name: normalized_builder(name) for name in tables}
 
         staged: dict[str, DataSource] = {}
@@ -558,6 +623,12 @@ class QueryChatBase(Generic[IntoFrameT]):
             with contextlib.suppress(Exception):
                 self._query_executor.cleanup()
             self._query_executor = None
+
+        new_greeting = list(self.greeter.tables)
+        for name in greeting_names:
+            if name not in new_greeting:
+                new_greeting.append(name)
+        self.greeter.tables = new_greeting
 
     def remove_table(self, table_name: str) -> None:
         """
@@ -597,6 +668,8 @@ class QueryChatBase(Generic[IntoFrameT]):
 
         self._build_system_prompt(data_sources=next_data_sources)
         self._data_sources = next_data_sources
+        if self._greeter is not None:
+            self._greeter.tables = [n for n in self._greeter.tables if n != table_name]
         if self._query_executor is not None:
             with contextlib.suppress(Exception):
                 self._query_executor.cleanup()
@@ -677,19 +750,23 @@ def cleanup_failed_staged_source(
         normalized_source.cleanup()
 
 
-def create_client(client: str | chatlas.Chat | None) -> chatlas.Chat:
-    """Resolve a client spec into a fresh Chat with no conversation history."""
+def resolve_client(client: str | chatlas.Chat | None) -> chatlas.Chat:
+    """Resolve a client spec into a Chat object without cloning."""
     if client is None:
         client = os.getenv("QUERYCHAT_CLIENT", None)
 
     if client is None:
         client = "openai"
 
-    if isinstance(client, chatlas.Chat):
-        chat = copy.deepcopy(client)
-    else:
-        chat = chatlas.ChatAuto(provider_model=client)
+    if isinstance(client, str):
+        return chatlas.ChatAuto(provider_model=client)
 
+    return client
+
+
+def create_client(client: chatlas.Chat) -> chatlas.Chat:
+    """Clone a resolved Chat with empty conversation history."""
+    chat = copy.deepcopy(client)
     chat.set_turns([])
     return chat
 
@@ -888,6 +965,7 @@ class StateDictQueryChat(QueryChatBase[IntoFrameT]):
             client_factory=self._client_factory,
             greeting=self.greeting,
             query_executor=self._require_query_executor("_deserialize_state"),
+            greeting_client_factory=self.greeter.build_client,
         )
         if state_data:
             state.update_from_dict(state_data)

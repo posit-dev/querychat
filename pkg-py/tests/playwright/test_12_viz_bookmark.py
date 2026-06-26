@@ -97,7 +97,9 @@ class TestVizBookmarkRestore:
 
     def _wait_for_viz_bookmark_url(self) -> str:
         """Wait for the bookmark URL to include the viz state."""
-        pre_search = self.pre_viz_url.split("?", 1)[1] if "?" in self.pre_viz_url else ""
+        pre_search = (
+            self.pre_viz_url.split("?", 1)[1] if "?" in self.pre_viz_url else ""
+        )
         self.page.wait_for_function(
             "(preSearch) => window.location.search.includes('_state_id_=') && window.location.search !== '?' + preSearch",
             arg=pre_search,
@@ -110,7 +112,9 @@ class TestVizBookmarkRestore:
         url = self._wait_for_viz_bookmark_url()
         assert url != self.pre_viz_url, "URL should have changed after viz bookmarking"
 
-    def test_viz_widget_renders_on_bookmark_restore(self, context: BrowserContext) -> None:
+    def test_viz_widget_renders_on_bookmark_restore(
+        self, context: BrowserContext
+    ) -> None:
         """BOOKMARK-VIZ-RESTORE: Restored bookmark should re-render the chart widget, not just the HTML shell."""
         bookmark_url = self._wait_for_viz_bookmark_url()
 

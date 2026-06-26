@@ -12,6 +12,20 @@ check_data_source <- function(
   }
 }
 
+check_query_executor <- function(
+  x,
+  ...,
+  arg = caller_arg(x),
+  call = caller_env()
+) {
+  if (!inherits(x, "QueryExecutor")) {
+    cli::cli_abort(
+      "{.arg {arg}} must be a {.cls QueryExecutor} object, not {.obj_type_friendly {x}}.",
+      call = call
+    )
+  }
+}
+
 # SQL table name validation ----------------------------------------------
 
 #' Check SQL table name validity

@@ -19,6 +19,12 @@ QueryExecutor <- R6::R6Class(
         class = "not_implemented_error"
       )
     },
+    validate_query = function(query) {
+      cli::cli_abort(
+        "{.fn validate_query} must be implemented by subclass",
+        class = "not_implemented_error"
+      )
+    },
     get_db_type = function() {
       cli::cli_abort(
         "{.fn get_db_type} must be implemented by subclass",
@@ -122,6 +128,14 @@ DuckDBExecutor <- R6::R6Class(
       df
     },
 
+    validate_query = function(query) {
+      check_query(query)
+      rs <- DBI::dbSendQuery(private$conn, query)
+      on.exit(DBI::dbClearResult(rs))
+      DBI::dbFetch(rs, n = 1)
+      invisible(NULL)
+    },
+
     get_db_type = function() "DuckDB",
 
     get_schema = function(
@@ -188,6 +202,11 @@ DataSourceExecutor <- R6::R6Class(
         query,
         require_all_columns = require_all_columns
       )
+    },
+
+    validate_query = function(query) {
+      private$primary$test_query(query)
+      invisible(NULL)
     },
 
     get_db_type = function() {

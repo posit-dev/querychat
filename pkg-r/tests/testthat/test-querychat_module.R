@@ -35,7 +35,7 @@ test_that("mod_server() return includes table() and table_names() for single-tab
       greeting = "Hello",
       client = client_factory,
       tools = "query",
-      enable_bookmarking = FALSE
+      bookmark_enable = FALSE
     ),
     {
       # table_names_fn() returns the table name vector
@@ -95,7 +95,7 @@ test_that("mod_server() return includes table() and table_names() for multi-tabl
       greeting = "Hello",
       client = client_factory,
       tools = "query",
-      enable_bookmarking = FALSE
+      bookmark_enable = FALSE
     ),
     {
       # table_names_fn() returns all registered table names
@@ -152,7 +152,7 @@ test_that("mod_server() passes visualize callback and tools to client factory", 
       greeting = "Hello",
       client = client_factory,
       tools = c("query", "visualize"),
-      enable_bookmarking = FALSE
+      bookmark_enable = FALSE
     ),
     {
       expect_type(captured, "list")
@@ -182,7 +182,7 @@ test_that("mod_server() exposes current_table() starting as NULL", {
       greeting = "Hello",
       client = client_factory,
       tools = "query",
-      enable_bookmarking = FALSE
+      bookmark_enable = FALSE
     ),
     {
       expect_true(is.function(session$returned$current_table))
@@ -215,7 +215,7 @@ test_that("mod_server() current_table() updates on update_dashboard and reset_qu
       greeting = "Hello",
       client = client_factory,
       tools = "query",
-      enable_bookmarking = FALSE
+      bookmark_enable = FALSE
     ),
     {
       # Initially NULL
@@ -314,7 +314,7 @@ test_that("restored viz widgets survive a second bookmark cycle", {
       greeting = "Hello",
       client = client_factory,
       tools = c("query", "visualize"),
-      enable_bookmarking = TRUE
+      bookmark_enable = TRUE
     ),
     {
       expect_true(is.function(bookmark_fn))
@@ -330,6 +330,9 @@ test_that("restored viz widgets survive a second bookmark cycle", {
 
       shiny::isolate(callbacks$visualize(saved[[1]]))
 
+      # The shiny onBookmark/onRestore mocks bypass Shiny's per-module scope
+      # wrapper (which namespaces keys), so the keys here are the flat ones the
+      # module code writes directly.
       first_state <- new.env(parent = emptyenv())
       first_state$values <- list()
       shiny::isolate(bookmark_fn(first_state))
@@ -347,4 +350,124 @@ test_that("restored viz widgets survive a second bookmark cycle", {
       expect_equal(second_state$values$querychat_viz_widgets, saved)
     }
   )
+})
+
+test_that("normalize_bookmark_categories() handles logical input", {
+  expect_equal(
+    normalize_bookmark_categories(TRUE),
+    c("conversation", "cards")
+  )
+  expect_equal(normalize_bookmark_categories(FALSE), character(0))
+})
+
+test_that("normalize_bookmark_categories() treats NULL/empty as none", {
+  expect_equal(normalize_bookmark_categories(NULL), character(0))
+  expect_equal(normalize_bookmark_categories(character(0)), character(0))
+})
+
+test_that("normalize_bookmark_categories() accepts a character subset", {
+  expect_equal(
+    normalize_bookmark_categories("cards"),
+    "cards"
+  )
+  expect_equal(
+    normalize_bookmark_categories("conversation"),
+    "conversation"
+  )
+  expect_equal(
+    normalize_bookmark_categories(c("cards", "conversation")),
+    c("cards", "conversation")
+  )
+})
+
+test_that("normalize_bookmark_categories() rejects invalid input", {
+  expect_error(normalize_bookmark_categories("nonsense"))
+  expect_error(normalize_bookmark_categories(c("cards", "nonsense")))
+  expect_error(normalize_bookmark_categories(NA))
+  expect_error(normalize_bookmark_categories(c(TRUE, FALSE)))
+  expect_error(normalize_bookmark_categories(1))
+})
+
+test_that("resolve_bookmark_store() disables when no categories", {
+  expect_equal(resolve_bookmark_store(NULL, character(0)), "disable")
+  expect_equal(resolve_bookmark_store("url", character(0)), "disable")
+})
+
+test_that("resolve_bookmark_store() honors an explicit store", {
+  expect_equal(resolve_bookmark_store("url", "cards"), "url")
+  expect_equal(resolve_bookmark_store("server", "cards"), "server")
+  expect_equal(resolve_bookmark_store("disable", "conversation"), "disable")
+  expect_error(resolve_bookmark_store("nonsense", "cards"))
+})
+
+test_that("resolve_bookmark_store() defers to an existing enableBookmarking()", {
+  withr::defer(shiny::shinyOptions(bookmarkStore = NULL))
+  shiny::shinyOptions(bookmarkStore = "server")
+  expect_null(resolve_bookmark_store(NULL, "cards"))
+  expect_null(resolve_bookmark_store(NULL, "conversation"))
+})
+
+test_that("resolve_bookmark_store() picks server for conversation bookmarks", {
+  withr::local_envvar(R_CONFIG_ACTIVE = "")
+  shiny::shinyOptions(bookmarkStore = NULL)
+  expect_equal(resolve_bookmark_store(NULL, "conversation"), "server")
+  expect_equal(
+    resolve_bookmark_store(NULL, c("cards", "conversation")),
+    "server"
+  )
+})
+
+test_that("resolve_bookmark_store() picks server on a hosting platform", {
+  shiny::shinyOptions(bookmarkStore = NULL)
+  withr::local_envvar(R_CONFIG_ACTIVE = "connect")
+  expect_equal(resolve_bookmark_store(NULL, "cards"), "server")
+  withr::local_envvar(R_CONFIG_ACTIVE = "SHINYAPPS")
+  expect_equal(resolve_bookmark_store(NULL, "cards"), "server")
+})
+
+test_that("resolve_bookmark_store() picks url for local cards-only", {
+  shiny::shinyOptions(bookmarkStore = NULL)
+  withr::local_envvar(R_CONFIG_ACTIVE = "")
+  expect_equal(resolve_bookmark_store(NULL, "cards"), "url")
+})
+
+test_that("restore_record_list() rebuilds list-of-lists from a data.frame", {
+  cards <- list(
+    list(
+      id = "a3f7",
+      display = "value_box",
+      title = "Total",
+      query = "SELECT 1"
+    ),
+    list(
+      id = "b2c1",
+      display = "table",
+      title = "Top",
+      query = "SELECT 2",
+      text = "x"
+    )
+  )
+
+  # Simulate the Shiny URL bookmark round-trip (jsonlite simplifies to a df)
+  as_df <- jsonlite::fromJSON(jsonlite::toJSON(cards, auto_unbox = TRUE))
+  expect_s3_class(as_df, "data.frame")
+
+  restored <- restore_record_list(as_df)
+  expect_type(restored, "list")
+  expect_length(restored, 2)
+  expect_equal(restored[[1]]$display, "value_box")
+  expect_equal(restored[[2]]$text, "x")
+  # Absent optional fields (NA after simplification) are dropped, not kept as NA
+  expect_null(restored[[1]]$text)
+})
+
+test_that("restore_record_list() passes through lists and NULL", {
+  cards <- list(list(
+    id = "a3f7",
+    display = "markdown",
+    title = "x",
+    value = "y"
+  ))
+  expect_equal(restore_record_list(cards), cards)
+  expect_null(restore_record_list(NULL))
 })

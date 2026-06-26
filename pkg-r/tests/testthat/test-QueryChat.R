@@ -1312,3 +1312,56 @@ describe("QueryChatGreeter", {
     expect_true("customers" %in% qc$greeter$tables)
   })
 })
+
+describe("QueryChat bookmarking arguments", {
+  skip_if_no_dataframe_engine()
+
+  it("$server() deprecates enable_bookmarking in favor of bookmark_enable", {
+    qc <- QueryChat$new(new_test_df(), "test_df", greeting = "Hi")
+    withr::defer(qc$cleanup())
+
+    withr::local_options(lifecycle_verbosity = "warning")
+    expect_warning(
+      expect_error(
+        qc$server(enable_bookmarking = TRUE),
+        "must be called within a Shiny server function"
+      ),
+      class = "lifecycle_warning_deprecated"
+    )
+  })
+
+  it("$server() errors when both bookmark_enable and enable_bookmarking are given", {
+    qc <- QueryChat$new(new_test_df(), "test_df", greeting = "Hi")
+    withr::defer(qc$cleanup())
+
+    expect_error(
+      qc$server(bookmark_enable = "cards", enable_bookmarking = FALSE),
+      "Can't supply both"
+    )
+  })
+
+  it("$app_obj() resolves enableBookmarking from store and categories", {
+    skip_if_not_installed("DT")
+
+    captured <- NULL
+    local_mocked_bindings(
+      shinyApp = function(ui, server, ..., enableBookmarking = NULL) {
+        captured <<- enableBookmarking
+        structure(list(), class = "shiny.appobj")
+      },
+      .package = "shiny"
+    )
+
+    qc <- QueryChat$new(new_test_df(), "test_df", greeting = "Hi")
+    withr::defer(qc$cleanup())
+
+    qc$app_obj(bookmark_enable = TRUE, bookmark_store = "url")
+    expect_equal(captured, "url")
+
+    qc$app_obj(bookmark_enable = FALSE, bookmark_store = "url")
+    expect_equal(captured, "disable")
+
+    qc$app_obj(bookmark_enable = TRUE, bookmark_store = "disable")
+    expect_equal(captured, "disable")
+  })
+})

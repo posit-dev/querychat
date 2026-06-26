@@ -18,6 +18,7 @@ querychat(
   extra_instructions = NULL,
   prompt_template = NULL,
   data_dict = NULL,
+  cards = NULL,
   cleanup = NA
 )
 
@@ -28,14 +29,16 @@ querychat_app(
   id = NULL,
   greeting = NULL,
   client = NULL,
-  tools = c("filter", "query"),
+  tools = c("filter", "query", "visualize", "cards"),
   data_description = NULL,
   categorical_threshold = 20,
   extra_instructions = NULL,
   prompt_template = NULL,
   data_dict = NULL,
+  cards = NULL,
   cleanup = NA,
-  bookmark_store = "url"
+  bookmark_enable = TRUE,
+  bookmark_store = NULL
 )
 }
 \arguments{
@@ -46,15 +49,39 @@ connection).}
 
 \item{...}{Additional arguments (currently unused).}
 
-\item{id}{Optional module ID for the QueryChat instance.}
+\item{id}{Optional module ID for the QueryChat instance. If not provided,
+will be auto-generated from \code{table_name}. The ID is used to namespace
+the Shiny module.}
 
-\item{greeting}{Optional initial message to display to users.}
+\item{greeting}{Optional initial message to display to users. Can be a
+character string (in Markdown format) or a file path. If not provided,
+a greeting will be generated at the start of each conversation using the
+LLM, which adds latency and cost. Use \verb{$generate_greeting()} to create
+a greeting to save and reuse.}
 
-\item{client}{Optional chat client.}
+\item{client}{Optional chat client. Can be:
+\itemize{
+\item An \link[ellmer:Chat]{ellmer::Chat} object
+\item A string to pass to \code{\link[ellmer:chat]{ellmer::chat()}} (e.g., \code{"openai/gpt-4o"})
+\item \code{NULL} (default): Uses the \code{querychat.client} option, the
+\code{QUERYCHAT_CLIENT} environment variable, or defaults to
+\code{\link[ellmer:chat_openai]{ellmer::chat_openai()}}
+}}
 
-\item{tools}{Which querychat tools to include in the chat client.}
+\item{tools}{Which querychat tools to include in the chat client, by
+default. \code{"filter"} includes the tools for filtering and resetting the
+dashboard and \code{"query"} includes the tool for executing SQL queries.
+Use \code{tools = "filter"} when you only want the dashboard filtering tools,
+or when you want to disable the querying tool entirely to prevent the
+LLM from seeing any of the data in your dataset. The legacy name
+\code{"update"} is still accepted as an alias for \code{"filter"}.
+\code{querychat_app()} defaults to
+\code{c("filter", "query", "visualize", "cards")} so the bundled app's Insights
+tab is populated; pass \code{tools} explicitly to override.}
 
-\item{data_description}{Optional description of the data.}
+\item{data_description}{Optional description of the data in plain text or
+Markdown. Can be a string or a file path. This provides context to the
+LLM about what the data represents.}
 
 \item{categorical_threshold}{For text columns, the maximum number of unique
 values to consider as a categorical variable. Default is 20.}
@@ -65,10 +92,26 @@ values to consider as a categorical variable. Default is 20.}
 
 \item{data_dict}{Optional data dictionary. A path to a YAML file or a list of paths.}
 
+\item{cards}{Optional initial set of cards to display in the Insights panel
+before any LLM interaction. A list of named card field-lists, a JSON
+string, or a path to a \code{.json} file. See \code{QueryChat$new()} for details.}
+
 \item{cleanup}{Whether or not to automatically run \verb{$cleanup()} when the
 Shiny session/app stops.}
 
-\item{bookmark_store}{The bookmarking storage method. Default is \code{"url"}.}
+\item{bookmark_enable}{Which categories of state to bookmark. Passed to
+\code{QueryChat$server()}; see its documentation for accepted values. Default is
+\code{TRUE} (bookmark everything). Nothing is bookmarked when this is \code{FALSE} or
+when \code{bookmark_store} is \code{"disable"}.}
+
+\item{bookmark_store}{Where bookmarked state is stored. Passed to
+\code{\link[shiny:enableBookmarking]{shiny::enableBookmarking()}}: \code{"url"} stores state in the URL, \code{"server"}
+stores it server-side, and \code{"disable"} turns off bookmarking entirely.
+Default is \code{NULL}, which defers to a store set via
+\code{\link[shiny:enableBookmarking]{shiny::enableBookmarking()}} if present, otherwise picks a sensible default
+(\code{"server"} when the conversation is bookmarked or when running on a
+hosting platform, \code{"url"} otherwise). Use \code{bookmark_enable} to choose
+\emph{which} state is saved.}
 }
 \value{
 A \code{QueryChat} object. See \link{QueryChat} for available methods.

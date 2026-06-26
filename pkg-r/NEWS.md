@@ -29,11 +29,17 @@
 
 * File attachments are now enabled by default in the Shiny chat UI. Users can attach images, PDFs, and text files to their messages and the LLM will receive them. Disable with `allow_attachments = FALSE` in `mod_ui()` or `QueryChat$ui()`. (#253)
 
+* Card dashboards can now be **shared and author-seeded** without the LLM. `$cards_url()` encodes the current cards into a compact URL, and `$cards_set_url()` updates the address bar to that link; opening such a URL seeds the dashboard with exactly those cards and a fresh conversation. The new `cards` argument to `QueryChat$new()` (and `querychat()`) seeds an initial dashboard from a list of cards, a JSON string, or a path to a `.json` file. The bundled `querychat_app()` Insights panel shows an "open in new tab" link for the current cards.
+
 ## Breaking changes
 
 * The `$data_source` property has been removed. Use `qc$table("name")$data_source` to read a table's data source, and `qc$add_table(df, "name", replace = TRUE)` to replace it. The `data_source` parameter to `$server()` has also been removed; call `$add_table()` before `$server()` instead. (#195)
 
 ## Improvements
+
+* The `$server()` argument `enable_bookmarking` has been renamed to `bookmark_enable` (the old name is deprecated but still works). It now also selects *which* categories of state to bookmark, accepting `TRUE`/`FALSE` or a subset of `c("conversation", "cards")`. `bookmark_enable` is also available on `$app()`, `$app_obj()`, and `querychat_app()`, where `bookmark_store` now solely controls *where* state is stored.
+
+* The `bookmark_store` argument of `$app()`, `$app_obj()`, and `querychat_app()` now defaults to `NULL` instead of `"url"`. With `NULL`, querychat defers to a store you set yourself via `shiny::enableBookmarking()`, and otherwise picks a sensible default: `"server"` when the conversation is bookmarked or when running on a hosting platform (detected via `R_CONFIG_ACTIVE`), and `"url"` otherwise. Pass `bookmark_store` explicitly to override.
 
 * Chat greetings now use shinychat's greeting API (requires shinychat >= 0.4.0). A provided `greeting` renders instantly when the app loads, and when no `greeting` is given one is generated on demand — now **schema-aware**, so it can describe the data it's about to help you explore — without being added to the conversation history. Generated greetings are preserved across bookmark/restore. Tables passed to `QueryChat$new()` are described in the greeting automatically; opt additional tables in with `include_in_greeting = TRUE` on `$add_table()`/`$add_tables()`, or fine-tune which tables and which template the greeting uses via `qc$greeter`. (#249, #261)
 

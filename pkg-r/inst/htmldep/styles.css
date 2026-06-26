@@ -8,6 +8,11 @@
   font-family: var(--bs-font-monospace);
 }
 
+/* hide value box SQL viewer unless the card is in full-screen mode */
+.bslib-card[data-full-screen="false"] .querychat-vb-sql {
+  display: none;
+}
+
 /* querychat takes up the full sidebar, so move the collapse toggle out of the way */
 .bslib-sidebar-layout:has(.querychat-sidebar):not(.sidebar-collapsed)>.collapse-toggle {
     right: 4px;

@@ -104,6 +104,7 @@ QueryChat <- R6::R6Class(
     .categorical_threshold = NULL,
     .data_dicts = list(),
     .greeter = NULL,
+    .seed_cards = NULL,
 
     require_initialized = function(method_name) {
       if (length(private$.data_sources) == 0) {
@@ -156,7 +157,8 @@ QueryChat <- R6::R6Class(
       session = NULL,
       update_dashboard = function(query, title, table) {},
       reset_dashboard = function(table) {},
-      visualize = function(data) {}
+      visualize = function(data) {},
+      card = function(action, id = NULL, card = NULL) {}
     ) {
       spec <- client_spec %||% private$.client_spec
       chat <- create_client(spec)
@@ -222,6 +224,12 @@ QueryChat <- R6::R6Class(
         )
       }
 
+      if ("cards" %in% tools) {
+        chat$register_tool(
+          tool_card(executor, manage_card = card)
+        )
+      }
+
       chat
     }
   ),
@@ -282,6 +290,17 @@ QueryChat <- R6::R6Class(
     #'   format.
     #' @param data_dict Optional data dictionary. A path to a YAML file, or a
     #'   list of YAML file paths. See [read_data_dict()] for the expected format.
+    #' @param cards Optional initial set of cards to display in the Insights
+    #'   panel before any LLM interaction. Accepts:
+    #'   - A list of named lists, where each named list contains the card fields
+    #'     (`display`, `title`, `query` and/or `text`, and optionally `theme`,
+    #'     `icon`).
+    #'   - A JSON string encoding such a list.
+    #'   - A path to a `.json` file containing such a list.
+    #'
+    #'   Structural checks (e.g. each element is a named list) run at
+    #'   construction time. Full field and query validation runs at app startup
+    #'   and aborts loudly naming the 1-based card index on failure.
     #' @param cleanup Whether or not to automatically run `$cleanup()` when the
     #'   Shiny session/app stops. By default, cleanup only occurs if `QueryChat`
     #'   gets created within a Shiny session. Set to `TRUE` to always clean up,
@@ -301,6 +320,7 @@ QueryChat <- R6::R6Class(
       extra_instructions = NULL,
       prompt_template = NULL,
       data_dict = NULL,
+      cards = NULL,
       cleanup = NA
     ) {
       check_dots_empty()
@@ -310,7 +330,7 @@ QueryChat <- R6::R6Class(
       check_string(greeting, allow_null = TRUE)
       arg_match(
         tools,
-        values = c("filter", "update", "query", "visualize"),
+        values = c("filter", "update", "query", "visualize", "cards"),
         multiple = TRUE
       )
       tools <- normalize_tools(tools)
@@ -322,6 +342,10 @@ QueryChat <- R6::R6Class(
 
       # Normalize data_dicts
       private$.data_dicts <- normalize_data_dicts(data_dict)
+
+      # Normalize and structurally validate seed cards; full field/query
+      # validation is deferred to mod_server() where the executor is available.
+      private$.seed_cards <- normalize_seed_cards(cards)
 
       # Store init parameters for deferred system prompt building
       private$.prompt_template <- prompt_template
@@ -633,6 +657,9 @@ QueryChat <- R6::R6Class(
     #'   `reset_dashboard` tool is called. Takes a `table` argument.
     #' @param visualize Optional function to call with a list containing
     #'   `ggsql`, `title`, and `widget_id` when a visualization succeeds.
+    #' @param card Optional function to call when the `querychat_card` tool
+    #'   performs an `add`, `update`, or `remove` action. The function signature
+    #'   must be `function(action, id = NULL, card = NULL)`.
     #' @param session A Shiny session object. Required when `"visualize"` is
     #'   in `tools` and you want interactive chart rendering. When `NULL`
     #'   (the default), visualizations still execute but are not rendered
@@ -642,6 +669,7 @@ QueryChat <- R6::R6Class(
       update_dashboard = function(query, title, table) {},
       reset_dashboard = function(table) {},
       visualize = function(data) {},
+      card = function(action, id = NULL, card = NULL) {},
       session = NULL
     ) {
       private$require_initialized("$client")
@@ -649,7 +677,7 @@ QueryChat <- R6::R6Class(
       if (!is_na(tools) && !is.null(tools)) {
         tools <- arg_match(
           tools,
-          values = c("filter", "update", "query", "visualize"),
+          values = c("filter", "update", "query", "visualize", "cards"),
           multiple = TRUE
         )
         tools <- normalize_tools(tools)
@@ -660,7 +688,8 @@ QueryChat <- R6::R6Class(
         session = session,
         update_dashboard = update_dashboard,
         reset_dashboard = reset_dashboard,
-        visualize = visualize
+        visualize = visualize,
+        card = card
       )
     },
 
@@ -688,13 +717,30 @@ QueryChat <- R6::R6Class(
     #' Create and run a Shiny gadget for chatting with data
     #'
     #' @param ... Arguments passed to `$app_obj()`.
-    #' @param bookmark_store The bookmarking storage method. Passed to
-    #'   [shiny::enableBookmarking()]. If `"url"` or `"server"`, the chat state
-    #'   (including current query) will be bookmarked. Default is `"url"`.
+    #' @param bookmark_enable Which categories of state to bookmark. Passed to
+    #'   `$server()`; see its documentation for accepted values. Default is
+    #'   `TRUE` (bookmark everything). Nothing is bookmarked when this is `FALSE`
+    #'   or when `bookmark_store` is `"disable"`.
+    #' @param bookmark_store Where bookmarked state is stored. Passed to
+    #'   [shiny::enableBookmarking()]: `"url"` stores state in the URL, `"server"`
+    #'   stores it server-side, and `"disable"` turns off bookmarking entirely.
+    #'   Default is `NULL`, which defers to a store set via
+    #'   [shiny::enableBookmarking()] if present, otherwise picks a sensible
+    #'   default (`"server"` when the conversation is bookmarked or when running
+    #'   on a hosting platform, `"url"` otherwise). Use `bookmark_enable` to
+    #'   choose *which* state is saved.
     #'
-    #' @return Invisibly returns a list of session-specific values.
-    app = function(..., bookmark_store = "url") {
-      app <- self$app_obj(..., bookmark_store = bookmark_store)
+    #' @return Invisibly returns a list of session-specific values:
+    #'  - `df`: The final filtered data frame
+    #'  - `sql`: The final SQL query string
+    #'  - `title`: The final title
+    #'  - `client`: The session-specific chat client instance
+    app = function(..., bookmark_enable = TRUE, bookmark_store = NULL) {
+      app <- self$app_obj(
+        ...,
+        bookmark_enable = bookmark_enable,
+        bookmark_store = bookmark_store
+      )
       vals <- tryCatch(shiny::runGadget(app), interrupt = function(cnd) NULL)
       invisible(vals)
     },
@@ -702,66 +748,119 @@ QueryChat <- R6::R6Class(
     #' @description
     #' A streamlined Shiny app for chatting with data
     #'
+    #' Creates a Shiny app designed for chatting with data, with:
+    #' - A sidebar containing the chat interface
+    #' - A "Data" tab with the current SQL query, a reset button, and the
+    #'   filtered data table
+    #' - An "Insights" tab displaying LLM-curated cards, when the `"cards"` tool
+    #'   is enabled
+    #'
+    #' ```r
+    #' library(querychat)
+    #'
+    #' qc <- QueryChat$new(mtcars)
+    #' app <- qc$app_obj()
+    #' shiny::runApp(app)
+    #' ```
+    #'
     #' @param ... Additional arguments (currently unused).
-    #' @param bookmark_store The bookmarking storage method. Passed to
-    #'  [shiny::enableBookmarking()]. Default is `"url"`.
+    #' @param bookmark_enable Which categories of state to bookmark. Passed to
+    #'   `$server()`; see its documentation for accepted values. Default is
+    #'   `TRUE` (bookmark everything). Nothing is bookmarked when this is `FALSE`
+    #'   or when `bookmark_store` is `"disable"`.
+    #' @param bookmark_store Where bookmarked state is stored. Passed to
+    #'  [shiny::enableBookmarking()]: `"url"` stores state in the URL, `"server"`
+    #'  stores it server-side, and `"disable"` turns off bookmarking entirely.
+    #'  Default is `NULL`, which defers to a store set via
+    #'  [shiny::enableBookmarking()] if present, otherwise picks a sensible
+    #'  default (`"server"` when the conversation is bookmarked or when running
+    #'  on a hosting platform, `"url"` otherwise). Use `bookmark_enable` to
+    #'  choose *which* state is saved.
     #'
     #' @return A Shiny app object that can be run with `shiny::runApp()`.
-    app_obj = function(..., bookmark_store = "url") {
+    app_obj = function(..., bookmark_enable = TRUE, bookmark_store = NULL) {
       private$require_initialized("$app_obj")
       check_installed("DT")
       check_dots_empty()
 
       first_table_name <- names(private$.data_sources)[[1]]
+      cards_enabled <- "cards" %in% self$tools
 
       ui <- function(req) {
-        bslib::page_sidebar(
+        sql_card <- bslib::card(
+          fill = FALSE,
+          style = bslib::css(max_height = "33%"),
+          bslib::card_header(
+            shiny::div(
+              class = "hstack w-100",
+              shiny::div(
+                bsicons::bs_icon("terminal-fill"),
+                shiny::textOutput("query_title", inline = TRUE)
+              ),
+              shiny::div(
+                class = "ms-auto",
+                shiny::uiOutput("ui_reset", inline = TRUE)
+              )
+            )
+          ),
+          shiny::uiOutput("sql_output")
+        )
+
+        data_nav <- bslib::nav_panel(
+          title = list(bsicons::bs_icon("table"), "Data"),
+          value = "data",
+          class = "bslib-page-dashboard",
+          sql_card,
+          bslib::card(
+            full_screen = TRUE,
+            DT::DTOutput("dt")
+          )
+        )
+
+        insights_nav <- if (cards_enabled) {
+          bslib::nav_panel(
+            title = list(bsicons::bs_icon("lightbulb"), "Insights"),
+            value = "insights",
+            class = "bslib-page-dashboard",
+            self$ui_cards(),
+            shiny::uiOutput("cards_share_link")
+          )
+        }
+
+        close_nav <- if (rlang::is_interactive()) {
+          bslib::nav_item(
+            shiny::actionButton(
+              "close_btn",
+              label = "",
+              class = "btn-close",
+              style = "align-self: center;"
+            )
+          )
+        }
+
+        rlang::inject(bslib::page_navbar(
           title = shiny::HTML(
             sprintf(
               "<span>querychat with <code>%s</code></span>",
               first_table_name
             )
           ),
-          class = "bslib-page-dashboard",
+          window_title = paste("querychat with", first_table_name),
+          id = "querychat_navbar",
           sidebar = self$sidebar(),
-          shiny::useBusyIndicators(pulse = TRUE, spinners = FALSE),
-          bslib::card(
-            fill = FALSE,
-            style = bslib::css(max_height = "33%"),
-            bslib::card_header(
-              shiny::div(
-                class = "hstack w-100",
-                shiny::div(
-                  bsicons::bs_icon("terminal-fill"),
-                  shiny::textOutput("query_title", inline = TRUE)
-                ),
-                shiny::div(
-                  class = "ms-auto",
-                  shiny::uiOutput("ui_reset", inline = TRUE)
-                )
-              )
-            ),
-            shiny::uiOutput("sql_output")
-          ),
-          bslib::card(
-            full_screen = TRUE,
-            bslib::card_header(
-              bsicons::bs_icon("table"),
-              "Data \u2014 ",
-              shiny::textOutput("data_card_header_text", inline = TRUE)
-            ),
-            DT::DTOutput("dt")
-          ),
-          if (rlang::is_interactive()) {
-            shiny::actionButton(
-              "close_btn",
-              label = "",
-              class = "btn-close",
-              style = "position: fixed; top: 6px; right: 6px;"
-            )
-          }
-        )
+          header = shiny::useBusyIndicators(pulse = TRUE, spinners = FALSE),
+          bslib::nav_spacer(),
+          !!!compact(list(data_nav, insights_nav)),
+          close_nav
+        ))
       }
+
+      # `bookmark_store` selects where state is stored; `bookmark_enable`
+      # selects whether and what is stored. `resolve_bookmark_store()` picks a
+      # default when `bookmark_store` is NULL and defers to a store the author
+      # already set via shiny::enableBookmarking() (returning NULL in that case).
+      bookmark_cats <- normalize_bookmark_categories(bookmark_enable)
+      effective_store <- resolve_bookmark_store(bookmark_store, bookmark_cats)
 
       server <- function(input, output, session) {
         shiny::setBookmarkExclude(c(
@@ -769,8 +868,13 @@ QueryChat <- R6::R6Class(
           "reset_query",
           "sql_editor"
         ))
-        enable_bookmarking <- bookmark_store %in% c("url", "server")
-        qc_vals <- self$server(enable_bookmarking = enable_bookmarking)
+        qc_vals <- self$server(
+          bookmark_enable = if (identical(effective_store, "disable")) {
+            FALSE
+          } else {
+            bookmark_enable
+          }
+        )
 
         active_table_name <- shiny::reactive({
           ct <- qc_vals$current_table()
@@ -830,6 +934,40 @@ QueryChat <- R6::R6Class(
           )
         })
 
+        if (cards_enabled) {
+          # Open the Insights tab on startup when it is seeded with cards,
+          # regardless of how they were seeded (author `cards=`, the
+          # `?querychat_cards=` URL param, or bookmark restore). onFlushed fires
+          # after the first reactive flush, by which point all three paths have
+          # applied to `qc_vals$cards()`.
+          shiny::onFlushed(
+            function() {
+              if (length(shiny::isolate(qc_vals$cards())) > 0) {
+                bslib::nav_select("querychat_navbar", "insights")
+              }
+            },
+            once = TRUE
+          )
+
+          output$cards_share_link <- shiny::renderUI({
+            current_cards <- qc_vals$cards()
+            if (length(current_cards) == 0) {
+              return(NULL)
+            }
+            url <- self$cards_url(current_cards)
+            htmltools::div(
+              class = "mt-auto pt-2 text-center border-top",
+              htmltools::a(
+                href = url,
+                target = "_blank",
+                rel = "noopener",
+                "Share these insights",
+                bsicons::bs_icon("box-arrow-up-right"),
+              )
+            )
+          })
+        }
+
         shiny::observe(label = "sync_sql_editor", {
           name <- active_table_name()
           bslib::update_code_editor(
@@ -866,7 +1004,7 @@ QueryChat <- R6::R6Class(
         }
       }
 
-      shiny::shinyApp(ui, server, enableBookmarking = bookmark_store)
+      shiny::shinyApp(ui, server, enableBookmarking = effective_store)
     },
 
     #' @description
@@ -913,12 +1051,152 @@ QueryChat <- R6::R6Class(
     },
 
     #' @description
+    #' Create the UI for the querychat cards area.
+    #'
+    #' This method generates the output area where cards created by the LLM are
+    #' displayed. Place it in your app's main panel, next to `$sidebar()`.
+    #'
+    #' ```r
+    #' qc <- QueryChat$new(mtcars)
+    #'
+    #' ui <- bslib::page_sidebar(
+    #'   sidebar = qc$sidebar(),
+    #'   qc$ui_cards()
+    #' )
+    #' ```
+    #'
+    #' The placeholder text is configured on `$server()` via `card_placeholder`.
+    #' Card layout is handled automatically.
+    #'
+    #' @param ... Additional arguments passed to [shiny::uiOutput()].
+    #' @param id Optional ID for the QueryChat instance. If not provided,
+    #'   will use the ID provided at initialization. If using `$ui_cards()` in a
+    #'   Shiny module, you'll need to provide `id = ns("your_id")` where `ns` is
+    #'   the namespacing function from [shiny::NS()].
+    #'
+    #' @return A UI component containing the cards output area.
+    ui_cards = function(..., id = NULL) {
+      check_string(id, allow_null = TRUE, allow_empty = FALSE)
+      id <- id %||% namespaced_id(self$id)
+      mod_ui_cards(id, ...)
+    },
+
+    #' @description
+    #' Build a shareable URL that opens the app with the given cards pre-loaded.
+    #'
+    #' The cards list is encoded as a compact gzip+base64 query parameter.
+    #' When visited, `$server()` seeds the cards reactive from this parameter
+    #' before the first render — so the app opens with the shared insight cards
+    #' already visible, without requiring a bookmark.
+    #'
+    #' @param cards A list of card field-lists, or a JSON string that encodes
+    #'   such a list. Required; there is no default.
+    #' @param ... Must be empty.
+    #' @param id Optional module ID override. Defaults to `self$id`.
+    #'
+    #' @return A URL string (absolute when called from a session, relative
+    #'   otherwise).
+    cards_url = function(cards = NULL, ..., id = NULL) {
+      rlang::check_dots_empty()
+      if (is.null(cards)) {
+        cli::cli_abort(
+          "{.arg cards} is required: pass a list of cards or a JSON string."
+        )
+      }
+      if (is.character(cards) && length(cards) == 1) {
+        cards <- jsonlite::fromJSON(cards, simplifyVector = FALSE)
+      }
+      id <- id %||% self$id
+      # shiny::NS(id)("querychat_cards") == paste0(id, "-querychat_cards")
+      key <- paste0(id, "-querychat_cards")
+      payload <- cards_to_payload(cards)
+      encoded_key <- utils::URLencode(key, reserved = TRUE)
+      encoded_val <- utils::URLencode(payload, reserved = TRUE)
+      qs <- sprintf("?%s=%s", encoded_key, encoded_val)
+      session <- shiny::getDefaultReactiveDomain()
+      if (!is.null(session)) {
+        cd <- session$clientData
+        port <- cd$url_port
+        host <- if (nzchar(port %||% "")) {
+          paste0(cd$url_hostname, ":", port)
+        } else {
+          cd$url_hostname
+        }
+        paste0(cd$url_protocol, "//", host, cd$url_pathname, qs)
+      } else {
+        qs
+      }
+    },
+
+    #' @description
+    #' Update the browser URL to a shareable cards link.
+    #'
+    #' A thin wrapper around `$cards_url()` that calls
+    #' [shiny::updateQueryString()] with the resulting URL. Must be called
+    #' from within a Shiny server function.
+    #'
+    #' @param cards A list of card field-lists, or a JSON string. Required.
+    #' @param ... Passed to `$cards_url()`.
+    #' @param id Optional module ID override.
+    #'
+    #' @return Invisibly returns the URL string.
+    cards_set_url = function(cards = NULL, ..., id = NULL) {
+      url <- self$cards_url(cards, ..., id = id)
+      shiny::updateQueryString(url)
+      invisible(url)
+    },
+
+    #' @description
     #' Initialize the querychat server logic.
     #'
-    #' @param data_source Optional data source for backward compatibility.
-    #'   If provided, calls `$add_table()` before initializing server logic.
-    #' @param client Optional chat client override for this session.
-    #' @param enable_bookmarking Whether to enable bookmarking. Default is `FALSE`.
+    #' This method must be called within a Shiny server function. It sets up the
+    #' reactive logic for the chat interface and returns session-specific
+    #' reactive values.
+    #'
+    #' ```r
+    #' qc <- QueryChat$new(mtcars)
+    #'
+    #' server <- function(input, output, session) {
+    #'   qc_vals <- qc$server(bookmark_enable = TRUE)
+    #'
+    #'   output$data <- renderDataTable(qc_vals$df())
+    #'   output$query <- renderText(qc_vals$sql())
+    #'   output$title <- renderText(qc_vals$title() %||% "No Query")
+    #' }
+    #' ```
+    #'
+    #' @param data_source Optional data source to use. If provided, sets the
+    #'   data_source property before initializing server logic. This is useful
+    #'   for the deferred pattern where data_source is not known at
+    #'   initialization time (e.g., when the data source depends on session-
+    #'   specific authentication).
+    #' @param client Optional chat client override for this session. Can be an
+    #'   [ellmer::Chat] object or a string (e.g., `"openai/gpt-4o"`). If provided,
+    #'   overrides the client set at initialization for this session only —
+    #'   other sessions are unaffected. This is useful when the client must be
+    #'   created within a session scope (e.g., Posit Connect managed credentials).
+    #' @param bookmark_enable Which categories of state to bookmark. Default
+    #'   is `FALSE` (no bookmarking). Accepts:
+    #'   - `TRUE` to bookmark everything (equivalent to
+    #'     `c("conversation", "cards")`).
+    #'   - `FALSE` or `NULL` to disable bookmarking.
+    #'   - A character vector subset of `c("conversation", "cards")` to bookmark
+    #'     only those categories. `"conversation"` covers the chat transcript,
+    #'     the active dashboard filter (query and title), the generated greeting,
+    #'     and inline visualization widgets. `"cards"` covers the insight cards
+    #'     created with the `querychat_card` tool.
+    #'
+    #'   Bookmarking categories independently enables share patterns such as
+    #'   `bookmark_enable = "cards"`, which produces links that open the app
+    #'   with the same insights but a fresh conversation.
+    #'
+    #'   This requires that the Shiny app has bookmarking enabled via
+    #'   `shiny::enableBookmarking()` or the `enableBookmarking` parameter of
+    #'   `shiny::shinyApp()`.
+    #' @param enable_bookmarking `r lifecycle::badge("deprecated")` Renamed to
+    #'   `bookmark_enable`.
+    #' @param card_placeholder Text shown in the `$ui_cards()` area when no
+    #'   cards exist. Set to `NULL` for no placeholder.
     #' @param ... Ignored.
     #' @param id Optional module ID override.
     #' @param session The Shiny session object.
@@ -926,19 +1204,38 @@ QueryChat <- R6::R6Class(
     #' @return A list containing session-specific reactive values and the chat
     #'   client. For single-table usage, includes `df`, `sql`, `title` directly.
     #'   For multi-table, use `qc_vals$table("name")` to get a [TableAccessor]
-    #'   with per-table reactive state. Also includes `table_names()` to list tables.
-    #'   `current_table()` returns the name of the most recently queried table,
-    #'   or `NULL` before any query.
+    #'   with per-table reactive state. Also includes `table_names()` to list tables,
+    #'   `current_table()` which returns the name of the most recently queried table
+    #'   (or `NULL` before any query), and `cards`, a reactive value holding the
+    #'   current list of cards.
+    #'
     server = function(
       data_source = NULL,
       client = NULL,
-      enable_bookmarking = FALSE,
+      bookmark_enable = FALSE,
+      card_placeholder = "Insights will appear here",
       ...,
       id = NULL,
-      session = shiny::getDefaultReactiveDomain()
+      session = shiny::getDefaultReactiveDomain(),
+      enable_bookmarking = lifecycle::deprecated()
     ) {
       check_string(id, allow_null = TRUE, allow_empty = FALSE)
       check_dots_empty()
+
+      if (lifecycle::is_present(enable_bookmarking)) {
+        if (!missing(bookmark_enable)) {
+          cli::cli_abort(c(
+            "Can't supply both {.arg bookmark_enable} and the deprecated {.arg enable_bookmarking}.",
+            "i" = "Use only {.arg bookmark_enable}."
+          ))
+        }
+        lifecycle::deprecate_warn(
+          when = "0.4.0",
+          what = "QueryChat$server(enable_bookmarking = )",
+          with = "QueryChat$server(bookmark_enable = )"
+        )
+        bookmark_enable <- enable_bookmarking
+      }
 
       if (is.null(session)) {
         cli::cli_abort(
@@ -984,7 +1281,9 @@ QueryChat <- R6::R6Class(
         tools = self$tools,
         greeter = self$greeter,
         greeting_base = base_client,
-        enable_bookmarking = enable_bookmarking
+        bookmark_enable = bookmark_enable,
+        card_placeholder = card_placeholder,
+        seed_cards = private$.seed_cards
       )
       result
     },
@@ -1091,16 +1390,41 @@ QueryChat <- R6::R6Class(
 #'   connection).
 #' @param table_name A string specifying the table name to use in SQL queries.
 #' @param ... Additional arguments (currently unused).
-#' @param id Optional module ID for the QueryChat instance.
-#' @param greeting Optional initial message to display to users.
-#' @param client Optional chat client.
-#' @param tools Which querychat tools to include in the chat client.
-#' @param data_description Optional description of the data.
+#' @param id Optional module ID for the QueryChat instance. If not provided,
+#'   will be auto-generated from `table_name`. The ID is used to namespace
+#'   the Shiny module.
+#' @param greeting Optional initial message to display to users. Can be a
+#'   character string (in Markdown format) or a file path. If not provided,
+#'   a greeting will be generated at the start of each conversation using the
+#'   LLM, which adds latency and cost. Use `$generate_greeting()` to create
+#'   a greeting to save and reuse.
+#' @param client Optional chat client. Can be:
+#'   - An [ellmer::Chat] object
+#'   - A string to pass to [ellmer::chat()] (e.g., `"openai/gpt-4o"`)
+#'   - `NULL` (default): Uses the `querychat.client` option, the
+#'     `QUERYCHAT_CLIENT` environment variable, or defaults to
+#'     [ellmer::chat_openai()]
+#' @param tools Which querychat tools to include in the chat client, by
+#'   default. `"filter"` includes the tools for filtering and resetting the
+#'   dashboard and `"query"` includes the tool for executing SQL queries.
+#'   Use `tools = "filter"` when you only want the dashboard filtering tools,
+#'   or when you want to disable the querying tool entirely to prevent the
+#'   LLM from seeing any of the data in your dataset. The legacy name
+#'   `"update"` is still accepted as an alias for `"filter"`.
+#'   `querychat_app()` defaults to
+#'   `c("filter", "query", "visualize", "cards")` so the bundled app's Insights
+#'   tab is populated; pass `tools` explicitly to override.
+#' @param data_description Optional description of the data in plain text or
+#'   Markdown. Can be a string or a file path. This provides context to the
+#'   LLM about what the data represents.
 #' @param categorical_threshold For text columns, the maximum number of unique
 #'   values to consider as a categorical variable. Default is 20.
 #' @param extra_instructions Optional additional instructions for the chat model.
 #' @param prompt_template Optional path to or string of a custom prompt template.
 #' @param data_dict Optional data dictionary. A path to a YAML file or a list of paths.
+#' @param cards Optional initial set of cards to display in the Insights panel
+#'   before any LLM interaction. A list of named card field-lists, a JSON
+#'   string, or a path to a `.json` file. See `QueryChat$new()` for details.
 #' @param cleanup Whether or not to automatically run `$cleanup()` when the
 #'   Shiny session/app stops.
 #'
@@ -1121,6 +1445,7 @@ querychat <- function(
   extra_instructions = NULL,
   prompt_template = NULL,
   data_dict = NULL,
+  cards = NULL,
   cleanup = NA
 ) {
   if (is_missing(table_name)) {
@@ -1148,12 +1473,24 @@ querychat <- function(
     extra_instructions = extra_instructions,
     prompt_template = prompt_template,
     data_dict = data_dict,
+    cards = cards,
     cleanup = cleanup
   )
 }
 
 #' @rdname querychat-convenience
-#' @param bookmark_store The bookmarking storage method. Default is `"url"`.
+#' @param bookmark_enable Which categories of state to bookmark. Passed to
+#'   `QueryChat$server()`; see its documentation for accepted values. Default is
+#'   `TRUE` (bookmark everything). Nothing is bookmarked when this is `FALSE` or
+#'   when `bookmark_store` is `"disable"`.
+#' @param bookmark_store Where bookmarked state is stored. Passed to
+#'   [shiny::enableBookmarking()]: `"url"` stores state in the URL, `"server"`
+#'   stores it server-side, and `"disable"` turns off bookmarking entirely.
+#'   Default is `NULL`, which defers to a store set via
+#'   [shiny::enableBookmarking()] if present, otherwise picks a sensible default
+#'   (`"server"` when the conversation is bookmarked or when running on a
+#'   hosting platform, `"url"` otherwise). Use `bookmark_enable` to choose
+#'   *which* state is saved.
 #' @return Invisibly returns the chat object after the app stops.
 #'
 #' @export
@@ -1164,14 +1501,16 @@ querychat_app <- function(
   id = NULL,
   greeting = NULL,
   client = NULL,
-  tools = c("filter", "query"),
+  tools = c("filter", "query", "visualize", "cards"),
   data_description = NULL,
   categorical_threshold = 20,
   extra_instructions = NULL,
   prompt_template = NULL,
   data_dict = NULL,
+  cards = NULL,
   cleanup = NA,
-  bookmark_store = "url"
+  bookmark_enable = TRUE,
+  bookmark_store = NULL
 ) {
   if (shiny::isRunning()) {
     cli::cli_abort(
@@ -1211,10 +1550,14 @@ querychat_app <- function(
     extra_instructions = extra_instructions,
     prompt_template = prompt_template,
     data_dict = data_dict,
+    cards = cards,
     cleanup = cleanup
   )
 
-  qc$app(bookmark_store = bookmark_store)
+  qc$app(
+    bookmark_enable = bookmark_enable,
+    bookmark_store = bookmark_store
+  )
 }
 
 normalize_tools <- function(tools) {

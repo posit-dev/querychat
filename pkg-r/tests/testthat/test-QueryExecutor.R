@@ -17,6 +17,15 @@ describe("DataSourceExecutor", {
     expect_equal(nrow(result), 1)
   })
 
+  it("validate_query() accepts a valid query without naming a table", {
+    expect_invisible(executor$validate_query("SELECT * FROM users"))
+    expect_null(executor$validate_query("SELECT * FROM users"))
+  })
+
+  it("validate_query() surfaces an error for an invalid query", {
+    expect_error(executor$validate_query("SELECT * FROM not_a_table"))
+  })
+
   it("returns correct get_db_type()", {
     expect_equal(executor$get_db_type(), "DuckDB")
   })
@@ -52,6 +61,22 @@ describe("DuckDBExecutor", {
     expect_equal(nrow(result), 5)
     expect_true("name" %in% names(result))
     expect_true("score" %in% names(result))
+  })
+
+  it("validate_query() accepts a cross-table JOIN without naming a table", {
+    users <- new_users_df()
+    scores <- data.frame(
+      id = 1:5,
+      score = c(90, 85, 92, 78, 88),
+      stringsAsFactors = FALSE
+    )
+    executor <- DuckDBExecutor$new(list(users = users, scores = scores))
+    withr::defer(executor$cleanup())
+
+    expect_invisible(executor$validate_query(
+      "SELECT u.name, s.score FROM users u JOIN scores s ON u.id = s.id"
+    ))
+    expect_error(executor$validate_query("SELECT * FROM nope"))
   })
 
   it("enforces require_all_columns per table in test_query()", {

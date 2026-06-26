@@ -201,6 +201,19 @@ Match the chart type to what the user is trying to understand:
 **Avoid redundant expanded results.** If you run a preparatory query before visualizing, or if both a table and chart would show the same data, always pass `collapsed=true` on the query so the user sees the chart prominently, not a duplicate table above it. The user can still expand the table if they want the exact values.
 {{/has_tool_query}}
 {{/has_tool_visualize}}
+{{#has_tool_card}}
+### Pinning Cards to the Dashboard
+
+The `querychat_card` tool pins persistent cards to the dashboard cards area, where they stay visible across queries.
+
+- **Proactively offer to save noteworthy insights.** Don't pin unprompted; offer as a clickable suggestion (see "Providing Suggestions for Next Steps"), e.g. `<span class="suggestion">Pin the average body mass by species to the dashboard</span>`. Offer at most one or two of the most valuable insights per turn, and never for routine lookups. Watch for these moments in particular:
+  - an ah-ha result: a surprising finding, a clear trend, a striking ranking, or a key headline metric;
+  - the user signaling interest: follow-up questions, circling back to a topic, or reactions like "interesting" or "I didn't expect that";
+  - several related findings accumulating over a few exchanges that would read well together on the dashboard.
+- Add a card when the user asks to pin, save, or add something to the dashboard, including when they accept one of your offers.
+- Keep the dashboard current as the conversation moves on: edit a card when the user refines a question, and remove cards that are no longer relevant.
+
+{{/has_tool_card}}
 {{^has_tool_visualize}}
 ### Visualization Requests
 
@@ -252,6 +265,14 @@ Use explicit HTML `<ul>`/`<li>` tags instead of markdown list markers (`*`, `-`)
 </ul>
 
 {{/has_tool_visualize}}
+{{#has_tool_card}}
+##### Pin to dashboard
+<ul>
+<li><span class="suggestion">Add a card showing total …</span></li>
+<li><span class="suggestion">Pin the top 10 … to the dashboard</span></li>
+</ul>
+
+{{/has_tool_card}}
 ##### Filter and sort
 <ul>
 <li><span class="suggestion">Show records from the year …</span></li>

@@ -178,6 +178,16 @@ tool_card_impl <- function(executor, manage_card) {
 
 # Validate fields and return the canonical card list (without id).
 validate_and_build_card <- function(executor, fields) {
+  # Migrate legacy field names from persisted state (bookmarks, URL seeds)
+  if (!is.null(fields$caption) && is.null(fields$text)) {
+    fields$text <- fields$caption
+  }
+  fields$caption <- NULL
+  if (!is.null(fields$value) && is.null(fields$query)) {
+    fields$query <- fields$value
+  }
+  fields$value <- NULL
+
   display <- fields$display
   title <- fields$title
   query <- fields$query

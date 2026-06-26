@@ -219,7 +219,7 @@ list of YAML file paths. See \code{\link[=read_data_dict]{read_data_dict()}} for
 panel before any LLM interaction. Accepts:
 \itemize{
 \item A list of named lists, where each named list contains the card fields
-(\code{display}, \code{title}, \code{value}, and optionally \code{caption}, \code{theme},
+(\code{display}, \code{title}, \code{query} and/or \code{text}, and optionally \code{theme},
 \code{icon}).
 \item A JSON string encoding such a list.
 \item A path to a \code{.json} file containing such a list.

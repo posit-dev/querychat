@@ -40,7 +40,7 @@ text :
     - `"table"` / `"visualization"`: a brief footer shown below the content.
     - `"value_box"`: the subtitle shown under the main value.
 theme :
-    Optional Bootstrap theme name for a value_box background: one of `primary`, `secondary`, `success`, `danger`, `warning`, `info`. Applies to value_box only; ignored for other displays.
+    Optional Bootstrap theme name for a value_box background (e.g. `primary`, `secondary`, `success`, `danger`, `warning`, `info`). Any valid Bootstrap theme class is accepted. Applies to value_box only; ignored for other displays.
 icon :
     Optional Bootstrap icon name (e.g., `"bar-chart"`, `"currency-dollar"`, `"people-fill"`). Honored by every display: the showcase icon for value_box, and shown beside the title for table/visualization/markdown.
 

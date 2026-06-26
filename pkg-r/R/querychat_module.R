@@ -628,6 +628,22 @@ restore_record_list <- function(x) {
   as.list(x)
 }
 
+# Migrate legacy card field names from persisted state. Copies `caption` to
+# `text` (for non-markdown cards) and `value` to `query` when the new field is
+# absent, so bookmarked or server-restored cards created before the rename
+# still render correctly.
+migrate_card_fields <- function(card) {
+  if (!is.null(card$caption) && is.null(card$text) && !identical(card$display, "markdown")) {
+    card$text <- card$caption
+  }
+  card$caption <- NULL
+  if (!is.null(card$value) && is.null(card$query)) {
+    card$query <- card$value
+  }
+  card$value <- NULL
+  card
+}
+
 restore_viz_widgets <- function(executor, saved_widgets, session) {
   if (!rlang::is_installed("ggsql")) {
     warning(
@@ -703,6 +719,7 @@ navset_title_with_icon <- function(title, icon) {
 }
 
 render_card <- function(card, executor, session) {
+  card <- migrate_card_fields(card)
   tryCatch(
     switch(
       card$display %||% "markdown",

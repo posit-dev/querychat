@@ -35,6 +35,7 @@ querychat_app(
   extra_instructions = NULL,
   prompt_template = NULL,
   data_dict = NULL,
+  cards = NULL,
   cleanup = NA,
   bookmark_enable = TRUE,
   bookmark_store = NULL

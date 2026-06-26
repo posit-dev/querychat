@@ -293,7 +293,7 @@ QueryChat <- R6::R6Class(
     #' @param cards Optional initial set of cards to display in the Insights
     #'   panel before any LLM interaction. Accepts:
     #'   - A list of named lists, where each named list contains the card fields
-    #'     (`display`, `title`, `value`, and optionally `caption`, `theme`,
+    #'     (`display`, `title`, `query` and/or `text`, and optionally `theme`,
     #'     `icon`).
     #'   - A JSON string encoding such a list.
     #'   - A path to a `.json` file containing such a list.
@@ -1507,6 +1507,7 @@ querychat_app <- function(
   extra_instructions = NULL,
   prompt_template = NULL,
   data_dict = NULL,
+  cards = NULL,
   cleanup = NA,
   bookmark_enable = TRUE,
   bookmark_store = NULL
@@ -1549,6 +1550,7 @@ querychat_app <- function(
     extra_instructions = extra_instructions,
     prompt_template = prompt_template,
     data_dict = data_dict,
+    cards = cards,
     cleanup = cleanup
   )
 

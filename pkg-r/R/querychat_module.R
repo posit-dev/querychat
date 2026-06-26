@@ -702,14 +702,14 @@ navset_title_with_icon <- function(title, icon) {
   }
 }
 
-render_card <- function(card, data_source, session) {
+render_card <- function(card, executor, session) {
   tryCatch(
     switch(
       card$display %||% "markdown",
-      value_box = render_card_value_box(card, data_source, session),
-      table = render_card_table(card, data_source, session),
-      visualization = render_card_visualization(card, data_source, session),
-      render_card_markdown(card, data_source, session)
+      value_box = render_card_value_box(card, executor, session),
+      table = render_card_table(card, executor, session),
+      visualization = render_card_visualization(card, executor, session),
+      render_card_markdown(card, executor, session)
     ),
     error = function(e) render_card_error(card, conditionMessage(e))
   )
@@ -723,7 +723,7 @@ render_card_error <- function(card, message) {
   )
 }
 
-render_card_value_box <- function(card, data_source, session) {
+render_card_value_box <- function(card, executor, session) {
   col_or <- function(row, col_name, fallback) {
     val <- row[[col_name]]
     if (!is.null(val) && !is.na(val) && nzchar(as.character(val))) {
@@ -733,7 +733,7 @@ render_card_value_box <- function(card, data_source, session) {
     }
   }
 
-  df <- data_source$execute_query(card$query)
+  df <- executor$execute_query(card$query)
   row <- as.list(df[1, , drop = FALSE])
 
   scalar <- if ("value" %in% names(row)) {
@@ -743,17 +743,17 @@ render_card_value_box <- function(card, data_source, session) {
   }
 
   effective_title <- col_or(row, "title", card$title)
-  effective_caption <- col_or(row, "caption", card$caption)
+  effective_text <- col_or(row, "text", card$text)
   effective_theme <- col_or(row, "theme", card$theme %||% "primary")
   effective_icon <- col_or(row, "icon", card$icon)
 
   showcase <- if (!is.null(effective_icon) && nzchar(effective_icon)) {
     bsicons::bs_icon(effective_icon)
   }
-  caption_content <- if (
-    !is.null(effective_caption) && nzchar(effective_caption)
+  subtitle_content <- if (
+    !is.null(effective_text) && nzchar(effective_text)
   ) {
-    shiny::p(effective_caption)
+    shiny::p(effective_text)
   }
 
   sql_viewer <- htmltools::div(
@@ -771,7 +771,7 @@ render_card_value_box <- function(card, data_source, session) {
   bslib::value_box(
     title = effective_title,
     value = scalar,
-    caption_content,
+    subtitle_content,
     sql_viewer,
     showcase = showcase,
     theme = effective_theme,
@@ -779,9 +779,9 @@ render_card_value_box <- function(card, data_source, session) {
   )
 }
 
-render_card_table <- function(card, data_source, session) {
+render_card_table <- function(card, executor, session) {
   rlang::check_installed("DT", reason = "for table cards.")
-  df <- data_source$execute_query(card$query)
+  df <- executor$execute_query(card$query)
   if (inherits(df, "tbl_sql")) {
     df <- dplyr::collect(df)
   }
@@ -793,7 +793,7 @@ render_card_table <- function(card, data_source, session) {
   bslib::navset_card_underline(
     title = navset_title_with_icon(card$title, card$icon),
     full_screen = TRUE,
-    footer = if (!is.null(card$caption)) bslib::card_footer(card$caption),
+    footer = if (!is.null(card$text)) bslib::card_footer(card$text),
     bslib::nav_spacer(),
     bslib::nav_panel(
       bsicons::bs_icon("table"),
@@ -812,10 +812,10 @@ render_card_table <- function(card, data_source, session) {
   )
 }
 
-render_card_visualization <- function(card, data_source, session) {
+render_card_visualization <- function(card, executor, session) {
   widget_id <- paste0("querychat_card_viz_", card$id)
   validated <- ggsql::ggsql_validate(card$query)
-  spec <- execute_ggsql(data_source, validated)
+  spec <- execute_ggsql(executor, validated)
   session$output[[widget_id]] <- ggsql::renderGgsql(spec)
   content_panel <- htmltools::div(
     class = "querychat-viz-container",
@@ -825,7 +825,7 @@ render_card_visualization <- function(card, data_source, session) {
   bslib::navset_card_underline(
     title = navset_title_with_icon(card$title, card$icon),
     full_screen = TRUE,
-    footer = if (!is.null(card$caption)) bslib::card_footer(card$caption),
+    footer = if (!is.null(card$text)) bslib::card_footer(card$text),
     bslib::nav_spacer(),
     bslib::nav_panel(
       bsicons::bs_icon("bar-chart-fill"),
@@ -844,9 +844,9 @@ render_card_visualization <- function(card, data_source, session) {
   )
 }
 
-render_card_markdown <- function(card, data_source, session) {
+render_card_markdown <- function(card, executor, session) {
   rendered_text <- if (!is.null(card$query)) {
-    df <- data_source$execute_query(card$query)
+    df <- executor$execute_query(card$query)
     row <- as.list(df[1, , drop = FALSE])
     whisker::whisker.render(card$text, row)
   } else {
@@ -857,7 +857,6 @@ render_card_markdown <- function(card, data_source, session) {
     bslib::navset_card_underline(
       title = navset_title_with_icon(card$title, card$icon),
       full_screen = TRUE,
-      footer = if (!is.null(card$caption)) bslib::card_footer(card$caption),
       bslib::nav_spacer(),
       bslib::nav_panel(
         bsicons::bs_icon("file-text"),
@@ -877,8 +876,7 @@ render_card_markdown <- function(card, data_source, session) {
   } else {
     bslib::card(
       card_header_with_icon(card$title, card$icon),
-      bslib::card_body(shiny::markdown(rendered_text)),
-      if (!is.null(card$caption)) bslib::card_footer(card$caption)
+      bslib::card_body(shiny::markdown(rendered_text))
     )
   }
 }

@@ -4,7 +4,7 @@ Cards live in a developer-placed dashboard area and stay visible across queries.
 
 Match the display to the finding:
 
-- **value_box**: a single key metric. The SQL query must return exactly 1 row. The displayed number comes from the `value` column (or the first column if no `value` column). Columns named `title`, `caption`, `theme`, or `icon` override the static card fields, enabling dynamic theming (e.g. `CASE WHEN ... THEN 'danger' ELSE 'success' END AS theme`).
+- **value_box**: a single key metric. The SQL query must return exactly 1 row. The displayed number comes from the `value` column (or the first column if no `value` column). Columns named `title`, `text`, `theme`, or `icon` override the static card fields, enabling dynamic theming (e.g. `CASE WHEN ... THEN 'danger' ELSE 'success' END AS theme`).
 - **table**: a ranked or comparative result set the user wants to see at a glance.
 - **visualization**: a trend, distribution, or comparison that reads better as a chart.
 - **markdown**: a written takeaway or note. Use the `text` field for the markdown body. Optionally supply a `query` (SQL returning exactly 1 row) whose columns become `{{var}}` placeholders in `text` for live interpolation (e.g. `Revenue grew {{pct}}% to {{total}}`).
@@ -32,12 +32,13 @@ query :
     The data query; required for table, visualization, and value_box displays; optional for markdown (interpolation). Its meaning depends on `display`:
     - `"table"`: a valid {{db_type}} SQL SELECT query.
     - `"visualization"`: a full ggsql query including a VISUALISE clause. Do NOT include `LABEL title => ...`; use the `title` parameter instead.
-    - `"value_box"`: a {{db_type}} SQL SELECT query returning exactly 1 row. The displayed number comes from the `value` column (or the first column). Additional columns named `title`, `caption`, `theme`, or `icon` override the static card fields. Format the displayed value as a human-readable string in SQL (thousands separators, currency, rounding, a `%` suffix, etc.).
+    - `"value_box"`: a {{db_type}} SQL SELECT query returning exactly 1 row. The displayed number comes from the `value` column (or the first column). Additional columns named `title`, `text`, `theme`, or `icon` override the static card fields. Format the displayed value as a human-readable string in SQL (thousands separators, currency, rounding, a `%` suffix, etc.).
     - `"markdown"` (optional): a {{db_type}} SQL SELECT query returning exactly 1 row. Its columns become `{{var}}` placeholders in the `text` body.
 text :
-    The markdown body; required for markdown display only. Rendered as HTML via markdown. If a `query` is also supplied, its single-row columns are interpolated as `{{var}}` placeholders.
-caption :
-    Optional brief secondary text. Rendered as a footer for table/visualization/markdown cards, and as the subtitle for value_box. Keep it to a few words.
+    Supplementary text; its role depends on `display`:
+    - `"markdown"` (required): the body content, rendered as HTML via markdown. If a `query` is also supplied, its single-row columns are interpolated as `{{var}}` placeholders.
+    - `"table"` / `"visualization"`: a brief footer shown below the content.
+    - `"value_box"`: the subtitle shown under the main value.
 theme :
     Optional Bootstrap theme name for a value_box background: one of `primary`, `secondary`, `success`, `danger`, `warning`, `info`. Applies to value_box only; ignored for other displays.
 icon :

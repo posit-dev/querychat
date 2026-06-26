@@ -437,14 +437,14 @@ test_that("restore_record_list() rebuilds list-of-lists from a data.frame", {
       id = "a3f7",
       display = "value_box",
       title = "Total",
-      value = "SELECT 1"
+      query = "SELECT 1"
     ),
     list(
       id = "b2c1",
       display = "table",
       title = "Top",
-      value = "SELECT 2",
-      caption = "x"
+      query = "SELECT 2",
+      text = "x"
     )
   )
 
@@ -456,9 +456,9 @@ test_that("restore_record_list() rebuilds list-of-lists from a data.frame", {
   expect_type(restored, "list")
   expect_length(restored, 2)
   expect_equal(restored[[1]]$display, "value_box")
-  expect_equal(restored[[2]]$caption, "x")
+  expect_equal(restored[[2]]$text, "x")
   # Absent optional fields (NA after simplification) are dropped, not kept as NA
-  expect_null(restored[[1]]$caption)
+  expect_null(restored[[1]]$text)
 })
 
 test_that("restore_record_list() passes through lists and NULL", {

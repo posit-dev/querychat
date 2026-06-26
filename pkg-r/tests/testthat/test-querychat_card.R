@@ -130,21 +130,20 @@ describe("tool_card_impl()", {
     expect_equal(call$card$display, "value_box")
   })
 
-  it("validates theme column in value_box query", {
+  it("accepts any theme column in value_box query", {
     ds <- local_query_executor(new_test_df())
     mock <- new_mock()
     impl <- tool_card_impl(ds, mock$mock_manage)
 
-    expect_error(
-      impl(
-        action = "add",
-        display = "value_box",
-        title = "V",
-        query = "SELECT COUNT(*) AS value, 'not_a_theme' AS theme FROM test_table"
-      ),
-      "theme"
+    res <- impl(
+      action = "add",
+      display = "value_box",
+      title = "V",
+      query = "SELECT COUNT(*) AS value, 'custom_theme' AS theme FROM test_table"
     )
-    expect_length(mock$record$calls, 0)
+
+    expect_s7_class(res, ellmer::ContentToolResult)
+    expect_length(mock$record$calls, 1)
   })
 
   it("validates icon column in value_box query", {
@@ -202,7 +201,7 @@ describe("tool_card_impl()", {
       display = "table",
       title = "Old title",
       query = "SELECT * FROM test_table",
-      caption = "Old caption"
+      text = "Old footer"
     )
     record <- new.env(parent = emptyenv())
     record$calls <- list()
@@ -228,7 +227,7 @@ describe("tool_card_impl()", {
     expect_equal(call$id, "abcd")
     expect_equal(call$card$title, "New title")
     expect_equal(call$card$query, existing$query)
-    expect_equal(call$card$caption, existing$caption)
+    expect_equal(call$card$text, existing$text)
     expect_equal(jsonlite::fromJSON(res@value)$status, "patched")
   })
 
@@ -343,7 +342,7 @@ describe("tool_card_impl()", {
     expect_length(mock$record$calls, 0)
   })
 
-  it("stores caption field in the card", {
+  it("stores text field in the card", {
     ds <- local_query_executor(new_test_df())
     mock <- new_mock()
     impl <- tool_card_impl(ds, mock$mock_manage)
@@ -353,11 +352,11 @@ describe("tool_card_impl()", {
       display = "table",
       title = "T",
       query = "SELECT * FROM test_table",
-      caption = "Some caption text"
+      text = "Some footer text"
     )
 
     call <- mock$record$calls[[1]]
-    expect_equal(call$card$caption, "Some caption text")
+    expect_equal(call$card$text, "Some footer text")
   })
 
   it("adds a markdown card with query for interpolation", {
@@ -419,7 +418,7 @@ describe("tool_card_impl()", {
     expect_equal(call$card$text, "Just plain text.")
   })
 
-  it("stores caption field for value_box", {
+  it("stores text field for value_box", {
     ds <- local_query_executor(new_test_df())
     mock <- new_mock()
     impl <- tool_card_impl(ds, mock$mock_manage)
@@ -429,11 +428,11 @@ describe("tool_card_impl()", {
       display = "value_box",
       title = "V",
       query = "SELECT COUNT(*) AS n FROM test_table",
-      caption = "All time"
+      text = "All time"
     )
 
     call <- mock$record$calls[[1]]
-    expect_equal(call$card$caption, "All time")
+    expect_equal(call$card$text, "All time")
   })
 })
 
@@ -472,7 +471,7 @@ describe("card_public()", {
       display = "table",
       title = "T",
       query = "SELECT 1",
-      caption = NULL,
+      text = NULL,
       theme = NULL,
       icon = NULL,
       id = "abc123"
@@ -483,7 +482,7 @@ describe("card_public()", {
     parsed <- jsonlite::fromJSON(jsonlite::toJSON(public, auto_unbox = TRUE))
     expect_equal(parsed$id, "abc123")
     expect_equal(parsed$display, "table")
-    expect_null(parsed$caption)
+    expect_null(parsed$text)
   })
 })
 
@@ -594,7 +593,7 @@ describe("cards_to_payload() / payload_to_cards()", {
         display = "value_box",
         title = "Total Sales",
         query = "SELECT '$1,234' AS val",
-        caption = "All time",
+        text = "All time",
         theme = "success",
         icon = "currency-dollar"
       )
@@ -612,7 +611,7 @@ describe("cards_to_payload() / payload_to_cards()", {
     expect_equal(card$display, "value_box")
     expect_equal(card$title, "Total Sales")
     expect_equal(card$query, "SELECT '$1,234' AS val")
-    expect_equal(card$caption, "All time")
+    expect_equal(card$text, "All time")
     expect_equal(card$theme, "success")
     expect_equal(card$icon, "currency-dollar")
   })
@@ -633,7 +632,7 @@ describe("cards_to_payload() / payload_to_cards()", {
     expect_equal(card$display, "table")
     expect_equal(card$title, "Top Products")
     expect_equal(card$query, "SELECT * FROM test_table")
-    expect_null(card$caption)
+    expect_null(card$text)
     expect_null(card$theme)
     expect_null(card$icon)
   })
@@ -660,7 +659,7 @@ describe("cards_to_payload() / payload_to_cards()", {
         display = "value_box",
         title = "Count",
         query = "SELECT COUNT(*) FROM t",
-        caption = "Rows"
+        text = "Rows"
       ),
       list(
         id = "bb02",
@@ -678,7 +677,7 @@ describe("cards_to_payload() / payload_to_cards()", {
     result <- payload_to_cards(cards_to_payload(cards))
     expect_length(result, 3)
     expect_equal(result[[1]]$display, "value_box")
-    expect_equal(result[[1]]$caption, "Rows")
+    expect_equal(result[[1]]$text, "Rows")
     expect_equal(result[[2]]$display, "table")
     expect_equal(result[[3]]$display, "markdown")
   })

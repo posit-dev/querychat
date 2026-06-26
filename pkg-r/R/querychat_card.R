@@ -40,7 +40,7 @@ tool_card <- function(executor, manage_card) {
             "The data query; required for table, visualization, and value_box displays; optional for markdown (interpolation). Its meaning depends on display:",
             "- table: a {{db_type}} SQL SELECT query.",
             "- visualization: a full ggsql query including a VISUALISE clause. Do NOT include `LABEL title => ...`; use the title parameter instead.",
-            "- value_box: a {{db_type}} SQL SELECT query returning exactly 1 row. The displayed number comes from the `value` column (or the first column). Additional columns named title, caption, theme, or icon override the static card fields. Format the displayed value as a human-readable string in SQL (thousands separators, currency, rounding, a % suffix, etc.).",
+            "- value_box: a {{db_type}} SQL SELECT query returning exactly 1 row. The displayed number comes from the `value` column (or the first column). Additional columns named title, text, theme, or icon override the static card fields. Format the displayed value as a human-readable string in SQL (thousands separators, currency, rounding, a % suffix, etc.).",
             "- markdown (optional): a {{db_type}} SQL SELECT query returning exactly 1 row. Its columns become {{{{var}}}} placeholders in the text body.",
             sep = "\n"
           ),
@@ -49,15 +49,17 @@ tool_card <- function(executor, manage_card) {
         required = FALSE
       ),
       text = ellmer::type_string(
-        "The markdown body; required for markdown display only. Rendered as HTML via markdown. If a query is also supplied, its single-row columns are interpolated as {{var}} placeholders.",
-        required = FALSE
-      ),
-      caption = ellmer::type_string(
-        "Optional brief secondary text. Rendered as a footer for table/visualization/markdown cards, and as the subtitle for value_box. Keep it to a few words.",
+        paste(
+          "Supplementary text; its role depends on display:",
+          "- markdown (required): the body content, rendered as HTML via markdown. If a query is also supplied, its single-row columns are interpolated as {{var}} placeholders.",
+          "- table / visualization: a brief footer shown below the content.",
+          "- value_box: the subtitle shown under the main value.",
+          sep = "\n"
+        ),
         required = FALSE
       ),
       theme = ellmer::type_string(
-        "Optional Bootstrap theme name for a value_box background: one of primary, secondary, success, danger, warning, info. Applies to value_box only; ignored for other displays.",
+        "Optional Bootstrap theme name for a value_box background (e.g. primary, secondary, success, danger, warning, info). Applies to value_box only; ignored for other displays.",
         required = FALSE
       ),
       icon = ellmer::type_string(
@@ -83,7 +85,6 @@ tool_card_impl <- function(executor, manage_card) {
     title = NULL,
     query = NULL,
     text = NULL,
-    caption = NULL,
     theme = NULL,
     icon = NULL
   ) {
@@ -127,7 +128,6 @@ tool_card_impl <- function(executor, manage_card) {
           title = title,
           query = query,
           text = text,
-          caption = caption,
           theme = theme,
           icon = icon
         )
@@ -137,7 +137,6 @@ tool_card_impl <- function(executor, manage_card) {
       title <- merged$title
       query <- merged$query
       text <- merged$text
-      caption <- merged$caption
       theme <- merged$theme
       icon <- merged$icon
     }
@@ -149,7 +148,6 @@ tool_card_impl <- function(executor, manage_card) {
         title = title,
         query = query,
         text = text,
-        caption = caption,
         theme = theme,
         icon = icon
       )
@@ -184,7 +182,6 @@ validate_and_build_card <- function(executor, fields) {
   title <- fields$title
   query <- fields$query
   text <- fields$text
-  caption <- fields$caption
   theme <- fields$theme
   icon <- fields$icon
 
@@ -225,29 +222,12 @@ validate_and_build_card <- function(executor, fields) {
       ))
     }
     row <- as.list(df[1, , drop = FALSE])
-    vb_cols <- c("value", "title", "caption", "theme", "icon")
+    vb_cols <- c("value", "title", "text", "theme", "icon")
     for (col in intersect(names(row), vb_cols)) {
       val <- as.character(row[[col]])
       if (!is.na(val) && nzchar(val)) {
-        if (col == "value") {
+        if (col %in% c("value", "text", "theme")) {
           next
-        }
-        if (col == "theme") {
-          allowed_themes <- c(
-            "primary",
-            "secondary",
-            "success",
-            "danger",
-            "warning",
-            "info"
-          )
-          if (!val %in% allowed_themes) {
-            rlang::abort(sprintf(
-              "Value box query returned theme '%s'; must be one of: %s.",
-              val,
-              paste(allowed_themes, collapse = ", ")
-            ))
-          }
         }
         if (col == "icon") {
           tryCatch(
@@ -296,7 +276,6 @@ validate_and_build_card <- function(executor, fields) {
     title = title,
     query = query,
     text = text,
-    caption = caption,
     theme = theme,
     icon = icon
   )
@@ -333,7 +312,6 @@ card_public <- function(card) {
     "title",
     "query",
     "text",
-    "caption",
     "theme",
     "icon"
   )

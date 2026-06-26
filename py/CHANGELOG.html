@@ -227,6 +227,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="new-features" class="level3">
 <h3 class="anchored" data-anchor-id="new-features">New features</h3>
 <ul>
+<li><p>The SQL panel in <code>.app()</code> is now an editable code editor. Users can tweak the generated SQL directly and apply it with Ctrl/Cmd+Enter or by clicking away — no extra button required. The editor stays in sync when the LLM updates the query or the active table changes. (#265)</p></li>
 <li><p><code>QueryChat()</code> now supports <strong>multiple related tables</strong>. Register additional tables with <code>add_table()</code> and the LLM can reason across all of them — joins, cross-table filters, aggregations. Per-table reactive state (<code>df()</code>, <code>sql()</code>, <code>title()</code>) is accessible via <code>qc_vals.table("name")</code> on the value returned by <code>server()</code>. For SQLAlchemy engines and Ibis backends, <code>add_tables()</code> registers all tables (or a named subset) in a single call. (#195)</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>qc <span class="op">=</span> QueryChat(orders_df, <span class="st">"orders"</span>)</span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>qc.add_table(customers_df, <span class="st">"customers"</span>)</span>

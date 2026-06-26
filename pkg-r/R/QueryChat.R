@@ -752,12 +752,14 @@ QueryChat <- R6::R6Class(
             ),
             DT::DTOutput("dt")
           ),
-          shiny::actionButton(
-            "close_btn",
-            label = "",
-            class = "btn-close",
-            style = "position: fixed; top: 6px; right: 6px;"
-          )
+          if (rlang::is_interactive()) {
+            shiny::actionButton(
+              "close_btn",
+              label = "",
+              class = "btn-close",
+              style = "position: fixed; top: 6px; right: 6px;"
+            )
+          }
         )
       }
 
@@ -824,17 +826,19 @@ QueryChat <- R6::R6Class(
           )
         })
 
-        shiny::observeEvent(input$close_btn, label = "on_close_btn", {
-          name <- active_table_name()
-          shiny::stopApp(
-            list(
-              df = qc_vals$.tables[[name]]$df(),
-              sql = qc_vals$.tables[[name]]$sql(),
-              title = qc_vals$.tables[[name]]$title(),
-              client = qc_vals$client
+        if (rlang::is_interactive()) {
+          shiny::observeEvent(input$close_btn, label = "on_close_btn", {
+            name <- active_table_name()
+            shiny::stopApp(
+              list(
+                df = qc_vals$.tables[[name]]$df(),
+                sql = qc_vals$.tables[[name]]$sql(),
+                title = qc_vals$.tables[[name]]$title(),
+                client = qc_vals$client
+              )
             )
-          )
-        })
+          })
+        }
       }
 
       shiny::shinyApp(ui, server, enableBookmarking = bookmark_store)

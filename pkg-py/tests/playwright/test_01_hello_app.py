@@ -45,7 +45,7 @@ class Test01HelloApp:
 
     def test_default_sql_query_shown(self) -> None:
         """INIT-03: SQL panel shows default query."""
-        sql_code = self.page.locator("pre code").first
+        sql_code = self.page.locator(".cm-content").first
         expect(sql_code).to_contain_text("SELECT * FROM titanic")
 
     def test_data_table_populated(self) -> None:
@@ -85,7 +85,7 @@ class Test01HelloApp:
         self.chat.send_user_input(method="click")
 
         # SQL should filter by sex = 'female'
-        sql_code = self.page.locator("pre code").first
+        sql_code = self.page.locator(".cm-content").first
         expect(sql_code).to_contain_text(
             re.compile(r"WHERE.*sex.*=.*['\"]?female['\"]?", re.IGNORECASE),
             timeout=60000,
@@ -97,7 +97,7 @@ class Test01HelloApp:
         self.chat.send_user_input(method="click")
 
         # SQL should filter by survived = 1 (or TRUE)
-        sql_code = self.page.locator("pre code").first
+        sql_code = self.page.locator(".cm-content").first
         expect(sql_code).to_contain_text(
             re.compile(r"WHERE.*survived.*=.*(1|TRUE)", re.IGNORECASE), timeout=60000
         )
@@ -110,7 +110,7 @@ class Test01HelloApp:
         self.chat.send_user_input(method="click")
 
         # SQL should filter by survived = 1 (or TRUE)
-        sql_code = self.page.locator("pre code").first
+        sql_code = self.page.locator(".cm-content").first
         expect(sql_code).to_contain_text(
             re.compile(r"WHERE.*survived.*=.*(1|TRUE)", re.IGNORECASE), timeout=60000
         )
@@ -144,7 +144,7 @@ class Test01HelloApp:
         self.chat.send_user_input(method="click")
 
         # SQL should filter by class/pclass = 1 or 'First'
-        sql_code = self.page.locator("pre code").first
+        sql_code = self.page.locator(".cm-content").first
         expect(sql_code).to_contain_text(
             re.compile(r"WHERE.*(p?class).*=.*(1|['\"]First['\"])", re.IGNORECASE),
             timeout=60000,
@@ -176,7 +176,7 @@ class Test01HelloApp:
         self.chat.send_user_input(method="click")
 
         # SQL should filter by class/pclass = 1 or 'First'
-        sql_code = self.page.locator("pre code").first
+        sql_code = self.page.locator(".cm-content").first
         expect(sql_code).to_contain_text(
             re.compile(r"WHERE.*(p?class).*=.*(1|['\"]First['\"])", re.IGNORECASE),
             timeout=60000,
@@ -195,7 +195,7 @@ class Test01HelloApp:
         self.chat.send_user_input(method="click")
 
         # SQL should filter by sex = 'male'
-        sql_code = self.page.locator("pre code").first
+        sql_code = self.page.locator(".cm-content").first
         expect(sql_code).to_contain_text(
             re.compile(r"WHERE.*sex.*=.*['\"]?male['\"]?", re.IGNORECASE), timeout=60000
         )
@@ -207,7 +207,7 @@ class Test01HelloApp:
         self.chat.set_user_input("Show only first class passengers")
         self.chat.send_user_input(method="click")
 
-        sql_code = self.page.locator("pre code").first
+        sql_code = self.page.locator(".cm-content").first
         expect(sql_code).to_contain_text(
             re.compile(r"WHERE.*(p?class).*=.*(1|['\"]First['\"])", re.IGNORECASE),
             timeout=60000,

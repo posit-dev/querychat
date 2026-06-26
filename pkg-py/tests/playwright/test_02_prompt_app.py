@@ -42,7 +42,7 @@ class Test02PromptApp:
 
     def test_default_sql_query_shown(self) -> None:
         """INIT-03: SQL panel shows default query."""
-        sql_code = self.page.locator("pre code").first
+        sql_code = self.page.locator(".cm-content").first
         expect(sql_code).to_contain_text("SELECT * FROM titanic")
 
     def test_chat_input_visible(self) -> None:

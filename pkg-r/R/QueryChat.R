@@ -228,6 +228,8 @@ QueryChat <- R6::R6Class(
   public = list(
     #' @field greeting The greeting message displayed to users.
     greeting = NULL,
+    #' @field history Conversation history configuration.
+    history = NULL,
     #' @field id ID for the QueryChat instance.
     id = NULL,
     #' @field id_override Whether the ID was explicitly set by the user.
@@ -256,6 +258,10 @@ QueryChat <- R6::R6Class(
     #'   a greeting will be generated at the start of each conversation using
     #'   the LLM, which adds latency and cost. Use `$generate_greeting()` to
     #'   create a greeting to save and reuse.
+    #' @param history Conversation history configuration: `NULL` (default;
+    #'   resolves to `TRUE` when `$server()`/`$app()` is called and nothing else
+    #'   was set), `TRUE`/`FALSE`, or a [shinychat::history_options()] object.
+    #'   Passed straight through to `shinychat::chat_server(history = )`.
     #' @param client Optional chat client. Can be:
     #'   - An [ellmer::Chat] object
     #'   - A string to pass to [ellmer::chat()] (e.g., `"openai/gpt-4o"`)
@@ -294,6 +300,7 @@ QueryChat <- R6::R6Class(
       ...,
       id = NULL,
       greeting = NULL,
+      history = NULL,
       client = NULL,
       tools = c("filter", "query"),
       data_description = NULL,
@@ -308,6 +315,7 @@ QueryChat <- R6::R6Class(
       # Validate arguments
       check_string(id, allow_null = TRUE)
       check_string(greeting, allow_null = TRUE)
+      check_history(history)
       arg_match(
         tools,
         values = c("filter", "update", "query", "visualize"),
@@ -341,6 +349,7 @@ QueryChat <- R6::R6Class(
         greeting <- read_utf8(greeting)
       }
       self$greeting <- greeting
+      self$history <- history
 
       # Track whether id was explicitly set
       self$id_override <- id
@@ -688,13 +697,16 @@ QueryChat <- R6::R6Class(
     #' Create and run a Shiny gadget for chatting with data
     #'
     #' @param ... Arguments passed to `$app_obj()`.
-    #' @param bookmark_store The bookmarking storage method. Passed to
-    #'   [shiny::enableBookmarking()]. If `"url"` or `"server"`, the chat state
-    #'   (including current query) will be bookmarked. Default is `"url"`.
+    #' @param history Conversation history configuration for the generated app.
+    #'   Defaults to `shinychat::history_options(restore_mode = "bookmark")` when
+    #'   neither this nor `$new()`'s `history` was set, since `$app()`'s whole
+    #'   purpose is a single, shareable demo. When the resolved value has
+    #'   `restore_mode = "bookmark"`, the generated app automatically enables
+    #'   Shiny's own server-side bookmarking.
     #'
     #' @return Invisibly returns a list of session-specific values.
-    app = function(..., bookmark_store = "url") {
-      app <- self$app_obj(..., bookmark_store = bookmark_store)
+    app = function(..., history = NULL) {
+      app <- self$app_obj(..., history = history)
       vals <- tryCatch(shiny::runGadget(app), interrupt = function(cnd) NULL)
       invisible(vals)
     },
@@ -703,14 +715,23 @@ QueryChat <- R6::R6Class(
     #' A streamlined Shiny app for chatting with data
     #'
     #' @param ... Additional arguments (currently unused).
-    #' @param bookmark_store The bookmarking storage method. Passed to
-    #'  [shiny::enableBookmarking()]. Default is `"url"`.
+    #' @param history Conversation history configuration for the generated app.
+    #'   See `$app()`.
     #'
     #' @return A Shiny app object that can be run with `shiny::runApp()`.
-    app_obj = function(..., bookmark_store = "url") {
+    app_obj = function(..., history = NULL) {
       private$require_initialized("$app_obj")
       check_installed("DT")
       check_dots_empty()
+      check_history(history)
+      resolved_history <- history %||%
+        self$history %||%
+        shinychat::history_options(restore_mode = "bookmark")
+      enable_shiny_bookmarking <- inherits(
+        resolved_history,
+        "chat_history_config"
+      ) &&
+        identical(resolved_history$restore_mode, "bookmark")
 
       first_table_name <- names(private$.data_sources)[[1]]
 
@@ -769,8 +790,7 @@ QueryChat <- R6::R6Class(
           "reset_query",
           "sql_editor"
         ))
-        enable_bookmarking <- bookmark_store %in% c("url", "server")
-        qc_vals <- self$server(enable_bookmarking = enable_bookmarking)
+        qc_vals <- self$server(history = resolved_history)
 
         active_table_name <- shiny::reactive({
           ct <- qc_vals$current_table()
@@ -866,7 +886,15 @@ QueryChat <- R6::R6Class(
         }
       }
 
-      shiny::shinyApp(ui, server, enableBookmarking = bookmark_store)
+      shiny::shinyApp(
+        ui,
+        server,
+        enableBookmarking = if (enable_shiny_bookmarking) {
+          "server"
+        } else {
+          "disable"
+        }
+      )
     },
 
     #' @description
@@ -909,7 +937,7 @@ QueryChat <- R6::R6Class(
 
       id <- id %||% namespaced_id(self$id)
 
-      mod_ui(id, ..., greeting = self$greeting)
+      mod_ui(id, ...)
     },
 
     #' @description
@@ -918,7 +946,12 @@ QueryChat <- R6::R6Class(
     #' @param data_source Optional data source for backward compatibility.
     #'   If provided, calls `$add_table()` before initializing server logic.
     #' @param client Optional chat client override for this session.
-    #' @param enable_bookmarking Whether to enable bookmarking. Default is `FALSE`.
+    #' @param history Conversation history configuration for this call. Overrides
+    #'   the value set on `$new()`. Resolves to `TRUE` when neither this nor the
+    #'   constructor's `history` was set.
+    #' @param enable_bookmarking `r lifecycle::badge("deprecated")` Use `history =
+    #'   shinychat::history_options(restore_mode = "bookmark")` instead (set on
+    #'   `$new()`, or passed here).
     #' @param ... Ignored.
     #' @param id Optional module ID override.
     #' @param session The Shiny session object.
@@ -932,7 +965,8 @@ QueryChat <- R6::R6Class(
     server = function(
       data_source = NULL,
       client = NULL,
-      enable_bookmarking = FALSE,
+      history = NULL,
+      enable_bookmarking = NULL,
       ...,
       id = NULL,
       session = shiny::getDefaultReactiveDomain()
@@ -975,6 +1009,18 @@ QueryChat <- R6::R6Class(
         )
       }
 
+      check_history(history)
+      resolved_history <- history %||% self$history %||% TRUE
+
+      if (!is.null(enable_bookmarking)) {
+        lifecycle::deprecate_warn(
+          when = "0.4.0",
+          what = "QueryChat$server(enable_bookmarking = )",
+          with = "QueryChat$server(history = )",
+          details = 'Use history = shinychat::history_options(restore_mode = "bookmark") for the equivalent behavior.'
+        )
+      }
+
       result <- mod_server(
         id %||% self$id,
         data_sources = private$.data_sources,
@@ -982,9 +1028,9 @@ QueryChat <- R6::R6Class(
         greeting = self$greeting,
         client = create_session_client,
         tools = self$tools,
+        history = resolved_history,
         greeter = self$greeter,
-        greeting_base = base_client,
-        enable_bookmarking = enable_bookmarking
+        greeting_base = base_client
       )
       result
     },
@@ -1093,6 +1139,8 @@ QueryChat <- R6::R6Class(
 #' @param ... Additional arguments (currently unused).
 #' @param id Optional module ID for the QueryChat instance.
 #' @param greeting Optional initial message to display to users.
+#' @param history Conversation history configuration. See [QueryChat]'s
+#'   `$new()` method.
 #' @param client Optional chat client.
 #' @param tools Which querychat tools to include in the chat client.
 #' @param data_description Optional description of the data.
@@ -1114,6 +1162,7 @@ querychat <- function(
   ...,
   id = NULL,
   greeting = NULL,
+  history = NULL,
   client = NULL,
   tools = c("filter", "query"),
   data_description = NULL,
@@ -1141,6 +1190,7 @@ querychat <- function(
     ...,
     id = id,
     greeting = greeting,
+    history = history,
     client = client,
     tools = tools,
     data_description = data_description,
@@ -1153,7 +1203,8 @@ querychat <- function(
 }
 
 #' @rdname querychat-convenience
-#' @param bookmark_store The bookmarking storage method. Default is `"url"`.
+#' @param history Conversation history configuration for the generated app. See
+#'   [QueryChat]'s `$app()` method.
 #' @return Invisibly returns the chat object after the app stops.
 #'
 #' @export
@@ -1171,7 +1222,7 @@ querychat_app <- function(
   prompt_template = NULL,
   data_dict = NULL,
   cleanup = NA,
-  bookmark_store = "url"
+  history = NULL
 ) {
   if (shiny::isRunning()) {
     cli::cli_abort(
@@ -1214,7 +1265,7 @@ querychat_app <- function(
     cleanup = cleanup
   )
 
-  qc$app(bookmark_store = bookmark_store)
+  qc$app(history = history)
 }
 
 normalize_tools <- function(tools) {

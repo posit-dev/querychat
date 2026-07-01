@@ -688,6 +688,112 @@ test_that("QueryChat$server() errors when called outside Shiny context", {
   })
 })
 
+test_that("QueryChat$new() validates history and stores it verbatim", {
+  test_df <- new_test_df()
+
+  qc_default <- QueryChat$new(test_df, greeting = "Test")
+  withr::defer(qc_default$cleanup())
+  expect_null(qc_default$history)
+
+  qc_false <- QueryChat$new(
+    test_df,
+    table_name = "test_df2",
+    greeting = "Test",
+    history = FALSE
+  )
+  withr::defer(qc_false$cleanup())
+  expect_false(qc_false$history)
+
+  expect_error(
+    QueryChat$new(
+      test_df,
+      table_name = "test_df3",
+      greeting = "Test",
+      history = "nope"
+    ),
+    class = "rlang_error"
+  )
+})
+
+test_that("QueryChat$server() resolves history (explicit > constructor > TRUE) and warns on enable_bookmarking", {
+  skip_if_no_dataframe_engine()
+  withr::local_envvar(OPENAI_API_KEY = "boop")
+
+  ds <- local_data_frame_source(new_test_df())
+  executor <- build_query_executor(list(test_table = ds))
+  withr::defer(executor$cleanup())
+
+  captured <- NULL
+  local_mocked_bindings(
+    mod_server = function(id, ..., history) {
+      captured <<- history
+      list()
+    },
+    .package = "querychat"
+  )
+
+  qc <- local_querychat(history = FALSE)
+  qc$.__enclos_env__$private$.query_executor <- executor
+
+  expect_no_warning(
+    shiny::testServer(
+      function(input, output, session) qc$server(),
+      {
+        expect_false(captured)
+      }
+    ),
+    class = "lifecycle_warning_deprecated"
+  )
+
+  shiny::testServer(
+    function(input, output, session) qc$server(history = TRUE),
+    {
+      expect_true(captured)
+    }
+  )
+
+  qc_no_history <- local_querychat()
+  qc_no_history$.__enclos_env__$private$.query_executor <- executor
+  shiny::testServer(
+    function(input, output, session) qc_no_history$server(),
+    {
+      expect_true(captured)
+    }
+  )
+
+  expect_snapshot(
+    shiny::testServer(
+      function(input, output, session) {
+        qc_no_history$server(enable_bookmarking = TRUE)
+      },
+      {}
+    )
+  )
+})
+
+test_that("QueryChat$app_obj() infers Shiny bookmarking from history's restore_mode", {
+  skip_if_no_dataframe_engine()
+  withr::local_envvar(OPENAI_API_KEY = "boop")
+
+  qc_default <- local_querychat()
+  app_default <- qc_default$app_obj()
+  expect_equal(app_default$appOptions$bookmarkStore, "server")
+
+  qc_browser <- local_querychat(history = TRUE)
+  app_browser <- qc_browser$app_obj()
+  expect_equal(app_browser$appOptions$bookmarkStore, "disable")
+
+  qc_explicit_off <- local_querychat(history = FALSE)
+  app_explicit_off <- qc_explicit_off$app_obj()
+  expect_equal(app_explicit_off$appOptions$bookmarkStore, "disable")
+
+  qc_no_history <- local_querychat()
+  app_call_override <- qc_no_history$app_obj(
+    history = shinychat::history_options(restore_mode = "bookmark")
+  )
+  expect_equal(app_call_override$appOptions$bookmarkStore, "server")
+})
+
 describe("querychat()", {
   skip_if_no_dataframe_engine()
   withr::local_envvar(OPENAI_API_KEY = "boop")

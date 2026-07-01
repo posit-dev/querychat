@@ -3,18 +3,16 @@ from __future__ import annotations
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Generic, TypedDict, Union
+from typing import TYPE_CHECKING, Any, Generic, TypedDict, Union
 
 import chatlas
 import shinychat
 from narwhals.stable.v1.typing import IntoFrameT
-from shinychat import Attachment, attachment_to_content
 
 from shiny import module, reactive, ui
 
 from ._querychat_core import warn_multi_table_flat_accessor
 from ._table_accessor import TableAccessor
-from ._utils_shinychat import chat_greeting_persistent
 from ._viz_altair_widget import AltairWidget
 from ._viz_ggsql import execute_ggsql
 from ._viz_utils import has_viz_tool, preload_viz_deps_server, preload_viz_deps_ui
@@ -23,6 +21,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from shiny.bookmark import BookmarkState, RestoreState
+    from shinychat.types import HistoryOptions
 
     from shiny import Inputs, Outputs, Session
 
@@ -70,14 +69,12 @@ class TableState(Generic[IntoFrameT]):
 
 
 @module.ui
-def mod_ui(*, preload_viz: bool = False, greeting: str | None = None, **kwargs):
+def mod_ui(*, preload_viz: bool = False, **kwargs):
     css_path = Path(__file__).parent / "static" / "css" / "styles.css"
     js_path = Path(__file__).parent / "static" / "js" / "querychat.js"
 
     kwargs.setdefault("enable_cancel", True)
     kwargs.setdefault("allow_attachments", True)
-    if greeting:
-        kwargs.setdefault("greeting", chat_greeting_persistent(greeting))
     tag = shinychat.chat_ui(CHAT_ID, **kwargs)
     tag.add_class("querychat")
 
@@ -212,19 +209,11 @@ def mod_server(
     executor: QueryExecutor | None,
     greeting: str | None,
     client: Callable[..., chatlas.Chat],
-    enable_bookmarking: bool,
+    history: bool | HistoryOptions,
     tools: set[str] | None = None,
     greeter: QueryChatGreeter,
     greeting_base: chatlas.Chat | None = None,
 ) -> ServerValues[IntoFrameT]:
-    # Holds a generated greeting so it can be saved and restored on bookmark.
-    # Static greetings live in the UI (chat_ui(greeting=)) and persist already.
-    # Workaround for posit-dev/shinychat#253: shinychat does not bookmark
-    # greetings or expose their state. If that issue is fixed, this value, the
-    # get_last_turn() capture below, and the greeting handling in
-    # on_bookmark/on_restore can be dropped (and the shinychat minimum bumped).
-    current_greeting = ReactiveStringOrNone(None)
-
     if not callable(client):
         raise TypeError("mod_server() requires a callable client factory.")
 
@@ -309,48 +298,39 @@ def mod_server(
     if has_viz_tool(tools):
         preload_viz_deps_server()
 
-    # Chat UI logic
-    chat_ui = shinychat.Chat(CHAT_ID)
-    ctrl = chatlas.StreamController()
-
-    @chat_ui.on_user_submit
-    async def _(user_input: str, attachments: list[Attachment]):
-        contents = [attachment_to_content(a) for a in attachments]
-        stream = await chat.stream_async(
-            user_input, *contents, echo="none", content="all", controller=ctrl
+    async def _make_greeting():
+        # shinychat invokes this asynchronously, so there's no useful caller frame
+        # to point to — stacklevel=1 just points at this line.
+        warnings.warn(
+            "No greeting provided to `QueryChat()`. Using the LLM `client` to generate one now. "
+            "For faster startup, lower cost, and determinism, consider providing a greeting "
+            "to `QueryChat()` and `.generate_greeting()` to generate one beforehand.",
+            GreetWarning,
+            stacklevel=1,
         )
-        await chat_ui.append_message_stream(stream)
+        stream = await greeter.generate_async(base=greeting_base)
+        return shinychat.chat_greeting(stream, persistent=True)
 
-    @reactive.effect
-    @reactive.event(input[f"{CHAT_ID}_cancel"])
-    def _handle_cancel():
-        ctrl.cancel()
+    greeting_arg = (
+        _make_greeting
+        if greeting is None
+        else shinychat.chat_greeting(greeting, persistent=True)
+    )
 
-    if greeting is None:
+    shinychat_chat = shinychat.Chat(
+        CHAT_ID,
+        client=chat,
+        greeting=greeting_arg,
+        history=history,
+    )
 
-        @reactive.effect
-        @reactive.event(input[f"{CHAT_ID}_greeting_requested"])
-        async def _handle_greeting_requested():
-            # Re-display a restored greeting rather than generating a new one.
-            # On empty-chat restore both this and on_restore set the greeting
-            # (harmless, identical content); on non-empty restore this never
-            # fires, so on_restore is the only path that re-displays.
-            existing = current_greeting.get()
-            if existing is not None:
-                await chat_ui.set_greeting(chat_greeting_persistent(existing))
-                return
-            warnings.warn(
-                "No greeting provided to `QueryChat()`. Using the LLM `client` to generate one now. "
-                "For faster startup, lower cost, and determinism, consider providing a greeting "
-                "to `QueryChat()` and `.generate_greeting()` to generate one beforehand.",
-                GreetWarning,
-                stacklevel=2,
-            )
-            await greeter.generate_stream(
-                chat_ui=chat_ui,
-                current_greeting=current_greeting,
-                base=greeting_base,
-            )
+    # Registered unconditionally so the chat client's own state (and greeting)
+    # round-trip through Shiny bookmarks whenever the host app has bookmarking
+    # enabled -- independent of `history`. Only the save/restore hooks are
+    # wanted here; the automatic bookmark trigger is turned off (bookmark_on=
+    # None) so `history` (or the host app) remains the sole source of *when*
+    # to bookmark.
+    shinychat_chat.enable_bookmarking(chat, bookmark_on=None)
 
     # Handle update button clicks
     @reactive.effect
@@ -367,43 +347,53 @@ def mod_server(
             table_states[table_name].title.set(new_title)
             _current_table.set(table_name)
 
-    if enable_bookmarking:
-        chat_ui.enable_bookmarking(chat)
-        session.bookmark.exclude.append("chat_update")
+    def build_state_snapshot() -> dict[str, Any]:
+        snapshot: dict[str, Any] = {}
+        for name, state in table_states.items():
+            snapshot[f"querychat_sql_{name}"] = state.sql.get()
+            snapshot[f"querychat_title_{name}"] = state.title.get()
+        if viz_widgets:
+            snapshot["querychat_viz_widgets"] = list(viz_widgets)
+        return snapshot
 
-        @session.bookmark.on_bookmark
-        def _on_bookmark(x: BookmarkState) -> None:
-            vals = x.values
-            for name, state in table_states.items():
-                vals[f"querychat_sql_{name}"] = state.sql.get()
-                vals[f"querychat_title_{name}"] = state.title.get()
-            greeting_val = current_greeting.get()
-            if greeting_val is not None:
-                vals["querychat_greeting"] = greeting_val
-            if viz_widgets:
-                vals["querychat_viz_widgets"] = viz_widgets
+    def apply_state_snapshot(vals: dict[str, Any]) -> None:
+        last_restored: str | None = None
+        for name, state in table_states.items():
+            if f"querychat_sql_{name}" in vals:
+                state.sql.set(vals[f"querychat_sql_{name}"])
+                if vals[f"querychat_sql_{name}"] is not None:
+                    last_restored = name
+            if f"querychat_title_{name}" in vals:
+                state.title.set(vals[f"querychat_title_{name}"])
+        if last_restored is not None:
+            _current_table.set(last_restored)
+        if "querychat_viz_widgets" in vals:
+            restored = restore_viz_widgets(executor, vals["querychat_viz_widgets"])
+            viz_widgets[:] = restored
 
-        @session.bookmark.on_restore
-        async def _on_restore(x: RestoreState) -> None:
-            vals = x.values
-            last_restored: str | None = None
-            for name, state in table_states.items():
-                if f"querychat_sql_{name}" in vals:
-                    state.sql.set(vals[f"querychat_sql_{name}"])
-                    if vals[f"querychat_sql_{name}"] is not None:
-                        last_restored = name
-                if f"querychat_title_{name}" in vals:
-                    state.title.set(vals[f"querychat_title_{name}"])
-            if last_restored is not None:
-                _current_table.set(last_restored)
-            if "querychat_greeting" in vals:
-                current_greeting.set(vals["querychat_greeting"])
-                await chat_ui.set_greeting(
-                    chat_greeting_persistent(vals["querychat_greeting"])
-                )
-            if "querychat_viz_widgets" in vals:
-                restored = restore_viz_widgets(executor, vals["querychat_viz_widgets"])
-                viz_widgets[:] = restored
+    # Registered unconditionally: both registrations are no-ops unless the
+    # corresponding persistence layer (Shiny's own bookmarking, or shinychat's
+    # history) is actually active in the host app. In restore_mode="bookmark",
+    # shinychat's history-save triggers a real Shiny bookmark internally, so both
+    # callbacks fire for the same event -- the snapshot is written twice,
+    # harmlessly, since it's idempotent.
+    session.bookmark.exclude.append("chat_update")
+
+    @session.bookmark.on_bookmark
+    def _on_bookmark(x: BookmarkState) -> None:
+        x.values.update(build_state_snapshot())
+
+    @session.bookmark.on_restore
+    def _on_restore(x: RestoreState) -> None:
+        apply_state_snapshot(x.values)
+
+    @shinychat_chat.history.on_save
+    def _on_history_save(values: dict[str, Any]) -> None:
+        values.update(build_state_snapshot())
+
+    @shinychat_chat.history.on_restore
+    def _on_history_restore(values: dict[str, Any]) -> None:
+        apply_state_snapshot(values)
 
     if len(table_states) == 1:
         only_state = next(iter(table_states.values()))

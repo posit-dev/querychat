@@ -12,6 +12,32 @@ check_data_source <- function(
   }
 }
 
+# History parameter validation -------------------------------------------
+
+#' Check that a value is a valid `history` argument
+#'
+#' Accepts `NULL` (not specified), `TRUE`, `FALSE`, or a
+#' `shinychat::history_options()` object.
+#'
+#' @noRd
+check_history <- function(
+  x,
+  ...,
+  arg = caller_arg(x),
+  call = caller_env()
+) {
+  check_dots_empty()
+  if (
+    is.null(x) || isTRUE(x) || isFALSE(x) || inherits(x, "chat_history_config")
+  ) {
+    return(invisible(NULL))
+  }
+  cli::cli_abort(
+    "{.arg {arg}} must be {.code NULL}, {.code TRUE}, {.code FALSE}, or a {.fun shinychat::history_options} object, not {.obj_type_friendly {x}}.",
+    call = call
+  )
+}
+
 # SQL table name validation ----------------------------------------------
 
 #' Check SQL table name validity

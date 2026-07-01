@@ -438,3 +438,20 @@ class TestAddTablesIbis:
             and "Multiple tables" in str(x.message)
         ]
         assert len(multi_table_warns) == 1
+
+
+def test_history_stored_verbatim_no_default_substitution():
+    """
+    QueryChatBase stores history exactly as given -- including None -- so callers
+    can later distinguish 'never set' from 'explicitly set to a falsy/true value'.
+    """
+    df = pd.DataFrame({"a": [1, 2, 3]})
+
+    qc_default = QueryChatBase(df, "a_table")
+    assert qc_default.history is None
+
+    qc_explicit_false = QueryChatBase(df, "a_table2", history=False)
+    assert qc_explicit_false.history is False
+
+    qc_explicit_true = QueryChatBase(df, "a_table3", history=True)
+    assert qc_explicit_true.history is True

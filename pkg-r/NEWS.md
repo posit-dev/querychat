@@ -33,6 +33,14 @@
 
 * The `$data_source` property has been removed. Use `qc$table("name")$data_source` to read a table's data source, and `qc$add_table(df, "name", replace = TRUE)` to replace it. The `data_source` parameter to `$server()` has also been removed; call `$add_table()` before `$server()` instead. (#195)
 
+* `$app()`/`$app_obj()`'s `bookmark_store` parameter has been removed. Pass `history = shinychat::history_options(restore_mode = "bookmark")` to get the same shareable-bookmark behavior; any other `history` value disables Shiny-level bookmarking for the generated app. `$app()` defaults to `restore_mode = "bookmark"` when no `history` is set anywhere, so existing `$app()` callers keep working without changes.
+
+* `QueryChat` now defaults to `history = TRUE` (shinychat's own default, browser-localStorage-backed conversation history) instead of no persistence. Pass `history = FALSE` to opt back out.
+
+## Deprecated
+
+* `$server()`'s `enable_bookmarking` parameter is deprecated in favor of `history`. Pass `history = shinychat::history_options(restore_mode = "bookmark")` instead of `enable_bookmarking = TRUE` for the equivalent behavior.
+
 ## Improvements
 
 * Chat greetings now use shinychat's greeting API (requires shinychat >= 0.4.0). A provided `greeting` renders instantly when the app loads, and when no `greeting` is given one is generated on demand — now **schema-aware**, so it can describe the data it's about to help you explore — without being added to the conversation history. Generated greetings are preserved across bookmark/restore. Tables passed to `QueryChat$new()` are described in the greeting automatically; opt additional tables in with `include_in_greeting = TRUE` on `$add_table()`/`$add_tables()`, or fine-tune which tables and which template the greeting uses via `qc$greeter`. (#249, #261)

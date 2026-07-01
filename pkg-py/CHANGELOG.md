@@ -41,6 +41,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * The `data_source` property has been removed. Use `qc.table("name").data_source` to read a table's data source, and `qc.add_table(df, "name", replace=True)` to replace it. The `data_source` parameter to `server()` (Shiny) has also been removed; call `add_table()` before `server()` instead. (#195)
 
+* `.app()`'s `bookmark_store` parameter has been removed. Pass `history=shinychat.types.HistoryOptions(restore_mode="bookmark")` to get the same shareable-bookmark behavior; any other `history` value disables Shiny-level bookmarking for the generated app. `.app()` defaults to `restore_mode="bookmark"` when no `history` is set anywhere, so existing `.app()` callers keep working without changes.
+
+* `QueryChat`/`QueryChatExpress` now default to `history=True` (shinychat's own default, browser-localStorage-backed conversation history) instead of no persistence. Pass `history=False` to opt back out.
+
+### Deprecated
+
+* `.server()`'s and `QueryChatExpress`'s `enable_bookmarking` parameter is deprecated in favor of `history`. Pass `history=shinychat.types.HistoryOptions(restore_mode="bookmark")` instead of `enable_bookmarking=True` for the equivalent behavior.
+
 ### Improvements
 
 * Chat greetings now use shinychat's greeting API (requires shinychat >= 0.4.0). A provided `greeting` renders instantly when the app loads, and when no `greeting` is given one is generated on demand — now **schema-aware**, so it can describe the data it's about to help you explore — without being added to the conversation history. Generated greetings are preserved across bookmark/restore. Tables passed to `QueryChat()` are described in the greeting automatically; opt additional tables in with `include_in_greeting=True` on `add_table()`/`add_tables()`, or fine-tune which tables and which template the greeting uses via `qc.greeter`. (#249, #261)

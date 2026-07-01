@@ -763,10 +763,10 @@ test_that("QueryChat$server() resolves history (explicit > constructor > TRUE) a
 
   expect_snapshot(
     shiny::testServer(
-      function(input, output, session)
-        qc_no_history$server(enable_bookmarking = TRUE),
-      {
-      }
+      function(input, output, session) {
+        qc_no_history$server(enable_bookmarking = TRUE)
+      },
+      {}
     )
   )
 })
@@ -982,8 +982,7 @@ test_that("querychat_app() only cleans up data frame sources on exit", {
         # have to use an option because the code is evaluated in a far-away env
         options(.test_cleanup = cleanup)
       },
-      app = function(...) {
-      }
+      app = function(...) {}
     )
   )
   withr::local_options(rlang_interactive = TRUE)

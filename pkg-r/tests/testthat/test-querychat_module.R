@@ -24,8 +24,9 @@ test_that("mod_server() return includes table() and table_names() for single-tab
   executor <- build_query_executor(list(test_table = ds))
   withr::defer(executor$cleanup())
 
-  client_factory <- function(...)
+  client_factory <- function(...) {
     structure(list(), class = c("MockChat", "Chat"))
+  }
 
   local_mocked_bindings(
     chat_server = function(id, client, ...) mock_chat_server_result(client),
@@ -173,8 +174,9 @@ test_that("mod_server() exposes current_table() starting as NULL", {
   executor <- build_query_executor(list(test_table = ds))
   withr::defer(executor$cleanup())
 
-  client_factory <- function(...)
+  client_factory <- function(...) {
     structure(list(), class = c("MockChat", "Chat"))
+  }
 
   local_mocked_bindings(
     chat_server = function(id, client, ...) mock_chat_server_result(client),
@@ -396,8 +398,9 @@ test_that("mod_server() calls chat_server('chat', ...) with the pre-built client
   withr::defer(executor$cleanup())
 
   captured_chat_args <- NULL
-  client_factory <- function(...)
+  client_factory <- function(...) {
     structure(list(), class = c("MockChat", "Chat"))
+  }
 
   local_mocked_bindings(
     chat_server = function(id, client, ...) {
@@ -432,8 +435,9 @@ test_that("mod_server() always calls chat_restore() with the auto-bookmark trigg
   executor <- build_query_executor(list(test_table = ds))
   withr::defer(executor$cleanup())
 
-  client_factory <- function(...)
+  client_factory <- function(...) {
     structure(list(), class = c("MockChat", "Chat"))
+  }
 
   captured_restore_args <- NULL
   local_mocked_bindings(
@@ -542,8 +546,9 @@ test_that("mod_server() chat_update input updates table state", {
   executor <- build_query_executor(list(test_table = ds))
   withr::defer(executor$cleanup())
 
-  client_factory <- function(...)
+  client_factory <- function(...) {
     structure(list(), class = c("MockChat", "Chat"))
+  }
 
   local_mocked_bindings(
     chat_server = function(id, client, ...) mock_chat_server_result(client),
@@ -588,8 +593,9 @@ test_that("mod_server() registers table/viz state with both bookmark and history
   executor <- build_query_executor(list(test_table = ds))
   withr::defer(executor$cleanup())
 
-  client_factory <- function(...)
+  client_factory <- function(...) {
     structure(list(), class = c("MockChat", "Chat"))
+  }
 
   bookmark_save_count <- 0
   bookmark_restore_count <- 0
@@ -652,8 +658,9 @@ test_that("history on_save callback returns merged values (R history contract)",
   executor <- build_query_executor(list(test_table = ds))
   withr::defer(executor$cleanup())
 
-  client_factory <- function(...)
+  client_factory <- function(...) {
     structure(list(), class = c("MockChat", "Chat"))
+  }
 
   history_save_fn <- NULL
   local_mocked_bindings(

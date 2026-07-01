@@ -727,7 +727,10 @@ QueryChat <- R6::R6Class(
       resolved_history <- history %||%
         self$history %||%
         shinychat::history_options(restore_mode = "bookmark")
-      enable_shiny_bookmarking <- inherits(resolved_history, "chat_history_config") &&
+      enable_shiny_bookmarking <- inherits(
+        resolved_history,
+        "chat_history_config"
+      ) &&
         identical(resolved_history$restore_mode, "bookmark")
 
       first_table_name <- names(private$.data_sources)[[1]]
@@ -886,7 +889,11 @@ QueryChat <- R6::R6Class(
       shiny::shinyApp(
         ui,
         server,
-        enableBookmarking = if (enable_shiny_bookmarking) "server" else "disable"
+        enableBookmarking = if (enable_shiny_bookmarking) {
+          "server"
+        } else {
+          "disable"
+        }
       )
     },
 

@@ -1,6 +1,5 @@
 # Main module UI function
 mod_ui <- function(id, ...) {
-
   htmltools::tagList(
     htmltools::htmlDependency(
       "querychat",

@@ -1,18 +1,5 @@
 # Main module UI function
-mod_ui <- function(
-  id,
-  ...,
-  greeting = NULL,
-  enable_cancel = TRUE,
-  allow_attachments = TRUE
-) {
-  ns <- shiny::NS(id)
-
-  if (!is.null(greeting) && any(nzchar(greeting))) {
-    greeting <- chat_greeting_persistent(greeting)
-  } else {
-    greeting <- NULL
-  }
+mod_ui <- function(id, ...) {
 
   htmltools::tagList(
     htmltools::htmlDependency(
@@ -24,12 +11,9 @@ mod_ui <- function(
       stylesheet = "styles.css"
     ),
     shinychat::chat_ui(
-      ns("chat"),
+      shiny::NS(id, "chat"),
       height = "100%",
       class = "querychat",
-      enable_cancel = enable_cancel,
-      allow_attachments = allow_attachments,
-      greeting = greeting,
       ...
     )
   )
@@ -49,13 +33,6 @@ mod_server <- function(
 ) {
   shiny::moduleServer(id, function(input, output, session) {
     current_table_val <- shiny::reactiveVal(NULL, label = "current_table")
-    # Holds a generated greeting so it can be saved and restored on bookmark.
-    # Static greetings live in the UI (chat_ui(greeting=)) and persist already.
-    # Workaround for posit-dev/shinychat#253: shinychat does not bookmark
-    # greetings or expose their state. If that issue is fixed, this reactiveVal,
-    # the last_turn() capture below, and the greeting handling in
-    # onBookmark/onRestore can be dropped (and the shinychat minimum bumped).
-    current_greeting <- shiny::reactiveVal(NULL, label = "current_greeting")
 
     # Per-table reactive state
     tables <- list()
@@ -83,17 +60,6 @@ mod_server <- function(
       })
     }
 
-    append_output <- function(...) {
-      txt <- paste0(...)
-      shinychat::chat_append_message(
-        "chat",
-        list(role = "assistant", content = txt),
-        chunk = TRUE,
-        operation = "append",
-        session = session
-      )
-    }
-
     update_dashboard <- function(query, title, table) {
       if (!is.null(query)) {
         tables[[table]]$sql(query)
@@ -116,9 +82,7 @@ mod_server <- function(
       )
     }
 
-    # Non-reactive bookkeeping for bookmark save/restore of viz widgets
     viz_widgets <- list()
-
     on_visualize <- function(data) {
       viz_widgets[[length(viz_widgets) + 1L]] <<- list(
         widget_id = data$widget_id,
@@ -126,9 +90,8 @@ mod_server <- function(
       )
     }
 
-    # Set up the chat object for this session
     check_function(client)
-    chat <- client(
+    pre_built_client <- client(
       update_dashboard = update_dashboard,
       reset_dashboard = reset_query,
       visualize = on_visualize,
@@ -136,84 +99,41 @@ mod_server <- function(
       session = session
     )
 
-    if (is.null(greeting)) {
-      shiny::observeEvent(
-        input$chat_greeting_requested,
-        label = "on_greeting_requested",
-        {
-          # Re-display a restored greeting rather than generating a new one.
-          # On empty-chat restore both this and onRestore set the greeting
-          # (harmless, identical content); on non-empty restore this never fires,
-          # so onRestore is the only path that re-displays.
-          if (!is.null(current_greeting())) {
-            shinychat::chat_set_greeting(
-              "chat",
-              chat_greeting_persistent(current_greeting())
-            )
-            return()
-          }
-          cli::cli_warn(c(
-            "No {.arg greeting} provided to {.fn QueryChat}. Using the LLM {.arg client} to generate one now.",
-            "i" = "For faster startup, lower cost, and determinism, consider providing a {.arg greeting} to {.fn QueryChat}.",
-            "i" = "You can use your {.help querychat::QueryChat} object's {.fn $generate_greeting} method to generate a greeting."
-          ))
-          greeter$generate_stream(
-            greeting_reactive = current_greeting,
-            base = greeting_base
-          )
-        }
-      )
+    greeting_arg <- if (is.null(greeting)) {
+      function() {
+        cli::cli_warn(c(
+          "No {.arg greeting} provided to {.fn QueryChat}. Using the LLM {.arg client} to generate one now.",
+          "i" = "For faster startup, lower cost, and determinism, consider providing a {.arg greeting} to {.fn QueryChat}.",
+          "i" = "You can use your {.help querychat::QueryChat} object's {.fn $generate_greeting} method to generate a greeting."
+        ))
+        greeting_client <- greeter$build_client(greeting_base)
+        stream <- greeting_client$stream_async(GREETING_PROMPT)
+        shinychat::chat_greeting(stream, persistent = TRUE)
+      }
+    } else {
+      shinychat::chat_greeting(greeting, persistent = TRUE)
     }
 
-    ctrl <- ellmer::stream_controller()
+    chat_module <- shinychat::chat_server("chat", pre_built_client, greeting = greeting_arg)
 
-    append_stream_task <- shiny::ExtendedTask$new(
-      function(client, user_input, controller = NULL) {
-        user_input_parts <- if (is.list(user_input)) {
-          user_input
-        } else {
-          list(user_input)
+    shiny::observeEvent(
+      input$chat_update,
+      label = "on_chat_update",
+      {
+        upd <- input$chat_update
+        tbl <- upd$table
+        if (!is.null(tbl) && tbl %in% names(tables)) {
+          q <- upd$query
+          ttl <- upd$title
+          tables[[tbl]]$sql(if (nzchar(q %||% "")) q else NULL)
+          tables[[tbl]]$title(if (nzchar(ttl %||% "")) ttl else NULL)
+          current_table_val(tbl)
         }
-        stream <- client$stream_async(
-          !!!user_input_parts,
-          stream = "content",
-          controller = controller
-        )
-
-        p <- promises::promise_resolve(stream)
-        promises::then(p, function(stream) {
-          shinychat::chat_append("chat", stream)
-        })
       }
     )
 
-    shiny::observeEvent(input$chat_user_input, label = "on_chat_user_input", {
-      append_stream_task$invoke(chat, input$chat_user_input, controller = ctrl)
-    })
-
-    shiny::observeEvent(input$chat_cancel, label = "on_chat_cancel", {
-      ctrl$cancel()
-    })
-
-    shiny::observeEvent(input$chat_update, label = "on_chat_update", {
-      tbl <- input$chat_update$table
-      if (!is.null(tbl) && tbl %in% names(tables)) {
-        q <- input$chat_update$query
-        ttl <- input$chat_update$title
-        tables[[tbl]]$sql(if (nzchar(q %||% "")) q else NULL)
-        tables[[tbl]]$title(if (nzchar(ttl %||% "")) ttl else NULL)
-        current_table_val(tbl)
-      }
-    })
-
     if (enable_bookmarking) {
-      shinychat::chat_restore(
-        "chat",
-        chat,
-        restore_ui = FALSE,
-        session = session
-      )
-      shiny::setBookmarkExclude("chat_update", session = session)
+      shiny::setBookmarkExclude("chat_update")
 
       shiny::onBookmark(function(state) {
         table_states <- list()
@@ -224,9 +144,6 @@ mod_server <- function(
           )
         }
         state$values$querychat_tables <- table_states
-        if (!is.null(current_greeting())) {
-          state$values$querychat_greeting <- current_greeting()
-        }
         if (length(viz_widgets) > 0) {
           state$values$querychat_viz_widgets <- viz_widgets
         }
@@ -248,14 +165,6 @@ mod_server <- function(
           if (!is.null(last_restored)) {
             current_table_val(last_restored)
           }
-        }
-        if (!is.null(state$values$querychat_greeting)) {
-          current_greeting(state$values$querychat_greeting)
-          shinychat::chat_set_greeting(
-            "chat",
-            chat_greeting_persistent(state$values$querychat_greeting),
-            session = session
-          )
         }
         if (!is.null(state$values$querychat_viz_widgets)) {
           restored <- restore_viz_widgets(
@@ -280,11 +189,10 @@ mod_server <- function(
 
     table_names_fn <- function() names(tables)
 
-    # Backward compat: for single-table, expose sql/title/df directly
     if (length(data_sources) == 1) {
       first <- tables[[1]]
       list(
-        client = chat,
+        client = chat_module$client,
         sql = first$sql,
         title = first$title,
         df = first$df,
@@ -302,7 +210,7 @@ mod_server <- function(
         }
       }
       list(
-        client = chat,
+        client = chat_module$client,
         sql = single_table_error("sql"),
         title = single_table_error("title"),
         df = single_table_error("df"),

@@ -4,6 +4,7 @@ from pathlib import Path
 
 from querychat import QueryChat
 from querychat.data import titanic
+from shinychat.types import HistoryOptions
 
 from shiny import App, ui
 
@@ -24,7 +25,7 @@ def app_ui(request):
 
 
 def server(input, output, session):
-    qc.server(enable_bookmarking=True)
+    qc.server(history=HistoryOptions(restore_mode="bookmark"))
 
 
 app = App(app_ui, server, bookmark_store="server")

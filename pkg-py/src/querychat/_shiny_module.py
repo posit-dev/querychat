@@ -3,7 +3,7 @@ from __future__ import annotations
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Generic, TypedDict, Union
+from typing import TYPE_CHECKING, Any, Generic, TypedDict, Union
 
 import chatlas
 import shinychat
@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from shiny.bookmark import BookmarkState, RestoreState
+    from shinychat.types import HistoryOptions
 
     from shiny import Inputs, Outputs, Session
 
@@ -208,7 +209,7 @@ def mod_server(
     executor: QueryExecutor | None,
     greeting: str | None,
     client: Callable[..., chatlas.Chat],
-    enable_bookmarking: bool,
+    history: bool | HistoryOptions,
     tools: set[str] | None = None,
     greeter: QueryChatGreeter,
     greeting_base: chatlas.Chat | None = None,
@@ -320,10 +321,16 @@ def mod_server(
         CHAT_ID,
         client=chat,
         greeting=greeting_arg,
+        history=history,
     )
 
-    if enable_bookmarking:
-        shinychat_chat.enable_bookmarking(chat)
+    # Registered unconditionally so the chat client's own state (and greeting)
+    # round-trip through Shiny bookmarks whenever the host app has bookmarking
+    # enabled -- independent of `history`. Only the save/restore hooks are
+    # wanted here; the automatic bookmark trigger is turned off (bookmark_on=
+    # None) so `history` (or the host app) remains the sole source of *when*
+    # to bookmark.
+    shinychat_chat.enable_bookmarking(chat, bookmark_on=None)
 
     # Handle update button clicks
     @reactive.effect
@@ -340,34 +347,53 @@ def mod_server(
             table_states[table_name].title.set(new_title)
             _current_table.set(table_name)
 
-    if enable_bookmarking:
-        session.bookmark.exclude.append("chat_update")
+    def build_state_snapshot() -> dict[str, Any]:
+        snapshot: dict[str, Any] = {}
+        for name, state in table_states.items():
+            snapshot[f"querychat_sql_{name}"] = state.sql.get()
+            snapshot[f"querychat_title_{name}"] = state.title.get()
+        if viz_widgets:
+            snapshot["querychat_viz_widgets"] = list(viz_widgets)
+        return snapshot
 
-        @session.bookmark.on_bookmark
-        def _on_bookmark(x: BookmarkState) -> None:
-            vals = x.values
-            for name, state in table_states.items():
-                vals[f"querychat_sql_{name}"] = state.sql.get()
-                vals[f"querychat_title_{name}"] = state.title.get()
-            if viz_widgets:
-                vals["querychat_viz_widgets"] = viz_widgets
+    def apply_state_snapshot(vals: dict[str, Any]) -> None:
+        last_restored: str | None = None
+        for name, state in table_states.items():
+            if f"querychat_sql_{name}" in vals:
+                state.sql.set(vals[f"querychat_sql_{name}"])
+                if vals[f"querychat_sql_{name}"] is not None:
+                    last_restored = name
+            if f"querychat_title_{name}" in vals:
+                state.title.set(vals[f"querychat_title_{name}"])
+        if last_restored is not None:
+            _current_table.set(last_restored)
+        if "querychat_viz_widgets" in vals:
+            restored = restore_viz_widgets(executor, vals["querychat_viz_widgets"])
+            viz_widgets[:] = restored
 
-        @session.bookmark.on_restore
-        async def _on_restore(x: RestoreState) -> None:
-            vals = x.values
-            last_restored: str | None = None
-            for name, state in table_states.items():
-                if f"querychat_sql_{name}" in vals:
-                    state.sql.set(vals[f"querychat_sql_{name}"])
-                    if vals[f"querychat_sql_{name}"] is not None:
-                        last_restored = name
-                if f"querychat_title_{name}" in vals:
-                    state.title.set(vals[f"querychat_title_{name}"])
-            if last_restored is not None:
-                _current_table.set(last_restored)
-            if "querychat_viz_widgets" in vals:
-                restored = restore_viz_widgets(executor, vals["querychat_viz_widgets"])
-                viz_widgets[:] = restored
+    # Registered unconditionally: both registrations are no-ops unless the
+    # corresponding persistence layer (Shiny's own bookmarking, or shinychat's
+    # history) is actually active in the host app. In restore_mode="bookmark",
+    # shinychat's history-save triggers a real Shiny bookmark internally, so both
+    # callbacks fire for the same event -- the snapshot is written twice,
+    # harmlessly, since it's idempotent.
+    session.bookmark.exclude.append("chat_update")
+
+    @session.bookmark.on_bookmark
+    def _on_bookmark(x: BookmarkState) -> None:
+        x.values.update(build_state_snapshot())
+
+    @session.bookmark.on_restore
+    def _on_restore(x: RestoreState) -> None:
+        apply_state_snapshot(x.values)
+
+    @shinychat_chat.history.on_save
+    def _on_history_save(values: dict[str, Any]) -> None:
+        values.update(build_state_snapshot())
+
+    @shinychat_chat.history.on_restore
+    def _on_history_restore(values: dict[str, Any]) -> None:
+        apply_state_snapshot(values)
 
     if len(table_states) == 1:
         only_state = next(iter(table_states.values()))

@@ -37,28 +37,6 @@ QueryChatGreeter <- R6::R6Class(
       echo <- rlang::arg_match(echo)
       client <- self$build_client(base)
       as.character(client$chat(GREETING_PROMPT, echo = echo))
-    },
-
-    #' @description Stream a greeting into the chat UI and capture the result
-    #'   (Shiny path).
-    #' @param greeting_reactive Session reactiveVal to receive the generated greeting.
-    #' @param base Optional resolved client to clone.
-    #' @param chat_id Chat component id targeted by the Shiny stream (default "chat").
-    generate_stream = function(
-      greeting_reactive,
-      base = NULL,
-      chat_id = "chat"
-    ) {
-      client <- self$build_client(base)
-      stream <- client$stream_async(GREETING_PROMPT)
-      p <- shinychat::chat_set_greeting(
-        chat_id,
-        chat_greeting_persistent(stream)
-      )
-      promises::then(p, function(value) {
-        greeting_reactive(client$last_turn()@text)
-      })
-      p
     }
   ),
   active = list(

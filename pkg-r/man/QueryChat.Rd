@@ -98,6 +98,8 @@ qc <- QueryChat$new(con, "mtcars")
   \describe{
     \item{\code{greeting}}{The greeting message displayed to users.}
 
+    \item{\code{history}}{Conversation history configuration.}
+
     \item{\code{id}}{ID for the QueryChat instance.}
 
     \item{\code{id_override}}{Whether the ID was explicitly set by the user.}
@@ -151,6 +153,7 @@ access its \verb{$tables} and \verb{$prompt}.}
   ...,
   id = NULL,
   greeting = NULL,
+  history = NULL,
   client = NULL,
   tools = c("filter", "query"),
   data_description = NULL,
@@ -183,6 +186,10 @@ character string (in Markdown format) or a file path. If not provided,
 a greeting will be generated at the start of each conversation using
 the LLM, which adds latency and cost. Use \verb{$generate_greeting()} to
 create a greeting to save and reuse.}
+      \item{\code{history}}{Conversation history configuration: \code{NULL} (default;
+resolves to \code{TRUE} when \verb{$server()}/\verb{$app()} is called and nothing else
+was set), \code{TRUE}/\code{FALSE}, or a \code{\link[shinychat:history_options]{shinychat::history_options()}} object.
+Passed straight through to \code{shinychat::chat_server(history = )}.}
       \item{\code{client}}{Optional chat client. Can be:
 \itemize{
 \item An \link[ellmer:Chat]{ellmer::Chat} object
@@ -404,16 +411,19 @@ By default, only the \code{"query"} tool is included, regardless of the
   Create and run a Shiny gadget for chatting with data
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
-    \preformatted{QueryChat$app(..., bookmark_store = "url")}
+    \preformatted{QueryChat$app(..., history = NULL)}
     \if{html}{\out{</div>}}
   }
   \subsection{Arguments}{
     \if{html}{\out{<div class="arguments">}}
     \describe{
       \item{\code{...}}{Arguments passed to \verb{$app_obj()}.}
-      \item{\code{bookmark_store}}{The bookmarking storage method. Passed to
-\code{\link[shiny:enableBookmarking]{shiny::enableBookmarking()}}. If \code{"url"} or \code{"server"}, the chat state
-(including current query) will be bookmarked. Default is \code{"url"}.}
+      \item{\code{history}}{Conversation history configuration for the generated app.
+Defaults to \code{shinychat::history_options(restore_mode = "bookmark")} when
+neither this nor \verb{$new()}'s \code{history} was set, since \verb{$app()}'s whole
+purpose is a single, shareable demo. When the resolved value has
+\code{restore_mode = "bookmark"}, the generated app automatically enables
+Shiny's own server-side bookmarking.}
     }
     \if{html}{\out{</div>}}
   }
@@ -429,15 +439,15 @@ By default, only the \code{"query"} tool is included, regardless of the
   A streamlined Shiny app for chatting with data
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
-    \preformatted{QueryChat$app_obj(..., bookmark_store = "url")}
+    \preformatted{QueryChat$app_obj(..., history = NULL)}
     \if{html}{\out{</div>}}
   }
   \subsection{Arguments}{
     \if{html}{\out{<div class="arguments">}}
     \describe{
       \item{\code{...}}{Additional arguments (currently unused).}
-      \item{\code{bookmark_store}}{The bookmarking storage method. Passed to
-\code{\link[shiny:enableBookmarking]{shiny::enableBookmarking()}}. Default is \code{"url"}.}
+      \item{\code{history}}{Conversation history configuration for the generated app.
+See \verb{$app()}.}
     }
     \if{html}{\out{</div>}}
   }
@@ -512,7 +522,8 @@ By default, only the \code{"query"} tool is included, regardless of the
     \preformatted{QueryChat$server(
   data_source = NULL,
   client = NULL,
-  enable_bookmarking = FALSE,
+  history = NULL,
+  enable_bookmarking = NULL,
   ...,
   id = NULL,
   session = shiny::getDefaultReactiveDomain()
@@ -525,7 +536,11 @@ By default, only the \code{"query"} tool is included, regardless of the
       \item{\code{data_source}}{Optional data source for backward compatibility.
 If provided, calls \verb{$add_table()} before initializing server logic.}
       \item{\code{client}}{Optional chat client override for this session.}
-      \item{\code{enable_bookmarking}}{Whether to enable bookmarking. Default is \code{FALSE}.}
+      \item{\code{history}}{Conversation history configuration for this call. Overrides
+the value set on \verb{$new()}. Resolves to \code{TRUE} when neither this nor the
+constructor's \code{history} was set.}
+      \item{\code{enable_bookmarking}}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}} Use \code{history = shinychat::history_options(restore_mode = "bookmark")} instead (set on
+\verb{$new()}, or passed here).}
       \item{\code{...}}{Ignored.}
       \item{\code{id}}{Optional module ID override.}
       \item{\code{session}}{The Shiny session object.}

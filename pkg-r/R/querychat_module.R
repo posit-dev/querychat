@@ -27,9 +27,9 @@ mod_server <- function(
   greeting,
   client,
   tools,
+  history,
   greeter = NULL,
-  greeting_base = NULL,
-  enable_bookmarking = FALSE
+  greeting_base = NULL
 ) {
   shiny::moduleServer(id, function(input, output, session) {
     current_table_val <- shiny::reactiveVal(NULL, label = "current_table")
@@ -114,7 +114,26 @@ mod_server <- function(
       shinychat::chat_greeting(greeting, persistent = TRUE)
     }
 
-    chat_module <- shinychat::chat_server("chat", pre_built_client, greeting = greeting_arg)
+    chat_module <- shinychat::chat_server(
+      "chat",
+      pre_built_client,
+      greeting = greeting_arg,
+      history = history
+    )
+
+    # Registered unconditionally so the chat client's own state (and greeting)
+    # round-trip through Shiny bookmarks whenever the host app has bookmarking
+    # enabled -- independent of `history`. Only the save/restore hooks are
+    # wanted here; the automatic bookmark triggers are turned off so `history`
+    # (or the host app) remains the sole source of *when* to bookmark.
+    shinychat::chat_restore(
+      "chat",
+      pre_built_client,
+      bookmark_on_input = FALSE,
+      bookmark_on_response = FALSE,
+      restore_ui = FALSE,
+      session = session
+    )
 
     shiny::observeEvent(
       input$chat_update,
@@ -132,50 +151,70 @@ mod_server <- function(
       }
     )
 
-    if (enable_bookmarking) {
-      shiny::setBookmarkExclude("chat_update")
-
-      shiny::onBookmark(function(state) {
-        table_states <- list()
-        for (name in names(tables)) {
-          table_states[[name]] <- list(
-            sql = tables[[name]]$sql(),
-            title = tables[[name]]$title()
-          )
-        }
-        state$values$querychat_tables <- table_states
-        if (length(viz_widgets) > 0) {
-          state$values$querychat_viz_widgets <- viz_widgets
-        }
-      })
-
-      shiny::onRestore(function(state) {
-        if (!is.null(state$values$querychat_tables)) {
-          last_restored <- NULL
-          for (name in names(state$values$querychat_tables)) {
-            tbl_state <- state$values$querychat_tables[[name]]
-            if (!is.null(tbl_state$sql)) {
-              tables[[name]]$sql(tbl_state$sql)
-              last_restored <- name
-            }
-            if (!is.null(tbl_state$title)) {
-              tables[[name]]$title(tbl_state$title)
-            }
-          }
-          if (!is.null(last_restored)) {
-            current_table_val(last_restored)
-          }
-        }
-        if (!is.null(state$values$querychat_viz_widgets)) {
-          restored <- restore_viz_widgets(
-            executor,
-            restore_record_list(state$values$querychat_viz_widgets),
-            session
-          )
-          viz_widgets <<- restored
-        }
-      })
+    build_state_snapshot <- function() {
+      table_states <- list()
+      for (name in names(tables)) {
+        table_states[[name]] <- list(
+          sql = tables[[name]]$sql(),
+          title = tables[[name]]$title()
+        )
+      }
+      snapshot <- list(querychat_tables = table_states)
+      if (length(viz_widgets) > 0) {
+        snapshot$querychat_viz_widgets <- viz_widgets
+      }
+      snapshot
     }
+
+    apply_state_snapshot <- function(values) {
+      if (!is.null(values$querychat_tables)) {
+        last_restored <- NULL
+        for (name in names(values$querychat_tables)) {
+          tbl_state <- values$querychat_tables[[name]]
+          if (!is.null(tbl_state$sql)) {
+            tables[[name]]$sql(tbl_state$sql)
+            last_restored <- name
+          }
+          if (!is.null(tbl_state$title)) {
+            tables[[name]]$title(tbl_state$title)
+          }
+        }
+        if (!is.null(last_restored)) {
+          current_table_val(last_restored)
+        }
+      }
+      if (!is.null(values$querychat_viz_widgets)) {
+        restored <- restore_viz_widgets(
+          executor,
+          restore_record_list(values$querychat_viz_widgets),
+          session
+        )
+        viz_widgets <<- restored
+      }
+      invisible(NULL)
+    }
+
+    # Registered unconditionally: both registrations are no-ops unless the
+    # corresponding persistence layer (Shiny's own bookmarking, or shinychat's
+    # history) is actually active in the host app. In restore_mode = "bookmark",
+    # shinychat's history-save triggers a real Shiny bookmark internally, so both
+    # callbacks fire for the same event -- the snapshot is written twice,
+    # harmlessly, since it's idempotent.
+    shiny::setBookmarkExclude("chat_update")
+
+    shiny::onBookmark(function(state) {
+      state$values <- utils::modifyList(state$values, build_state_snapshot())
+    })
+
+    shiny::onRestore(function(state) {
+      apply_state_snapshot(state$values)
+    })
+
+    chat_module$history$on_save(function(values) {
+      utils::modifyList(values, build_state_snapshot())
+    })
+
+    chat_module$history$on_restore(apply_state_snapshot)
 
     table_fn <- function(name) {
       if (!name %in% names(tables)) {

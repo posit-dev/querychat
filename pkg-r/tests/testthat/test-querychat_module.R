@@ -28,9 +28,10 @@ test_that("mod_server() return includes table() and table_names() for single-tab
     structure(list(), class = c("MockChat", "Chat"))
 
   local_mocked_bindings(
-    chat_server = function(id, client, ...) list(client = client),
+    chat_server = function(id, client, ...) mock_chat_server_result(client),
     .package = "shinychat"
   )
+  local_mock_chat_restore()
 
   shiny::testServer(
     mod_server,
@@ -40,8 +41,7 @@ test_that("mod_server() return includes table() and table_names() for single-tab
       executor = executor,
       greeting = "Hello",
       client = client_factory,
-      tools = "query",
-      enable_bookmarking = FALSE
+      tools = "query"
     ),
     {
       # Verify the returned list exposes table() and table_names()
@@ -88,9 +88,10 @@ test_that("mod_server() return includes table() and table_names() for multi-tabl
   }
 
   local_mocked_bindings(
-    chat_server = function(id, client, ...) list(client = client),
+    chat_server = function(id, client, ...) mock_chat_server_result(client),
     .package = "shinychat"
   )
+  local_mock_chat_restore()
 
   shiny::testServer(
     mod_server,
@@ -100,8 +101,7 @@ test_that("mod_server() return includes table() and table_names() for multi-tabl
       executor = executor,
       greeting = "Hello",
       client = client_factory,
-      tools = "query",
-      enable_bookmarking = FALSE
+      tools = "query"
     ),
     {
       # Verify the returned list exposes table() and table_names()
@@ -141,9 +141,10 @@ test_that("mod_server() passes visualize callback and tools to client factory", 
   }
 
   local_mocked_bindings(
-    chat_server = function(id, client, ...) list(client = client),
+    chat_server = function(id, client, ...) mock_chat_server_result(client),
     .package = "shinychat"
   )
+  local_mock_chat_restore()
 
   shiny::testServer(
     mod_server,
@@ -153,8 +154,7 @@ test_that("mod_server() passes visualize callback and tools to client factory", 
       executor = executor,
       greeting = "Hello",
       client = client_factory,
-      tools = c("query", "visualize"),
-      enable_bookmarking = FALSE
+      tools = c("query", "visualize")
     ),
     {
       expect_type(captured, "list")
@@ -177,9 +177,10 @@ test_that("mod_server() exposes current_table() starting as NULL", {
     structure(list(), class = c("MockChat", "Chat"))
 
   local_mocked_bindings(
-    chat_server = function(id, client, ...) list(client = client),
+    chat_server = function(id, client, ...) mock_chat_server_result(client),
     .package = "shinychat"
   )
+  local_mock_chat_restore()
 
   shiny::testServer(
     mod_server,
@@ -189,8 +190,7 @@ test_that("mod_server() exposes current_table() starting as NULL", {
       executor = executor,
       greeting = "Hello",
       client = client_factory,
-      tools = "query",
-      enable_bookmarking = FALSE
+      tools = "query"
     ),
     {
       expect_true(is.function(session$returned$current_table))
@@ -215,9 +215,10 @@ test_that("mod_server() current_table() updates on update_dashboard and reset_qu
   }
 
   local_mocked_bindings(
-    chat_server = function(id, client, ...) list(client = client),
+    chat_server = function(id, client, ...) mock_chat_server_result(client),
     .package = "shinychat"
   )
+  local_mock_chat_restore()
 
   shiny::testServer(
     mod_server,
@@ -227,8 +228,7 @@ test_that("mod_server() current_table() updates on update_dashboard and reset_qu
       executor = executor,
       greeting = "Hello",
       client = client_factory,
-      tools = "query",
-      enable_bookmarking = FALSE
+      tools = "query"
     ),
     {
       # Initially NULL
@@ -320,9 +320,10 @@ test_that("restored viz widgets survive a second bookmark cycle", {
   }
 
   local_mocked_bindings(
-    chat_server = function(id, client, ...) list(client = client),
+    chat_server = function(id, client, ...) mock_chat_server_result(client),
     .package = "shinychat"
   )
+  local_mock_chat_restore()
   local_mocked_bindings(
     onBookmark = function(fun, session = NULL) {
       bookmark_fn <<- fun
@@ -344,50 +345,46 @@ test_that("restored viz widgets survive a second bookmark cycle", {
     .package = "querychat"
   )
 
-  expect_no_warning(
-    shiny::testServer(
-      mod_server,
-      args = list(
-        id = "test",
-        data_sources = list(test_table = ds),
-        executor = executor,
-        greeting = "Hello",
-        client = client_factory,
-        tools = c("query", "visualize"),
-        enable_bookmarking = TRUE
-      ),
-      {
-        expect_true(is.function(bookmark_fn))
-        expect_true(is.function(restore_fn))
-        expect_true(is.function(callbacks$visualize))
-
-        saved <- list(
-          list(
-            widget_id = "querychat_viz_1",
-            ggsql = "SELECT 1 VISUALISE 1 AS x DRAW point"
-          )
-        )
-
-        shiny::isolate(callbacks$visualize(saved[[1]]))
-
-        first_state <- new.env(parent = emptyenv())
-        first_state$values <- list()
-        shiny::isolate(bookmark_fn(first_state))
-        expect_equal(first_state$values$querychat_viz_widgets, saved)
-
-        restore_state <- new.env(parent = emptyenv())
-        restore_state$values <- first_state$values
-        shiny::isolate(restore_fn(restore_state))
-        expect_true(inherits(restored_args$executor, "QueryExecutor"))
-        expect_equal(restored_args$saved_widgets, saved)
-
-        second_state <- new.env(parent = emptyenv())
-        second_state$values <- list()
-        shiny::isolate(bookmark_fn(second_state))
-        expect_equal(second_state$values$querychat_viz_widgets, saved)
-      }
+  shiny::testServer(
+    mod_server,
+    args = list(
+      id = "test",
+      data_sources = list(test_table = ds),
+      executor = executor,
+      greeting = "Hello",
+      client = client_factory,
+      tools = c("query", "visualize")
     ),
-    class = "lifecycle_warning_deprecated"
+    {
+      expect_true(is.function(bookmark_fn))
+      expect_true(is.function(restore_fn))
+      expect_true(is.function(callbacks$visualize))
+
+      saved <- list(
+        list(
+          widget_id = "querychat_viz_1",
+          ggsql = "SELECT 1 VISUALISE 1 AS x DRAW point"
+        )
+      )
+
+      shiny::isolate(callbacks$visualize(saved[[1]]))
+
+      first_state <- new.env(parent = emptyenv())
+      first_state$values <- list()
+      shiny::isolate(bookmark_fn(first_state))
+      expect_equal(first_state$values$querychat_viz_widgets, saved)
+
+      restore_state <- new.env(parent = emptyenv())
+      restore_state$values <- first_state$values
+      shiny::isolate(restore_fn(restore_state))
+      expect_true(inherits(restored_args$executor, "QueryExecutor"))
+      expect_equal(restored_args$saved_widgets, saved)
+
+      second_state <- new.env(parent = emptyenv())
+      second_state$values <- list()
+      shiny::isolate(bookmark_fn(second_state))
+      expect_equal(second_state$values$querychat_viz_widgets, saved)
+    }
   )
 })
 
@@ -405,7 +402,45 @@ test_that("mod_server() calls chat_server('chat', ...) with the pre-built client
   local_mocked_bindings(
     chat_server = function(id, client, ...) {
       captured_chat_args <<- list(id = id, client = client)
-      list(client = client)
+      mock_chat_server_result(client)
+    },
+    .package = "shinychat"
+  )
+  local_mock_chat_restore()
+
+  shiny::testServer(
+    mod_server,
+    args = list(
+      id = "test",
+      data_sources = list(test_table = ds),
+      executor = executor,
+      greeting = "Hello",
+      client = client_factory,
+      tools = "query"
+    ),
+    {
+      expect_equal(captured_chat_args$id, "chat")
+      expect_true(inherits(captured_chat_args$client, "Chat"))
+    }
+  )
+})
+
+test_that("mod_server() always calls chat_restore() with the auto-bookmark trigger disabled", {
+  skip_if_no_dataframe_engine()
+
+  ds <- local_data_frame_source(new_test_df())
+  executor <- build_query_executor(list(test_table = ds))
+  withr::defer(executor$cleanup())
+
+  client_factory <- function(...)
+    structure(list(), class = c("MockChat", "Chat"))
+
+  captured_restore_args <- NULL
+  local_mocked_bindings(
+    chat_server = function(id, client, ...) mock_chat_server_result(client),
+    chat_restore = function(id, client, ...) {
+      captured_restore_args <<- list(id = id, client = client, ...)
+      invisible(NULL)
     },
     .package = "shinychat"
   )
@@ -419,11 +454,16 @@ test_that("mod_server() calls chat_server('chat', ...) with the pre-built client
       greeting = "Hello",
       client = client_factory,
       tools = "query",
-      enable_bookmarking = FALSE
+      history = TRUE
     ),
     {
-      expect_equal(captured_chat_args$id, "chat")
-      expect_true(inherits(captured_chat_args$client, "Chat"))
+      expect_equal(captured_restore_args$id, "chat")
+      expect_true(inherits(captured_restore_args$client, "Chat"))
+      expect_false(captured_restore_args$restore_ui)
+      # The hooks are registered, but querychat never triggers a bookmark
+      # itself -- that's left to `history` or the host app.
+      expect_false(captured_restore_args$bookmark_on_input)
+      expect_false(captured_restore_args$bookmark_on_response)
     }
   )
 })
@@ -461,11 +501,12 @@ test_that("mod_server() builds the auto-generated greeting from the greeter, not
   local_mocked_bindings(
     chat_server = function(id, client, greeting = NULL, ...) {
       captured_greeting_arg <<- greeting
-      list(client = client)
+      mock_chat_server_result(client)
     },
     chat_greeting = function(content, ...) content,
     .package = "shinychat"
   )
+  local_mock_chat_restore()
 
   shiny::testServer(
     mod_server,
@@ -477,8 +518,7 @@ test_that("mod_server() builds the auto-generated greeting from the greeter, not
       client = client_factory,
       tools = "query",
       greeter = fake_greeter,
-      greeting_base = "base-client",
-      enable_bookmarking = FALSE
+      greeting_base = "base-client"
     ),
     {
       expect_true(is.function(captured_greeting_arg))
@@ -506,9 +546,10 @@ test_that("mod_server() chat_update input updates table state", {
     structure(list(), class = c("MockChat", "Chat"))
 
   local_mocked_bindings(
-    chat_server = function(id, client, ...) list(client = client),
+    chat_server = function(id, client, ...) mock_chat_server_result(client),
     .package = "shinychat"
   )
+  local_mock_chat_restore()
 
   shiny::testServer(
     mod_server,
@@ -518,8 +559,7 @@ test_that("mod_server() chat_update input updates table state", {
       executor = executor,
       greeting = "Hello",
       client = client_factory,
-      tools = "query",
-      enable_bookmarking = FALSE
+      tools = "query"
     ),
     {
       session$setInputs(
@@ -536,6 +576,127 @@ test_that("mod_server() chat_update input updates table state", {
       expect_equal(
         shiny::isolate(session$returned$current_table()),
         "test_table"
+      )
+    }
+  )
+})
+
+test_that("mod_server() registers table/viz state with both bookmark and history hooks, unconditionally", {
+  skip_if_no_dataframe_engine()
+
+  ds <- local_data_frame_source(new_test_df())
+  executor <- build_query_executor(list(test_table = ds))
+  withr::defer(executor$cleanup())
+
+  client_factory <- function(...)
+    structure(list(), class = c("MockChat", "Chat"))
+
+  bookmark_save_count <- 0
+  bookmark_restore_count <- 0
+  history_save_fn <- NULL
+  history_restore_fn <- NULL
+
+  local_mocked_bindings(
+    chat_server = function(id, client, ...) {
+      list(
+        client = client,
+        history = list(
+          on_save = function(fn) {
+            history_save_fn <<- fn
+            invisible(fn)
+          },
+          on_restore = function(fn) {
+            history_restore_fn <<- fn
+            invisible(fn)
+          }
+        )
+      )
+    },
+    .package = "shinychat"
+  )
+  local_mock_chat_restore()
+  local_mocked_bindings(
+    onBookmark = function(fun, session = NULL) {
+      bookmark_save_count <<- bookmark_save_count + 1
+    },
+    onRestore = function(fun, session = NULL) {
+      bookmark_restore_count <<- bookmark_restore_count + 1
+    },
+    .package = "shiny"
+  )
+
+  shiny::testServer(
+    mod_server,
+    args = list(
+      id = "test",
+      data_sources = list(test_table = ds),
+      executor = executor,
+      greeting = "Hello",
+      client = client_factory,
+      tools = "query",
+      history = FALSE # even with history disabled, registration must still happen
+    ),
+    {
+      expect_equal(bookmark_save_count, 1L)
+      expect_equal(bookmark_restore_count, 1L)
+      expect_true(is.function(history_save_fn))
+      expect_true(is.function(history_restore_fn))
+    }
+  )
+})
+
+test_that("history on_save callback returns merged values (R history contract)", {
+  skip_if_no_dataframe_engine()
+
+  ds <- local_data_frame_source(new_test_df())
+  executor <- build_query_executor(list(test_table = ds))
+  withr::defer(executor$cleanup())
+
+  client_factory <- function(...)
+    structure(list(), class = c("MockChat", "Chat"))
+
+  history_save_fn <- NULL
+  local_mocked_bindings(
+    chat_server = function(id, client, ...) {
+      list(
+        client = client,
+        history = list(
+          on_save = function(fn) {
+            history_save_fn <<- fn
+            invisible(fn)
+          },
+          on_restore = function(fn) invisible(fn)
+        )
+      )
+    },
+    .package = "shinychat"
+  )
+  local_mock_chat_restore()
+
+  shiny::testServer(
+    mod_server,
+    args = list(
+      id = "test",
+      data_sources = list(test_table = ds),
+      executor = executor,
+      greeting = "Hello",
+      client = client_factory,
+      tools = "query",
+      history = TRUE
+    ),
+    {
+      session$setInputs(
+        chat_update = list(
+          table = "test_table",
+          query = "SELECT * FROM test_table WHERE id = 1",
+          title = "One row"
+        )
+      )
+      result <- shiny::isolate(history_save_fn(list(unrelated_key = "kept")))
+      expect_equal(result$unrelated_key, "kept")
+      expect_equal(
+        result$querychat_tables$test_table$sql,
+        "SELECT * FROM test_table WHERE id = 1"
       )
     }
   )

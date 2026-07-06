@@ -22,7 +22,7 @@ maintainers = [
 dependencies = [
     "duckdb",
     "shiny>=1.6.2",
-    "shinychat @ git+https://github.com/posit-dev/shinychat.git@feat/chat-history",
+    "shinychat>=0.6.0",
     "htmltools",
     "chatlas>=0.18.0",
     "narwhals>=2.2.0",

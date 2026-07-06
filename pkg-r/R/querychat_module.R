@@ -168,7 +168,7 @@ mod_server <- function(
     apply_state_snapshot <- function(values) {
       if (!is.null(values$querychat_tables)) {
         last_restored <- NULL
-        for (name in names(values$querychat_tables)) {
+        for (name in names(tables)) {
           tbl_state <- values$querychat_tables[[name]]
           if (!is.null(tbl_state$sql)) {
             tables[[name]]$sql(tbl_state$sql)

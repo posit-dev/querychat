@@ -9,6 +9,7 @@ These tests verify the client-side JS behavior in viz.js:
 
 from __future__ import annotations
 
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -16,12 +17,42 @@ import pytest
 from playwright.sync_api import expect
 
 if TYPE_CHECKING:
-    from playwright.sync_api import Download, Page
+    from playwright.sync_api import Download, Locator, Page
     from shinychat.playwright import ChatController
 
 
 VIZ_PROMPT = "Use the visualize tool to create a scatter plot of age vs fare"
 TOOL_RESULT_TIMEOUT = 90_000
+
+
+def _wait_for_stable_position(
+    locator: Locator,
+    quiet_checks: int = 5,
+    interval_s: float = 0.1,
+    max_wait_s: float = 8.0,
+) -> None:
+    """
+    Wait until `locator`'s bounding box stops changing.
+
+    The viz widget (chart) keeps resizing for a couple of seconds after the
+    tool result first appears — likely a client/server size-negotiation
+    round trip for its responsive fill layout. That drags the footer button
+    below it along for the ride, so a click issued mid-drift can land on
+    stale coordinates and silently miss the button.
+    """
+    deadline = time.monotonic() + max_wait_s
+    last_box = None
+    stable_count = 0
+    while time.monotonic() < deadline:
+        box = locator.bounding_box()
+        if box is not None and box == last_box:
+            stable_count += 1
+            if stable_count >= quiet_checks:
+                return
+        else:
+            stable_count = 0
+        last_box = box
+        time.sleep(interval_s)
 
 
 def _download_from_save_menu(page: Page, export_format: str) -> tuple[Download, str]:
@@ -58,6 +89,11 @@ def _send_viz_prompt(page: Page, app_10_viz: str, chat_10_viz: ChatController) -
     # complete and shinychat has finished its final re-render of the tool
     # result card.
     expect(chat_10_viz.loc_input).to_be_enabled(timeout=30_000)
+    # The chart widget below the footer keeps resizing for a couple of
+    # seconds after that (see _wait_for_stable_position), dragging the
+    # Show Query button's position along with it. Let it settle before
+    # tests start clicking, or a click can land on stale coordinates.
+    _wait_for_stable_position(page.locator(".querychat-show-query-btn"))
 
 
 class TestShowQueryToggle:
@@ -104,6 +140,11 @@ class TestShowQueryToggle:
 
         btn.click()  # show
         expect(label).to_have_text("Hide Query")
+
+        # Revealing the query section changes the card's layout, which
+        # kicks off another round of the chart's resize settling (see
+        # _wait_for_stable_position) and can drag the button along with it.
+        _wait_for_stable_position(btn)
 
         btn.click()  # hide
 

@@ -41,8 +41,9 @@
 # QueryChat$server() resolves history (explicit > constructor > TRUE) and warns on enable_bookmarking
 
     Code
-      shiny::testServer(function(input, output, session) qc_no_history$server(
-        enable_bookmarking = TRUE), { })
+      shiny::testServer(function(input, output, session) {
+        qc_no_history$server(enable_bookmarking = TRUE)
+      }, { })
     Message
       Using model = "gpt-4.1".
     Condition

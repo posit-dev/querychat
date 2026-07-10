@@ -57,6 +57,7 @@ if TYPE_CHECKING:
     from ibis.backends.sql import SQLBackend
     from narwhals.stable.v1.typing import IntoFrame
     from pins.boards import BaseBoard
+    from shinychat.types import HistoryOptions
 
     from ._data_dict import DataDict
     from ._viz_tools import VisualizeData
@@ -91,6 +92,7 @@ class QueryChatBase(Generic[IntoFrameT]):
         prompt_template: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         data_description: Optional[str | Path] = None,
+        history: Optional[bool | HistoryOptions] = None,
     ):
         self._data_dicts: list[DataDict] = _normalize_data_dicts(data_dict)
 
@@ -103,6 +105,7 @@ class QueryChatBase(Generic[IntoFrameT]):
 
         self.tools = normalize_tools(tools, default=DEFAULT_TOOLS)
         self.greeting = greeting.read_text() if isinstance(greeting, Path) else greeting
+        self.history = history
 
         # Store init parameters for deferred system prompt building
         self._prompt_template = prompt_template

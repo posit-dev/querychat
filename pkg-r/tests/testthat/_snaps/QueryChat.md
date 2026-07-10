@@ -38,6 +38,23 @@
       Error in `qc$server()`:
       ! `$server()` must be called within a Shiny server function
 
+# QueryChat$server() resolves history (explicit > constructor > TRUE) and warns on enable_bookmarking
+
+    Code
+      shiny::testServer(function(input, output, session) {
+        qc_no_history$server(enable_bookmarking = TRUE)
+      }, {
+        expect_s3_class(captured, "chat_history_config")
+        expect_equal(captured$restore_mode, "bookmark")
+      })
+    Message
+      Using model = "gpt-4.1".
+    Condition
+      Warning:
+      The `enable_bookmarking` argument of `QueryChat$server()` is deprecated as of querychat 0.4.0.
+      i Please use the `history` argument instead.
+      i Use history = shinychat::history_options(restore_mode = "bookmark") for the equivalent behavior.
+
 # normalize_data_source() / errors with invalid data source types
 
     Code

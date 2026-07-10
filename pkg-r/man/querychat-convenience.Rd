@@ -11,6 +11,7 @@ querychat(
   ...,
   id = NULL,
   greeting = NULL,
+  history = NULL,
   client = NULL,
   tools = c("filter", "query"),
   data_description = NULL,
@@ -35,7 +36,7 @@ querychat_app(
   prompt_template = NULL,
   data_dict = NULL,
   cleanup = NA,
-  bookmark_store = "url"
+  history = NULL
 )
 }
 \arguments{
@@ -49,6 +50,9 @@ connection).}
 \item{id}{Optional module ID for the QueryChat instance.}
 
 \item{greeting}{Optional initial message to display to users.}
+
+\item{history}{Conversation history configuration for the generated app. See
+\link{QueryChat}'s \verb{$app()} method.}
 
 \item{client}{Optional chat client.}
 
@@ -67,8 +71,6 @@ values to consider as a categorical variable. Default is 20.}
 
 \item{cleanup}{Whether or not to automatically run \verb{$cleanup()} when the
 Shiny session/app stops.}
-
-\item{bookmark_store}{The bookmarking storage method. Default is \code{"url"}.}
 }
 \value{
 A \code{QueryChat} object. See \link{QueryChat} for available methods.

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, Optional, overload
+import warnings
+from typing import TYPE_CHECKING, Any, Literal, Optional, overload
 
 from narwhals.stable.v1.typing import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
 from shiny.express._stub_session import ExpressStubSession
 from shiny.session import get_current_session
+from shinychat.types import HistoryOptions
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 
@@ -159,6 +161,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         prompt_template: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         data_description: Optional[str | Path] = None,
+        history: Optional[bool | HistoryOptions] = None,
     ) -> None: ...
 
     @overload
@@ -176,6 +179,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         prompt_template: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         data_description: Optional[str | Path] = None,
+        history: Optional[bool | HistoryOptions] = None,
     ) -> None: ...
 
     @overload
@@ -193,6 +197,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         prompt_template: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         data_description: Optional[str | Path] = None,
+        history: Optional[bool | HistoryOptions] = None,
     ) -> None: ...
 
     @overload
@@ -210,6 +215,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         prompt_template: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         data_description: Optional[str | Path] = None,
+        history: Optional[bool | HistoryOptions] = None,
     ) -> None: ...
 
     @overload
@@ -227,6 +233,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         prompt_template: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         data_description: Optional[str | Path] = None,
+        history: Optional[bool | HistoryOptions] = None,
     ) -> None: ...
 
     def __init__(
@@ -243,6 +250,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         prompt_template: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         data_description: Optional[str | Path] = None,
+        history: Optional[bool | HistoryOptions] = None,
     ):
         super().__init__(
             data_source,
@@ -255,11 +263,14 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             categorical_threshold=categorical_threshold,
             extra_instructions=extra_instructions,
             prompt_template=prompt_template,
+            history=history,
         )
         self.id = id or (f"querychat_{table_name}" if table_name else "querychat")
 
     def app(
-        self, *, bookmark_store: Literal["url", "server", "disable"] = "url"
+        self,
+        *,
+        history: Optional[bool | HistoryOptions] = None,
     ) -> App:
         """
         Quickly chat with a dataset.
@@ -269,11 +280,16 @@ class QueryChat(QueryChatBase[IntoFrameT]):
 
         Parameters
         ----------
-        bookmark_store
-            The bookmarking store to use for the Shiny app. Options are:
-                - `"url"`: Store bookmarks in the URL (default).
-                - `"server"`: Store bookmarks on the server.
-                - `"disable"`: Disable bookmarking.
+        history
+            Conversation history configuration, passed through to
+            `shinychat.Chat(history=)`. Defaults to
+            `shinychat.types.HistoryOptions(restore_mode="bookmark")` when neither
+            this nor the constructor's `history` was set, since `.app()`'s whole
+            purpose is a single, shareable demo (chat + SQL editor + table state
+            tied together). When the resolved value has `restore_mode="bookmark"`,
+            the generated app automatically enables Shiny's own server-side
+            bookmarking (`bookmark_store="server"`) -- shinychat's `history`
+            mechanism only wires the chat side, not the app-level Shiny setting.
 
         Returns
         -------
@@ -282,7 +298,19 @@ class QueryChat(QueryChatBase[IntoFrameT]):
 
         """
         self._require_initialized("app")
-        enable_bookmarking = bookmark_store != "disable"
+        resolved_history: bool | HistoryOptions = (
+            history
+            if history is not None
+            else (
+                self.history
+                if self.history is not None
+                else HistoryOptions(restore_mode="bookmark")
+            )
+        )
+        enable_bookmarking = (
+            isinstance(resolved_history, HistoryOptions)
+            and resolved_history.restore_mode == "bookmark"
+        )
         first_table_name = next(iter(self._data_sources))
 
         def app_ui(request):
@@ -330,7 +358,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 executor=self._require_query_executor("server"),
                 greeting=self.greeting,
                 client=self._create_session_client,
-                enable_bookmarking=enable_bookmarking,
+                history=resolved_history,
                 tools=self.tools,
                 greeter=self.greeter,
                 greeting_base=None,
@@ -401,7 +429,11 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                     query if query and query.strip() != default_query else None
                 )
 
-        return App(app_ui, app_server, bookmark_store=bookmark_store)
+        return App(
+            app_ui,
+            app_server,
+            bookmark_store="server" if enable_bookmarking else "disable",
+        )
 
     def sidebar(
         self,
@@ -462,18 +494,14 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             A UI component.
 
         """
-        return mod_ui(
-            id or self.id,
-            preload_viz=has_viz_tool(self.tools),
-            greeting=self.greeting,
-            **kwargs,
-        )
+        return mod_ui(id or self.id, preload_viz=has_viz_tool(self.tools), **kwargs)
 
     def server(
         self,
         *,
         client: str | chatlas.Chat | MISSING_TYPE = MISSING,
-        enable_bookmarking: bool = False,
+        history: Optional[bool | HistoryOptions] = None,
+        enable_bookmarking: bool | None = None,
         id: Optional[str] = None,
     ) -> ServerValues[IntoFrameT]:
         """
@@ -492,51 +520,19 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             for the deferred pattern where the client cannot be created at
             initialization time (e.g., when using Posit Connect managed OAuth
             credentials that require session access).
+        history
+            Conversation history configuration, passed through to
+            `shinychat.Chat(history=)`. Overrides the value set on the `QueryChat`
+            constructor for this call only. Defaults to `True` when neither this
+            nor the constructor's `history` was set.
         enable_bookmarking
-            Whether to enable bookmarking for the querychat module.
+            Deprecated. `True` resolves to `history=shinychat.types.HistoryOptions(restore_mode="bookmark")`
+            when neither this call's `history` nor the constructor's `history` was set. Use `history=`
+            directly instead (set on the `QueryChat` constructor, or passed here).
         id
             Optional module ID for the QueryChat instance. If not provided,
             will use the ID provided at initialization. This must match the ID
             used in the `.ui()` or `.sidebar()` methods.
-
-        Examples
-        --------
-        ```python
-        from shiny import App, render, ui
-        from seaborn import load_dataset
-        from querychat import QueryChat
-
-        titanic = load_dataset("titanic")
-
-        qc = QueryChat(titanic, "titanic")
-
-
-        def app_ui(request):
-            return ui.page_sidebar(
-                qc.sidebar(),
-                ui.card(
-                    ui.card_header(ui.output_text("title")),
-                    ui.output_data_frame("data_table"),
-                ),
-                title="Titanic QueryChat App",
-                fillable=True,
-            )
-
-
-        def server(input, output, session):
-            qc_vals = qc.server(enable_bookmarking=True)
-
-            @render.data_frame
-            def data_table():
-                return qc_vals.df()
-
-            @render.text
-            def title():
-                return qc_vals.title() or "My Data"
-
-
-        app = App(app_ui, server, bookmark_store="url")
-        ```
 
         Returns
         -------
@@ -560,6 +556,30 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         def create_session_client(**kwargs) -> chatlas.Chat:
             return self._create_session_client(base=resolved_client, **kwargs)
 
+        if enable_bookmarking is not None:
+            warnings.warn(
+                "`enable_bookmarking` is deprecated. "
+                'Use `history=shinychat.types.HistoryOptions(restore_mode="bookmark")` '
+                "instead (on the QueryChat constructor or passed to .server()) "
+                "for the equivalent behavior.",
+                FutureWarning,
+                stacklevel=2,
+            )
+
+        resolved_history: bool | HistoryOptions = (
+            history
+            if history is not None
+            else (
+                self.history
+                if self.history is not None
+                else (
+                    HistoryOptions(restore_mode="bookmark")
+                    if enable_bookmarking
+                    else True
+                )
+            )
+        )
+
         self._mark_server_initialized()
         return mod_server(
             id or self.id,
@@ -567,7 +587,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             executor=self._require_query_executor("server"),
             greeting=self.greeting,
             client=create_session_client,
-            enable_bookmarking=enable_bookmarking,
+            history=resolved_history,
             tools=self.tools,
             greeter=self.greeter,
             greeting_base=resolved_client,
@@ -587,11 +607,12 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
     ```python
     from querychat.express import QueryChat
     from seaborn import load_dataset
-    from shiny.express import app_opts, render, ui
+    from shiny.express import render, ui
+    from shinychat.types import HistoryOptions
 
     titanic = load_dataset("titanic")
 
-    qc = QueryChat(titanic, "titanic")
+    qc = QueryChat(titanic, "titanic", history=HistoryOptions(restore_mode="bookmark"))
     qc.sidebar()
 
     with ui.card(fill=True):
@@ -610,8 +631,6 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         title="Titanic QueryChat App",
         fillable=True,
     )
-
-    app_opts(bookmark_store="url")
     ```
 
     Parameters
@@ -675,9 +694,6 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
 
     """
 
-    # Class-level cache for bookmarking settings detected during stub session
-    _bookmarking_settings: ClassVar[dict[str, bool]] = {}
-
     @overload
     def __init__(
         self: QueryChatExpress[Any],
@@ -693,6 +709,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         prompt_template: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         data_description: Optional[str | Path] = None,
+        history: Optional[bool | HistoryOptions] = None,
         enable_bookmarking: Literal["auto", True, False] = "auto",
     ) -> None: ...
 
@@ -711,6 +728,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         prompt_template: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         data_description: Optional[str | Path] = None,
+        history: Optional[bool | HistoryOptions] = None,
         enable_bookmarking: Literal["auto", True, False] = "auto",
     ) -> None: ...
 
@@ -729,6 +747,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         prompt_template: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         data_description: Optional[str | Path] = None,
+        history: Optional[bool | HistoryOptions] = None,
         enable_bookmarking: Literal["auto", True, False] = "auto",
     ) -> None: ...
 
@@ -747,6 +766,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         prompt_template: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         data_description: Optional[str | Path] = None,
+        history: Optional[bool | HistoryOptions] = None,
         enable_bookmarking: Literal["auto", True, False] = "auto",
     ) -> None: ...
 
@@ -765,6 +785,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         prompt_template: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         data_description: Optional[str | Path] = None,
+        history: Optional[bool | HistoryOptions] = None,
         enable_bookmarking: Literal["auto", True, False] = "auto",
     ) -> None: ...
 
@@ -782,6 +803,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         prompt_template: Optional[str | Path] = None,
         categorical_threshold: int = 20,
         data_description: Optional[str | Path] = None,
+        history: Optional[bool | HistoryOptions] = None,
         enable_bookmarking: Literal["auto", True, False] = "auto",
     ):
         # Sanity check: Express should always have a (stub/real) session
@@ -803,26 +825,20 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             categorical_threshold=categorical_threshold,
             extra_instructions=extra_instructions,
             prompt_template=prompt_template,
+            history=history,
         )
         self.id = id or (f"querychat_{table_name}" if table_name else "querychat")
 
-        # Determine bookmarking setting
-        # During stub session: detect from app_opts and cache in class variable
-        # During real session: retrieve from class variable
-        enable: bool
-        if enable_bookmarking == "auto":
-            if isinstance(session, ExpressStubSession):
-                store = session.app_opts.get("bookmark_store", "disable")
-                enable = store != "disable"
-                # Cache for the real session
-                QueryChatExpress._bookmarking_settings[self.id] = enable
-            else:
-                # Retrieve and clean up (pop prevents memory accumulation)
-                enable = QueryChatExpress._bookmarking_settings.pop(self.id, False)
-        else:
-            enable = enable_bookmarking
+        if enable_bookmarking != "auto":
+            warnings.warn(
+                "`enable_bookmarking` is deprecated. "
+                'Use `history=shinychat.types.HistoryOptions(restore_mode="bookmark")` '
+                "instead, for the equivalent behavior.",
+                FutureWarning,
+                stacklevel=2,
+            )
 
-        self._enable_bookmarking = enable
+        self._enable_bookmarking = enable_bookmarking
         self._vals: ServerValues[IntoFrameT] | None = None
 
     def _ensure_server_started(self) -> None:
@@ -843,13 +859,22 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             return
         self._require_initialized("_ensure_server_started")
         self._mark_server_initialized()
+        resolved_history: bool | HistoryOptions = (
+            self.history
+            if self.history is not None
+            else (
+                HistoryOptions(restore_mode="bookmark")
+                if self._enable_bookmarking is True
+                else True
+            )
+        )
         self._vals = mod_server(
             self.id,
             data_sources=dict(self._data_sources),
             executor=self._require_query_executor("_ensure_server_started"),
             greeting=self.greeting,
             client=self._create_session_client,
-            enable_bookmarking=self._enable_bookmarking,
+            history=resolved_history,
             tools=self.tools,
             greeter=self.greeter,
             greeting_base=None,
@@ -914,12 +939,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             A UI component.
 
         """
-        result = mod_ui(
-            id or self.id,
-            preload_viz=has_viz_tool(self.tools),
-            greeting=self.greeting,
-            **kwargs,
-        )
+        result = mod_ui(id or self.id, preload_viz=has_viz_tool(self.tools), **kwargs)
         self._ensure_server_started()
         return result
 

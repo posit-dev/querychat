@@ -175,3 +175,29 @@ mock_ellmer_chat_client <- function(
 
   MockChat$new(ellmer::Provider("test", "test", "test"))
 }
+
+# shinychat::chat_restore() validates that `client` is an ellmer::Chat() R6
+# object; the lightweight `structure(list(), class = c("MockChat", "Chat"))`
+# fakes used throughout this file don't satisfy that. mod_server() calls
+# chat_restore() whenever `history` isn't in bookmark mode, so tests that
+# don't care about its behavior need a no-op stand-in.
+local_mock_chat_restore <- function(env = parent.frame()) {
+  testthat::local_mocked_bindings(
+    chat_restore = function(...) invisible(NULL),
+    .package = "shinychat",
+    .env = env
+  )
+}
+
+# Minimal mock matching the shape shinychat::chat_server() always returns,
+# including a $history interface that's present regardless of the `history`
+# argument's value (registrations are just inert if history isn't active).
+mock_chat_server_result <- function(client) {
+  list(
+    client = client,
+    history = list(
+      on_save = function(fn) invisible(fn),
+      on_restore = function(fn) invisible(fn)
+    )
+  )
+}

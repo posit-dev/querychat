@@ -526,8 +526,9 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             constructor for this call only. Defaults to `True` when neither this
             nor the constructor's `history` was set.
         enable_bookmarking
-            Deprecated. Use `history=shinychat.types.HistoryOptions(restore_mode="bookmark")`
-            instead (set on the `QueryChat` constructor, or passed here).
+            Deprecated. `True` resolves to `history=shinychat.types.HistoryOptions(restore_mode="bookmark")`
+            when neither this call's `history` nor the constructor's `history` was set. Use `history=`
+            directly instead (set on the `QueryChat` constructor, or passed here).
         id
             Optional module ID for the QueryChat instance. If not provided,
             will use the ID provided at initialization. This must match the ID
@@ -555,20 +556,29 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         def create_session_client(**kwargs) -> chatlas.Chat:
             return self._create_session_client(base=resolved_client, **kwargs)
 
-        resolved_history: bool | HistoryOptions = (
-            history
-            if history is not None
-            else (self.history if self.history is not None else True)
-        )
-
         if enable_bookmarking is not None:
             warnings.warn(
-                "`enable_bookmarking` is deprecated and no longer has any effect. "
+                "`enable_bookmarking` is deprecated. "
                 'Use `history=shinychat.types.HistoryOptions(restore_mode="bookmark")` '
-                "instead (on the QueryChat constructor or passed to .server()).",
+                "instead (on the QueryChat constructor or passed to .server()) "
+                "for the equivalent behavior.",
                 FutureWarning,
                 stacklevel=2,
             )
+
+        resolved_history: bool | HistoryOptions = (
+            history
+            if history is not None
+            else (
+                self.history
+                if self.history is not None
+                else (
+                    HistoryOptions(restore_mode="bookmark")
+                    if enable_bookmarking
+                    else True
+                )
+            )
+        )
 
         self._mark_server_initialized()
         return mod_server(
@@ -821,13 +831,14 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
 
         if enable_bookmarking != "auto":
             warnings.warn(
-                "`enable_bookmarking` is deprecated and no longer has any effect. "
+                "`enable_bookmarking` is deprecated. "
                 'Use `history=shinychat.types.HistoryOptions(restore_mode="bookmark")` '
-                "instead.",
+                "instead, for the equivalent behavior.",
                 FutureWarning,
                 stacklevel=2,
             )
 
+        self._enable_bookmarking = enable_bookmarking
         self._vals: ServerValues[IntoFrameT] | None = None
 
     def _ensure_server_started(self) -> None:
@@ -849,7 +860,13 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         self._require_initialized("_ensure_server_started")
         self._mark_server_initialized()
         resolved_history: bool | HistoryOptions = (
-            self.history if self.history is not None else True
+            self.history
+            if self.history is not None
+            else (
+                HistoryOptions(restore_mode="bookmark")
+                if self._enable_bookmarking is True
+                else True
+            )
         )
         self._vals = mod_server(
             self.id,

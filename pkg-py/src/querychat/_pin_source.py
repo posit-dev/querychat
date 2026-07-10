@@ -150,9 +150,12 @@ class PinSource(DataSource[nw.DataFrame]):
                         f"Pin '{name}' contains {len(paths)} files, but PinSource "
                         "requires a single-file pin (as created by pin_write())."
                     )
-                arrow_df = pl.read_ipc(paths[0])
+                # Materialize to a pyarrow.Table rather than registering the
+                # polars object directly -- see the comment in
+                # DataFrameSource.__init__.
+                arrow_tbl = pl.read_ipc(paths[0]).to_arrow()
                 vname = f"__pin_staging_{effective_table_name}"
-                conn.register(vname, arrow_df)
+                conn.register(vname, arrow_tbl)
                 conn.execute(
                     f'CREATE TABLE "{effective_table_name}" AS SELECT * FROM "{vname}"'
                 )

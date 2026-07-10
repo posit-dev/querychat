@@ -22,7 +22,13 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-qc = QueryChat(titanic(), "titanic", greeting=greeting)
+
+@st.cache_resource
+def _get_qc() -> QueryChat:
+    return QueryChat(titanic(), "titanic", greeting=greeting)
+
+
+qc = _get_qc()
 qc.sidebar()
 
 st.title("Titanic Data Explorer")

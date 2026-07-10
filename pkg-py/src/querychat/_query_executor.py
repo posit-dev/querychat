@@ -79,23 +79,38 @@ class DuckDBExecutor(QueryExecutor):
 
     def __init__(self, sources: dict[str, DataFrameSource]):
         self._df_lib = get_shared_dataframe_backend(sources)
-        self._conn = duckdb.connect(database=":memory:")
+        # Materialize each source's data once rather than registering the native
+        # (e.g. polars) object on every query -- see the comment in
+        # DataFrameSource.__init__. Each query below opens its own short-lived
+        # connection around these tables instead of sharing one DuckDB connection
+        # across threads.
+        self._arrow_tables = {
+            name: source._df.to_arrow() for name, source in sources.items()
+        }
+        self._closed = False
 
-        for name, source in sources.items():
-            self._conn.register(name, source.get_data())
-
-        # Cache column names per table before lockdown
+        # Cache column names per table
         self._table_columns: dict[str, list[str]] = {}
-        for name in sources:
-            result = self._conn.execute(f'SELECT * FROM "{name}" LIMIT 0')
-            self._table_columns[name] = [desc[0] for desc in result.description]
+        with self._connect() as conn:
+            for name in sources:
+                result = conn.execute(f'SELECT * FROM "{name}" LIMIT 0')
+                self._table_columns[name] = [desc[0] for desc in result.description]
 
-        duckdb_lock_down(self._conn)
+    def _connect(self) -> duckdb.DuckDBPyConnection:
+        """Open a fresh, locked-down connection registered with all tables."""
+        if self._closed:
+            raise duckdb.ConnectionException("Connection already closed!")
+        conn = duckdb.connect(database=":memory:")
+        for name, arrow_table in self._arrow_tables.items():
+            conn.register(name, arrow_table)
+        duckdb_lock_down(conn)
+        return conn
 
     def execute_query(self, query: str) -> Any:
         check_query(query)
-        result = self._conn.execute(query)
-        return self._convert_result(result)
+        with self._connect() as conn:
+            result = conn.execute(query)
+            return self._convert_result(result)
 
     def _convert_result(self, result: duckdb.DuckDBPyConnection) -> Any:
         if self._df_lib == "polars":
@@ -114,29 +129,32 @@ class DuckDBExecutor(QueryExecutor):
         self, query: str, *, table_name: str, require_all_columns: bool = False
     ) -> None:
         check_query(query)
-        result = self._conn.execute(f"{query} LIMIT 1")
+        with self._connect() as conn:
+            result = conn.execute(f"{query} LIMIT 1")
 
-        if require_all_columns:
-            result_columns = {desc[0] for desc in result.description}
-            self._validate_missing_columns(
-                result_columns, self._table_columns[table_name]
-            )
+            if require_all_columns:
+                result_columns = {desc[0] for desc in result.description}
+                self._validate_missing_columns(
+                    result_columns, self._table_columns[table_name]
+                )
 
     def get_db_type(self) -> str:
         return "DuckDB"
 
     def cleanup(self) -> None:
-        if self._conn:
-            self._conn.close()
+        """Mark this executor closed; further queries raise duckdb.ConnectionException."""
+        self._closed = True
 
     def get_column_metas(self, table_name: str) -> list[ColumnMeta]:
-        result = self._conn.execute(f'SELECT * FROM "{table_name}" LIMIT 0')
-        return [duckdb_column_meta(desc[0], desc[1]) for desc in result.description]
+        with self._connect() as conn:
+            result = conn.execute(f'SELECT * FROM "{table_name}" LIMIT 0')
+            return [duckdb_column_meta(desc[0], desc[1]) for desc in result.description]
 
     def populate_column_stats(
         self, table_name: str, columns: list[ColumnMeta], categorical_threshold: int
     ) -> None:
-        duckdb_column_stats(self._conn, table_name, columns, categorical_threshold)
+        with self._connect() as conn:
+            duckdb_column_stats(conn, table_name, columns, categorical_threshold)
 
 
 class PolarsSQLExecutor(QueryExecutor):

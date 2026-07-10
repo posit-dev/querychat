@@ -170,6 +170,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <ul class="collapse">
   <li><a href="#new-features" id="toc-new-features" class="nav-link" data-scroll-target="#new-features">New features</a></li>
   <li><a href="#breaking-changes" id="toc-breaking-changes" class="nav-link" data-scroll-target="#breaking-changes">Breaking Changes</a></li>
+  <li><a href="#deprecated" id="toc-deprecated" class="nav-link" data-scroll-target="#deprecated">Deprecated</a></li>
   <li><a href="#improvements" id="toc-improvements" class="nav-link" data-scroll-target="#improvements">Improvements</a></li>
   </ul></li>
   <li><a href="#section" id="toc-section" class="nav-link" data-scroll-target="#section">[0.6.1] - 2026-05-26</a>
@@ -244,12 +245,20 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>QueryChat(data_dict<span class="op">=</span><span class="st">"data_dict.yaml"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div></li>
 <li><p>Added <code>PinSource</code>, a data source for chatting with datasets pinned to a <a href="https://pins.rstudio.com/">pins</a> board. Works with parquet, CSV, JSON, and Arrow pins, and uses the pin’s title, description, and tags as the default data description. Install the optional dependency with <code>pip install querychat[pins]</code>. (#246)</p></li>
 <li><p>File attachments are now enabled by default in the Shiny chat UI. Users can attach images, PDFs, and text files to their messages and the LLM will receive them. Disable with <code>allow_attachments=False</code> in <code>mod_ui()</code> or <code>QueryChat.ui()</code>. (#253)</p></li>
+<li><p>Conversation history is now persisted by default. <code>QueryChat</code>/<code>QueryChatExpress</code> keep a user’s chat around across page reloads and browser sessions, backed by shinychat’s history support. The default <code>restore_mode="browser"</code> stores the active conversation in the browser’s localStorage, but you can pass <code>history=shinychat.types.HistoryOptions(restore_mode="url")</code> to restore via a plain, shareable URL instead, or <code>restore_mode="bookmark"</code> to fold the conversation into a full Shiny bookmark. Disable with <code>history=False</code>.</p></li>
 </ul>
 </section>
 <section id="breaking-changes" class="level3">
 <h3 class="anchored" data-anchor-id="breaking-changes">Breaking Changes</h3>
 <ul>
-<li>The <code>data_source</code> property has been removed. Use <code>qc.table("name").data_source</code> to read a table’s data source, and <code>qc.add_table(df, "name", replace=True)</code> to replace it. The <code>data_source</code> parameter to <code>server()</code> (Shiny) has also been removed; call <code>add_table()</code> before <code>server()</code> instead. (#195)</li>
+<li><p>The <code>data_source</code> property has been removed. Use <code>qc.table("name").data_source</code> to read a table’s data source, and <code>qc.add_table(df, "name", replace=True)</code> to replace it. The <code>data_source</code> parameter to <code>server()</code> (Shiny) has also been removed; call <code>add_table()</code> before <code>server()</code> instead. (#195)</p></li>
+<li><p><code>.app()</code>’s <code>bookmark_store</code> parameter has been removed. Pass <code>history=shinychat.types.HistoryOptions(restore_mode="bookmark")</code> to get the same shareable-bookmark behavior; any other <code>history</code> value disables Shiny-level bookmarking for the generated app. <code>.app()</code> defaults to <code>restore_mode="bookmark"</code> when no <code>history</code> is set anywhere, so existing <code>.app()</code> callers keep working without changes. Note this default is a storage-mechanism change, not just a rename: the old default (<code>bookmark_store="url"</code>) encoded the entire bookmark state in the URL itself, requiring no server storage; the new default requires server-side bookmark storage (<code>bookmark_store="server"</code>), with just a short state ID in the URL. Deployments that relied on <code>.app()</code> being fully stateless should pass <code>history=False</code> or a non-bookmark <code>HistoryOptions()</code>.</p></li>
+</ul>
+</section>
+<section id="deprecated" class="level3">
+<h3 class="anchored" data-anchor-id="deprecated">Deprecated</h3>
+<ul>
+<li><code>.server()</code>’s and <code>QueryChatExpress</code>’s <code>enable_bookmarking</code> parameter is deprecated in favor of <code>history</code>. Pass <code>history=shinychat.types.HistoryOptions(restore_mode="bookmark")</code> instead of <code>enable_bookmarking=True</code> for the equivalent behavior.</li>
 </ul>
 </section>
 <section id="improvements" class="level3">

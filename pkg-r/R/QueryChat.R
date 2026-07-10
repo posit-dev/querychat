@@ -1010,7 +1010,6 @@ QueryChat <- R6::R6Class(
       }
 
       check_history(history)
-      resolved_history <- history %||% self$history %||% TRUE
 
       if (!is.null(enable_bookmarking)) {
         lifecycle::deprecate_warn(
@@ -1020,6 +1019,15 @@ QueryChat <- R6::R6Class(
           details = 'Use history = shinychat::history_options(restore_mode = "bookmark") for the equivalent behavior.'
         )
       }
+
+      resolved_history <- history %||%
+        self$history %||%
+        (
+          if (isTRUE(enable_bookmarking)) {
+            shinychat::history_options(restore_mode = "bookmark")
+          }
+        ) %||%
+        TRUE
 
       result <- mod_server(
         id %||% self$id,

@@ -43,7 +43,10 @@
     Code
       shiny::testServer(function(input, output, session) {
         qc_no_history$server(enable_bookmarking = TRUE)
-      }, { })
+      }, {
+        expect_s3_class(captured, "chat_history_config")
+        expect_equal(captured$restore_mode, "bookmark")
+      })
     Message
       Using model = "gpt-4.1".
     Condition

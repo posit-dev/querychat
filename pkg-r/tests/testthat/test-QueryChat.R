@@ -766,7 +766,32 @@ test_that("QueryChat$server() resolves history (explicit > constructor > TRUE) a
       function(input, output, session) {
         qc_no_history$server(enable_bookmarking = TRUE)
       },
-      {}
+      {
+        expect_s3_class(captured, "chat_history_config")
+        expect_equal(captured$restore_mode, "bookmark")
+      }
+    )
+  )
+
+  # `history` (explicit or from the constructor) always wins over
+  # `enable_bookmarking`, which only fills in when neither was set.
+  suppressWarnings(
+    shiny::testServer(
+      function(input, output, session) {
+        qc_no_history$server(history = FALSE, enable_bookmarking = TRUE)
+      },
+      {
+        expect_false(captured)
+      }
+    )
+  )
+
+  suppressWarnings(
+    shiny::testServer(
+      function(input, output, session) qc$server(enable_bookmarking = TRUE),
+      {
+        expect_false(captured)
+      }
     )
   )
 })

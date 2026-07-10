@@ -1022,11 +1022,9 @@ QueryChat <- R6::R6Class(
 
       resolved_history <- history %||%
         self$history %||%
-        (
-          if (isTRUE(enable_bookmarking)) {
-            shinychat::history_options(restore_mode = "bookmark")
-          }
-        ) %||%
+        (if (isTRUE(enable_bookmarking)) {
+          shinychat::history_options(restore_mode = "bookmark")
+        }) %||%
         TRUE
 
       result <- mod_server(

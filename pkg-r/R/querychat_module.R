@@ -120,19 +120,26 @@ mod_server <- function(
       history = history
     )
 
-    # Registered unconditionally so the chat client's own state (and greeting)
-    # round-trip through Shiny bookmarks whenever the host app has bookmarking
-    # enabled -- independent of `history`. Only the save/restore hooks are
+    # Skipped when `history` is already in bookmark mode: chat_server() has
+    # then already registered chat_enable_history() for this id/client, and
+    # shinychat docs call chat_enable_history() and chat_restore() mutually
+    # exclusive. Otherwise, register chat_restore() so the chat client's own
+    # state (and greeting) still round-trip through Shiny bookmarks the host
+    # app might trigger for unrelated reasons. Only the save/restore hooks are
     # wanted here; the automatic bookmark triggers are turned off so `history`
     # (or the host app) remains the sole source of *when* to bookmark.
-    shinychat::chat_restore(
-      "chat",
-      pre_built_client,
-      bookmark_on_input = FALSE,
-      bookmark_on_response = FALSE,
-      restore_ui = FALSE,
-      session = session
-    )
+    history_is_bookmark_mode <- inherits(history, "chat_history_config") &&
+      identical(history$restore_mode, "bookmark")
+    if (!history_is_bookmark_mode) {
+      shinychat::chat_restore(
+        "chat",
+        pre_built_client,
+        bookmark_on_input = FALSE,
+        bookmark_on_response = FALSE,
+        restore_ui = FALSE,
+        session = session
+      )
+    }
 
     shiny::observeEvent(
       input$chat_update,

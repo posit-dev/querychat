@@ -42,7 +42,8 @@ test_that("mod_server() return includes table() and table_names() for single-tab
       executor = executor,
       greeting = "Hello",
       client = client_factory,
-      tools = "query"
+      tools = "query",
+      history = TRUE
     ),
     {
       # Verify the returned list exposes table() and table_names()
@@ -102,7 +103,8 @@ test_that("mod_server() return includes table() and table_names() for multi-tabl
       executor = executor,
       greeting = "Hello",
       client = client_factory,
-      tools = "query"
+      tools = "query",
+      history = TRUE
     ),
     {
       # Verify the returned list exposes table() and table_names()
@@ -155,7 +157,8 @@ test_that("mod_server() passes visualize callback and tools to client factory", 
       executor = executor,
       greeting = "Hello",
       client = client_factory,
-      tools = c("query", "visualize")
+      tools = c("query", "visualize"),
+      history = TRUE
     ),
     {
       expect_type(captured, "list")
@@ -192,7 +195,8 @@ test_that("mod_server() exposes current_table() starting as NULL", {
       executor = executor,
       greeting = "Hello",
       client = client_factory,
-      tools = "query"
+      tools = "query",
+      history = TRUE
     ),
     {
       expect_true(is.function(session$returned$current_table))
@@ -230,7 +234,8 @@ test_that("mod_server() current_table() updates on update_dashboard and reset_qu
       executor = executor,
       greeting = "Hello",
       client = client_factory,
-      tools = "query"
+      tools = "query",
+      history = TRUE
     ),
     {
       # Initially NULL
@@ -355,7 +360,8 @@ test_that("restored viz widgets survive a second bookmark cycle", {
       executor = executor,
       greeting = "Hello",
       client = client_factory,
-      tools = c("query", "visualize")
+      tools = c("query", "visualize"),
+      history = TRUE
     ),
     {
       expect_true(is.function(bookmark_fn))
@@ -419,7 +425,8 @@ test_that("mod_server() calls chat_server('chat', ...) with the pre-built client
       executor = executor,
       greeting = "Hello",
       client = client_factory,
-      tools = "query"
+      tools = "query",
+      history = TRUE
     ),
     {
       expect_equal(captured_chat_args$id, "chat")
@@ -428,7 +435,7 @@ test_that("mod_server() calls chat_server('chat', ...) with the pre-built client
   )
 })
 
-test_that("mod_server() always calls chat_restore() with the auto-bookmark trigger disabled", {
+test_that("mod_server() calls chat_restore() with the auto-bookmark trigger disabled when history isn't bookmark mode", {
   skip_if_no_dataframe_engine()
 
   ds <- local_data_frame_source(new_test_df())
@@ -468,6 +475,44 @@ test_that("mod_server() always calls chat_restore() with the auto-bookmark trigg
       # itself -- that's left to `history` or the host app.
       expect_false(captured_restore_args$bookmark_on_input)
       expect_false(captured_restore_args$bookmark_on_response)
+    }
+  )
+})
+
+test_that("mod_server() skips chat_restore() when history is bookmark mode", {
+  skip_if_no_dataframe_engine()
+
+  ds <- local_data_frame_source(new_test_df())
+  executor <- build_query_executor(list(test_table = ds))
+  withr::defer(executor$cleanup())
+
+  client_factory <- function(...) {
+    structure(list(), class = c("MockChat", "Chat"))
+  }
+
+  chat_restore_called <- FALSE
+  local_mocked_bindings(
+    chat_server = function(id, client, ...) mock_chat_server_result(client),
+    chat_restore = function(id, client, ...) {
+      chat_restore_called <<- TRUE
+      invisible(NULL)
+    },
+    .package = "shinychat"
+  )
+
+  shiny::testServer(
+    mod_server,
+    args = list(
+      id = "test",
+      data_sources = list(test_table = ds),
+      executor = executor,
+      greeting = "Hello",
+      client = client_factory,
+      tools = "query",
+      history = shinychat::history_options(restore_mode = "bookmark")
+    ),
+    {
+      expect_false(chat_restore_called)
     }
   )
 })
@@ -522,7 +567,8 @@ test_that("mod_server() builds the auto-generated greeting from the greeter, not
       client = client_factory,
       tools = "query",
       greeter = fake_greeter,
-      greeting_base = "base-client"
+      greeting_base = "base-client",
+      history = TRUE
     ),
     {
       expect_true(is.function(captured_greeting_arg))
@@ -564,7 +610,8 @@ test_that("mod_server() chat_update input updates table state", {
       executor = executor,
       greeting = "Hello",
       client = client_factory,
-      tools = "query"
+      tools = "query",
+      history = TRUE
     ),
     {
       session$setInputs(

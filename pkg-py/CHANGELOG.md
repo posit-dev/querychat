@@ -5,11 +5,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [0.7.0] - 2026-07-10
 
 ### New features
-
-* The SQL panel in `.app()` is now an editable code editor. Users can tweak the generated SQL directly and apply it with Ctrl/Cmd+Enter or by clicking away — no extra button required. The editor stays in sync when the LLM updates the query or the active table changes. (#265)
 
 * `QueryChat()` now supports **multiple related tables**. Register additional tables with `add_table()` and the LLM can reason across all of them — joins, cross-table filters, aggregations. Per-table reactive state (`df()`, `sql()`, `title()`) is accessible via `qc_vals.table("name")` on the value returned by `server()`. For SQLAlchemy engines and Ibis backends, `add_tables()` registers all tables (or a named subset) in a single call. (#195)
 
@@ -33,11 +31,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   QueryChat(data_dict="data_dict.yaml")
   ```
 
-* Added `PinSource`, a data source for chatting with datasets pinned to a [pins](https://pins.rstudio.com/) board. Works with parquet, CSV, JSON, and Arrow pins, and uses the pin's title, description, and tags as the default data description. Install the optional dependency with `pip install querychat[pins]`. (#246)
+* Conversation history is now enabled by default. `QueryChat`/`QueryChatExpress` keep a user's chat around across page reloads and browser sessions, backed by shinychat's history support. The default `restore_mode="browser"` stores the active conversation in the browser's localStorage, but you can pass `history=shinychat.types.HistoryOptions(restore_mode="url")` to restore via a plain, shareable URL instead, or `restore_mode="bookmark"` to fold the conversation into a full Shiny bookmark. Disable with `history=False`.
 
 * File attachments are now enabled by default in the Shiny chat UI. Users can attach images, PDFs, and text files to their messages and the LLM will receive them. Disable with `allow_attachments=False` in `mod_ui()` or `QueryChat.ui()`. (#253)
 
-* Conversation history is now persisted by default. `QueryChat`/`QueryChatExpress` keep a user's chat around across page reloads and browser sessions, backed by shinychat's history support. The default `restore_mode="browser"` stores the active conversation in the browser's localStorage, but you can pass `history=shinychat.types.HistoryOptions(restore_mode="url")` to restore via a plain, shareable URL instead, or `restore_mode="bookmark"` to fold the conversation into a full Shiny bookmark. Disable with `history=False`.
+* Added `PinSource`, a data source for chatting with datasets pinned to a [pins](https://pins.rstudio.com/) board. Works with parquet, CSV, JSON, and Arrow pins, and uses the pin's title, description, and tags as the default data description. Install the optional dependency with `pip install querychat[pins]`. (#246)
+
+* The SQL panel in `.app()` is now an editable code editor. Users can tweak the generated SQL directly and apply it with Ctrl/Cmd+Enter or by clicking away — no extra button required. The editor stays in sync when the LLM updates the query or the active table changes. (#265)
+
+### Improvements
+
+* Chat greetings now use shinychat's greeting API (requires shinychat >= 0.4.0). A provided `greeting` renders instantly when the app loads, and when no `greeting` is given one is generated on demand — now **schema-aware**, so it can describe the data it's about to help you explore — without being added to the conversation history. Generated greetings are preserved across bookmark/restore. Tables passed to `QueryChat()` are described in the greeting automatically; opt additional tables in with `include_in_greeting=True` on `add_table()`/`add_tables()`, or fine-tune which tables and which template the greeting uses via `qc.greeter`. (#249, #261)
+
+* The system prompt is now lighter: full schema is no longer embedded upfront. Instead the LLM fetches per-table schema on demand via the new `querychat_get_schema` tool — and only when it needs to. When a `DataDict` is provided, the tool skips columns that already have descriptions, so the LLM only pays for what isn't already documented. (#195)
+
+* The query tool result card now starts collapsed by default. Users can still expand it to see the SQL query and results. Set `QUERYCHAT_TOOL_DETAILS=expanded` to restore the previous behavior. (#239)
+
+* Fixed `data_description` and `extra_instructions` being HTML-escaped in the system prompt. Special characters like `<`, `>`, and `&` in developer-provided descriptions and instructions are now passed to the LLM verbatim. (#258)
 
 ### Breaking Changes
 
@@ -48,14 +58,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Deprecated
 
 * `.server()`'s and `QueryChatExpress`'s `enable_bookmarking` parameter is deprecated in favor of `history`. Pass `history=shinychat.types.HistoryOptions(restore_mode="bookmark")` instead of `enable_bookmarking=True` for the equivalent behavior.
-
-### Improvements
-
-* Chat greetings now use shinychat's greeting API (requires shinychat >= 0.4.0). A provided `greeting` renders instantly when the app loads, and when no `greeting` is given one is generated on demand — now **schema-aware**, so it can describe the data it's about to help you explore — without being added to the conversation history. Generated greetings are preserved across bookmark/restore. Tables passed to `QueryChat()` are described in the greeting automatically; opt additional tables in with `include_in_greeting=True` on `add_table()`/`add_tables()`, or fine-tune which tables and which template the greeting uses via `qc.greeter`. (#249, #261)
-
-* The system prompt is now lighter: full schema is no longer embedded upfront. Instead the LLM fetches per-table schema on demand via the new `querychat_get_schema` tool — and only when it needs to. When a `DataDict` is provided, the tool skips columns that already have descriptions, so the LLM only pays for what isn't already documented. (#195)
-* The query tool result card now starts collapsed by default. Users can still expand it to see the SQL query and results. Set `QUERYCHAT_TOOL_DETAILS=expanded` to restore the previous behavior. (#239)
-* Fixed `data_description` and `extra_instructions` being HTML-escaped in the system prompt. Special characters like `<`, `>`, and `&` in developer-provided descriptions and instructions are now passed to the LLM verbatim. (#258)
 
 ## [0.6.1] - 2026-05-26
 

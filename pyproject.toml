@@ -43,7 +43,7 @@ classifiers = [
 [project.optional-dependencies]
 # For SQLAlchemySource and sample data, one of polars or pandas is required
 pandas = ["pandas"]
-polars = ["polars", "pyarrow"] # duckdb requires pyarrow for polars DataFrame registration
+polars = ["polars", "pyarrow<25.0.0"] # duckdb requires pyarrow for polars DataFrame registration; pyarrow>=25.0.0 segfaults when its native conversion code runs on more than ~2 OS threads over a process's lifetime (e.g. Streamlit reruns each script on a fresh thread) -- see #268
 ibis = ["ibis-framework>=9.0.0", "pandas"]  # pandas required for ibis .execute() to return DataFrames
 pins = ["pins>=0.9.1"]
 # Web framework extras
@@ -101,7 +101,7 @@ dev = [
     "tox-uv>=1.11.4",
     "pytest>=8.4.0",
     "polars>=1.0.0",
-    "pyarrow>=14.0.0",
+    "pyarrow<25.0.0", # see comment on the `polars` extra above
     "ibis-framework[duckdb]>=9.0.0",
     "ggsql>=0.3.2",
     "altair>=6.0",

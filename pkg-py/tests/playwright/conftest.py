@@ -359,9 +359,20 @@ def _stop_streamlit_server(process: subprocess.Popen) -> None:
             process.kill()
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def app_04_streamlit() -> Generator[str, None, None]:
-    """Start the 04-streamlit-app.py Streamlit server for testing."""
+    """
+    Start the 04-streamlit-app.py Streamlit server for testing.
+
+    Function-scoped (a fresh subprocess per test), unlike the Shiny/Gradio/Dash
+    app fixtures in this file. A single Streamlit server was observed to stop
+    re-running its script for new browser sessions after the first test's
+    session completed successfully -- the static page shell still loads, but
+    no reactive content (e.g. the chat greeting) ever streams in, with no
+    error on either side, and the condition persists for the rest of the
+    server's life (a fresh browser context/page doesn't recover it; only a
+    new server process does).
+    """
     app_path = str(EXAMPLES_DIR / "04-streamlit-app.py")
 
     def start_factory():
@@ -381,9 +392,9 @@ def app_04_streamlit() -> Generator[str, None, None]:
         _stop_streamlit_server(process)
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 def app_09_streamlit_custom() -> Generator[str, None, None]:
-    """Start the 09-streamlit-custom-app.py Streamlit server for testing."""
+    """Start the 09-streamlit-custom-app.py Streamlit server for testing. Function-scoped; see app_04_streamlit()."""
     app_path = str(EXAMPLES_DIR / "09-streamlit-custom-app.py")
 
     def start_factory():

@@ -25,11 +25,20 @@ VIZ_PROMPT = "Use the visualize tool to create a scatter plot of age vs fare"
 TOOL_RESULT_TIMEOUT = 90_000
 
 
+def _boxes_match(
+    a: dict[str, float] | None, b: dict[str, float] | None, tolerance_px: float
+) -> bool:
+    if a is None or b is None:
+        return a is b
+    return all(abs(a[key] - b[key]) <= tolerance_px for key in a)
+
+
 def _wait_for_stable_position(
     locator: Locator,
     quiet_checks: int = 5,
     interval_s: float = 0.1,
     max_wait_s: float = 8.0,
+    tolerance_px: float = 0.5,
 ) -> None:
     """
     Wait until `locator`'s bounding box stops changing.
@@ -39,13 +48,16 @@ def _wait_for_stable_position(
     round trip for its responsive fill layout. That drags the footer button
     below it along for the ride, so a click issued mid-drift can land on
     stale coordinates and silently miss the button.
+
+    Comparing boxes within `tolerance_px` (rather than exact equality) avoids
+    false "still moving" reads from sub-pixel rendering jitter.
     """
     deadline = time.monotonic() + max_wait_s
     last_box = None
     stable_count = 0
     while time.monotonic() < deadline:
         box = locator.bounding_box()
-        if box is not None and box == last_box:
+        if box is not None and _boxes_match(box, last_box, tolerance_px):
             stable_count += 1
             if stable_count >= quiet_checks:
                 return
@@ -53,6 +65,11 @@ def _wait_for_stable_position(
             stable_count = 0
         last_box = box
         time.sleep(interval_s)
+
+    pytest.fail(
+        f"Locator position did not stabilize within {max_wait_s}s "
+        f"(last bounding box: {last_box})"
+    )
 
 
 def _download_from_save_menu(page: Page, export_format: str) -> tuple[Download, str]:

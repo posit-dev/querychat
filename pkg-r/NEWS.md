@@ -33,7 +33,7 @@
 
 * The `$data_source` property has been removed. Use `qc$table("name")$data_source` to read a table's data source, and `qc$add_table(df, "name", replace = TRUE)` to replace it. The `data_source` parameter to `$server()` has also been removed; call `$add_table()` before `$server()` instead. (#195)
 
-* `$app()`/`$app_obj()`'s `bookmark_store` parameter has been removed. Pass `history = shinychat::history_options(restore_mode = "bookmark")` to get the same shareable-bookmark behavior; any other `history` value disables Shiny-level bookmarking for the generated app. `$app()` defaults to `restore_mode = "bookmark"` when no `history` is set anywhere, so existing `$app()` callers keep working without changes.
+* `$app()`/`$app_obj()`'s `bookmark_store` parameter has been removed. Pass `history = shinychat::history_options(restore_mode = "bookmark")` to get the same shareable-bookmark behavior; any other `history` value disables Shiny-level bookmarking for the generated app. `$app()` defaults to `restore_mode = "bookmark"` when no `history` is set anywhere, so existing `$app()` callers keep working without changes. Note this default is a storage-mechanism change, not just a rename: the old default (`bookmark_store = "url"`) encoded the entire bookmark state in the URL itself, requiring no server storage; the new default requires server-side bookmark storage (`bookmarkStore = "server"`), with just a short state ID in the URL. Deployments that relied on `$app()` being fully stateless should pass `history = FALSE` or a non-bookmark `history_options()`.
 
 * `QueryChat` now defaults to `history = TRUE` (shinychat's own default, browser-localStorage-backed conversation history) instead of no persistence. Pass `history = FALSE` to opt back out.
 

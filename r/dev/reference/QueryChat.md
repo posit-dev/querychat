@@ -50,6 +50,10 @@ connection) as input and provides methods to:
 
   The greeting message displayed to users.
 
+- `history`:
+
+  Conversation history configuration.
+
 - `id`:
 
   ID for the QueryChat instance.
@@ -125,6 +129,7 @@ Create a new QueryChat object.
       ...,
       id = NULL,
       greeting = NULL,
+      history = NULL,
       client = NULL,
       tools = c("filter", "query"),
       data_description = NULL,
@@ -169,6 +174,15 @@ Create a new QueryChat object.
   greeting will be generated at the start of each conversation using the
   LLM, which adds latency and cost. Use `$generate_greeting()` to create
   a greeting to save and reuse.
+
+- `history`:
+
+  Conversation history configuration: `NULL` (default; resolves to
+  `TRUE` when `$server()`/`$app()` is called and nothing else was set),
+  `TRUE`/`FALSE`, or a
+  [`shinychat::history_options()`](https://posit-dev.github.io/shinychat/r/reference/history_options.html)
+  object. Passed straight through to
+  `shinychat::chat_server(history = )`.
 
 - `client`:
 
@@ -438,7 +452,7 @@ Create and run a Shiny gadget for chatting with data
 
 #### Usage
 
-    QueryChat$app(..., bookmark_store = "url")
+    QueryChat$app(..., history = NULL)
 
 #### Arguments
 
@@ -446,12 +460,14 @@ Create and run a Shiny gadget for chatting with data
 
   Arguments passed to `$app_obj()`.
 
-- `bookmark_store`:
+- `history`:
 
-  The bookmarking storage method. Passed to
-  [`shiny::enableBookmarking()`](https://rdrr.io/pkg/shiny/man/enableBookmarking.html).
-  If `"url"` or `"server"`, the chat state (including current query)
-  will be bookmarked. Default is `"url"`.
+  Conversation history configuration for the generated app. Defaults to
+  `shinychat::history_options(restore_mode = "bookmark")` when neither
+  this nor `$new()`'s `history` was set, since `$app()`'s whole purpose
+  is a single, shareable demo. When the resolved value has
+  `restore_mode = "bookmark"`, the generated app automatically enables
+  Shiny's own server-side bookmarking.
 
 #### Returns
 
@@ -465,7 +481,7 @@ A streamlined Shiny app for chatting with data
 
 #### Usage
 
-    QueryChat$app_obj(..., bookmark_store = "url")
+    QueryChat$app_obj(..., history = NULL)
 
 #### Arguments
 
@@ -473,11 +489,10 @@ A streamlined Shiny app for chatting with data
 
   Additional arguments (currently unused).
 
-- `bookmark_store`:
+- `history`:
 
-  The bookmarking storage method. Passed to
-  [`shiny::enableBookmarking()`](https://rdrr.io/pkg/shiny/man/enableBookmarking.html).
-  Default is `"url"`.
+  Conversation history configuration for the generated app. See
+  `$app()`.
 
 #### Returns
 
@@ -565,7 +580,8 @@ Initialize the querychat server logic.
     QueryChat$server(
       data_source = NULL,
       client = NULL,
-      enable_bookmarking = FALSE,
+      history = NULL,
+      enable_bookmarking = NULL,
       ...,
       id = NULL,
       session = shiny::getDefaultReactiveDomain()
@@ -582,9 +598,17 @@ Initialize the querychat server logic.
 
   Optional chat client override for this session.
 
+- `history`:
+
+  Conversation history configuration for this call. Overrides the value
+  set on `$new()`. Resolves to `TRUE` when neither this nor the
+  constructor's `history` was set.
+
 - `enable_bookmarking`:
 
-  Whether to enable bookmarking. Default is `FALSE`.
+  **\[deprecated\]** Use
+  `history = shinychat::history_options(restore_mode = "bookmark")`
+  instead (set on `$new()`, or passed here).
 
 - `...`:
 

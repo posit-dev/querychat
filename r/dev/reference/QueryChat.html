@@ -130,6 +130,10 @@ values (use <code>qc_vals$table("name")</code> for multi-table access)</p></li>
 <dd><p>The greeting message displayed to users.</p></dd>
 
 
+    <dt><code>history</code></dt>
+<dd><p>Conversation history configuration.</p></dd>
+
+
     <dt><code>id</code></dt>
 <dd><p>ID for the QueryChat instance.</p></dd>
 
@@ -191,6 +195,7 @@ access its <code>$tables</code> and <code>$prompt</code>.</p></dd>
 <span>  <span class="va">...</span>,</span>
 <span>  id <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  greeting <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  history <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  client <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"filter"</span>, <span class="st">"query"</span><span class="op">)</span>,</span>
 <span>  data_description <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -229,6 +234,12 @@ character string (in Markdown format) or a file path. If not provided,
 a greeting will be generated at the start of each conversation using
 the LLM, which adds latency and cost. Use <code>$generate_greeting()</code> to
 create a greeting to save and reuse.</p></dd>
+
+      <dt><code>history</code></dt>
+<dd><p>Conversation history configuration: <code>NULL</code> (default;
+resolves to <code>TRUE</code> when <code>$server()</code>/<code>$app()</code> is called and nothing else
+was set), <code>TRUE</code>/<code>FALSE</code>, or a <code><a href="https://posit-dev.github.io/shinychat/r/reference/history_options.html" class="external-link">shinychat::history_options()</a></code> object.
+Passed straight through to <code>shinychat::chat_server(history = )</code>.</p></dd>
 
       <dt><code>client</code></dt>
 <dd><p>Optional chat client. Can be:</p><ul><li><p>An <a href="https://ellmer.tidyverse.org/reference/Chat.html" class="external-link">ellmer::Chat</a> object</p></li>
@@ -468,16 +479,19 @@ By default, only the <code>"query"</code> tool is included, regardless of the
 <h3 id="querychat-app-"><code>QueryChat$app()</code><a class="anchor" aria-label="anchor" href="#querychat-app-"></a></h3>
 <p>Create and run a Shiny gadget for chatting with data</p><div class="section">
 <h4 id="usage-7">Usage<a class="anchor" aria-label="anchor" href="#usage-7"></a></h4>
-<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">QueryChat</span><span class="op">$</span><span class="fu">app</span><span class="op">(</span><span class="va">...</span>, bookmark_store <span class="op">=</span> <span class="st">"url"</span><span class="op">)</span></span></code></pre></div><p></p></div>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">QueryChat</span><span class="op">$</span><span class="fu">app</span><span class="op">(</span><span class="va">...</span>, history <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div><p></p><div class="section">
 <h4 id="arguments-6">Arguments<a class="anchor" aria-label="anchor" href="#arguments-6"></a></h4>
 <p></p><div class="arguments"><dl><dt><code>...</code></dt>
 <dd><p>Arguments passed to <code>$app_obj()</code>.</p></dd>
 
-      <dt><code>bookmark_store</code></dt>
-<dd><p>The bookmarking storage method. Passed to
-<code><a href="https://rdrr.io/pkg/shiny/man/enableBookmarking.html" class="external-link">shiny::enableBookmarking()</a></code>. If <code>"url"</code> or <code>"server"</code>, the chat state
-(including current query) will be bookmarked. Default is <code>"url"</code>.</p></dd>
+      <dt><code>history</code></dt>
+<dd><p>Conversation history configuration for the generated app.
+Defaults to <code>shinychat::history_options(restore_mode = "bookmark")</code> when
+neither this nor <code>$new()</code>'s <code>history</code> was set, since <code>$app()</code>'s whole
+purpose is a single, shareable demo. When the resolved value has
+<code>restore_mode = "bookmark"</code>, the generated app automatically enables
+Shiny's own server-side bookmarking.</p></dd>
 
 
 </dl><p></p></div>
@@ -492,15 +506,15 @@ By default, only the <code>"query"</code> tool is included, regardless of the
 <h3 id="querychat-app-obj-"><code>QueryChat$app_obj()</code><a class="anchor" aria-label="anchor" href="#querychat-app-obj-"></a></h3>
 <p>A streamlined Shiny app for chatting with data</p><div class="section">
 <h4 id="usage-8">Usage<a class="anchor" aria-label="anchor" href="#usage-8"></a></h4>
-<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">QueryChat</span><span class="op">$</span><span class="fu">app_obj</span><span class="op">(</span><span class="va">...</span>, bookmark_store <span class="op">=</span> <span class="st">"url"</span><span class="op">)</span></span></code></pre></div><p></p></div>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">QueryChat</span><span class="op">$</span><span class="fu">app_obj</span><span class="op">(</span><span class="va">...</span>, history <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div><p></p><div class="section">
 <h4 id="arguments-7">Arguments<a class="anchor" aria-label="anchor" href="#arguments-7"></a></h4>
 <p></p><div class="arguments"><dl><dt><code>...</code></dt>
 <dd><p>Additional arguments (currently unused).</p></dd>
 
-      <dt><code>bookmark_store</code></dt>
-<dd><p>The bookmarking storage method. Passed to
-<code><a href="https://rdrr.io/pkg/shiny/man/enableBookmarking.html" class="external-link">shiny::enableBookmarking()</a></code>. Default is <code>"url"</code>.</p></dd>
+      <dt><code>history</code></dt>
+<dd><p>Conversation history configuration for the generated app.
+See <code>$app()</code>.</p></dd>
 
 
 </dl><p></p></div>
@@ -578,7 +592,8 @@ By default, only the <code>"query"</code> tool is included, regardless of the
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">QueryChat</span><span class="op">$</span><span class="fu">server</span><span class="op">(</span></span>
 <span>  data_source <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  client <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  enable_bookmarking <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  history <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  enable_bookmarking <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">...</span>,</span>
 <span>  id <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  session <span class="op">=</span> <span class="fu">shiny</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/shiny/man/domains.html" class="external-link">getDefaultReactiveDomain</a></span><span class="op">(</span><span class="op">)</span></span>
@@ -592,8 +607,14 @@ If provided, calls <code>$add_table()</code> before initializing server logic.</
       <dt><code>client</code></dt>
 <dd><p>Optional chat client override for this session.</p></dd>
 
+      <dt><code>history</code></dt>
+<dd><p>Conversation history configuration for this call. Overrides
+the value set on <code>$new()</code>. Resolves to <code>TRUE</code> when neither this nor the
+constructor's <code>history</code> was set.</p></dd>
+
       <dt><code>enable_bookmarking</code></dt>
-<dd><p>Whether to enable bookmarking. Default is <code>FALSE</code>.</p></dd>
+<dd><p><a href="https://lifecycle.r-lib.org/articles/stages.html#deprecated" class="external-link"><img src="figures/lifecycle-deprecated.svg" alt="[Deprecated]"></a> Use <code>history = shinychat::history_options(restore_mode = "bookmark")</code> instead (set on
+<code>$new()</code>, or passed here).</p></dd>
 
       <dt><code>...</code></dt>
 <dd><p>Ignored.</p></dd>
@@ -718,7 +739,7 @@ or <code>NULL</code> before any query.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

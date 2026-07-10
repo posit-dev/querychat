@@ -14,6 +14,7 @@ querychat(
   ...,
   id = NULL,
   greeting = NULL,
+  history = NULL,
   client = NULL,
   tools = c("filter", "query"),
   data_description = NULL,
@@ -38,7 +39,7 @@ querychat_app(
   prompt_template = NULL,
   data_dict = NULL,
   cleanup = NA,
-  bookmark_store = "url"
+  history = NULL
 )
 ```
 
@@ -63,6 +64,12 @@ querychat_app(
 - greeting:
 
   Optional initial message to display to users.
+
+- history:
+
+  Conversation history configuration for the generated app. See
+  [QueryChat](https://posit-dev.github.io/querychat/dev/reference/QueryChat.md)'s
+  `$app()` method.
 
 - client:
 
@@ -97,10 +104,6 @@ querychat_app(
 
   Whether or not to automatically run `$cleanup()` when the Shiny
   session/app stops.
-
-- bookmark_store:
-
-  The bookmarking storage method. Default is `"url"`.
 
 ## Value
 

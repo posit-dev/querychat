@@ -171,6 +171,6 @@ if (rlang::is_installed(c("pins", "duckdb"))) {
 
   ps$cleanup()
 }
-#> Creating new version '20260626T133659Z-c0340'
+#> Creating new version '20260710T194816Z-c0340'
 #> Writing to pin 'mtcars'
 ```

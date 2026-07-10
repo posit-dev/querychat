@@ -160,6 +160,9 @@ engine from duckdb or RSQLite (in that order).</p></dd>
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Create a data frame source (uses first available: duckdb or sqlite)</span></span></span>
 <span class="r-in"><span><span class="va">df_source</span> <span class="op">&lt;-</span> <span class="va">DataFrameSource</span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">mtcars</span>, <span class="st">"mtcars"</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> duckdb: caching downloaded extensions in the package library:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">ℹ</span> /home/runner/work/_temp/Library/duckdb/extensions</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">ℹ</span> This is removed when the package is re-installed; see `?duckdb_storage` to choose a different location.</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Get database type</span></span></span>
 <span class="r-in"><span><span class="va">df_source</span><span class="op">$</span><span class="fu">get_db_type</span><span class="op">(</span><span class="op">)</span>  <span class="co"># Returns "DuckDB" or "SQLite"</span></span></span>
@@ -185,7 +188,7 @@ engine from duckdb or RSQLite (in that order).</p></dd>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

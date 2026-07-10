@@ -1,5 +1,5 @@
 pandoc: 3.8.3
-pkgdown: 2.2.0
+pkgdown: 2.2.1
 pkgdown_sha: ~
 articles:
   build: build.html
@@ -9,7 +9,7 @@ articles:
   models: models.html
   tools: tools.html
   visualize: visualize.html
-last_built: 2026-06-26T13:36Z
+last_built: 2026-07-10T19:48Z
 urls:
   reference: https://posit-dev.github.io/querychat/reference
   article: https://posit-dev.github.io/querychat/articles

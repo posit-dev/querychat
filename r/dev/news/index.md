@@ -4,6 +4,14 @@
 
 ### New features
 
+- The SQL panel in
+  [`querychat_app()`](https://posit-dev.github.io/querychat/dev/reference/querychat-convenience.md)
+  is now an editable code editor. Users can tweak the generated SQL
+  directly and apply it with Ctrl/Cmd+Enter or by clicking away — no
+  extra button required. The editor stays in sync when the LLM updates
+  the query or the active table changes.
+  ([\#265](https://github.com/posit-dev/querychat/issues/265))
+
 - `QueryChat$new()` now supports **multiple related tables**. Register
   additional tables with `$add_table()` and the LLM can reason across
   all of them — joins, cross-table filters, aggregations. Per-table
@@ -53,6 +61,15 @@
   `mod_ui()` or `QueryChat$ui()`.
   ([\#253](https://github.com/posit-dev/querychat/issues/253))
 
+- Conversation history is now persisted by default. `QueryChat` keeps a
+  user’s chat around across page reloads and browser sessions, backed by
+  shinychat’s history support. The default `restore_mode = "browser"`
+  stores the active conversation in the browser’s localStorage, but you
+  can pass `history = shinychat::history_options(restore_mode = "url")`
+  to restore via a plain, shareable URL instead, or
+  `restore_mode = "bookmark"` to fold the conversation into a full Shiny
+  bookmark. Disable with `history = FALSE`.
+
 ### Breaking changes
 
 - The `$data_source` property has been removed. Use
@@ -61,6 +78,27 @@
   `data_source` parameter to `$server()` has also been removed; call
   `$add_table()` before `$server()` instead.
   ([\#195](https://github.com/posit-dev/querychat/issues/195))
+
+- `$app()`/`$app_obj()`’s `bookmark_store` parameter has been removed.
+  Pass `history = shinychat::history_options(restore_mode = "bookmark")`
+  to get the same shareable-bookmark behavior; any other `history` value
+  disables Shiny-level bookmarking for the generated app. `$app()`
+  defaults to `restore_mode = "bookmark"` when no `history` is set
+  anywhere, so existing `$app()` callers keep working without changes.
+  Note this default is a storage-mechanism change, not just a rename:
+  the old default (`bookmark_store = "url"`) encoded the entire bookmark
+  state in the URL itself, requiring no server storage; the new default
+  requires server-side bookmark storage (`bookmarkStore = "server"`),
+  with just a short state ID in the URL. Deployments that relied on
+  `$app()` being fully stateless should pass `history = FALSE` or a
+  non-bookmark `history_options()`.
+
+### Deprecated
+
+- `$server()`’s `enable_bookmarking` parameter is deprecated in favor of
+  `history`. Pass
+  `history = shinychat::history_options(restore_mode = "bookmark")`
+  instead of `enable_bookmarking = TRUE` for the equivalent behavior.
 
 ### Improvements
 
@@ -90,6 +128,12 @@
   developer-provided descriptions and instructions are now passed to the
   LLM verbatim.
   ([\#258](https://github.com/posit-dev/querychat/issues/258))
+
+- The close button in `$app()` is now hidden when running in a
+  non-interactive context (e.g. a deployed Shiny app), preventing
+  [`stopApp()`](https://rdrr.io/pkg/shiny/man/stopApp.html) from
+  crashing the session for other users.
+  ([\#259](https://github.com/posit-dev/querychat/issues/259))
 
 ## querychat 0.3.0
 

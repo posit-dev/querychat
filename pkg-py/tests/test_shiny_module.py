@@ -286,3 +286,43 @@ def test_mod_server_registers_table_state_with_both_bookmark_and_history_hooks()
     fake_session.bookmark.on_restore.assert_called_once()
     fake_chat_instance.history.on_save.assert_called_once()
     fake_chat_instance.history.on_restore.assert_called_once()
+
+
+def test_shinychat_chat_contract_used_by_mod_server():
+    """
+    Thin, non-mocked check of the shinychat surface mod_server() depends on.
+
+    Every other test above patches `shinychat.Chat` with a fake constructor,
+    so an upstream rename/removal of `Chat(client=, greeting=, history=)`,
+    `.history.on_save()`/`.history.on_restore()`, or
+    `.enable_bookmarking(client, bookmark_on=)` wouldn't turn any of them red.
+    This constructs the real shinychat.Chat and calls the real methods with
+    the same arguments mod_server() uses, so it does.
+    """
+    from unittest.mock import MagicMock
+
+    import shinychat
+    from shiny._namespaces import Root
+    from shiny.session import session_context
+
+    mock_session = MagicMock()
+    mock_session.ns = Root
+    mock_session.app = None
+
+    with session_context(mock_session):
+        chat = shinychat.Chat(
+            "chat", client=MagicMock(), greeting=None, history=True
+        )
+
+        @chat.history.on_save
+        def _on_save(values):
+            return values
+
+        @chat.history.on_restore
+        def _on_restore(values):
+            return values
+
+        chat.enable_bookmarking(MagicMock(), bookmark_on=None)
+
+    assert _on_save in chat.history._save_callbacks
+    assert _on_restore in chat.history._restore_callbacks

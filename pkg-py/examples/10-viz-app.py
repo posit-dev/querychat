@@ -1,9 +1,8 @@
 from pathlib import Path
 
-from querychat.express import QueryChat
 from querychat.data import titanic
-
-from shiny.express import ui, app_opts
+from querychat.express import QueryChat
+from shiny.express import ui
 
 greeting = Path(__file__).parent / "greeting-viz.md"
 
@@ -18,5 +17,3 @@ qc = QueryChat(
 qc.ui()
 
 ui.page_opts(fillable=True, title="QueryChat Visualization Demo")
-
-app_opts(bookmark_store="url")

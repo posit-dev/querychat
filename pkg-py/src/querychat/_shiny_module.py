@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, Generic, TypedDict, Union
 import chatlas
 import shinychat
 from narwhals.stable.v1.typing import IntoFrameT
+from shinychat.types import HistoryOptions
 
 from shiny import module, reactive, ui
 
@@ -21,7 +22,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from shiny.bookmark import BookmarkState, RestoreState
-    from shinychat.types import HistoryOptions
 
     from shiny import Inputs, Outputs, Session
 
@@ -324,13 +324,19 @@ def mod_server(
         history=history,
     )
 
-    # Registered unconditionally so the chat client's own state (and greeting)
-    # round-trip through Shiny bookmarks whenever the host app has bookmarking
-    # enabled -- independent of `history`. Only the save/restore hooks are
-    # wanted here; the automatic bookmark trigger is turned off (bookmark_on=
-    # None) so `history` (or the host app) remains the sole source of *when*
-    # to bookmark.
-    shinychat_chat.enable_bookmarking(chat, bookmark_on=None)
+    # Skipped when `history` is already in bookmark mode: shinychat_chat.history
+    # is then already enabled for this chat/client, and shinychat treats it and
+    # enable_bookmarking() as mutually exclusive. Otherwise, register
+    # enable_bookmarking() so the chat client's own state (and greeting) still
+    # round-trip through Shiny bookmarks the host app might trigger for
+    # unrelated reasons. Only the save/restore hooks are wanted here; the
+    # automatic bookmark trigger is turned off (bookmark_on=None) so `history`
+    # (or the host app) remains the sole source of *when* to bookmark.
+    history_is_bookmark_mode = (
+        isinstance(history, HistoryOptions) and history.restore_mode == "bookmark"
+    )
+    if not history_is_bookmark_mode:
+        shinychat_chat.enable_bookmarking(chat, bookmark_on=None)
 
     # Handle update button clicks
     @reactive.effect

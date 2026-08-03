@@ -169,6 +169,7 @@ target-version = "py310"
 extend-ignore = [
     "A002",    # Shadowing a built-in
     "ARG001",  # Unused argument
+    "BLE001",  # Do not catch blind exception (legacy alias of bugbear's B001; never intentionally enabled, and this codebase relies on broad except-Exception fallbacks around user SQL/tools/rendering)
     "D103",    # Missing docstring in public function
     "D200",    # One-line docstring should fit on one line with quotes
     "D203",    # 1 blank line required before class docstring

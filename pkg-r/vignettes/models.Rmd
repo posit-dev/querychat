@@ -52,15 +52,15 @@ qc$app()  # Launch the app
 Most models require an API key or some other form of authentication. See the reference page for the relevant model provider (e.g., [`chat_anthropic()`](https://ellmer.tidyverse.org/reference/chat_anthropic.html)) to learn more on how to set up credentials.
 
 ::: {.alert .alert-info}
-**Free tier options**
+**Free trial options**
 
-If you don't want to spend any money to get started, [`chat_google_gemini()`](https://ellmer.tidyverse.org/reference/chat_google_gemini.html) offers a generous free tier.
+If you don't want to spend any money to get started, [`chat_posit()`](https://ellmer.tidyverse.org/reference/chat_posit.html) provides free trial access to a curated set of models through the [Posit AI](https://posit.ai) gateway.
 
 ```{r}
 library(ellmer)
 
-# Just works if GOOGLE_API_KEY is set in your environment
-client <- chat_google_gemini()
+# Prompts you to log in via OAuth the first time; tokens are then cached
+client <- chat_posit()
 ```
 :::
 

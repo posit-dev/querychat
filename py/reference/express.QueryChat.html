@@ -76,7 +76,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <link href="../site_libs/quarto-html/quarto-syntax-highlighting-51e9ba6732aa6bc0134376f05742e55b.css" rel="stylesheet" id="quarto-text-highlighting-styles">
 <script src="../site_libs/bootstrap/bootstrap.min.js"></script>
 <link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
-<link href="../site_libs/bootstrap/bootstrap-3adfe33ab714ce331f23a0b8a88f2530.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<link href="../site_libs/bootstrap/bootstrap-f69a33a72707161d2eb92d5ab0392ad8.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
   "copy-button": false,
@@ -746,7 +746,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td>tools</td>
-<td><code>TOOL_GROUPS</code> | <a href="https://docs.python.org/3/library/stdtypes.html#tuple">tuple</a>[<code>TOOL_GROUPS</code>, …] | None | <code>MISSING_TYPE</code></td>
+<td><code>TOOL_GROUPS</code> | <a href="https://docs.python.org/3/library/stdtypes.html#tuple">tuple</a>[<code>TOOL_GROUPS</code>, …] | <code>MISSING_TYPE</code> | None</td>
 <td>Which tools to include: <code>"filter"</code>, <code>"query"</code>, <code>"visualize"</code>, or a combination. The legacy name <code>"update"</code> is still accepted as an alias for <code>"filter"</code>.</td>
 <td><code>MISSING</code></td>
 </tr>
@@ -1023,7 +1023,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td></td>
-<td><a href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | None | <a href="https://docs.python.org/3/library/functions.html#bool">bool</a></td>
+<td><a href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | <a href="https://docs.python.org/3/library/functions.html#bool">bool</a> | None</td>
 <td>If no <code>query</code> is provided, returns the current SQL query as a string (or <code>None</code> if no query has been set). If a <code>query</code> is provided, returns <code>True</code> if the query was changed to a new value, or <code>False</code> if it was the same as the current value.</td>
 </tr>
 </tbody>
@@ -1162,7 +1162,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td></td>
-<td><a href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | None | <a href="https://docs.python.org/3/library/functions.html#bool">bool</a></td>
+<td><a href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | <a href="https://docs.python.org/3/library/functions.html#bool">bool</a> | None</td>
 <td>If no <code>value</code> is provided, returns the current title as a string, or <code>None</code> if no title has been set due to no SQL query being set. If a <code>value</code> is provided, sets the current title to this value and returns <code>True</code> if the title was changed to a new value, or <code>False</code> if it was the same as the current value.</td>
 </tr>
 </tbody>

@@ -229,7 +229,7 @@ class QueryChatBase(Generic[IntoFrameT]):
         self,
         *,
         base: chatlas.Chat | None = None,
-        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None | MISSING_TYPE = MISSING,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | MISSING_TYPE | None = MISSING,
         update_dashboard: Callable[[UpdateDashboardData], None] | None = None,
         reset_dashboard: ResetDashboardCallback | None = None,
         visualize: Callable[[VisualizeData], None] | None = None,
@@ -291,7 +291,7 @@ class QueryChatBase(Generic[IntoFrameT]):
     def client(
         self,
         *,
-        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None | MISSING_TYPE = MISSING,
+        tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | MISSING_TYPE | None = MISSING,
         update_dashboard: Callable[[UpdateDashboardData], None] | None = None,
         reset_dashboard: ResetDashboardCallback | None = None,
         visualize: Callable[[VisualizeData], None] | None = None,
@@ -775,7 +775,7 @@ def create_client(client: chatlas.Chat) -> chatlas.Chat:
 
 
 def normalize_tools(
-    tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | None | MISSING_TYPE,
+    tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | MISSING_TYPE | None,
     default: tuple[TOOL_GROUPS, ...] | set[str] | None,
     *,
     check_deps: bool = True,

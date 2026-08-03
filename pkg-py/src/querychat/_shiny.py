@@ -973,7 +973,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
     @overload
     def sql(self, query: str) -> bool: ...
 
-    def sql(self, query: Optional[str] = None) -> str | None | bool:
+    def sql(self, query: Optional[str] = None) -> str | bool | None:
         """
         Reactively read (or set) the current SQL query that is in effect.
 
@@ -1002,7 +1002,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
     @overload
     def title(self, value: str) -> bool: ...
 
-    def title(self, value: Optional[str] = None) -> str | None | bool:
+    def title(self, value: Optional[str] = None) -> str | bool | None:
         """
         Reactively read (or set) the current title that is in effect.
 

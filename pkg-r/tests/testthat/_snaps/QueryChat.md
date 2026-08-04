@@ -47,8 +47,6 @@
         expect_s3_class(captured, "chat_history_config")
         expect_equal(captured$restore_mode, "bookmark")
       })
-    Message
-      Using model = "gpt-4.1".
     Condition
       Warning:
       The `enable_bookmarking` argument of `QueryChat$server()` is deprecated as of querychat 0.4.0.

@@ -38,15 +38,15 @@ client = ChatAnthropic(model="claude-sonnet-4-5")
 Most models require an API key or some other form of authentication. See the reference page for the relevant [model provider](https://posit-dev.github.io/chatlas/get-started/models.html)  (e.g., [ChatAnthropic](https://posit-dev.github.io/chatlas/reference/ChatAnthropic.html)) to learn more on how to set up credentials.
 
 ::: callout-tip
-### Github model marketplace
+### Free trial options
 
-If you are already setup with Github credentials, [Github model marketplace](https://github.com/marketplace/models) provides a free and easy way to get started. See [here](https://posit-dev.github.io/chatlas/reference/ChatGithub.html) for more details on how to get setup.
+If you don't want to spend any money to get started, [ChatPosit](https://posit-dev.github.io/chatlas/reference/ChatPosit.html) provides free trial access to a curated set of models through the [Posit AI](https://posit.ai) gateway.
 
-```{.python filename="github-model.py"}
-from chatlas import ChatGithub
+```{.python filename="posit-model.py"}
+from chatlas import ChatPosit
 
-# Just works if GITHUB_TOKEN is set in your environment
-client = ChatGithub(model="gpt-4.1")
+# Prompts you to log in via OAuth the first time; tokens are then cached
+client = ChatPosit()
 ```
 :::
 

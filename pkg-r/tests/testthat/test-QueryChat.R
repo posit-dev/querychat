@@ -752,7 +752,7 @@ test_that("QueryChat$server() resolves history (explicit > constructor > TRUE) a
     }
   )
 
-  qc_no_history <- local_querychat()
+  qc_no_history <- local_querychat(client = mock_ellmer_chat_client())
   qc_no_history$.__enclos_env__$private$.query_executor <- executor
   shiny::testServer(
     function(input, output, session) qc_no_history$server(),

@@ -687,6 +687,14 @@ The objects of this class are cloneable with this method.
 ``` r
 # Basic usage with a data frame
 qc <- QueryChat$new(mtcars)
+#> duckdb keeps downloaded extensions and secrets in a temporary directory:
+#> ℹ /tmp/Rtmps3gu2r/duckdb
+#> This is removed when the R session ends.
+#> • Extensions are re-downloaded each session.
+#> • Secrets are lost.
+#> ℹ Run duckdb(shared_home = TRUE) (or create ~/.duckdb) to keep them (suitable for most users).
+#> ℹ Run duckdb(shared_home = FALSE) to accept the temporary directory (and silence this message).
+#> ℹ See ?duckdb_storage for details and alternatives.
 if (FALSE) { # \dontrun{
 app <- qc$app()
 } # }
@@ -694,9 +702,25 @@ app <- qc$app()
 # With a custom greeting
 greeting <- "Welcome! Ask me about the mtcars dataset."
 qc <- QueryChat$new(mtcars, greeting = greeting)
+#> duckdb keeps downloaded extensions and secrets in a temporary directory:
+#> ℹ /tmp/Rtmps3gu2r/duckdb
+#> This is removed when the R session ends.
+#> • Extensions are re-downloaded each session.
+#> • Secrets are lost.
+#> ℹ Run duckdb(shared_home = TRUE) (or create ~/.duckdb) to keep them (suitable for most users).
+#> ℹ Run duckdb(shared_home = FALSE) to accept the temporary directory (and silence this message).
+#> ℹ See ?duckdb_storage for details and alternatives.
 
 # With a specific LLM provider
 qc <- QueryChat$new(mtcars, client = "anthropic/claude-sonnet-4-5")
+#> duckdb keeps downloaded extensions and secrets in a temporary directory:
+#> ℹ /tmp/Rtmps3gu2r/duckdb
+#> This is removed when the R session ends.
+#> • Extensions are re-downloaded each session.
+#> • Secrets are lost.
+#> ℹ Run duckdb(shared_home = TRUE) (or create ~/.duckdb) to keep them (suitable for most users).
+#> ℹ Run duckdb(shared_home = FALSE) to accept the temporary directory (and silence this message).
+#> ℹ See ?duckdb_storage for details and alternatives.
 
 # Generate a greeting for reuse (requires internet/API access)
 if (FALSE) { # \dontrun{
@@ -713,6 +737,14 @@ qc <- QueryChat$new(
   client = "openai/gpt-4o",
   data_description = "Motor Trend car road tests dataset"
 )
+#> duckdb keeps downloaded extensions and secrets in a temporary directory:
+#> ℹ /tmp/Rtmps3gu2r/duckdb
+#> This is removed when the R session ends.
+#> • Extensions are re-downloaded each session.
+#> • Secrets are lost.
+#> ℹ Run duckdb(shared_home = TRUE) (or create ~/.duckdb) to keep them (suitable for most users).
+#> ℹ Run duckdb(shared_home = FALSE) to accept the temporary directory (and silence this message).
+#> ℹ See ?duckdb_storage for details and alternatives.
 # Create a QueryChat object from a database connection
 # 1. Set up the database connection
 con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")

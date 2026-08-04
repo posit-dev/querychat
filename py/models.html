@@ -344,19 +344,19 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <i class="callout-icon"></i>
 </div>
 <div class="callout-title-container flex-fill">
-Github model marketplace
+Free trial options
 </div>
 </div>
 <div class="callout-body-container callout-body">
-<p>If you are already setup with Github credentials, <a href="https://github.com/marketplace/models">Github model marketplace</a> provides a free and easy way to get started. See <a href="https://posit-dev.github.io/chatlas/reference/ChatGithub.html">here</a> for more details on how to get setup.</p>
+<p>If you don’t want to spend any money to get started, <a href="https://posit-dev.github.io/chatlas/reference/ChatPosit.html">ChatPosit</a> provides free trial access to a curated set of models through the <a href="https://posit.ai">Posit AI</a> gateway.</p>
 <div class="code-with-filename">
 <div class="code-with-filename-file">
-<pre><strong>github-model.py</strong></pre>
+<pre><strong>posit-model.py</strong></pre>
 </div>
-<div class="sourceCode" id="cb4" data-filename="github-model.py"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> chatlas <span class="im">import</span> ChatGithub</span>
+<div class="sourceCode" id="cb4" data-filename="posit-model.py"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> chatlas <span class="im">import</span> ChatPosit</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Just works if GITHUB_TOKEN is set in your environment</span></span>
-<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>client <span class="op">=</span> ChatGithub(model<span class="op">=</span><span class="st">"gpt-4.1"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co"># Prompts you to log in via OAuth the first time; tokens are then cached</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>client <span class="op">=</span> ChatPosit()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 </div>
 </div>

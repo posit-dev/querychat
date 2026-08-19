@@ -77,19 +77,15 @@ def load_artifact_registry() -> ArtifactRegistry:
     path = files("querychat").joinpath("artifact-formats.yml")
     raw: object = yaml.safe_load(path.read_text(encoding="utf-8"))
     if not isinstance(raw, dict):
-        raise ValueError("Artifact registry must be a mapping.")
+        raise TypeError("Artifact registry must be a mapping.")
     formats = raw.get("formats")
     if not isinstance(formats, dict):
-        raise ValueError(
-            "Artifact registry formats must be a mapping."
-        )
+        raise TypeError("Artifact registry formats must be a mapping.")
 
     normalized: dict[str, object] = {}
     for format_id, definition in formats.items():
         if not isinstance(format_id, str) or not isinstance(definition, dict):
-            raise ValueError(
-                "Artifact registry format entries must be mappings."
-            )
+            raise TypeError("Artifact registry format entries must be mappings.")
         normalized[format_id] = {"id": format_id, **definition}
 
     return ArtifactRegistry.model_validate({**raw, "formats": normalized})

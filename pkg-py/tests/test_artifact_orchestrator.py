@@ -16,10 +16,10 @@ from querychat._artifact_orchestrator import (
     ArtifactOrchestrator,
     GenerateRequest,
     build_freeform_artifact_type,
-    version_from_result,
+    state_from_result,
 )
 from querychat._artifact_prompt import ArtifactResult, FreeformMetadata
-from querychat._artifact_state import ArtifactState, ArtifactVersion
+from querychat._artifact_state import ArtifactState
 from querychat._artifact_types import ArtifactLanguage, resolve_artifact_type
 from querychat._artifact_validation import ArtifactValidationError
 from querychat._datasource import DataFrameSource
@@ -178,16 +178,10 @@ def make_state(
     return ArtifactState(
         artifact_id=artifact_id,
         artifact_type=resolve_artifact_type("quarto-dashboard", language),
-        language=language,
         system_prompt="sys",
-        versions=[
-            ArtifactVersion(
-                source=source,
-                turns=[],
-                kind="generated",
-                run_instructions=f"```bash\nrun artifact in {language}\n```",
-            )
-        ],
+        source=source,
+        turns=[],
+        run_instructions=f"```bash\nrun artifact in {language}\n```",
     )
 
 
@@ -256,16 +250,10 @@ def make_r_notebook_state(source: str) -> ArtifactState:
     return ArtifactState(
         artifact_id="a",
         artifact_type=resolve_artifact_type("jupyter-notebook", "r"),
-        language="r",
         system_prompt="sys",
-        versions=[
-            ArtifactVersion(
-                source=source,
-                turns=[],
-                kind="generated",
-                run_instructions="Run with Jupyter Lab.",
-            )
-        ],
+        source=source,
+        turns=[],
+        run_instructions="Run with Jupyter Lab.",
     )
 
 
@@ -279,58 +267,6 @@ def test_freeform_type_is_text_target_snapshot():
     assert artifact_type.language is None
     assert artifact_type.file_extension == ".sql"
     assert artifact_type.structure == "text"
-
-
-class TestStepVersion:
-    def test_unknown_id_is_noop(self):
-        orch = make_session()
-        changed = asyncio.run(orch.step_version("missing", 1))
-
-        assert changed is False
-        assert orch.view.session.messages == []
-
-    def test_step_sends_version_view(self):
-        orch = make_session()
-        state = make_state()
-        state.push_version(ArtifactVersion(source="v2", turns=[], kind="revised"))
-        orch.store.remember(state)
-
-        changed = asyncio.run(orch.step_version("a", -1))
-
-        assert changed is True
-        assert state.current_index == 0
-        assert "querychat-artifact-source-update" in message_types(orch)
-        assert "querychat-artifact-version-update" in message_types(orch)
-
-    def test_show_version_marks_missing_bundle_download_unavailable(self):
-        orch = make_session()
-        state = make_state()
-        state.current_version.bundled_tables = ["tips"]
-        state.current_version.bundle_id = "evicted-bundle"
-        state.push_version(ArtifactVersion(source="database", turns=[], kind="revised"))
-        orch.store.remember(state)
-
-        asyncio.run(orch.show_version("a"))
-        asyncio.run(orch.step_version("a", -1))
-
-        version_messages = [
-            payload
-            for message_type, payload in orch.view.session.messages
-            if message_type == "querychat-artifact-version-update"
-        ]
-        assert version_messages[-2]["download_available"] is True
-        assert version_messages[-1]["download_available"] is False
-
-    def test_boundary_step_is_noop(self):
-        orch = make_session()
-        state = make_state()
-        orch.store.remember(state)
-
-        changed = asyncio.run(orch.step_version("a", -1))
-
-        assert changed is False
-        assert state.current_index == 0
-        assert orch.view.session.messages == []
 
 
 class TestStoreEviction:
@@ -373,9 +309,9 @@ class TestStoreEviction:
         )
         shared = orch.bundle_store.put({"shared.csv": b"shared"}, "")
         evicted = make_state("evicted")
-        evicted.current_version.bundle_id = shared.bundle_id
+        evicted.bundle_id = shared.bundle_id
         retained = make_state("retained")
-        retained.current_version.bundle_id = shared.bundle_id
+        retained.bundle_id = shared.bundle_id
         orch.store.remember(evicted)
         orch.store.remember(retained)
 
@@ -391,7 +327,7 @@ class TestStoreEviction:
         assert orch.bundle_store.get(shared.bundle_id) is not None
         generated = orch.store.get("generated")
         assert generated is not None
-        assert orch.bundle_store.get(generated.current_version.bundle_id) is not None
+        assert orch.bundle_store.get(generated.bundle_id) is not None
 
     def test_artifact_eviction_discards_unreachable_bundle(self, monkeypatch):
         monkeypatch.setattr("querychat._artifact_store.MAX_STORED_ARTIFACTS", 1)
@@ -402,7 +338,7 @@ class TestStoreEviction:
         )
         old_bundle = orch.bundle_store.put({"old.csv": b"old"}, "")
         old = make_state("old")
-        old.current_version.bundle_id = old_bundle.bundle_id
+        old.bundle_id = old_bundle.bundle_id
         orch.store.remember(old)
 
         asyncio.run(
@@ -445,11 +381,11 @@ class TestBookmark:
         assert previous.store.keys() == ["new"]
         assert not previous.store.has("old")
 
-    def test_restore_preserves_version_data_contract(self):
+    def test_restore_preserves_current_data_contract(self):
         orch = make_session(data_source=FakeDataSource())
         state = make_state("a")
-        state.current_version.referenced_tables = ["mtcars"]
-        state.current_version.bundled_tables = ["mtcars"]
+        state.referenced_tables = ["mtcars"]
+        state.bundled_tables = ["mtcars"]
         orch.store.remember(state)
 
         saved = orch.store.bookmark_values()
@@ -459,16 +395,16 @@ class TestBookmark:
 
         s = restored.store.get("a")
         assert s is not None
-        assert s.current_version.referenced_tables == ["mtcars"]
-        assert s.current_version.bundled_tables == ["mtcars"]
+        assert s.referenced_tables == ["mtcars"]
+        assert s.bundled_tables == ["mtcars"]
 
     def test_restore_preserves_in_session_bundle_snapshot(self):
         orch = make_session(data_source=FakeDataSource())
         bundle = orch.bundle_store.put({"tips.csv": b"total_bill\n10\n"}, "Load CSV")
         state = make_state("a")
-        state.current_version.bundled_tables = ["tips"]
-        state.current_version.bundle_id = bundle.bundle_id
-        state.current_version.data_instructions = bundle.data_instructions
+        state.bundled_tables = ["tips"]
+        state.bundle_id = bundle.bundle_id
+        state.data_instructions = bundle.data_instructions
         orch.store.remember(state)
         saved = orch.store.bookmark_values()
 
@@ -486,7 +422,7 @@ class TestBookmark:
 
 
 class TestDownload:
-    def test_restored_database_only_version_downloads_without_snapshot(self):
+    def test_restored_database_only_artifact_downloads_without_snapshot(self):
         original = make_session(data_source=FakeDataSource())
         original.store.remember(make_state())
 
@@ -498,12 +434,12 @@ class TestDownload:
         with zipfile.ZipFile(io.BytesIO(archive)) as zf:
             assert zf.read("artifact.qmd") == b"v1"
 
-    def test_legacy_bundle_without_snapshot_never_exports_live_dataframe(self):
+    def test_bundle_without_snapshot_never_exports_live_dataframe(self):
         source = RecordingDataFrameSource("tips")
         orch = make_session(data_sources={"tips": source})
         state = make_state()
-        state.current_version.referenced_tables = ["tips"]
-        state.current_version.bundled_tables = ["tips"]
+        state.referenced_tables = ["tips"]
+        state.bundled_tables = ["tips"]
         orch.store.remember(state)
 
         with pytest.raises(ArtifactSnapshotUnavailableError, match="unavailable"):
@@ -514,8 +450,8 @@ class TestDownload:
     def test_missing_bundle_id_reports_snapshot_unavailable(self):
         orch = make_session(data_source=FakeDataSource())
         state = make_state()
-        state.current_version.bundled_tables = ["tips"]
-        state.current_version.bundle_id = "missing"
+        state.bundled_tables = ["tips"]
+        state.bundle_id = "missing"
         orch.store.remember(state)
 
         with pytest.raises(ArtifactSnapshotUnavailableError, match="unavailable"):
@@ -531,7 +467,7 @@ class TestDownload:
         asyncio.run(orch.generate(GenerateRequest(type_id="quarto-dashboard"), "", "a"))
         state = orch.store.get("a")
         assert state is not None
-        bundle = orch.bundle_store.get(state.current_version.bundle_id)
+        bundle = orch.bundle_store.get(state.bundle_id)
         assert bundle is not None
         original_csv = bundle.bundled_files["tips.csv"]
         source._df = source._df.head(1)
@@ -545,8 +481,8 @@ class TestDownload:
     def test_r_artifact_readme_uses_r_database_instructions(self):
         orch = make_session(data_source=FakeDataSource())
         state = make_state(language="r")
-        state.current_version.referenced_tables = ["mtcars"]
-        state.current_version.data_instructions = (
+        state.referenced_tables = ["mtcars"]
+        state.data_instructions = (
             'Use DBI and credentials from `Sys.getenv("DATABASE_URL")`.'
         )
         orch.store.remember(state)
@@ -559,12 +495,10 @@ class TestDownload:
         assert 'Sys.getenv("DATABASE_URL")' in readme
         assert "os.environ" not in readme
 
-    def test_readme_uses_current_version_run_instructions(self):
+    def test_readme_uses_current_run_instructions(self):
         orch = make_session(data_source=FakeDataSource())
         state = make_state()
-        state.current_version.run_instructions = (
-            "Run it with:\n```bash\npython artifact.py\n```"
-        )
+        state.run_instructions = "Run it with:\n```bash\npython artifact.py\n```"
         orch.store.remember(state)
 
         archive = asyncio.run(orch.build_download("a"))
@@ -576,83 +510,94 @@ class TestDownload:
 
 
 class TestRevise:
-    def test_versions_keep_separate_dataframe_snapshots(self):
+    def test_revisions_replace_artifact_and_accumulate_conversation(self):
         source = RecordingDataFrameSource("tips")
+        prior_turn = chatlas.Turn(role="assistant", contents="first")
+        chat = FakeChat(
+            streams=[
+                [result_chunk("second", referenced_tables=["tips"])],
+                [result_chunk("third", referenced_tables=["tips"])],
+            ]
+        )
         orch = make_session(
-            FakeChat(
-                streams=[
-                    [result_chunk("first", referenced_tables=["tips"])],
-                    [result_chunk("second", referenced_tables=["tips"])],
-                ]
-            ),
+            chat,
             data_sources={"tips": source},
         )
-
-        asyncio.run(orch.generate(GenerateRequest(type_id="quarto-dashboard"), "", "a"))
-        state = orch.store.get("a")
-        assert state is not None
-        first_bundle_id = state.current_version.bundle_id
+        first_bundle = orch.bundle_store.put({"tips.csv": b"first"}, "Load tips.csv")
+        state = make_state()
+        state.turns = [prior_turn]
+        state.bundle_id = first_bundle.bundle_id
+        state.bundled_tables = ["tips"]
+        orch.store.remember(state)
         source._df = source._df.head(1)
 
         asyncio.run(orch.revise("a", "make it smaller"))
 
-        second_bundle_id = state.current_version.bundle_id
-        assert first_bundle_id is not None
-        assert second_bundle_id is not None
-        assert second_bundle_id != first_bundle_id
+        second = orch.store.get("a")
+        assert second is not None
+        second_turns = list(second.turns)
+        second_bundle_id = second.bundle_id
 
-        current_archive = asyncio.run(orch.build_download("a"))
-        state.step(-1)
-        prior_archive = asyncio.run(orch.build_download("a"))
+        asyncio.run(orch.revise("a", "return to the earlier layout"))
 
-        assert current_archive is not None
-        assert prior_archive is not None
-        with zipfile.ZipFile(io.BytesIO(current_archive)) as zf:
-            current_csv = zf.read("tips.csv")
-        with zipfile.ZipFile(io.BytesIO(prior_archive)) as zf:
-            prior_csv = zf.read("tips.csv")
-        assert current_csv != prior_csv
+        third = orch.store.get("a")
+        assert third is not None
+        assert third is not state
+        assert third.source == "third"
+        assert [turn.role for turn in third.turns] == [
+            "assistant",
+            "user",
+            "assistant",
+            "user",
+            "assistant",
+        ]
+        assert third.turns[0] == prior_turn
+        assert chat.incoming_turns == [[prior_turn], second_turns]
+        assert orch.bundle_store.get(first_bundle.bundle_id) is None
+        assert orch.bundle_store.get(second_bundle_id) is None
+        assert orch.bundle_store.get(third.bundle_id) is not None
 
-    def test_branching_discards_only_unreferenced_forward_bundles(self):
+    def test_failed_revision_preserves_snapshot_under_memory_pressure(
+        self,
+        monkeypatch,
+    ):
         source = RecordingDataFrameSource("tips")
         orch = make_session(
-            FakeChat([result_chunk("branched", referenced_tables=["tips"])]),
+            FakeChat([result_chunk("second", referenced_tables=["tips"])]),
             data_sources={"tips": source},
         )
-        shared = orch.bundle_store.put({"shared.csv": b"shared"}, "")
-        unreachable = orch.bundle_store.put({"unreachable.csv": b"old"}, "")
+        first_bundle = orch.bundle_store.put({"tips.csv": b"old!"}, "Load tips.csv")
         state = make_state()
-        state.versions = [
-            ArtifactVersion(
-                source="v1",
-                turns=[],
-                kind="generated",
-                bundle_id=shared.bundle_id,
-            ),
-            ArtifactVersion(source="v2", turns=[], kind="revised"),
-            ArtifactVersion(
-                source="v3",
-                turns=[],
-                kind="revised",
-                bundle_id=unreachable.bundle_id,
-            ),
-            ArtifactVersion(
-                source="v4",
-                turns=[],
-                kind="revised",
-                bundle_id=shared.bundle_id,
-            ),
-        ]
-        state.current_index = 1
+        state.bundle_id = first_bundle.bundle_id
+        state.bundled_tables = ["tips"]
         orch.store.remember(state)
+        monkeypatch.setattr(
+            "querychat._artifact_bundle_store.MAX_STORED_BUNDLE_BYTES",
+            4,
+        )
+        monkeypatch.setattr(
+            "querychat._artifact_orchestrator.materialize_artifact_data",
+            lambda *args: ArtifactDataContext(
+                data_instructions="Load tips.csv",
+                bundled_files={"tips.csv": b"new!"},
+                bundled_tables=["tips"],
+            ),
+        )
+        show_calls = 0
 
-        asyncio.run(orch.revise("a", "branch from v2"))
+        async def fail_replacement_once(*args, **kwargs):
+            nonlocal show_calls
+            show_calls += 1
+            if show_calls == 1:
+                raise RuntimeError("client disconnected")
 
-        assert [version.source for version in state.versions[:2]] == ["v1", "v2"]
-        assert state.current_version.source == "branched"
-        assert orch.bundle_store.get(unreachable.bundle_id) is None
-        assert orch.bundle_store.get(shared.bundle_id) is not None
-        assert orch.bundle_store.get(state.current_version.bundle_id) is not None
+        monkeypatch.setattr(orch.view, "show_artifact", fail_replacement_once)
+
+        with pytest.raises(RuntimeError, match="client disconnected"):
+            asyncio.run(orch.revise("a", "make it smaller"))
+
+        assert orch.store.get("a") is state
+        assert orch.bundle_store.get(first_bundle.bundle_id) is first_bundle
 
     def test_failed_dataframe_materialization_leaves_no_artifact_or_bundle(
         self,
@@ -673,7 +618,7 @@ class TestRevise:
         assert not orch.store.has("a")
         assert len(orch.bundle_store) == 0
 
-    def test_revise_pushes_new_version(self):
+    def test_revise_replaces_current_artifact(self):
         orch = make_session(
             FakeChat(
                 [
@@ -690,13 +635,13 @@ class TestRevise:
 
         asyncio.run(orch.revise("a", "make it better"))
 
-        assert state.total == 2
-        assert state.current_version.kind == "revised"
-        assert state.source == "new source"
-        assert state.summary == "s"
-        assert state.current_version.referenced_tables == ["mtcars"]
+        revised = orch.store.get("a")
+        assert revised is not None
+        assert revised.source == "new source"
+        assert revised.summary == "s"
+        assert revised.referenced_tables == ["mtcars"]
 
-    def test_revise_replaces_table_references_for_new_version(self):
+    def test_revise_replaces_table_references(self):
         orch = make_session(
             FakeChat([result_chunk("new source", referenced_tables=["customers"])]),
             data_sources={
@@ -705,13 +650,15 @@ class TestRevise:
             },
         )
         state = make_state()
-        state.current_version.referenced_tables = ["orders"]
+        state.referenced_tables = ["orders"]
         orch.store.remember(state)
 
         asyncio.run(orch.revise("a", "use customers instead"))
 
-        assert state.versions[0].referenced_tables == ["orders"]
-        assert state.current_version.referenced_tables == ["customers"]
+        revised = orch.store.get("a")
+        assert revised is not None
+        assert state.referenced_tables == ["orders"]
+        assert revised.referenced_tables == ["customers"]
 
     def test_revise_rejects_unknown_table_reference(self):
         orch = make_session(
@@ -727,7 +674,7 @@ class TestRevise:
         with pytest.raises(ValidationError, match="payments"):
             asyncio.run(orch.revise("a", "make it better"))
 
-        assert state.total == 1
+        assert orch.store.get("a") is state
 
     def test_revise_rejects_language_change(self):
         orch = make_session(
@@ -739,7 +686,7 @@ class TestRevise:
         with pytest.raises(ValidationError, match="language"):
             asyncio.run(orch.revise("a", "rewrite it in R"))
 
-        assert state.total == 1
+        assert orch.store.get("a") is state
 
     def test_blank_instructions_is_noop(self):
         orch = make_session(FakeChat(["ignored"]))
@@ -748,7 +695,7 @@ class TestRevise:
 
         asyncio.run(orch.revise("a", ""))
 
-        assert state.total == 1
+        assert orch.store.get("a") is state
 
     def test_stream_failure_restores_view_and_reraises(self):
         class BoomChat(FakeChat):
@@ -762,11 +709,10 @@ class TestRevise:
         with pytest.raises(RuntimeError, match="stream blew up"):
             asyncio.run(orch.revise("a", "do it"))
 
-        # current version preserved and the editor was restored
-        assert state.total == 1
+        assert orch.store.get("a") is state
         assert "querychat-artifact-source-update" in message_types(orch)
 
-    def test_revision_validation_failure_preserves_current_version(self):
+    def test_revision_validation_failure_preserves_current_artifact(self):
         original_source = r_notebook_source()
         invalid = artifact_result_json("{")
         chat = FakeChat(streams=[[invalid], [invalid]])
@@ -778,11 +724,11 @@ class TestRevise:
             asyncio.run(orch.revise("a", "change it"))
 
         assert chat.stream_count == 2
-        assert state.total == 1
-        assert state.source == original_source
+        assert orch.store.get("a") is state
+        assert orch.store.get("a").source == original_source
 
 
-class TestStreamArtifactVersion:
+class TestStreamArtifact:
     def test_returns_result_and_turns_and_updates_editor(self):
         chat = FakeChat(
             [('{"source": "generated src", "summary": "s", "referenced_tables": []}')]
@@ -807,8 +753,8 @@ class TestStreamArtifactVersion:
         assert "querychat-artifact-source-update" in message_types(orch)
 
 
-class TestVersionFromResult:
-    def test_maps_fields_for_generated(self):
+class TestStateFromResult:
+    def test_maps_current_artifact_fields(self):
         result = ArtifactResult(
             source="src",
             summary="sum",
@@ -821,19 +767,26 @@ class TestVersionFromResult:
             bundled_files={"mtcars.csv": b"mpg\n20\n"},
             bundled_tables=["mtcars"],
         )
-        version = version_from_result(result, [], "generated", context, "bundle-1")
-        assert version.source == "src"
-        assert version.summary == "sum"
-        assert version.install_instructions == "pip install x"
-        assert version.run_instructions == "python artifact.py"
-        assert version.kind == "generated"
-        assert version.turns == []
-        assert version.referenced_tables == ["mtcars"]
-        assert version.bundled_tables == ["mtcars"]
-        assert version.bundle_id == "bundle-1"
-        assert version.data_instructions == "Load mtcars.csv"
+        state = state_from_result(
+            result,
+            [],
+            artifact_id="a",
+            artifact_type=resolve_artifact_type("quarto-dashboard", "python"),
+            system_prompt="sys",
+            data_context=context,
+            bundle_id="bundle-1",
+        )
+        assert state.source == "src"
+        assert state.summary == "sum"
+        assert state.install_instructions == "pip install x"
+        assert state.run_instructions == "python artifact.py"
+        assert state.turns == []
+        assert state.referenced_tables == ["mtcars"]
+        assert state.bundled_tables == ["mtcars"]
+        assert state.bundle_id == "bundle-1"
+        assert state.data_instructions == "Load mtcars.csv"
 
-    def test_carries_turns_and_kind_for_revised(self):
+    def test_carries_cumulative_turns(self):
         turns = [chatlas.Turn(role="user", contents="hi")]
         result = ArtifactResult(
             source="src2",
@@ -842,10 +795,17 @@ class TestVersionFromResult:
             referenced_tables=[],
         )
         context = ArtifactDataContext(data_instructions="Use a database.")
-        version = version_from_result(result, turns, "revised", context, None)
-        assert version.kind == "revised"
-        assert version.turns == turns
-        assert version.summary == ""
+        state = state_from_result(
+            result,
+            turns,
+            artifact_id="a",
+            artifact_type=resolve_artifact_type("quarto-dashboard", "python"),
+            system_prompt="sys",
+            data_context=context,
+            bundle_id=None,
+        )
+        assert state.turns == turns
+        assert state.summary == ""
 
 
 class TestGenerate:
@@ -882,9 +842,9 @@ class TestGenerate:
 
         state = orch.store.get("artifact-1")
         assert state is not None
-        assert state.current_version.referenced_tables == ["tips"]
-        assert state.current_version.bundled_tables == ["tips"]
-        assert state.current_version.bundle_id is not None
+        assert state.referenced_tables == ["tips"]
+        assert state.bundled_tables == ["tips"]
+        assert state.bundle_id is not None
         assert source.get_data_calls == 1
 
     def test_stores_resolved_language(self):
@@ -909,7 +869,6 @@ class TestGenerate:
 
         state = orch.store.get("artifact-1")
         assert state is not None
-        assert state.language == "r"
         assert state.artifact_type.language == "r"
 
     def test_no_preference_result_selects_registered_target(self):
@@ -933,7 +892,7 @@ class TestGenerate:
 
         state = orch.store.get("artifact-1")
         assert state is not None
-        assert state.language == "r"
+        assert state.artifact_type.language == "r"
         assert state.artifact_type.file_extension == ".R"
 
     def test_failure_discards_provided_id_and_reraises(self):
@@ -1037,6 +996,7 @@ class TestGenerate:
             "id": orch.view.editor_id,
             "value": "",
             "language": "plain",
+            "download_available": False,
         }
 
 

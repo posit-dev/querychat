@@ -2,11 +2,11 @@
 Non-reactive business logic for the artifact feature.
 
 `ArtifactOrchestrator` owns the artifact store and orchestrates every flow
-(recommend, generate, revise, version navigation, download) by talking
-to the chat client, data source, and Shiny session/chat UI directly. It holds
-no reactive state and knows nothing about `reactive.Value`, effects, or
-`input.*` — that wiring lives in `_artifact_server.py`, which drives these
-methods. Keeping the logic here makes it exercisable with plain fakes.
+(recommend, generate, revise, download) by talking to the chat client, data
+source, and Shiny session/chat UI directly. It holds no reactive state and
+knows nothing about `reactive.Value`, effects, or `input.*` -- that wiring
+lives in `_artifact_server.py`, which drives these methods. Keeping the logic
+here makes it exercisable with plain fakes.
 """
 
 from __future__ import annotations
@@ -43,11 +43,7 @@ from ._artifact_prompt import (
     recommendation_model,
 )
 from ._artifact_readme import build_readme
-from ._artifact_state import (
-    ArtifactState,
-    ArtifactVersion,
-    VersionKind,
-)
+from ._artifact_state import ArtifactState
 from ._artifact_store import ArtifactStore
 from ._artifact_types import (
     ARTIFACT_FORMATS,
@@ -162,17 +158,22 @@ def build_freeform_artifact_type(
     )
 
 
-def version_from_result(
+def state_from_result(
     result: ArtifactResult,
     turns: list[chatlas.Turn],
-    kind: VersionKind,
+    *,
+    artifact_id: str,
+    artifact_type: ArtifactType,
+    system_prompt: str,
     data_context: ArtifactDataContext,
     bundle_id: str | None,
-) -> ArtifactVersion:
-    return ArtifactVersion(
+) -> ArtifactState:
+    return ArtifactState(
+        artifact_id=artifact_id,
+        artifact_type=artifact_type,
+        system_prompt=system_prompt,
         source=result.source,
         turns=turns,
-        kind=kind,
         summary=result.summary,
         install_instructions=result.install_instructions,
         run_instructions=result.run_instructions,
@@ -235,7 +236,7 @@ class ArtifactOrchestrator:
         self.default_type_id = next(iter(ARTIFACT_FORMATS))
 
     def restore_snapshot(self, saved: list[dict]) -> None:
-        """Rebuild the artifact store from persisted version metadata."""
+        """Rebuild the artifact store from persisted artifact metadata."""
         states = [ArtifactState.model_validate(data) for data in saved]
         self.store.replace(states)
 
@@ -369,28 +370,20 @@ class ArtifactOrchestrator:
                     data_context.bundled_files,
                     data_context.data_instructions,
                 ).bundle_id
-            state = ArtifactState(
+            state = state_from_result(
+                generated.result,
+                generated.turns,
                 artifact_id=artifact_id,
                 artifact_type=generated.artifact_type,
-                language=generated.artifact_type.language,
                 system_prompt=plan.system_prompt,
-                versions=[
-                    version_from_result(
-                        generated.result,
-                        generated.turns,
-                        "generated",
-                        data_context,
-                        bundle_id,
-                    )
-                ],
+                data_context=data_context,
+                bundle_id=bundle_id,
             )
             removed_states = self.store.remember(state)
             self._discard_unreferenced_bundles(
-                version.bundle_id
-                for removed_state in removed_states
-                for version in removed_state.versions
+                removed_state.bundle_id for removed_state in removed_states
             )
-            await self.view.show_version(
+            await self.view.show_artifact(
                 state,
                 download_available=self._download_available(state),
             )
@@ -454,37 +447,24 @@ class ArtifactOrchestrator:
             artifact_type=artifact_type,
         )
 
-    async def show_version(self, artifact_id: str | None) -> None:
+    async def show_artifact(self, artifact_id: str | None) -> None:
         state = self.store.get(artifact_id)
         if state is not None:
-            await self.view.show_version(
+            await self.view.show_artifact(
                 state,
                 download_available=self._download_available(state),
             )
-
-    async def step_version(self, artifact_id: str | None, delta: int) -> bool:
-        state = self.store.get(artifact_id)
-        if state is None:
-            return False
-        previous_index = state.current_index
-        state.step(delta)
-        if state.current_index == previous_index:
-            return False
-        await self.view.show_version(
-            state,
-            download_available=self._download_available(state),
-        )
-        return True
 
     async def revise(self, artifact_id: str | None, instructions: str) -> None:
         state = self.store.get(artifact_id)
         if state is None or not instructions:
             return
+        language = state.artifact_type.language
         data_catalog = prepare_artifact_data(
             self.data_sources,
-            language=state.language,
+            language=language,
         )
-        languages = (state.language,) if state.language is not None else None
+        languages = (language,) if language is not None else None
         result_model = artifact_result_model(
             list(self.data_sources),
             languages,
@@ -492,12 +472,12 @@ class ArtifactOrchestrator:
         )
 
         def resolve_type(result: ArtifactResult) -> ArtifactType:
-            if result.language != state.language:
+            if result.language != language:
                 raise ValueError("Revised artifact changed its language.")
             return state.artifact_type
 
         bundle_id: str | None = None
-        version_pushed = False
+        replacement_saved = False
         try:
             generated = await self._stream_validated(
                 prompt=instructions,
@@ -512,33 +492,33 @@ class ArtifactOrchestrator:
                 generated.result.referenced_tables,
             )
             if data_context.bundled_files:
-                bundle_id = self.bundle_store.put(
+                bundle_id = self.bundle_store.stage(
                     data_context.bundled_files,
                     data_context.data_instructions,
                 ).bundle_id
-            removed_versions = state.push_version(
-                version_from_result(
-                    generated.result,
-                    generated.turns,
-                    "revised",
-                    data_context,
-                    bundle_id,
-                )
+            replacement = state_from_result(
+                generated.result,
+                generated.turns,
+                artifact_id=state.artifact_id,
+                artifact_type=state.artifact_type,
+                system_prompt=state.system_prompt,
+                data_context=data_context,
+                bundle_id=bundle_id,
             )
+            await self.view.show_artifact(
+                replacement,
+                download_available=self._download_available(replacement),
+            )
+            removed_states = self.store.remember(replacement)
+            replacement_saved = True
             self._discard_unreferenced_bundles(
-                version.bundle_id for version in removed_versions
+                removed_state.bundle_id for removed_state in removed_states
             )
-            version_pushed = True
-            await self.view.show_version(
-                state,
-                download_available=self._download_available(state),
-            )
+            self.bundle_store.evict()
         except Exception:
-            if not version_pushed:
+            if not replacement_saved:
                 self.bundle_store.discard(bundle_id)
-            # A failed stream may have left a partial rewrite in the editor;
-            # restore the current version before surfacing the error.
-            await self.view.show_version(
+            await self.view.show_artifact(
                 state,
                 download_available=self._download_available(state),
             )
@@ -549,33 +529,30 @@ class ArtifactOrchestrator:
         bundle_ids: Iterable[str | None],
     ) -> None:
         retained = {
-            version.bundle_id
+            state.bundle_id
             for state in self.store.values()
-            for version in state.versions
-            if version.bundle_id is not None
+            if state.bundle_id is not None
         }
         for bundle_id in set(bundle_ids) - retained:
             self.bundle_store.discard(bundle_id)
 
     def _download_available(self, state: ArtifactState) -> bool:
-        version = state.current_version
-        if version.bundle_id is None:
-            return not version.bundled_tables
-        return self.bundle_store.get(version.bundle_id) is not None
+        if state.bundle_id is None:
+            return not state.bundled_tables
+        return self.bundle_store.get(state.bundle_id) is not None
 
     async def build_download(self, artifact_id: str | None) -> bytes | None:
         state = self.store.get(artifact_id)
         if state is None:
             return None
-        version = state.current_version
-        if version.bundle_id is None:
-            if version.bundled_tables:
+        if state.bundle_id is None:
+            if state.bundled_tables:
                 raise ArtifactSnapshotUnavailableError(
                     "This artifact data snapshot is unavailable."
                 )
             bundled_files: dict[str, bytes] = {}
         else:
-            bundle = self.bundle_store.get(version.bundle_id)
+            bundle = self.bundle_store.get(state.bundle_id)
             if bundle is None:
                 raise ArtifactSnapshotUnavailableError(
                     "This artifact data snapshot is unavailable."
@@ -588,7 +565,7 @@ class ArtifactOrchestrator:
             summary=state.summary,
             install_instructions=state.install_instructions,
             run_instructions=state.run_instructions,
-            data_instructions=version.data_instructions,
+            data_instructions=state.data_instructions,
             bundled_files=list(bundled_files),
         )
         return build_artifact_zip(

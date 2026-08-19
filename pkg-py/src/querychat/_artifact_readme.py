@@ -13,6 +13,7 @@ DISCLAIMER = (
 
 
 def build_readme(
+    *,
     artifact_type: ArtifactType,
     source_filename: str,
     summary: str,
@@ -43,7 +44,7 @@ def build_readme(
         if bundled_files:
             data_header = (
                 "Each bundled CSV file is a fixed CSV snapshot captured when this "
-                "artifact version was generated."
+                "artifact was generated."
             )
         else:
             data_header = (

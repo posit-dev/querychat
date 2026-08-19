@@ -558,22 +558,3 @@
   color: var(--bs-secondary-color, #6c757d);
   cursor: help;
 }
-
-/* Hidden until there are 2+ versions (JS adds .show); this also keeps the
-   nav out of view during streaming, before any version label exists. */
-.querychat-artifact-version-nav {
-  display: none;
-  align-items: center;
-  gap: 0.1rem;
-}
-
-.querychat-artifact-version-nav.show {
-  display: flex;
-}
-
-.querychat-artifact-version-label {
-  font-size: 0.8rem;
-  color: var(--bs-secondary-color, #6c757d);
-  white-space: nowrap;
-  padding: 0 0.15rem;
-}

@@ -38,10 +38,7 @@ def test_panel_messages_update_only_the_target_module(page: Page) -> None:
           <div class="querychat-artifact-backdrop"></div>
           <div class="querychat-artifact-panel">
             <span class="querychat-artifact-header-spinner"></span>
-            <div class="querychat-artifact-version-nav"></div>
-            <span class="querychat-artifact-version-label">first</span>
-            <button id="first-artifact_version_prev"></button>
-            <button id="first-artifact_version_next"></button>
+            <bslib-code-editor id="first-artifact_source_editor"></bslib-code-editor>
             <a id="first-artifact_download" title="Download"></a>
           </div>
         </div>
@@ -49,10 +46,7 @@ def test_panel_messages_update_only_the_target_module(page: Page) -> None:
           <div class="querychat-artifact-backdrop"></div>
           <div class="querychat-artifact-panel">
             <span class="querychat-artifact-header-spinner"></span>
-            <div class="querychat-artifact-version-nav"></div>
-            <span class="querychat-artifact-version-label">second</span>
-            <button id="second-artifact_version_prev"></button>
-            <button id="second-artifact_version_next"></button>
+            <bslib-code-editor id="second-artifact_source_editor"></bslib-code-editor>
             <a id="second-artifact_download" title="Download"></a>
           </div>
         </div>
@@ -69,12 +63,11 @@ def test_panel_messages_update_only_the_target_module(page: Page) -> None:
           root_id: "second-artifact_root",
           active: true
         });
-        window.artifactHandlers["querychat-artifact-version-update"]({
+        window.artifactHandlers["querychat-artifact-source-update"]({
           root_id: "second-artifact_root",
-          label: "v2 of 3",
-          total: 3,
-          prev_disabled: false,
-          next_disabled: false,
+          id: "second-artifact_source_editor",
+          value: "print(1)",
+          language: "python",
           download_available: false
         });
         """
@@ -84,12 +77,6 @@ def test_panel_messages_update_only_the_target_module(page: Page) -> None:
     second_panel = page.locator("#second-artifact_root .querychat-artifact-panel")
     expect(first_panel).not_to_have_class("querychat-artifact-panel open streaming")
     expect(second_panel).to_have_class("querychat-artifact-panel open streaming")
-    expect(
-        page.locator("#first-artifact_root .querychat-artifact-version-label")
-    ).to_have_text("first")
-    expect(
-        page.locator("#second-artifact_root .querychat-artifact-version-label")
-    ).to_have_text("v2 of 3")
     expect(page.locator("#first-artifact_download")).to_have_attribute(
         "title",
         "Download",
@@ -185,14 +172,10 @@ def test_recommendation_updates_only_the_target_modal(page: Page) -> None:
     )
 
     expect(
-        page.locator(
-            "#first-artifact_modal_root .querychat-artifact-gallery-item"
-        )
+        page.locator("#first-artifact_modal_root .querychat-artifact-gallery-item")
     ).not_to_have_class("querychat-artifact-gallery-item selected")
     expect(
-        page.locator(
-            "#second-artifact_modal_root .querychat-artifact-gallery-item"
-        )
+        page.locator("#second-artifact_modal_root .querychat-artifact-gallery-item")
     ).to_have_class("querychat-artifact-gallery-item selected")
     expect(page.locator("#first-artifact_directions")).to_have_value("")
     expect(page.locator("#second-artifact_directions")).to_have_value(

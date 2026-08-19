@@ -56,9 +56,7 @@ class TestArtifactAppLoads:
         expect(btn).to_be_attached()
 
     def test_panel_has_revise_textarea(self):
-        textarea = self.page.locator(
-            ".querychat-artifact-revise-drawer textarea"
-        )
+        textarea = self.page.locator(".querychat-artifact-revise-drawer textarea")
         expect(textarea).to_be_attached()
 
     def test_panel_has_revise_button(self):
@@ -127,6 +125,7 @@ class TestArtifactModal(ArtifactModalActions):
             "placeholder",
             re.compile(r"dark theme"),
         )
+
 
 class TestArtifactGalleryWithResults(ArtifactModalActions):
     """Tests the modal gallery after sending a query to populate it."""
@@ -201,7 +200,9 @@ class TestArtifactGalleryWithResults(ArtifactModalActions):
         gallery = self.page.locator(".querychat-artifact-gallery")
         expect(gallery).not_to_have_class(re.compile(r"\bloading\b"), timeout=60000)
 
-        checkbox = self.page.locator(".querychat-artifact-gallery-item .gallery-checkbox").first
+        checkbox = self.page.locator(
+            ".querychat-artifact-gallery-item .gallery-checkbox"
+        ).first
         expect(checkbox).to_be_visible()
 
 
@@ -291,8 +292,8 @@ class TestArtifactGeneration(ArtifactModalActions):
         textarea.fill("Add a comment at the top that says BROWSER_HISTORY.")
         textarea.press("Enter")
 
-        label = self.page.locator(".querychat-artifact-version-label")
-        expect(label).to_contain_text("2 of 2", timeout=120000)
+        editor = self.page.locator(".querychat-artifact-panel-body textarea")
+        expect(editor).to_have_value(re.compile("BROWSER_HISTORY"), timeout=120000)
 
     def test_generate_opens_panel(self):
         self._generate_artifact()
@@ -303,9 +304,7 @@ class TestArtifactGeneration(ArtifactModalActions):
     def test_generate_populates_editor(self):
         self._generate_artifact()
 
-        editor = self.page.locator(
-            ".querychat-artifact-panel-body textarea"
-        )
+        editor = self.page.locator(".querychat-artifact-panel-body textarea")
         expect(editor).to_be_visible(timeout=60000)
         expect(editor).not_to_have_value("", timeout=120000)
 
@@ -360,8 +359,8 @@ class TestArtifactGeneration(ArtifactModalActions):
         expect(pill.first).to_be_visible(timeout=30000)
         pill.first.click()
 
-        label = self.page.locator(".querychat-artifact-version-label")
-        expect(label).to_contain_text("2 of 2", timeout=10000)
+        editor = self.page.locator(".querychat-artifact-panel-body textarea")
+        expect(editor).to_have_value(re.compile("BROWSER_HISTORY"), timeout=10000)
 
 
 class TestArtifactToolRequest(ArtifactModalActions):

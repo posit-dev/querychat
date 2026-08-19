@@ -107,9 +107,8 @@ class TestArtifactBookmarkRestore(ArtifactModalActions):
         textarea.fill("Add a comment at the very top that says HELLO_REVISION.")
         textarea.press("Enter")
 
-        # The revision is complete once a second version exists.
-        label = self.page.locator(".querychat-artifact-version-label")
-        expect(label).to_contain_text("2 of 2", timeout=GEN_TIMEOUT)
+        editor = self.page.locator(".querychat-artifact-panel-body textarea")
+        expect(editor).to_have_value(re.compile("HELLO_REVISION"), timeout=GEN_TIMEOUT)
 
     def test_revision_updates_history_bookmark_and_restores_latest(self) -> None:
         self._generate_artifact()
@@ -169,5 +168,5 @@ class TestArtifactBookmarkRestore(ArtifactModalActions):
         panel = self.page.locator(".querychat-artifact-panel")
         expect(panel).to_have_class(re.compile(r"\bopen\b"), timeout=10_000)
 
-        label = self.page.locator(".querychat-artifact-version-label")
-        expect(label).to_contain_text("2 of 2", timeout=10_000)
+        editor = self.page.locator(".querychat-artifact-panel-body textarea")
+        expect(editor).to_have_value(re.compile("HELLO_REVISION"), timeout=10_000)

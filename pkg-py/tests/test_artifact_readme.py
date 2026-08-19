@@ -8,9 +8,7 @@ def make_readme(**overrides):
         "source_filename": "artifact.py",
         "summary": "A notebook that charts survival by class.",
         "install_instructions": "```bash\npip install marimo pandas altair\n```",
-        "run_instructions": (
-            "Run it with:\n```bash\nmarimo edit artifact.py\n```"
-        ),
+        "run_instructions": ("Run it with:\n```bash\nmarimo edit artifact.py\n```"),
         "data_instructions": "A CSV named titanic.csv is bundled alongside.",
         "bundled_files": ["titanic.csv"],
     }
@@ -28,7 +26,7 @@ class TestBuildReadme:
         out = make_readme()
         assert "marimo edit artifact.py" in out
 
-    def test_uses_version_run_instructions(self):
+    def test_uses_current_run_instructions(self):
         out = make_readme(
             run_instructions="Run it with:\n```bash\nRscript artifact.R\n```"
         )

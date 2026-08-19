@@ -112,9 +112,7 @@ def capture_history_restore(monkeypatch, orchestrator):
     session.bookmark.on_bookmark.side_effect = lambda fn: fn
     session.bookmark.on_restore.side_effect = lambda fn: fn
     shinychat_chat = MagicMock()
-    shinychat_chat.slash_command.side_effect = (
-        lambda *args, **kwargs: lambda fn: fn
-    )
+    shinychat_chat.slash_command.side_effect = lambda *args, **kwargs: lambda fn: fn
     shinychat_chat.history.on_save.side_effect = lambda fn: fn
 
     def register_restore(fn):
@@ -395,64 +393,6 @@ def test_bookmark_revision_falls_back_without_history_hook():
     session.bookmark.assert_awaited_once()
 
 
-def test_changed_version_selection_is_saved(monkeypatch):
-    orch = MagicMock()
-    orch.step_version = AsyncMock(return_value=True)
-    chat = MagicMock()
-    session = MagicMock()
-    save_revision = AsyncMock()
-    monkeypatch.setattr(
-        artifact_server,
-        "save_artifact_revision",
-        save_revision,
-    )
-
-    asyncio.run(
-        artifact_server.step_artifact_version(
-            orch,
-            "a",
-            -1,
-            chat,
-            session,
-            bookmark_mode=True,
-        )
-    )
-
-    orch.step_version.assert_awaited_once_with("a", -1)
-    save_revision.assert_awaited_once_with(
-        chat,
-        session,
-        bookmark_mode=True,
-    )
-
-
-def test_unchanged_version_selection_is_not_saved(monkeypatch):
-    orch = MagicMock()
-    orch.step_version = AsyncMock(return_value=False)
-    chat = MagicMock()
-    session = MagicMock()
-    save_revision = AsyncMock()
-    monkeypatch.setattr(
-        artifact_server,
-        "save_artifact_revision",
-        save_revision,
-    )
-
-    asyncio.run(
-        artifact_server.step_artifact_version(
-            orch,
-            "a",
-            1,
-            chat,
-            session,
-            bookmark_mode=False,
-        )
-    )
-
-    orch.step_version.assert_awaited_once_with("a", 1)
-    save_revision.assert_not_awaited()
-
-
 def test_generated_pill_is_committed_before_history_save(monkeypatch):
     events: list[str] = []
     saved_messages: list[object] = []
@@ -495,8 +435,8 @@ def test_generated_pill_is_committed_before_history_save(monkeypatch):
             MagicMock(),
             "Use a line chart",
             "artifact-id",
-            MagicMock(),
-            MagicMock(),
+            shinychat_chat=MagicMock(),
+            session=MagicMock(),
             bookmark_mode=True,
         )
     )

@@ -15,7 +15,7 @@ MAX_STORED_BUNDLE_BYTES = 25 * 1024 * 1024
 
 
 class ArtifactSnapshotUnavailableError(ValueError):
-    """A version's immutable artifact data snapshot is no longer available."""
+    """An artifact's immutable data snapshot is no longer available."""
 
 
 @dataclass(frozen=True)
@@ -42,6 +42,16 @@ class ArtifactBundleStore:
         bundled_files: Mapping[str, bytes],
         data_instructions: str,
     ) -> ArtifactBundle:
+        bundle = self.stage(bundled_files, data_instructions)
+        self.evict()
+        return bundle
+
+    def stage(
+        self,
+        bundled_files: Mapping[str, bytes],
+        data_instructions: str,
+    ) -> ArtifactBundle:
+        """Insert a bundle without evicting snapshots needed for rollback."""
         files = MappingProxyType(dict(bundled_files))
         bundle = ArtifactBundle(
             bundle_id=uuid4().hex,
@@ -52,7 +62,6 @@ class ArtifactBundleStore:
             raise ValueError("Artifact data snapshot exceeds session storage limit.")
         self._items[bundle.bundle_id] = bundle
         self._total_bytes += bundle.byte_size
-        self.evict()
         return bundle
 
     def get(self, bundle_id: str | None) -> ArtifactBundle | None:

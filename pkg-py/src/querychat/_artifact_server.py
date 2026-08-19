@@ -109,33 +109,11 @@ async def save_artifact_revision(
         await controller.save_current()
         record = controller.record
         on_response_saved = controller.on_response_saved
-        if (
-            bookmark_mode
-            and record is not None
-            and on_response_saved is not None
-        ):
+        if bookmark_mode and record is not None and on_response_saved is not None:
             await on_response_saved(record)
             return
     if bookmark_mode:
         await session.bookmark()
-
-
-async def step_artifact_version(
-    orchestrator: ArtifactOrchestrator,
-    artifact_id: str | None,
-    delta: int,
-    shinychat_chat: shinychat.Chat,
-    session: Session,
-    *,
-    bookmark_mode: bool,
-) -> None:
-    changed = await orchestrator.step_version(artifact_id, delta)
-    if changed:
-        await save_artifact_revision(
-            shinychat_chat,
-            session,
-            bookmark_mode=bookmark_mode,
-        )
 
 
 async def generate_and_save_artifact(
@@ -143,9 +121,9 @@ async def generate_and_save_artifact(
     request: GenerateRequest,
     directions: str,
     artifact_id: str,
+    *,
     shinychat_chat: shinychat.Chat,
     session: Session,
-    *,
     bookmark_mode: bool,
 ) -> None:
     await orchestrator.generate(request, directions, artifact_id)
@@ -243,8 +221,8 @@ def artifact_server(
                 req,
                 directions,
                 artifact_id,
-                shinychat_chat,
-                session,
+                shinychat_chat=shinychat_chat,
+                session=session,
                 bookmark_mode=bookmark_mode,
             )
         except Exception as e:
@@ -263,7 +241,7 @@ def artifact_server(
         artifact_id = input.artifact_open()
         if orch.store.has(artifact_id):
             await set_active_artifact(orch, active_artifact_id, artifact_id)
-            await orch.show_version(artifact_id)
+            await orch.show_artifact(artifact_id)
 
     @reactive.effect
     @reactive.event(input.artifact_revise_text)
@@ -273,30 +251,6 @@ def artifact_server(
         except Exception as e:
             raise NotifyException(str(e)) from e
         await save_artifact_revision(
-            shinychat_chat,
-            session,
-            bookmark_mode=bookmark_mode,
-        )
-
-    @reactive.effect
-    @reactive.event(input.artifact_version_prev)
-    async def on_version_prev():
-        await step_artifact_version(
-            orch,
-            active_artifact_id.get(),
-            -1,
-            shinychat_chat,
-            session,
-            bookmark_mode=bookmark_mode,
-        )
-
-    @reactive.effect
-    @reactive.event(input.artifact_version_next)
-    async def on_version_next():
-        await step_artifact_version(
-            orch,
-            active_artifact_id.get(),
-            1,
             shinychat_chat,
             session,
             bookmark_mode=bookmark_mode,

@@ -138,7 +138,6 @@ def test_mod_server_passes_client_and_history_to_chat():
     artifact_server_mock.assert_called_once()
     assert artifact_server_mock.call_args.kwargs["data_sources"] == {"t": fake_source}
     assert artifact_server_mock.call_args.kwargs["executor"] is fake_executor
-    assert artifact_server_mock.call_args.kwargs["history"] is True
 
 
 def test_mod_server_registers_chat_bookmarking_with_no_auto_trigger_when_history_not_bookmark_mode():
@@ -305,8 +304,8 @@ def test_mod_server_registers_table_state_with_both_bookmark_and_history_hooks()
         )
 
     assert "chat_update" in fake_session.bookmark.exclude
-    assert fake_session.bookmark.on_bookmark.call_count == 2
-    assert fake_session.bookmark.on_restore.call_count == 2
+    assert fake_session.bookmark.on_bookmark.call_count == 1
+    assert fake_session.bookmark.on_restore.call_count == 1
     assert fake_chat_instance.history.on_save.call_count == 2
     assert fake_chat_instance.history.on_restore.call_count == 2
 

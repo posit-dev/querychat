@@ -5,7 +5,6 @@ import uuid
 from typing import TYPE_CHECKING, Any
 
 from shiny.types import NotifyException
-from shinychat.types import HistoryOptions
 
 from shiny import reactive, render, ui
 
@@ -16,7 +15,6 @@ if TYPE_CHECKING:
 
     import chatlas
     import shinychat
-    from shiny.bookmark import BookmarkState, RestoreState
 
     from shiny import Inputs, Session
 
@@ -91,33 +89,8 @@ def finish_artifact_restore_task(
 
 async def save_artifact_revision(
     shinychat_chat: shinychat.Chat,
-    session: Session,
-    *,
-    bookmark_mode: bool,
 ) -> None:
-    """
-    Save a revision that did not append a chat message.
-
-    The private controller can be absent. Its save method updates an existing
-    conversation and does not create a Shiny bookmark. Artifact generation
-    creates the conversation record before a revision can occur.
-    """
-    # Replace these private history hooks with the public shinychat save API
-    # after shinychat provides one.
-    controller = shinychat_chat.history._controller
-    if controller is not None:
-        await controller.save_current()
-        record = controller.record
-        on_response_saved = controller.on_response_saved
-        if (
-            bookmark_mode
-            and record is not None
-            and on_response_saved is not None
-        ):
-            await on_response_saved(record)
-            return
-    if bookmark_mode:
-        await session.bookmark()
+    await shinychat_chat.history.save()
 
 
 async def step_artifact_version(
@@ -125,17 +98,10 @@ async def step_artifact_version(
     artifact_id: str | None,
     delta: int,
     shinychat_chat: shinychat.Chat,
-    session: Session,
-    *,
-    bookmark_mode: bool,
 ) -> None:
     changed = await orchestrator.step_version(artifact_id, delta)
     if changed:
-        await save_artifact_revision(
-            shinychat_chat,
-            session,
-            bookmark_mode=bookmark_mode,
-        )
+        await save_artifact_revision(shinychat_chat)
 
 
 async def generate_and_save_artifact(
@@ -144,16 +110,9 @@ async def generate_and_save_artifact(
     directions: str,
     artifact_id: str,
     shinychat_chat: shinychat.Chat,
-    session: Session,
-    *,
-    bookmark_mode: bool,
 ) -> None:
     await orchestrator.generate(request, directions, artifact_id)
-    await save_artifact_revision(
-        shinychat_chat,
-        session,
-        bookmark_mode=bookmark_mode,
-    )
+    await save_artifact_revision(shinychat_chat)
 
 
 def artifact_server(
@@ -164,7 +123,6 @@ def artifact_server(
     data_sources: dict[str, DataSource],
     executor: QueryExecutor,
     shinychat_chat: shinychat.Chat,
-    history: bool | HistoryOptions,
 ) -> Callable[[], None]:
     orch = ArtifactOrchestrator(
         session,
@@ -175,9 +133,6 @@ def artifact_server(
     )
     active_artifact_id: reactive.Value[str | None] = reactive.Value(None)
     restore_tasks: set[asyncio.Task[None]] = set()
-    bookmark_mode = (
-        isinstance(history, HistoryOptions) and history.restore_mode == "bookmark"
-    )
 
     @reactive.extended_task
     async def recommend_task(items: list[GalleryItem]) -> Recommendation:
@@ -244,8 +199,6 @@ def artifact_server(
                 directions,
                 artifact_id,
                 shinychat_chat,
-                session,
-                bookmark_mode=bookmark_mode,
             )
         except Exception as e:
             if not orch.store.has(artifact_id):
@@ -272,11 +225,7 @@ def artifact_server(
             await orch.revise(active_artifact_id.get(), input.artifact_revise_text())
         except Exception as e:
             raise NotifyException(str(e)) from e
-        await save_artifact_revision(
-            shinychat_chat,
-            session,
-            bookmark_mode=bookmark_mode,
-        )
+        await save_artifact_revision(shinychat_chat)
 
     @reactive.effect
     @reactive.event(input.artifact_version_prev)
@@ -286,8 +235,6 @@ def artifact_server(
             active_artifact_id.get(),
             -1,
             shinychat_chat,
-            session,
-            bookmark_mode=bookmark_mode,
         )
 
     @reactive.effect
@@ -298,8 +245,6 @@ def artifact_server(
             active_artifact_id.get(),
             1,
             shinychat_chat,
-            session,
-            bookmark_mode=bookmark_mode,
         )
 
     @render.download(filename="artifact.zip")
@@ -307,22 +252,6 @@ def artifact_server(
         data = await orch.build_download(active_artifact_id.get())
         if data is not None:
             yield data
-
-    @session.bookmark.on_bookmark
-    def on_artifact_bookmark(state: BookmarkState) -> None:
-        values = build_artifact_snapshot(orch)
-        if values:
-            state.values[ARTIFACTS_BOOKMARK_KEY] = values
-
-    @session.bookmark.on_restore
-    async def on_artifact_restore(state: RestoreState) -> None:
-        panel_close = apply_artifact_snapshot(
-            orch,
-            state.values.get(ARTIFACTS_BOOKMARK_KEY),
-            active_artifact_id,
-        )
-        if panel_close is not None:
-            await panel_close
 
     @shinychat_chat.history.on_save
     def on_artifact_history_save(values: dict[str, Any]) -> None:

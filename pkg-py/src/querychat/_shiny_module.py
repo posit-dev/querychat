@@ -343,7 +343,6 @@ def mod_server(
         data_sources=data_sources,
         executor=executor,
         shinychat_chat=shinychat_chat,
-        history=history,
     )
 
     @reactive.effect

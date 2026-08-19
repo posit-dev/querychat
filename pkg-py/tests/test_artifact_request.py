@@ -2,6 +2,7 @@ import asyncio
 import gc
 from unittest.mock import AsyncMock, MagicMock, call
 
+import pytest
 import querychat._artifact_server as artifact_server
 from querychat._artifact_types import resolve_artifact_type
 from querychat._artifact_view import ArtifactView
@@ -109,12 +110,8 @@ def capture_history_restore(monkeypatch, orchestrator):
     recommend_task = MagicMock()
     recommend_task.status = MagicMock()
     session = MagicMock()
-    session.bookmark.on_bookmark.side_effect = lambda fn: fn
-    session.bookmark.on_restore.side_effect = lambda fn: fn
     shinychat_chat = MagicMock()
-    shinychat_chat.slash_command.side_effect = (
-        lambda *args, **kwargs: lambda fn: fn
-    )
+    shinychat_chat.slash_command.side_effect = lambda *args, **kwargs: lambda fn: fn
     shinychat_chat.history.on_save.side_effect = lambda fn: fn
 
     def register_restore(fn):
@@ -156,7 +153,6 @@ def capture_history_restore(monkeypatch, orchestrator):
         data_sources={},
         executor=MagicMock(),
         shinychat_chat=shinychat_chat,
-        history=False,
     )
     return callbacks[0], active_artifact_id
 
@@ -281,125 +277,36 @@ def test_set_active_artifact_closes_panel():
     orch.view.set_panel_open.assert_awaited_once_with(is_open=False)
 
 
-def test_revision_save_uses_history_controller():
-    controller = MagicMock()
-    controller.save_current = AsyncMock()
+def test_artifact_revision_uses_public_history_save():
     chat = MagicMock()
-    chat.history._controller = controller
-    session = MagicMock()
-    session.bookmark = AsyncMock()
+    chat.history.save = AsyncMock(return_value=True)
 
-    asyncio.run(
-        artifact_server.save_artifact_revision(
-            chat,
-            session,
-            bookmark_mode=False,
-        )
-    )
+    asyncio.run(artifact_server.save_artifact_revision(chat))
 
-    controller.save_current.assert_awaited_once()
-    session.bookmark.assert_not_awaited()
+    chat.history.save.assert_awaited_once_with()
 
 
-def test_bookmark_revision_uses_history_hook_after_saving():
-    record = object()
-    events: list[str] = []
-
-    async def save_current() -> None:
-        events.append("save")
-
-    async def on_response_saved(saved_record: object) -> None:
-        assert saved_record is record
-        events.append("bookmark")
-
-    controller = MagicMock()
-    controller.record = record
-    controller.save_current = save_current
-    controller.on_response_saved = on_response_saved
+def test_artifact_revision_propagates_history_save_error():
     chat = MagicMock()
-    chat.history._controller = controller
-    session = MagicMock()
-    session.bookmark = AsyncMock()
+    chat.history.save = AsyncMock(side_effect=OSError("disk full"))
 
-    asyncio.run(
-        artifact_server.save_artifact_revision(
-            chat,
-            session,
-            bookmark_mode=True,
-        )
-    )
-
-    assert events == ["save", "bookmark"]
-    session.bookmark.assert_not_awaited()
+    with pytest.raises(OSError, match="disk full"):
+        asyncio.run(artifact_server.save_artifact_revision(chat))
 
 
-def test_revision_save_bookmarks_without_history_controller():
+def test_artifact_revision_does_not_fallback_when_history_save_returns_false():
     chat = MagicMock()
-    chat.history._controller = None
-    session = MagicMock()
-    session.bookmark = AsyncMock()
+    chat.history.save = AsyncMock(return_value=False)
 
-    asyncio.run(
-        artifact_server.save_artifact_revision(
-            chat,
-            session,
-            bookmark_mode=True,
-        )
-    )
+    asyncio.run(artifact_server.save_artifact_revision(chat))
 
-    session.bookmark.assert_awaited_once()
-
-
-def test_bookmark_revision_falls_back_without_active_record():
-    controller = MagicMock()
-    controller.record = None
-    controller.save_current = AsyncMock()
-    controller.on_response_saved = AsyncMock()
-    chat = MagicMock()
-    chat.history._controller = controller
-    session = MagicMock()
-    session.bookmark = AsyncMock()
-
-    asyncio.run(
-        artifact_server.save_artifact_revision(
-            chat,
-            session,
-            bookmark_mode=True,
-        )
-    )
-
-    controller.save_current.assert_awaited_once()
-    controller.on_response_saved.assert_not_awaited()
-    session.bookmark.assert_awaited_once()
-
-
-def test_bookmark_revision_falls_back_without_history_hook():
-    controller = MagicMock()
-    controller.record = object()
-    controller.save_current = AsyncMock()
-    controller.on_response_saved = None
-    chat = MagicMock()
-    chat.history._controller = controller
-    session = MagicMock()
-    session.bookmark = AsyncMock()
-
-    asyncio.run(
-        artifact_server.save_artifact_revision(
-            chat,
-            session,
-            bookmark_mode=True,
-        )
-    )
-
-    controller.save_current.assert_awaited_once()
-    session.bookmark.assert_awaited_once()
+    chat.history.save.assert_awaited_once_with()
 
 
 def test_changed_version_selection_is_saved(monkeypatch):
     orch = MagicMock()
     orch.step_version = AsyncMock(return_value=True)
     chat = MagicMock()
-    session = MagicMock()
     save_revision = AsyncMock()
     monkeypatch.setattr(
         artifact_server,
@@ -413,24 +320,17 @@ def test_changed_version_selection_is_saved(monkeypatch):
             "a",
             -1,
             chat,
-            session,
-            bookmark_mode=True,
         )
     )
 
     orch.step_version.assert_awaited_once_with("a", -1)
-    save_revision.assert_awaited_once_with(
-        chat,
-        session,
-        bookmark_mode=True,
-    )
+    save_revision.assert_awaited_once_with(chat)
 
 
 def test_unchanged_version_selection_is_not_saved(monkeypatch):
     orch = MagicMock()
     orch.step_version = AsyncMock(return_value=False)
     chat = MagicMock()
-    session = MagicMock()
     save_revision = AsyncMock()
     monkeypatch.setattr(
         artifact_server,
@@ -444,8 +344,6 @@ def test_unchanged_version_selection_is_not_saved(monkeypatch):
             "a",
             1,
             chat,
-            session,
-            bookmark_mode=False,
         )
     )
 
@@ -478,7 +376,7 @@ def test_generated_pill_is_committed_before_history_save(monkeypatch):
         )
         events.append("pill")
 
-    async def save_revision(chat, session, *, bookmark_mode):
+    async def save_revision(chat):
         saved_messages.extend(chat_ui.messages)
         events.append("history")
 
@@ -496,8 +394,6 @@ def test_generated_pill_is_committed_before_history_save(monkeypatch):
             "Use a line chart",
             "artifact-id",
             MagicMock(),
-            MagicMock(),
-            bookmark_mode=True,
         )
     )
 

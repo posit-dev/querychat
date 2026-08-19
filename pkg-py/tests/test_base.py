@@ -252,6 +252,30 @@ class TestQueryChatBase:
         )
         assert isinstance(client, chatlas.Chat)
 
+    def test_public_client_does_not_register_artifact_tool(self, sample_df):
+        qc = QueryChatBase(sample_df, "test_table")
+
+        for client in (qc.client(tools="query"), qc.client(tools=None)):
+            names = [tool.name for tool in client.get_tools()]
+            assert "querychat_request_artifact" not in names
+
+    def test_private_session_client_registers_artifact_callback(self, sample_df):
+        qc = QueryChatBase(sample_df, "test_table")
+        called: list[bool] = []
+
+        client = qc._create_session_client(
+            tools=None,
+            request_artifact=lambda: called.append(True),
+        )
+        tool = next(
+            tool
+            for tool in client.get_tools()
+            if tool.name == "querychat_request_artifact"
+        )
+        tool.func()
+
+        assert called == [True]
+
     def test_cleanup(self, sample_df):
         qc = QueryChatBase(sample_df, "test_table")
         qc.cleanup()

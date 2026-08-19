@@ -25,6 +25,10 @@ const jsTargets = [
     output: "../pkg-r/inst/htmldep/viz.js",
   },
   {
+    source: "src/artifact.ts",
+    output: "../pkg-py/src/querychat/static/js/artifact.js",
+  },
+  {
     source: "src/schema-display.js",
     output: "../pkg-py/src/querychat/static/js/schema-display.js",
   },
@@ -43,6 +47,21 @@ const cssTargets = [
     source: "src/viz.css",
     output: "../pkg-r/inst/htmldep/viz.css",
   },
+  {
+    source: "src/artifact.css",
+    output: "../pkg-py/src/querychat/static/css/artifact.css",
+  },
+];
+
+const rawTargets = [
+  {
+    source: "../shared/artifact-formats.yml",
+    output: "../pkg-py/src/querychat/artifact-formats.yml",
+  },
+  {
+    source: "../shared/artifact-formats.yml",
+    output: "../pkg-r/inst/artifact-formats.yml",
+  },
 ];
 
 const ensureParentDir = async (relativePath) => {
@@ -51,7 +70,7 @@ const ensureParentDir = async (relativePath) => {
   return absolutePath;
 };
 
-export const assetTargets = [...cssTargets, ...jsTargets];
+export const assetTargets = [...cssTargets, ...jsTargets, ...rawTargets];
 
 export const resolveOutputPath = (baseDir, relativePath) =>
   path.resolve(baseDir, path.relative(repoDir, path.resolve(rootDir, relativePath)));
@@ -65,10 +84,11 @@ const findMissingSources = async (targets) => {
   const missingSources = [];
 
   for (const source of uniqueSources(targets)) {
+    const sourcePath = path.resolve(rootDir, source);
     try {
-      await access(path.resolve(rootDir, source));
+      await access(sourcePath);
     } catch {
-      missingSources.push(`js/${source}`);
+      missingSources.push(path.relative(repoDir, sourcePath));
     }
   }
 
@@ -78,8 +98,13 @@ const findMissingSources = async (targets) => {
 const reportMissingSources = async () => {
   const missingCssSources = await findMissingSources(cssTargets);
   const missingJsSources = await findMissingSources(jsTargets);
+  const missingRawSources = await findMissingSources(rawTargets);
 
-  if (missingCssSources.length === 0 && missingJsSources.length === 0) {
+  if (
+    missingCssSources.length === 0 &&
+    missingJsSources.length === 0 &&
+    missingRawSources.length === 0
+  ) {
     return;
   }
 
@@ -91,6 +116,10 @@ const reportMissingSources = async () => {
 
   if (missingJsSources.length > 0) {
     messages.push(`Missing JS source files:\n- ${missingJsSources.join("\n- ")}`);
+  }
+
+  if (missingRawSources.length > 0) {
+    messages.push(`Missing raw source files:\n- ${missingRawSources.join("\n- ")}`);
   }
 
   throw new Error(messages.join("\n\n"));
@@ -120,6 +149,13 @@ export const stageBuildOutputs = async (stageDir) => {
         js: banner(target.source),
       },
     });
+  }
+
+  for (const target of rawTargets) {
+    const sourcePath = path.resolve(rootDir, target.source);
+    const outputPath = resolveOutputPath(stageDir, target.output);
+    await mkdir(path.dirname(outputPath), { recursive: true });
+    await copyFile(sourcePath, outputPath);
   }
 };
 

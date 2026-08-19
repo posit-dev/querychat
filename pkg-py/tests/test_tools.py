@@ -7,16 +7,20 @@ import narwhals.stable.v1 as nw
 import pandas as pd
 import polars as pl
 import pytest
+from chatlas import ContentToolResult
 from htmltools import TagList
 from querychat._data_dict import ColumnRange, ColumnSpec, DataDict, TableSpec
 from querychat._datasource import DataFrameSource
 from querychat._query_executor import DataSourceExecutor
+from querychat._tool_names import TOOL_REQUEST_ARTIFACT
 from querychat._utils import querychat_tool_starts_open
 from querychat.tools import (
     GetSchemaResult,
     UpdateDashboardData,
     _get_schema_impl,
     _query_impl,
+    _request_artifact_impl,
+    tool_request_artifact,
     tool_reset_dashboard,
 )
 from shinychat import message_content_chunk
@@ -130,6 +134,20 @@ def test_querychat_tool_starts_open_invalid_setting(monkeypatch):
         assert len(w) == 1
         assert "Invalid value" in str(w[0].message)
         assert result is False  # Falls back to default behavior
+
+
+def test_request_artifact_impl_invokes_callback():
+    called = []
+    impl = _request_artifact_impl(lambda: called.append(True))
+    result = impl()
+    assert called == [True]
+    assert isinstance(result, ContentToolResult)
+    assert "artifact" in str(result.value).lower()
+
+
+def test_tool_request_artifact_has_expected_name():
+    tool = tool_request_artifact(lambda: None)
+    assert tool.name == TOOL_REQUEST_ARTIFACT
 
 
 def test_update_dashboard_data_has_table_field():

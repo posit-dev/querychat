@@ -6,6 +6,7 @@ import os
 from unittest.mock import patch
 
 import pytest
+from htmltools import TagList
 
 from shiny import ui
 
@@ -48,6 +49,18 @@ def test_mod_ui_allow_attachments_can_be_overridden():
         assert _fake_chat_ui.last_kwargs.get("allow_attachments") is False
 
 
+def test_mod_ui_scopes_artifact_roots_and_deduplicates_assets():
+    from querychat._shiny_module import mod_ui
+
+    with patch("querychat._shiny_module.shinychat.chat_ui", side_effect=_fake_chat_ui):
+        rendered = TagList(mod_ui("first"), mod_ui("second")).render()
+
+    assert 'id="first-artifact_root"' in rendered["html"]
+    assert 'id="second-artifact_root"' in rendered["html"]
+    dependency_names = [dependency.name for dependency in rendered["dependencies"]]
+    assert dependency_names.count("querychat-artifact") == 1
+
+
 def _unwrap_module_server(decorated):
     """
     Recover the undecorated function wrapped by @module.server.
@@ -84,8 +97,8 @@ def test_mod_server_passes_client_and_history_to_chat():
     fake_executor = MagicMock()
     fake_executor.execute_query.return_value = []
 
-    def client_factory(**kwargs):
-        return MagicMock(spec=["stream_async"])
+    client_factory = MagicMock(return_value=MagicMock(spec=["stream_async"]))
+    artifact_server_mock = MagicMock()
 
     inner_fn = _unwrap_module_server(mod_server)
 
@@ -99,6 +112,11 @@ def test_mod_server_passes_client_and_history_to_chat():
             "querychat._shiny_module.shinychat.Chat", side_effect=fake_chat_constructor
         ),
         patch("querychat._shiny_module.has_viz_tool", return_value=False),
+        patch(
+            "querychat._shiny_module.artifact_server",
+            artifact_server_mock,
+            create=True,
+        ),
     ):
         inner_fn(
             fake_input,
@@ -116,6 +134,11 @@ def test_mod_server_passes_client_and_history_to_chat():
     assert captured.get("client") is not None, "client= should be passed to Chat"
     assert captured.get("history") is True, "history= should be forwarded verbatim"
     assert callable(captured.get("greeting")), "greeting= should be a callable"
+    assert callable(client_factory.call_args.kwargs["request_artifact"])
+    artifact_server_mock.assert_called_once()
+    assert artifact_server_mock.call_args.kwargs["data_sources"] == {"t": fake_source}
+    assert artifact_server_mock.call_args.kwargs["executor"] is fake_executor
+    assert artifact_server_mock.call_args.kwargs["history"] is True
 
 
 def test_mod_server_registers_chat_bookmarking_with_no_auto_trigger_when_history_not_bookmark_mode():
@@ -282,10 +305,10 @@ def test_mod_server_registers_table_state_with_both_bookmark_and_history_hooks()
         )
 
     assert "chat_update" in fake_session.bookmark.exclude
-    fake_session.bookmark.on_bookmark.assert_called_once()
-    fake_session.bookmark.on_restore.assert_called_once()
-    fake_chat_instance.history.on_save.assert_called_once()
-    fake_chat_instance.history.on_restore.assert_called_once()
+    assert fake_session.bookmark.on_bookmark.call_count == 2
+    assert fake_session.bookmark.on_restore.call_count == 2
+    assert fake_chat_instance.history.on_save.call_count == 2
+    assert fake_chat_instance.history.on_restore.call_count == 2
 
 
 def test_shinychat_chat_contract_used_by_mod_server():

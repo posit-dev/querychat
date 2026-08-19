@@ -1,0 +1,50 @@
+version: 1
+formats:
+  quarto-dashboard:
+    label: Quarto
+    description: A Quarto dashboard
+    icon: grid-1x2-fill
+    targets:
+      python:
+        file_extension: .qmd
+        editor_language: markdown
+        structure: text
+      r:
+        file_extension: .qmd
+        editor_language: markdown
+        structure: text
+  marimo-notebook:
+    label: Marimo
+    description: A marimo reactive notebook
+    icon: journal-code
+    targets:
+      python:
+        file_extension: .py
+        editor_language: python
+        structure: text
+  shiny-app:
+    label: Shiny
+    description: A single-file Shiny application
+    icon: lightning-fill
+    targets:
+      python:
+        file_extension: .py
+        editor_language: python
+        structure: text
+      r:
+        file_extension: .R
+        editor_language: r
+        structure: text
+  jupyter-notebook:
+    label: Jupyter
+    description: A Jupyter notebook
+    icon: file-earmark-code
+    targets:
+      python:
+        file_extension: .ipynb
+        editor_language: json
+        structure: notebook-json
+      r:
+        file_extension: .ipynb
+        editor_language: json
+        structure: notebook-json

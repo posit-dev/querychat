@@ -27,24 +27,6 @@ def artifact_panel_ui() -> TagList:
                         tags.span(class_="querychat-artifact-header-spinner"),
                         class_="querychat-artifact-title",
                     ),
-                    tags.div(
-                        ui.input_action_button(
-                            "artifact_version_prev",
-                            bs_icon("chevron-left"),
-                            class_="btn btn-sm querychat-artifact-icon-btn",
-                            title="Previous version",
-                            aria_label="Previous version",
-                        ),
-                        tags.span(class_="querychat-artifact-version-label"),
-                        ui.input_action_button(
-                            "artifact_version_next",
-                            bs_icon("chevron-right"),
-                            class_="btn btn-sm querychat-artifact-icon-btn",
-                            title="Next version",
-                            aria_label="Next version",
-                        ),
-                        class_="querychat-artifact-version-nav",
-                    ),
                     tags.div(class_="querychat-artifact-header-spacer"),
                     tags.button(
                         bs_icon("pencil-square"),

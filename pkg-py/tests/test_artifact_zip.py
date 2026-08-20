@@ -46,7 +46,7 @@ def test_readme_describes_bundled_csv_as_fixed_snapshot():
         bundled_files=["tips.csv"],
     )
 
-    assert "fixed CSV snapshot captured when this artifact version was generated" in readme
+    assert "fixed CSV snapshot captured when this artifact was generated" in readme
 
 
 def test_readme_describes_unbundled_data_as_live_access():

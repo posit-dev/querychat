@@ -305,6 +305,17 @@
       }
       el.value = msg.value;
     }
+    if (msg.download_available !== void 0) {
+      const downloadBtn = root.querySelector(
+        "[id$='artifact_download']"
+      );
+      if (downloadBtn) {
+        downloadBtn.classList.toggle("disabled", !msg.download_available);
+        downloadBtn.setAttribute("aria-disabled", String(!msg.download_available));
+        downloadBtn.tabIndex = msg.download_available ? 0 : -1;
+        downloadBtn.title = msg.download_available ? "Download" : "Download unavailable: data snapshot is no longer available";
+      }
+    }
   }
   function getPanel(root) {
     return root.querySelector(".querychat-artifact-panel");
@@ -314,33 +325,6 @@
     if (!root) return;
     const panel = getPanel(root);
     if (panel) panel.classList.toggle("streaming", msg.active);
-  }
-  function handleVersionUpdate(msg) {
-    const root = getArtifactRoot(msg.root_id);
-    if (!root) return;
-    const panel = getPanel(root);
-    if (!panel) return;
-    const nav = panel.querySelector(".querychat-artifact-version-nav");
-    if (nav) nav.classList.toggle("show", msg.total > 1);
-    const labelEl = panel.querySelector(".querychat-artifact-version-label");
-    if (labelEl) labelEl.textContent = msg.label;
-    const prevBtn = panel.querySelector(
-      "[id$='artifact_version_prev']"
-    );
-    const nextBtn = panel.querySelector(
-      "[id$='artifact_version_next']"
-    );
-    if (prevBtn) prevBtn.disabled = msg.prev_disabled;
-    if (nextBtn) nextBtn.disabled = msg.next_disabled;
-    const downloadBtn = panel.querySelector(
-      "[id$='artifact_download']"
-    );
-    if (downloadBtn) {
-      downloadBtn.classList.toggle("disabled", !msg.download_available);
-      downloadBtn.setAttribute("aria-disabled", String(!msg.download_available));
-      downloadBtn.tabIndex = msg.download_available ? 0 : -1;
-      downloadBtn.title = msg.download_available ? "Download" : "Download unavailable: data snapshot is no longer available";
-    }
   }
   function handlePanelToggle(msg) {
     const root = getArtifactRoot(msg.root_id);
@@ -378,10 +362,6 @@
     shiny.addCustomMessageHandler(
       artifactMessageName("streaming"),
       handleStreaming
-    );
-    shiny.addCustomMessageHandler(
-      artifactMessageName("version-update"),
-      handleVersionUpdate
     );
     shiny.addCustomMessageHandler(
       artifactMessageName("panel-toggle"),

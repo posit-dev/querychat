@@ -303,54 +303,6 @@ def test_artifact_revision_does_not_fallback_when_history_save_returns_false():
     chat.history.save.assert_awaited_once_with()
 
 
-def test_changed_version_selection_is_saved(monkeypatch):
-    orch = MagicMock()
-    orch.step_version = AsyncMock(return_value=True)
-    chat = MagicMock()
-    save_revision = AsyncMock()
-    monkeypatch.setattr(
-        artifact_server,
-        "save_artifact_revision",
-        save_revision,
-    )
-
-    asyncio.run(
-        artifact_server.step_artifact_version(
-            orch,
-            "a",
-            -1,
-            chat,
-        )
-    )
-
-    orch.step_version.assert_awaited_once_with("a", -1)
-    save_revision.assert_awaited_once_with(chat)
-
-
-def test_unchanged_version_selection_is_not_saved(monkeypatch):
-    orch = MagicMock()
-    orch.step_version = AsyncMock(return_value=False)
-    chat = MagicMock()
-    save_revision = AsyncMock()
-    monkeypatch.setattr(
-        artifact_server,
-        "save_artifact_revision",
-        save_revision,
-    )
-
-    asyncio.run(
-        artifact_server.step_artifact_version(
-            orch,
-            "a",
-            1,
-            chat,
-        )
-    )
-
-    orch.step_version.assert_awaited_once_with("a", 1)
-    save_revision.assert_not_awaited()
-
-
 def test_generated_pill_is_committed_before_history_save(monkeypatch):
     events: list[str] = []
     saved_messages: list[object] = []
@@ -393,7 +345,7 @@ def test_generated_pill_is_committed_before_history_save(monkeypatch):
             MagicMock(),
             "Use a line chart",
             "artifact-id",
-            MagicMock(),
+            shinychat_chat=MagicMock(),
         )
     )
 

@@ -11,7 +11,6 @@ ArtifactMessageAction = Literal[
     "recommend-error",
     "source-update",
     "streaming",
-    "version-update",
     "panel-toggle",
 ]
 
@@ -20,7 +19,6 @@ ARTIFACT_MESSAGE_ACTIONS: tuple[ArtifactMessageAction, ...] = (
     "recommend-error",
     "source-update",
     "streaming",
-    "version-update",
     "panel-toggle",
 )
 MESSAGE_PREFIX = "querychat-artifact-"
@@ -63,22 +61,13 @@ class SourceUpdateMessage(ArtifactMessage):
     id: str
     value: str
     language: str | None = None
+    download_available: bool | None = None
 
 
 class StreamingMessage(ArtifactMessage):
     action: ClassVar[ArtifactMessageAction] = "streaming"
 
     active: bool
-
-
-class VersionUpdateMessage(ArtifactMessage):
-    action: ClassVar[ArtifactMessageAction] = "version-update"
-
-    label: str
-    total: int
-    prev_disabled: bool
-    next_disabled: bool
-    download_available: bool
 
 
 class PanelToggleMessage(ArtifactMessage):

@@ -5,7 +5,7 @@ Server→client output for the artifact feature.
 `querychat-artifact-*` custom messages (the wire contract with
 `static/js/artifact.js`), the wizard modal, and the chat pill. It wraps the
 Shiny `Session` and chat UI plus the namespaced ids the messages target, so
-callers express intent (`view.show_version(state)`, `view.append_pill(...)`)
+callers express intent (`view.show_artifact(state)`, `view.append_pill(...)`)
 rather than touching `shiny`/`shinychat` directly. It holds no reactive state.
 """
 
@@ -24,7 +24,6 @@ from ._artifact_protocol import (
     RecommendationMessage,
     SourceUpdateMessage,
     StreamingMessage,
-    VersionUpdateMessage,
 )
 
 if TYPE_CHECKING:
@@ -55,9 +54,7 @@ class ArtifactView:
         )
 
     async def set_panel_open(self, *, is_open: bool) -> None:
-        await self._send(
-            PanelToggleMessage(root_id=self.panel_root_id, open=is_open)
-        )
+        await self._send(PanelToggleMessage(root_id=self.panel_root_id, open=is_open))
 
     async def clear_editor(self, language: str) -> None:
         await self._send(
@@ -66,6 +63,7 @@ class ArtifactView:
                 id=self.editor_id,
                 value="",
                 language=language,
+                download_available=False,
             )
         )
 
@@ -79,11 +77,9 @@ class ArtifactView:
         )
 
     async def set_streaming(self, *, active: bool) -> None:
-        await self._send(
-            StreamingMessage(root_id=self.panel_root_id, active=active)
-        )
+        await self._send(StreamingMessage(root_id=self.panel_root_id, active=active))
 
-    async def show_version(
+    async def show_artifact(
         self,
         state: ArtifactState,
         *,
@@ -95,15 +91,6 @@ class ArtifactView:
                 id=self.editor_id,
                 value=state.source,
                 language=state.artifact_type.editor_language,
-            )
-        )
-        await self._send(
-            VersionUpdateMessage(
-                root_id=self.panel_root_id,
-                label=f"v{state.current_index + 1} of {state.total}",
-                total=state.total,
-                prev_disabled=state.current_index == 0,
-                next_disabled=state.current_index >= state.total - 1,
                 download_available=download_available,
             )
         )

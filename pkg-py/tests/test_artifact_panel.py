@@ -52,15 +52,13 @@ class TestArtifactPanelUi:
         assert len(artifact_dependencies) == 1
         dependency = artifact_dependencies[0]
         assert dependency.script == [{"src": "js/artifact.js"}]
-        assert [item["href"] for item in dependency.stylesheet] == [
-            "css/artifact.css"
-        ]
+        assert [item["href"] for item in dependency.stylesheet] == ["css/artifact.css"]
 
-    def test_has_version_controls(self):
+    def test_omits_version_navigation(self):
         markup = str(artifact_panel_ui())
-        assert "artifact_version_prev" in markup
-        assert "artifact_version_next" in markup
-        assert "querychat-artifact-version-label" in markup
+        assert "artifact_version_prev" not in markup
+        assert "artifact_version_next" not in markup
+        assert "querychat-artifact-version-label" not in markup
 
     def test_has_download_and_close(self):
         markup = str(artifact_panel_ui())

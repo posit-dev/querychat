@@ -93,22 +93,12 @@ async def save_artifact_revision(
     await shinychat_chat.history.save()
 
 
-async def step_artifact_version(
-    orchestrator: ArtifactOrchestrator,
-    artifact_id: str | None,
-    delta: int,
-    shinychat_chat: shinychat.Chat,
-) -> None:
-    changed = await orchestrator.step_version(artifact_id, delta)
-    if changed:
-        await save_artifact_revision(shinychat_chat)
-
-
 async def generate_and_save_artifact(
     orchestrator: ArtifactOrchestrator,
     request: GenerateRequest,
     directions: str,
     artifact_id: str,
+    *,
     shinychat_chat: shinychat.Chat,
 ) -> None:
     await orchestrator.generate(request, directions, artifact_id)
@@ -198,7 +188,7 @@ def artifact_server(
                 req,
                 directions,
                 artifact_id,
-                shinychat_chat,
+                shinychat_chat=shinychat_chat,
             )
         except Exception as e:
             if not orch.store.has(artifact_id):
@@ -216,7 +206,7 @@ def artifact_server(
         artifact_id = input.artifact_open()
         if orch.store.has(artifact_id):
             await set_active_artifact(orch, active_artifact_id, artifact_id)
-            await orch.show_version(artifact_id)
+            await orch.show_artifact(artifact_id)
 
     @reactive.effect
     @reactive.event(input.artifact_revise_text)
@@ -226,26 +216,6 @@ def artifact_server(
         except Exception as e:
             raise NotifyException(str(e)) from e
         await save_artifact_revision(shinychat_chat)
-
-    @reactive.effect
-    @reactive.event(input.artifact_version_prev)
-    async def on_version_prev():
-        await step_artifact_version(
-            orch,
-            active_artifact_id.get(),
-            -1,
-            shinychat_chat,
-        )
-
-    @reactive.effect
-    @reactive.event(input.artifact_version_next)
-    async def on_version_next():
-        await step_artifact_version(
-            orch,
-            active_artifact_id.get(),
-            1,
-            shinychat_chat,
-        )
 
     @render.download(filename="artifact.zip")
     async def artifact_download():

@@ -8,6 +8,7 @@ from querychat._artifact_protocol import (
     ARTIFACT_MESSAGE_ACTIONS,
     SourceUpdateMessage,
 )
+from querychat._artifact_state import ArtifactState
 from querychat._artifact_types import resolve_artifact_type
 from querychat._artifact_view import ArtifactView
 
@@ -89,6 +90,31 @@ class TestUpdateSource:
                     "root_id": view.panel_root_id,
                     "id": view.editor_id,
                     "value": "print(1)",
+                },
+            ),
+        ]
+
+    def test_show_artifact_sends_current_source_and_download_state(self):
+        view = make_view()
+        artifact_type = resolve_artifact_type("quarto-dashboard", "python")
+        state = ArtifactState(
+            artifact_id="a",
+            artifact_type=artifact_type,
+            system_prompt="sys",
+            source="print(1)",
+        )
+
+        asyncio.run(view.show_artifact(state, download_available=False))
+
+        assert view.session.messages == [
+            (
+                "querychat-artifact-source-update",
+                {
+                    "root_id": view.panel_root_id,
+                    "id": view.editor_id,
+                    "value": "print(1)",
+                    "language": artifact_type.editor_language,
+                    "download_available": False,
                 },
             ),
         ]

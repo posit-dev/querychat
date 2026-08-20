@@ -1,7 +1,7 @@
 // Browser runtime for the artifact feature: the Create Artifact modal
 // (gallery selection, format/language pills, freeform input, Generate) and the
-// side panel (revise drawer, streaming source editor, version nav, download,
-// backdrop dismiss). All DOM and Shiny wiring is registered by
+// side panel (revise drawer, streaming source editor, download, backdrop
+// dismiss). All DOM and Shiny wiring is registered by
 // `installArtifact`; the entry point (`artifact.ts`) calls it once Shiny is
 // available.
 
@@ -20,7 +20,6 @@ const artifactMessageActions = [
   "recommend-error",
   "source-update",
   "streaming",
-  "version-update",
   "panel-toggle",
 ] as const;
 
@@ -45,18 +44,11 @@ type SourceUpdateMessage = ArtifactMessage & {
   id: string;
   value: string;
   language?: string;
+  download_available?: boolean;
 };
 
 type StreamingMessage = ArtifactMessage & {
   active: boolean;
-};
-
-type VersionUpdateMessage = ArtifactMessage & {
-  label: string;
-  total: number;
-  prev_disabled: boolean;
-  next_disabled: boolean;
-  download_available: boolean;
 };
 
 type PanelToggleMessage = ArtifactMessage & {
@@ -453,6 +445,19 @@ function handleSourceUpdate(msg: SourceUpdateMessage): void {
     }
     el.value = msg.value;
   }
+  if (msg.download_available !== undefined) {
+    const downloadBtn = root.querySelector(
+      "[id$='artifact_download']",
+    ) as HTMLAnchorElement | null;
+    if (downloadBtn) {
+      downloadBtn.classList.toggle("disabled", !msg.download_available);
+      downloadBtn.setAttribute("aria-disabled", String(!msg.download_available));
+      downloadBtn.tabIndex = msg.download_available ? 0 : -1;
+      downloadBtn.title = msg.download_available
+        ? "Download"
+        : "Download unavailable: data snapshot is no longer available";
+    }
+  }
 }
 
 function getPanel(root: HTMLElement): Element | null {
@@ -465,42 +470,6 @@ function handleStreaming(msg: StreamingMessage): void {
   if (!root) return;
   const panel = getPanel(root);
   if (panel) panel.classList.toggle("streaming", msg.active);
-}
-
-// Version state — toggle the nav (only shown with 2+ versions), update the
-// stepper label and prev/next disabled state.
-function handleVersionUpdate(msg: VersionUpdateMessage): void {
-  const root = getArtifactRoot(msg.root_id);
-  if (!root) return;
-  const panel = getPanel(root);
-  if (!panel) return;
-
-  const nav = panel.querySelector(".querychat-artifact-version-nav");
-  if (nav) nav.classList.toggle("show", msg.total > 1);
-
-  const labelEl = panel.querySelector(".querychat-artifact-version-label");
-  if (labelEl) labelEl.textContent = msg.label;
-
-  const prevBtn = panel.querySelector(
-    "[id$='artifact_version_prev']",
-  ) as HTMLButtonElement | null;
-  const nextBtn = panel.querySelector(
-    "[id$='artifact_version_next']",
-  ) as HTMLButtonElement | null;
-  if (prevBtn) prevBtn.disabled = msg.prev_disabled;
-  if (nextBtn) nextBtn.disabled = msg.next_disabled;
-
-  const downloadBtn = panel.querySelector(
-    "[id$='artifact_download']",
-  ) as HTMLAnchorElement | null;
-  if (downloadBtn) {
-    downloadBtn.classList.toggle("disabled", !msg.download_available);
-    downloadBtn.setAttribute("aria-disabled", String(!msg.download_available));
-    downloadBtn.tabIndex = msg.download_available ? 0 : -1;
-    downloadBtn.title = msg.download_available
-      ? "Download"
-      : "Download unavailable: data snapshot is no longer available";
-  }
 }
 
 // Panel toggle message handler — adds/removes .open class on panel + backdrop
@@ -545,10 +514,6 @@ export function installArtifact(shiny: ShinyApi): void {
   shiny.addCustomMessageHandler<StreamingMessage>(
     artifactMessageName("streaming"),
     handleStreaming,
-  );
-  shiny.addCustomMessageHandler<VersionUpdateMessage>(
-    artifactMessageName("version-update"),
-    handleVersionUpdate,
   );
   shiny.addCustomMessageHandler<PanelToggleMessage>(
     artifactMessageName("panel-toggle"),

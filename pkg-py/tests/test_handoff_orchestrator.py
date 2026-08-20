@@ -12,7 +12,11 @@ import querychat._handoff_view as view_mod
 from pydantic import ValidationError
 from querychat._datasource import DataFrameSource
 from querychat._handoff_bundle_store import HandoffSnapshotUnavailableError
-from querychat._handoff_data import HandoffDataContext, HandoffDataError
+from querychat._handoff_data import (
+    HandoffDataContext,
+    HandoffDataError,
+    materialize_handoff_data,
+)
 from querychat._handoff_orchestrator import (
     GenerateRequest,
     HandoffOrchestrator,
@@ -21,7 +25,7 @@ from querychat._handoff_orchestrator import (
 )
 from querychat._handoff_prompt import FreeformMetadata, HandoffResult
 from querychat._handoff_state import HandoffState
-from querychat._handoff_types import HandoffLanguage, resolve_handoff_type
+from querychat._handoff_types import HandoffLanguage, HandoffType, resolve_handoff_type
 from querychat._handoff_validation import HandoffValidationError
 from querychat.data import tips
 
@@ -901,6 +905,80 @@ class TestGenerate:
             asyncio.run(orch.generate(req, "", "myid"))
 
         assert not orch.store.has("myid")
+
+    def test_failed_generation_preserves_existing_download_when_bundle_store_is_full(
+        self,
+        monkeypatch,
+    ):
+        source = RecordingDataFrameSource("tips")
+        chat = FakeChat([result_chunk("new", referenced_tables=["tips"])])
+        orch = make_session(chat, data_sources={"tips": source})
+        req = GenerateRequest(type_id="quarto-dashboard", language="python")
+        plan = asyncio.run(orch.prepare_generation(req, ""))
+        new_data = materialize_handoff_data(
+            plan.data_catalog,
+            orch.data_sources,
+            ["tips"],
+        )
+        new_bundle_size = sum(len(data) for data in new_data.bundled_files.values())
+        old_bundle = orch.bundle_store.put({"old.csv": b"x" * new_bundle_size})
+        old_state = make_state("old")
+        old_state.bundled_tables = ["old"]
+        old_state.bundle_id = old_bundle.bundle_id
+        orch.store.remember(old_state)
+        monkeypatch.setattr(
+            "querychat._handoff_bundle_store.MAX_STORED_BUNDLE_BYTES",
+            new_bundle_size,
+        )
+
+        async def fail_append_pill(
+            handoff_id: str,
+            handoff_type: HandoffType,
+            summary: str,
+        ) -> None:
+            raise RuntimeError("client disconnected")
+
+        monkeypatch.setattr(orch.view, "append_pill", fail_append_pill)
+
+        with pytest.raises(RuntimeError, match="client disconnected"):
+            asyncio.run(orch.generate(req, "", "new"))
+
+        assert orch.store.get("old") is old_state
+        assert orch.bundle_store.get(old_bundle.bundle_id) is old_bundle
+        archive = asyncio.run(orch.build_download("old"))
+        assert archive is not None
+        with zipfile.ZipFile(io.BytesIO(archive)) as zf:
+            assert zf.read("old.csv") == b"x" * new_bundle_size
+
+    def test_successful_generation_enforces_bundle_byte_limit(self, monkeypatch):
+        source = RecordingDataFrameSource("tips")
+        chat = FakeChat([result_chunk("new", referenced_tables=["tips"])])
+        orch = make_session(chat, data_sources={"tips": source})
+        req = GenerateRequest(type_id="quarto-dashboard", language="python")
+        plan = asyncio.run(orch.prepare_generation(req, ""))
+        new_data = materialize_handoff_data(
+            plan.data_catalog,
+            orch.data_sources,
+            ["tips"],
+        )
+        new_bundle_size = sum(len(data) for data in new_data.bundled_files.values())
+        old_bundle = orch.bundle_store.put({"old.csv": b"x" * new_bundle_size})
+        old_state = make_state("old")
+        old_state.bundled_tables = ["old"]
+        old_state.bundle_id = old_bundle.bundle_id
+        orch.store.remember(old_state)
+        monkeypatch.setattr(
+            "querychat._handoff_bundle_store.MAX_STORED_BUNDLE_BYTES",
+            new_bundle_size,
+        )
+
+        asyncio.run(orch.generate(req, "", "new"))
+
+        assert orch.store.get("old") is old_state
+        assert orch.bundle_store.get(old_bundle.bundle_id) is None
+        new_state = orch.store.get("new")
+        assert new_state is not None
+        assert orch.bundle_store.get(new_state.bundle_id) is not None
 
     def test_generation_repairs_invalid_notebook_once(self):
         chat = FakeChat(

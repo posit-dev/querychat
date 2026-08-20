@@ -338,7 +338,7 @@ class HandoffOrchestrator:
                 generated.result.referenced_tables,
             )
             if data_context.bundled_files:
-                bundle_id = self.bundle_store.put(
+                bundle_id = self.bundle_store.stage(
                     data_context.bundled_files,
                 ).bundle_id
             state = state_from_result(
@@ -350,10 +350,6 @@ class HandoffOrchestrator:
                 data_context=data_context,
                 bundle_id=bundle_id,
             )
-            removed_states = self.store.remember(state)
-            self._discard_unreferenced_bundles(
-                removed_state.bundle_id for removed_state in removed_states
-            )
             await self.view.show_handoff(
                 state,
                 download_available=self._download_available(state),
@@ -363,8 +359,12 @@ class HandoffOrchestrator:
                 generated.handoff_type,
                 generated.result.summary,
             )
+            removed_states = self.store.remember(state)
+            self._discard_unreferenced_bundles(
+                removed_state.bundle_id for removed_state in removed_states
+            )
+            self.bundle_store.evict()
         except Exception:
-            self.store.discard(handoff_id)
             self.bundle_store.discard(bundle_id)
             await self.view.clear_editor("plain")
             raise

@@ -980,6 +980,83 @@ class TestGenerate:
         assert new_state is not None
         assert orch.bundle_store.get(new_state.bundle_id) is not None
 
+    def test_generation_does_not_enable_download_before_handoff_is_committed(
+        self,
+        monkeypatch,
+    ):
+        source = RecordingDataFrameSource("tips")
+        chat = FakeChat([result_chunk("new", referenced_tables=["tips"])])
+        orch = make_session(chat, data_sources={"tips": source})
+        req = GenerateRequest(type_id="quarto-dashboard", language="python")
+
+        async def exercise_generation() -> None:
+            append_started = asyncio.Event()
+            allow_append = asyncio.Event()
+
+            async def pause_append_pill(
+                handoff_id: str,
+                handoff_type: HandoffType,
+                summary: str,
+            ) -> None:
+                append_started.set()
+                await allow_append.wait()
+
+            monkeypatch.setattr(orch.view, "append_pill", pause_append_pill)
+            task = asyncio.create_task(orch.generate(req, "", "new"))
+            await append_started.wait()
+            source_updates = [
+                payload
+                for message_type, payload in orch.view.session.messages
+                if message_type == "querychat-handoff-source-update"
+                and payload["value"] == "new"
+            ]
+            try:
+                assert source_updates[-1]["download_available"] is False
+                assert await orch.build_download("new") is None
+            finally:
+                allow_append.set()
+                await task
+
+        asyncio.run(exercise_generation())
+
+        source_updates = [
+            payload
+            for message_type, payload in orch.view.session.messages
+            if message_type == "querychat-handoff-source-update"
+            and payload["value"] == "new"
+        ]
+        assert source_updates[-1]["download_available"] is True
+        assert asyncio.run(orch.build_download("new")) is not None
+
+    def test_post_commit_download_ui_failure_preserves_generated_handoff(
+        self,
+        monkeypatch,
+    ):
+        source = RecordingDataFrameSource("tips")
+        chat = FakeChat([result_chunk("new", referenced_tables=["tips"])])
+        orch = make_session(chat, data_sources={"tips": source})
+        req = GenerateRequest(type_id="quarto-dashboard", language="python")
+        show_handoff = orch.view.show_handoff
+
+        async def fail_download_enablement(
+            state: HandoffState,
+            *,
+            download_available: bool,
+        ) -> None:
+            if download_available:
+                raise RuntimeError("client disconnected")
+            await show_handoff(state, download_available=download_available)
+
+        monkeypatch.setattr(orch.view, "show_handoff", fail_download_enablement)
+
+        with pytest.raises(RuntimeError, match="client disconnected"):
+            asyncio.run(orch.generate(req, "", "new"))
+
+        state = orch.store.get("new")
+        assert state is not None
+        assert orch.bundle_store.get(state.bundle_id) is not None
+        assert asyncio.run(orch.build_download("new")) is not None
+
     def test_generation_repairs_invalid_notebook_once(self):
         chat = FakeChat(
             streams=[

@@ -324,6 +324,7 @@ class HandoffOrchestrator:
         await self.view.clear_editor(plan.handoff_type.editor_language)
 
         bundle_id: str | None = None
+        committed = False
         try:
             generated = await self._stream_validated(
                 prompt=plan.user_prompt,
@@ -352,7 +353,7 @@ class HandoffOrchestrator:
             )
             await self.view.show_handoff(
                 state,
-                download_available=self._download_available(state),
+                download_available=False,
             )
             await self.view.append_pill(
                 handoff_id,
@@ -360,13 +361,19 @@ class HandoffOrchestrator:
                 generated.result.summary,
             )
             removed_states = self.store.remember(state)
+            committed = True
             self._discard_unreferenced_bundles(
                 removed_state.bundle_id for removed_state in removed_states
             )
             self.bundle_store.evict()
+            await self.view.show_handoff(
+                state,
+                download_available=self._download_available(state),
+            )
         except Exception:
-            self.bundle_store.discard(bundle_id)
-            await self.view.clear_editor("plain")
+            if not committed:
+                self.bundle_store.discard(bundle_id)
+                await self.view.clear_editor("plain")
             raise
 
     async def _stream_validated(

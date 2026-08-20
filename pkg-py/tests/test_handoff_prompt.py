@@ -256,6 +256,47 @@ def test_repair_prompt_includes_error_target_and_resolved_language():
     assert "same registered data tables" in result
 
 
+def test_external_data_repair_prompt_is_self_contained():
+    handoff_type = resolve_handoff_type("jupyter-notebook", "python")
+
+    result = handoff_prompt.build_external_data_repair_system_prompt(
+        handoff_type=handoff_type,
+        schema="Table: tips\nColumns:\n- total_bill DOUBLE",
+        data_instructions="DATA SETUP: load equivalent tips data.",
+        referenced_tables=["tips"],
+    )
+
+    assert "first code cell" in result
+    assert "Table: tips" in result
+    assert "load equivalent tips data" in result
+    assert '["tips"]' in result
+    assert "exact same referenced-table set" in result
+    assert "paths, credentials, or environment variables" in result
+
+
+@pytest.mark.parametrize(
+    ("format_id", "setup_location"),
+    [
+        ("quarto-dashboard", "dedicated DATA SETUP code chunk"),
+        ("shiny-app", "prominent top-level DATA SETUP block"),
+    ],
+)
+def test_external_data_repair_prompt_uses_target_setup_location(
+    format_id: str,
+    setup_location: str,
+):
+    handoff_type = resolve_handoff_type(format_id, "python")
+
+    result = handoff_prompt.build_external_data_repair_system_prompt(
+        handoff_type=handoff_type,
+        schema="Table: tips",
+        data_instructions="Load tips data.",
+        referenced_tables=["tips"],
+    )
+
+    assert setup_location in result
+
+
 class TestBuildRecommendPrompt:
     def test_returns_nonempty_string(self):
         items = [

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
@@ -214,6 +215,31 @@ def build_handoff_repair_prompt(
     )
 
 
+def build_external_data_repair_system_prompt(
+    *,
+    handoff_type: HandoffType,
+    schema: str,
+    data_instructions: str,
+    referenced_tables: list[str],
+) -> str:
+    setup_location = external_data_setup_location(handoff_type)
+    return (
+        "You are correcting a generated handoff because its DataFrame snapshots "
+        "exceed the bundle limit. The preceding conversation contains the complete "
+        "source to revise.\n\n"
+        f"Place all external data import and connection code in a {setup_location}. "
+        "Call it DATA SETUP and make it visually prominent. Clearly state that "
+        "paths, credentials, or environment variables may need adjustment. Never "
+        "invent or hardcode credentials.\n\n"
+        "Keep the exact same referenced-table set: "
+        f"{json.dumps(referenced_tables)}.\n\n"
+        f"Database schema:\n{schema}\n\n"
+        f"Data access requirements:\n{data_instructions}\n\n"
+        f"Return the complete corrected {handoff_type.label} source and structured "
+        "metadata, not a patch or explanation."
+    )
+
+
 def build_recommend_prompt(
     items: list[GalleryItem],
     handoff_formats: dict[str, HandoffFormat],
@@ -240,6 +266,14 @@ def build_recommend_prompt(
     }
 
     return chevron.render(template, context)
+
+
+def external_data_setup_location(handoff_type: HandoffType) -> str:
+    if handoff_type.id in {"jupyter-notebook", "marimo-notebook"}:
+        return "first code cell"
+    if handoff_type.id == "quarto-dashboard":
+        return "dedicated DATA SETUP code chunk"
+    return "prominent top-level DATA SETUP block"
 
 
 def prompts_dir() -> Path:

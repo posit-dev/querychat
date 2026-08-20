@@ -143,6 +143,42 @@ class TestBuildHandoffSystemPrompt:
         )
         assert "SUM(rev)" in result
 
+    def test_preserves_source_fidelity_and_escapes_titles(self):
+        sql = (
+            'SELECT "name", amount\n'
+            "FROM sales\n"
+            "WHERE amount > 10 AND note < 'x' AND tag = 'R&D'"
+        )
+        ggsql = (
+            'SELECT "category", SUM(amount) AS total\n'
+            "FROM sales\n"
+            "WHERE amount >= 10 AND note < 'x&y'\n"
+            "VISUALISE category, total\n"
+            "DRAW bar"
+        )
+        items: list[GalleryItem] = [
+            VizGalleryItem(
+                id="viz-0",
+                title='Revenue <raw> & "quoted"',
+                thumbnail=None,
+                ggsql=ggsql,
+            ),
+            QueryGalleryItem(id="query-0", title="Query", sql=sql),
+        ]
+
+        result = build_handoff_system_prompt(
+            selected_items=items,
+            schema="CREATE TABLE sales (name TEXT, amount INT, note TEXT, tag TEXT)",
+            custom_directions="",
+            format_id="quarto-dashboard",
+            language="python",
+        )
+
+        assert sql in result
+        assert ggsql in result
+        assert "Revenue &lt;raw&gt; &amp; &quot;quoted&quot;" in result
+        assert 'Revenue <raw> & "quoted"' not in result
+
     def test_renders_shared_sections(self):
         items: list[GalleryItem] = [
             VizGalleryItem(id="viz-0", title="Chart", thumbnail=None, ggsql="SELECT 1"),

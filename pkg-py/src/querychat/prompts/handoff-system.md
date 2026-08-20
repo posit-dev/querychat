@@ -82,14 +82,14 @@ The user selected these results from their chat session. Incorporate them into t
 {{#viz_items}}
 ### Visualization: {{title}}
 ```
-{{ggsql}}
+{{{ggsql}}}
 ```
 {{/viz_items}}
 
 {{#query_items}}
 ### Query: {{title}}
 ```sql
-{{sql}}
+{{{sql}}}
 ```
 {{/query_items}}
 {{/has_items}}

@@ -961,6 +961,71 @@ class TestGenerate:
         assert not orch.store.has("a")
         assert not orch.bundle_store._items
 
+    def test_external_data_correction_rejects_changed_language(
+        self,
+        monkeypatch,
+    ):
+        source = RecordingDataFrameSource("tips")
+        chat = FakeChat(
+            streams=[
+                [result_chunk("csv source", referenced_tables=["tips"])],
+                [
+                    result_chunk(
+                        "external source",
+                        language="r",
+                        referenced_tables=["tips"],
+                    )
+                ],
+            ]
+        )
+        orch = make_session(chat, data_sources={"tips": source})
+        monkeypatch.setattr("querychat._handoff_data.MAX_BUNDLE_SIZE", 1)
+
+        with pytest.raises(HandoffDataError) as error:
+            asyncio.run(
+                orch.generate(
+                    GenerateRequest(type_id="quarto-dashboard", language="python"),
+                    "",
+                    "a",
+                )
+            )
+
+        assert str(error.value) == "Corrected handoff changed its language."
+        assert chat.stream_count == 2
+        assert not orch.store.has("a")
+        assert not orch.bundle_store._items
+
+    def test_external_data_correction_rejects_unknown_table(
+        self,
+        monkeypatch,
+    ):
+        source = RecordingDataFrameSource("tips")
+        chat = FakeChat(
+            streams=[
+                [result_chunk("csv source", referenced_tables=["tips"])],
+                [result_chunk("external source", referenced_tables=["unknown"])],
+            ]
+        )
+        orch = make_session(chat, data_sources={"tips": source})
+        monkeypatch.setattr("querychat._handoff_data.MAX_BUNDLE_SIZE", 1)
+
+        with pytest.raises(HandoffDataError) as error:
+            asyncio.run(
+                orch.generate(
+                    GenerateRequest(type_id="quarto-dashboard", language="python"),
+                    "",
+                    "a",
+                )
+            )
+
+        assert (
+            str(error.value)
+            == "Corrected handoff changed its referenced-table set."
+        )
+        assert chat.stream_count == 2
+        assert not orch.store.has("a")
+        assert not orch.bundle_store._items
+
     def test_external_data_correction_failure_stores_nothing(
         self,
         monkeypatch,

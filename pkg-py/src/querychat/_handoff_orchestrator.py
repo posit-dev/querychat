@@ -17,7 +17,7 @@ from contextlib import suppress
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, cast
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 from ._handoff_bundle_store import (
     HandoffBundleStore,
@@ -447,13 +447,27 @@ class HandoffOrchestrator:
             data_instructions=data_context.data_instructions,
             referenced_tables=generated.result.referenced_tables,
         )
-        repaired_result, repaired_turns = await self.chat.stream(
-            "Return the complete corrected handoff now.",
-            turns=generated.turns,
-            system_prompt=repair_system_prompt,
-            sink=self.view,
-            model=result_model,
-        )
+        try:
+            repaired_result, repaired_turns = await self.chat.stream(
+                "Return the complete corrected handoff now.",
+                turns=generated.turns,
+                system_prompt=repair_system_prompt,
+                sink=self.view,
+                model=result_model,
+            )
+        except ValidationError as error:
+            error_roots = {
+                detail["loc"][0] for detail in error.errors() if detail["loc"]
+            }
+            if "language" in error_roots:
+                raise HandoffDataError(
+                    "Corrected handoff changed its language."
+                ) from error
+            if "referenced_tables" in error_roots:
+                raise HandoffDataError(
+                    "Corrected handoff changed its referenced-table set."
+                ) from error
+            raise
         if repaired_result.language != generated.handoff_type.language:
             raise HandoffDataError("Corrected handoff changed its language.")
         if set(repaired_result.referenced_tables) != expected_tables:

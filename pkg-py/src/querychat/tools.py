@@ -145,7 +145,7 @@ def _schema_table(columns: list[ColumnMeta]) -> Tag:
 
         rows.append(
             tags.tr(
-                tags.th(column.name, scope="row"),
+                tags.th(tags.code(column.name), scope="row"),
                 tags.td(type_cell),
                 tags.td(column.description or ""),
                 tags.td(", ".join(column.constraints)),
@@ -156,10 +156,11 @@ def _schema_table(columns: list[ColumnMeta]) -> Tag:
     return tags.div(
         tags.table(
             tags.thead(
-                tags.tr(*(tags.th(header, scope="col") for header in headers))
+                tags.tr(*(tags.th(header, scope="col") for header in headers)),
+                class_="table-light",
             ),
             tags.tbody(*rows),
-            class_="table table-sm mb-0",
+            class_="table table-sm table-hover align-middle mb-0",
         ),
         class_="table-responsive",
     )

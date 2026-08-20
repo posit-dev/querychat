@@ -418,10 +418,11 @@ schema_table <- function(columns) {
           lapply(headers, function(header) {
             htmltools::tags$th(header, scope = "col")
           })
-        )
+        ),
+        class = "table-light"
       ),
       htmltools::tags$tbody(rows),
-      class = "table table-sm mb-0"
+      class = "table table-sm table-hover align-middle mb-0"
     ),
     class = "table-responsive"
   )

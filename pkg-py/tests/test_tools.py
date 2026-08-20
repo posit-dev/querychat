@@ -1,5 +1,6 @@
 """Tests for tool functions and utilities."""
 
+import re
 import warnings
 
 import narwhals.stable.v1 as nw
@@ -286,10 +287,14 @@ def test_get_schema_tool_uses_native_display() -> None:
 
     html = display.html.render()["html"]
     assert '<div class="table-responsive">' in html
-    assert '<table class="table table-sm mb-0">' in html
+    assert '<table class="table table-sm table-hover align-middle mb-0">' in html
+    assert '<thead class="table-light">' in html
     for header in ("Column", "Type", "Description", "Constraints", "Range / Values"):
         assert f'<th scope="col">{header}</th>' in html
-    assert '<th scope="row">order_id</th>' in html
+    assert re.search(
+        r'<th scope="row">\s*<code>order_id</code>\s*</th>',
+        html,
+    )
     assert "INTEGER" in html
 
 

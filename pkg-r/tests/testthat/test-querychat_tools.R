@@ -540,7 +540,12 @@ describe("tool_get_schema()", {
     expect_false(display$show_request)
     expect_false(display$open)
     expect_match(html, '<div class="table-responsive">', fixed = TRUE)
-    expect_match(html, '<table class="table table-sm mb-0">', fixed = TRUE)
+    expect_match(
+      html,
+      '<table class="table table-sm table-hover align-middle mb-0">',
+      fixed = TRUE
+    )
+    expect_match(html, '<thead class="table-light">', fixed = TRUE)
     for (header in c(
       "Column",
       "Type",

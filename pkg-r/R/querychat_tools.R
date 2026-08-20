@@ -3,28 +3,9 @@ GetSchemaResult <- S7::new_class(
   "GetSchemaResult",
   parent = ellmer::ContentToolResult,
   properties = list(
-    table_name = S7::class_character,
-    columns_json = S7::new_property(S7::class_character, default = "")
+    table_name = S7::class_character
   )
 )
-
-#' @importFrom shinychat contents_shinychat
-rlang::on_load({
-  S7::method(contents_shinychat, GetSchemaResult) <- get_schema_result_display
-
-  orig_request_contents <- S7::method(
-    contents_shinychat,
-    ellmer::ContentToolRequest
-  )
-  S7::method(contents_shinychat, ellmer::ContentToolRequest) <- function(
-    content
-  ) {
-    if (identical(content@name, "querychat_get_schema")) {
-      return(NULL)
-    }
-    orig_request_contents(content)
-  }
-})
 
 tool_get_schema <- function(
   data_dicts,
@@ -52,11 +33,22 @@ tool_get_schema <- function(
         categorical_threshold,
         table_spec = table_spec
       )
-      columns_json <- jsonlite::toJSON(schema_result$columns, auto_unbox = TRUE)
+      column_count <- length(schema_result$columns)
       GetSchemaResult(
         value = schema_result$text,
         table_name = table_name,
-        columns_json = as.character(columns_json)
+        extra = list(
+          display = shinychat::tool_result_display(
+            label = table_name,
+            value_preview = paste(
+              column_count,
+              if (column_count == 1) "column" else "columns"
+            ),
+            html = schema_table(schema_result$columns),
+            show_request = FALSE,
+            open = FALSE
+          )
+        )
       )
     },
     name = "querychat_get_schema",
@@ -66,7 +58,7 @@ tool_get_schema <- function(
         "The name of the table to retrieve schema for."
       )
     ),
-    annotations = ellmer::tool_annotations(title = "Get Schema")
+    annotations = ellmer::tool_annotations(title = "Fetch schemas")
   )
 }
 
@@ -364,25 +356,81 @@ querychat_tool_result <- function(
   )
 }
 
-schema_dep <- function() {
-  htmltools::htmlDependency(
-    name = "querychat-schema-display",
-    version = utils::packageVersion("querychat"),
-    package = "querychat",
-    src = "htmldep",
-    script = "schema-display.js"
+schema_table <- function(columns) {
+  headers <- c(
+    "Column",
+    "Type",
+    "Description",
+    "Constraints",
+    "Range / Values"
+  )
+  rows <- lapply(columns, function(column) {
+    units <- schema_scalar_text(column$units)
+    type_cell <- htmltools::tagList(
+      htmltools::tags$span(schema_scalar_text(column$sql_type)),
+      if (nzchar(units)) {
+        htmltools::tagList(
+          " ",
+          htmltools::tags$span(units, class = "text-body-secondary")
+        )
+      }
+    )
+
+    constraints <- vapply(
+      column$constraints,
+      schema_scalar_text,
+      character(1)
+    )
+    constraints <- paste(constraints[nzchar(constraints)], collapse = ", ")
+
+    categories <- vapply(
+      column$categories,
+      schema_scalar_text,
+      character(1)
+    )
+    categories <- categories[nzchar(categories)]
+    min_val <- schema_scalar_text(column$min_val)
+    max_val <- schema_scalar_text(column$max_val)
+    range_values <- if (nzchar(min_val) && nzchar(max_val)) {
+      paste(min_val, "to", max_val)
+    } else if (length(categories) > 0) {
+      paste0("'", categories, "'", collapse = ", ")
+    } else {
+      ""
+    }
+
+    htmltools::tags$tr(
+      htmltools::tags$th(
+        htmltools::tags$code(schema_scalar_text(column$name)),
+        scope = "row"
+      ),
+      htmltools::tags$td(type_cell),
+      htmltools::tags$td(schema_scalar_text(column$description)),
+      htmltools::tags$td(constraints),
+      htmltools::tags$td(range_values)
+    )
+  })
+
+  htmltools::tags$div(
+    htmltools::tags$table(
+      htmltools::tags$thead(
+        htmltools::tags$tr(
+          lapply(headers, function(header) {
+            htmltools::tags$th(header, scope = "col")
+          })
+        )
+      ),
+      htmltools::tags$tbody(rows),
+      class = "table table-sm mb-0"
+    ),
+    class = "table-responsive"
   )
 }
 
-get_schema_result_display <- function(content) {
-  htmltools::tagList(
-    htmltools::tags$span(
-      class = "qc-schema-collector",
-      `data-table` = content@table_name,
-      `data-schema` = content@value,
-      `data-schema-json` = content@columns_json,
-      style = "display:none"
-    ),
-    schema_dep()
-  )
+schema_scalar_text <- function(value) {
+  if (is.null(value) || length(value) == 0 || is.na(value[[1]])) {
+    return("")
+  }
+
+  as.character(value[[1]])
 }

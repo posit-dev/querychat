@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import html
+import math
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -142,7 +143,7 @@ def build_preview_table(value: object) -> str | None:
 
 def format_cell(value: object) -> str:
     if isinstance(value, float):
-        if value == int(value):
+        if math.isfinite(value) and value == int(value):
             return str(int(value))
         return f"{value:.2f}"
     if value is None:

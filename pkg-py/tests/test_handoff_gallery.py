@@ -1,9 +1,13 @@
+import math
+
+import pytest
 from chatlas import ContentToolRequest, ContentToolResult, Turn
 from chatlas._content import ContentImageInline
 from querychat._handoff_gallery import (
     QueryGalleryItem,
     VizGalleryItem,
     extract_gallery_items,
+    format_cell,
 )
 
 
@@ -150,3 +154,19 @@ class TestExtractGalleryItems:
         items = extract_gallery_items(turns)
         ids = [item.id for item in items]
         assert len(ids) == len(set(ids))
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        (math.nan, "nan"),
+        (math.inf, "inf"),
+        (-math.inf, "-inf"),
+    ],
+)
+def test_format_cell_renders_non_finite_floats(value: float, expected: str):
+    assert format_cell(value) == expected
+
+
+def test_format_cell_keeps_integer_valued_float_compact():
+    assert format_cell(42.0) == "42"

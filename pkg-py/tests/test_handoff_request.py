@@ -138,8 +138,12 @@ def test_failed_panel_close_task_notifies_and_is_removed(monkeypatch):
 
         handoff_server.finish_handoff_restore_task(task, restore_tasks)
 
-        notifications.assert_called_once()
-        assert "panel close failed" in notifications.call_args.args[0]
+        notifications.assert_called_once_with(
+            "Failed to close the handoff panel after state restore: "
+            "panel close failed",
+            type="error",
+            duration=None,
+        )
         assert not restore_tasks
 
     asyncio.run(run_test())

@@ -82,7 +82,7 @@ def finish_handoff_restore_task(
         task.result()
     except Exception as error:
         ui.notification_show(
-            f"Failed to close the handoff panel after history restore: {error}",
+            f"Failed to close the handoff panel after state restore: {error}",
             type="error",
             duration=None,
         )

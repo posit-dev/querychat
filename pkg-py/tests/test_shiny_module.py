@@ -49,16 +49,16 @@ def test_mod_ui_allow_attachments_can_be_overridden():
         assert _fake_chat_ui.last_kwargs.get("allow_attachments") is False
 
 
-def test_mod_ui_scopes_artifact_roots_and_deduplicates_assets():
+def test_mod_ui_scopes_handoff_roots_and_deduplicates_assets():
     from querychat._shiny_module import mod_ui
 
     with patch("querychat._shiny_module.shinychat.chat_ui", side_effect=_fake_chat_ui):
         rendered = TagList(mod_ui("first"), mod_ui("second")).render()
 
-    assert 'id="first-artifact_root"' in rendered["html"]
-    assert 'id="second-artifact_root"' in rendered["html"]
+    assert 'id="first-handoff_root"' in rendered["html"]
+    assert 'id="second-handoff_root"' in rendered["html"]
     dependency_names = [dependency.name for dependency in rendered["dependencies"]]
-    assert dependency_names.count("querychat-artifact") == 1
+    assert dependency_names.count("querychat-handoff") == 1
 
 
 def _unwrap_module_server(decorated):
@@ -98,7 +98,7 @@ def test_mod_server_passes_client_and_history_to_chat():
     fake_executor.execute_query.return_value = []
 
     client_factory = MagicMock(return_value=MagicMock(spec=["stream_async"]))
-    artifact_server_mock = MagicMock()
+    handoff_server_mock = MagicMock()
 
     inner_fn = _unwrap_module_server(mod_server)
 
@@ -113,8 +113,8 @@ def test_mod_server_passes_client_and_history_to_chat():
         ),
         patch("querychat._shiny_module.has_viz_tool", return_value=False),
         patch(
-            "querychat._shiny_module.artifact_server",
-            artifact_server_mock,
+            "querychat._shiny_module.handoff_server",
+            handoff_server_mock,
             create=True,
         ),
     ):
@@ -134,10 +134,10 @@ def test_mod_server_passes_client_and_history_to_chat():
     assert captured.get("client") is not None, "client= should be passed to Chat"
     assert captured.get("history") is True, "history= should be forwarded verbatim"
     assert callable(captured.get("greeting")), "greeting= should be a callable"
-    assert callable(client_factory.call_args.kwargs["request_artifact"])
-    artifact_server_mock.assert_called_once()
-    assert artifact_server_mock.call_args.kwargs["data_sources"] == {"t": fake_source}
-    assert artifact_server_mock.call_args.kwargs["executor"] is fake_executor
+    assert callable(client_factory.call_args.kwargs["request_handoff"])
+    handoff_server_mock.assert_called_once()
+    assert handoff_server_mock.call_args.kwargs["data_sources"] == {"t": fake_source}
+    assert handoff_server_mock.call_args.kwargs["executor"] is fake_executor
 
 
 def test_mod_server_registers_chat_bookmarking_with_no_auto_trigger_when_history_not_bookmark_mode():

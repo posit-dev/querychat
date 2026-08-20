@@ -16,7 +16,7 @@ from ._datasource import ColumnMeta, format_schema
 from ._icons import bs_icon
 from ._tool_names import (
     TOOL_QUERY,
-    TOOL_REQUEST_ARTIFACT,
+    TOOL_REQUEST_HANDOFF,
     TOOL_RESET_DASHBOARD,
     TOOL_UPDATE_DASHBOARD,
 )
@@ -33,7 +33,7 @@ __all__ = [
     "GetSchemaResult",
     "tool_get_schema",
     "tool_query",
-    "tool_request_artifact",
+    "tool_request_handoff",
     "tool_reset_dashboard",
     "tool_update_dashboard",
     "tool_visualize",
@@ -400,33 +400,33 @@ def tool_reset_dashboard(
     )
 
 
-def _request_artifact_impl(
+def _request_handoff_impl(
     request_fn: Callable[[], None],
 ) -> Callable[[], ContentToolResult]:
-    """Create the implementation function for opening the artifact creator."""
+    """Create the implementation function for opening the handoff creator."""
 
-    def request_artifact() -> ContentToolResult:
+    def request_handoff() -> ContentToolResult:
         request_fn()
         return ContentToolResult(
             value=(
-                "Opening the artifact creator. The user will choose which "
+                "Opening the handoff creator. The user will choose which "
                 "results to include and the output format there."
             ),
         )
 
-    return request_artifact
+    return request_handoff
 
 
-def tool_request_artifact(
+def tool_request_handoff(
     request_fn: Callable[[], None],
 ) -> Tool:
     """
-    Create a tool that opens the artifact creator modal.
+    Create a tool that opens the handoff creator modal.
 
     Parameters
     ----------
     request_fn
-        Callback invoked when the LLM requests opening the artifact creator.
+        Callback invoked when the LLM requests opening the handoff creator.
 
     Returns
     -------
@@ -434,15 +434,15 @@ def tool_request_artifact(
         A tool that can be registered with chatlas.
 
     """
-    impl = _request_artifact_impl(request_fn)
+    impl = _request_handoff_impl(request_fn)
 
-    description = read_prompt_template("tool-request-artifact.md")
+    description = read_prompt_template("tool-request-handoff.md")
     impl.__doc__ = description
 
     return Tool.from_func(
         impl,
-        name=TOOL_REQUEST_ARTIFACT,
-        annotations={"title": "Open Artifact Creator"},
+        name=TOOL_REQUEST_HANDOFF,
+        annotations={"title": "Open Handoff Creator"},
     )
 
 

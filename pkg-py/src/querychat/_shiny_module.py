@@ -12,8 +12,8 @@ from shinychat.types import HistoryOptions
 
 from shiny import module, reactive, ui
 
-from ._artifact_panel import artifact_panel_ui
-from ._artifact_server import artifact_server
+from ._handoff_panel import handoff_panel_ui
+from ._handoff_server import handoff_server
 from ._querychat_core import warn_multi_table_flat_accessor
 from ._table_accessor import TableAccessor
 from ._viz_altair_widget import AltairWidget
@@ -89,7 +89,7 @@ def mod_ui(*, preload_viz: bool = False, **kwargs):
             ui.include_js(js_path),
         ),
         tag,
-        artifact_panel_ui(),
+        handoff_panel_ui(),
         preload_viz_deps_ui() if preload_viz else None,
     )
 
@@ -220,10 +220,10 @@ def mod_server(
     greeter: QueryChatGreeter,
     greeting_base: chatlas.Chat | None = None,
 ) -> ServerValues[IntoFrameT]:
-    artifact_requested = reactive.value[bool](False)  # noqa: FBT003
+    handoff_requested = reactive.value[bool](False)  # noqa: FBT003
 
-    def on_request_artifact() -> None:
-        artifact_requested.set(True)
+    def on_request_handoff() -> None:
+        handoff_requested.set(True)
 
     if not callable(client):
         raise TypeError("mod_server() requires a callable client factory.")
@@ -269,7 +269,7 @@ def mod_server(
             update_dashboard=update_dashboard,
             reset_dashboard=reset_dashboard,
             visualize=on_visualize,
-            request_artifact=on_request_artifact,
+            request_handoff=on_request_handoff,
             tools=tools,
         )
 
@@ -336,7 +336,7 @@ def mod_server(
         history=history,
     )
 
-    open_artifact_creator = artifact_server(
+    open_handoff_creator = handoff_server(
         input,
         session,
         chat,
@@ -348,18 +348,18 @@ def mod_server(
     @reactive.effect
     # The lambda defers the reactive read until the event executes.
     @reactive.event(lambda: shinychat_chat.latest_message_stream.status())  # noqa: PLW0108
-    def open_artifact_when_ready():
-        action = artifact_action_for_status(
+    def open_handoff_when_ready():
+        action = handoff_action_for_status(
             shinychat_chat.latest_message_stream.status()
         )
         if action == "wait":
             return
         with reactive.isolate():
-            if not artifact_requested.get():
+            if not handoff_requested.get():
                 return
-            artifact_requested.set(False)
+            handoff_requested.set(False)
         if action == "open":
-            open_artifact_creator()
+            open_handoff_creator()
 
     # Skipped when `history` is already in bookmark mode: shinychat_chat.history
     # is then already enabled for this chat/client, and shinychat treats it and
@@ -511,11 +511,11 @@ def restore_viz_widgets(
     return restored
 
 
-def artifact_action_for_status(
+def handoff_action_for_status(
     stream_status: StreamStatus,
 ) -> Literal["wait", "open", "drop"]:
     """
-    Decide what to do with a pending request_artifact call given the stream state.
+    Decide what to do with a pending request_handoff call given the stream state.
 
     - ``"wait"``: the turn is still in progress.
     - ``"open"``: the turn finished successfully; open the modal.

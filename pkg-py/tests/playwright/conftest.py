@@ -637,9 +637,9 @@ def chat_10_viz(page: Page) -> ChatControllerType:
 
 
 @pytest.fixture(scope="module")
-def app_artifact() -> Generator[str, None, None]:
-    """Start the artifact_app.py Shiny server for testing."""
-    app_path = str(APPS_DIR / "artifact_app.py")
+def app_handoff() -> Generator[str, None, None]:
+    """Start the handoff_app.py Shiny server for testing."""
+    app_path = str(APPS_DIR / "handoff_app.py")
 
     def start_factory():
         port = _find_free_port()
@@ -659,14 +659,14 @@ def app_artifact() -> Generator[str, None, None]:
 
 
 @pytest.fixture
-def chat_artifact(page: Page) -> ChatControllerType:
-    """Create a ChatController for the artifact_app chat component."""
+def chat_handoff(page: Page) -> ChatControllerType:
+    """Create a ChatController for the handoff_app chat component."""
     return _create_chat_controller(page, "titanic")
 
 
-class ArtifactModalActions:
+class HandoffModalActions:
     """
-    Shared modal/query helpers for artifact test classes.
+    Shared modal/query helpers for handoff test classes.
 
     Subclasses set ``page`` and ``chat`` in an autouse setup fixture.
     """
@@ -674,10 +674,10 @@ class ArtifactModalActions:
     page: Page
     chat: ChatControllerType
 
-    def _open_artifact_modal(self) -> None:
+    def _open_handoff_modal(self) -> None:
         # Trailing space closes the slash-command palette dropdown so that
         # Enter actually submits the command rather than selecting a palette entry.
-        self.chat.set_user_input("/artifact ")
+        self.chat.set_user_input("/handoff ")
         self.chat.send_user_input(method="enter")
         self.page.wait_for_selector(".modal", timeout=15000)
 

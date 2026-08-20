@@ -46,7 +46,7 @@ from .tools import (
     UpdateDashboardData,
     tool_get_schema,
     tool_query,
-    tool_request_artifact,
+    tool_request_handoff,
     tool_reset_dashboard,
     tool_update_dashboard,
     tool_visualize,
@@ -234,7 +234,7 @@ class QueryChatBase(Generic[IntoFrameT]):
         update_dashboard: Callable[[UpdateDashboardData], None] | None = None,
         reset_dashboard: ResetDashboardCallback | None = None,
         visualize: Callable[[VisualizeData], None] | None = None,
-        request_artifact: Callable[[], None] | None = None,
+        request_handoff: Callable[[], None] | None = None,
     ) -> chatlas.Chat:
         """Create a fresh, fully-configured Chat."""
         chat = self._create_client(base)
@@ -244,8 +244,8 @@ class QueryChatBase(Generic[IntoFrameT]):
         if self._system_prompt is not None:
             chat.system_prompt = self._system_prompt.render(resolved_tools)
 
-        if request_artifact is not None:
-            chat.register_tool(tool_request_artifact(request_artifact))
+        if request_handoff is not None:
+            chat.register_tool(tool_request_handoff(request_handoff))
 
         if resolved_tools is None:
             return chat

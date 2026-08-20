@@ -25,8 +25,8 @@ const jsTargets = [
     output: "../pkg-r/inst/htmldep/viz.js",
   },
   {
-    source: "src/artifact.ts",
-    output: "../pkg-py/src/querychat/static/js/artifact.js",
+    source: "src/handoff.ts",
+    output: "../pkg-py/src/querychat/static/js/handoff.js",
   },
   {
     source: "src/schema-display.js",
@@ -48,19 +48,19 @@ const cssTargets = [
     output: "../pkg-r/inst/htmldep/viz.css",
   },
   {
-    source: "src/artifact.css",
-    output: "../pkg-py/src/querychat/static/css/artifact.css",
+    source: "src/handoff.css",
+    output: "../pkg-py/src/querychat/static/css/handoff.css",
   },
 ];
 
 const rawTargets = [
   {
-    source: "../shared/artifact-formats.yml",
-    output: "../pkg-py/src/querychat/artifact-formats.yml",
+    source: "../shared/handoff-formats.yml",
+    output: "../pkg-py/src/querychat/handoff-formats.yml",
   },
   {
-    source: "../shared/artifact-formats.yml",
-    output: "../pkg-r/inst/artifact-formats.yml",
+    source: "../shared/handoff-formats.yml",
+    output: "../pkg-r/inst/handoff-formats.yml",
   },
 ];
 

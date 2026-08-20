@@ -82,7 +82,7 @@ packages = ["pkg-py/src/querychat"]
 include = ["py.typed"]
 
 [tool.hatch.build.targets.wheel.force-include]
-"pkg-py/src/querychat/artifact-formats.yml" = "querychat/artifact-formats.yml"
+"pkg-py/src/querychat/handoff-formats.yml" = "querychat/handoff-formats.yml"
 
 [tool.hatch.build.targets.sdist]
 include = ["pkg-py/src/querychat", "pkg-py/LICENSE", "pkg-py/README.md"]

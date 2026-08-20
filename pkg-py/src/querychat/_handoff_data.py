@@ -44,6 +44,7 @@ class HandoffDataContext:
     data_instructions: str
     bundled_files: dict[str, bytes] = field(default_factory=dict)
     bundled_tables: list[str] = field(default_factory=list)
+    externalized_dataframe_tables: list[str] = field(default_factory=list)
 
 
 def prepare_handoff_data(
@@ -95,14 +96,16 @@ def materialize_handoff_data(
             ) from error
 
         if len(csv_bytes) > MAX_BUNDLE_SIZE:
-            raise HandoffDataError(
-                f"Handoff CSV for table '{name}' exceeds the 5 MB limit."
+            return build_externalized_dataframe_context(
+                catalog,
+                unique_tables,
             )
 
         combined_size += len(csv_bytes)
         if combined_size > MAX_BUNDLE_SIZE:
-            raise HandoffDataError(
-                "The combined handoff CSV bundle exceeds the 5 MB limit."
+            return build_externalized_dataframe_context(
+                catalog,
+                unique_tables,
             )
         bundled_files[f"{name}.csv"] = csv_bytes
         bundled_tables.append(name)
@@ -142,6 +145,7 @@ def build_data_context(
     referenced_tables: list[str],
     bundled_files: dict[str, bytes],
     bundled_tables: list[str],
+    externalized_dataframe_tables: list[str] | None = None,
 ) -> HandoffDataContext:
     bundled_set = set(bundled_tables)
 
@@ -157,6 +161,25 @@ def build_data_context(
         data_instructions=instructions,
         bundled_files=bundled_files,
         bundled_tables=list(bundled_tables),
+        externalized_dataframe_tables=list(externalized_dataframe_tables or ()),
+    )
+
+
+def build_externalized_dataframe_context(
+    catalog: HandoffDataCatalog,
+    referenced_tables: list[str],
+) -> HandoffDataContext:
+    externalized_dataframe_tables = [
+        name
+        for name in referenced_tables
+        if catalog.entries[name].mode == "dataframe"
+    ]
+    return build_data_context(
+        catalog,
+        referenced_tables,
+        bundled_files={},
+        bundled_tables=[],
+        externalized_dataframe_tables=externalized_dataframe_tables,
     )
 
 
@@ -221,25 +244,30 @@ def external_dataframe_instructions(
     language: HandoffLanguage,
 ) -> str:
     instructions = (
-        f"The data comes from a {db_type} in-memory database with a table named "
-        f'"{table_name}".\n'
-        "The dataset is not bundled, so the user must provide a data source.\n\n"
+        f'The original in-memory DataFrame for table "{table_name}" is not bundled.\n'
+        f"It was exposed through a {db_type} in-memory database.\n"
+        "The handoff requires a user-supplied data file or equivalent database "
+        "connection.\n\n"
         "Generate a clearly marked DATA SETUP section at the top of the handoff.\n"
-        "Include a prominent TODO comment for the data file or database path.\n"
+        "Put setup code in a dedicated DATA SETUP block that loads the data and "
+        f'registers it under the existing table name `"{table_name}"`.\n'
     )
     if language == "python":
         instructions += (
-            'Use `duckdb.connect("path/to/your/database.db")` as the '
-            "placeholder connection.\n"
+            "Use environment variables for any credentials, such as "
+            '`os.environ["DATABASE_URL"]`.\n'
         )
     else:
         instructions += (
-            "Use `DBI::dbConnect(duckdb::duckdb(), "
-            'dbdir = "path/to/your/database.duckdb")` as the placeholder '
-            "connection.\n"
+            "Use environment variables for any credentials, such as "
+            '`Sys.getenv("DATABASE_URL")`.\n'
         )
     return (
-        instructions + "Make the required user change clear before the handoff runs."
+        instructions
+        + "Do not hardcode credentials.\n"
+        + "Do not claim to know the original file path, connection string, or "
+        + "credentials.\n"
+        + "This setup may need adjustment before the handoff can run."
     )
 
 

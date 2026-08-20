@@ -1,3 +1,4 @@
+from querychat._handoff_data import external_dataframe_instructions
 from querychat._handoff_readme import build_readme
 from querychat._handoff_types import HandoffType, resolve_handoff_type
 
@@ -66,6 +67,21 @@ class TestBuildReadme:
         out = make_readme(bundled_files=[])
         assert "`titanic.csv`" not in out
         assert "`handoff.py`" in out  # source is always listed
+
+    def test_externalized_dataframe_includes_warning_without_bundled_file_claim(self):
+        out = make_readme(
+            data_instructions=external_dataframe_instructions(
+                "tips",
+                "DuckDB",
+                "python",
+            ),
+            bundled_files=[],
+        )
+
+        assert "This setup may need adjustment before the handoff can run." in out
+        assert "`tips.csv`" not in out
+        assert "bundled data file" not in out
+        assert "fixed CSV snapshot" not in out
 
     def test_does_not_duplicate_source_in_file_list(self):
         out = make_readme(bundled_files=["handoff.py", "titanic.csv"])

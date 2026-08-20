@@ -14,7 +14,6 @@ from querychat._datasource import DataFrameSource
 from querychat._handoff_bundle_store import HandoffSnapshotUnavailableError
 from querychat._handoff_data import (
     HandoffDataContext,
-    HandoffDataError,
     materialize_handoff_data,
 )
 from querychat._handoff_orchestrator import (
@@ -622,7 +621,7 @@ class TestRevise:
         assert orch.store.get("a") is state
         assert orch.bundle_store.get(first_bundle.bundle_id) is first_bundle
 
-    def test_failed_dataframe_materialization_leaves_no_handoff_or_bundle(
+    def test_oversized_dataframe_materialization_uses_external_data_without_bundle(
         self,
         monkeypatch,
     ):
@@ -633,16 +632,22 @@ class TestRevise:
         )
         monkeypatch.setattr("querychat._handoff_data.MAX_BUNDLE_SIZE", 1)
 
-        with pytest.raises(HandoffDataError, match="exceeds"):
-            asyncio.run(
-                orch.generate(
-                    GenerateRequest(type_id="quarto-dashboard", language="python"),
-                    "",
-                    "a",
-                )
+        asyncio.run(
+            orch.generate(
+                GenerateRequest(type_id="quarto-dashboard", language="python"),
+                "",
+                "a",
             )
+        )
 
-        assert not orch.store.has("a")
+        state = orch.store.get("a")
+        assert state is not None
+        assert state.bundled_tables == []
+        assert state.bundle_id is None
+        assert (
+            "This setup may need adjustment before the handoff can run."
+            in state.data_instructions
+        )
 
     def test_revise_replaces_current_handoff(self):
         orch = make_session(

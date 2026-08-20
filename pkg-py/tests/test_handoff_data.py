@@ -71,6 +71,43 @@ class TestHandoffDataCatalog:
         assert expected in catalog.prompt_instructions
         assert forbidden not in catalog.prompt_instructions
 
+    @pytest.mark.parametrize(
+        ("language", "expected", "forbidden"),
+        [
+            ("python", 'os.environ["DATABASE_URL"]', "Sys.getenv"),
+            ("r", 'Sys.getenv("DATABASE_URL")', "os.environ"),
+        ],
+    )
+    def test_external_dataframe_instructions_require_user_supplied_setup(
+        self,
+        language: HandoffLanguage,
+        expected: str,
+        forbidden: str,
+    ):
+        instructions = handoff_data.external_dataframe_instructions(
+            "tips",
+            "DuckDB",
+            language,
+        )
+
+        assert (
+            'The original in-memory DataFrame for table "tips" is not bundled.'
+            in instructions
+        )
+        assert "user-supplied data file or equivalent database connection" in instructions
+        assert "dedicated DATA SETUP block" in instructions
+        assert 'existing table name `"tips"`' in instructions
+        assert expected in instructions
+        assert forbidden not in instructions
+        assert "path/to/your" not in instructions
+        assert (
+            "Do not claim to know the original file path, connection string, "
+            "or credentials." in instructions
+        )
+        assert (
+            "This setup may need adjustment before the handoff can run." in instructions
+        )
+
     def test_prepare_describes_every_registered_table(self):
         sources = {
             "tips": DataFrameSource(tips(), "tips"),
@@ -199,20 +236,31 @@ class TestHandoffDataCatalog:
 
         assert source.get_data_calls == 1
 
-    def test_materialize_rejects_individual_size_limit(self, monkeypatch):
+    def test_materialize_externalizes_all_dataframes_when_one_exceeds_limit(
+        self,
+        monkeypatch,
+    ):
         source = RecordingDataFrameSource("tips")
         sources = {"tips": source}
         catalog = handoff_data.prepare_handoff_data(sources, language="python")
         monkeypatch.setattr("querychat._handoff_data.MAX_BUNDLE_SIZE", 1)
 
-        with pytest.raises(handoff_data.HandoffDataError, match="exceeds"):
-            handoff_data.materialize_handoff_data(
-                catalog,
-                sources,
-                ["tips"],
-            )
+        context = handoff_data.materialize_handoff_data(
+            catalog,
+            sources,
+            ["tips"],
+        )
 
-    def test_materialize_rejects_combined_size_limit(self, monkeypatch):
+        assert context.bundled_files == {}
+        assert context.bundled_tables == []
+        assert context.externalized_dataframe_tables == ["tips"]
+        assert "DATA SETUP" in context.data_instructions
+        assert "may need adjustment" in context.data_instructions
+
+    def test_materialize_externalizes_all_dataframes_when_combined_bundle_exceeds_limit(
+        self,
+        monkeypatch,
+    ):
         sources = {
             "tips": RecordingDataFrameSource("tips"),
             "tips_copy": RecordingDataFrameSource("tips_copy"),
@@ -228,9 +276,12 @@ class TestHandoffDataCatalog:
             len(one_table.bundled_files["tips.csv"]) + 1,
         )
 
-        with pytest.raises(handoff_data.HandoffDataError, match="combined"):
-            handoff_data.materialize_handoff_data(
-                catalog,
-                sources,
-                ["tips", "tips_copy"],
-            )
+        context = handoff_data.materialize_handoff_data(
+            catalog,
+            sources,
+            ["tips", "tips_copy"],
+        )
+
+        assert context.bundled_files == {}
+        assert context.bundled_tables == []
+        assert context.externalized_dataframe_tables == ["tips", "tips_copy"]

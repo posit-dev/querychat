@@ -16,7 +16,7 @@ from playwright.sync_api import expect
 from .conftest import HandoffModalActions
 
 if TYPE_CHECKING:
-    from playwright.sync_api import Page
+    from playwright.sync_api import BrowserContext, Page
     from shinychat.playwright import ChatController
 
 
@@ -278,3 +278,64 @@ class TestHandoffGeneration(HandoffModalActions):
 
         editor = self.page.locator(".querychat-handoff-panel-body textarea")
         expect(editor).to_have_value(re.compile("BROWSER_HISTORY"), timeout=10000)
+
+
+class TestHandoffPlainBookmarkRestore(HandoffModalActions):
+    @pytest.fixture(autouse=True)
+    def setup(
+        self,
+        page: Page,
+        app_handoff_bookmark: str,
+        chat_handoff_bookmark: ChatController,
+    ) -> None:
+        page.goto(app_handoff_bookmark)
+        page.wait_for_selector("shiny-chat-container", timeout=30000)
+        expect(chat_handoff_bookmark.loc_input).to_be_enabled(timeout=30000)
+        self.page = page
+        self.chat = chat_handoff_bookmark
+
+    def test_restored_pill_reopens_handoff(self, context: BrowserContext) -> None:
+        self._send_query_and_wait("Show only female passengers")
+        self._open_handoff_modal()
+
+        gallery = self.page.locator(".querychat-handoff-gallery")
+        expect(gallery).not_to_have_class(re.compile(r"\bloading\b"), timeout=60000)
+        self.page.locator(
+            '.querychat-handoff-type-pill[data-handoff-type="quarto-dashboard"]'
+        ).click()
+        self.page.locator(
+            '.querychat-handoff-language-pill[data-language="python"]'
+        ).click()
+        generate = self.page.locator(".modal button:has-text('Generate')")
+        expect(generate).to_be_enabled()
+        generate.click()
+
+        pill = self.page.locator(".querychat-handoff-pill")
+        expect(pill).to_be_visible(timeout=120000)
+        panel = self.page.locator(".querychat-handoff-panel")
+        self.page.locator(
+            ".querychat-handoff-panel-header button[aria-label='Close']"
+        ).click()
+        expect(panel).not_to_have_class(re.compile(r"\bopen\b"), timeout=5000)
+
+        self.page.locator("#bookmark_now").click()
+        bookmark_url_input = self.page.locator("#shiny-modal textarea")
+        expect(bookmark_url_input).to_have_value(
+            re.compile(r"_state_id_="),
+            timeout=30000,
+        )
+        bookmark_url = bookmark_url_input.input_value()
+
+        new_page = context.new_page()
+        new_page.goto(bookmark_url)
+        new_page.wait_for_selector("shiny-chat-container", timeout=30000)
+
+        restored_pill = new_page.locator(".querychat-handoff-pill")
+        expect(restored_pill).to_be_visible(timeout=30000)
+        restored_pill.click()
+
+        restored_panel = new_page.locator(".querychat-handoff-panel")
+        expect(restored_panel).to_have_class(re.compile(r"\bopen\b"), timeout=5000)
+        editor = restored_panel.locator(".querychat-handoff-panel-body textarea")
+        expect(editor).not_to_have_value("", timeout=10000)
+        new_page.close()

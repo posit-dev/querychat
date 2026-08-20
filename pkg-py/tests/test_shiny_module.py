@@ -261,8 +261,8 @@ def test_mod_server_skips_chat_bookmarking_when_history_is_bookmark_mode():
     fake_chat_instance.enable_bookmarking.assert_not_called()
 
 
-def test_mod_server_registers_table_state_with_both_bookmark_and_history_hooks():
-    """Table/viz state callbacks must always register with both APIs, unconditionally."""
+def test_mod_server_registers_app_state_with_both_bookmark_and_history_hooks():
+    """App state callbacks must always register with both APIs, unconditionally."""
     from unittest.mock import MagicMock, patch
 
     from querychat._shiny_module import mod_server
@@ -311,8 +311,8 @@ def test_mod_server_registers_table_state_with_both_bookmark_and_history_hooks()
         )
 
     assert "chat_update" in fake_session.bookmark.exclude
-    assert fake_session.bookmark.on_bookmark.call_count == 1
-    assert fake_session.bookmark.on_restore.call_count == 1
+    assert fake_session.bookmark.on_bookmark.call_count == 2
+    assert fake_session.bookmark.on_restore.call_count == 2
     assert fake_chat_instance.history.on_save.call_count == 2
     assert fake_chat_instance.history.on_restore.call_count == 2
 

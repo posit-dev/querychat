@@ -664,6 +664,34 @@ def chat_handoff(page: Page) -> ChatControllerType:
     return _create_chat_controller(page, "titanic")
 
 
+@pytest.fixture(scope="module")
+def app_handoff_bookmark() -> Generator[str, None, None]:
+    """Start the handoff_bookmark_app.py Shiny server for testing."""
+    app_path = str(APPS_DIR / "handoff_bookmark_app.py")
+
+    def start_factory():
+        port = _find_free_port()
+        url = f"http://localhost:{port}"
+        return url, lambda: _start_shiny_app_threaded(app_path, port)
+
+    def shiny_cleanup(_thread, server):
+        _stop_shiny_server(server)
+
+    url, _thread, server = _start_server_with_retry(
+        start_factory, shiny_cleanup, timeout=30.0
+    )
+    try:
+        yield url
+    finally:
+        _stop_shiny_server(server)
+
+
+@pytest.fixture
+def chat_handoff_bookmark(page: Page) -> ChatControllerType:
+    """Create a ChatController for the handoff bookmark app."""
+    return _create_chat_controller(page, "titanic")
+
+
 class HandoffModalActions:
     """
     Shared modal/query helpers for handoff test classes.

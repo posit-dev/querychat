@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 
     import chatlas
     import shinychat
+    from shiny.bookmark import BookmarkState, RestoreState
 
     from shiny import Inputs, Session
 
@@ -223,14 +224,12 @@ def handoff_server(
         if data is not None:
             yield data
 
-    @shinychat_chat.history.on_save
-    def on_handoff_history_save(values: dict[str, Any]) -> None:
+    def save_handoffs(values: dict[str, Any]) -> None:
         snapshot = build_handoff_snapshot(orch)
         if snapshot:
             values[HANDOFFS_BOOKMARK_KEY] = snapshot
 
-    @shinychat_chat.history.on_restore
-    def on_handoff_history_restore(values: dict[str, Any]) -> None:
+    def restore_handoffs(values: dict[str, Any]) -> None:
         panel_close = apply_handoff_snapshot(
             orch,
             values.get(HANDOFFS_BOOKMARK_KEY),
@@ -246,3 +245,19 @@ def handoff_server(
                 restore_tasks,
             )
         )
+
+    @session.bookmark.on_bookmark
+    def on_handoff_bookmark(state: BookmarkState) -> None:
+        save_handoffs(state.values)
+
+    @session.bookmark.on_restore
+    def on_handoff_bookmark_restore(state: RestoreState) -> None:
+        restore_handoffs(state.values)
+
+    @shinychat_chat.history.on_save
+    def on_handoff_history_save(values: dict[str, Any]) -> None:
+        save_handoffs(values)
+
+    @shinychat_chat.history.on_restore
+    def on_handoff_history_restore(values: dict[str, Any]) -> None:
+        restore_handoffs(values)

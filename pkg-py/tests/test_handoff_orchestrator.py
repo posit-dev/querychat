@@ -374,6 +374,7 @@ class TestBookmark:
 
         restored = make_session(data_source=FakeDataSource())
         restored.restore_snapshot(saved)
+        restored.restore_snapshot(saved)
 
         assert restored.store.has("a")
         assert restored.store.has("b")
@@ -419,6 +420,10 @@ class TestBookmark:
         state.data_instructions = "Load CSV"
         orch.store.remember(state)
         saved = orch.store.bookmark_values()
+
+        assert saved[0]["bundle_id"] == bundle.bundle_id
+        assert "bundled_files" not in saved[0]
+        assert b"total_bill\n10\n" not in repr(saved).encode()
 
         orch.restore_snapshot(saved)
 

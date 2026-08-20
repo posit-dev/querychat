@@ -14,6 +14,7 @@ from querychat._datasource import DataFrameSource
 from querychat._handoff_bundle_store import HandoffSnapshotUnavailableError
 from querychat._handoff_data import (
     HandoffDataContext,
+    HandoffDataError,
     materialize_handoff_data,
 )
 from querychat._handoff_orchestrator import (
@@ -621,33 +622,76 @@ class TestRevise:
         assert orch.store.get("a") is state
         assert orch.bundle_store.get(first_bundle.bundle_id) is first_bundle
 
-    def test_oversized_dataframe_materialization_uses_external_data_without_bundle(
+    def test_oversized_dataframe_revision_is_corrected_to_external_data(
         self,
         monkeypatch,
     ):
         source = RecordingDataFrameSource("tips")
+        chat = FakeChat(
+            streams=[
+                [result_chunk("csv source", referenced_tables=["tips"])],
+                [result_chunk("external source", referenced_tables=["tips"])],
+            ]
+        )
         orch = make_session(
-            FakeChat([result_chunk("source", referenced_tables=["tips"])]),
+            chat,
             data_sources={"tips": source},
         )
+        original_bundle = orch.bundle_store.put({"tips.csv": b"original"})
+        state = make_state()
+        state.bundle_id = original_bundle.bundle_id
+        state.bundled_tables = ["tips"]
+        orch.store.remember(state)
         monkeypatch.setattr("querychat._handoff_data.MAX_BUNDLE_SIZE", 1)
 
-        asyncio.run(
-            orch.generate(
-                GenerateRequest(type_id="quarto-dashboard", language="python"),
-                "",
-                "a",
-            )
-        )
+        asyncio.run(orch.revise("a", "change the layout"))
 
-        state = orch.store.get("a")
-        assert state is not None
-        assert state.bundled_tables == []
-        assert state.bundle_id is None
-        assert (
-            "This setup may need adjustment before the handoff can run."
-            in state.data_instructions
+        replacement = orch.store.get("a")
+        assert chat.stream_count == 2
+        assert replacement is not None
+        assert replacement is not state
+        assert replacement.source == "external source"
+        assert replacement.referenced_tables == ["tips"]
+        assert replacement.bundled_tables == []
+        assert replacement.bundle_id is None
+        assert "may need adjustment" in replacement.data_instructions
+        assert replacement.turns[-1].text == result_chunk(
+            "external source",
+            referenced_tables=["tips"],
         )
+        assert orch.bundle_store.get(original_bundle.bundle_id) is None
+
+    def test_failed_external_data_correction_preserves_current_handoff(
+        self,
+        monkeypatch,
+    ):
+        source = RecordingDataFrameSource("tips")
+        chat = FakeChat(
+            streams=[
+                [result_chunk("csv source", referenced_tables=["tips"])],
+                [result_chunk("external source", referenced_tables=[])],
+            ]
+        )
+        orch = make_session(
+            chat,
+            data_sources={"tips": source},
+        )
+        original_bundle = orch.bundle_store.put({"tips.csv": b"original"})
+        state = make_state()
+        state.bundle_id = original_bundle.bundle_id
+        state.bundled_tables = ["tips"]
+        orch.store.remember(state)
+        monkeypatch.setattr("querychat._handoff_data.MAX_BUNDLE_SIZE", 1)
+
+        with pytest.raises(HandoffDataError, match="referenced-table set"):
+            asyncio.run(orch.revise("a", "change the layout"))
+
+        assert chat.stream_count == 2
+        assert orch.store.get("a") is state
+        assert state.source == "v1"
+        assert state.bundled_tables == ["tips"]
+        assert state.bundle_id == original_bundle.bundle_id
+        assert orch.bundle_store.get(original_bundle.bundle_id) is original_bundle
 
     def test_revise_replaces_current_handoff(self):
         orch = make_session(
@@ -854,6 +898,96 @@ class TestGenerate:
         assert state.bundled_tables == ["tips"]
         assert state.bundle_id is not None
         assert source.get_data_calls == 1
+
+    def test_oversized_dataframe_is_corrected_to_external_data(
+        self,
+        monkeypatch,
+    ):
+        source = RecordingDataFrameSource("tips")
+        chat = FakeChat(
+            streams=[
+                [result_chunk("csv source", referenced_tables=["tips"])],
+                [result_chunk("external source", referenced_tables=["tips"])],
+            ]
+        )
+        orch = make_session(chat, data_sources={"tips": source})
+        monkeypatch.setattr("querychat._handoff_data.MAX_BUNDLE_SIZE", 1)
+
+        asyncio.run(
+            orch.generate(
+                GenerateRequest(type_id="quarto-dashboard", language="python"),
+                "",
+                "a",
+            )
+        )
+
+        state = orch.store.get("a")
+        assert chat.stream_count == 2
+        assert state is not None
+        assert state.source == "external source"
+        assert state.referenced_tables == ["tips"]
+        assert state.bundled_tables == []
+        assert state.bundle_id is None
+        assert "may need adjustment" in state.data_instructions
+        assert state.turns[-1].text == result_chunk(
+            "external source",
+            referenced_tables=["tips"],
+        )
+
+    def test_external_data_correction_rejects_changed_table_set(
+        self,
+        monkeypatch,
+    ):
+        source = RecordingDataFrameSource("tips")
+        chat = FakeChat(
+            streams=[
+                [result_chunk("csv source", referenced_tables=["tips"])],
+                [result_chunk("external source", referenced_tables=[])],
+            ]
+        )
+        orch = make_session(chat, data_sources={"tips": source})
+        monkeypatch.setattr("querychat._handoff_data.MAX_BUNDLE_SIZE", 1)
+
+        with pytest.raises(HandoffDataError, match="referenced-table set"):
+            asyncio.run(
+                orch.generate(
+                    GenerateRequest(type_id="quarto-dashboard", language="python"),
+                    "",
+                    "a",
+                )
+            )
+
+        assert chat.stream_count == 2
+        assert not orch.store.has("a")
+        assert not orch.bundle_store._items
+
+    def test_external_data_correction_failure_stores_nothing(
+        self,
+        monkeypatch,
+    ):
+        source = RecordingDataFrameSource("tips")
+        chat = FakeChat(
+            streams=[
+                [result_chunk("csv source", referenced_tables=["tips"])],
+                [result_chunk("", referenced_tables=["tips"])],
+                [result_chunk("must not be used", referenced_tables=["tips"])],
+            ]
+        )
+        orch = make_session(chat, data_sources={"tips": source})
+        monkeypatch.setattr("querychat._handoff_data.MAX_BUNDLE_SIZE", 1)
+
+        with pytest.raises(HandoffValidationError, match="source is empty"):
+            asyncio.run(
+                orch.generate(
+                    GenerateRequest(type_id="quarto-dashboard", language="python"),
+                    "",
+                    "a",
+                )
+            )
+
+        assert chat.stream_count == 2
+        assert not orch.store.has("a")
+        assert not orch.bundle_store._items
 
     def test_stores_resolved_language(self):
         chat = FakeChat(

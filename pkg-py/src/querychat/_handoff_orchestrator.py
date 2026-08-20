@@ -27,6 +27,7 @@ from ._handoff_chat import HandoffChat
 from ._handoff_data import (
     HandoffDataCatalog,
     HandoffDataContext,
+    HandoffDataError,
     materialize_handoff_data,
     prepare_handoff_data,
 )
@@ -35,6 +36,7 @@ from ._handoff_prompt import (
     FreeformMetadata,
     HandoffResult,
     Recommendation,
+    build_external_data_repair_system_prompt,
     build_freeform_handoff_user_prompt,
     build_handoff_repair_prompt,
     build_handoff_system_prompt,
@@ -102,6 +104,7 @@ class GenerationPlan:
     handoff_type: HandoffType
     system_prompt: str
     user_prompt: str
+    schema: str
     data_catalog: HandoffDataCatalog
     result_model: type[HandoffResult]
 
@@ -302,6 +305,7 @@ class HandoffOrchestrator:
             handoff_type=handoff_type,
             system_prompt=system_prompt,
             user_prompt=user_prompt,
+            schema=schema,
             data_catalog=data_catalog,
             result_model=handoff_result_model(
                 list(self.data_sources),
@@ -334,10 +338,11 @@ class HandoffOrchestrator:
                 result_model=plan.result_model,
                 handoff_type=plan.handoff_type,
             )
-            data_context = materialize_handoff_data(
-                plan.data_catalog,
-                self.data_sources,
-                generated.result.referenced_tables,
+            generated, data_context = await self._materialize_generated(
+                generated,
+                data_catalog=plan.data_catalog,
+                schema=plan.schema,
+                result_model=plan.result_model,
             )
             if data_context.bundled_files:
                 bundle_id = self.bundle_store.stage(
@@ -419,6 +424,52 @@ class HandoffOrchestrator:
             handoff_type=handoff_type,
         )
 
+    async def _materialize_generated(
+        self,
+        generated: GeneratedHandoff,
+        *,
+        data_catalog: HandoffDataCatalog,
+        schema: str,
+        result_model: type[HandoffResult],
+    ) -> tuple[GeneratedHandoff, HandoffDataContext]:
+        data_context = materialize_handoff_data(
+            data_catalog,
+            self.data_sources,
+            generated.result.referenced_tables,
+        )
+        if not data_context.externalized_dataframe_tables:
+            return generated, data_context
+
+        expected_tables = set(generated.result.referenced_tables)
+        repair_system_prompt = build_external_data_repair_system_prompt(
+            handoff_type=generated.handoff_type,
+            schema=schema,
+            data_instructions=data_context.data_instructions,
+            referenced_tables=generated.result.referenced_tables,
+        )
+        repaired_result, repaired_turns = await self.chat.stream(
+            "Return the complete corrected handoff now.",
+            turns=generated.turns,
+            system_prompt=repair_system_prompt,
+            sink=self.view,
+            model=result_model,
+        )
+        if repaired_result.language != generated.handoff_type.language:
+            raise HandoffDataError("Corrected handoff changed its language.")
+        if set(repaired_result.referenced_tables) != expected_tables:
+            raise HandoffDataError(
+                "Corrected handoff changed its referenced-table set."
+            )
+        validate_handoff_source(repaired_result.source, generated.handoff_type)
+        return (
+            GeneratedHandoff(
+                result=repaired_result,
+                turns=repaired_turns,
+                handoff_type=generated.handoff_type,
+            ),
+            data_context,
+        )
+
     async def show_handoff(self, handoff_id: str | None) -> None:
         state = self.store.get(handoff_id)
         if state is not None:
@@ -432,6 +483,10 @@ class HandoffOrchestrator:
         if state is None or not instructions:
             return
         language = state.handoff_type.language
+        schema = "\n\n".join(
+            self.executor.get_schema(name, categorical_threshold=20)
+            for name in self.data_sources
+        )
         data_catalog = prepare_handoff_data(
             self.data_sources,
             language=language,
@@ -457,10 +512,11 @@ class HandoffOrchestrator:
                 result_model=result_model,
                 handoff_type=state.handoff_type,
             )
-            data_context = materialize_handoff_data(
-                data_catalog,
-                self.data_sources,
-                generated.result.referenced_tables,
+            generated, data_context = await self._materialize_generated(
+                generated,
+                data_catalog=data_catalog,
+                schema=schema,
+                result_model=result_model,
             )
             if data_context.bundled_files:
                 bundle_id = self.bundle_store.stage(

@@ -60,7 +60,7 @@ from ._handoff_validation import HandoffValidationError, validate_handoff_source
 from ._handoff_view import HandoffView
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Callable, Iterable
 
     import chatlas
     import shinychat
@@ -341,7 +341,7 @@ class HandoffOrchestrator:
             generated, data_context = await self._materialize_generated(
                 generated,
                 data_catalog=plan.data_catalog,
-                schema=plan.schema,
+                schema_provider=lambda: plan.schema,
                 result_model=plan.result_model,
             )
             if data_context.bundled_files:
@@ -378,7 +378,7 @@ class HandoffOrchestrator:
                     state,
                     download_available=download_available,
                 )
-        except Exception:
+        except BaseException:
             if not committed:
                 self.bundle_store.discard(bundle_id)
                 await self.view.clear_editor("plain")
@@ -429,7 +429,7 @@ class HandoffOrchestrator:
         generated: GeneratedHandoff,
         *,
         data_catalog: HandoffDataCatalog,
-        schema: str,
+        schema_provider: Callable[[], str],
         result_model: type[HandoffResult],
     ) -> tuple[GeneratedHandoff, HandoffDataContext]:
         data_context = materialize_handoff_data(
@@ -443,7 +443,7 @@ class HandoffOrchestrator:
         expected_tables = set(generated.result.referenced_tables)
         repair_system_prompt = build_external_data_repair_system_prompt(
             handoff_type=generated.handoff_type,
-            schema=schema,
+            schema=schema_provider(),
             data_instructions=data_context.data_instructions,
             referenced_tables=generated.result.referenced_tables,
         )
@@ -501,10 +501,13 @@ class HandoffOrchestrator:
         if state is None or not instructions:
             return
         language = state.handoff_type.language
-        schema = "\n\n".join(
-            self.executor.get_schema(name, categorical_threshold=20)
-            for name in self.data_sources
-        )
+
+        def schema_provider() -> str:
+            return "\n\n".join(
+                self.executor.get_schema(name, categorical_threshold=20)
+                for name in self.data_sources
+            )
+
         data_catalog = prepare_handoff_data(
             self.data_sources,
             language=language,
@@ -533,7 +536,7 @@ class HandoffOrchestrator:
             generated, data_context = await self._materialize_generated(
                 generated,
                 data_catalog=data_catalog,
-                schema=schema,
+                schema_provider=schema_provider,
                 result_model=result_model,
             )
             if data_context.bundled_files:
@@ -559,7 +562,7 @@ class HandoffOrchestrator:
                 removed_state.bundle_id for removed_state in removed_states
             )
             self.bundle_store.evict()
-        except Exception:
+        except BaseException:
             if not replacement_saved:
                 self.bundle_store.discard(bundle_id)
             await self.view.show_handoff(

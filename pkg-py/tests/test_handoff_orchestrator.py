@@ -53,6 +53,7 @@ class FakeStreamController:
         self.streams = streams
         self.stream_count = 0
         self.incoming_turns: list[list[chatlas.Turn]] = []
+        self.system_prompts: list[str | None] = []
 
     def __deepcopy__(self, memo: dict[int, object]) -> FakeStreamController:
         """Keep stream sequencing shared across copied chat forks."""
@@ -84,6 +85,10 @@ class FakeChat:
     def incoming_turns(self) -> list[list[chatlas.Turn]]:
         return self.controller.incoming_turns
 
+    @property
+    def system_prompts(self) -> list[str | None]:
+        return self.controller.system_prompts
+
     def set_turns(self, turns):
         self._turns = list(turns)
 
@@ -93,6 +98,7 @@ class FakeChat:
     async def stream_async(self, prompt, echo="none", data_model=None):
         chunks = self.controller.streams[self.controller.stream_count]
         self.controller.incoming_turns.append(list(self._turns))
+        self.controller.system_prompts.append(self.system_prompt)
         self.controller.stream_count += 1
         self._turns.extend(
             [
@@ -109,6 +115,16 @@ class FakeChat:
 
     async def chat_structured_async(self, prompt, data_model=None):
         return self._structured
+
+
+class CancelSecondStreamChat(FakeChat):
+    async def stream_async(self, prompt, echo="none", data_model=None):
+        if self.stream_count == 1:
+            self.controller.incoming_turns.append(list(self._turns))
+            self.controller.system_prompts.append(self.system_prompt)
+            self.controller.stream_count += 1
+            raise asyncio.CancelledError
+        return await super().stream_async(prompt, echo=echo, data_model=data_model)
 
 
 class FakeDataSource:
@@ -141,6 +157,19 @@ class FakeExecutor:
         categorical_threshold: int,
     ) -> str:
         return f"Table {table_name}\nColumns: id (INTEGER)"
+
+
+class RecordingExecutor(FakeExecutor):
+    def __init__(self) -> None:
+        self.schema_calls: list[str] = []
+
+    def get_schema(
+        self,
+        table_name: str,
+        categorical_threshold: int,
+    ) -> str:
+        self.schema_calls.append(table_name)
+        return super().get_schema(table_name, categorical_threshold)
 
 
 class FakeChatUI:
@@ -627,6 +656,7 @@ class TestRevise:
         monkeypatch,
     ):
         source = RecordingDataFrameSource("tips")
+        executor = RecordingExecutor()
         chat = FakeChat(
             streams=[
                 [result_chunk("csv source", referenced_tables=["tips"])],
@@ -635,7 +665,11 @@ class TestRevise:
         )
         orch = make_session(
             chat,
-            data_sources={"tips": source},
+            data_sources={
+                "tips": source,
+                "orders": FakeDataSource("orders"),
+            },
+            executor=executor,
         )
         original_bundle = orch.bundle_store.put({"tips.csv": b"original"})
         state = make_state()
@@ -659,7 +693,75 @@ class TestRevise:
             "external source",
             referenced_tables=["tips"],
         )
+        assert executor.schema_calls == ["tips", "orders"]
+        correction_prompt = chat.system_prompts[1]
+        assert correction_prompt is not None
+        assert "Table tips\nColumns: id (INTEGER)" in correction_prompt
+        assert "Table orders\nColumns: id (INTEGER)" in correction_prompt
         assert orch.bundle_store.get(original_bundle.bundle_id) is None
+
+    def test_correction_cancellation_preserves_current_handoff(
+        self,
+        monkeypatch,
+    ):
+        source = RecordingDataFrameSource("tips")
+        chat = CancelSecondStreamChat(
+            streams=[
+                [result_chunk("csv source", referenced_tables=["tips"])],
+                [],
+            ]
+        )
+        orch = make_session(
+            chat,
+            data_sources={"tips": source},
+        )
+        original_bundle = orch.bundle_store.put({"tips.csv": b"original"})
+        state = make_state()
+        state.bundle_id = original_bundle.bundle_id
+        state.bundled_tables = ["tips"]
+        orch.store.remember(state)
+        monkeypatch.setattr("querychat._handoff_data.MAX_BUNDLE_SIZE", 1)
+        restored_states: list[HandoffState] = []
+        show_handoff = orch.view.show_handoff
+
+        async def record_show_handoff(
+            shown_state: HandoffState,
+            *,
+            download_available: bool,
+        ) -> None:
+            restored_states.append(shown_state)
+            await show_handoff(
+                shown_state,
+                download_available=download_available,
+            )
+
+        monkeypatch.setattr(orch.view, "show_handoff", record_show_handoff)
+
+        with pytest.raises(asyncio.CancelledError):
+            asyncio.run(orch.revise("a", "change the layout"))
+
+        assert chat.stream_count == 2
+        assert orch.store.get("a") is state
+        assert orch.bundle_store.get(original_bundle.bundle_id) is original_bundle
+        assert restored_states[-1] is state
+
+    def test_normal_revision_does_not_load_schema(self):
+        source = RecordingDataFrameSource("tips")
+        executor = RecordingExecutor()
+        orch = make_session(
+            FakeChat([result_chunk("new source", referenced_tables=["tips"])]),
+            data_sources={"tips": source},
+            executor=executor,
+        )
+        state = make_state()
+        orch.store.remember(state)
+
+        asyncio.run(orch.revise("a", "change the layout"))
+
+        replacement = orch.store.get("a")
+        assert replacement is not None
+        assert replacement.source == "new source"
+        assert executor.schema_calls == []
 
     def test_failed_external_data_correction_preserves_current_handoff(
         self,
@@ -933,6 +1035,45 @@ class TestGenerate:
             "external source",
             referenced_tables=["tips"],
         )
+
+    def test_correction_cancellation_cleans_up_generation(
+        self,
+        monkeypatch,
+    ):
+        source = RecordingDataFrameSource("tips")
+        chat = CancelSecondStreamChat(
+            streams=[
+                [result_chunk("csv source", referenced_tables=["tips"])],
+                [],
+            ]
+        )
+        orch = make_session(chat, data_sources={"tips": source})
+        monkeypatch.setattr("querychat._handoff_data.MAX_BUNDLE_SIZE", 1)
+
+        with pytest.raises(asyncio.CancelledError):
+            asyncio.run(
+                orch.generate(
+                    GenerateRequest(type_id="quarto-dashboard", language="python"),
+                    "",
+                    "a",
+                )
+            )
+
+        source_updates = [
+            payload
+            for message_type, payload in orch.view.session.messages
+            if message_type == "querychat-handoff-source-update"
+        ]
+        assert chat.stream_count == 2
+        assert not orch.store.has("a")
+        assert not orch.bundle_store._items
+        assert source_updates[-1] == {
+            "root_id": orch.view.panel_root_id,
+            "id": orch.view.editor_id,
+            "value": "",
+            "language": "plain",
+            "download_available": False,
+        }
 
     def test_external_data_correction_rejects_changed_table_set(
         self,

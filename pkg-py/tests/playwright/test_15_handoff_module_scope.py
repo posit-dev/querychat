@@ -195,7 +195,9 @@ def test_modal_inputs_update_only_the_clicked_module(page: Page) -> None:
             <button class="querychat-handoff-type-pill active" data-handoff-type="quarto-dashboard" data-languages="python,r"></button>
             <button class="querychat-handoff-type-pill" data-handoff-type="other" data-languages="python,r"></button>
           </div>
-          <div class="querychat-handoff-language-selector"></div>
+          <div class="querychat-handoff-language-selector">
+            <input type="radio" class="querychat-handoff-language-radio" data-language="python" checked>
+          </div>
           <div class="querychat-handoff-freeform-input hidden">
             <input>
           </div>
@@ -209,7 +211,9 @@ def test_modal_inputs_update_only_the_clicked_module(page: Page) -> None:
             <button class="querychat-handoff-type-pill active" data-handoff-type="quarto-dashboard" data-languages="python,r"></button>
             <button class="querychat-handoff-type-pill" data-handoff-type="other" data-languages="python,r"></button>
           </div>
-          <div class="querychat-handoff-language-selector"></div>
+          <div class="querychat-handoff-language-selector">
+            <input type="radio" class="querychat-handoff-language-radio" data-language="python" checked>
+          </div>
           <div class="querychat-handoff-freeform-input hidden">
             <input>
           </div>

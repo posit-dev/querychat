@@ -27,6 +27,7 @@ class TestRenderPillHtml:
         art = ArtifactType(
             id="other",
             label="<b>R</b> & Co",
+            language="r",
             file_extension=".R",
             editor_language="r",
         )

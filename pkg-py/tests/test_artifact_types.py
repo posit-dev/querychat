@@ -28,7 +28,7 @@ class TestArtifactType:
         artifact_type = ArtifactType(
             id="other",
             label="SQL script",
-            language=None,
+            language="python",
             file_extension=".sql",
             editor_language="sql",
         )

@@ -66,7 +66,7 @@ class ArtifactType(BaseModel):
     id: str
     label: str
     icon: ICON_NAMES = "file-earmark-code"
-    language: ArtifactLanguage | None = None
+    language: ArtifactLanguage
     file_extension: str
     editor_language: EditorLanguage
     structure: ArtifactStructure = "text"

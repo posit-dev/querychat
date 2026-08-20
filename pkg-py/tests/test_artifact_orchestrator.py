@@ -261,10 +261,10 @@ def test_freeform_type_is_text_target_snapshot():
     artifact_type = build_freeform_artifact_type(
         "SQL script",
         FreeformMetadata(file_extension="sql", editor_language="sql"),
-        None,
+        "python",
     )
 
-    assert artifact_type.language is None
+    assert artifact_type.language == "python"
     assert artifact_type.file_extension == ".sql"
     assert artifact_type.structure == "text"
 
@@ -280,7 +280,11 @@ class TestStoreEviction:
         orch = make_session()
         for i in range(5):
             orch.store.remember(make_state(artifact_id=f"a{i}"))
-        assert [state.artifact_id for state in orch.store.values()] == ["a2", "a3", "a4"]
+        assert [state.artifact_id for state in orch.store.values()] == [
+            "a2",
+            "a3",
+            "a4",
+        ]
 
     def test_access_protects_from_eviction(self, monkeypatch):
         monkeypatch.setattr("querychat._artifact_store.MAX_STORED_ARTIFACTS", 3)
@@ -295,7 +299,11 @@ class TestStoreEviction:
         # a1 is now the oldest and is evicted; a0 survives.
         assert orch.store.has("a0")
         assert not orch.store.has("a1")
-        assert [state.artifact_id for state in orch.store.values()] == ["a2", "a0", "a3"]
+        assert [state.artifact_id for state in orch.store.values()] == [
+            "a2",
+            "a0",
+            "a3",
+        ]
 
     def test_artifact_eviction_discards_only_unreferenced_bundles(
         self,
@@ -317,7 +325,7 @@ class TestStoreEviction:
 
         asyncio.run(
             orch.generate(
-                GenerateRequest(type_id="quarto-dashboard"),
+                GenerateRequest(type_id="quarto-dashboard", language="python"),
                 "",
                 "generated",
             )
@@ -343,7 +351,7 @@ class TestStoreEviction:
 
         asyncio.run(
             orch.generate(
-                GenerateRequest(type_id="quarto-dashboard"),
+                GenerateRequest(type_id="quarto-dashboard", language="python"),
                 "",
                 "generated",
             )
@@ -464,7 +472,13 @@ class TestDownload:
             data_sources={"tips": source},
         )
 
-        asyncio.run(orch.generate(GenerateRequest(type_id="quarto-dashboard"), "", "a"))
+        asyncio.run(
+            orch.generate(
+                GenerateRequest(type_id="quarto-dashboard", language="python"),
+                "",
+                "a",
+            )
+        )
         state = orch.store.get("a")
         assert state is not None
         bundle = orch.bundle_store.get(state.bundle_id)
@@ -612,7 +626,11 @@ class TestRevise:
 
         with pytest.raises(ArtifactDataError, match="exceeds"):
             asyncio.run(
-                orch.generate(GenerateRequest(type_id="quarto-dashboard"), "", "a")
+                orch.generate(
+                    GenerateRequest(type_id="quarto-dashboard", language="python"),
+                    "",
+                    "a",
+                )
             )
 
         assert not orch.store.has("a")
@@ -730,7 +748,12 @@ class TestRevise:
 class TestStreamArtifact:
     def test_returns_result_and_turns_and_updates_editor(self):
         chat = FakeChat(
-            [('{"source": "generated src", "summary": "s", "referenced_tables": []}')]
+            [
+                (
+                    '{"source": "generated src", "language": "python", '
+                    '"summary": "s", "referenced_tables": []}'
+                )
+            ]
         )
         orch = make_session(chat)
 
@@ -756,6 +779,7 @@ class TestStateFromResult:
     def test_maps_current_artifact_fields(self):
         result = ArtifactResult(
             source="src",
+            language="python",
             summary="sum",
             install_instructions="pip install x",
             run_instructions="python artifact.py",
@@ -789,6 +813,7 @@ class TestStateFromResult:
         turns = [chatlas.Turn(role="user", contents="hi")]
         result = ArtifactResult(
             source="src2",
+            language="python",
             summary="",
             install_instructions="",
             referenced_tables=[],
@@ -813,7 +838,7 @@ class TestGenerate:
             [result_chunk("gen src", referenced_tables=["mtcars"], summary="sum")]
         )
         orch = make_session(chat, data_source=FakeDataSource())
-        req = GenerateRequest(type_id="quarto-dashboard")
+        req = GenerateRequest(type_id="quarto-dashboard", language="python")
 
         asyncio.run(orch.generate(req, "", "myid"))
 
@@ -825,7 +850,7 @@ class TestGenerate:
             [result_chunk("gen src", referenced_tables=["mtcars"], summary="sum")]
         )
         orch = make_session(chat, data_source=FakeDataSource())
-        req = GenerateRequest(type_id="quarto-dashboard")
+        req = GenerateRequest(type_id="quarto-dashboard", language="python")
 
         asyncio.run(orch.generate(req, "", "myid"))
 
@@ -835,7 +860,7 @@ class TestGenerate:
         source = RecordingDataFrameSource("tips")
         chat = FakeChat([result_chunk("x", referenced_tables=["tips"])])
         orch = make_session(chat, data_sources={"tips": source})
-        req = GenerateRequest(type_id="quarto-dashboard")
+        req = GenerateRequest(type_id="quarto-dashboard", language="python")
 
         asyncio.run(orch.generate(req, "", "artifact-1"))
 
@@ -870,7 +895,7 @@ class TestGenerate:
         assert state is not None
         assert state.artifact_type.language == "r"
 
-    def test_no_preference_result_selects_registered_target(self):
+    def test_explicit_language_selects_registered_target(self):
         chat = FakeChat(
             [
                 (
@@ -883,7 +908,7 @@ class TestGenerate:
 
         asyncio.run(
             orch.generate(
-                GenerateRequest(type_id="shiny-app", language=""),
+                GenerateRequest(type_id="shiny-app", language="r"),
                 "",
                 "artifact-1",
             )
@@ -900,7 +925,7 @@ class TestGenerate:
                 raise RuntimeError("boom")
 
         orch = make_session(BoomChat([]), data_source=FakeDataSource())
-        req = GenerateRequest(type_id="quarto-dashboard")
+        req = GenerateRequest(type_id="quarto-dashboard", language="python")
 
         with pytest.raises(RuntimeError, match="boom"):
             asyncio.run(orch.generate(req, "", "myid"))
@@ -953,27 +978,6 @@ class TestGenerate:
         assert "failed structural validation" in state.turns[-2].text
         assert state.turns[-1].text == repaired
 
-    def test_no_preference_repair_rejects_language_change(self):
-        invalid_r = artifact_result_json("{", language="r")
-        valid_python = artifact_result_json(
-            python_notebook_source(),
-            language="python",
-        )
-        chat = FakeChat(streams=[[invalid_r], [valid_python]])
-        orch = make_session(chat)
-
-        with pytest.raises(ValidationError, match="language"):
-            asyncio.run(
-                orch.generate(
-                    GenerateRequest(type_id="jupyter-notebook"),
-                    "",
-                    "artifact-1",
-                )
-            )
-
-        assert chat.stream_count == 2
-        assert not orch.store.has("artifact-1")
-
     def test_generation_stops_after_second_invalid_result(self):
         invalid = artifact_result_json("{")
         chat = FakeChat(streams=[[invalid], [invalid]])
@@ -1010,7 +1014,7 @@ class TestPrepareGeneration:
 
         plan = asyncio.run(
             orch.prepare_generation(
-                GenerateRequest(type_id="quarto-dashboard"),
+                GenerateRequest(type_id="quarto-dashboard", language="python"),
                 "",
             )
         )
@@ -1018,23 +1022,14 @@ class TestPrepareGeneration:
         assert "Table orders" in plan.system_prompt
         assert "Table customers" in plan.system_prompt
 
-    def test_builds_no_preference_plan_for_known_format(self):
+    def test_requires_language(self):
         orch = make_session(data_source=FakeDataSource())
         req = GenerateRequest(
             selected_ids=[], type_id="quarto-dashboard", language="", freeform=""
         )
 
-        plan = asyncio.run(orch.prepare_generation(req, "make it dark"))
-
-        assert plan.artifact_format is not None
-        assert plan.artifact_format.id == "quarto-dashboard"
-        assert plan.artifact_type is None
-        assert plan.allowed_languages == ("python", "r")
-        assert isinstance(plan.system_prompt, str)
-        assert plan.system_prompt
-        assert isinstance(plan.user_prompt, str)
-        assert plan.user_prompt
-        assert plan.data_catalog.entries["mtcars"].mode == "database"
+        with pytest.raises(ValueError, match="Select R or Python"):
+            asyncio.run(orch.prepare_generation(req, "make it dark"))
 
     def test_explicit_r_plan_resolves_before_generation(self):
         orch = make_session(data_source=FakeDataSource())
@@ -1046,9 +1041,7 @@ class TestPrepareGeneration:
             )
         )
 
-        assert plan.artifact_type is not None
         assert plan.artifact_type.file_extension == ".R"
-        assert plan.allowed_languages == ("r",)
         assert 'Sys.getenv("DATABASE_URL")' in plan.system_prompt
         assert "os.environ" not in plan.system_prompt
 
@@ -1069,7 +1062,7 @@ class TestPrepareGeneration:
         with pytest.raises(ValueError, match="Unknown artifact format: missing"):
             asyncio.run(
                 orch.prepare_generation(
-                    GenerateRequest(type_id="missing"),
+                    GenerateRequest(type_id="missing", language="python"),
                     "",
                 )
             )
@@ -1093,7 +1086,5 @@ class TestPrepareGeneration:
         )
 
         assert plan.artifact_format is None
-        assert plan.artifact_type is not None
         assert plan.artifact_type.language == "r"
         assert plan.artifact_type.structure == "text"
-        assert plan.allowed_languages == ("r",)

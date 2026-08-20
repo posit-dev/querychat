@@ -58,7 +58,7 @@ class TestBuildFreeformArtifactType:
             editor_language="sql",
             run_instructions="duckdb < {filename}",
         )
-        art_type = build_freeform_artifact_type("SQL script", meta, None)
+        art_type = build_freeform_artifact_type("SQL script", meta, "python")
         assert art_type.file_extension == ".sql"
 
     def test_preserves_existing_dot_and_metadata(self):
@@ -67,7 +67,7 @@ class TestBuildFreeformArtifactType:
             editor_language="markdown",
             run_instructions="open {filename}",
         )
-        art_type = build_freeform_artifact_type("R Markdown report", meta, None)
+        art_type = build_freeform_artifact_type("R Markdown report", meta, "r")
         assert art_type.id == "other"
         assert art_type.label == "R Markdown report"
         assert art_type.file_extension == ".md"

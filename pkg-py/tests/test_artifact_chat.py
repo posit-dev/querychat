@@ -60,6 +60,7 @@ class TestStream:
             '\\nfrom shiny import ui", ',
             '"summary": "A demo app", ',
             '"install_instructions": "pip install shiny", ',
+            '"language": "python", ',
             '"referenced_tables": []}',
         ]
         sink = FakeSink()
@@ -85,7 +86,8 @@ class TestStream:
         chunks = [
             (
                 '{"source": "x", "summary": "s", '
-                '"install_instructions": "i", "referenced_tables": []}'
+                '"install_instructions": "i", "language": "python", '
+                '"referenced_tables": []}'
             )
         ]
         sink = FakeSink()
@@ -119,9 +121,9 @@ class TestStream:
         assert sink.streaming[-1] is False
 
     def test_stream_uses_supplied_result_model(self):
-        model = artifact_prompt.artifact_result_model(["orders"])
+        model = artifact_prompt.artifact_result_model(["orders"], ("python",))
         fake = FakeChat(
-            ['{"source":"x","referenced_tables":["orders"]}'],
+            ['{"source":"x","language":"python","referenced_tables":["orders"]}'],
             expected_data_model=model,
         )
         sink = FakeSink()

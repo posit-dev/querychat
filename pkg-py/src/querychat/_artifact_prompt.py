@@ -37,12 +37,8 @@ class ArtifactResult(BaseModel):
     source: str = Field(
         description="The complete raw source for the artifact: no markdown code fences, no commentary before or after."
     )
-    language: ArtifactLanguage | None = Field(
-        default=None,
-        description=(
-            "Programming language used by the artifact. Required for registered "
-            "formats and optional for freeform formats."
-        ),
+    language: ArtifactLanguage = Field(
+        description="Programming language used by the artifact.",
     )
     summary: str = Field(
         default="",
@@ -81,8 +77,7 @@ class FreeformMetadata(BaseModel):
             bool(suffix)
             and ".." not in extension
             and all(
-                char.isascii()
-                and (char.isalnum() or char in {".", "_", "+", "-"})
+                char.isascii() and (char.isalnum() or char in {".", "_", "+", "-"})
                 for char in suffix
             )
         )
@@ -114,7 +109,7 @@ def recommendation_model(
 
 def artifact_result_model(
     table_names: list[str],
-    languages: tuple[ArtifactLanguage, ...] | None = None,
+    languages: tuple[ArtifactLanguage, ...],
     *,
     require_run_instructions: bool = False,
 ) -> type[ArtifactResult]:
@@ -124,42 +119,23 @@ def artifact_result_model(
         list[table_name_type],  # type: ignore[valid-type]
         Field(description="Registered table names used by the artifact source."),
     )
-    if languages:
-        language_type = Literal[tuple(languages)]  # type: ignore[valid-type]
-        language = (
-            language_type,  # type: ignore[valid-type]
-            Field(
-                description=(
-                    "Programming language used by the artifact. Required for "
-                    "registered formats and optional for freeform formats."
-                )
-            ),
-        )
-        if require_run_instructions:
-            return create_model(
-                "ArtifactResult",
-                __base__=ArtifactResult,
-                language=language,
-                run_instructions=required_run_instructions_field(),
-                referenced_tables=referenced_tables,
-            )
-        return create_model(
-            "ArtifactResult",
-            __base__=ArtifactResult,
-            language=language,
-            referenced_tables=referenced_tables,
-        )
-
+    language_type = Literal[tuple(languages)]  # type: ignore[valid-type]
+    language = (
+        language_type,  # type: ignore[valid-type]
+        Field(description="Programming language used by the artifact."),
+    )
     if require_run_instructions:
         return create_model(
             "ArtifactResult",
             __base__=ArtifactResult,
+            language=language,
             run_instructions=required_run_instructions_field(),
             referenced_tables=referenced_tables,
         )
     return create_model(
         "ArtifactResult",
         __base__=ArtifactResult,
+        language=language,
         referenced_tables=referenced_tables,
     )
 
@@ -170,7 +146,7 @@ def build_artifact_system_prompt(
     custom_directions: str,
     *,
     format_id: str,
-    language: ArtifactLanguage | None,
+    language: ArtifactLanguage,
     data_instructions: str = "",
 ) -> str:
     template = load_template("artifact-system.md")
@@ -193,14 +169,13 @@ def build_artifact_system_prompt(
         "has_items": len(selected_items) > 0,
         "viz_items": viz_items,
         "query_items": query_items,
-        "language_label": LANGUAGES[language] if language is not None else "",
+        "language_label": LANGUAGES[language],
         "format_quarto": format_id == "quarto-dashboard",
         "format_marimo": format_id == "marimo-notebook",
         "format_shiny": format_id == "shiny-app",
         "format_jupyter": format_id == "jupyter-notebook",
         "lang_python": language == "python",
         "lang_r": language == "r",
-        "language_unspecified": language is None,
     }
 
     return chevron.render(template, context)
@@ -208,13 +183,8 @@ def build_artifact_system_prompt(
 
 def build_artifact_user_prompt(
     artifact_format: ArtifactFormat,
-    language: ArtifactLanguage | None,
+    language: ArtifactLanguage,
 ) -> str:
-    if language is None:
-        return (
-            f"Generate the complete source for a {artifact_format.label} artifact. "
-            "Choose one supported language and report it in the structured result."
-        )
     return (
         f"Generate the complete source for a {artifact_format.label} artifact "
         f"in {LANGUAGES[language]}."
@@ -223,13 +193,8 @@ def build_artifact_user_prompt(
 
 def build_freeform_artifact_user_prompt(
     format_name: str,
-    language: ArtifactLanguage | None,
+    language: ArtifactLanguage,
 ) -> str:
-    if language is None:
-        return (
-            f"Generate the complete source for a {format_name} artifact. "
-            "Choose one supported language and report it in the structured result."
-        )
     return (
         f"Generate the complete source for a {format_name} artifact "
         f"in {LANGUAGES[language]}."
@@ -240,11 +205,7 @@ def build_artifact_repair_prompt(
     error: ArtifactValidationError,
     artifact_type: ArtifactType,
 ) -> str:
-    language = (
-        LANGUAGES[artifact_type.language]
-        if artifact_type.language is not None
-        else "the previously selected language"
-    )
+    language = LANGUAGES[artifact_type.language]
     return (
         "The generated artifact failed structural validation:\n\n"
         f"{error}\n\n"

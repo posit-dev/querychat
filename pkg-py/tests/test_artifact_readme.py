@@ -51,6 +51,7 @@ class TestBuildReadme:
         at = ArtifactType(
             id="other",
             label="Mystery",
+            language="python",
             file_extension=".txt",
             editor_language="plain",
         )

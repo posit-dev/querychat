@@ -57,7 +57,7 @@ from ._artifact_validation import ArtifactValidationError, validate_artifact_sou
 from ._artifact_view import ArtifactView
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable
+    from collections.abc import Iterable
 
     import chatlas
     import shinychat
@@ -98,22 +98,11 @@ class GenerateRequest(BaseModel):
 @dataclass(frozen=True)
 class GenerationPlan:
     artifact_format: ArtifactFormat | None
-    artifact_type: ArtifactType | None
-    allowed_languages: tuple[ArtifactLanguage, ...] | None
+    artifact_type: ArtifactType
     system_prompt: str
     user_prompt: str
     data_catalog: ArtifactDataCatalog
     result_model: type[ArtifactResult]
-
-    def resolve_type(
-        self,
-        result: ArtifactResult,
-    ) -> ArtifactType:
-        if self.artifact_type is not None:
-            return self.artifact_type
-        if self.artifact_format is None or result.language is None:
-            raise ValueError("Generated artifact did not select a language.")
-        return resolve_artifact_type(self.artifact_format.id, result.language)
 
 
 @dataclass(frozen=True)
@@ -141,7 +130,7 @@ def parse_generate_payload(raw: object, default_type: str) -> GenerateRequest:
 def build_freeform_artifact_type(
     freeform: str,
     metadata: FreeformMetadata,
-    language: ArtifactLanguage | None,
+    language: ArtifactLanguage,
 ) -> ArtifactType:
     ext = metadata.file_extension
     if not ext.startswith("."):
@@ -183,9 +172,9 @@ def state_from_result(
     )
 
 
-def parse_artifact_language(language: str) -> ArtifactLanguage | None:
+def parse_artifact_language(language: str) -> ArtifactLanguage:
     if not language:
-        return None
+        raise ValueError("Select R or Python before generating an artifact.")
     if language not in LANGUAGES:
         raise ValueError(f"Unknown artifact language: {language}")
     return cast("ArtifactLanguage", language)
@@ -274,21 +263,11 @@ class ArtifactOrchestrator:
                 metadata,
                 language,
             )
-            allowed_languages = (language,) if language is not None else None
         else:
             artifact_format = ARTIFACT_FORMATS.get(req.type_id)
             if artifact_format is None:
                 raise ValueError(f"Unknown artifact format: {req.type_id}")
-            artifact_type = (
-                resolve_artifact_type(artifact_format.id, language)
-                if language is not None
-                else None
-            )
-            allowed_languages = (
-                (language,)
-                if language is not None
-                else artifact_format.supported_languages
-            )
+            artifact_type = resolve_artifact_type(artifact_format.id, language)
         selected_items = [
             item for item in self.gallery_items if item.id in req.selected_ids
         ]
@@ -320,13 +299,12 @@ class ArtifactOrchestrator:
         return GenerationPlan(
             artifact_format=artifact_format,
             artifact_type=artifact_type,
-            allowed_languages=allowed_languages,
             system_prompt=system_prompt,
             user_prompt=user_prompt,
             data_catalog=data_catalog,
             result_model=artifact_result_model(
                 list(self.data_sources),
-                allowed_languages,
+                (language,),
                 require_run_instructions=True,
             ),
         )
@@ -343,12 +321,7 @@ class ArtifactOrchestrator:
         plan = await self.prepare_generation(req, directions)
 
         self.view.remove_modal()
-        editor_language = (
-            plan.artifact_type.editor_language
-            if plan.artifact_type is not None
-            else "plain"
-        )
-        await self.view.clear_editor(editor_language)
+        await self.view.clear_editor(plan.artifact_type.editor_language)
 
         bundle_id: str | None = None
         try:
@@ -357,7 +330,7 @@ class ArtifactOrchestrator:
                 turns=[],
                 system_prompt=plan.system_prompt,
                 result_model=plan.result_model,
-                resolve_type=plan.resolve_type,
+                artifact_type=plan.artifact_type,
             )
             data_context = materialize_artifact_data(
                 plan.data_catalog,
@@ -403,7 +376,7 @@ class ArtifactOrchestrator:
         turns: list[chatlas.Turn],
         system_prompt: str,
         result_model: type[ArtifactResult],
-        resolve_type: Callable[[ArtifactResult], ArtifactType],
+        artifact_type: ArtifactType,
     ) -> GeneratedArtifact:
         result, result_turns = await self.chat.stream(
             prompt,
@@ -412,18 +385,12 @@ class ArtifactOrchestrator:
             sink=self.view,
             model=result_model,
         )
-        artifact_type = resolve_type(result)
         try:
             validate_artifact_source(result.source, artifact_type)
         except ArtifactValidationError as error:
-            repair_languages = (
-                (artifact_type.language,)
-                if artifact_type.language is not None
-                else None
-            )
             repair_model = artifact_result_model(
                 list(self.data_sources),
-                repair_languages,
+                (artifact_type.language,),
                 require_run_instructions=True,
             )
             result, result_turns = await self.chat.stream(
@@ -433,10 +400,7 @@ class ArtifactOrchestrator:
                 sink=self.view,
                 model=repair_model,
             )
-            if (
-                artifact_type.language is not None
-                and result.language != artifact_type.language
-            ):
+            if result.language != artifact_type.language:
                 raise ValueError("Repaired artifact changed its language.") from error
             validate_artifact_source(result.source, artifact_type)
         return GeneratedArtifact(
@@ -462,10 +426,9 @@ class ArtifactOrchestrator:
             self.data_sources,
             language=language,
         )
-        languages = (language,) if language is not None else None
         result_model = artifact_result_model(
             list(self.data_sources),
-            languages,
+            (language,),
             require_run_instructions=True,
         )
 
@@ -482,7 +445,7 @@ class ArtifactOrchestrator:
                 turns=state.turns,
                 system_prompt=state.system_prompt,
                 result_model=result_model,
-                resolve_type=resolve_type,
+                artifact_type=state.artifact_type,
             )
             data_context = materialize_artifact_data(
                 data_catalog,

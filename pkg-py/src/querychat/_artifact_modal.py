@@ -148,14 +148,7 @@ def build_type_selector() -> TagList:
 
 
 def build_language_selector() -> Tag:
-    pills = [
-        tags.button(
-            "No preference",
-            class_="querychat-artifact-language-pill active",
-            type="button",
-            data_language="",
-        )
-    ]
+    pills = []
     for lang_id, label in LANGUAGES.items():
         pills.append(
             tags.button(

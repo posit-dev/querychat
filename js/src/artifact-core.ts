@@ -98,8 +98,11 @@ function updateGenerateButton(modal: HTMLElement): void {
   ) as HTMLInputElement | null;
   const hasFreeformText =
     !isOther || (freeformInput?.value.trim().length ?? 0) > 0;
+  const hasLanguage = Boolean(
+    modal.querySelector(".querychat-artifact-language-pill.active"),
+  );
 
-  generateBtn.disabled = selectedCount === 0 || !hasFreeformText;
+  generateBtn.disabled = selectedCount === 0 || !hasFreeformText || !hasLanguage;
 }
 
 function updateLanguagePills(
@@ -119,28 +122,17 @@ function updateLanguagePills(
   );
   if (!selector) return;
 
-  let resetNeeded = false;
   selector
     .querySelectorAll(".querychat-artifact-language-pill")
     .forEach((p) => {
       const lang = p.getAttribute("data-language") ?? "";
-      const ok = lang === "" || supported.has(lang);
+      const ok = supported.has(lang);
       p.classList.toggle("disabled", !ok);
       (p as HTMLButtonElement).disabled = !ok;
       if (!ok && p.classList.contains("active")) {
         p.classList.remove("active");
-        resetNeeded = true;
       }
     });
-
-  if (resetNeeded) {
-    const noPref = selector.querySelector(
-      '.querychat-artifact-language-pill[data-language=""]',
-    ) as HTMLElement | null;
-    if (noPref) {
-      noPref.classList.add("active");
-    }
-  }
 }
 
 function handleDocumentClick(event: MouseEvent, shiny: ShinyApi): void {
@@ -268,6 +260,10 @@ function handleDocumentClick(event: MouseEvent, shiny: ShinyApi): void {
         .forEach((p) => p.classList.remove("active"));
       langPill.classList.add("active");
     }
+    const modal = langPill.closest(
+      ".querychat-artifact-modal",
+    ) as HTMLElement | null;
+    if (modal) updateGenerateButton(modal);
     return;
   }
 

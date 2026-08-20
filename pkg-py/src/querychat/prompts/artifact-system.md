@@ -45,9 +45,6 @@ ggsql_render(vegalite_writer(), spec)
 
 In Shiny for R, use `ggsqlOutput("id")` in the UI and `renderGgsql({ "...VISUALISE..." })` in the server, with `ggsql_session_reader(duckdb_reader())` set once at startup.
 {{/lang_r}}
-{{#language_unspecified}}
-For Python, use `ggsql.render_altair(df, visualise_clause)` after running the SQL. For R, use `ggsql_execute(reader, full_query)` followed by `ggsql_render(vegalite_writer(), spec)`, or `ggsqlOutput`/`renderGgsql` in Shiny.
-{{/language_unspecified}}
 {{/format_shiny}}
 {{#format_jupyter}}
 {{#lang_python}}
@@ -63,9 +60,6 @@ spec <- ggsql_execute(reader, "SELECT ... FROM tbl VISUALISE x, y DRAW point")
 ggsql_render(vegalite_writer(), spec)
 ```
 {{/lang_r}}
-{{#language_unspecified}}
-For Python, use `ggsql.render_altair(df, visualise_clause)` after running the SQL. For R, use `ggsql_execute(reader, full_query)` followed by `ggsql_render(vegalite_writer(), spec)`.
-{{/language_unspecified}}
 {{/format_jupyter}}
 
 ## Database schema

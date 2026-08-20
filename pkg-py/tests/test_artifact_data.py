@@ -71,23 +71,13 @@ class TestArtifactDataCatalog:
         assert expected in catalog.prompt_instructions
         assert forbidden not in catalog.prompt_instructions
 
-    def test_unspecified_language_uses_language_neutral_instructions(
-        self,
-        tips_source: DataFrameSource,
-    ):
-        catalog = artifact_data.prepare_artifact_data({"tips": tips_source})
-
-        assert "chosen language" in catalog.prompt_instructions
-        assert "duckdb.connect()" not in catalog.prompt_instructions
-        assert "DBI::dbConnect" not in catalog.prompt_instructions
-
     def test_prepare_describes_every_registered_table(self):
         sources = {
             "tips": DataFrameSource(tips(), "tips"),
             "tips_copy": DataFrameSource(tips(), "tips_copy"),
         }
 
-        catalog = artifact_data.prepare_artifact_data(sources)
+        catalog = artifact_data.prepare_artifact_data(sources, language="python")
 
         assert set(catalog.entries) == {"tips", "tips_copy"}
         assert "tips.csv" in catalog.prompt_instructions
@@ -98,7 +88,8 @@ class TestArtifactDataCatalog:
         unused_source = RecordingDataFrameSource("unused")
 
         artifact_data.prepare_artifact_data(
-            {"tips": tips_source, "unused": unused_source}
+            {"tips": tips_source, "unused": unused_source},
+            language="python",
         )
 
         assert tips_source.get_data_calls == 0
@@ -108,7 +99,7 @@ class TestArtifactDataCatalog:
         tips_source = RecordingDataFrameSource("tips")
         unused_source = RecordingDataFrameSource("unused")
         sources = {"tips": tips_source, "unused": unused_source}
-        catalog = artifact_data.prepare_artifact_data(sources)
+        catalog = artifact_data.prepare_artifact_data(sources, language="python")
 
         context = artifact_data.materialize_artifact_data(
             catalog,
@@ -127,7 +118,7 @@ class TestArtifactDataCatalog:
     ):
         source = RecordingDataFrameSource("tips")
         sources = {"tips": source}
-        catalog = artifact_data.prepare_artifact_data(sources)
+        catalog = artifact_data.prepare_artifact_data(sources, language="python")
         csv_size = len(artifact_data.export_csv(source))
         source.get_data_calls = 0
         monkeypatch.setattr(
@@ -151,7 +142,7 @@ class TestArtifactDataCatalog:
             "first": RecordingDataFrameSource("first"),
             "second": RecordingDataFrameSource("second"),
         }
-        catalog = artifact_data.prepare_artifact_data(sources)
+        catalog = artifact_data.prepare_artifact_data(sources, language="python")
 
         context = artifact_data.materialize_artifact_data(
             catalog,
@@ -165,7 +156,7 @@ class TestArtifactDataCatalog:
     def test_materialized_csv_and_instructions_are_stable_after_source_mutation(self):
         source = RecordingDataFrameSource("tips")
         sources = {"tips": source}
-        catalog = artifact_data.prepare_artifact_data(sources)
+        catalog = artifact_data.prepare_artifact_data(sources, language="python")
 
         context = artifact_data.materialize_artifact_data(
             catalog,
@@ -182,7 +173,7 @@ class TestArtifactDataCatalog:
     def test_materialize_rejects_unknown_tables_before_export(self):
         source = RecordingDataFrameSource("tips")
         sources = {"tips": source}
-        catalog = artifact_data.prepare_artifact_data(sources)
+        catalog = artifact_data.prepare_artifact_data(sources, language="python")
 
         with pytest.raises(artifact_data.ArtifactDataError, match="unknown"):
             artifact_data.materialize_artifact_data(
@@ -197,7 +188,7 @@ class TestArtifactDataCatalog:
         source = RecordingDataFrameSource("tips")
         source.export_error = RuntimeError("cannot export")
         sources = {"tips": source}
-        catalog = artifact_data.prepare_artifact_data(sources)
+        catalog = artifact_data.prepare_artifact_data(sources, language="python")
 
         with pytest.raises(artifact_data.ArtifactDataError, match="could not export"):
             artifact_data.materialize_artifact_data(
@@ -211,7 +202,7 @@ class TestArtifactDataCatalog:
     def test_materialize_rejects_individual_size_limit(self, monkeypatch):
         source = RecordingDataFrameSource("tips")
         sources = {"tips": source}
-        catalog = artifact_data.prepare_artifact_data(sources)
+        catalog = artifact_data.prepare_artifact_data(sources, language="python")
         monkeypatch.setattr("querychat._artifact_data.MAX_BUNDLE_SIZE", 1)
 
         with pytest.raises(artifact_data.ArtifactDataError, match="exceeds"):
@@ -226,7 +217,7 @@ class TestArtifactDataCatalog:
             "tips": RecordingDataFrameSource("tips"),
             "tips_copy": RecordingDataFrameSource("tips_copy"),
         }
-        catalog = artifact_data.prepare_artifact_data(sources)
+        catalog = artifact_data.prepare_artifact_data(sources, language="python")
         one_table = artifact_data.materialize_artifact_data(
             catalog,
             sources,

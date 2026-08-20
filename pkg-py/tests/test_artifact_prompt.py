@@ -17,9 +17,7 @@ from querychat._artifact_validation import ArtifactValidationError
 
 class TestRecommendation:
     def test_default_directions(self):
-        rec = Recommendation(
-            selected_ids=["viz-0"], format_id="quarto-dashboard"
-        )
+        rec = Recommendation(selected_ids=["viz-0"], format_id="quarto-dashboard")
         assert rec.directions == ""
 
     def test_all_fields(self):
@@ -147,9 +145,7 @@ class TestBuildArtifactSystemPrompt:
 
     def test_renders_shared_sections(self):
         items: list[GalleryItem] = [
-            VizGalleryItem(
-                id="viz-0", title="Chart", thumbnail=None, ggsql="SELECT 1"
-            ),
+            VizGalleryItem(id="viz-0", title="Chart", thumbnail=None, ggsql="SELECT 1"),
         ]
         result = build_artifact_system_prompt(
             selected_items=items,
@@ -253,15 +249,20 @@ class TestBuildRecommendPrompt:
 
 class TestArtifactResult:
     def test_source_required_metadata_optional(self):
-        r = ArtifactResult(source="print('hi')", referenced_tables=[])
+        r = ArtifactResult(
+            source="print('hi')",
+            language="python",
+            referenced_tables=[],
+        )
         assert r.source == "print('hi')"
-        assert r.language is None
+        assert r.language == "python"
         assert r.summary == ""
         assert r.install_instructions == ""
 
     def test_accepts_run_instructions(self):
         result = ArtifactResult(
             source="print('ok')",
+            language="python",
             run_instructions="Run it with:\n```bash\npython artifact.py\n```",
             referenced_tables=[],
         )
@@ -279,9 +280,13 @@ class TestArtifactResult:
         ]
 
     def test_model_constrains_table_names(self):
-        model = artifact_prompt.artifact_result_model(["orders", "customers"])
+        model = artifact_prompt.artifact_result_model(
+            ["orders", "customers"],
+            ("python",),
+        )
         result = model(
             source="print('ok')",
+            language="python",
             referenced_tables=["orders"],
         )
         assert result.referenced_tables == ["orders"]
@@ -293,8 +298,12 @@ class TestArtifactResult:
             )
 
     def test_model_allows_no_table_references(self):
-        model = artifact_prompt.artifact_result_model(["orders"])
-        result = model(source="print('static')", referenced_tables=[])
+        model = artifact_prompt.artifact_result_model(["orders"], ("python",))
+        result = model(
+            source="print('static')",
+            language="python",
+            referenced_tables=[],
+        )
         assert result.referenced_tables == []
 
     def test_model_constrains_languages(self):
@@ -303,11 +312,14 @@ class TestArtifactResult:
             ("python", "r"),
         )
 
-        assert model(
-            source="print('ok')",
-            language="r",
-            referenced_tables=[],
-        ).language == "r"
+        assert (
+            model(
+                source="print('ok')",
+                language="r",
+                referenced_tables=[],
+            ).language
+            == "r"
+        )
         with pytest.raises(ValidationError, match="language"):
             model(
                 source="print('bad')",
@@ -324,6 +336,7 @@ class TestArtifactResult:
     def test_model_can_require_run_instructions(self):
         model = artifact_prompt.artifact_result_model(
             ["orders"],
+            ("python",),
             require_run_instructions=True,
         )
 
@@ -332,6 +345,7 @@ class TestArtifactResult:
 
         result = model(
             source="print('ok')",
+            language="python",
             run_instructions="```bash\npython artifact.py\n```",
             referenced_tables=[],
         )
@@ -382,13 +396,9 @@ class TestArtifactPromptTargets:
         )
         assert "```{ggsql}" in result
 
-    def test_user_prompt_requests_structured_language_when_unspecified(self):
+    def test_user_prompt_names_selected_language(self):
         result = build_artifact_user_prompt(
             ARTIFACT_FORMATS["shiny-app"],
-            language=None,
+            language="r",
         )
-        assert (
-            result
-            == "Generate the complete source for a Shiny artifact. Choose one "
-            "supported language and report it in the structured result."
-        )
+        assert result == "Generate the complete source for a Shiny artifact in R."

@@ -175,8 +175,10 @@ class TestArtifactGalleryWithResults(ArtifactModalActions):
         items = self.page.locator(".querychat-artifact-gallery-item")
         expect(items.first).to_be_visible(timeout=5000)
 
+        self.page.locator(
+            '.querychat-artifact-language-pill[data-language="python"]'
+        ).click()
         btn = self.page.locator(".modal button:has-text('Generate')")
-        # After recommend, at least one item should be selected, enabling Generate
         expect(btn).not_to_be_disabled(timeout=5000)
 
     def test_gallery_starts_in_loading_state(self):
@@ -207,7 +209,7 @@ class TestArtifactGalleryWithResults(ArtifactModalActions):
 
 
 class TestArtifactLanguageSelector(ArtifactModalActions):
-    """Tests the modal's Language selector: defaults, per-format disabling, reset."""
+    """Tests the modal's Language selector and per-format availability."""
 
     @pytest.fixture(autouse=True)
     def setup(self, page: Page, app_artifact: str, chat_artifact: ChatController):
@@ -216,15 +218,6 @@ class TestArtifactLanguageSelector(ArtifactModalActions):
         expect(chat_artifact.loc_input).to_be_enabled(timeout=30000)
         self.page = page
         self.chat = chat_artifact
-
-    def test_language_section_defaults_to_no_preference(self):
-        self._open_artifact_modal()
-        pills = self.page.locator(".querychat-artifact-language-pill")
-        expect(pills).to_have_count(3)
-        no_pref = self.page.locator(
-            '.querychat-artifact-language-pill[data-language=""]'
-        )
-        expect(no_pref).to_have_class(re.compile(r"\bactive\b"))
 
     def test_python_only_format_disables_r(self):
         self._open_artifact_modal()
@@ -235,27 +228,6 @@ class TestArtifactLanguageSelector(ArtifactModalActions):
             '.querychat-artifact-language-pill[data-language="r"]'
         )
         expect(r_pill).to_have_class(re.compile(r"\bdisabled\b"))
-
-    def test_switching_to_python_only_format_resets_active_language(self):
-        self._open_artifact_modal()
-        # Choose R explicitly
-        r_pill = self.page.locator(
-            '.querychat-artifact-language-pill[data-language="r"]'
-        )
-        r_pill.click()
-        expect(r_pill).to_have_class(re.compile(r"\bactive\b"))
-
-        # Switch to a Python-only format; R must disable and selection reset
-        self.page.locator(
-            '.querychat-artifact-type-pill[data-artifact-type="marimo-notebook"]'
-        ).click()
-        expect(r_pill).to_have_class(re.compile(r"\bdisabled\b"))
-        expect(r_pill).not_to_have_class(re.compile(r"\bactive\b"))
-        no_pref = self.page.locator(
-            '.querychat-artifact-language-pill[data-language=""]'
-        )
-        expect(no_pref).to_have_class(re.compile(r"\bactive\b"))
-
 
 class TestArtifactGeneration(ArtifactModalActions):
     """Tests the full artifact generation flow: generate, panel, pill, close."""
@@ -281,6 +253,9 @@ class TestArtifactGeneration(ArtifactModalActions):
         selected = self.page.locator(".querychat-artifact-gallery-item.selected")
         expect(selected.first).to_be_visible(timeout=5000)
 
+        self.page.locator(
+            '.querychat-artifact-language-pill[data-language="python"]'
+        ).click()
         btn = self.page.locator(".modal button:has-text('Generate')")
         expect(btn).to_be_enabled()
         btn.click()

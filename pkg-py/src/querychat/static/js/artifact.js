@@ -35,7 +35,10 @@
       ".querychat-artifact-freeform-input input"
     );
     const hasFreeformText = !isOther || (freeformInput?.value.trim().length ?? 0) > 0;
-    generateBtn.disabled = selectedCount === 0 || !hasFreeformText;
+    const hasLanguage = Boolean(
+      modal.querySelector(".querychat-artifact-language-pill.active")
+    );
+    generateBtn.disabled = selectedCount === 0 || !hasFreeformText || !hasLanguage;
   }
   function updateLanguagePills(modal, activeFormatPill) {
     const langsAttr = activeFormatPill?.getAttribute("data-languages") ?? "python,r";
@@ -46,25 +49,15 @@
       ".querychat-artifact-language-selector"
     );
     if (!selector) return;
-    let resetNeeded = false;
     selector.querySelectorAll(".querychat-artifact-language-pill").forEach((p) => {
       const lang = p.getAttribute("data-language") ?? "";
-      const ok = lang === "" || supported.has(lang);
+      const ok = supported.has(lang);
       p.classList.toggle("disabled", !ok);
       p.disabled = !ok;
       if (!ok && p.classList.contains("active")) {
         p.classList.remove("active");
-        resetNeeded = true;
       }
     });
-    if (resetNeeded) {
-      const noPref = selector.querySelector(
-        '.querychat-artifact-language-pill[data-language=""]'
-      );
-      if (noPref) {
-        noPref.classList.add("active");
-      }
-    }
   }
   function handleDocumentClick(event, shiny) {
     const target = event.target;
@@ -172,6 +165,10 @@
         selector.querySelectorAll(".querychat-artifact-language-pill").forEach((p) => p.classList.remove("active"));
         langPill.classList.add("active");
       }
+      const modal = langPill.closest(
+        ".querychat-artifact-modal"
+      );
+      if (modal) updateGenerateButton(modal);
       return;
     }
     const item = target.closest(

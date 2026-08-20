@@ -36,7 +36,7 @@ class ArtifactDataEntry:
 class ArtifactDataCatalog:
     entries: dict[str, ArtifactDataEntry]
     prompt_instructions: str
-    language: ArtifactLanguage | None
+    language: ArtifactLanguage
 
 
 @dataclass(frozen=True)
@@ -48,7 +48,7 @@ class ArtifactDataContext:
 
 def prepare_artifact_data(
     data_sources: Mapping[str, DatabaseTypeSource],
-    language: ArtifactLanguage | None = None,
+    language: ArtifactLanguage,
 ) -> ArtifactDataCatalog:
     entries = {
         name: prepare_table_catalog_entry(name, source)
@@ -175,7 +175,7 @@ def render_data_instructions(
     entry: ArtifactDataEntry,
     *,
     bundled: bool,
-    language: ArtifactLanguage | None,
+    language: ArtifactLanguage,
 ) -> str:
     if bundled:
         return bundled_csv_instructions(entry.table_name, language)
@@ -190,7 +190,7 @@ def render_data_instructions(
 
 def bundled_csv_instructions(
     table_name: str,
-    language: ArtifactLanguage | None,
+    language: ArtifactLanguage,
 ) -> str:
     introduction = (
         f"A CSV file named `{table_name}.csv` is bundled alongside this artifact "
@@ -202,16 +202,11 @@ def bundled_csv_instructions(
             "and DuckDB's `read_csv_auto()`, registering it as the "
             f'`"{table_name}"` table.\n'
         )
-    elif language == "r":
+    else:
         setup = (
             "Generate R code that connects with "
             "`DBI::dbConnect(duckdb::duckdb())`, loads this CSV, and registers "
             f'it as the `"{table_name}"` table with `DBI::dbWriteTable()`.\n'
-        )
-    else:
-        setup = (
-            "Generate code using idiomatic DuckDB APIs for the chosen language "
-            f'to load this CSV and register it as the `"{table_name}"` table.\n'
         )
     return (
         introduction
@@ -223,7 +218,7 @@ def bundled_csv_instructions(
 def external_dataframe_instructions(
     table_name: str,
     db_type: str,
-    language: ArtifactLanguage | None,
+    language: ArtifactLanguage,
 ) -> str:
     instructions = (
         f"The data comes from a {db_type} in-memory database with a table named "
@@ -237,16 +232,11 @@ def external_dataframe_instructions(
             'Use `duckdb.connect("path/to/your/database.db")` as the '
             "placeholder connection.\n"
         )
-    elif language == "r":
+    else:
         instructions += (
             "Use `DBI::dbConnect(duckdb::duckdb(), "
             'dbdir = "path/to/your/database.duckdb")` as the placeholder '
             "connection.\n"
-        )
-    else:
-        instructions += (
-            "Use an idiomatic DuckDB file connection for the chosen language "
-            "as the placeholder.\n"
         )
     return (
         instructions + "Make the required user change clear before the artifact runs."
@@ -256,7 +246,7 @@ def external_dataframe_instructions(
 def database_instructions(
     table_name: str,
     db_type: str,
-    language: ArtifactLanguage | None,
+    language: ArtifactLanguage,
 ) -> str:
     instructions = (
         f"The data comes from a {db_type} database with a table named "
@@ -269,15 +259,10 @@ def database_instructions(
             "Use the appropriate Python database client. For credentials, use "
             'environment variables such as `os.environ["DATABASE_URL"]`.\n'
         )
-    elif language == "r":
+    else:
         instructions += (
             "Use DBI with the appropriate database backend. For credentials, "
             'use environment variables such as `Sys.getenv("DATABASE_URL")`.\n'
-        )
-    else:
-        instructions += (
-            "Use the idiomatic database client and environment-variable API "
-            "for the chosen language.\n"
         )
     return (
         instructions

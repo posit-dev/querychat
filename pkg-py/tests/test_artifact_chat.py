@@ -1,5 +1,4 @@
 import asyncio
-import itertools
 
 import pytest
 import querychat._artifact_prompt as artifact_prompt
@@ -44,17 +43,21 @@ class FakeSink:
 
     def __init__(self):
         self.sources = []
+        self.source_appends = []
         self.streaming = []
 
     async def update_source(self, value):
         self.sources.append(value)
+
+    async def append_source(self, value):
+        self.source_appends.append(value)
 
     async def set_streaming(self, *, active):
         self.streaming.append(active)
 
 
 class TestStream:
-    def test_streams_growing_source_and_returns_result(self):
+    def test_streams_source_deltas_and_returns_result(self):
         chunks = [
             '{"source": "import shiny',
             '\\nfrom shiny import ui", ',
@@ -79,8 +82,8 @@ class TestStream:
         assert result.summary == "A demo app"
         assert result.install_instructions == "pip install shiny"
         assert turns == []
-        assert sink.sources[-1] == "import shiny\nfrom shiny import ui"
-        assert all(len(a) <= len(b) for a, b in itertools.pairwise(sink.sources))
+        assert sink.sources == ["import shiny"]
+        assert sink.source_appends == ["\nfrom shiny import ui"]
 
     def test_emits_streaming_on_first_then_off_last(self):
         chunks = [

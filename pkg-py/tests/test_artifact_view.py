@@ -94,6 +94,22 @@ class TestUpdateSource:
             ),
         ]
 
+    def test_appends_source_delta_to_editor(self):
+        view = make_view()
+        asyncio.run(view.append_source("print(1)"))
+
+        assert view.session.messages == [
+            (
+                "querychat-artifact-source-update",
+                {
+                    "root_id": view.panel_root_id,
+                    "id": view.editor_id,
+                    "value": "print(1)",
+                    "append": True,
+                },
+            ),
+        ]
+
     def test_show_artifact_sends_current_source_and_download_state(self):
         view = make_view()
         artifact_type = resolve_artifact_type("quarto-dashboard", "python")

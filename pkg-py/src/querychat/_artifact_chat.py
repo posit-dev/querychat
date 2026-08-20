@@ -83,7 +83,7 @@ class ArtifactChat:
         await sink.set_streaming(active=True)
         try:
             buf = ""
-            last = ""
+            last_source: str | None = None
             async for chunk in tokens:
                 buf += chunk
                 try:
@@ -92,13 +92,30 @@ class ArtifactChat:
                     # buf hasn't reached the opening '{' yet (e.g. leading
                     # whitespace); from_json rejects it even with allow_partial.
                     continue
-                value = raw.get("source", "") if isinstance(raw, dict) else ""
-                source = value if isinstance(value, str) else ""
-                if source != last:
-                    last = source
-                    await sink.update_source(source)
+                value = raw.get("source") if isinstance(raw, dict) else None
+                if not isinstance(value, str):
+                    continue
+                last_source = await update_streamed_source(
+                    sink,
+                    last_source,
+                    value,
+                )
             result = model.model_validate_json(buf)
-            await sink.update_source(result.source)
+            await update_streamed_source(sink, last_source, result.source)
             return result
         finally:
             await sink.set_streaming(active=False)
+
+
+async def update_streamed_source(
+    sink: ArtifactView,
+    previous: str | None,
+    source: str,
+) -> str:
+    if source == previous:
+        return source
+    if previous is not None and source.startswith(previous):
+        await sink.append_source(source.removeprefix(previous))
+    else:
+        await sink.update_source(source)
+    return source

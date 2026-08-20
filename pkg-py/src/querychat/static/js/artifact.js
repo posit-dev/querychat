@@ -300,7 +300,7 @@
       if (msg.language) {
         el.language = msg.language;
       }
-      el.value = msg.value;
+      el.value = msg.append ? el.value + msg.value : msg.value;
     }
     if (msg.download_available !== void 0) {
       const downloadBtn = root.querySelector(

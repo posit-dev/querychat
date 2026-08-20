@@ -60,6 +60,7 @@ class SourceUpdateMessage(ArtifactMessage):
 
     id: str
     value: str
+    append: bool | None = None
     language: str | None = None
     download_available: bool | None = None
 

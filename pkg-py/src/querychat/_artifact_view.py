@@ -76,6 +76,16 @@ class ArtifactView:
             )
         )
 
+    async def append_source(self, value: str) -> None:
+        await self._send(
+            SourceUpdateMessage(
+                root_id=self.panel_root_id,
+                id=self.editor_id,
+                value=value,
+                append=True,
+            )
+        )
+
     async def set_streaming(self, *, active: bool) -> None:
         await self._send(StreamingMessage(root_id=self.panel_root_id, active=active))
 

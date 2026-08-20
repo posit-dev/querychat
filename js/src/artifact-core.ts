@@ -43,6 +43,7 @@ type RecommendationErrorMessage = ArtifactMessage & {
 type SourceUpdateMessage = ArtifactMessage & {
   id: string;
   value: string;
+  append?: boolean;
   language?: string;
   download_available?: boolean;
 };
@@ -439,7 +440,7 @@ function handleSourceUpdate(msg: SourceUpdateMessage): void {
     if (msg.language) {
       el.language = msg.language;
     }
-    el.value = msg.value;
+    el.value = msg.append ? el.value + msg.value : msg.value;
   }
   if (msg.download_available !== undefined) {
     const downloadBtn = root.querySelector(

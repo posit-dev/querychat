@@ -155,12 +155,19 @@ def build_language_selector() -> Tag:
                 tags.input(
                     type="radio",
                     name="querychat-handoff-language",
-                    class_="querychat-handoff-language-radio querychat-handoff-language-pill",
+                    class_="querychat-handoff-language-radio",
                     data_language=lang_id,
                     checked="" if lang_id == "python" else None,
                 ),
+                tags.span(
+                    class_=(
+                        "querychat-handoff-language-icon "
+                        f"querychat-handoff-language-icon-{lang_id}"
+                    )
+                ),
                 label,
-                class_="querychat-handoff-language-option",
+                class_="querychat-handoff-language-option querychat-handoff-language-pill",
+                data_language=lang_id,
             )
         )
     return tags.div(

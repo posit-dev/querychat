@@ -131,7 +131,7 @@ def handoff_server(
 
     @shinychat_chat.slash_command(
         "handoff",
-        "Prepare a shareable handoff",
+        "Prepare a shareable handoff document or webapp using the current chat context.",
         echo=False,
     )
     async def open_handoff_modal():

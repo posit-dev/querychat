@@ -252,8 +252,8 @@
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
-  padding: 0.375rem 0.625rem;
-  border-radius: 4px;
+  padding: 0.375rem 1rem;
+  border-radius: 999px;
   border: 1px solid var(--bs-border-color, #dee2e6);
   background: transparent;
   cursor: pointer;
@@ -262,8 +262,36 @@
 }
 
 .querychat-handoff-language-radio {
-  accent-color: var(--bs-primary, #0d6efd);
-  margin: 0;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.querychat-handoff-language-icon {
+  width: 1rem;
+  height: 1rem;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+
+.querychat-handoff-language-icon-python {
+  background-image: url("../img/handoff-language-python.svg");
+}
+
+.querychat-handoff-language-icon-r {
+  background-image: url("../img/handoff-language-r.svg");
+}
+
+.querychat-handoff-language-radio:focus-visible
+  + .querychat-handoff-language-icon {
+  outline: 2px solid var(--bs-focus-ring-color, rgba(13, 110, 253, 0.5));
+  outline-offset: 3px;
 }
 
 .querychat-handoff-language-option:hover:not(.disabled) {

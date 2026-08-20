@@ -49,7 +49,7 @@ def test_readme_describes_bundled_csv_as_fixed_snapshot():
     assert "fixed CSV snapshot captured when this handoff was generated" in readme
 
 
-def test_readme_describes_unbundled_data_as_live_access():
+def test_readme_describes_unbundled_data_as_user_supplied_access():
     readme = build_readme(
         handoff_type=resolve_handoff_type("quarto-dashboard", "python"),
         source_filename="handoff.qmd",
@@ -60,4 +60,9 @@ def test_readme_describes_unbundled_data_as_live_access():
         bundled_files=[],
     )
 
-    assert "live data access and credentials" in readme
+    assert "This handoff requires user-supplied data access." in readme
+    assert (
+        "File paths, connection details, or credentials may need configuration "
+        "before running." in readme
+    )
+    assert "requires live data access and credentials" not in readme

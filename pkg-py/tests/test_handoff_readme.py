@@ -79,6 +79,12 @@ class TestBuildReadme:
         )
 
         assert "This setup may need adjustment before the handoff can run." in out
+        assert "requires live data access and credentials" not in out
+        assert "This handoff requires user-supplied data access." in out
+        assert (
+            "File paths, connection details, or credentials may need configuration "
+            "before running." in out
+        )
         assert "`tips.csv`" not in out
         assert "bundled data file" not in out
         assert "fixed CSV snapshot" not in out

@@ -48,7 +48,8 @@ def build_readme(
             )
         else:
             data_header = (
-                "This handoff requires live data access and credentials before "
+                "This handoff requires user-supplied data access. File paths, "
+                "connection details, or credentials may need configuration before "
                 "running."
             )
         sections.append("## Data\n" + data_header + "\n\n" + data_instructions)

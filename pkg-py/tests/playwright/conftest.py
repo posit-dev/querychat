@@ -7,6 +7,7 @@ import logging
 import re
 import socket
 import subprocess
+import sys
 import threading
 import time
 import urllib.error
@@ -207,6 +208,42 @@ def _start_shiny_app_threaded(app_path: str, port: int) -> tuple[threading.Threa
 def _stop_shiny_server(server: Any) -> None:
     """Stop a uvicorn server."""
     server.should_exit = True
+
+
+def _start_shiny_app_subprocess(
+    app_path: str, port: int
+) -> tuple[subprocess.Popen[bytes], None]:
+    """Start a Shiny app in an isolated subprocess."""
+    process = subprocess.Popen(
+        [
+            sys.executable,
+            "-m",
+            "shiny",
+            "run",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            str(port),
+            "--log-level",
+            "warning",
+            "--no-dev-mode",
+            app_path,
+        ]
+    )
+    return process, None
+
+
+def _stop_shiny_app_subprocess(process: subprocess.Popen[bytes]) -> None:
+    """Stop a Shiny subprocess."""
+    if process.poll() is not None:
+        return
+
+    process.terminate()
+    try:
+        process.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait(timeout=5)
 
 
 @pytest.fixture(scope="module")
@@ -644,18 +681,18 @@ def app_handoff() -> Generator[str, None, None]:
     def start_factory():
         port = _find_free_port()
         url = f"http://localhost:{port}"
-        return url, lambda: _start_shiny_app_threaded(app_path, port)
+        return url, lambda: _start_shiny_app_subprocess(app_path, port)
 
-    def shiny_cleanup(_thread, server):
-        _stop_shiny_server(server)
+    def shiny_cleanup(process, _server):
+        _stop_shiny_app_subprocess(process)
 
-    url, _thread, server = _start_server_with_retry(
+    url, process, _server = _start_server_with_retry(
         start_factory, shiny_cleanup, timeout=30.0
     )
     try:
         yield url
     finally:
-        _stop_shiny_server(server)
+        _stop_shiny_app_subprocess(process)
 
 
 @pytest.fixture
@@ -672,18 +709,18 @@ def app_handoff_bookmark() -> Generator[str, None, None]:
     def start_factory():
         port = _find_free_port()
         url = f"http://localhost:{port}"
-        return url, lambda: _start_shiny_app_threaded(app_path, port)
+        return url, lambda: _start_shiny_app_subprocess(app_path, port)
 
-    def shiny_cleanup(_thread, server):
-        _stop_shiny_server(server)
+    def shiny_cleanup(process, _server):
+        _stop_shiny_app_subprocess(process)
 
-    url, _thread, server = _start_server_with_retry(
+    url, process, _server = _start_server_with_retry(
         start_factory, shiny_cleanup, timeout=30.0
     )
     try:
         yield url
     finally:
-        _stop_shiny_server(server)
+        _stop_shiny_app_subprocess(process)
 
 
 @pytest.fixture

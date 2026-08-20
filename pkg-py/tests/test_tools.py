@@ -1,15 +1,14 @@
 """Tests for tool functions and utilities."""
 
-import html as html_module
 import warnings
 
 import narwhals.stable.v1 as nw
 import pandas as pd
 import polars as pl
 import pytest
-from htmltools import TagList
+from htmltools import Tag
 from querychat._data_dict import ColumnRange, ColumnSpec, DataDict, TableSpec
-from querychat._datasource import DataFrameSource
+from querychat._datasource import ColumnMeta, DataFrameSource
 from querychat._query_executor import DataSourceExecutor
 from querychat._utils import querychat_tool_starts_open
 from querychat.tools import (
@@ -17,9 +16,9 @@ from querychat.tools import (
     UpdateDashboardData,
     _get_schema_impl,
     _query_impl,
+    tool_get_schema,
     tool_reset_dashboard,
 )
-from shinychat import message_content_chunk
 
 
 @pytest.fixture
@@ -191,20 +190,60 @@ def _make_executor_and_table(
     return executor, [table_name]
 
 
-def test_get_schema_impl_with_data_dict() -> None:
+def test_get_schema_result_preserves_metadata_for_model_and_display() -> None:
     dd = DataDict(
         tables={
             "orders": TableSpec(
-                columns=[ColumnSpec(name="amount", range=ColumnRange(min=0, max=100))]
+                columns=[
+                    ColumnSpec(
+                        name="amount",
+                        description="Gross <amount> & tax",
+                        units="USD",
+                        constraints=[">= 0", "required"],
+                        range=ColumnRange(min=0, max=100),
+                    ),
+                    ColumnSpec(
+                        name="status",
+                        values=["pending", "shipped & paid"],
+                    ),
+                ]
             )
         },
     )
-    df = pl.DataFrame({"amount": [10, 20]})
+    df = pl.DataFrame(
+        {
+            "amount": [10, 20],
+            "status": ["pending", "shipped & paid"],
+        }
+    )
     executor, table_names = _make_executor_and_table(df, "orders")
     fn = _get_schema_impl([dd], executor, table_names, categorical_threshold=10)
+
     result = fn("orders")
-    assert "amount" in str(result.value)
-    assert "Range: 0 to 100" in str(result.value)
+
+    assert isinstance(result, GetSchemaResult)
+    assert result.value == (
+        "Table: orders\n"
+        "Columns:\n"
+        "- amount (INTEGER) [USD]\n"
+        "  Description: Gross <amount> & tax\n"
+        "  Constraints: >= 0, required\n"
+        "  Range: 0 to 100\n"
+        "- status (TEXT)\n"
+        "  Categorical values: 'pending', 'shipped & paid'"
+    )
+    assert all(isinstance(column, ColumnMeta) for column in result.columns)
+    assert [column.name for column in result.columns] == ["amount", "status"]
+
+    assert result.extra is not None
+    display = result.extra["display"]
+    assert isinstance(display.html, Tag)
+    rendered = display.html.render()["html"]
+    assert "Gross &lt;amount&gt; &amp; tax" in rendered
+    assert '<span class="text-body-secondary">USD</span>' in rendered
+    assert "&gt;= 0, required" in rendered
+    assert "<td>0 to 100</td>" in rendered
+    assert "'pending', 'shipped &amp; paid'" in rendered
 
 
 def test_get_schema_impl_without_data_dict() -> None:
@@ -224,31 +263,41 @@ def test_get_schema_impl_unknown_table_returns_error() -> None:
     assert "nonexistent" in str(result.error)
 
 
-def test_get_schema_result_sentinel_has_data_attributes():
-    result = GetSchemaResult(
-        value="Table: orders\nColumns:\n- id (INTEGER)",
-        table_name="orders",
+def test_get_schema_tool_uses_native_display() -> None:
+    df = pl.DataFrame(
+        {
+            "order_id": [1, 2],
+            "status": ["pending", "shipped"],
+        }
     )
-    msg = message_content_chunk(result)
-    # msg.content is a pre-rendered HTML string; wrap in TagList to render again
-    rendered = TagList(msg.content).render()
-    html = rendered["html"]
-    assert "qc-schema-collector" in html
-    assert 'data-table="orders"' in html
-    assert "display:none" in html
+    executor, table_names = _make_executor_and_table(df, "orders")
+    tool = tool_get_schema([], executor, table_names, categorical_threshold=10)
+
+    result = tool.func(table_name="orders")
+    display = result.extra["display"]
+
+    assert tool.annotations is not None
+    assert tool.annotations["title"] == "Fetch schemas"
+    assert display.label == "orders"
+    assert display.value_preview == "2 columns"
+    assert display.show_request is False
+    assert display.open is False
+    assert isinstance(display.html, Tag)
+
+    html = display.html.render()["html"]
+    assert '<div class="table-responsive">' in html
+    assert '<table class="table table-sm mb-0">' in html
+    for header in ("Column", "Type", "Description", "Constraints", "Range / Values"):
+        assert f'<th scope="col">{header}</th>' in html
+    assert '<th scope="row">order_id</th>' in html
+    assert "INTEGER" in html
 
 
-def test_get_schema_result_sentinel_embeds_schema():
-    schema = "Table: orders\nColumns:\n- id (INTEGER)"
-    result = GetSchemaResult(value=schema, table_name="orders")
-    msg = message_content_chunk(result)
-    # ChatMessage pre-renders TagList to a string; unescape HTML entities to check schema
-    assert schema in html_module.unescape(msg.content)
+def test_get_schema_tool_uses_singular_column_preview() -> None:
+    df = pl.DataFrame({"order_id": [1]})
+    executor, table_names = _make_executor_and_table(df, "orders")
+    tool = tool_get_schema([], executor, table_names, categorical_threshold=10)
 
+    result = tool.func(table_name="orders")
 
-def test_get_schema_result_includes_js_dependency():
-    result = GetSchemaResult(value="Table: t\nColumns:\n- x (TEXT)", table_name="t")
-    msg = message_content_chunk(result)
-    # ChatMessage extracts HTMLDependency objects into html_deps
-    dep_names = [d.name for d in msg.html_deps]
-    assert "querychat-schema-display" in dep_names
+    assert result.extra["display"].value_preview == "1 column"

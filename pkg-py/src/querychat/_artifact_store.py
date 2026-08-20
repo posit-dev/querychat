@@ -61,10 +61,6 @@ class ArtifactStore:
         """Remove an artifact if present, without touching LRU order."""
         self._items.pop(artifact_id, None)
 
-    def keys(self) -> list[str]:
-        """Artifact ids in least-recently-used order."""
-        return list(self._items.keys())
-
     def values(self) -> list[ArtifactState]:
         """Artifact states in least-recently-used order."""
         return list(self._items.values())

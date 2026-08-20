@@ -28,7 +28,6 @@ class TestRenderPillHtml:
             id="other",
             label="<b>R</b> & Co",
             file_extension=".R",
-            description="",
             editor_language="r",
         )
         html = render_pill_html("x", art, "ns-artifact_open")

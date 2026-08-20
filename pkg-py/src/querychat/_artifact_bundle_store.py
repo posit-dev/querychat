@@ -22,7 +22,6 @@ class ArtifactSnapshotUnavailableError(ValueError):
 class ArtifactBundle:
     bundle_id: str
     bundled_files: Mapping[str, bytes]
-    data_instructions: str
 
     @property
     def byte_size(self) -> int:
@@ -34,29 +33,23 @@ class ArtifactBundleStore:
         self._items: OrderedDict[str, ArtifactBundle] = OrderedDict()
         self._total_bytes = 0
 
-    def __len__(self) -> int:
-        return len(self._items)
-
     def put(
         self,
         bundled_files: Mapping[str, bytes],
-        data_instructions: str,
     ) -> ArtifactBundle:
-        bundle = self.stage(bundled_files, data_instructions)
+        bundle = self.stage(bundled_files)
         self.evict()
         return bundle
 
     def stage(
         self,
         bundled_files: Mapping[str, bytes],
-        data_instructions: str,
     ) -> ArtifactBundle:
         """Insert a bundle without evicting snapshots needed for rollback."""
         files = MappingProxyType(dict(bundled_files))
         bundle = ArtifactBundle(
             bundle_id=uuid4().hex,
             bundled_files=files,
-            data_instructions=data_instructions,
         )
         if bundle.byte_size > MAX_STORED_BUNDLE_BYTES:
             raise ValueError("Artifact data snapshot exceeds session storage limit.")
@@ -78,10 +71,6 @@ class ArtifactBundleStore:
         bundle = self._items.pop(bundle_id, None)
         if bundle is not None:
             self._total_bytes -= bundle.byte_size
-
-    def clear(self) -> None:
-        self._items.clear()
-        self._total_bytes = 0
 
     def evict(self) -> None:
         while self._total_bytes > MAX_STORED_BUNDLE_BYTES:

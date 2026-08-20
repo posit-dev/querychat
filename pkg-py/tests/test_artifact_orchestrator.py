@@ -280,7 +280,7 @@ class TestStoreEviction:
         orch = make_session()
         for i in range(5):
             orch.store.remember(make_state(artifact_id=f"a{i}"))
-        assert list(orch.store.keys()) == ["a2", "a3", "a4"]
+        assert [state.artifact_id for state in orch.store.values()] == ["a2", "a3", "a4"]
 
     def test_access_protects_from_eviction(self, monkeypatch):
         monkeypatch.setattr("querychat._artifact_store.MAX_STORED_ARTIFACTS", 3)
@@ -295,7 +295,7 @@ class TestStoreEviction:
         # a1 is now the oldest and is evicted; a0 survives.
         assert orch.store.has("a0")
         assert not orch.store.has("a1")
-        assert list(orch.store.keys()) == ["a2", "a0", "a3"]
+        assert [state.artifact_id for state in orch.store.values()] == ["a2", "a0", "a3"]
 
     def test_artifact_eviction_discards_only_unreferenced_bundles(
         self,
@@ -307,7 +307,7 @@ class TestStoreEviction:
             FakeChat([result_chunk("new", referenced_tables=["tips"])]),
             data_sources={"tips": source},
         )
-        shared = orch.bundle_store.put({"shared.csv": b"shared"}, "")
+        shared = orch.bundle_store.put({"shared.csv": b"shared"})
         evicted = make_state("evicted")
         evicted.bundle_id = shared.bundle_id
         retained = make_state("retained")
@@ -336,7 +336,7 @@ class TestStoreEviction:
             FakeChat([result_chunk("new", referenced_tables=["tips"])]),
             data_sources={"tips": source},
         )
-        old_bundle = orch.bundle_store.put({"old.csv": b"old"}, "")
+        old_bundle = orch.bundle_store.put({"old.csv": b"old"})
         old = make_state("old")
         old.bundle_id = old_bundle.bundle_id
         orch.store.remember(old)
@@ -366,7 +366,7 @@ class TestBookmark:
         assert restored.store.has("a")
         assert restored.store.has("b")
         # LRU order is preserved on restore (checked before any access reorders it).
-        assert list(restored.store.keys()) == ["a", "b"]
+        assert [state.artifact_id for state in restored.store.values()] == ["a", "b"]
         assert restored.store.get("a").source == "src-a"
 
     def test_restore_replaces_artifacts_from_previous_conversation(self):
@@ -378,7 +378,7 @@ class TestBookmark:
 
         previous.restore_snapshot(current.store.bookmark_values())
 
-        assert previous.store.keys() == ["new"]
+        assert [state.artifact_id for state in previous.store.values()] == ["new"]
         assert not previous.store.has("old")
 
     def test_restore_preserves_current_data_contract(self):
@@ -400,11 +400,11 @@ class TestBookmark:
 
     def test_restore_preserves_in_session_bundle_snapshot(self):
         orch = make_session(data_source=FakeDataSource())
-        bundle = orch.bundle_store.put({"tips.csv": b"total_bill\n10\n"}, "Load CSV")
+        bundle = orch.bundle_store.put({"tips.csv": b"total_bill\n10\n"})
         state = make_state("a")
         state.bundled_tables = ["tips"]
         state.bundle_id = bundle.bundle_id
-        state.data_instructions = bundle.data_instructions
+        state.data_instructions = "Load CSV"
         orch.store.remember(state)
         saved = orch.store.bookmark_values()
 
@@ -523,7 +523,7 @@ class TestRevise:
             chat,
             data_sources={"tips": source},
         )
-        first_bundle = orch.bundle_store.put({"tips.csv": b"first"}, "Load tips.csv")
+        first_bundle = orch.bundle_store.put({"tips.csv": b"first"})
         state = make_state()
         state.turns = [prior_turn]
         state.bundle_id = first_bundle.bundle_id
@@ -566,7 +566,7 @@ class TestRevise:
             FakeChat([result_chunk("second", referenced_tables=["tips"])]),
             data_sources={"tips": source},
         )
-        first_bundle = orch.bundle_store.put({"tips.csv": b"old!"}, "Load tips.csv")
+        first_bundle = orch.bundle_store.put({"tips.csv": b"old!"})
         state = make_state()
         state.bundle_id = first_bundle.bundle_id
         state.bundled_tables = ["tips"]
@@ -616,7 +616,6 @@ class TestRevise:
             )
 
         assert not orch.store.has("a")
-        assert len(orch.bundle_store) == 0
 
     def test_revise_replaces_current_artifact(self):
         orch = make_session(

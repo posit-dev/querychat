@@ -17,7 +17,6 @@ class TestArtifactType:
         assert artifact_type.model_dump(mode="json") == {
             "id": "shiny-app",
             "label": "Shiny",
-            "description": "A single-file Shiny application",
             "icon": "lightning-fill",
             "language": "r",
             "file_extension": ".R",
@@ -29,7 +28,6 @@ class TestArtifactType:
         artifact_type = ArtifactType(
             id="other",
             label="SQL script",
-            description="",
             language=None,
             file_extension=".sql",
             editor_language="sql",

@@ -5,14 +5,13 @@ def test_put_copies_files_and_get_returns_immutable_bundle():
     store = ArtifactBundleStore()
     files = {"tips.csv": b"total_bill\n10\n"}
 
-    bundle = store.put(files, "Load tips.csv")
+    bundle = store.put(files)
     files["tips.csv"] = b"total_bill\n20\n"
 
     stored = store.get(bundle.bundle_id)
 
     assert stored is not None
     assert stored.bundled_files["tips.csv"] == b"total_bill\n10\n"
-    assert stored.data_instructions == "Load tips.csv"
 
 
 def test_get_marks_bundle_recent_for_lru_eviction(monkeypatch):
@@ -21,25 +20,21 @@ def test_get_marks_bundle_recent_for_lru_eviction(monkeypatch):
         4,
     )
     store = ArtifactBundleStore()
-    first = store.put({"one.csv": b"aa"}, "")
-    second = store.put({"two.csv": b"bb"}, "")
+    first = store.put({"one.csv": b"aa"})
+    second = store.put({"two.csv": b"bb"})
 
     assert store.get(first.bundle_id) is not None
-    third = store.put({"three.csv": b"cc"}, "")
+    third = store.put({"three.csv": b"cc"})
 
     assert store.get(first.bundle_id) is not None
     assert store.get(second.bundle_id) is None
     assert store.get(third.bundle_id) is not None
 
 
-def test_discard_and_clear_remove_bundles():
+def test_discard_removes_bundle():
     store = ArtifactBundleStore()
-    first = store.put({"one.csv": b"1"}, "")
-    second = store.put({"two.csv": b"2"}, "")
+    first = store.put({"one.csv": b"1"})
 
     store.discard(first.bundle_id)
-    store.clear()
 
     assert store.get(first.bundle_id) is None
-    assert store.get(second.bundle_id) is None
-    assert len(store) == 0

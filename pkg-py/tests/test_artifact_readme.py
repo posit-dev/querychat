@@ -52,7 +52,6 @@ class TestBuildReadme:
             id="other",
             label="Mystery",
             file_extension=".txt",
-            description="",
             editor_language="plain",
         )
         out = make_readme(

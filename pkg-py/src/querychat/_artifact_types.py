@@ -65,7 +65,6 @@ class ArtifactType(BaseModel):
 
     id: str
     label: str
-    description: str
     icon: ICON_NAMES = "file-earmark-code"
     language: ArtifactLanguage | None = None
     file_extension: str
@@ -122,7 +121,6 @@ def resolve_artifact_type(
     return ArtifactType(
         id=format_id,
         label=artifact_format.label,
-        description=artifact_format.description,
         icon=artifact_format.icon,
         language=language,
         **target.model_dump(),

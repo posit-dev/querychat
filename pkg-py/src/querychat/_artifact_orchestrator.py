@@ -149,7 +149,6 @@ def build_freeform_artifact_type(
     return ArtifactType(
         id="other",
         label=freeform,
-        description="",
         language=language,
         file_extension=ext,
         # The LLM-inferred editor language won't match the Literal type statically.
@@ -368,7 +367,6 @@ class ArtifactOrchestrator:
             if data_context.bundled_files:
                 bundle_id = self.bundle_store.put(
                     data_context.bundled_files,
-                    data_context.data_instructions,
                 ).bundle_id
             state = state_from_result(
                 generated.result,
@@ -494,7 +492,6 @@ class ArtifactOrchestrator:
             if data_context.bundled_files:
                 bundle_id = self.bundle_store.stage(
                     data_context.bundled_files,
-                    data_context.data_instructions,
                 ).bundle_id
             replacement = state_from_result(
                 generated.result,

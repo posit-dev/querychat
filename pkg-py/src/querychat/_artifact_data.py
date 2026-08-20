@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Literal, Protocol
 
 import narwhals as nw
 
-from ._datasource import DataFrameSource, DataSource
+from ._datasource import DataFrameSource
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -112,25 +112,6 @@ def materialize_artifact_data(
         unique_tables,
         bundled_files,
         bundled_tables,
-    )
-
-
-def get_artifact_data_context(
-    data_source: DataSource | None,
-    language: ArtifactLanguage | None = None,
-) -> ArtifactDataContext:
-    """Compatibility adapter for the original single-table artifact flow."""
-    if data_source is None:
-        return no_data_context(language)
-
-    catalog = prepare_artifact_data(
-        {data_source.table_name: data_source},
-        language=language,
-    )
-    return materialize_artifact_data(
-        catalog,
-        {data_source.table_name: data_source},
-        [data_source.table_name],
     )
 
 
@@ -302,24 +283,4 @@ def database_instructions(
         instructions
         + "Do not hardcode passwords or connection strings.\n"
         + "Make the required user change clear before the artifact runs."
-    )
-
-
-def no_data_context(
-    language: ArtifactLanguage | None = None,
-) -> ArtifactDataContext:
-    if language == "python":
-        setup = "using idiomatic Python database APIs"
-    elif language == "r":
-        setup = "using DBI and credentials from `Sys.getenv()`"
-    else:
-        setup = "using idiomatic APIs for the chosen language"
-    return ArtifactDataContext(
-        data_instructions=(
-            "No data source is configured.\n\n"
-            "Generate a clearly marked DATA SETUP section at the top of the "
-            "artifact\n"
-            "with a TODO comment that shows where to configure the data connection "
-            f"{setup}."
-        ),
     )

@@ -122,7 +122,7 @@ def tool_get_schema(
 
 
 def _schema_table(columns: list[ColumnMeta]) -> Tag:
-    headers = ("Column", "Type", "Description", "Constraints", "Range / Values")
+    headers = ("Column", "Type", "Range / Values", "Description", "Constraints")
     rows: list[Tag] = []
 
     for column in columns:
@@ -147,9 +147,9 @@ def _schema_table(columns: list[ColumnMeta]) -> Tag:
             tags.tr(
                 tags.th(tags.code(column.name), scope="row"),
                 tags.td(type_cell),
+                tags.td(range_values),
                 tags.td(column.description or ""),
                 tags.td(", ".join(column.constraints)),
-                tags.td(range_values),
             )
         )
 

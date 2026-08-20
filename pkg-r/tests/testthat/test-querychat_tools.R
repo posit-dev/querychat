@@ -520,9 +520,25 @@ describe("tool_get_schema()", {
   it("returns schema text with a native rich display", {
     df_source <- local_data_frame_source(new_test_df())
     executor <- local_executor(df_source)
-    expected <- executor$get_schema_result("test_table", 20)
+    table_spec <- list(
+      columns = list(
+        list(
+          name = "id",
+          description = "Primary key",
+          units = "rows",
+          constraints = c("positive", "required"),
+          range = list(min = 1, max = 5)
+        )
+      )
+    )
+    data_dicts <- list(list(tables = list(test_table = table_spec)))
+    expected <- executor$get_schema_result(
+      "test_table",
+      20,
+      table_spec = table_spec
+    )
     tool <- tool_get_schema(
-      data_dicts = list(),
+      data_dicts = data_dicts,
       executor = executor,
       table_names = "test_table",
       categorical_threshold = 20
@@ -546,19 +562,33 @@ describe("tool_get_schema()", {
       fixed = TRUE
     )
     expect_match(html, '<thead class="table-light">', fixed = TRUE)
-    for (header in c(
+    expected_headers <- c(
       "Column",
       "Type",
+      "Range / Values",
       "Description",
-      "Constraints",
-      "Range / Values"
-    )) {
-      expect_match(
-        html,
-        paste0('<th scope="col">', header, "</th>"),
-        fixed = TRUE
-      )
-    }
+      "Constraints"
+    )
+    header_positions <- vapply(
+      paste0('<th scope="col">', expected_headers, "</th>"),
+      function(header) regexpr(header, html, fixed = TRUE)[[1]],
+      integer(1)
+    )
+    id_cell_positions <- vapply(
+      c(
+        "<code>id</code>",
+        "<span>INTEGER</span>",
+        "<td>1 to 5</td>",
+        "<td>Primary key</td>",
+        "<td>positive, required</td>"
+      ),
+      function(content) regexpr(content, html, fixed = TRUE)[[1]],
+      integer(1)
+    )
+    expect_true(all(header_positions > 0))
+    expect_true(all(id_cell_positions > 0))
+    expect_true(all(diff(header_positions) > 0))
+    expect_true(all(diff(id_cell_positions) > 0))
     expect_match(
       html,
       '<th scope="row">\\s*<code>id</code>\\s*</th>'

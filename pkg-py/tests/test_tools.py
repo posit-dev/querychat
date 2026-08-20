@@ -191,7 +191,7 @@ def _make_executor_and_table(
     return executor, [table_name]
 
 
-def test_get_schema_result_preserves_metadata_for_model_and_display() -> None:
+def test_get_schema_tool_preserves_metadata_for_model_and_display() -> None:
     dd = DataDict(
         tables={
             "orders": TableSpec(
@@ -240,6 +240,29 @@ def test_get_schema_result_preserves_metadata_for_model_and_display() -> None:
     display = result.extra["display"]
     assert isinstance(display.html, Tag)
     rendered = display.html.render()["html"]
+    expected_headers = (
+        "Column",
+        "Type",
+        "Range / Values",
+        "Description",
+        "Constraints",
+    )
+    header_positions = [
+        rendered.index(f'<th scope="col">{header}</th>')
+        for header in expected_headers
+    ]
+    amount_cell_positions = [
+        rendered.index(content)
+        for content in (
+            "<code>amount</code>",
+            "<span>INTEGER ",
+            "<td>0 to 100</td>",
+            "<td>Gross &lt;amount&gt; &amp; tax</td>",
+            "<td>&gt;= 0, required</td>",
+        )
+    ]
+    assert header_positions == sorted(header_positions)
+    assert amount_cell_positions == sorted(amount_cell_positions)
     assert "Gross &lt;amount&gt; &amp; tax" in rendered
     assert '<span class="text-body-secondary">USD</span>' in rendered
     assert "&gt;= 0, required" in rendered
@@ -289,7 +312,7 @@ def test_get_schema_tool_uses_native_display() -> None:
     assert '<div class="table-responsive">' in html
     assert '<table class="table table-sm table-hover align-middle mb-0">' in html
     assert '<thead class="table-light">' in html
-    for header in ("Column", "Type", "Description", "Constraints", "Range / Values"):
+    for header in ("Column", "Type", "Range / Values", "Description", "Constraints"):
         assert f'<th scope="col">{header}</th>' in html
     assert re.search(
         r'<th scope="row">\s*<code>order_id</code>\s*</th>',

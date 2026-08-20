@@ -360,9 +360,9 @@ schema_table <- function(columns) {
   headers <- c(
     "Column",
     "Type",
+    "Range / Values",
     "Description",
-    "Constraints",
-    "Range / Values"
+    "Constraints"
   )
   rows <- lapply(columns, function(column) {
     units <- schema_scalar_text(column$units)
@@ -405,9 +405,9 @@ schema_table <- function(columns) {
         scope = "row"
       ),
       htmltools::tags$td(type_cell),
+      htmltools::tags$td(range_values),
       htmltools::tags$td(schema_scalar_text(column$description)),
-      htmltools::tags$td(constraints),
-      htmltools::tags$td(range_values)
+      htmltools::tags$td(constraints)
     )
   })
 

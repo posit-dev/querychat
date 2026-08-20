@@ -456,9 +456,13 @@ class HandoffOrchestrator:
                 model=result_model,
             )
         except ValidationError as error:
-            error_roots = {
-                detail["loc"][0] for detail in error.errors() if detail["loc"]
-            }
+            error_details = error.errors()
+            if any(not detail["loc"] for detail in error_details):
+                raise
+            error_roots = {detail["loc"][0] for detail in error_details}
+            contract_roots = {"language", "referenced_tables"}
+            if not error_roots or not error_roots.issubset(contract_roots):
+                raise
             if "language" in error_roots:
                 raise HandoffDataError(
                     "Corrected handoff changed its language."

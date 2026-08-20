@@ -1026,6 +1026,79 @@ class TestGenerate:
         assert not orch.store.has("a")
         assert not orch.bundle_store._items
 
+    def test_external_data_correction_preserves_unrelated_validation_error(
+        self,
+        monkeypatch,
+    ):
+        source = RecordingDataFrameSource("tips")
+        invalid_correction = json.dumps(
+            {
+                "source": "external source",
+                "language": "r",
+                "summary": [],
+                "run_instructions": "```bash\nrun handoff in r\n```",
+                "referenced_tables": ["tips"],
+            }
+        )
+        chat = FakeChat(
+            streams=[
+                [result_chunk("csv source", referenced_tables=["tips"])],
+                [invalid_correction],
+            ]
+        )
+        orch = make_session(chat, data_sources={"tips": source})
+        monkeypatch.setattr("querychat._handoff_data.MAX_BUNDLE_SIZE", 1)
+
+        with pytest.raises(ValidationError) as error:
+            asyncio.run(
+                orch.generate(
+                    GenerateRequest(type_id="quarto-dashboard", language="python"),
+                    "",
+                    "a",
+                )
+            )
+
+        assert {
+            detail["loc"][0] for detail in error.value.errors()
+        } == {"language", "summary"}
+        assert chat.stream_count == 2
+        assert not orch.store.has("a")
+        assert not orch.bundle_store._items
+
+    def test_external_data_correction_rejects_language_and_table_changes(
+        self,
+        monkeypatch,
+    ):
+        source = RecordingDataFrameSource("tips")
+        chat = FakeChat(
+            streams=[
+                [result_chunk("csv source", referenced_tables=["tips"])],
+                [
+                    result_chunk(
+                        "external source",
+                        language="r",
+                        referenced_tables=["unknown"],
+                    )
+                ],
+            ]
+        )
+        orch = make_session(chat, data_sources={"tips": source})
+        monkeypatch.setattr("querychat._handoff_data.MAX_BUNDLE_SIZE", 1)
+
+        with pytest.raises(HandoffDataError) as error:
+            asyncio.run(
+                orch.generate(
+                    GenerateRequest(type_id="quarto-dashboard", language="python"),
+                    "",
+                    "a",
+                )
+            )
+
+        assert str(error.value) == "Corrected handoff changed its language."
+        assert chat.stream_count == 2
+        assert not orch.store.has("a")
+        assert not orch.bundle_store._items
+
     def test_external_data_correction_failure_stores_nothing(
         self,
         monkeypatch,

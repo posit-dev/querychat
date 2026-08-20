@@ -148,17 +148,27 @@ def build_type_selector() -> TagList:
 
 
 def build_language_selector() -> Tag:
-    pills = []
+    radios = []
     for lang_id, label in LANGUAGES.items():
-        pills.append(
-            tags.button(
+        radios.append(
+            tags.label(
+                tags.input(
+                    type="radio",
+                    name="querychat-artifact-language",
+                    class_="querychat-artifact-language-radio querychat-artifact-language-pill",
+                    data_language=lang_id,
+                    checked="" if lang_id == "python" else None,
+                ),
                 label,
-                class_="querychat-artifact-language-pill",
-                type="button",
-                data_language=lang_id,
+                class_="querychat-artifact-language-option",
             )
         )
-    return tags.div(*pills, class_="querychat-artifact-language-selector")
+    return tags.div(
+        *radios,
+        class_="querychat-artifact-language-selector",
+        role="radiogroup",
+        aria_label="Programming language",
+    )
 
 
 def build_gallery(items: list[GalleryItem]) -> Tag:

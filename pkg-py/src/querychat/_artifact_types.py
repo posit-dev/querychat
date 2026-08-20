@@ -21,7 +21,7 @@ else:
 ArtifactLanguage = Literal["python", "r"]
 ArtifactStructure = Literal["text", "notebook-json"]
 
-LANGUAGES: dict[ArtifactLanguage, str] = {"r": "R", "python": "Python"}
+LANGUAGES: dict[ArtifactLanguage, str] = {"python": "Python", "r": "R"}
 
 
 class ArtifactTarget(BaseModel):

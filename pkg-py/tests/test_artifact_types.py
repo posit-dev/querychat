@@ -1,5 +1,6 @@
 import pytest
 from pydantic import ValidationError
+from querychat._artifact_modal import build_language_selector
 from querychat._artifact_types import (
     ARTIFACT_FORMATS,
     LANGUAGES,
@@ -41,8 +42,16 @@ class TestArtifactType:
 
 
 class TestLanguages:
-    def test_registry_is_r_and_python(self):
-        assert LANGUAGES == {"r": "R", "python": "Python"}
+    def test_registry_is_python_and_r(self):
+        assert list(LANGUAGES) == ["python", "r"]
+
+    def test_selector_uses_python_radio_by_default(self):
+        html = str(build_language_selector())
+
+        assert "querychat-artifact-language-radio" in html
+        assert 'data-language="python"' in html
+        assert 'data-language="r"' in html
+        assert 'checked=""' in html
 
 
 def test_registry_loads_all_builtin_formats():

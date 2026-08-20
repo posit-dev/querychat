@@ -100,7 +100,7 @@ function updateGenerateButton(modal: HTMLElement): void {
   const hasFreeformText =
     !isOther || (freeformInput?.value.trim().length ?? 0) > 0;
   const hasLanguage = Boolean(
-    modal.querySelector(".querychat-artifact-language-pill.active"),
+    modal.querySelector(".querychat-artifact-language-radio:checked"),
   );
 
   generateBtn.disabled = selectedCount === 0 || !hasFreeformText || !hasLanguage;
@@ -123,17 +123,23 @@ function updateLanguagePills(
   );
   if (!selector) return;
 
-  selector
-    .querySelectorAll(".querychat-artifact-language-pill")
-    .forEach((p) => {
-      const lang = p.getAttribute("data-language") ?? "";
-      const ok = supported.has(lang);
-      p.classList.toggle("disabled", !ok);
-      (p as HTMLButtonElement).disabled = !ok;
-      if (!ok && p.classList.contains("active")) {
-        p.classList.remove("active");
-      }
-    });
+  const radios = Array.from(
+    selector.querySelectorAll(".querychat-artifact-language-radio"),
+  ) as HTMLInputElement[];
+  radios.forEach((radio) => {
+    const lang = radio.getAttribute("data-language") ?? "";
+    const ok = supported.has(lang);
+    radio.classList.toggle("disabled", !ok);
+    radio.disabled = !ok;
+    radio.closest(".querychat-artifact-language-option")?.classList.toggle(
+      "disabled",
+      !ok,
+    );
+  });
+  if (!radios.some((radio) => radio.checked && !radio.disabled)) {
+    const firstSupported = radios.find((radio) => !radio.disabled);
+    if (firstSupported) firstSupported.checked = true;
+  }
 }
 
 function handleDocumentClick(event: MouseEvent, shiny: ShinyApi): void {
@@ -159,8 +165,8 @@ function handleDocumentClick(event: MouseEvent, shiny: ShinyApi): void {
     ) as HTMLElement | null;
     const type = activeType?.getAttribute("data-artifact-type") ?? "";
     const activeLang = modal.querySelector(
-      ".querychat-artifact-language-pill.active",
-    ) as HTMLElement | null;
+      ".querychat-artifact-language-radio:checked",
+    ) as HTMLInputElement | null;
     const language = activeLang?.getAttribute("data-language") ?? "";
     const freeformInput = modal.querySelector(
       ".querychat-artifact-freeform-input input",
@@ -248,27 +254,7 @@ function handleDocumentClick(event: MouseEvent, shiny: ShinyApi): void {
     return;
   }
 
-  // 4. Language selector pill (in modal) — toggles active language
-  const langPill = target.closest(
-    ".querychat-artifact-language-pill",
-  ) as HTMLElement | null;
-  if (langPill) {
-    if ((langPill as HTMLButtonElement).disabled) return;
-    const selector = langPill.parentElement;
-    if (selector) {
-      selector
-        .querySelectorAll(".querychat-artifact-language-pill")
-        .forEach((p) => p.classList.remove("active"));
-      langPill.classList.add("active");
-    }
-    const modal = langPill.closest(
-      ".querychat-artifact-modal",
-    ) as HTMLElement | null;
-    if (modal) updateGenerateButton(modal);
-    return;
-  }
-
-  // 5. Gallery item (in modal) — toggles selection + checkbox
+  // 4. Gallery item (in modal) — toggles selection + checkbox
   const item = target.closest(
     ".querychat-artifact-gallery-item",
   ) as HTMLElement | null;
@@ -291,6 +277,20 @@ function handleDocumentInput(event: Event): void {
     ) as HTMLElement | null;
     if (modal) updateGenerateButton(modal);
   }
+}
+
+function handleDocumentChange(event: Event): void {
+  const target = event.target;
+  if (
+    !(target instanceof HTMLInputElement) ||
+    !target.matches(".querychat-artifact-language-radio")
+  ) {
+    return;
+  }
+  const modal = target.closest(
+    ".querychat-artifact-modal",
+  ) as HTMLElement | null;
+  if (modal) updateGenerateButton(modal);
 }
 
 // Backdrop click — dismiss the artifact panel by proxying to the close button.
@@ -493,6 +493,7 @@ export function installArtifact(shiny: ShinyApi): void {
 
   // Re-evaluate Generate button when freeform format name changes
   document.addEventListener("input", handleDocumentInput);
+  document.addEventListener("change", handleDocumentChange);
 
   document.addEventListener("click", handleBackdropClick);
 

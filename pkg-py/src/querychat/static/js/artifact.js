@@ -36,7 +36,7 @@
     );
     const hasFreeformText = !isOther || (freeformInput?.value.trim().length ?? 0) > 0;
     const hasLanguage = Boolean(
-      modal.querySelector(".querychat-artifact-language-pill.active")
+      modal.querySelector(".querychat-artifact-language-radio:checked")
     );
     generateBtn.disabled = selectedCount === 0 || !hasFreeformText || !hasLanguage;
   }
@@ -49,15 +49,23 @@
       ".querychat-artifact-language-selector"
     );
     if (!selector) return;
-    selector.querySelectorAll(".querychat-artifact-language-pill").forEach((p) => {
-      const lang = p.getAttribute("data-language") ?? "";
+    const radios = Array.from(
+      selector.querySelectorAll(".querychat-artifact-language-radio")
+    );
+    radios.forEach((radio) => {
+      const lang = radio.getAttribute("data-language") ?? "";
       const ok = supported.has(lang);
-      p.classList.toggle("disabled", !ok);
-      p.disabled = !ok;
-      if (!ok && p.classList.contains("active")) {
-        p.classList.remove("active");
-      }
+      radio.classList.toggle("disabled", !ok);
+      radio.disabled = !ok;
+      radio.closest(".querychat-artifact-language-option")?.classList.toggle(
+        "disabled",
+        !ok
+      );
     });
+    if (!radios.some((radio) => radio.checked && !radio.disabled)) {
+      const firstSupported = radios.find((radio) => !radio.disabled);
+      if (firstSupported) firstSupported.checked = true;
+    }
   }
   function handleDocumentClick(event, shiny) {
     const target = event.target;
@@ -78,7 +86,7 @@
       );
       const type = activeType?.getAttribute("data-artifact-type") ?? "";
       const activeLang = modal.querySelector(
-        ".querychat-artifact-language-pill.active"
+        ".querychat-artifact-language-radio:checked"
       );
       const language = activeLang?.getAttribute("data-language") ?? "";
       const freeformInput = modal.querySelector(
@@ -155,22 +163,6 @@
       updateGenerateButton(modal);
       return;
     }
-    const langPill = target.closest(
-      ".querychat-artifact-language-pill"
-    );
-    if (langPill) {
-      if (langPill.disabled) return;
-      const selector = langPill.parentElement;
-      if (selector) {
-        selector.querySelectorAll(".querychat-artifact-language-pill").forEach((p) => p.classList.remove("active"));
-        langPill.classList.add("active");
-      }
-      const modal = langPill.closest(
-        ".querychat-artifact-modal"
-      );
-      if (modal) updateGenerateButton(modal);
-      return;
-    }
     const item = target.closest(
       ".querychat-artifact-gallery-item"
     );
@@ -192,6 +184,16 @@
       );
       if (modal) updateGenerateButton(modal);
     }
+  }
+  function handleDocumentChange(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement) || !target.matches(".querychat-artifact-language-radio")) {
+      return;
+    }
+    const modal = target.closest(
+      ".querychat-artifact-modal"
+    );
+    if (modal) updateGenerateButton(modal);
   }
   function handleBackdropClick(event) {
     const target = event.target;
@@ -343,6 +345,7 @@
       (event) => handleDocumentClick(event, shiny)
     );
     document.addEventListener("input", handleDocumentInput);
+    document.addEventListener("change", handleDocumentChange);
     document.addEventListener("click", handleBackdropClick);
     shiny.addCustomMessageHandler(
       artifactMessageName("recommend"),

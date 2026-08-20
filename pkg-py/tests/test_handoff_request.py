@@ -7,6 +7,25 @@ from querychat._handoff_types import resolve_handoff_type
 from querychat._handoff_view import HandoffView
 
 
+def test_handoff_server_returns_none(monkeypatch):
+    monkeypatch.setattr(
+        handoff_server,
+        "HandoffOrchestrator",
+        MagicMock(return_value=MagicMock()),
+    )
+
+    result = handoff_server.handoff_server(
+        MagicMock(),
+        MagicMock(),
+        MagicMock(),
+        data_sources={},
+        executor=MagicMock(),
+        shinychat_chat=MagicMock(),
+    )
+
+    assert result is None
+
+
 def test_handoff_snapshot_round_trip():
     active_handoff_id = MagicMock()
     orch = MagicMock()

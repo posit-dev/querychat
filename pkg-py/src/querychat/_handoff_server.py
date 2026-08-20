@@ -11,7 +11,7 @@ from shiny import reactive, render, ui
 from ._handoff_orchestrator import HandoffOrchestrator, parse_generate_payload
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Coroutine
+    from collections.abc import Coroutine
 
     import chatlas
     import shinychat
@@ -113,7 +113,7 @@ def handoff_server(
     data_sources: dict[str, DataSource],
     executor: QueryExecutor,
     shinychat_chat: shinychat.Chat,
-) -> Callable[[], None]:
+) -> None:
     orch = HandoffOrchestrator(
         session,
         chat,
@@ -246,5 +246,3 @@ def handoff_server(
                 restore_tasks,
             )
         )
-
-    return lambda: open_handoff_creator(orch, recommend_task)

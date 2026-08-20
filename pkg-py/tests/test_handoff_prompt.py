@@ -272,6 +272,15 @@ def test_external_data_repair_prompt_is_self_contained():
     assert '["tips"]' in result
     assert "exact same referenced-table set" in result
     assert "paths, credentials, or environment variables" in result
+    assert "DataFrame snapshots exceed the bundle limit" in result
+    assert "preceding conversation contains the complete source to revise" in result
+    assert "Call it DATA SETUP and make it visually prominent" in result
+    assert "Never invent or hardcode credentials" in result
+    assert (
+        f"Return the complete corrected {handoff_type.label} source and structured "
+        "metadata, not a patch or explanation."
+        in result
+    )
 
 
 @pytest.mark.parametrize(

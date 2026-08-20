@@ -257,24 +257,20 @@ class TestQueryChatBase:
 
         for client in (qc.client(tools="query"), qc.client(tools=None)):
             names = [tool.name for tool in client.get_tools()]
-            assert "querychat_request_handoff" not in names
+            assert all("handoff" not in name for name in names)
 
-    def test_private_session_client_registers_handoff_callback(self, sample_df):
+    def test_session_client_advertises_handoff_without_registering_tool(
+        self, sample_df
+    ):
         qc = QueryChatBase(sample_df, "test_table")
-        called: list[bool] = []
 
         client = qc._create_session_client(
             tools=None,
-            request_handoff=lambda: called.append(True),
+            handoff_available=True,
         )
-        tool = next(
-            tool
-            for tool in client.get_tools()
-            if tool.name == "querychat_request_handoff"
-        )
-        tool.func()
 
-        assert called == [True]
+        assert "/handoff" in client.system_prompt
+        assert client.get_tools() == []
 
     def test_cleanup(self, sample_df):
         qc = QueryChatBase(sample_df, "test_table")

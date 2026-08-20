@@ -3,7 +3,7 @@ from __future__ import annotations
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Generic, Literal, TypedDict, Union
+from typing import TYPE_CHECKING, Any, Generic, TypedDict, Union
 
 import chatlas
 import shinychat
@@ -32,9 +32,6 @@ if TYPE_CHECKING:
     from ._querychat_greeter import QueryChatGreeter
     from ._viz_tools import VisualizeData
     from .types import UpdateDashboardData
-
-StreamStatus = Literal["initial", "running", "success", "error", "cancelled"]
-"""Possible values of shinychat's `latest_message_stream.status()`."""
 
 ReactiveString = reactive.Value[str]
 """A reactive string value."""
@@ -220,11 +217,6 @@ def mod_server(
     greeter: QueryChatGreeter,
     greeting_base: chatlas.Chat | None = None,
 ) -> ServerValues[IntoFrameT]:
-    handoff_requested = reactive.value[bool](False)  # noqa: FBT003
-
-    def on_request_handoff() -> None:
-        handoff_requested.set(True)
-
     if not callable(client):
         raise TypeError("mod_server() requires a callable client factory.")
 
@@ -269,7 +261,7 @@ def mod_server(
             update_dashboard=update_dashboard,
             reset_dashboard=reset_dashboard,
             visualize=on_visualize,
-            request_handoff=on_request_handoff,
+            handoff_available=True,
             tools=tools,
         )
 
@@ -336,7 +328,7 @@ def mod_server(
         history=history,
     )
 
-    open_handoff_creator = handoff_server(
+    handoff_server(
         input,
         session,
         chat,
@@ -344,22 +336,6 @@ def mod_server(
         executor=executor,
         shinychat_chat=shinychat_chat,
     )
-
-    @reactive.effect
-    # The lambda defers the reactive read until the event executes.
-    @reactive.event(lambda: shinychat_chat.latest_message_stream.status())  # noqa: PLW0108
-    def open_handoff_when_ready():
-        action = handoff_action_for_status(
-            shinychat_chat.latest_message_stream.status()
-        )
-        if action == "wait":
-            return
-        with reactive.isolate():
-            if not handoff_requested.get():
-                return
-            handoff_requested.set(False)
-        if action == "open":
-            open_handoff_creator()
 
     # Skipped when `history` is already in bookmark mode: shinychat_chat.history
     # is then already enabled for this chat/client, and shinychat treats it and
@@ -509,19 +485,3 @@ def restore_viz_widgets(
             )
 
     return restored
-
-
-def handoff_action_for_status(
-    stream_status: StreamStatus,
-) -> Literal["wait", "open", "drop"]:
-    """
-    Decide what to do with a pending request_handoff call given the stream state.
-
-    - ``"wait"``: the turn is still in progress.
-    - ``"open"``: the turn finished successfully; open the modal.
-    - ``"drop"``: the turn was cancelled or errored; consume the request
-      without opening so a stale request can't fire on a later turn.
-    """
-    if stream_status not in ("success", "error", "cancelled"):
-        return "wait"
-    return "open" if stream_status == "success" else "drop"

@@ -7,21 +7,16 @@ import narwhals.stable.v1 as nw
 import pandas as pd
 import polars as pl
 import pytest
-import querychat.tools as querychat_tools
-from chatlas import ContentToolResult
 from htmltools import TagList
 from querychat._data_dict import ColumnRange, ColumnSpec, DataDict, TableSpec
 from querychat._datasource import DataFrameSource
 from querychat._query_executor import DataSourceExecutor
-from querychat._tool_names import TOOL_REQUEST_HANDOFF
 from querychat._utils import querychat_tool_starts_open
 from querychat.tools import (
     GetSchemaResult,
     UpdateDashboardData,
     _get_schema_impl,
     _query_impl,
-    _request_handoff_impl,
-    tool_request_handoff,
     tool_reset_dashboard,
 )
 from shinychat import message_content_chunk
@@ -135,26 +130,6 @@ def test_querychat_tool_starts_open_invalid_setting(monkeypatch):
         assert len(w) == 1
         assert "Invalid value" in str(w[0].message)
         assert result is False  # Falls back to default behavior
-
-
-def test_request_handoff_impl_invokes_callback():
-    called = []
-    impl = _request_handoff_impl(lambda: called.append(True))
-    result = impl()
-    assert called == [True]
-    assert isinstance(result, ContentToolResult)
-    assert "handoff" in str(result.value).lower()
-
-
-def test_tool_request_handoff_has_expected_name():
-    tool = tool_request_handoff(lambda: None)
-    assert tool.name == TOOL_REQUEST_HANDOFF
-
-
-def test_handoff_tool_has_public_factory_and_expected_name():
-    assert hasattr(querychat_tools, "tool_request_handoff")
-    tool = querychat_tools.tool_request_handoff(lambda: None)
-    assert tool.name == "querychat_request_handoff"
 
 
 def test_update_dashboard_data_has_table_field():

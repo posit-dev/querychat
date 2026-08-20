@@ -5,21 +5,6 @@ import pytest
 import querychat._handoff_server as handoff_server
 from querychat._handoff_types import resolve_handoff_type
 from querychat._handoff_view import HandoffView
-from querychat._shiny_module import handoff_action_for_status
-
-
-def test_running_or_initial_status_waits():
-    assert handoff_action_for_status("running") == "wait"
-    assert handoff_action_for_status("initial") == "wait"
-
-
-def test_success_opens():
-    assert handoff_action_for_status("success") == "open"
-
-
-def test_error_or_cancelled_drops():
-    assert handoff_action_for_status("error") == "drop"
-    assert handoff_action_for_status("cancelled") == "drop"
 
 
 def test_handoff_snapshot_round_trip():

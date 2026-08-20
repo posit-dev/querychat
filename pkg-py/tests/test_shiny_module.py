@@ -134,7 +134,14 @@ def test_mod_server_passes_client_and_history_to_chat():
     assert captured.get("client") is not None, "client= should be passed to Chat"
     assert captured.get("history") is True, "history= should be forwarded verbatim"
     assert callable(captured.get("greeting")), "greeting= should be a callable"
-    assert callable(client_factory.call_args.kwargs["request_handoff"])
+    assert client_factory.call_args.kwargs["handoff_available"] is True
+    assert set(client_factory.call_args.kwargs) == {
+        "update_dashboard",
+        "reset_dashboard",
+        "visualize",
+        "handoff_available",
+        "tools",
+    }
     handoff_server_mock.assert_called_once()
     assert handoff_server_mock.call_args.kwargs["data_sources"] == {"t": fake_source}
     assert handoff_server_mock.call_args.kwargs["executor"] is fake_executor

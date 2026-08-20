@@ -278,32 +278,3 @@ class TestHandoffGeneration(HandoffModalActions):
 
         editor = self.page.locator(".querychat-handoff-panel-body textarea")
         expect(editor).to_have_value(re.compile("BROWSER_HISTORY"), timeout=10000)
-
-
-class TestHandoffToolRequest(HandoffModalActions):
-    """The LLM's request_handoff tool opens the modal after the turn completes."""
-
-    @pytest.fixture(autouse=True)
-    def setup(self, page: Page, app_handoff: str, chat_handoff: ChatController):
-        page.goto(app_handoff)
-        page.wait_for_selector("table", timeout=15000)
-        expect(chat_handoff.loc_input).to_be_enabled(timeout=30000)
-        self.page = page
-        self.chat = chat_handoff
-
-    def test_natural_language_request_opens_modal(self):
-        # Give the model something to package, then ask for a handoff.
-        self._send_query_and_wait("Show only female passengers")
-        self.chat.set_user_input(
-            "Please turn this analysis into a standalone Quarto report I can share."
-        )
-        self.chat.send_user_input(method="click")
-
-        # The modal must not open mid-stream; it waits for the turn to finish.
-        expect(self.page.locator(".modal")).not_to_be_visible(timeout=500)
-
-        # The modal must not appear until the assistant turn finishes; once it
-        # does, the deferred submit fires "/handoff" and the modal opens.
-        modal = self.page.locator(".modal")
-        expect(modal).to_be_visible(timeout=120000)
-        expect(modal).to_contain_text("Prepare Handoff")

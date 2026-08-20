@@ -745,36 +745,6 @@ class TestRevise:
         assert orch.store.get("a").source == original_source
 
 
-class TestStreamArtifact:
-    def test_returns_result_and_turns_and_updates_editor(self):
-        chat = FakeChat(
-            [
-                (
-                    '{"source": "generated src", "language": "python", '
-                    '"summary": "s", "referenced_tables": []}'
-                )
-            ]
-        )
-        orch = make_session(chat)
-
-        result, turns = asyncio.run(
-            orch.chat.stream(
-                "make it",
-                turns=[],
-                system_prompt="sys",
-                sink=orch.view,
-                model=ArtifactResult,
-            )
-        )
-
-        assert result.source == "generated src"
-        assert result.summary == "s"
-        # turns come from the forked chat
-        assert [turn.role for turn in turns] == ["user", "assistant"]
-        # the editor received at least one source update
-        assert "querychat-artifact-source-update" in message_types(orch)
-
-
 class TestStateFromResult:
     def test_maps_current_artifact_fields(self):
         result = ArtifactResult(

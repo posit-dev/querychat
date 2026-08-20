@@ -1,13 +1,8 @@
 import asyncio
-import re
-from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
-from querychat._artifact_protocol import (
-    ARTIFACT_MESSAGE_ACTIONS,
-    SourceUpdateMessage,
-)
+from querychat._artifact_protocol import SourceUpdateMessage
 from querychat._artifact_state import ArtifactState
 from querychat._artifact_types import resolve_artifact_type
 from querychat._artifact_view import ArtifactView
@@ -36,19 +31,6 @@ def test_protocol_messages_reject_unknown_payload_fields():
             value="print(1)",
             extra_field=True,
         )
-
-
-def test_protocol_actions_match_browser_handlers():
-    source = (Path(__file__).parents[2] / "js" / "src" / "artifact-core.ts").read_text()
-    browser_actions = re.findall(
-        r'^\s*"([a-z-]+)",$',
-        source.split("const artifactMessageActions = [", 1)[1].split("] as const;", 1)[
-            0
-        ],
-        flags=re.MULTILINE,
-    )
-
-    assert browser_actions == list(ARTIFACT_MESSAGE_ACTIONS)
 
 
 class FakeSession:

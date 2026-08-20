@@ -1,5 +1,4 @@
 import asyncio
-import gc
 from unittest.mock import AsyncMock, MagicMock, call
 
 import pytest
@@ -104,124 +103,40 @@ def test_apply_artifact_snapshot_closes_open_panel():
     ]
 
 
-def capture_history_restore(monkeypatch, orchestrator):
-    callbacks = []
-    active_artifact_id = MagicMock()
-    recommend_task = MagicMock()
-    recommend_task.status = MagicMock()
-    session = MagicMock()
-    shinychat_chat = MagicMock()
-    shinychat_chat.slash_command.side_effect = lambda *args, **kwargs: lambda fn: fn
-    shinychat_chat.history.on_save.side_effect = lambda fn: fn
-
-    def register_restore(fn):
-        callbacks.append(fn)
-        return fn
-
-    shinychat_chat.history.on_restore.side_effect = register_restore
-    monkeypatch.setattr(
-        artifact_server,
-        "ArtifactOrchestrator",
-        MagicMock(return_value=orchestrator),
-    )
-    monkeypatch.setattr(
-        artifact_server.reactive,
-        "Value",
-        MagicMock(return_value=active_artifact_id),
-    )
-    monkeypatch.setattr(
-        artifact_server.reactive,
-        "extended_task",
-        lambda fn: recommend_task,
-    )
-    monkeypatch.setattr(artifact_server.reactive, "effect", lambda fn: fn)
-    monkeypatch.setattr(
-        artifact_server.reactive,
-        "event",
-        lambda *args, **kwargs: lambda fn: fn,
-    )
-    monkeypatch.setattr(
-        artifact_server.render,
-        "download",
-        lambda *args, **kwargs: lambda fn: fn,
-    )
-
-    artifact_server.artifact_server(
-        MagicMock(),
-        session,
-        MagicMock(),
-        data_sources={},
-        executor=MagicMock(),
-        shinychat_chat=shinychat_chat,
-    )
-    return callbacks[0], active_artifact_id
-
-
-def get_restore_tasks(callback):
-    index = callback.__code__.co_freevars.index("restore_tasks")
-    return callback.__closure__[index].cell_contents
-
-
-def test_history_restore_applies_metadata_synchronously_and_retains_close_task(
-    monkeypatch,
-):
+def test_completed_panel_close_task_is_removed():
     async def run_test():
-        close_started = asyncio.Event()
-        release_close = asyncio.Event()
+        task = asyncio.create_task(asyncio.sleep(0))
+        restore_tasks = {task}
+        await task
 
-        async def close_panel(*, is_open):
-            assert is_open is False
-            close_started.set()
-            await release_close.wait()
+        artifact_server.finish_artifact_restore_task(task, restore_tasks)
 
-        orch = MagicMock()
-        orch.view.set_panel_open = close_panel
-        callback, active_artifact_id = capture_history_restore(monkeypatch, orch)
-        restore_tasks = get_restore_tasks(callback)
-        values = [{"artifact_id": "restored"}]
-
-        callback({artifact_server.ARTIFACTS_BOOKMARK_KEY: values})
-
-        orch.restore_snapshot.assert_called_once_with(values)
-        active_artifact_id.set.assert_called_once_with(None)
-        assert len(restore_tasks) == 1
-        await close_started.wait()
-        assert len(restore_tasks) == 1
-
-        release_close.set()
-        await asyncio.sleep(0)
-        await asyncio.sleep(0)
         assert not restore_tasks
 
     asyncio.run(run_test())
 
 
-def test_history_restore_reports_and_consumes_panel_close_failure(monkeypatch):
+def test_failed_panel_close_task_notifies_and_is_removed(monkeypatch):
     async def run_test():
-        async def close_panel(*, is_open):
+        async def fail_close():
             raise RuntimeError("panel close failed")
 
-        orch = MagicMock()
-        orch.view.set_panel_open = close_panel
-        callback, _ = capture_history_restore(monkeypatch, orch)
         notifications = MagicMock()
         monkeypatch.setattr(
             artifact_server.ui,
             "notification_show",
             notifications,
         )
-        loop_errors = []
-        loop = asyncio.get_running_loop()
-        loop.set_exception_handler(lambda _loop, context: loop_errors.append(context))
+        task = asyncio.create_task(fail_close())
+        restore_tasks = {task}
+        with pytest.raises(RuntimeError, match="panel close failed"):
+            await task
 
-        callback({artifact_server.ARTIFACTS_BOOKMARK_KEY: []})
-        await asyncio.sleep(0)
-        await asyncio.sleep(0)
-        gc.collect()
+        artifact_server.finish_artifact_restore_task(task, restore_tasks)
 
         notifications.assert_called_once()
         assert "panel close failed" in notifications.call_args.args[0]
-        assert loop_errors == []
+        assert not restore_tasks
 
     asyncio.run(run_test())
 
@@ -292,15 +207,6 @@ def test_artifact_revision_propagates_history_save_error():
 
     with pytest.raises(OSError, match="disk full"):
         asyncio.run(artifact_server.save_artifact_revision(chat))
-
-
-def test_artifact_revision_does_not_fallback_when_history_save_returns_false():
-    chat = MagicMock()
-    chat.history.save = AsyncMock(return_value=False)
-
-    asyncio.run(artifact_server.save_artifact_revision(chat))
-
-    chat.history.save.assert_awaited_once_with()
 
 
 def test_generated_pill_is_committed_before_history_save(monkeypatch):

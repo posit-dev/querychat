@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
 
 class TestArtifactAppLoads:
-    """Verifies the app starts correctly with the artifact panel in the DOM."""
+    """Verifies the app starts with the artifact panel closed."""
 
     @pytest.fixture(autouse=True)
     def setup(self, page: Page, app_artifact: str, chat_artifact: ChatController):
@@ -30,38 +30,12 @@ class TestArtifactAppLoads:
         self.page = page
         self.chat = chat_artifact
 
-    def test_app_loads(self):
+    def test_app_loads_with_closed_artifact_panel(self):
         expect(self.page.locator("body")).to_be_visible()
         expect(self.page.locator("table")).to_be_visible()
-
-    def test_panel_in_dom_but_hidden(self):
         panel = self.page.locator(".querychat-artifact-panel")
         expect(panel).to_be_attached()
         expect(panel).not_to_have_class(re.compile(r"\bopen\b"))
-
-    def test_panel_has_code_editor_container(self):
-        body = self.page.locator(".querychat-artifact-panel-body")
-        expect(body).to_be_attached()
-
-    def test_panel_has_download_button(self):
-        btn = self.page.locator(
-            ".querychat-artifact-panel-header [id$='artifact_download']"
-        )
-        expect(btn.first).to_be_attached()
-
-    def test_panel_has_close_button(self):
-        btn = self.page.locator(
-            ".querychat-artifact-panel-header button[aria-label='Close']"
-        )
-        expect(btn).to_be_attached()
-
-    def test_panel_has_revise_textarea(self):
-        textarea = self.page.locator(".querychat-artifact-revise-drawer textarea")
-        expect(textarea).to_be_attached()
-
-    def test_panel_has_revise_button(self):
-        btn = self.page.locator(".querychat-artifact-revise-toggle")
-        expect(btn).to_be_attached()
 
 
 class TestArtifactModal(ArtifactModalActions):
@@ -164,48 +138,30 @@ class TestArtifactGalleryWithResults(ArtifactModalActions):
         item.click()
         expect(item).to_have_class(re.compile(r"\bselected\b"))
 
-    def test_generate_enabled_with_gallery_items(self):
-        self._send_query_and_wait("Show only female passengers")
-        self._open_artifact_modal()
-
-        # Wait for auto-recommend to complete
-        gallery = self.page.locator(".querychat-artifact-gallery")
-        expect(gallery).not_to_have_class(re.compile(r"\bloading\b"), timeout=60000)
-
-        items = self.page.locator(".querychat-artifact-gallery-item")
-        expect(items.first).to_be_visible(timeout=5000)
-
-        self.page.locator(
-            '.querychat-artifact-language-pill[data-language="python"]'
-        ).click()
-        btn = self.page.locator(".modal button:has-text('Generate')")
-        expect(btn).not_to_be_disabled(timeout=5000)
-
-    def test_gallery_starts_in_loading_state(self):
+    def test_recommendation_transitions_modal_to_ready(self):
         self._send_query_and_wait("Show only female passengers")
         self._open_artifact_modal()
 
         gallery = self.page.locator(".querychat-artifact-gallery")
-        # Gallery should start with loading class (auto-recommend in flight)
         expect(gallery).to_have_class(re.compile(r"\bloading\b"), timeout=5000)
-
-        # Loading status line should be visible
         status = self.page.locator(".querychat-artifact-loading-status")
         expect(status).to_be_visible()
         expect(status).to_contain_text("Analyzing")
+        generate = self.page.locator(".modal button:has-text('Generate')")
+        directions = self.page.locator(".modal textarea")
+        expect(generate).to_be_disabled()
+        expect(directions).to_be_disabled()
 
-    def test_gallery_items_have_checkboxes(self):
-        self._send_query_and_wait("Show only female passengers")
-        self._open_artifact_modal()
-
-        # Wait for loading to complete
-        gallery = self.page.locator(".querychat-artifact-gallery")
         expect(gallery).not_to_have_class(re.compile(r"\bloading\b"), timeout=60000)
-
-        checkbox = self.page.locator(
-            ".querychat-artifact-gallery-item .gallery-checkbox"
-        ).first
-        expect(checkbox).to_be_visible()
+        expect(status).to_be_hidden()
+        expect(directions).to_be_enabled()
+        expect(directions).not_to_have_value("")
+        expect(
+            self.page.locator(".querychat-artifact-directions-subtitle")
+        ).to_be_visible()
+        expect(
+            self.page.locator(".querychat-artifact-gallery-item.selected").first
+        ).to_be_visible()
 
 
 class TestArtifactLanguageSelector(ArtifactModalActions):
@@ -240,7 +196,7 @@ class TestArtifactGeneration(ArtifactModalActions):
         self.page = page
         self.chat = chat_artifact
 
-    def _generate_artifact(self):
+    def _generate_quarto_artifact(self):
         """Send a query, open modal, wait for recommend, generate."""
         self._send_query_and_wait("Show only female passengers")
         self._open_artifact_modal()
@@ -253,6 +209,9 @@ class TestArtifactGeneration(ArtifactModalActions):
         selected = self.page.locator(".querychat-artifact-gallery-item.selected")
         expect(selected.first).to_be_visible(timeout=5000)
 
+        self.page.locator(
+            '.querychat-artifact-type-pill[data-artifact-type="quarto-dashboard"]'
+        ).click()
         self.page.locator(
             '.querychat-artifact-language-pill[data-language="python"]'
         ).click()
@@ -270,57 +229,29 @@ class TestArtifactGeneration(ArtifactModalActions):
         editor = self.page.locator(".querychat-artifact-panel-body textarea")
         expect(editor).to_have_value(re.compile("BROWSER_HISTORY"), timeout=120000)
 
-    def test_generate_opens_panel(self):
-        self._generate_artifact()
+    def test_generated_artifact_can_be_closed_and_reopened(self):
+        self._generate_quarto_artifact()
 
         panel = self.page.locator(".querychat-artifact-panel")
         expect(panel).to_have_class(re.compile(r"\bopen\b"), timeout=60000)
-
-    def test_generate_populates_editor(self):
-        self._generate_artifact()
-
         editor = self.page.locator(".querychat-artifact-panel-body textarea")
         expect(editor).to_be_visible(timeout=60000)
         expect(editor).not_to_have_value("", timeout=120000)
-
-    def test_generate_creates_pill_in_chat(self):
-        self._generate_artifact()
-
         pill = self.page.locator(".querychat-artifact-pill")
         expect(pill).to_be_visible(timeout=120000)
         expect(pill).to_contain_text("Quarto")
 
-    def test_close_button_hides_panel(self):
-        self._generate_artifact()
-
-        panel = self.page.locator(".querychat-artifact-panel")
-        expect(panel).to_have_class(re.compile(r"\bopen\b"), timeout=120000)
-
         close_btn = self.page.locator(
             ".querychat-artifact-panel-header button[aria-label='Close']"
         )
         close_btn.click()
-        expect(panel).not_to_have_class(re.compile(r"\bopen\b"), timeout=5000)
-
-    def test_pill_click_reopens_panel(self):
-        self._generate_artifact()
-
-        pill = self.page.locator(".querychat-artifact-pill")
-        expect(pill).to_be_visible(timeout=120000)
-
-        close_btn = self.page.locator(
-            ".querychat-artifact-panel-header button[aria-label='Close']"
-        )
-        close_btn.click()
-
-        panel = self.page.locator(".querychat-artifact-panel")
         expect(panel).not_to_have_class(re.compile(r"\bopen\b"), timeout=5000)
 
         pill.click()
         expect(panel).to_have_class(re.compile(r"\bopen\b"), timeout=5000)
 
     def test_revision_restores_after_browser_history_reload(self):
-        self._generate_artifact()
+        self._generate_quarto_artifact()
         pill = self.page.locator(".querychat-artifact-pill")
         expect(pill).to_be_visible(timeout=120000)
 

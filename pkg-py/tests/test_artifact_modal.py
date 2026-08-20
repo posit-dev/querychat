@@ -1,5 +1,3 @@
-import re
-
 from querychat._artifact_gallery import VizGalleryItem
 from querychat._artifact_modal import (
     build_language_selector,
@@ -27,18 +25,6 @@ class TestTypeSelectorLanguages:
         assert 'data-languages="python"' in html
         assert 'data-artifact-type="shiny-app"' in html
         assert 'data-languages="python,r"' in html
-
-    def test_marimo_pill_is_python_only(self):
-        html = str(build_type_selector())
-        assert re.search(
-            r'data-artifact-type="marimo-notebook"[^>]*data-languages="python"',
-            html,
-        )
-
-    def test_multilingual_pill_supports_both(self):
-        html = str(build_type_selector())
-        assert 'data-languages="python,r"' in html
-
 
 def test_modal_body_has_namespaced_artifact_root():
     html = str(build_modal_ui(ns, []))

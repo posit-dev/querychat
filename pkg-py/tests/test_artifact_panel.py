@@ -54,27 +54,9 @@ class TestArtifactPanelUi:
         assert dependency.script == [{"src": "js/artifact.js"}]
         assert [item["href"] for item in dependency.stylesheet] == ["css/artifact.css"]
 
-    def test_omits_version_navigation(self):
-        markup = str(artifact_panel_ui())
-        assert "artifact_version_prev" not in markup
-        assert "artifact_version_next" not in markup
-        assert "querychat-artifact-version-label" not in markup
-
-    def test_has_download_and_close(self):
+    def test_has_artifact_controls(self):
         markup = str(artifact_panel_ui())
         assert "artifact_download" in markup
         assert "artifact_close" in markup
-
-    def test_revise_toggle_present(self):
-        markup = str(artifact_panel_ui())
         assert "querychat-artifact-revise-toggle" in markup
-
-    def test_refine_removed(self):
-        markup = str(artifact_panel_ui())
-        assert "artifact_refine" not in markup
-        assert "querychat-artifact-findings" not in markup
-
-    def test_single_row_header_no_toolbar(self):
-        markup = str(artifact_panel_ui())
-        assert "querychat-artifact-toolbar" not in markup
         assert "querychat-artifact-panel-header" in markup

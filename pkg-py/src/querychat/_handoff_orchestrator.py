@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import io
 import zipfile
+from contextlib import suppress
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, cast
 
@@ -366,10 +367,12 @@ class HandoffOrchestrator:
                 removed_state.bundle_id for removed_state in removed_states
             )
             self.bundle_store.evict()
-            await self.view.show_handoff(
-                state,
-                download_available=self._download_available(state),
-            )
+            download_available = self._download_available(state)
+            with suppress(Exception):
+                await self.view.show_handoff(
+                    state,
+                    download_available=download_available,
+                )
         except Exception:
             if not committed:
                 self.bundle_store.discard(bundle_id)

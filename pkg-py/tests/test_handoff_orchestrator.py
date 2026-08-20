@@ -1028,7 +1028,7 @@ class TestGenerate:
         assert source_updates[-1]["download_available"] is True
         assert asyncio.run(orch.build_download("new")) is not None
 
-    def test_post_commit_download_ui_failure_preserves_generated_handoff(
+    def test_post_commit_download_ui_failure_does_not_fail_generation(
         self,
         monkeypatch,
     ):
@@ -1049,8 +1049,7 @@ class TestGenerate:
 
         monkeypatch.setattr(orch.view, "show_handoff", fail_download_enablement)
 
-        with pytest.raises(RuntimeError, match="client disconnected"):
-            asyncio.run(orch.generate(req, "", "new"))
+        asyncio.run(orch.generate(req, "", "new"))
 
         state = orch.store.get("new")
         assert state is not None

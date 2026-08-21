@@ -819,6 +819,40 @@ test_that("QueryChat$app_obj() infers Shiny bookmarking from history's restore_m
   expect_equal(app_call_override$appOptions$bookmarkStore, "server")
 })
 
+describe("QueryChat internal client handoff availability", {
+  local_mocked_r6_class(
+    QueryChat,
+    public = list(
+      internal_client = function(handoff_available = FALSE) {
+        private$create_session_client(
+          tools = NULL,
+          handoff_available = handoff_available
+        )
+      }
+    )
+  )
+
+  it("keeps public clients unavailable while allowing internal opt-in", {
+    qc <- QueryChat$new(new_test_df(), "test_df")
+    withr::defer(qc$cleanup())
+
+    public_client <- qc$client(tools = NULL)
+    handoff_client <- qc$internal_client(handoff_available = TRUE)
+
+    expect_no_match(
+      public_client$get_system_prompt(),
+      "/handoff",
+      fixed = TRUE
+    )
+    expect_match(
+      handoff_client$get_system_prompt(),
+      "/handoff",
+      fixed = TRUE
+    )
+    expect_length(handoff_client$get_tools(), 0L)
+  })
+})
+
 describe("querychat()", {
   skip_if_no_dataframe_engine()
   withr::local_envvar(OPENAI_API_KEY = "boop")

@@ -125,6 +125,34 @@ describe("QueryChatSystemPrompt$new()", {
 })
 
 describe("QueryChatSystemPrompt$render()", {
+  it("renders handoff guidance only when available", {
+    df <- new_test_df()
+    ds <- DataFrameSource$new(df, "test_table")
+    withr::defer(ds$cleanup())
+    sp <- QueryChatSystemPrompt$new(
+      prompt_template = system.file(
+        "prompts",
+        "prompt.md",
+        package = "querychat"
+      ),
+      data_sources = list(test_table = ds)
+    )
+
+    public_prompt <- sp$render(tools = NULL)
+    handoff_prompt <- sp$render(
+      tools = NULL,
+      handoff_available = TRUE
+    )
+
+    expect_no_match(public_prompt, "/handoff", fixed = TRUE)
+    expect_match(handoff_prompt, "/handoff", fixed = TRUE)
+    expect_match(
+      handoff_prompt,
+      "save, share, export, package, reproduce, or continue",
+      fixed = TRUE
+    )
+  })
+
   it("renders with both tools", {
     df <- new_test_df()
     ds <- DataFrameSource$new(df, "test_table")

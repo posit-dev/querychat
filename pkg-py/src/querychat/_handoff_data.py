@@ -80,6 +80,7 @@ def materialize_handoff_data(
     bundled_files: dict[str, bytes] = {}
     bundled_tables: list[str] = []
     combined_size = 0
+    size_limit_exceeded = False
 
     for name in unique_tables:
         entry = catalog.entries[name]
@@ -95,20 +96,25 @@ def materialize_handoff_data(
                 f"Handoff data could not export dataframe table '{name}' as CSV."
             ) from error
 
-        if len(csv_bytes) > MAX_BUNDLE_SIZE:
-            return build_externalized_dataframe_context(
-                catalog,
-                unique_tables,
-            )
+        if size_limit_exceeded:
+            continue
 
-        combined_size += len(csv_bytes)
-        if combined_size > MAX_BUNDLE_SIZE:
-            return build_externalized_dataframe_context(
-                catalog,
-                unique_tables,
-            )
+        csv_size = len(csv_bytes)
+        if csv_size > MAX_BUNDLE_SIZE or combined_size + csv_size > MAX_BUNDLE_SIZE:
+            size_limit_exceeded = True
+            bundled_files.clear()
+            bundled_tables.clear()
+            continue
+
+        combined_size += csv_size
         bundled_files[f"{name}.csv"] = csv_bytes
         bundled_tables.append(name)
+
+    if size_limit_exceeded:
+        return build_externalized_dataframe_context(
+            catalog,
+            unique_tables,
+        )
 
     return build_data_context(
         catalog,

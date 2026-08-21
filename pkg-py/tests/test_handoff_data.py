@@ -236,26 +236,56 @@ class TestHandoffDataCatalog:
 
         assert source.get_data_calls == 1
 
+    def test_materialize_rejects_export_failure_after_size_overflow(
+        self,
+        monkeypatch,
+    ):
+        oversized_source = RecordingDataFrameSource("oversized")
+        failing_source = RecordingDataFrameSource("failing")
+        failing_source.export_error = RuntimeError("cannot export")
+        sources = {
+            "oversized": oversized_source,
+            "failing": failing_source,
+        }
+        catalog = handoff_data.prepare_handoff_data(sources, language="python")
+        monkeypatch.setattr("querychat._handoff_data.MAX_BUNDLE_SIZE", 1)
+
+        with pytest.raises(handoff_data.HandoffDataError, match="could not export"):
+            handoff_data.materialize_handoff_data(
+                catalog,
+                sources,
+                ["oversized", "failing"],
+            )
+
+        assert oversized_source.get_data_calls == 1
+        assert failing_source.get_data_calls == 1
+
     def test_materialize_externalizes_all_dataframes_when_one_exceeds_limit(
         self,
         monkeypatch,
     ):
-        source = RecordingDataFrameSource("tips")
-        sources = {"tips": source}
+        oversized_source = RecordingDataFrameSource("oversized")
+        later_source = RecordingDataFrameSource("later")
+        sources = {
+            "oversized": oversized_source,
+            "later": later_source,
+        }
         catalog = handoff_data.prepare_handoff_data(sources, language="python")
         monkeypatch.setattr("querychat._handoff_data.MAX_BUNDLE_SIZE", 1)
 
         context = handoff_data.materialize_handoff_data(
             catalog,
             sources,
-            ["tips"],
+            ["oversized", "later"],
         )
 
         assert context.bundled_files == {}
         assert context.bundled_tables == []
-        assert context.externalized_dataframe_tables == ["tips"]
+        assert context.externalized_dataframe_tables == ["oversized", "later"]
         assert "DATA SETUP" in context.data_instructions
         assert "may need adjustment" in context.data_instructions
+        assert oversized_source.get_data_calls == 1
+        assert later_source.get_data_calls == 1
 
     def test_materialize_externalizes_all_dataframes_when_combined_bundle_exceeds_limit(
         self,

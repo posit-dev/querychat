@@ -153,7 +153,8 @@ visualize_result <- function(
       open = querychat_tool_starts_open("visualize"),
       full_screen = TRUE,
       icon = viz_icon(),
-      footer = freeze_tags(footer)
+      footer = freeze_tags(footer),
+      presentation = "framed"
     )
   )
 
@@ -242,7 +243,7 @@ build_viz_footer <- function(
         class = "querychat-show-query-btn",
         `data-querychat-action` = "show-query",
         `data-target` = query_section_id,
-        shiny::tags$span(class = "querychat-query-chevron", "\u25b6"),
+        bsicons::bs_icon("chevron-down", class = "querychat-query-chevron"),
         shiny::tags$span(class = "querychat-query-label", "Show Query")
       )
     ),

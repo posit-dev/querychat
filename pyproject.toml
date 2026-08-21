@@ -22,9 +22,9 @@ maintainers = [
 dependencies = [
     "duckdb",
     "shiny>=1.6.2",
-    "shinychat @ git+https://github.com/posit-dev/shinychat.git@main",
+    "shinychat @ git+https://github.com/posit-dev/shinychat.git@refs/pull/331/head",
     "htmltools",
-    "chatlas>=0.18.0",
+    "chatlas @ git+https://github.com/posit-dev/chatlas.git@refs/pull/396/head",
     "narwhals>=2.2.0",
     "chevron",
     "sqlalchemy>=2.0.0", # Using 2.0+ for improved type hints and API

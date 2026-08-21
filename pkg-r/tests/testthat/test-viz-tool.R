@@ -445,3 +445,28 @@ describe("collapse_validation_errors()", {
     )
   })
 })
+
+describe("build_viz_footer()", {
+  it("uses the Shiny Chat disclosure chevron for Show Query", {
+    footer <- build_viz_footer(
+      "SELECT * FROM test_table VISUALISE value AS x DRAW histogram",
+      "Chart",
+      "querychat_viz_raw",
+      "querychat_viz_raw"
+    )
+    html <- as.character(footer)
+
+    expect_match(html, "querychat-query-chevron", fixed = TRUE)
+    expect_match(html, "bi-chevron-down", fixed = TRUE)
+    expect_no_match(html, "\u25b6", fixed = TRUE)
+  })
+})
+
+describe("visualization tool display", {
+  it("requests Shiny Chat's framed presentation", {
+    source <- readLines(test_path("..", "..", "R", "querychat_viz.R"))
+    source <- paste(source, collapse = "\n")
+
+    expect_match(source, 'presentation = "framed"', fixed = TRUE)
+  })
+})

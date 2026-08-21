@@ -141,6 +141,7 @@ class VisualizeResult(ContentToolResult):
                 full_screen=True,
                 icon=bs_icon("graph-up"),
                 footer=footer,
+                presentation="framed",
             ),
         }
 
@@ -319,7 +320,7 @@ def build_viz_footer(
                     "data-querychat-action": "show-query",
                     "data-target": query_section_id,
                 },
-                tags.span({"class": "querychat-query-chevron"}, "\u25b6"),
+                bs_icon("chevron-down", cls="querychat-query-chevron"),
                 tags.span({"class": "querychat-query-label"}, "Show Query"),
             ),
         ),

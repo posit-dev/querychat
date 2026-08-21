@@ -17,3 +17,5 @@ qc = QueryChat(
 qc.ui()
 
 ui.page_opts(fillable=True, title="QueryChat Visualization Demo")
+
+ui.input_dark_mode()

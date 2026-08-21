@@ -463,10 +463,48 @@ describe("build_viz_footer()", {
 })
 
 describe("visualization tool display", {
-  it("requests Shiny Chat's framed presentation", {
-    source <- readLines(test_path("..", "..", "R", "querychat_viz.R"))
-    source <- paste(source, collapse = "\n")
+  skip_if_no_dataframe_engine()
+  skip_if_not_installed("ggsql")
 
-    expect_match(source, 'presentation = "framed"', fixed = TRUE)
+  it("requests Shiny Chat's framed presentation", {
+    ds <- local_data_frame_source(new_test_df())
+    session <- structure(
+      list(
+        output = list(),
+        ns = identity
+      ),
+      class = "MockShinySession"
+    )
+
+    local_mocked_bindings(
+      execute_ggsql = function(...) structure(list(), class = "ggsql_spec"),
+      build_viz_footer = function(...) htmltools::tagList(),
+      .package = "querychat"
+    )
+    local_mocked_bindings(
+      ggsql_validate = function(...) {
+        structure(list(valid = TRUE), class = "ggsql_validated")
+      },
+      ggsql_has_visual = function(...) TRUE,
+      renderGgsql = function(...) shiny::renderText("ok"),
+      ggsqlOutput = function(id) htmltools::div(id = id),
+      ggsql_save = function(...) rlang::abort("V8 is not installed"),
+      .package = "ggsql"
+    )
+
+    tool <- tool_visualize_dashboard(
+      ds,
+      session = session,
+      update_fn = function(data) {}
+    )
+
+    suppressWarnings(
+      result <- tool(
+        ggsql = "SELECT * FROM test_table VISUALISE value AS x DRAW histogram",
+        title = "Test"
+      )
+    )
+
+    expect_identical(result@extra$display$presentation, "framed")
   })
 })

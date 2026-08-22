@@ -10,6 +10,7 @@
 </p>
 
 
+
 QueryChat facilitates safe and reliable natural language exploration of tabular data, powered by SQL and large language models (LLMs). For analysts, it offers an intuitive web application where they can quickly ask questions of their data and receive verifiable data-driven answers. For software developers, QueryChat provides a comprehensive Python API to access core functionality -- including chat UI, generated SQL statements, resulting data, and more. This capability enables the seamless integration of natural language querying into bespoke data applications.
 
 ## Installation

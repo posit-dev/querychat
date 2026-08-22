@@ -179,7 +179,7 @@ class TestVizFrameStyles:
         assert "height: 24px;" in buttons["declarations"]
         assert "padding: 1px 0.25rem;" in buttons["declarations"]
 
-    def test_visualization_requests_shinychat_framed_presentation(self):
+    def test_visualization_requests_shinychat_framed_open_style(self):
         source = (
             Path(__file__).parents[1]
             / "src"
@@ -187,4 +187,4 @@ class TestVizFrameStyles:
             / "_viz_tools.py"
         ).read_text(encoding="utf-8")
 
-        assert 'presentation="framed"' in source
+        assert 'open_style="framed"' in source

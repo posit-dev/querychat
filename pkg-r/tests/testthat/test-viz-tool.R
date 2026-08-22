@@ -466,7 +466,7 @@ describe("visualization tool display", {
   skip_if_no_dataframe_engine()
   skip_if_not_installed("ggsql")
 
-  it("requests Shiny Chat's framed presentation", {
+  it("requests Shiny Chat's framed open style", {
     ds <- local_data_frame_source(new_test_df())
     session <- structure(
       list(
@@ -505,6 +505,6 @@ describe("visualization tool display", {
       )
     )
 
-    expect_identical(result@extra$display$presentation, "framed")
+    expect_identical(result@extra$display$open_style, "framed")
   })
 })

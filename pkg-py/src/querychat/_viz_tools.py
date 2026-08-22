@@ -141,7 +141,7 @@ class VisualizeResult(ContentToolResult):
                 full_screen=True,
                 icon=bs_icon("graph-up"),
                 footer=footer,
-                presentation="framed",
+                open_style="framed",
             ),
         }
 

@@ -154,7 +154,7 @@ visualize_result <- function(
       full_screen = TRUE,
       icon = viz_icon(),
       footer = freeze_tags(footer),
-      presentation = "framed"
+      open_style = "framed"
     )
   )
 

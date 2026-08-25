@@ -1820,6 +1820,23 @@ describe("parse_handoff_recommendation()", {
     expect_identical(recommendation@directions, "")
   })
 
+  it("accepts ellmer's converted structured-output shape", {
+    # ellmer's convert_from_type() returns type_array(type_enum(...))
+    # fields as factors and materializes omitted optional fields as NULL.
+    recommendation <- parse_handoff_recommendation(
+      list(
+        selected_ids = factor("viz-1", levels = "viz-1"),
+        format_id = "quarto-dashboard",
+        directions = NULL
+      ),
+      allowed_item_ids = "viz-1",
+      allowed_format_ids = "quarto-dashboard"
+    )
+
+    expect_identical(recommendation@selected_ids, "viz-1")
+    expect_identical(recommendation@directions, "")
+  })
+
   it("rejects unsupported IDs with a representative diagnostic", {
     expect_snapshot(error = TRUE, {
       parse_handoff_recommendation(
@@ -1838,7 +1855,7 @@ describe("parse_handoff_recommendation()", {
       ),
       selected_type = list(
         list(
-          selected_ids = list("viz-1"),
+          selected_ids = list(1, 2),
           format_id = "quarto-dashboard"
         ),
         "selected_ids"
@@ -1858,7 +1875,7 @@ describe("parse_handoff_recommendation()", {
         list(
           selected_ids = "viz-1",
           format_id = "quarto-dashboard",
-          directions = NULL
+          directions = 1
         ),
         "directions"
       ),
@@ -1943,6 +1960,47 @@ describe("parse_handoff_result()", {
     expect_identical(result@run_instructions, "Run the app.")
   })
 
+  it("accepts the literal jsonlite::parse_json() shape from ContentJson", {
+    # ellmer's ContentJson@parsed getter runs jsonlite::parse_json() with
+    # simplifyVector = FALSE, so array fields are plain lists of scalars.
+    parsed <- jsonlite::parse_json(
+      paste0(
+        '{"source": "print(1)", "language": "python",',
+        '"referenced_tables": ["orders"], "summary": "A result"}'
+      )
+    )
+
+    result <- parse_handoff_result(
+      parsed,
+      allowed_table_names = "orders",
+      allowed_languages = "python"
+    )
+
+    expect_identical(result@referenced_tables, "orders")
+    expect_identical(result@summary, "A result")
+  })
+
+  it("accepts ellmer's converted structured-output shape", {
+    # ellmer's convert_from_type() returns type_array(type_enum(...))
+    # fields as factors and materializes omitted optional fields as NULL.
+    result <- parse_handoff_result(
+      list(
+        source = "print(1)",
+        language = "python",
+        summary = NULL,
+        install_instructions = NULL,
+        run_instructions = NULL,
+        referenced_tables = factor("orders", levels = "orders")
+      ),
+      allowed_table_names = "orders",
+      allowed_languages = "python"
+    )
+
+    expect_identical(result@referenced_tables, "orders")
+    expect_identical(result@summary, "")
+    expect_identical(result@run_instructions, "")
+  })
+
   it("rejects unsupported tables with a representative diagnostic", {
     expect_snapshot(error = TRUE, {
       parse_handoff_result(
@@ -1996,7 +2054,7 @@ describe("parse_handoff_result()", {
         list(
           source = "x",
           language = "python",
-          summary = NULL,
+          summary = NA_character_,
           referenced_tables = character()
         ),
         "summary"
@@ -2023,7 +2081,7 @@ describe("parse_handoff_result()", {
         list(
           source = "x",
           language = "python",
-          referenced_tables = list("orders")
+          referenced_tables = list(1)
         ),
         "referenced_tables"
       )

@@ -218,6 +218,14 @@ describe("HandoffBundleStore$evict()", {
     expect_identical(store$get(second@bundle_id), second)
     expect_identical(store$get(fourth@bundle_id), fourth)
   })
+
+  it("stops without error when the byte total is stale but no bundles remain", {
+    store <- HandoffBundleStore$new(max_bytes = 1)
+    private <- store$.__enclos_env__$private
+    private$total_bytes <- 100
+
+    expect_identical(store$evict(), list())
+  })
 })
 
 describe("HandoffBundleStore$new()", {

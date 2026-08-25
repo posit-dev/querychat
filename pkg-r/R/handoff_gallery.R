@@ -34,7 +34,7 @@ expand_handoff_gallery_contents <- function(turn) {
     },
     turn@contents
   )
-  ellmer:::turn_contents_expand(turn)@contents
+  ellmer_turn_contents_expand(turn)@contents
 }
 
 is_handoff_gallery_result <- function(result) {

@@ -567,6 +567,10 @@ local_mock_chat_restore <- function(env = parent.frame()) {
 # Minimal mock matching the shape shinychat::chat_server() always returns,
 # including a $history interface that's present regardless of the `history`
 # argument's value (registrations are just inert if history isn't active).
+# Note the pinned shinychat branch's history object exposes only `on_save`
+# and `on_restore` -- no `save()` -- so the mock deliberately omits it.
+# Tests that exercise history saving add their own `save` (see
+# new_server_chat_module()).
 mock_chat_server_result <- function(client) {
   chat <- new.env(parent = emptyenv())
   chat$client <- client
@@ -600,7 +604,6 @@ mock_chat_server_result <- function(client) {
     invisible(NULL)
   }
   chat$history <- list(
-    save = function() FALSE,
     on_save = function(fn) invisible(fn),
     on_restore = function(fn) invisible(fn)
   )

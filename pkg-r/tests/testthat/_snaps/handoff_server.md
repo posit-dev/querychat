@@ -63,23 +63,3 @@
       Caused by error:
       ! first generation failed
 
-# handoff_server() / keeps committed generation visible when history save fails
-
-    Code
-      flush_handoff_server(session)
-    Condition
-      Warning in `handoff_task$invoke()`:
-      ERROR: An error occurred when invoking the ExtendedTask.
-      Caused by error:
-      ! history save failed
-
-# handoff_server() / allows FALSE revision saves and preserves commits on save errors
-
-    Code
-      flush_handoff_server(session)
-    Condition
-      Warning in `handoff_task$invoke()`:
-      ERROR: An error occurred when invoking the ExtendedTask.
-      Caused by error:
-      ! revision save failed
-

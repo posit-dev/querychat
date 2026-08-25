@@ -77,7 +77,7 @@
       Error in `validate_handoff_source()`:
       ! Generated handoff source must be a non-empty string.
 
-# HandoffOrchestrator$generate() / rolls back completed-view and pill failures before remember
+# HandoffOrchestrator$generate() / rolls back completed-view failures before remember
 
     Code
       sync_promise(fixture$orchestrator$generate(transaction_request(), "",
@@ -85,15 +85,6 @@
     Condition
       Error in `record()`:
       ! show_handoff failed
-
----
-
-    Code
-      sync_promise(fixture$orchestrator$generate(transaction_request(), "",
-      "handoff-1"))
-    Condition
-      Error in `record()`:
-      ! append_pill failed
 
 # HandoffOrchestrator$generate() / aborts when the correction changes the handoff language
 

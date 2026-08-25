@@ -166,7 +166,7 @@ parse_handoff_recommendation <- function(
     context = "Handoff recommendation"
   )
 
-  selected_ids <- value$selected_ids
+  selected_ids <- payload_character_vector(value, "selected_ids")
   format_id <- value$format_id
   directions <- optional_payload_value(value, "directions", "")
 
@@ -226,7 +226,7 @@ parse_handoff_result <- function(
     ""
   )
   run_instructions <- optional_payload_value(value, "run_instructions", "")
-  referenced_tables <- value$referenced_tables
+  referenced_tables <- payload_character_vector(value, "referenced_tables")
 
   check_scalar_field(source, "source", allow_empty = TRUE)
   check_scalar_field(language, "language")
@@ -933,11 +933,16 @@ payload_value <- function(value, name, default) {
   value[[name]]
 }
 
-# Shiny's browser JSON deserialization keeps array-valued custom-message
-# payload fields as plain lists of scalars (never simplified to an atomic
-# vector), regardless of length. Flatten that shape before validating.
+# Array-valued payload fields arrive in two non-atomic shapes depending on
+# the entry point: Shiny's browser JSON deserialization keeps them as plain
+# lists of scalars (never simplified to an atomic vector), and ellmer's
+# structured-output conversion returns `type_array(type_enum(...))` fields
+# as factors. Flatten both shapes before validating.
 payload_character_vector <- function(value, name) {
   field <- payload_value(value, name, character())
+  if (is.factor(field)) {
+    field <- as.character(field)
+  }
   if (is.list(field)) {
     field <- unlist(field, use.names = FALSE) %||% character()
   }
@@ -945,7 +950,9 @@ payload_character_vector <- function(value, name) {
 }
 
 optional_payload_value <- function(value, name, default) {
-  if (!name %in% names(value)) {
+  # ellmer's structured-output conversion materializes omitted optional
+  # fields as NULL, indistinguishable from an explicit JSON null.
+  if (!name %in% names(value) || is.null(value[[name]])) {
     return(default)
   }
   value[[name]]

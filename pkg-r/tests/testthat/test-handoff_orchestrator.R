@@ -420,8 +420,8 @@ describe("HandoffOrchestrator$generate()", {
         "clear_source",
         "stream",
         "show_handoff",
-        "append_pill",
         "remember",
+        "append_pill",
         "show_handoff"
       )
     )
@@ -567,50 +567,97 @@ describe("HandoffOrchestrator$generate()", {
     expect_identical(tail(journal_actions(fixture), 1L), "clear_source")
   })
 
-  it("rolls back completed-view and pill failures before remember", {
-    cases <- list(
-      list(
-        failures = list(show_handoff = 1L),
-        actions = c(
-          "remove_modal",
-          "clear_source",
-          "stream",
-          "show_handoff",
-          "clear_source"
-        )
-      ),
-      list(
-        failures = list(append_pill = 1L),
-        actions = c(
-          "remove_modal",
-          "clear_source",
-          "stream",
-          "show_handoff",
-          "append_pill",
-          "clear_source"
+  it("rolls back completed-view failures before remember", {
+    fixture <- new_transaction_orchestrator(
+      list(new_transaction_handoff_result()),
+      view_failures = list(show_handoff = 1L)
+    )
+
+    expect_snapshot(
+      error = TRUE,
+      sync_promise(
+        fixture$orchestrator$generate(
+          transaction_request(),
+          "",
+          "handoff-1"
         )
       )
     )
-
-    for (case in cases) {
-      fixture <- new_transaction_orchestrator(
-        list(new_transaction_handoff_result()),
-        view_failures = case$failures
+    expect_length(fixture$store$values(), 0L)
+    expect_identical(
+      journal_actions(fixture),
+      c(
+        "remove_modal",
+        "clear_source",
+        "stream",
+        "show_handoff",
+        "clear_source"
       )
+    )
+  })
 
-      expect_snapshot(
-        error = TRUE,
-        sync_promise(
-          fixture$orchestrator$generate(
-            transaction_request(),
-            "",
-            "handoff-1"
-          )
+  it("keeps the committed handoff when the pill append fails after commit", {
+    fixture <- new_transaction_orchestrator(
+      list(new_transaction_handoff_result()),
+      view_failures = list(append_pill = 1L)
+    )
+
+    expect_warning(
+      sync_promise(
+        fixture$orchestrator$generate(
+          transaction_request(),
+          "",
+          "handoff-1"
         )
+      ),
+      "post-commit step failed"
+    )
+
+    expect_identical(fixture$store$has("handoff-1"), TRUE)
+    expect_identical(
+      journal_actions(fixture),
+      c(
+        "remove_modal",
+        "clear_source",
+        "stream",
+        "show_handoff",
+        "remember",
+        "append_pill"
       )
-      expect_length(fixture$store$values(), 0L)
-      expect_identical(journal_actions(fixture), case$actions)
-    }
+    )
+  })
+
+  it("keeps the committed handoff when bundle eviction fails after commit", {
+    FailingEvictBundleStore <- R6::R6Class(
+      "FailingEvictBundleStore",
+      inherit = HandoffBundleStore,
+      public = list(
+        evict = function() {
+          stop("evict failed")
+        }
+      )
+    )
+    fixture <- new_transaction_orchestrator(
+      list(new_transaction_handoff_result()),
+      bundle_store = FailingEvictBundleStore$new()
+    )
+
+    expect_warning(
+      sync_promise(
+        fixture$orchestrator$generate(
+          transaction_request(),
+          "",
+          "handoff-1"
+        )
+      ),
+      "post-commit step failed"
+    )
+
+    expect_identical(fixture$store$has("handoff-1"), TRUE)
+    expect_identical(
+      tail(journal_actions(fixture), 2L),
+      c("remember", "append_pill")
+    )
   })
 
   it("keeps committed state when the availability refresh fails", {
@@ -631,9 +678,10 @@ describe("HandoffOrchestrator$generate()", {
 
     expect_identical(fixture$store$has("handoff-1"), TRUE)
     expect_identical(
-      tail(journal_actions(fixture), 2L),
+      tail(journal_actions(fixture), 3L),
       c(
         "remember",
+        "append_pill",
         "show_handoff"
       )
     )
@@ -868,9 +916,14 @@ describe("HandoffOrchestrator$revise()", {
     blank <- sync_promise(
       fixture$orchestrator$revise("handoff-1", "   ")
     )
+    # The revise textarea reports NULL before it is bound client-side.
+    unbound <- sync_promise(
+      fixture$orchestrator$revise("handoff-1", NULL)
+    )
 
     expect_identical(missing, FALSE)
     expect_identical(blank, FALSE)
+    expect_identical(unbound, FALSE)
     expect_identical(fixture$store$get("handoff-1"), state)
     expect_length(fixture$journal$events, 0L)
   })
@@ -1116,6 +1169,41 @@ describe("HandoffOrchestrator$revise()", {
     expect_identical(caught, original)
     expect_snapshot(error = TRUE, stop(caught))
     expect_identical(fixture$store$get("handoff-1"), old)
+  })
+
+  it("keeps the committed revision and view when post-commit cleanup fails", {
+    FailingEvictBundleStore <- R6::R6Class(
+      "FailingEvictBundleStore",
+      inherit = HandoffBundleStore,
+      public = list(
+        evict = function() {
+          stop("evict failed")
+        }
+      )
+    )
+    fixture <- new_transaction_orchestrator(
+      list(new_transaction_handoff_result(source = "new source")),
+      bundle_store = FailingEvictBundleStore$new()
+    )
+    old <- new_revision_handoff_state()
+    fixture$store$remember(old)
+    fixture$journal$events <- list()
+
+    expect_warning(
+      revised <- sync_promise(
+        fixture$orchestrator$revise("handoff-1", "Make it smaller.")
+      ),
+      "post-commit step failed"
+    )
+
+    expect_identical(revised, TRUE)
+    replacement <- fixture$store$get("handoff-1")
+    expect_identical(replacement@source, "new source")
+    # The view keeps showing the committed replacement; it is not reverted
+    # to the pre-revision state.
+    shown <- tail(fixture$view$events, 1L)[[1]]
+    expect_identical(shown$action, "show_handoff")
+    expect_identical(shown$state, replacement)
   })
 
   it("stages a fresh bundle for normal-sized data and discards the old one", {

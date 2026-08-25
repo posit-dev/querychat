@@ -136,7 +136,7 @@ update_streamed_source <- function(view, previous, source) {
 }
 
 completed_json_content <- function(turns) {
-  content_json <- asNamespace("ellmer")[["ContentJson"]]
+  content_json <- ellmer_content_json_class()
   for (turn in rev(turns)) {
     if (!S7::S7_inherits(turn, ellmer::AssistantTurn)) {
       next

@@ -212,13 +212,15 @@ HandoffOrchestrator <- R6::R6Class(
               state,
               download_available = FALSE
             )
+            removed <- private$store$remember(state)
+            committed <- TRUE
+            # Append the chat pill only after the commit succeeds so a
+            # failure cannot leave an orphaned, permanently dead pill.
             private$view$append_pill(
               handoff_id,
               generated$handoff_type,
               result@summary
             )
-            removed <- private$store$remember(state)
-            committed <- TRUE
             private$discard_unreferenced_bundles(
               lapply(removed, \(removed_state) removed_state@bundle_id)
             )
@@ -232,16 +234,23 @@ HandoffOrchestrator <- R6::R6Class(
             )
           },
           error = function(error) {
-            if (!committed) {
-              tryCatch(
-                private$bundle_store$discard(staged_bundle_id),
-                error = function(discard_error) NULL
-              )
-              tryCatch(
-                private$view$clear_source("plain"),
-                error = function(clear_error) NULL
-              )
+            if (committed) {
+              # The handoff is committed: post-commit cleanup or view
+              # failures must not be reported as a failed generation.
+              cli::cli_warn(c(
+                "!" = "The handoff was saved, but a post-commit step failed:",
+                "x" = conditionMessage(error)
+              ))
+              return(invisible(NULL))
             }
+            tryCatch(
+              private$bundle_store$discard(staged_bundle_id),
+              error = function(discard_error) NULL
+            )
+            tryCatch(
+              private$view$clear_source("plain"),
+              error = function(clear_error) NULL
+            )
             stop(error)
           }
         )
@@ -254,8 +263,15 @@ HandoffOrchestrator <- R6::R6Class(
         if (!private$store$has(handoff_id)) {
           return(FALSE)
         }
-        check_handoff_directions(instructions)
-        if (!nzchar(trimws(instructions))) {
+        # Mirror Python's `if not instructions: return`: the revise textarea
+        # can report NULL before it is bound client-side, and blank
+        # instructions are a quiet no-op rather than an error.
+        if (
+          !is.character(instructions) ||
+            length(instructions) != 1L ||
+            is.na(instructions) ||
+            !nzchar(trimws(instructions))
+        ) {
           return(FALSE)
         }
         state <- private$store$get(handoff_id)
@@ -323,12 +339,23 @@ HandoffOrchestrator <- R6::R6Class(
             private$bundle_store$evict()
           },
           error = function(error) {
-            if (!replacement_saved) {
-              tryCatch(
-                private$bundle_store$discard(staged_bundle_id),
-                error = function(discard_error) NULL
-              )
+            if (replacement_saved) {
+              # The replacement is committed: post-commit cleanup failures
+              # must not revert the view to the pre-revision state or be
+              # reported as a failed revision.
+              cli::cli_warn(c(
+                "!" = paste(
+                  "The revised handoff was saved,",
+                  "but a post-commit step failed:"
+                ),
+                "x" = conditionMessage(error)
+              ))
+              return(invisible(NULL))
             }
+            tryCatch(
+              private$bundle_store$discard(staged_bundle_id),
+              error = function(discard_error) NULL
+            )
             tryCatch(
               private$view$show_handoff(
                 state,

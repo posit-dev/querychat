@@ -4,16 +4,14 @@
 # calling a real model).
 #
 # NOTE: restore-after-reload is intentionally not covered here. The pinned
-# `shinychat@dev/querychat-pr311-history-save` branch's `chat_module$history$
-# save()` method does not exist on the currently installed build (confirmed
-# via `is.function(chat_module$history$save)` returning FALSE at runtime),
-# so every handoff commit that reaches that call currently raises "attempt to
-# apply non-function" as a (non-blocking) notification. The underlying
-# generation/revision still commits correctly -- this is upstream API drift
-# on a work-in-progress branch, not a defect in the handoff port -- but it
-# also means the chat-history round trip that restore relies on cannot be
-# exercised reliably right now. See the PR description for this as a
-# concrete release blocker.
+# `shinychat@dev/querychat-pr311-history-save` branch's history object
+# exposes only `on_save`/`on_restore` -- no `save()` method (confirmed via
+# `is.function(chat_module$history$save)` returning FALSE at runtime) -- so
+# `handoff_server()` skips the post-commit history save on this build. The
+# underlying generation/revision still commits correctly, but the
+# chat-history round trip that restore relies on cannot be exercised
+# reliably right now. See the PR description for this as a concrete release
+# blocker.
 
 local_handoff_app <- function(env = parent.frame()) {
   app <- shinytest2::AppDriver$new(

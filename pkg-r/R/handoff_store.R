@@ -198,16 +198,21 @@ HandoffBundleStore <- R6::R6Class(
         return(NULL)
       }
       bundle <- get(bundle_id, envir = private$items, inherits = FALSE)
+      # Compute the byte refund before mutating so a failure here cannot
+      # leave `total_bytes` stale relative to `items`/`order`.
+      byte_size <- handoff_bundle_byte_size(bundle@bundled_files)
       rm(list = bundle_id, envir = private$items)
       private$order <- private$order[private$order != bundle_id]
-      private$total_bytes <- private$total_bytes -
-        handoff_bundle_byte_size(bundle@bundled_files)
+      private$total_bytes <- private$total_bytes - byte_size
       bundle
     },
 
     evict = function() {
       removed <- list()
-      while (private$total_bytes > private$max_bytes) {
+      while (
+        private$total_bytes > private$max_bytes &&
+          length(private$order) > 0L
+      ) {
         bundle_id <- private$order[[1]]
         removed[[length(removed) + 1L]] <- self$discard(bundle_id)
       }

@@ -113,7 +113,29 @@ handoff_server <- function(
         if (identical(operation, "revise") && identical(committed, FALSE)) {
           return(FALSE)
         }
-        chat_module$history$save()
+        # The pinned shinychat history API is still in flux: the
+        # `dev/querychat-pr311-history-save` branch's history object
+        # exposes `on_save`/`on_restore` but no `save()` method. A missing
+        # or failing history save must never mask a committed handoff by
+        # rejecting this task.
+        save_history <- chat_module$history$save
+        if (is.function(save_history)) {
+          tryCatch(
+            save_history(),
+            error = function(error) {
+              shiny::showNotification(
+                paste(
+                  "The handoff was saved, but updating the chat",
+                  "history failed:",
+                  conditionMessage(error)
+                ),
+                type = "warning",
+                session = session
+              )
+            }
+          )
+        }
+        TRUE
       })
     }
   )

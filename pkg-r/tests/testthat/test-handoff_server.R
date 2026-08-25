@@ -1036,24 +1036,51 @@ describe("handoff_server()", {
           freeform = ""
         )
       )
-      expect_snapshot(flush_handoff_server(session))
+      flush_handoff_server(session)
 
       expect_identical(chat_module$history_saves, 1L)
       expect_length(orchestrator$stored_ids, 1L)
-      show_call <- Filter(
-        \(call) identical(call$action, "show"),
-        orchestrator$calls
-      )[[1]]
-      expect_identical(show_call$handoff_id, orchestrator$stored_ids[[1]])
+      # The task did not error, so no error-recovery show() call happens.
+      expect_length(
+        Filter(\(call) identical(call$action, "show"), orchestrator$calls),
+        0L
+      )
       expect_identical(
         vapply(view$events, `[[`, character(1), "action"),
         "set_panel_open"
       )
+      expect_length(notifications$values, 1L)
+      expect_identical(notifications$values[[1]]$type, "warning")
       expect_match(
         as.character(notifications$values[[1]]$ui),
         "history save failed",
         fixed = TRUE
       )
+    })
+  })
+
+  it("commits without error when the history object has no save method", {
+    # The pinned shinychat branch's history object exposes only
+    # on_save/on_restore; a missing save() must not fail the task.
+    chat_module <- new_server_chat_module()
+    chat_module$history$save <- NULL
+    orchestrator <- new_server_orchestrator()
+    local_server_orchestrator(orchestrator)
+    notifications <- local_handoff_notifications()
+
+    shiny::testServer(new_handoff_server_function(chat_module), {
+      session$setInputs(
+        handoff_generate = list(
+          selected_ids = character(),
+          type = "quarto-dashboard",
+          language = "r",
+          freeform = ""
+        )
+      )
+      flush_handoff_server(session)
+
+      expect_length(orchestrator$stored_ids, 1L)
+      expect_length(notifications$values, 0L)
     })
   })
 
@@ -1135,7 +1162,7 @@ describe("handoff_server()", {
       session$setInputs(handoff_open = "known")
       flush_handoff_server(session)
       session$setInputs(handoff_revise_text = "Revise twice.")
-      expect_snapshot(flush_handoff_server(session))
+      flush_handoff_server(session)
 
       expect_identical(error_chat$history_saves, 1L)
       expect_length(
@@ -1149,6 +1176,8 @@ describe("handoff_server()", {
         tail(view$events, 1L)[[1]],
         list(action = "set_panel_open", open = TRUE)
       )
+      expect_length(notifications$values, 1L)
+      expect_identical(notifications$values[[1]]$type, "warning")
       expect_match(
         as.character(notifications$values[[1]]$ui),
         "revision save failed",

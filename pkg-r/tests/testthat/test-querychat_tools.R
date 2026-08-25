@@ -123,10 +123,22 @@ describe("querychat_tool_result()", {
     value_df <- jsonlite::fromJSON(result@value)
     expect_s3_class(value_df, "data.frame")
     expect_equal(nrow(value_df), 1)
+  })
 
-    # Data frame is also available for display consumers
-    expect_s3_class(result@extra$result_df, "data.frame")
-    expect_equal(nrow(result@extra$result_df), 1)
+  it("materializes lazy tbl results (e.g. from TblSqlSource)", {
+    tbl_source <- local_tbl_sql_source()
+    executor <- local_executor(tbl_source)
+
+    result <- querychat_tool_result(
+      executor,
+      query = "SELECT * FROM test_table WHERE id = 1",
+      action = "query"
+    )
+
+    expect_s7_class(result, ellmer::ContentToolResult)
+    expect_null(result@error)
+    expect_type(result@value, "character")
+    expect_equal(nrow(jsonlite::fromJSON(result@value)), 1)
   })
 
   it("returns successful result for valid update action", {

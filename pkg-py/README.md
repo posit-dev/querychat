@@ -64,3 +64,5 @@ Build your own custom web apps with natural language querying capabilities, such
 ## Learn more
 
 See the [website](https://posit-dev.github.io/querychat/py) to learn more.
+
+<!-- trivial change to trigger E2E CI -->

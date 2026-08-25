@@ -326,6 +326,10 @@ querychat_tool_result <- function(
     switch(
       action,
       update = "Dashboard updated. Use `querychat_query` tool to review results, if needed.",
+      # Send query results as a JSON string: ellmer no longer coerces data
+      # frame tool values, and providers reject a raw JSON array. The data
+      # frame itself is carried in `extra$result_df` below.
+      query = if (!is_error) jsonlite::toJSON(res, dataframe = "rows", auto_unbox = TRUE),
       res
     )
 
@@ -348,7 +352,8 @@ querychat_tool_result <- function(
         } else {
           querychat_tool_starts_open(action)
         }
-      )
+      ),
+      result_df = if (!is_error && action == "query") res
     )
   )
 }

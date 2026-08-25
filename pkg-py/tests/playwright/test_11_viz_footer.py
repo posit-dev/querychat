@@ -121,8 +121,9 @@ def _send_viz_prompt(
 
 class TestVizFrame:
     def test_expanded_visualization_has_complete_frame(self, page: Page) -> None:
-        group = page.locator(".shiny-chat-tool-group--single").filter(
-            has_text="Passengers by Class"
+        # Filter structurally, not by the LLM-chosen chart title
+        group = page.locator(
+            ".shiny-chat-tool-group--single:has(.querychat-viz-container)"
         )
         card = page.locator(".shiny-tool-card:has(.querychat-viz-container)")
         summary = group.locator(":scope > .shiny-chat-tool-group__row")
@@ -147,12 +148,8 @@ class TestVizFrame:
         header_chevron_box = summary.locator(
             ".shiny-chat-tool-group__chevron"
         ).bounding_box()
-        show_chevron_box = footer.locator(
-            ".querychat-query-chevron"
-        ).bounding_box()
-        save_chevron_box = footer.locator(
-            ".querychat-dropdown-chevron"
-        ).bounding_box()
+        show_chevron_box = footer.locator(".querychat-query-chevron").bounding_box()
+        save_chevron_box = footer.locator(".querychat-dropdown-chevron").bounding_box()
 
         assert header_box is not None
         assert footer_box is not None
@@ -162,14 +159,21 @@ class TestVizFrame:
         assert save_chevron_box is not None
         assert abs(header_box["height"] - footer_box["height"]) <= 1
         assert abs(header_glyph_box["x"] - show_chevron_box["x"]) <= 0.5
-        assert abs(
-            (header_chevron_box["x"] + header_chevron_box["width"])
-            - (save_chevron_box["x"] + save_chevron_box["width"])
-        ) <= 0.5
+        assert (
+            abs(
+                (header_chevron_box["x"] + header_chevron_box["width"])
+                - (save_chevron_box["x"] + save_chevron_box["width"])
+            )
+            <= 0.5
+        )
 
         summary.click()
+        # Collapsing unmounts the card (and the viz container with it), so
+        # the :has() locator above no longer matches. The viz group is the
+        # last tool group in the chat.
+        collapsed_group = page.locator(".shiny-chat-tool-group--single").last
         for side in ("top", "right", "bottom", "left"):
-            expect(group).to_have_css(f"border-{side}-width", "0px")
+            expect(collapsed_group).to_have_css(f"border-{side}-width", "0px")
 
 
 class TestShowQueryToggle:

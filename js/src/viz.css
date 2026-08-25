@@ -144,7 +144,20 @@
   opacity: 1;
 }
 
-.shiny-tool-card:has(.querychat-viz-container) > .card-footer {
+/* shinychat dims tool activity (opacity: .7); the framed viz group header
+   should stay fully opaque like the card body it introduces */
+.shiny-chat-tool-group--framed:has(.querychat-viz-container)
+  > .shiny-chat-tool-group__row {
+  opacity: 1;
+}
+
+.shiny-tool-card:has(.querychat-viz-container) > .card-footer,
+/* Match (and beat, via load order) the specificity of shinychat's framed
+   group footer rule, which would otherwise force card-cap padding */
+.shiny-chat-tool-group--framed
+  > .shiny-chat-tool-call-row__detail
+  > .shiny-tool-card:has(.querychat-viz-container)
+  > .card-footer {
   --_querychat-footer-pad-y: 0.125rem;
   --_querychat-footer-pad-x: calc(var(--_row-pad, 0.4rem) - 0.25rem);
 

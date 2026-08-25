@@ -85,7 +85,9 @@ extract_handoff_query_item <- function(result, item_index) {
     id = sprintf("query-%d", item_index),
     title = title,
     sql = sql,
-    preview_html = build_handoff_query_preview(result@value)
+    preview_html = build_handoff_query_preview(
+      handoff_query_result_df(result@value)
+    )
   )
 }
 
@@ -110,6 +112,19 @@ extract_handoff_viz_item <- function(result, contents, item_index) {
     ),
     ggsql = ggsql
   )
+}
+
+# Query tool results carry the result data frame as a JSON string; older
+# sessions may still hold the raw data frame.
+handoff_query_result_df <- function(value) {
+  if (is.data.frame(value)) {
+    return(value)
+  }
+  if (!is_scalar_nonempty_gallery_string(value)) {
+    return(NULL)
+  }
+  df <- tryCatch(jsonlite::fromJSON(value), error = function(e) NULL)
+  if (is.data.frame(df)) df else NULL
 }
 
 build_handoff_query_preview <- function(value) {

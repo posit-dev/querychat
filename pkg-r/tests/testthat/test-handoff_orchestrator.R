@@ -9,7 +9,7 @@ new_orchestrator_gallery_turn <- function() {
   )
   ellmer::AssistantTurn(list(
     ellmer::ContentToolResult(
-      value = data.frame(total = 42),
+      value = '[{"total":42}]',
       request = request
     )
   ))

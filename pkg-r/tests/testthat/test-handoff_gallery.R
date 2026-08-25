@@ -13,7 +13,7 @@ new_gallery_query_result <- function(
     query = "SELECT COUNT(*) AS count FROM sales",
     `_intent` = "Count sales"
   ),
-  value = data.frame(count = 42),
+  value = '[{"count":42}]',
   error = NULL
 ) {
   ellmer::ContentToolResult(
@@ -300,7 +300,7 @@ describe("extract_handoff_gallery_items()", {
       id = "failed-viz",
       error = simpleError("bad ggsql")
     )
-    orphan <- ellmer::ContentToolResult(value = data.frame(x = 1))
+    orphan <- ellmer::ContentToolResult(value = '[{"x":1}]')
     unrelated <- new_gallery_query_result(
       id = "other",
       name = "other_tool"

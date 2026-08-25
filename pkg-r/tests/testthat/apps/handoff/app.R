@@ -143,7 +143,7 @@ HandoffTestChat <- R6::R6Class(
         )
       )
       result <- ellmer::ContentToolResult(
-        value = data.frame(amount = c(10, 20, 30)),
+        value = '[{"amount":10},{"amount":20},{"amount":30}]',
         request = request
       )
       user_turn <- ellmer::UserTurn("Show me the sales data")

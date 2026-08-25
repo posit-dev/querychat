@@ -296,6 +296,12 @@ querychat_tool_result <- function(
 
   is_error <- is_condition(res)
 
+  # Materialize lazy query results (e.g. TblSqlSource returns a lazy tbl)
+  if (!is_error && action == "query" && !is.data.frame(res)) {
+    res <- tryCatch(as.data.frame(res), error = function(err) err)
+    is_error <- is_condition(res)
+  }
+
   output <- ""
   if (!is_error && action == "query") {
     output <- utils::capture.output(print(res))
@@ -326,6 +332,11 @@ querychat_tool_result <- function(
     switch(
       action,
       update = "Dashboard updated. Use `querychat_query` tool to review results, if needed.",
+      # Send query results as a JSON string: ellmer no longer coerces data
+      # frame tool values, and providers reject a raw JSON array.
+      query = if (!is_error) {
+        jsonlite::toJSON(res, dataframe = "rows", auto_unbox = TRUE)
+      },
       res
     )
 

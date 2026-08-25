@@ -29,7 +29,10 @@ qc <- QueryChat$new(
   data_source = db_conn,
   table_name = "iris",
   greeting = "Welcome to the test app!",
-  client = MockChat$new(ellmer::Provider("test", "test", "test"))
+  client = MockChat$new(
+    ellmer::Provider("test", "test", "test"),
+    model = "test"
+  )
 )
 
 ui <- page_sidebar(

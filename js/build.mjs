@@ -29,6 +29,10 @@ const jsTargets = [
     output: "../pkg-py/src/querychat/static/js/handoff.js",
   },
   {
+    source: "src/handoff.ts",
+    output: "../pkg-r/inst/htmldep/handoff.js",
+  },
+  {
     source: "src/schema-display.js",
     output: "../pkg-py/src/querychat/static/js/schema-display.js",
   },
@@ -51,9 +55,31 @@ const cssTargets = [
     source: "src/handoff.css",
     output: "../pkg-py/src/querychat/static/css/handoff.css",
   },
+  {
+    source: "src/handoff.css",
+    output: "../pkg-r/inst/htmldep/handoff.css",
+    transform: (source) =>
+      source.replaceAll("../img/handoff-language-", "img/handoff-language-"),
+  },
 ];
 
 const rawTargets = [
+  {
+    source: "../shared/img/handoff-language-python.svg",
+    output: "../pkg-py/src/querychat/static/img/handoff-language-python.svg",
+  },
+  {
+    source: "../shared/img/handoff-language-python.svg",
+    output: "../pkg-r/inst/htmldep/img/handoff-language-python.svg",
+  },
+  {
+    source: "../shared/img/handoff-language-r.svg",
+    output: "../pkg-py/src/querychat/static/img/handoff-language-r.svg",
+  },
+  {
+    source: "../shared/img/handoff-language-r.svg",
+    output: "../pkg-r/inst/htmldep/img/handoff-language-r.svg",
+  },
   {
     source: "../shared/handoff-formats.yml",
     output: "../pkg-py/src/querychat/handoff-formats.yml",
@@ -130,8 +156,9 @@ export const stageBuildOutputs = async (stageDir) => {
     const cssSourcePath = path.resolve(rootDir, target.source);
     const cssSource = await readFile(cssSourcePath, "utf8");
     const outputPath = resolveOutputPath(stageDir, target.output);
+    const outputSource = target.transform ? target.transform(cssSource) : cssSource;
     await mkdir(path.dirname(outputPath), { recursive: true });
-    await writeFile(outputPath, `${banner(target.source)}${cssSource}`, "utf8");
+    await writeFile(outputPath, `${banner(target.source)}${outputSource}`, "utf8");
   }
 
   for (const target of jsTargets) {

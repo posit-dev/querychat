@@ -153,6 +153,7 @@ QueryChat <- R6::R6Class(
     create_session_client = function(
       client_spec = NULL,
       tools = NA,
+      handoff_available = FALSE,
       session = NULL,
       update_dashboard = function(query, title, table) {},
       reset_dashboard = function(table) {},
@@ -165,7 +166,12 @@ QueryChat <- R6::R6Class(
         tools <- self$tools
       }
 
-      chat$set_system_prompt(private$.system_prompt$render(tools = tools))
+      chat$set_system_prompt(
+        private$.system_prompt$render(
+          tools = tools,
+          handoff_available = handoff_available
+        )
+      )
 
       if (is.null(tools)) {
         return(chat)

@@ -17,6 +17,11 @@ class TestLanguageSelector:
         assert 'data-language="r"' in html
         assert 'data-language="python"' in html
 
+    def test_renders_a_bundled_logo_for_each_language(self):
+        html = str(build_language_selector())
+        assert "querychat-handoff-language-icon-python" in html
+        assert "querychat-handoff-language-icon-r" in html
+
 
 class TestTypeSelectorLanguages:
     def test_type_selector_reads_languages_from_registry(self):

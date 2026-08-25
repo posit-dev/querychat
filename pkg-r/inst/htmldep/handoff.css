@@ -1,3 +1,4 @@
+/* Generated file. Source: js/src/handoff.css. Do not edit directly. */
 /* Backdrop */
 .querychat-handoff-backdrop {
   position: fixed;
@@ -280,11 +281,11 @@
 }
 
 .querychat-handoff-language-icon-python {
-  background-image: url("../img/handoff-language-python.svg");
+  background-image: url("img/handoff-language-python.svg");
 }
 
 .querychat-handoff-language-icon-r {
-  background-image: url("../img/handoff-language-r.svg");
+  background-image: url("img/handoff-language-r.svg");
 }
 
 .querychat-handoff-language-radio:focus-visible

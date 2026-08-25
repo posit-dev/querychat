@@ -196,6 +196,48 @@ class TestHandoffLanguageSelector(HandoffModalActions):
         )
         expect(r_pill).to_have_class(re.compile(r"\bdisabled\b"))
 
+    def test_language_pills_show_language_icons_and_select_exclusively(self):
+        self._open_handoff_modal()
+        r_pill = self.page.locator(
+            '.querychat-handoff-language-pill[data-language="r"]'
+        )
+        python_radio = self.page.locator(
+            '.querychat-handoff-language-radio[data-language="python"]'
+        )
+        r_radio = self.page.locator(
+            '.querychat-handoff-language-radio[data-language="r"]'
+        )
+
+        python_icon = self.page.locator(
+            '.querychat-handoff-language-pill[data-language="python"] '
+            ".querychat-handoff-language-icon"
+        )
+        r_icon = r_pill.locator(".querychat-handoff-language-icon")
+        expect(python_icon).to_be_attached()
+        expect(r_icon).to_be_attached()
+        assert python_icon.evaluate(
+            """async icon => {
+                const url = getComputedStyle(icon).backgroundImage
+                    .slice(5, -2)
+                    .replaceAll('"', "");
+                return (await fetch(url)).ok;
+            }"""
+        )
+        assert r_icon.evaluate(
+            """async icon => {
+                const url = getComputedStyle(icon).backgroundImage
+                    .slice(5, -2)
+                    .replaceAll('"', "");
+                return (await fetch(url)).ok;
+            }"""
+        )
+
+        r_pill.click()
+
+        expect(r_radio).to_be_checked()
+        expect(python_radio).not_to_be_checked()
+
+
 class TestHandoffGeneration(HandoffModalActions):
     """Tests the full handoff generation flow: generate, panel, pill, close."""
 

@@ -2,9 +2,8 @@
 
 import pytest
 from chatlas import ContentToolResult
-from shinychat.types import ToolResultDisplay
-
 from querychat._querychat_core import format_chunk, format_tool_result
+from shinychat.types import ToolResultDisplay
 
 
 def test_format_tool_result_without_display_returns_value():

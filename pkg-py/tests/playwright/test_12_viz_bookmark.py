@@ -66,8 +66,10 @@ class TestVizBookmarkRestore:
         chat_viz_bookmark.set_user_input(VIZ_PROMPT)
         chat_viz_bookmark.send_user_input(method="click")
 
-        # Wait for the viz tool result to fully render
-        page.locator(".shiny-tool-result:has(.tool-fullscreen-toggle)").wait_for(
+        # Wait for the viz tool result to fully render. On shinychat main,
+        # routed tool results render as a .shiny-tool-card inside a
+        # .shiny-chat-tool-group, not a .shiny-tool-result element.
+        page.locator(".shiny-tool-card:has(.querychat-viz-container)").wait_for(
             state="visible", timeout=TOOL_RESULT_TIMEOUT
         )
         page.locator(".querychat-footer-buttons").wait_for(

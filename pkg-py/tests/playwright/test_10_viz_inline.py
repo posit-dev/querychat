@@ -43,7 +43,7 @@ class TestInlineVisualization:
         self.chat.send_user_input(method="click")
 
         # Wait for a tool result card with full-screen attribute (viz results have it)
-        tool_card = self.page.locator(".shiny-tool-result:has(.tool-fullscreen-toggle)")
+        tool_card = self.page.locator(".shiny-tool-card:has(.querychat-viz-container)")
         expect(tool_card).to_be_visible(timeout=90000)
 
         # The card should contain the viz container (Altair chart via shinywidgets)
@@ -58,7 +58,7 @@ class TestInlineVisualization:
         self.chat.send_user_input(method="click")
 
         # Wait for viz tool result
-        tool_card = self.page.locator(".shiny-tool-result:has(.tool-fullscreen-toggle)")
+        tool_card = self.page.locator(".shiny-tool-card:has(.querychat-viz-container)")
         expect(tool_card).to_be_visible(timeout=90000)
 
         # Fullscreen toggle should be visible
@@ -74,7 +74,7 @@ class TestInlineVisualization:
 
         # Wait for viz tool result
         tool_result = self.page.locator(
-            ".shiny-tool-result:has(.tool-fullscreen-toggle)"
+            ".shiny-tool-card:has(.querychat-viz-container)"
         )
         expect(tool_result).to_be_visible(timeout=90000)
 
@@ -83,7 +83,9 @@ class TestInlineVisualization:
         fs_button.click()
 
         # The .shiny-tool-card inside should now have fullscreen attribute
-        card = tool_result.locator(".shiny-tool-card[fullscreen]")
+        card = self.page.locator(
+            ".shiny-tool-card[fullscreen]:has(.querychat-viz-container)"
+        )
         expect(card).to_be_visible()
 
     def test_escape_closes_fullscreen(self) -> None:
@@ -95,7 +97,7 @@ class TestInlineVisualization:
 
         # Wait for viz tool result
         tool_result = self.page.locator(
-            ".shiny-tool-result:has(.tool-fullscreen-toggle)"
+            ".shiny-tool-card:has(.querychat-viz-container)"
         )
         expect(tool_result).to_be_visible(timeout=90000)
 
@@ -103,7 +105,9 @@ class TestInlineVisualization:
         fs_button = tool_result.locator(".tool-fullscreen-toggle")
         fs_button.click()
 
-        card = tool_result.locator(".shiny-tool-card[fullscreen]")
+        card = self.page.locator(
+            ".shiny-tool-card[fullscreen]:has(.querychat-viz-container)"
+        )
         expect(card).to_be_visible()
 
         # Press Escape
@@ -122,13 +126,15 @@ class TestInlineVisualization:
         self.chat.send_user_input(method="click")
 
         tool_result = self.page.locator(
-            ".shiny-tool-result:has(.tool-fullscreen-toggle)"
+            ".shiny-tool-card:has(.querychat-viz-container)"
         )
         expect(tool_result).to_be_visible(timeout=90000)
 
         tool_result.locator(".tool-fullscreen-toggle").click()
 
-        card = tool_result.locator(".shiny-tool-card[fullscreen]")
+        card = self.page.locator(
+            ".shiny-tool-card[fullscreen]:has(.querychat-viz-container)"
+        )
         expect(card).to_be_visible()
 
         viz_container = card.locator(".querychat-viz-container")
@@ -153,13 +159,15 @@ class TestInlineVisualization:
         self.chat.send_user_input(method="click")
 
         tool_result = self.page.locator(
-            ".shiny-tool-result:has(.tool-fullscreen-toggle)"
+            ".shiny-tool-card:has(.querychat-viz-container)"
         )
         expect(tool_result).to_be_visible(timeout=90000)
 
         tool_result.locator(".tool-fullscreen-toggle").click()
 
-        card = tool_result.locator(".shiny-tool-card[fullscreen]")
+        card = self.page.locator(
+            ".shiny-tool-card[fullscreen]:has(.querychat-viz-container)"
+        )
         expect(card).to_be_visible()
 
         footer = card.locator(":scope > .card-footer")

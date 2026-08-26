@@ -16,6 +16,7 @@ from playwright.sync_api import expect
 
 if TYPE_CHECKING:
     from playwright.sync_api import Page
+    from shiny.run import ShinyAppProc
     from shinychat.playwright import ChatController
 
 
@@ -23,9 +24,11 @@ class TestInlineVisualization:
     """Tests for inline chart rendering in tool result cards."""
 
     @pytest.fixture(autouse=True)
-    def setup(self, page: Page, app_10_viz: str, chat_10_viz: ChatController) -> None:
+    def setup(
+        self, page: Page, app_10_viz: ShinyAppProc, chat_10_viz: ChatController
+    ) -> None:
         """Navigate to the viz app before each test."""
-        page.goto(app_10_viz)
+        page.goto(app_10_viz.url)
         page.wait_for_selector("shiny-chat-container", timeout=30000)
         greeting = chat_10_viz.loc.locator(".shiny-chat-greeting")
         expect(greeting).to_contain_text("Welcome", timeout=30000)

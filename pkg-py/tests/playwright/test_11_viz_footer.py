@@ -18,6 +18,7 @@ from playwright.sync_api import expect
 
 if TYPE_CHECKING:
     from playwright.sync_api import Download, Locator, Page
+    from shiny.run import ShinyAppProc
     from shinychat.playwright import ChatController
 
 
@@ -86,9 +87,11 @@ def _download_from_save_menu(page: Page, export_format: str) -> tuple[Download, 
 
 
 @pytest.fixture(autouse=True)
-def _send_viz_prompt(page: Page, app_10_viz: str, chat_10_viz: ChatController) -> None:
+def _send_viz_prompt(
+    page: Page, app_10_viz: ShinyAppProc, chat_10_viz: ChatController
+) -> None:
     """Navigate to the viz app and trigger a visualization before each test."""
-    page.goto(app_10_viz)
+    page.goto(app_10_viz.url)
     page.wait_for_selector("shiny-chat-container", timeout=30_000)
     greeting = chat_10_viz.loc.locator(".shiny-chat-greeting")
     expect(greeting).to_contain_text("Welcome", timeout=30_000)

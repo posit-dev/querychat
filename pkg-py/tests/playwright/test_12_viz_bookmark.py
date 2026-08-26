@@ -13,50 +13,26 @@ from typing import TYPE_CHECKING
 
 import pytest
 from playwright.sync_api import expect
+from shiny.pytest import create_app_fixture
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
-
     from playwright.sync_api import BrowserContext, Page
+    from shiny.run import ShinyAppProc
     from shinychat.playwright import ChatController as ChatControllerType
 
 import sys
 
 # conftest.py is not importable directly; add the test directory to sys.path
 sys.path.insert(0, str(Path(__file__).parent))
-from conftest import (
-    _create_chat_controller,
-    _find_free_port,
-    _start_server_with_retry,
-    _start_shiny_app_threaded,
-    _stop_shiny_server,
-)
+from conftest import _create_chat_controller
 
 VIZ_PROMPT = "Use the visualize tool to create a scatter plot of age vs fare"
 TOOL_RESULT_TIMEOUT = 90_000
 APPS_DIR = Path(__file__).parent / "apps"
 
-
-@pytest.fixture(scope="module")
-def app_viz_bookmark() -> Generator[str, None, None]:
-    """Start the viz bookmark test app with server-side bookmarking."""
-    app_path = str(APPS_DIR / "viz_bookmark_app.py")
-
-    def start_factory():
-        port = _find_free_port()
-        url = f"http://localhost:{port}"
-        return url, lambda: _start_shiny_app_threaded(app_path, port)
-
-    def shiny_cleanup(_thread, server):
-        _stop_shiny_server(server)
-
-    url, _thread, server = _start_server_with_retry(
-        start_factory, shiny_cleanup, timeout=30.0
-    )
-    try:
-        yield url
-    finally:
-        _stop_shiny_server(server)
+app_viz_bookmark = create_app_fixture(
+    APPS_DIR / "viz_bookmark_app.py", scope="module"
+)
 
 
 @pytest.fixture
@@ -69,14 +45,17 @@ class TestVizBookmarkRestore:
 
     @pytest.fixture(autouse=True)
     def setup(
-        self, page: Page, app_viz_bookmark: str, chat_viz_bookmark: ChatControllerType
+        self,
+        page: Page,
+        app_viz_bookmark: ShinyAppProc,
+        chat_viz_bookmark: ChatControllerType,
     ) -> None:
         """Navigate to the viz app and create a viz before each test."""
-        self.app_url = app_viz_bookmark
+        self.app_url = app_viz_bookmark.url
         self.page = page
         self.chat = chat_viz_bookmark
 
-        page.goto(app_viz_bookmark)
+        page.goto(app_viz_bookmark.url)
         page.wait_for_selector("shiny-chat-container", timeout=30_000)
         greeting = chat_viz_bookmark.loc.locator(".shiny-chat-greeting")
         expect(greeting).to_contain_text("Welcome", timeout=30_000)

@@ -245,7 +245,7 @@ class Test01HelloApp:
         )
         self.chat.send_user_input(method="click")
 
-        stop_btn = self.page.locator(".shiny-chat-btn-cancel")
+        stop_btn = self.page.locator('.shiny-chat-btn-send[data-state="cancel"]')
         expect(stop_btn).to_be_visible(timeout=30000)
 
     def test_cancel_stops_response(self) -> None:
@@ -256,7 +256,7 @@ class Test01HelloApp:
         )
         self.chat.send_user_input(method="click")
 
-        stop_btn = self.page.locator(".shiny-chat-btn-cancel")
+        stop_btn = self.page.locator('.shiny-chat-btn-send[data-state="cancel"]')
         expect(stop_btn).to_be_visible(timeout=30000)
         stop_btn.click()
 
@@ -272,7 +272,7 @@ class Test01HelloApp:
         )
         self.chat.send_user_input(method="click")
 
-        stop_btn = self.page.locator(".shiny-chat-btn-cancel")
+        stop_btn = self.page.locator('.shiny-chat-btn-send[data-state="cancel"]')
         expect(stop_btn).to_be_visible(timeout=30000)
         stop_btn.click()
 
@@ -282,5 +282,7 @@ class Test01HelloApp:
         self.chat.set_user_input("How many rows are in the dataset?")
         self.chat.send_user_input(method="click")
 
-        send_btn = self.page.locator(".shiny-chat-btn-send:not(.shiny-chat-btn-cancel)")
+        send_btn = self.page.locator(
+            '.shiny-chat-btn-send:not([data-state="cancel"]):not([data-state="cancelling"])'
+        )
         expect(send_btn).to_be_visible(timeout=60000)

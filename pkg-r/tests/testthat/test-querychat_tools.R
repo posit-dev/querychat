@@ -514,38 +514,102 @@ describe("tool_update_dashboard_impl()", {
   })
 })
 
-describe("get_schema_result_display()", {
-  it("returns a sentinel span with data-table attribute", {
-    result <- GetSchemaResult(
-      value = "Table: orders\nColumns:\n- id (INTEGER)",
-      table_name = "orders"
+describe("tool_get_schema()", {
+  skip_if_no_dataframe_engine()
+
+  it("returns schema text with a native rich display", {
+    df_source <- local_data_frame_source(new_test_df())
+    executor <- local_executor(df_source)
+    table_spec <- list(
+      columns = list(
+        list(
+          name = "id",
+          description = "Primary key",
+          units = "rows",
+          constraints = c("positive", "required"),
+          range = list(min = 1, max = 5)
+        )
+      )
     )
-    html <- get_schema_result_display(result)
-    html_str <- as.character(html)
-    expect_true(grepl("qc-schema-collector", html_str))
-    expect_true(grepl('data-table="orders"', html_str))
-    expect_true(
-      grepl("display:none", html_str) || grepl("display: none", html_str)
+    data_dicts <- list(list(tables = list(test_table = table_spec)))
+    expected <- executor$get_schema_result(
+      "test_table",
+      20,
+      table_spec = table_spec
     )
+    tool <- tool_get_schema(
+      data_dicts = data_dicts,
+      executor = executor,
+      table_names = "test_table",
+      categorical_threshold = 20
+    )
+
+    result <- tool(table_name = "test_table")
+    display <- result@extra$display
+    html <- as.character(display$html)
+
+    expect_equal(tool@annotations$title, "Fetch schemas")
+    expect_equal(result@value, expected$text)
+    expect_s3_class(display, "shinychat_tool_result_display")
+    expect_equal(display$label, "test_table")
+    expect_equal(display$value_preview, "3 columns")
+    expect_false(display$show_request)
+    expect_false(display$open)
+    expect_match(html, '<div class="table-responsive">', fixed = TRUE)
+    expect_match(
+      html,
+      '<table class="table table-sm table-hover align-middle mb-0">',
+      fixed = TRUE
+    )
+    expect_match(html, '<thead class="table-light">', fixed = TRUE)
+    expected_headers <- c(
+      "Column",
+      "Type",
+      "Range / Values",
+      "Description",
+      "Constraints"
+    )
+    header_positions <- vapply(
+      paste0('<th scope="col">', expected_headers, "</th>"),
+      function(header) regexpr(header, html, fixed = TRUE)[[1]],
+      integer(1)
+    )
+    id_cell_positions <- vapply(
+      c(
+        "<code>id</code>",
+        "<span>INTEGER</span>",
+        "<td>1 to 5</td>",
+        "<td>Primary key</td>",
+        "<td>positive, required</td>"
+      ),
+      function(content) regexpr(content, html, fixed = TRUE)[[1]],
+      integer(1)
+    )
+    expect_true(all(header_positions > 0))
+    expect_true(all(id_cell_positions > 0))
+    expect_true(all(diff(header_positions) > 0))
+    expect_true(all(diff(id_cell_positions) > 0))
+    expect_match(
+      html,
+      '<th scope="row">\\s*<code>id</code>\\s*</th>'
+    )
+    expect_match(html, "INTEGER", fixed = TRUE)
+    expect_match(html, "1 to 5", fixed = TRUE)
+    expect_match(html, "'A', 'B', 'C', 'D', 'E'", fixed = TRUE)
   })
 
-  it("embeds schema text in data-schema attribute", {
-    schema <- "Table: orders\nColumns:\n- id (INTEGER)"
-    result <- GetSchemaResult(value = schema, table_name = "orders")
-    html <- get_schema_result_display(result)
-    html_str <- as.character(html)
-    expect_true(grepl("data-schema", html_str))
-    expect_true(grepl("orders", html_str))
-  })
-
-  it("includes querychat-schema-display HTML dependency", {
-    result <- GetSchemaResult(
-      value = "Table: t\nColumns:\n- x (TEXT)",
-      table_name = "t"
+  it("uses a singular preview for one column", {
+    df_source <- local_data_frame_source(data.frame(id = 1:3))
+    executor <- local_executor(df_source)
+    tool <- tool_get_schema(
+      data_dicts = list(),
+      executor = executor,
+      table_names = "test_table",
+      categorical_threshold = 20
     )
-    html <- get_schema_result_display(result)
-    deps <- htmltools::findDependencies(html)
-    dep_names <- vapply(deps, function(d) d$name, character(1))
-    expect_true("querychat-schema-display" %in% dep_names)
+
+    result <- tool(table_name = "test_table")
+
+    expect_equal(result@extra$display$value_preview, "1 column")
   })
 })

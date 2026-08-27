@@ -6,6 +6,8 @@ _build_viz_footer() and passed as the `footer` parameter to ToolResultDisplay.
 shinychat renders this in the card footer area.
 """
 
+import re
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import narwhals.stable.v1 as nw
@@ -13,6 +15,8 @@ import polars as pl
 import pytest
 from htmltools import TagList, tags
 from querychat._datasource import DataFrameSource
+
+VIZ_CSS_PATH = Path(__file__).parents[2] / "js" / "src" / "viz.css"
 
 
 @pytest.fixture
@@ -86,6 +90,21 @@ class TestVizFooterIcons:
         html = str(bs_icon("download", cls="querychat-icon"))
         assert "querychat-icon" in html
 
+    def test_show_query_uses_shinychat_disclosure_chevron(self):
+        from querychat._viz_tools import build_viz_footer
+
+        rendered = TagList(
+            build_viz_footer(
+                "SELECT * FROM test_data VISUALISE x, y DRAW point",
+                "Chart",
+                dom_widget_id="querychat_viz_raw",
+            )
+        ).render()["html"]
+
+        assert "querychat-query-chevron" in rendered
+        assert "bi-chevron-down" in rendered
+        assert "\u25b6" not in rendered
+
 
 class TestVizPreloadMarkup:
     def test_preload_markup_has_no_inline_script(self):
@@ -119,3 +138,53 @@ class TestVizFooterDomIds:
 
         assert 'data-widget-id="module-querychat_viz_raw"' in rendered
         assert 'data-widget-id="querychat_viz_raw"' not in rendered
+
+
+class TestVizFrameStyles:
+    def test_visualization_card_is_opaque_and_footer_is_compact(self):
+        css = VIZ_CSS_PATH.read_text(encoding="utf-8")
+
+        card = re.search(
+            r"\.shiny-tool-card:has\(\.querychat-viz-container\)\s*"
+            r"\{(?P<declarations>[^}]*)\}",
+            css,
+        )
+        assert card is not None
+        assert "opacity: 1;" in card["declarations"]
+
+        footer = re.search(
+            r"\.shiny-tool-card:has\(\.querychat-viz-container\)"
+            r"\s*> \.card-footer\s*\{(?P<declarations>[^}]*)\}",
+            css,
+        )
+        assert footer is not None
+        assert "--_querychat-footer-pad-y: 0.125rem;" in footer["declarations"]
+        assert (
+            "--_querychat-footer-pad-x: "
+            "calc(var(--_row-pad, 0.4rem) - 0.25rem);"
+            in footer["declarations"]
+        )
+        assert (
+            "padding: var(--_querychat-footer-pad-y) "
+            "var(--_querychat-footer-pad-x);"
+            in footer["declarations"]
+        )
+
+        buttons = re.search(
+            r"\.querychat-show-query-btn,\s*"
+            r"\.querychat-save-btn\s*\{(?P<declarations>[^}]*)\}",
+            css,
+        )
+        assert buttons is not None
+        assert "height: 24px;" in buttons["declarations"]
+        assert "padding: 1px 0.25rem;" in buttons["declarations"]
+
+    def test_visualization_requests_shinychat_framed_open_style(self):
+        source = (
+            Path(__file__).parents[1]
+            / "src"
+            / "querychat"
+            / "_viz_tools.py"
+        ).read_text(encoding="utf-8")
+
+        assert 'open_style="framed"' in source

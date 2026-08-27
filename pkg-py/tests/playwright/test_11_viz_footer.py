@@ -9,6 +9,7 @@ These tests verify the client-side JS behavior in viz.js:
 
 from __future__ import annotations
 
+import re
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -118,6 +119,63 @@ def _send_viz_prompt(
     _wait_for_stable_position(page.locator(".querychat-show-query-btn"))
 
 
+class TestVizFrame:
+    def test_expanded_visualization_has_complete_frame(self, page: Page) -> None:
+        # Filter structurally, not by the LLM-chosen chart title
+        group = page.locator(
+            ".shiny-chat-tool-group--single:has(.querychat-viz-container)"
+        )
+        card = page.locator(".shiny-tool-card:has(.querychat-viz-container)")
+        summary = group.locator(":scope > .shiny-chat-tool-group__row")
+        footer = card.locator(":scope > .card-footer")
+
+        expect(card).to_have_css("opacity", "1")
+        expect(summary).to_have_css("opacity", "1")
+        for side in ("top", "right", "bottom", "left"):
+            expect(group).to_have_css(f"border-{side}-width", "1px")
+            expect(card).to_have_css(f"border-{side}-width", "0px")
+        expect(summary).to_have_css("border-bottom-width", "1px")
+        expect(summary).to_have_css("border-radius", "0px")
+        expect(footer).to_have_css("border-top-width", "1px")
+        expect(footer).to_have_css("padding-top", "2px")
+        expect(footer).to_have_css("padding-bottom", "2px")
+
+        header_box = summary.bounding_box()
+        footer_box = footer.bounding_box()
+        header_glyph_box = summary.locator(
+            ".shiny-chat-tool-group__glyph"
+        ).bounding_box()
+        header_chevron_box = summary.locator(
+            ".shiny-chat-tool-group__chevron"
+        ).bounding_box()
+        show_chevron_box = footer.locator(".querychat-query-chevron").bounding_box()
+        save_chevron_box = footer.locator(".querychat-dropdown-chevron").bounding_box()
+
+        assert header_box is not None
+        assert footer_box is not None
+        assert header_glyph_box is not None
+        assert header_chevron_box is not None
+        assert show_chevron_box is not None
+        assert save_chevron_box is not None
+        assert abs(header_box["height"] - footer_box["height"]) <= 1
+        assert abs(header_glyph_box["x"] - show_chevron_box["x"]) <= 0.5
+        assert (
+            abs(
+                (header_chevron_box["x"] + header_chevron_box["width"])
+                - (save_chevron_box["x"] + save_chevron_box["width"])
+            )
+            <= 0.5
+        )
+
+        summary.click()
+        # Collapsing unmounts the card (and the viz container with it), so
+        # the :has() locator above no longer matches. The viz group is the
+        # last tool group in the chat.
+        collapsed_group = page.locator(".shiny-chat-tool-group--single").last
+        for side in ("top", "right", "bottom", "left"):
+            expect(collapsed_group).to_have_css(f"border-{side}-width", "0px")
+
+
 class TestShowQueryToggle:
     """Tests for the Show Query / Hide Query toggle button."""
 
@@ -152,7 +210,7 @@ class TestShowQueryToggle:
         expect(chevron).not_to_have_class("querychat-query-chevron--expanded")
         btn.click()
         expect(chevron).to_have_class(
-            "querychat-query-chevron querychat-query-chevron--expanded"
+            re.compile(r"\bquerychat-query-chevron--expanded\b")
         )
 
     def test_toggle_hides_section_again(self, page: Page) -> None:

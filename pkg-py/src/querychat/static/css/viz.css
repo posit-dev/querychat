@@ -36,8 +36,8 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 8px;
-  height: 28px;
+  padding: 1px 0.25rem;
+  height: 24px;
   border: none;
   border-radius: var(--bs-border-radius, 4px);
   background: transparent;
@@ -54,24 +54,36 @@
 }
 
 .querychat-query-chevron {
-  font-size: 0.625rem;
-  transition: transform 150ms;
-  display: inline-block;
+  display: grid;
+  place-items: center;
+  width: 0.9em;
+  height: 0.9em;
+  flex: none;
+  opacity: var(--_activity-opacity-muted, 0.65);
+  transform: rotate(-90deg);
+  transition: transform 300ms ease-in-out;
+}
+
+.querychat-query-chevron svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .querychat-query-chevron--expanded {
-  transform: rotate(90deg);
+  transform: rotate(0);
 }
 
 .querychat-icon {
-  width: 14px;
-  height: 14px;
+  width: 1em;
+  height: 1em;
 }
 
 .querychat-dropdown-chevron {
-  width: 12px;
-  height: 12px;
+  width: 0.9em;
+  height: 0.9em;
   margin-left: 2px;
+  opacity: var(--_activity-opacity-muted, 0.65);
 }
 
 .querychat-save-dropdown {
@@ -117,7 +129,8 @@
   display: none;
   position: relative;
   border-top: 1px solid var(--bs-border-color, #dee2e6);
-  margin: 8px -16px -8px;
+  margin: 0.25rem calc(-1 * var(--_querychat-footer-pad-x))
+    calc(-1 * var(--_querychat-footer-pad-y));
 }
 
 .querychat-query-section--visible {
@@ -129,10 +142,30 @@
 .shiny-tool-card:has(.querychat-viz-container) {
   max-height: 700px;
   overflow: hidden;
+  opacity: 1;
 }
 
-.shiny-tool-card:has(.querychat-viz-container) > .card-footer {
+/* shinychat dims tool activity (opacity: .7); the framed viz group header
+   should stay fully opaque like the card body it introduces */
+.shiny-chat-tool-group--framed:has(.querychat-viz-container)
+  > .shiny-chat-tool-group__row {
+  opacity: 1;
+}
+
+.shiny-tool-card:has(.querychat-viz-container) > .card-footer,
+/* Match (and beat, via load order) the specificity of shinychat's framed
+   group footer rule, which would otherwise force card-cap padding */
+.shiny-chat-tool-group--framed
+  > .shiny-chat-tool-call-row__detail
+  > .shiny-tool-card:has(.querychat-viz-container)
+  > .card-footer {
+  --_querychat-footer-pad-y: 0.125rem;
+  --_querychat-footer-pad-x: calc(var(--_row-pad, 0.4rem) - 0.25rem);
+
   flex: 0 0 auto;
+  padding: var(--_querychat-footer-pad-y) var(--_querychat-footer-pad-x);
+  border-top: var(--bs-border-width, 1px) solid
+    var(--bs-border-color, #dee2e6);
 }
 
 .shiny-tool-card[fullscreen]:has(.querychat-viz-container) {

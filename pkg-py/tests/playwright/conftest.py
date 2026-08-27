@@ -155,42 +155,6 @@ def _create_chat_controller(page: Page, table_name: str) -> ChatControllerType:
     return ChatController(page, f"querychat_{table_name}-chat")
 
 
-def _start_shiny_app_subprocess(
-    app_path: str, port: int
-) -> tuple[subprocess.Popen[bytes], None]:
-    """Start a Shiny app in an isolated subprocess."""
-    process = subprocess.Popen(
-        [
-            sys.executable,
-            "-m",
-            "shiny",
-            "run",
-            "--host",
-            "127.0.0.1",
-            "--port",
-            str(port),
-            "--log-level",
-            "warning",
-            "--no-dev-mode",
-            app_path,
-        ]
-    )
-    return process, None
-
-
-def _stop_shiny_app_subprocess(process: subprocess.Popen[bytes]) -> None:
-    """Stop a Shiny subprocess."""
-    if process.poll() is not None:
-        return
-
-    process.terminate()
-    try:
-        process.wait(timeout=5)
-    except subprocess.TimeoutExpired:
-        process.kill()
-        process.wait(timeout=5)
-
-
 # Shiny apps run as subprocesses via shiny.pytest.create_app_fixture.
 # Running them in-process (threaded uvicorn) shares Shiny's process-global,
 # loop-bound reactive lock across apps, which crashes sessions when apps
@@ -531,26 +495,7 @@ def chat_10_viz(page: Page) -> ChatControllerType:
     return _create_chat_controller(page, "titanic")
 
 
-@pytest.fixture(scope="module")
-def app_handoff() -> Generator[str, None, None]:
-    """Start the handoff_app.py Shiny server for testing."""
-    app_path = str(APPS_DIR / "handoff_app.py")
-
-    def start_factory():
-        port = _find_free_port()
-        url = f"http://localhost:{port}"
-        return url, lambda: _start_shiny_app_subprocess(app_path, port)
-
-    def shiny_cleanup(process, _server):
-        _stop_shiny_app_subprocess(process)
-
-    url, process, _server = _start_server_with_retry(
-        start_factory, shiny_cleanup, timeout=30.0
-    )
-    try:
-        yield url
-    finally:
-        _stop_shiny_app_subprocess(process)
+app_handoff = create_app_fixture(APPS_DIR / "handoff_app.py", scope="module")
 
 
 @pytest.fixture
@@ -559,26 +504,9 @@ def chat_handoff(page: Page) -> ChatControllerType:
     return _create_chat_controller(page, "titanic")
 
 
-@pytest.fixture(scope="module")
-def app_handoff_bookmark() -> Generator[str, None, None]:
-    """Start the handoff_bookmark_app.py Shiny server for testing."""
-    app_path = str(APPS_DIR / "handoff_bookmark_app.py")
-
-    def start_factory():
-        port = _find_free_port()
-        url = f"http://localhost:{port}"
-        return url, lambda: _start_shiny_app_subprocess(app_path, port)
-
-    def shiny_cleanup(process, _server):
-        _stop_shiny_app_subprocess(process)
-
-    url, process, _server = _start_server_with_retry(
-        start_factory, shiny_cleanup, timeout=30.0
-    )
-    try:
-        yield url
-    finally:
-        _stop_shiny_app_subprocess(process)
+app_handoff_bookmark = create_app_fixture(
+    APPS_DIR / "handoff_bookmark_app.py", scope="module"
+)
 
 
 @pytest.fixture

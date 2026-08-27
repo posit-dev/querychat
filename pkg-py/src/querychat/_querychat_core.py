@@ -101,8 +101,10 @@ def format_chunk(chunk: Union[str, Content]) -> str:
 def format_tool_result(result: ContentToolResult) -> str:
     """Extract displayable text from a tool result."""
     display_info = result.extra.get("display") if result.extra else None
-    if display_info and hasattr(display_info, "markdown"):
-        return display_info.markdown
+    if display_info:
+        markdown = getattr(display_info, "markdown", None)
+        if markdown is not None:
+            return markdown
     if result.value is not None:
         return str(result.value)
     return ""

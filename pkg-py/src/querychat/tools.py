@@ -1,17 +1,14 @@
 from __future__ import annotations
 
 import html
-import json
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, Protocol, TypedDict, runtime_checkable
 
-from chatlas import ContentToolRequest, ContentToolResult, Tool
-from htmltools import HTMLDependency, TagList, tags
+from chatlas import ContentToolResult, Tool
+from htmltools import Tag, tags
 from pydantic import Field
-from shinychat import message_content_chunk
-from shinychat.types import ChatMessage, ToolResultDisplay
+from shinychat.types import ToolResultDisplay
 
-from .__version import __version__
 from ._datasource import ColumnMeta, format_schema
 from ._icons import bs_icon
 from ._tool_names import (
@@ -52,54 +49,6 @@ class GetSchemaResult(ContentToolResult):
     columns: list[ColumnMeta] = Field(default_factory=list)
 
 
-def _col_to_dict(col: ColumnMeta) -> dict[str, Any]:
-    return {
-        "name": col.name,
-        "sql_type": col.sql_type,
-        "units": col.units,
-        "description": col.description,
-        "min_val": str(col.min_val) if col.min_val is not None else None,
-        "max_val": str(col.max_val) if col.max_val is not None else None,
-        "categories": col.categories,
-        "constraints": col.constraints,
-    }
-
-
-_orig_request_handler = message_content_chunk.dispatch(ContentToolRequest)
-
-
-@message_content_chunk.register
-def _(request: ContentToolRequest) -> ChatMessage:
-    if request.name == "querychat_get_schema":
-        return ChatMessage(content="")
-    return _orig_request_handler(request)
-
-
-@message_content_chunk.register
-def _(message: GetSchemaResult) -> ChatMessage:
-    columns_json = json.dumps([_col_to_dict(c) for c in message.columns])
-    content = TagList(
-        tags.span(
-            class_="qc-schema-collector",
-            data_table=message.table_name,
-            data_schema=str(message.value),
-            data_schema_json=columns_json,
-            style="display:none",
-        ),
-        _schema_dep(),
-    )
-    return ChatMessage(content=content)
-
-
-def _schema_dep() -> HTMLDependency:
-    return HTMLDependency(
-        "querychat-schema-display",
-        __version__,
-        source={"package": "querychat", "subdir": "static"},
-        script=[{"src": "js/schema-display.js"}],
-    )
-
-
 def _get_schema_impl(
     data_dicts: list[DataDict],
     executor: QueryExecutor,
@@ -120,7 +69,19 @@ def _get_schema_impl(
 
         schema_text = format_schema(table_name, columns)
         return GetSchemaResult(
-            value=schema_text, table_name=table_name, columns=columns
+            value=schema_text,
+            table_name=table_name,
+            columns=columns,
+            extra={
+                "display": ToolResultDisplay(
+                    label=table_name,
+                    value_preview=f"{len(columns)} column"
+                    f"{'' if len(columns) == 1 else 's'}",
+                    html=_schema_table(columns),
+                    show_request=False,
+                    open=False,
+                )
+            },
         )
 
     return get_schema
@@ -161,7 +122,52 @@ def tool_get_schema(
     return Tool.from_func(
         impl,
         name="querychat_get_schema",
-        annotations={"title": "Get Schema"},
+        annotations={"title": "Fetch schemas"},
+    )
+
+
+def _schema_table(columns: list[ColumnMeta]) -> Tag:
+    headers = ("Column", "Type", "Range / Values", "Description", "Constraints")
+    rows: list[Tag] = []
+
+    for column in columns:
+        type_cell = tags.span(column.sql_type)
+        if column.units:
+            type_cell.append(
+                " ",
+                tags.span(column.units, class_="text-body-secondary"),
+            )
+
+        range_values = ""
+        if (
+            column.kind in ("numeric", "date")
+            and column.min_val is not None
+            and column.max_val is not None
+        ):
+            range_values = f"{column.min_val} to {column.max_val}"
+        elif column.categories:
+            range_values = ", ".join(f"'{value}'" for value in column.categories)
+
+        rows.append(
+            tags.tr(
+                tags.th(tags.code(column.name), scope="row"),
+                tags.td(type_cell),
+                tags.td(range_values),
+                tags.td(column.description or ""),
+                tags.td(", ".join(column.constraints)),
+            )
+        )
+
+    return tags.div(
+        tags.table(
+            tags.thead(
+                tags.tr(*(tags.th(header, scope="col") for header in headers)),
+                class_="table-light",
+            ),
+            tags.tbody(*rows),
+            class_="table table-sm table-hover align-middle mb-0",
+        ),
+        class_="table-responsive",
     )
 
 

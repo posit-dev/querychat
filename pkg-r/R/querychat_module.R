@@ -176,20 +176,19 @@ mod_server <- function(
     )
 
     build_state_snapshot <- function() {
-      shiny::isolate({
-        table_states <- list()
-        for (name in names(tables)) {
-          table_states[[name]] <- list(
-            sql = tables[[name]]$sql(),
-            title = tables[[name]]$title()
-          )
-        }
-        snapshot <- list(querychat_tables = table_states)
-        if (length(viz_widgets) > 0) {
-          snapshot$querychat_viz_widgets <- viz_widgets
-        }
-        snapshot
-      })
+      # on_save can run from a promise handler with no reactive context.
+      table_states <- list()
+      for (name in names(tables)) {
+        table_states[[name]] <- list(
+          sql = shiny::isolate(tables[[name]]$sql()),
+          title = shiny::isolate(tables[[name]]$title())
+        )
+      }
+      snapshot <- list(querychat_tables = table_states)
+      if (length(viz_widgets) > 0) {
+        snapshot$querychat_viz_widgets <- viz_widgets
+      }
+      snapshot
     }
 
     apply_state_snapshot <- function(values) {
@@ -229,7 +228,11 @@ mod_server <- function(
     shiny::setBookmarkExclude("chat_update")
 
     shiny::onBookmark(function(state) {
-      state$values <- utils::modifyList(state$values, build_state_snapshot())
+      # state$values is a Shiny-owned environment: mutate, never replace.
+      snapshot <- build_state_snapshot()
+      for (nm in names(snapshot)) {
+        state$values[[nm]] <- snapshot[[nm]]
+      }
     })
 
     shiny::onRestore(function(state) {

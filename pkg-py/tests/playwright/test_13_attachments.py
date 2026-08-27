@@ -17,6 +17,7 @@ from playwright.sync_api import expect
 
 if TYPE_CHECKING:
     from playwright.sync_api import Page
+    from shiny.run import ShinyAppProc
     from shinychat.playwright import ChatController
 
 
@@ -25,9 +26,9 @@ class TestAttachments:
 
     @pytest.fixture(autouse=True)
     def setup(
-        self, page: Page, app_01_hello: str, chat_01_hello: ChatController
+        self, page: Page, app_01_hello: ShinyAppProc, chat_01_hello: ChatController
     ) -> None:
-        page.goto(app_01_hello)
+        page.goto(app_01_hello.url)
         page.wait_for_selector("table", timeout=10000)
         self.page = page
         self.chat = chat_01_hello

@@ -17,6 +17,7 @@ from playwright.sync_api import expect
 
 if TYPE_CHECKING:
     from playwright.sync_api import Page
+    from shiny.run import ShinyAppProc
     from shinychat.playwright import ChatController
 
 
@@ -25,10 +26,10 @@ class Test03SidebarExpress:
 
     @pytest.fixture(autouse=True)
     def setup(
-        self, page: Page, app_03_express: str, chat_03_express: ChatController
+        self, page: Page, app_03_express: ShinyAppProc, chat_03_express: ChatController
     ) -> None:
         """Navigate to the app before each test."""
-        page.goto(app_03_express)
+        page.goto(app_03_express.url)
         # Wait for data table to be visible
         page.wait_for_selector("table tbody tr", timeout=15000)
         self.page = page
@@ -114,9 +115,11 @@ class Test03SidebarCore:
     """Tests for 03-sidebar-core-app.py - Shiny Core with sidebar layout."""
 
     @pytest.fixture(autouse=True)
-    def setup(self, page: Page, app_03_core: str, chat_03_core: ChatController) -> None:
+    def setup(
+        self, page: Page, app_03_core: ShinyAppProc, chat_03_core: ChatController
+    ) -> None:
         """Navigate to the app before each test."""
-        page.goto(app_03_core)
+        page.goto(app_03_core.url)
         # Wait for Shiny data frame to be ready (uses shiny-data-frame custom element)
         page.wait_for_selector("shiny-data-frame table", timeout=15000)
         self.page = page

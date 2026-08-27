@@ -32,14 +32,6 @@ const jsTargets = [
     source: "src/handoff.ts",
     output: "../pkg-r/inst/htmldep/handoff.js",
   },
-  {
-    source: "src/schema-display.js",
-    output: "../pkg-py/src/querychat/static/js/schema-display.js",
-  },
-  {
-    source: "src/schema-display.js",
-    output: "../pkg-r/inst/htmldep/schema-display.js",
-  },
 ];
 
 const cssTargets = [

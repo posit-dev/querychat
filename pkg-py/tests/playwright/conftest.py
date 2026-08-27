@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 from playwright.sync_api import expect
+from shiny.pytest import create_app_fixture
 
 # Configure logging for test debugging
 logger = logging.getLogger(__name__)
@@ -154,62 +155,6 @@ def _create_chat_controller(page: Page, table_name: str) -> ChatControllerType:
     return ChatController(page, f"querychat_{table_name}-chat")
 
 
-def _load_shiny_app(app_path: str) -> Any:
-    """
-    Load a Shiny app from a Python file.
-
-    Handles both Shiny Core apps (with explicit `app = App(...)`) and Shiny Express
-    apps (which use decorators and don't have an explicit app object).
-
-    Args:
-        app_path: Absolute or relative path to the Shiny app Python file.
-
-    Returns:
-        The loaded Shiny App object ready to be served.
-
-    Note:
-        Uses unique module names based on the file path to avoid Python's module
-        caching, which could cause issues when loading multiple apps in the same
-        test session.
-
-    """
-    from shiny.express._is_express import is_express_app
-    from shiny.express._run import wrap_express_app
-
-    path = Path(app_path).resolve()
-    app_dir = str(path.parent)
-    app_file = path.name
-
-    if is_express_app(app_file, app_dir):
-        # Express apps don't have an explicit `app` object
-        return wrap_express_app(path)
-    else:
-        # Regular apps have `app = App(...)` at module level
-        # Use unique module name based on path to avoid caching issues
-        module_name = f"shiny_app_{path.stem}_{id(path)}"
-        spec = importlib.util.spec_from_file_location(module_name, str(path))
-        module = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
-        spec.loader.exec_module(module)  # type: ignore[union-attr]
-        return module.app
-
-
-def _start_shiny_app_threaded(app_path: str, port: int) -> tuple[threading.Thread, Any]:
-    """Start a Shiny app in a background thread."""
-    import uvicorn
-
-    app = _load_shiny_app(app_path)
-    config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning")
-    server = uvicorn.Server(config)
-    thread = threading.Thread(target=server.run, daemon=True)
-    thread.start()
-    return thread, server
-
-
-def _stop_shiny_server(server: Any) -> None:
-    """Stop a uvicorn server."""
-    server.should_exit = True
-
-
 def _start_shiny_app_subprocess(
     app_path: str, port: int
 ) -> tuple[subprocess.Popen[bytes], None]:
@@ -246,26 +191,11 @@ def _stop_shiny_app_subprocess(process: subprocess.Popen[bytes]) -> None:
         process.wait(timeout=5)
 
 
-@pytest.fixture(scope="module")
-def app_01_hello() -> Generator[str, None, None]:
-    """Start the 01-hello-app.py Shiny server for testing."""
-    app_path = str(EXAMPLES_DIR / "01-hello-app.py")
-
-    def start_factory():
-        port = _find_free_port()
-        url = f"http://localhost:{port}"
-        return url, lambda: _start_shiny_app_threaded(app_path, port)
-
-    def shiny_cleanup(_thread, server):
-        _stop_shiny_server(server)
-
-    url, _thread, server = _start_server_with_retry(
-        start_factory, shiny_cleanup, timeout=30.0
-    )
-    try:
-        yield url
-    finally:
-        _stop_shiny_server(server)
+# Shiny apps run as subprocesses via shiny.pytest.create_app_fixture.
+# Running them in-process (threaded uvicorn) shares Shiny's process-global,
+# loop-bound reactive lock across apps, which crashes sessions when apps
+# on different event loops contend for it.
+app_01_hello = create_app_fixture(EXAMPLES_DIR / "01-hello-app.py", scope="module")
 
 
 @pytest.fixture
@@ -274,26 +204,7 @@ def chat_01_hello(page: Page) -> ChatControllerType:
     return _create_chat_controller(page, "titanic")
 
 
-@pytest.fixture(scope="module")
-def app_02_prompt() -> Generator[str, None, None]:
-    """Start the 02-prompt-app.py Shiny server for testing."""
-    app_path = str(EXAMPLES_DIR / "02-prompt-app.py")
-
-    def start_factory():
-        port = _find_free_port()
-        url = f"http://localhost:{port}"
-        return url, lambda: _start_shiny_app_threaded(app_path, port)
-
-    def shiny_cleanup(_thread, server):
-        _stop_shiny_server(server)
-
-    url, _thread, server = _start_server_with_retry(
-        start_factory, shiny_cleanup, timeout=30.0
-    )
-    try:
-        yield url
-    finally:
-        _stop_shiny_server(server)
+app_02_prompt = create_app_fixture(EXAMPLES_DIR / "02-prompt-app.py", scope="module")
 
 
 @pytest.fixture
@@ -302,26 +213,9 @@ def chat_02_prompt(page: Page) -> ChatControllerType:
     return _create_chat_controller(page, "titanic")
 
 
-@pytest.fixture(scope="module")
-def app_03_express() -> Generator[str, None, None]:
-    """Start the 03-sidebar-express-app.py Shiny server for testing."""
-    app_path = str(EXAMPLES_DIR / "03-sidebar-express-app.py")
-
-    def start_factory():
-        port = _find_free_port()
-        url = f"http://localhost:{port}"
-        return url, lambda: _start_shiny_app_threaded(app_path, port)
-
-    def shiny_cleanup(_thread, server):
-        _stop_shiny_server(server)
-
-    url, _thread, server = _start_server_with_retry(
-        start_factory, shiny_cleanup, timeout=30.0
-    )
-    try:
-        yield url
-    finally:
-        _stop_shiny_server(server)
+app_03_express = create_app_fixture(
+    EXAMPLES_DIR / "03-sidebar-express-app.py", scope="module"
+)
 
 
 @pytest.fixture
@@ -330,26 +224,9 @@ def chat_03_express(page: Page) -> ChatControllerType:
     return _create_chat_controller(page, "titanic")
 
 
-@pytest.fixture(scope="module")
-def app_03_core() -> Generator[str, None, None]:
-    """Start the 03-sidebar-core-app.py Shiny server for testing."""
-    app_path = str(EXAMPLES_DIR / "03-sidebar-core-app.py")
-
-    def start_factory():
-        port = _find_free_port()
-        url = f"http://localhost:{port}"
-        return url, lambda: _start_shiny_app_threaded(app_path, port)
-
-    def shiny_cleanup(_thread, server):
-        _stop_shiny_server(server)
-
-    url, _thread, server = _start_server_with_retry(
-        start_factory, shiny_cleanup, timeout=30.0
-    )
-    try:
-        yield url
-    finally:
-        _stop_shiny_server(server)
+app_03_core = create_app_fixture(
+    EXAMPLES_DIR / "03-sidebar-core-app.py", scope="module"
+)
 
 
 @pytest.fixture
@@ -645,26 +522,7 @@ def app_08_dash_custom() -> Generator[str, None, None]:
         _stop_dash_server(server)
 
 
-@pytest.fixture(scope="module")
-def app_10_viz() -> Generator[str, None, None]:
-    """Start the 10-viz-app.py Shiny server for testing."""
-    app_path = str(EXAMPLES_DIR / "10-viz-app.py")
-
-    def start_factory():
-        port = _find_free_port()
-        url = f"http://localhost:{port}"
-        return url, lambda: _start_shiny_app_threaded(app_path, port)
-
-    def shiny_cleanup(_thread, server):
-        _stop_shiny_server(server)
-
-    url, _thread, server = _start_server_with_retry(
-        start_factory, shiny_cleanup, timeout=30.0
-    )
-    try:
-        yield url
-    finally:
-        _stop_shiny_server(server)
+app_10_viz = create_app_fixture(EXAMPLES_DIR / "10-viz-app.py", scope="module")
 
 
 @pytest.fixture

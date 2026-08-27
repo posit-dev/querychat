@@ -445,3 +445,66 @@ describe("collapse_validation_errors()", {
     )
   })
 })
+
+describe("build_viz_footer()", {
+  it("uses the Shiny Chat disclosure chevron for Show Query", {
+    footer <- build_viz_footer(
+      "SELECT * FROM test_table VISUALISE value AS x DRAW histogram",
+      "Chart",
+      "querychat_viz_raw",
+      "querychat_viz_raw"
+    )
+    html <- as.character(footer)
+
+    expect_match(html, "querychat-query-chevron", fixed = TRUE)
+    expect_match(html, "bi-chevron-down", fixed = TRUE)
+    expect_no_match(html, "\u25b6", fixed = TRUE)
+  })
+})
+
+describe("visualization tool display", {
+  skip_if_no_dataframe_engine()
+  skip_if_not_installed("ggsql")
+
+  it("requests Shiny Chat's framed open style", {
+    ds <- local_data_frame_source(new_test_df())
+    session <- structure(
+      list(
+        output = list(),
+        ns = identity
+      ),
+      class = "MockShinySession"
+    )
+
+    local_mocked_bindings(
+      execute_ggsql = function(...) structure(list(), class = "ggsql_spec"),
+      build_viz_footer = function(...) htmltools::tagList(),
+      .package = "querychat"
+    )
+    local_mocked_bindings(
+      ggsql_validate = function(...) {
+        structure(list(valid = TRUE), class = "ggsql_validated")
+      },
+      ggsql_has_visual = function(...) TRUE,
+      renderGgsql = function(...) shiny::renderText("ok"),
+      ggsqlOutput = function(id) htmltools::div(id = id),
+      ggsql_save = function(...) rlang::abort("V8 is not installed"),
+      .package = "ggsql"
+    )
+
+    tool <- tool_visualize_dashboard(
+      ds,
+      session = session,
+      update_fn = function(data) {}
+    )
+
+    suppressWarnings(
+      result <- tool(
+        ggsql = "SELECT * FROM test_table VISUALISE value AS x DRAW histogram",
+        title = "Test"
+      )
+    )
+
+    expect_identical(result@extra$display$open_style, "framed")
+  })
+})

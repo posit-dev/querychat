@@ -493,7 +493,7 @@ test_that("restored viz widgets survive a second bookmark cycle", {
       shiny::isolate(callbacks$visualize(saved[[1]]))
 
       first_state <- new.env(parent = emptyenv())
-      first_state$values <- list()
+      first_state$values <- new.env(parent = emptyenv())
       shiny::isolate(bookmark_fn(first_state))
       expect_equal(first_state$values$querychat_viz_widgets, saved)
 
@@ -504,9 +504,56 @@ test_that("restored viz widgets survive a second bookmark cycle", {
       expect_equal(restored_args$saved_widgets, saved)
 
       second_state <- new.env(parent = emptyenv())
-      second_state$values <- list()
+      second_state$values <- new.env(parent = emptyenv())
       shiny::isolate(bookmark_fn(second_state))
       expect_equal(second_state$values$querychat_viz_widgets, saved)
+    }
+  )
+})
+
+test_that("onBookmark callback mutates environment-backed state$values", {
+  skip_if_no_dataframe_engine()
+
+  ds <- local_data_frame_source(new_test_df())
+  executor <- build_query_executor(list(test_table = ds))
+  withr::defer(executor$cleanup())
+  bookmark_fn <- NULL
+
+  client_factory <- function(...) {
+    structure(list(), class = c("MockChat", "Chat"))
+  }
+
+  local_mocked_bindings(
+    chat_server = function(id, client, ...) mock_chat_server_result(client),
+    .package = "shinychat"
+  )
+  local_mock_chat_restore()
+  local_mocked_bindings(
+    onBookmark = function(fun, session = NULL) {
+      bookmark_fn <<- fun
+    },
+    onRestore = function(fun, session = NULL) NULL,
+    .package = "shiny"
+  )
+
+  shiny::testServer(
+    mod_server,
+    args = list(
+      id = "test",
+      data_sources = list(test_table = ds),
+      executor = executor,
+      greeting = "Hello",
+      client = client_factory,
+      tools = "query",
+      history = TRUE
+    ),
+    {
+      expect_true(is.function(bookmark_fn))
+
+      state <- new.env(parent = emptyenv())
+      state$values <- new.env(parent = emptyenv())
+      expect_no_error(shiny::isolate(bookmark_fn(state)))
+      expect_true("querychat_tables" %in% names(state$values))
     }
   )
 })
@@ -917,5 +964,10 @@ test_that("history on_save callback works with no active reactive context", {
     }
   )
 
-  expect_no_error(history_save_fn(list()))
+  # Called bare, as shinychat's promise handler would (no reactive context).
+  expect_no_error(result <- history_save_fn(list()))
+  expect_equal(
+    result$querychat_tables$test_table$sql,
+    "SELECT * FROM test_table WHERE id = 1"
+  )
 })

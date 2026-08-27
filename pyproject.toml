@@ -24,7 +24,7 @@ dependencies = [
     "shiny>=1.6.3",
     "shinychat @ git+https://github.com/posit-dev/shinychat.git@refs/heads/dev/querychat-pr311-history-save",
     "htmltools",
-    "chatlas>=0.18.0",
+    "chatlas>=0.21.2",
     "narwhals>=2.2.0",
     "chevron",
     "sqlalchemy>=2.0.0", # Using 2.0+ for improved type hints and API

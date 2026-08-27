@@ -15,6 +15,7 @@ from playwright.sync_api import expect
 
 if TYPE_CHECKING:
     from playwright.sync_api import Page
+    from shiny.run import ShinyAppProc
     from shinychat.playwright import ChatController
 
 
@@ -23,10 +24,10 @@ class Test01HelloApp:
 
     @pytest.fixture(autouse=True)
     def setup(
-        self, page: Page, app_01_hello: str, chat_01_hello: ChatController
+        self, page: Page, app_01_hello: ShinyAppProc, chat_01_hello: ChatController
     ) -> None:
         """Navigate to the app before each test."""
-        page.goto(app_01_hello)
+        page.goto(app_01_hello.url)
         page.wait_for_selector("table", timeout=10000)
         self.page = page
         self.chat = chat_01_hello
@@ -244,7 +245,7 @@ class Test01HelloApp:
         )
         self.chat.send_user_input(method="click")
 
-        stop_btn = self.page.locator(".shiny-chat-btn-cancel")
+        stop_btn = self.page.locator('.shiny-chat-btn-send[data-state="cancel"]')
         expect(stop_btn).to_be_visible(timeout=30000)
 
     def test_cancel_stops_response(self) -> None:
@@ -255,7 +256,7 @@ class Test01HelloApp:
         )
         self.chat.send_user_input(method="click")
 
-        stop_btn = self.page.locator(".shiny-chat-btn-cancel")
+        stop_btn = self.page.locator('.shiny-chat-btn-send[data-state="cancel"]')
         expect(stop_btn).to_be_visible(timeout=30000)
         stop_btn.click()
 
@@ -271,7 +272,7 @@ class Test01HelloApp:
         )
         self.chat.send_user_input(method="click")
 
-        stop_btn = self.page.locator(".shiny-chat-btn-cancel")
+        stop_btn = self.page.locator('.shiny-chat-btn-send[data-state="cancel"]')
         expect(stop_btn).to_be_visible(timeout=30000)
         stop_btn.click()
 
@@ -281,5 +282,7 @@ class Test01HelloApp:
         self.chat.set_user_input("How many rows are in the dataset?")
         self.chat.send_user_input(method="click")
 
-        send_btn = self.page.locator(".shiny-chat-btn-send:not(.shiny-chat-btn-cancel)")
+        send_btn = self.page.locator(
+            '.shiny-chat-btn-send:not([data-state="cancel"]):not([data-state="cancelling"])'
+        )
         expect(send_btn).to_be_visible(timeout=60000)

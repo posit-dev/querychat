@@ -14,6 +14,7 @@ from playwright.sync_api import expect
 
 if TYPE_CHECKING:
     from playwright.sync_api import Page
+    from shiny.run import ShinyAppProc
     from shinychat.playwright import ChatController
 
 
@@ -22,10 +23,10 @@ class Test02PromptApp:
 
     @pytest.fixture(autouse=True)
     def setup(
-        self, page: Page, app_02_prompt: str, chat_02_prompt: ChatController
+        self, page: Page, app_02_prompt: ShinyAppProc, chat_02_prompt: ChatController
     ) -> None:
         """Navigate to the app before each test."""
-        page.goto(app_02_prompt)
+        page.goto(app_02_prompt.url)
         page.wait_for_selector("table", timeout=10000)
         self.page = page
         self.chat = chat_02_prompt

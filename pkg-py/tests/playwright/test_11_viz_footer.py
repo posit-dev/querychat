@@ -18,6 +18,7 @@ from playwright.sync_api import expect
 
 if TYPE_CHECKING:
     from playwright.sync_api import Download, Locator, Page
+    from shiny.run import ShinyAppProc
     from shinychat.playwright import ChatController
 
 
@@ -86,9 +87,11 @@ def _download_from_save_menu(page: Page, export_format: str) -> tuple[Download, 
 
 
 @pytest.fixture(autouse=True)
-def _send_viz_prompt(page: Page, app_10_viz: str, chat_10_viz: ChatController) -> None:
+def _send_viz_prompt(
+    page: Page, app_10_viz: ShinyAppProc, chat_10_viz: ChatController
+) -> None:
     """Navigate to the viz app and trigger a visualization before each test."""
-    page.goto(app_10_viz)
+    page.goto(app_10_viz.url)
     page.wait_for_selector("shiny-chat-container", timeout=30_000)
     greeting = chat_10_viz.loc.locator(".shiny-chat-greeting")
     expect(greeting).to_contain_text("Welcome", timeout=30_000)
@@ -96,8 +99,10 @@ def _send_viz_prompt(page: Page, app_10_viz: str, chat_10_viz: ChatController) -
     chat_10_viz.set_user_input(VIZ_PROMPT)
     chat_10_viz.send_user_input(method="click")
 
-    # Wait for the viz tool result card with fullscreen support
-    page.locator(".shiny-tool-result:has(.tool-fullscreen-toggle)").wait_for(
+    # Wait for the viz tool result card with fullscreen support. On shinychat
+    # main, routed tool results render as a .shiny-tool-card inside a
+    # .shiny-chat-tool-group, not a .shiny-tool-result element.
+    page.locator(".shiny-tool-card:has(.querychat-viz-container)").wait_for(
         state="visible", timeout=TOOL_RESULT_TIMEOUT
     )
     # Wait for the footer buttons to appear inside the card

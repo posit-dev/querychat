@@ -15,6 +15,7 @@ from querychat._handoff_bundle_store import HandoffSnapshotUnavailableError
 from querychat._handoff_data import (
     HandoffDataContext,
     HandoffDataError,
+    export_csv,
     materialize_handoff_data,
 )
 from querychat._handoff_orchestrator import (
@@ -480,7 +481,7 @@ class TestDownload:
         with zipfile.ZipFile(io.BytesIO(archive)) as zf:
             assert zf.read("handoff.qmd") == b"v1"
 
-    def test_bundle_without_snapshot_never_exports_live_dataframe(self):
+    def test_bundle_without_snapshot_regenerates_from_live_dataframe(self):
         source = RecordingDataFrameSource("tips")
         orch = make_session(data_sources={"tips": source})
         state = make_state()
@@ -488,10 +489,65 @@ class TestDownload:
         state.bundled_tables = ["tips"]
         orch.store.remember(state)
 
+        expected_csv = export_csv(source)
+        source.get_data_calls = 0
+
+        archive = asyncio.run(orch.build_download("a"))
+
+        assert source.get_data_calls == 1
+        assert archive is not None
+        with zipfile.ZipFile(io.BytesIO(archive)) as zf:
+            assert zf.read("tips.csv") == expected_csv
+
+        # The regenerated bundle is re-cached, so later downloads don't re-export
+        assert state.bundle_id is not None
+        assert orch.bundle_store.get(state.bundle_id) is not None
+        asyncio.run(orch.build_download("a"))
+        assert source.get_data_calls == 1
+
+    def test_restored_handoff_download_regenerates_bundle(self):
+        source = RecordingDataFrameSource("tips")
+        original = make_session(
+            FakeChat([result_chunk("source", referenced_tables=["tips"])]),
+            data_sources={"tips": source},
+        )
+        asyncio.run(
+            original.generate(
+                GenerateRequest(type_id="quarto-dashboard", language="python"),
+                "",
+                "a",
+            )
+        )
+        saved = original.store.bookmark_values()
+
+        # A fresh session restores the handoff metadata but not the bundle
+        fresh_source = RecordingDataFrameSource("tips")
+        restored = make_session(data_sources={"tips": fresh_source})
+        restored.restore_snapshot(saved)
+        state = restored.store.get("a")
+        assert state is not None
+        assert state.bundle_id is not None
+        assert restored.bundle_store.get(state.bundle_id) is None
+        assert restored._download_available(state) is True
+
+        archive = asyncio.run(restored.build_download("a"))
+
+        assert fresh_source.get_data_calls == 1
+        assert archive is not None
+        with zipfile.ZipFile(io.BytesIO(archive)) as zf:
+            assert zf.read("tips.csv") == export_csv(fresh_source)
+
+    def test_download_unavailable_when_bundle_not_regenerable(self):
+        # FakeDataSource is not a DataFrameSource, so its bundle can't be rebuilt
+        orch = make_session(data_source=FakeDataSource())
+        state = make_state()
+        state.bundled_tables = ["mtcars"]
+        state.bundle_id = "missing"
+        orch.store.remember(state)
+
+        assert orch._download_available(state) is False
         with pytest.raises(HandoffSnapshotUnavailableError, match="unavailable"):
             asyncio.run(orch.build_download("a"))
-
-        assert source.get_data_calls == 0
 
     def test_missing_bundle_id_reports_snapshot_unavailable(self):
         orch = make_session(data_source=FakeDataSource())

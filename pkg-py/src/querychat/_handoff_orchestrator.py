@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, cast
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
+from ._datasource import DataFrameSource
 from ._handoff_bundle_store import (
     HandoffBundleStore,
     HandoffSnapshotUnavailableError,
@@ -28,6 +29,7 @@ from ._handoff_data import (
     HandoffDataCatalog,
     HandoffDataContext,
     HandoffDataError,
+    export_csv,
     materialize_handoff_data,
     prepare_handoff_data,
 )
@@ -181,7 +183,7 @@ def parse_handoff_language(language: str) -> HandoffLanguage:
         raise ValueError("Select R or Python before generating a handoff.")
     if language not in LANGUAGES:
         raise ValueError(f"Unknown handoff language: {language}")
-    return cast("HandoffLanguage", language)
+    return language
 
 
 def build_handoff_zip(
@@ -584,27 +586,69 @@ class HandoffOrchestrator:
             self.bundle_store.discard(bundle_id)
 
     def _download_available(self, state: HandoffState) -> bool:
-        if state.bundle_id is None:
-            return not state.bundled_tables
-        return self.bundle_store.get(state.bundle_id) is not None
+        if not state.bundled_tables:
+            return True
+        if (
+            state.bundle_id is not None
+            and self.bundle_store.get(state.bundle_id) is not None
+        ):
+            return True
+        # The bundle store is session-scoped, so a restored (or evicted)
+        # bundle is gone. Bundled tables are raw DataFrameSource exports, so
+        # the download can still be served by regenerating them on demand.
+        return self._can_regenerate(state)
+
+    def _bundled_dataframe_sources(
+        self, state: HandoffState
+    ) -> dict[str, DataFrameSource] | None:
+        """Live DataFrameSources for every bundled table, or None if any is missing."""
+        sources: dict[str, DataFrameSource] = {}
+        for name in state.bundled_tables:
+            source = self.data_sources.get(name)
+            if not isinstance(source, DataFrameSource):
+                return None
+            sources[name] = source
+        return sources
+
+    def _can_regenerate(self, state: HandoffState) -> bool:
+        return (
+            bool(state.bundled_tables)
+            and self._bundled_dataframe_sources(state) is not None
+        )
+
+    def _regenerate_bundled_files(self, state: HandoffState) -> dict[str, bytes]:
+        sources = self._bundled_dataframe_sources(state)
+        if not state.bundled_tables or sources is None:
+            raise HandoffSnapshotUnavailableError(
+                "This handoff data snapshot is unavailable."
+            )
+        bundled_files: dict[str, bytes] = {}
+        for name, source in sources.items():
+            try:
+                bundled_files[f"{name}.csv"] = export_csv(source)
+            except Exception as error:
+                raise HandoffSnapshotUnavailableError(
+                    "This handoff data snapshot could not be regenerated."
+                ) from error
+        return bundled_files
 
     async def build_download(self, handoff_id: str | None) -> bytes | None:
         state = self.store.get(handoff_id)
         if state is None:
             return None
-        if state.bundle_id is None:
-            if state.bundled_tables:
-                raise HandoffSnapshotUnavailableError(
-                    "This handoff data snapshot is unavailable."
-                )
-            bundled_files: dict[str, bytes] = {}
-        else:
-            bundle = self.bundle_store.get(state.bundle_id)
-            if bundle is None:
-                raise HandoffSnapshotUnavailableError(
-                    "This handoff data snapshot is unavailable."
-                )
+        bundle = (
+            self.bundle_store.get(state.bundle_id) if state.bundle_id else None
+        )
+        if bundle is not None:
             bundled_files = dict(bundle.bundled_files)
+        elif state.bundled_tables:
+            bundled_files = self._regenerate_bundled_files(state)
+            # Re-cache the rebuilt bundle for later downloads; if it exceeds
+            # the store's budget, serve it without caching.
+            with suppress(ValueError):
+                state.bundle_id = self.bundle_store.put(bundled_files).bundle_id
+        else:
+            bundled_files = {}
         source_filename = f"handoff{state.handoff_type.file_extension}"
         readme = build_readme(
             handoff_type=state.handoff_type,

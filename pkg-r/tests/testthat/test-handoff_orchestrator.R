@@ -1436,7 +1436,7 @@ describe("HandoffOrchestrator$build_download()", {
     )
   })
 
-  it("never calls live data sources to reconstruct a missing snapshot", {
+  it("regenerates a missing snapshot bundle from live data sources", {
     skip_if_no_dataframe_engine()
     fixture_data <- local_recording_data_frame_source(
       table_name = "sales",
@@ -1456,7 +1456,108 @@ describe("HandoffOrchestrator$build_download()", {
       new_revision_handoff_state("handoff-1", bundled_tables = "sales")
     )
 
-    expect_error(orchestrator$build_download("handoff-1"))
-    expect_identical(fixture_data$state$get_data_calls, 0L)
+    expected_csv <- export_handoff_csv(fixture_data$source)
+    fixture_data$state$get_data_calls <- 0L
+
+    zip_bytes <- orchestrator$build_download("handoff-1")
+
+    expect_identical(fixture_data$state$get_data_calls, 1L)
+    zip_path <- withr::local_tempfile(fileext = ".zip")
+    writeBin(zip_bytes, zip_path)
+    exdir <- withr::local_tempdir()
+    zip::unzip(zip_path, exdir = exdir)
+    csv_path <- file.path(exdir, "sales.csv")
+    expect_identical(
+      readBin(csv_path, "raw", file.size(csv_path)),
+      expected_csv
+    )
+
+    # The regenerated bundle is re-cached, so later downloads don't re-export
+    expect_false(is.null(store$get("handoff-1")@bundle_id))
+    orchestrator$build_download("handoff-1")
+    expect_identical(fixture_data$state$get_data_calls, 1L)
+  })
+
+  it("regenerates the bundle for a restored handoff in a fresh session", {
+    skip_if_no_dataframe_engine()
+    first_data <- local_recording_data_frame_source(
+      table_name = "sales",
+      engine = "sqlite"
+    )
+    first_bundles <- HandoffBundleStore$new()
+    first_store <- HandoffStore$new()
+    first <- HandoffOrchestrator$new(
+      chat = new_recording_handoff_chat()$chat,
+      data_sources = list(sales = first_data$source),
+      executor = new_recording_handoff_executor(list(
+        sales = "SCHEMA sales amount DOUBLE"
+      )),
+      view = new_recording_handoff_view(),
+      store = first_store,
+      bundle_store = first_bundles
+    )
+    bundle <- first_bundles$stage(list("sales.csv" = charToRaw("amount\n10\n")))
+    first_store$remember(
+      new_revision_handoff_state(
+        "handoff-1",
+        bundle_id = bundle@bundle_id,
+        bundled_tables = "sales"
+      )
+    )
+    saved <- build_handoff_snapshot(first)
+
+    # A fresh session restores the handoff metadata but not the bundle
+    second_data <- local_recording_data_frame_source(
+      table_name = "sales",
+      engine = "sqlite"
+    )
+    second_store <- HandoffStore$new()
+    second <- HandoffOrchestrator$new(
+      chat = new_recording_handoff_chat()$chat,
+      data_sources = list(sales = second_data$source),
+      executor = new_recording_handoff_executor(list(
+        sales = "SCHEMA sales amount DOUBLE"
+      )),
+      view = new_recording_handoff_view(),
+      store = second_store
+    )
+    apply_handoff_snapshot(second, saved, function(value) NULL)
+    restored <- second_store$get("handoff-1")
+    expect_false(is.null(restored@bundle_id))
+
+    expected_csv <- export_handoff_csv(second_data$source)
+    second_data$state$get_data_calls <- 0L
+
+    zip_bytes <- second$build_download("handoff-1")
+
+    expect_identical(second_data$state$get_data_calls, 1L)
+    zip_path <- withr::local_tempfile(fileext = ".zip")
+    writeBin(zip_bytes, zip_path)
+    exdir <- withr::local_tempdir()
+    zip::unzip(zip_path, exdir = exdir)
+    csv_path <- file.path(exdir, "sales.csv")
+    expect_identical(
+      readBin(csv_path, "raw", file.size(csv_path)),
+      expected_csv
+    )
+  })
+
+  it("reports download as unavailable when a missing bundle can't be regenerated", {
+    fixture <- new_transaction_orchestrator(list())
+    fixture$store$remember(
+      new_revision_handoff_state(
+        "handoff-1",
+        bundle_id = "missing-bundle",
+        bundled_tables = "sales"
+      )
+    )
+
+    expect_true(fixture$orchestrator$show("handoff-1"))
+    event <- tail(fixture$view$events, 1L)[[1]]
+    expect_identical(event$download_available, FALSE)
+    expect_error(
+      fixture$orchestrator$build_download("handoff-1"),
+      class = "querychat_handoff_snapshot_unavailable"
+    )
   })
 })

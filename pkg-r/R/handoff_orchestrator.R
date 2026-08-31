@@ -388,17 +388,25 @@ HandoffOrchestrator <- R6::R6Class(
         return(NULL)
       }
 
-      bundled_files <- list()
-      if (is.null(state@bundle_id)) {
-        if (length(state@bundled_tables) > 0L) {
-          abort_handoff_snapshot_unavailable()
-        }
-      } else {
+      bundle <- NULL
+      if (!is.null(state@bundle_id)) {
         bundle <- private$bundle_store$get(state@bundle_id)
-        if (is.null(bundle)) {
-          abort_handoff_snapshot_unavailable()
-        }
+      }
+      if (!is.null(bundle)) {
         bundled_files <- bundle@bundled_files
+      } else if (length(state@bundled_tables) > 0L) {
+        bundled_files <- private$regenerate_bundled_files(state)
+        # Re-cache the rebuilt bundle for later downloads; if it exceeds the
+        # store's budget, serve it without caching.
+        tryCatch(
+          {
+            state@bundle_id <- private$bundle_store$put(bundled_files)@bundle_id
+            private$store$remember(state)
+          },
+          error = function(error) NULL
+        )
+      } else {
+        bundled_files <- list()
       }
 
       source_filename <- paste0("handoff", state@handoff_type@file_extension)
@@ -586,10 +594,53 @@ HandoffOrchestrator <- R6::R6Class(
     },
 
     download_available = function(state) {
-      if (is.null(state@bundle_id)) {
-        return(length(state@bundled_tables) == 0L)
+      if (length(state@bundled_tables) == 0L) {
+        return(TRUE)
       }
-      !is.null(private$bundle_store$get(state@bundle_id))
+      if (
+        !is.null(state@bundle_id) &&
+          !is.null(private$bundle_store$get(state@bundle_id))
+      ) {
+        return(TRUE)
+      }
+      # The bundle store is session-scoped, so a restored (or evicted) bundle
+      # is gone. Bundled tables are raw DataFrameSource exports, so the
+      # download can still be served by regenerating them on demand.
+      private$can_regenerate(state)
+    },
+
+    bundled_data_frame_sources = function(state) {
+      # Live DataFrameSources for every bundled table, or NULL if any of
+      # them is unavailable in this session.
+      sources <- list()
+      for (table_name in state@bundled_tables) {
+        source <- private$data_sources[[table_name]]
+        if (!inherits(source, "DataFrameSource")) {
+          return(NULL)
+        }
+        sources[[table_name]] <- source
+      }
+      sources
+    },
+
+    can_regenerate = function(state) {
+      length(state@bundled_tables) > 0L &&
+        !is.null(private$bundled_data_frame_sources(state))
+    },
+
+    regenerate_bundled_files = function(state) {
+      sources <- private$bundled_data_frame_sources(state)
+      if (length(state@bundled_tables) == 0L || is.null(sources)) {
+        abort_handoff_snapshot_unavailable()
+      }
+      bundled_files <- list()
+      for (table_name in names(sources)) {
+        bundled_files[[paste0(table_name, ".csv")]] <- tryCatch(
+          export_handoff_csv(sources[[table_name]]),
+          error = abort_handoff_snapshot_regeneration
+        )
+      }
+      bundled_files
     }
   )
 )
@@ -606,6 +657,14 @@ abort_handoff_snapshot_unavailable <- function() {
   cli::cli_abort(
     "This handoff data snapshot is unavailable.",
     class = "querychat_handoff_snapshot_unavailable"
+  )
+}
+
+abort_handoff_snapshot_regeneration <- function(parent) {
+  cli::cli_abort(
+    "This handoff data snapshot could not be regenerated.",
+    class = "querychat_handoff_snapshot_unavailable",
+    parent = parent
   )
 }
 

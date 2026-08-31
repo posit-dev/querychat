@@ -30,13 +30,13 @@
       Error in `abort_non_inert_handoff_record()`:
       ! Handoff records may contain only inert JSON values and plain lists.
 
-# handoff_state_from_record() / rejects malformed ContentThinking before replay
+# handoff_state_from_record() / rejects malformed ContentThinking
 
     Code
       handoff_state_from_record(malformed_thinking)
     Condition
-      Error in `check_handoff_string_prop()`:
-      ! Ellmer ContentThinking prop `thinking` must be a single non-missing string.
+      Error in `value[[3L]]()`:
+      ! Ellmer turn record could not be replayed: <ellmer::ContentThinking> object properties are invalid: - @thinking must be <character>, not <double>
 
 ---
 
@@ -75,8 +75,8 @@
     Code
       handoff_state_from_record(failed_record)
     Condition
-      Error in `check_handoff_string_prop()`:
-      ! Ellmer ContentToolResult prop `error` must be a single non-missing string.
+      Error in `abort_non_inert_handoff_record()`:
+      ! Handoff records may contain only inert JSON values and plain lists.
 
 # handoff_state_from_record() / rejects non-plain state and turn containers
 
@@ -102,21 +102,21 @@
       Error in `check_handoff_ellmer_record_class()`:
       ! Handoff ellmer record class must be a single un-attributed string.
 
-# handoff_state_from_record() / rejects malformed ellmer prop values before replay
+# handoff_state_from_record() / rejects malformed ellmer prop values
 
     Code
       handoff_state_from_record(text)
     Condition
-      Error in `check_handoff_string_prop()`:
-      ! Ellmer ContentText prop `text` must be a single non-missing string.
+      Error in `value[[3L]]()`:
+      ! Ellmer turn record could not be replayed: <ellmer::ContentText> object properties are invalid: - @text must be <character>, not <double>
 
-# handoff_state_from_record() / rejects missing tool result requests before replay
+# handoff_state_from_record() / rejects missing tool result requests
 
     Code
       handoff_state_from_record(missing_request)
     Condition
-      Error in `check_payload_fields()`:
-      ! Ellmer ContentToolResult props is missing required field: "request".
+      Error in `value[[3L]]()`:
+      ! Ellmer turn record could not be replayed: no applicable method for `@` applied to an object of class "NULL"
 
 ---
 

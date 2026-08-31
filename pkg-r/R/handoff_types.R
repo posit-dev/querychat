@@ -320,6 +320,9 @@ handoff_state_record <- function(state) {
     named = FALSE
   )
   check_handoff_turn_records(record$turns)
+  # The turns came from a live chat, so replay should succeed; a failure here
+  # means ellmer's record format drifted from what contents_replay() accepts.
+  replay_handoff_turn_records(record$turns, tools = list())
   record
 }
 
@@ -355,11 +358,7 @@ handoff_state_from_record <- function(value, tools = list()) {
     named = FALSE
   )
   check_handoff_turn_records(value$turns)
-  turns <- lapply(
-    value$turns,
-    ellmer::contents_replay,
-    tools = tools
-  )
+  turns <- replay_handoff_turn_records(value$turns, tools)
 
   HandoffState(
     handoff_id = value$handoff_id,
@@ -1117,61 +1116,32 @@ check_handoff_turn_record <- function(record) {
     record$class,
     c("ellmer::UserTurn", "ellmer::AssistantTurn")
   )
-  class_name <- sub("ellmer::", "", record$class, fixed = TRUE)
-  props_context <- paste("Ellmer", class_name, "props")
-  check_plain_list(record$props, props_context, named = TRUE)
-  expected_props <- switch(
-    record$class,
-    "ellmer::UserTurn" = "contents",
-    "ellmer::AssistantTurn" = c(
-      "contents",
-      "json",
-      "tokens",
-      "cost",
-      "duration",
-      "finish_reason"
-    )
-  )
-  check_exact_fields(record$props, expected_props, props_context)
+  check_plain_list(record$props, "Ellmer turn record `props`", named = TRUE)
   check_plain_list(
     record$props$contents,
-    paste0(props_context, " `contents`"),
+    "Ellmer turn record `contents`",
     named = FALSE
   )
-  if (identical(record$class, "ellmer::AssistantTurn")) {
-    check_plain_list(
-      record$props$json,
-      "Ellmer AssistantTurn prop `json`"
-    )
-    check_handoff_numeric_prop(
-      record$props$tokens,
-      "Ellmer AssistantTurn prop `tokens`",
-      length = 3L
-    )
-    check_handoff_numeric_prop(
-      record$props$cost,
-      "Ellmer AssistantTurn prop `cost`",
-      length = 1L,
-      double_only = TRUE
-    )
-    check_handoff_numeric_prop(
-      record$props$duration,
-      "Ellmer AssistantTurn prop `duration`",
-      length = 1L,
-      double_only = TRUE
-    )
-    check_handoff_string_prop(
-      record$props$finish_reason,
-      "Ellmer AssistantTurn prop `finish_reason`",
-      allow_na = TRUE
-    )
-  }
   lapply(record$props$contents, check_handoff_content_record)
-  lapply(
-    record$props[setdiff(names(record$props), "contents")],
-    check_handoff_record_data
-  )
   invisible(NULL)
+}
+
+# Replaying defers prop-type validation to ellmer's own schema, so snapshot
+# validation survives ellmer drift (e.g. named `tokens`, classed `cost`).
+replay_handoff_turn_records <- function(records, tools = list()) {
+  lapply(
+    records,
+    function(record) {
+      tryCatch(
+        ellmer::contents_replay(record, tools = tools),
+        error = function(error) {
+          cli::cli_abort(
+            "Ellmer turn record could not be replayed: {conditionMessage(error)}"
+          )
+        }
+      )
+    }
+  )
 }
 
 check_handoff_content_record <- function(record) {
@@ -1192,87 +1162,7 @@ check_handoff_content_record <- function(record) {
       "ellmer::ContentToolResult"
     )
   )
-  class_name <- sub("ellmer::", "", record$class, fixed = TRUE)
-  props_context <- paste("Ellmer", class_name, "props")
-  check_plain_list(record$props, props_context, named = TRUE)
-  if (identical(record$class, "ellmer::ContentJson")) {
-    check_payload_fields(
-      record$props,
-      optional = c("data", "string"),
-      context = props_context
-    )
-  } else if (identical(record$class, "ellmer::ContentToolResult")) {
-    check_payload_fields(
-      record$props,
-      required = c("extra", "request"),
-      optional = c("value", "error"),
-      context = props_context
-    )
-  } else {
-    expected_props <- switch(
-      record$class,
-      "ellmer::ContentText" = "text",
-      "ellmer::ContentThinking" = c("thinking", "extra"),
-      "ellmer::ContentToolRequest" = c(
-        "id",
-        "name",
-        "arguments",
-        "extra"
-      )
-    )
-    check_exact_fields(record$props, expected_props, props_context)
-  }
-
-  if (identical(record$class, "ellmer::ContentText")) {
-    check_handoff_string_prop(
-      record$props$text,
-      "Ellmer ContentText prop `text`"
-    )
-  } else if (identical(record$class, "ellmer::ContentJson")) {
-    if ("string" %in% names(record$props)) {
-      check_handoff_string_prop(
-        record$props$string,
-        "Ellmer ContentJson prop `string`"
-      )
-    }
-  } else if (identical(record$class, "ellmer::ContentThinking")) {
-    check_handoff_string_prop(
-      record$props$thinking,
-      "Ellmer ContentThinking prop `thinking`"
-    )
-    check_plain_list(
-      record$props$extra,
-      "Ellmer ContentThinking prop `extra`"
-    )
-  } else if (identical(record$class, "ellmer::ContentToolRequest")) {
-    check_handoff_string_prop(
-      record$props$id,
-      "Ellmer ContentToolRequest prop `id`"
-    )
-    check_handoff_string_prop(
-      record$props$name,
-      "Ellmer ContentToolRequest prop `name`"
-    )
-    check_plain_list(
-      record$props$arguments,
-      "Ellmer ContentToolRequest prop `arguments`"
-    )
-    check_plain_list(
-      record$props$extra,
-      "Ellmer ContentToolRequest prop `extra`"
-    )
-  } else {
-    check_plain_list(
-      record$props$extra,
-      "Ellmer ContentToolResult prop `extra`"
-    )
-    if ("error" %in% names(record$props)) {
-      check_handoff_string_prop(
-        record$props$error,
-        "Ellmer ContentToolResult prop `error`"
-      )
-    }
-  }
+  check_plain_list(record$props, "Ellmer content record `props`", named = TRUE)
 
   if (
     identical(record$class, "ellmer::ContentToolResult") &&
@@ -1308,48 +1198,6 @@ check_handoff_content_record <- function(record) {
 check_handoff_ellmer_record_version <- function(value, context) {
   if (!identical(value, 1)) {
     cli::cli_abort("{context} version must be exactly 1.")
-  }
-}
-
-check_handoff_string_prop <- function(value, context, allow_na = FALSE) {
-  if (
-    !is.character(value) ||
-      length(value) != 1L ||
-      !is.null(attributes(value)) ||
-      (!allow_na && is.na(value))
-  ) {
-    qualifier <- if (allow_na) {
-      "a single string or NA"
-    } else {
-      "a single non-missing string"
-    }
-    cli::cli_abort("{context} must be {qualifier}.")
-  }
-}
-
-check_handoff_numeric_prop <- function(
-  value,
-  context,
-  length,
-  double_only = FALSE
-) {
-  valid_type <- if (double_only) {
-    is.double(value)
-  } else {
-    is.integer(value) || is.double(value)
-  }
-  if (
-    !valid_type ||
-      base::length(value) != length ||
-      !is.null(attributes(value)) ||
-      any(is.infinite(value))
-  ) {
-    size <- switch(
-      as.character(length),
-      "1" = "a scalar numeric value",
-      "3" = "a length-three numeric vector"
-    )
-    cli::cli_abort("{context} must be {size}.")
   }
 }
 
@@ -1408,10 +1256,13 @@ check_handoff_record_data <- function(value) {
     return(invisible(NULL))
   }
 
+  # Names round-trip losslessly through serializeJSON; other attributes
+  # (e.g. a factor's class/levels) make the value non-inert.
+  attribute_names <- names(attributes(value))
   if (
     typeof(value) %in%
       c("logical", "integer", "double", "character") &&
-      is.null(attributes(value)) &&
+      (is.null(attribute_names) || identical(attribute_names, "names")) &&
       !(is.double(value) &&
         any(is.nan(value) | is.infinite(value)))
   ) {

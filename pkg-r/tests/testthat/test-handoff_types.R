@@ -914,7 +914,7 @@ describe("handoff_state_from_record()", {
     )
   })
 
-  it("rejects malformed ContentThinking before replay", {
+  it("rejects malformed ContentThinking", {
     content_thinking <- asNamespace("ellmer")[["ContentThinking"]]
     thinking <- content_thinking(
       thinking = "private reasoning",
@@ -941,7 +941,7 @@ describe("handoff_state_from_record()", {
     expect_s3_class(error, "error")
     expect_identical(
       conditionMessage(error),
-      'Ellmer ContentThinking props has unexpected field: "trace".'
+      'Ellmer turn record could not be replayed: unused argument (trace = "trace")'
     )
 
     counter <- local_handoff_replay_probe()
@@ -1122,19 +1122,19 @@ describe("handoff_state_from_record()", {
       extra_content_prop = extra_content_prop
     )
     expected <- c(
-      unnamed_turn_props = "Ellmer UserTurn props must be a mapping.",
+      unnamed_turn_props = "Ellmer turn record `props` must be a mapping.",
       extra_turn_prop = paste(
-        "Ellmer UserTurn props has unexpected field:",
-        '"extra".'
+        "Ellmer turn record could not be replayed:",
+        "unused argument (extra = TRUE)"
       ),
       extra_content_field = paste(
         "Ellmer content record has unexpected field:",
         '"extra".'
       ),
-      unnamed_content_props = "Ellmer ContentText props must be a mapping.",
+      unnamed_content_props = "Ellmer content record `props` must be a mapping.",
       extra_content_prop = paste(
-        "Ellmer ContentText props has unexpected field:",
-        '"extra".'
+        "Ellmer turn record could not be replayed:",
+        "unused argument (extra = TRUE)"
       )
     )
 
@@ -1186,7 +1186,7 @@ describe("handoff_state_from_record()", {
     )
   })
 
-  it("rejects malformed ellmer prop values before replay", {
+  it("rejects malformed ellmer prop values", {
     text <- handoff_state_record(new_test_handoff_state(
       turns = list(new_test_turn())
     ))
@@ -1224,17 +1224,15 @@ describe("handoff_state_from_record()", {
       request_arguments = request_arguments,
       result_request = result_request
     )
+    # Prop type rules are ellmer's own (enforced by contents_replay via S7);
+    # match on ellmer's messages rather than duplicating the schema here.
     expected <- c(
       assistant_json = paste(
-        "Ellmer AssistantTurn prop `json` must be a plain list."
+        "Ellmer turn record could not be replayed:",
+        "<ellmer::AssistantTurn> object properties are invalid"
       ),
-      assistant_tokens = paste(
-        "Ellmer AssistantTurn prop `tokens` must be a",
-        "length-three numeric vector."
-      ),
-      request_arguments = paste(
-        "Ellmer ContentToolRequest prop `arguments` must be a plain list."
-      ),
+      assistant_tokens = "@tokens must be length three",
+      request_arguments = "@arguments must be <list>",
       result_request = paste(
         "Ellmer ContentToolResult `request` must be",
         "an ellmer::ContentToolRequest record."
@@ -1251,16 +1249,38 @@ describe("handoff_state_from_record()", {
       )
       expect_s3_class(error, "error")
       if (inherits(error, "error")) {
-        expect_identical(
-          conditionMessage(error),
-          expected[[case_name]],
+        expect_true(
+          grepl(expected[[case_name]], conditionMessage(error), fixed = TRUE),
           info = case_name
         )
       }
     }
   })
 
-  it("rejects missing tool result requests before replay", {
+  it("round-trips named ellmer numeric props faithfully", {
+    # Real ellmer AssistantTurns carry named tokens (input/output/
+    # cached_input); names must survive the full snapshot round-trip,
+    # including the serializeJSON envelope used by build_handoff_snapshot().
+    turn <- ellmer::AssistantTurn(
+      contents = list(ellmer::ContentText("hi")),
+      tokens = c(input = 12L, output = 6L, cached_input = 0L)
+    )
+    state <- new_test_handoff_state(turns = list(turn))
+    record <- handoff_state_record(state)
+    expect_identical(
+      record$turns[[1]]$props$tokens,
+      c(input = 12L, output = 6L, cached_input = 0L)
+    )
+
+    json <- jsonlite::serializeJSON(record, digits = NA)
+    restored <- handoff_state_from_record(jsonlite::unserializeJSON(json))
+    expect_identical(
+      restored@turns[[1]]@tokens,
+      c(input = 12L, output = 6L, cached_input = 0L)
+    )
+  })
+
+  it("rejects missing tool result requests", {
     request <- ellmer::ContentToolRequest(
       id = "call-one",
       name = "echo"

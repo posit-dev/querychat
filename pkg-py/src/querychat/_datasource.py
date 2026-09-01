@@ -1182,12 +1182,15 @@ class IbisSource(DataSource["ibis.Table"]):
 
         subqueries: list[ibis.Table] = []
         for col in categorical_cols:
+            # Filter before projecting: the predicate must belong to the
+            # relation being filtered, else Snowflake (ibis >= 12) raises
+            # IntegrityError.
             subq = (
-                table.select(
+                table.filter(table[col.name].notnull())
+                .select(
                     ibis.literal(col.name).name("_col_name"),
                     table[col.name].cast("string").name("_value"),
                 )
-                .filter(table[col.name].notnull())
                 .distinct()
             )
             subqueries.append(subq)

@@ -27,7 +27,7 @@ Imports:
     cli,
     coro,
     DBI,
-    ellmer (>= 0.4.1),
+    ellmer (>= 0.4.2.9000),
     htmltools,
     jsonlite,
     lifecycle,
@@ -62,7 +62,7 @@ Suggests:
 VignetteBuilder:
     knitr
 Remotes:
-    hadley/elmer@feat/structured-streaming,
+    tidyverse/ellmer,
     posit-dev/shinychat/pkg-r@dev/querychat-pr311-history-save
 Config/roxygen2/version: 8.1.0
 Config/testthat/edition: 3

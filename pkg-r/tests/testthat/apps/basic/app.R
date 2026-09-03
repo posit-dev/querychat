@@ -24,12 +24,27 @@ dbDisconnect(conn)
 # Setup database source and QueryChat instance
 db_conn <- dbConnect(RSQLite::SQLite(), temp_db)
 
+# ellmer 0.5.0 moved model details out of `Provider` and into a new `Model`
+# class: `Provider()` no longer takes `model` as its second positional
+# argument, and `Chat$new()` now requires a separate `model` argument. `Model`
+# doesn't exist before 0.5.0, so branch on its presence to support both.
+mock_chat_client <- if (
+  exists("Model", where = asNamespace("ellmer"), inherits = FALSE)
+) {
+  MockChat$new(
+    ellmer::Provider("test", "test"),
+    model = ellmer::Model(name = "test")
+  )
+} else {
+  MockChat$new(ellmer::Provider("test", "test", "test"))
+}
+
 # Create QueryChat instance
 qc <- QueryChat$new(
   data_source = db_conn,
   table_name = "iris",
   greeting = "Welcome to the test app!",
-  client = MockChat$new(ellmer::Provider("test", "test", "test"))
+  client = mock_chat_client
 )
 
 ui <- page_sidebar(

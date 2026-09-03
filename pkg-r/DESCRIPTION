@@ -62,8 +62,8 @@ Suggests:
 VignetteBuilder:
     knitr
 Remotes:
-    tidyverse/ellmer,
-    posit-dev/shinychat/pkg-r@dev/querychat-pr311-history-save
+    posit-dev/shinychat/pkg-r@dev/querychat-pr311-history-save,
+    tidyverse/ellmer
 Config/roxygen2/version: 8.1.0
 Config/testthat/edition: 3
 Config/testthat/parallel: true

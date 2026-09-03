@@ -173,7 +173,23 @@ mock_ellmer_chat_client <- function(
     private = private
   )
 
-  MockChat$new(ellmer::Provider("test", "test", "test"))
+  new_mock_chat(MockChat)
+}
+
+# ellmer 0.5.0 moved model details out of `Provider` and into a new `Model`
+# class: `Provider()` no longer takes `model` as its second positional
+# argument, and `Chat$new()` now requires a separate `model` argument. `Model`
+# doesn't exist before 0.5.0, so branch on its presence to support both.
+new_mock_chat <- function(MockChat, ...) {
+  if (exists("Model", where = asNamespace("ellmer"), inherits = FALSE)) {
+    MockChat$new(
+      ellmer::Provider("test", "test"),
+      model = ellmer::Model(name = "test"),
+      ...
+    )
+  } else {
+    MockChat$new(ellmer::Provider("test", "test", "test"), ...)
+  }
 }
 
 # shinychat::chat_restore() validates that `client` is an ellmer::Chat() R6

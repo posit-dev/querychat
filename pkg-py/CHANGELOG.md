@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### New features
+
+* `QueryChat.cleanup()` now also closes the chatlas client, releasing its provider resources (HTTP connection pools, database sessions) — but only when querychat created the client itself (i.e., `client` was `None` or a string spec like `"openai/gpt-4o"`). A user-supplied `chatlas.Chat` instance is never closed by querychat; its lifecycle remains the caller's responsibility. In long-lived applications, call `qc.cleanup()` when the app shuts down.
+
 ## [0.7.0] - 2026-07-10
 
 ### New features

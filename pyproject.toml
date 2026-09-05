@@ -24,7 +24,10 @@ dependencies = [
     "shiny>=1.6.2",
     "shinychat @ git+https://github.com/posit-dev/shinychat.git@main",
     "htmltools",
-    "chatlas>=0.21.2",
+    # TODO: before merging, replace this pin with a released version
+    # (chatlas>=X.Y.Z) once https://github.com/posit-dev/chatlas/pull/427
+    # (Chat.close()/close_async()) is merged and released.
+    "chatlas @ git+https://github.com/posit-dev/chatlas.git@refs/pull/427/head",
     "narwhals>=2.2.0",
     "chevron",
     "sqlalchemy>=2.0.0", # Using 2.0+ for improved type hints and API

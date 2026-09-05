@@ -171,10 +171,15 @@ TblSqlSource <- R6::R6Class(
         return(query)
       }
 
+      cte_body <- qualify_cte_table_refs(
+        private$conn,
+        as.character(private$tbl_cte)
+      )
+
       sprintf(
         "WITH %s AS (\n%s\n)\n%s",
         DBI::dbQuoteIdentifier(private$conn, self$table_name),
-        private$tbl_cte,
+        cte_body,
         query
       )
     },
@@ -196,3 +201,36 @@ TblSqlSource <- R6::R6Class(
     }
   )
 )
+
+# Get the current schema name for a DBI connection.
+# Tries `SELECT current_schema()` (DuckDB, PostgreSQL, etc.) and falls
+# back to "main" for databases that don't support it (SQLite).
+# @param conn A DBI connection
+# @return A character string with the schema name
+# @noRd
+get_current_schema <- function(conn) {
+  tryCatch(
+    DBI::dbGetQuery(conn, "SELECT current_schema()")[[1]],
+    error = function(e) "main"
+  )
+}
+
+# Schema-qualify table references in a CTE body to avoid circular
+# references. DuckDB 1.3.0+ and SQLite reject a CTE whose name matches
+# a table it references (e.g., `WITH t AS (SELECT ... FROM t) SELECT * FROM t`).
+# Prefixing the FROM/JOIN table with the schema name (e.g., `FROM main.t`)
+# disambiguates the CTE name from the physical table.
+# @param conn A DBI connection
+# @param cte_body A SQL string (the CTE body from dbplyr::remote_query())
+# @return The CTE body with table references schema-qualified
+# @noRd
+qualify_cte_table_refs <- function(conn, cte_body) {
+  schema <- as.character(DBI::dbQuoteIdentifier(conn, get_current_schema(conn)))
+
+  # Match FROM/JOIN followed by a table name (word or quoted identifier)
+  # that is not already schema-qualified (no dot immediately after).
+  # Subquery FROM clauses (FROM (SELECT ...)) are skipped because "(" is
+  # neither a word character nor a quoted identifier.
+  pattern <- "((?:FROM|JOIN)\\s+)([a-zA-Z_][a-zA-Z0-9_]*|\"[^\"]+\")(?![.])"
+  gsub(pattern, paste0("\\1", schema, ".\\2"), cte_body, perl = TRUE)
+}

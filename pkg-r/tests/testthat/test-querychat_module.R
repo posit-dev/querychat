@@ -378,7 +378,7 @@ test_that("restored viz widgets survive a second bookmark cycle", {
       shiny::isolate(callbacks$visualize(saved[[1]]))
 
       first_state <- new.env(parent = emptyenv())
-      first_state$values <- list()
+      first_state$values <- new.env(parent = emptyenv())
       shiny::isolate(bookmark_fn(first_state))
       expect_equal(first_state$values$querychat_viz_widgets, saved)
 
@@ -389,14 +389,14 @@ test_that("restored viz widgets survive a second bookmark cycle", {
       expect_equal(restored_args$saved_widgets, saved)
 
       second_state <- new.env(parent = emptyenv())
-      second_state$values <- list()
+      second_state$values <- new.env(parent = emptyenv())
       shiny::isolate(bookmark_fn(second_state))
       expect_equal(second_state$values$querychat_viz_widgets, saved)
     }
   )
 })
 
-test_that("onBookmark callback tolerates NULL state$values", {
+test_that("onBookmark callback mutates environment-backed state$values", {
   skip_if_no_dataframe_engine()
 
   ds <- local_data_frame_source(new_test_df())
@@ -436,9 +436,8 @@ test_that("onBookmark callback tolerates NULL state$values", {
       expect_true(is.function(bookmark_fn))
 
       state <- new.env(parent = emptyenv())
-      state$values <- NULL
+      state$values <- new.env(parent = emptyenv())
       expect_no_error(shiny::isolate(bookmark_fn(state)))
-      expect_true(is.list(state$values))
       expect_true("querychat_tables" %in% names(state$values))
     }
   )
@@ -796,6 +795,64 @@ test_that("history on_save callback returns merged values (R history contract)",
       )
       result <- shiny::isolate(history_save_fn(list(unrelated_key = "kept")))
       expect_equal(result$unrelated_key, "kept")
+      expect_equal(
+        result$querychat_tables$test_table$sql,
+        "SELECT * FROM test_table WHERE id = 1"
+      )
+    }
+  )
+})
+
+test_that("history on_save callback works without an active reactive context", {
+  skip_if_no_dataframe_engine()
+
+  ds <- local_data_frame_source(new_test_df())
+  executor <- build_query_executor(list(test_table = ds))
+  withr::defer(executor$cleanup())
+
+  client_factory <- function(...) {
+    structure(list(), class = c("MockChat", "Chat"))
+  }
+
+  history_save_fn <- NULL
+  local_mocked_bindings(
+    chat_server = function(id, client, ...) {
+      list(
+        client = client,
+        history = list(
+          on_save = function(fn) {
+            history_save_fn <<- fn
+            invisible(fn)
+          },
+          on_restore = function(fn) invisible(fn)
+        )
+      )
+    },
+    .package = "shinychat"
+  )
+  local_mock_chat_restore()
+
+  shiny::testServer(
+    mod_server,
+    args = list(
+      id = "test",
+      data_sources = list(test_table = ds),
+      executor = executor,
+      greeting = "Hello",
+      client = client_factory,
+      tools = "query",
+      history = TRUE
+    ),
+    {
+      session$setInputs(
+        chat_update = list(
+          table = "test_table",
+          query = "SELECT * FROM test_table WHERE id = 1",
+          title = "One row"
+        )
+      )
+      # Called bare, as shinychat's promise handler would (no reactive context).
+      expect_no_error(result <- history_save_fn(list()))
       expect_equal(
         result$querychat_tables$test_table$sql,
         "SELECT * FROM test_table WHERE id = 1"

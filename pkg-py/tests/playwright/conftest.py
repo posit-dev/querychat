@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import importlib.util
 import logging
+import re
 import socket
 import subprocess
+import sys
 import threading
 import time
 import urllib.error
@@ -14,6 +16,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from playwright.sync_api import expect
 from shiny.pytest import create_app_fixture
 
 # Configure logging for test debugging
@@ -23,6 +26,7 @@ logger = logging.getLogger(__name__)
 # Tests run from pkg-py/ but paths need to resolve correctly
 REPO_ROOT = Path(__file__).parent.parent.parent.parent
 EXAMPLES_DIR = REPO_ROOT / "pkg-py" / "examples"
+APPS_DIR = Path(__file__).parent / "apps"
 
 
 if TYPE_CHECKING:
@@ -489,3 +493,56 @@ app_10_viz = create_app_fixture(EXAMPLES_DIR / "10-viz-app.py", scope="module")
 def chat_10_viz(page: Page) -> ChatControllerType:
     """Create a ChatController for the 10-viz-app chat component."""
     return _create_chat_controller(page, "titanic")
+
+
+app_handoff = create_app_fixture(APPS_DIR / "handoff_app.py", scope="module")
+
+
+@pytest.fixture
+def chat_handoff(page: Page) -> ChatControllerType:
+    """Create a ChatController for the handoff_app chat component."""
+    return _create_chat_controller(page, "titanic")
+
+
+app_handoff_bookmark = create_app_fixture(
+    APPS_DIR / "handoff_bookmark_app.py", scope="module"
+)
+
+
+@pytest.fixture
+def chat_handoff_bookmark(page: Page) -> ChatControllerType:
+    """Create a ChatController for the handoff bookmark app."""
+    return _create_chat_controller(page, "titanic")
+
+
+class HandoffModalActions:
+    """
+    Shared modal/query helpers for handoff test classes.
+
+    Subclasses set ``page`` and ``chat`` in an autouse setup fixture.
+    """
+
+    page: Page
+    chat: ChatControllerType
+
+    def _open_handoff_modal(self) -> None:
+        # Trailing space closes the slash-command palette dropdown so that
+        # Enter actually submits the command rather than selecting a palette entry.
+        self.chat.set_user_input("/handoff ")
+        self.chat.send_user_input(method="enter")
+        self.page.wait_for_selector(".modal", timeout=15000)
+
+    def _send_query_and_wait(self, query: str, timeout: int = 60000) -> None:
+        self.chat.set_user_input(query)
+        self.chat.send_user_input(method="click")
+        sql_code = self.page.locator("pre code").first
+        expect(sql_code).to_contain_text(
+            re.compile(r"WHERE|SELECT", re.IGNORECASE), timeout=timeout
+        )
+        # Wait for the stream to finish. In shinychat's TipTap input the
+        # contenteditable div is always editable (to_be_editable() is always
+        # true), so we check the container's "disabled" class instead, which
+        # is added/removed by shinychat when streaming starts/ends.
+        expect(self.chat.loc_input_container).not_to_have_class(
+            re.compile(r"\bdisabled\b"), timeout=timeout
+        )

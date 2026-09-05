@@ -12,6 +12,8 @@ from shinychat.types import HistoryOptions
 
 from shiny import module, reactive, ui
 
+from ._handoff_panel import handoff_panel_ui
+from ._handoff_server import handoff_server
 from ._querychat_core import warn_multi_table_flat_accessor
 from ._table_accessor import TableAccessor
 from ._viz_altair_widget import AltairWidget
@@ -84,6 +86,7 @@ def mod_ui(*, preload_viz: bool = False, **kwargs):
             ui.include_js(js_path),
         ),
         tag,
+        handoff_panel_ui(),
         preload_viz_deps_ui() if preload_viz else None,
     )
 
@@ -258,6 +261,7 @@ def mod_server(
             update_dashboard=update_dashboard,
             reset_dashboard=reset_dashboard,
             visualize=on_visualize,
+            handoff_available=True,
             tools=tools,
         )
 
@@ -322,6 +326,15 @@ def mod_server(
         client=chat,
         greeting=greeting_arg,
         history=history,
+    )
+
+    handoff_server(
+        input,
+        session,
+        chat,
+        data_sources=data_sources,
+        executor=executor,
+        shinychat_chat=shinychat_chat,
     )
 
     # Skipped when `history` is already in bookmark mode: shinychat_chat.history

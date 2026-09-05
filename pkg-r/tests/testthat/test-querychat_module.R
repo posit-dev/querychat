@@ -310,6 +310,121 @@ test_that("mod_ui() passes enable_cancel through to chat_ui without warning", {
   expect_false(isTRUE(captured$enable_cancel))
 })
 
+describe("mod_ui()", {
+  it("mounts both dependencies and one closed namespaced handoff panel", {
+    local_mocked_bindings(
+      chat_ui = function(id, ...) {
+        htmltools::div(id = id, class = "mock-chat")
+      },
+      .package = "shinychat"
+    )
+
+    ui <- mod_ui("module")
+    markup <- as.character(ui)
+
+    expect_identical(ui[[1]]$name, "querychat")
+    expect_identical(ui[[2]]$name, "querychat-handoff")
+    expect_identical(ui[[2]]$script, "handoff.js")
+    expect_identical(ui[[2]]$stylesheet, "handoff.css")
+    expect_identical(
+      lengths(regmatches(
+        markup,
+        gregexpr(
+          'id="module-handoff_root"',
+          markup,
+          fixed = TRUE
+        )
+      )),
+      1L
+    )
+    expect_identical(
+      lengths(regmatches(
+        markup,
+        gregexpr(
+          'id="module-handoff_source_editor"',
+          markup,
+          fixed = TRUE
+        )
+      )),
+      1L
+    )
+    expect_no_match(
+      markup,
+      "querychat-handoff-panel open",
+      fixed = TRUE
+    )
+  })
+})
+
+describe("mod_server() handoff startup", {
+  it("builds a handoff-aware session client and starts after chat_server", {
+    skip_if_no_dataframe_engine()
+    ds <- local_data_frame_source(new_test_df(), engine = "sqlite")
+    executor <- build_query_executor(list(test_table = ds))
+    withr::defer(executor$cleanup())
+    events <- character()
+    captured_client_args <- NULL
+    captured_handoff_args <- NULL
+    pre_built_client <- structure(list(), class = c("MockChat", "Chat"))
+    chat_module <- mock_chat_server_result(pre_built_client)
+
+    client_factory <- function(...) {
+      events <<- c(events, "client")
+      captured_client_args <<- list(...)
+      pre_built_client
+    }
+    local_mocked_bindings(
+      chat_server = function(id, client, ...) {
+        events <<- c(events, "chat_server")
+        chat_module
+      },
+      .package = "shinychat"
+    )
+    local_mock_chat_restore()
+    local_mocked_bindings(
+      handoff_server = function(...) {
+        events <<- c(events, "handoff_server")
+        captured_handoff_args <<- list(...)
+        invisible(NULL)
+      },
+      .package = "querychat"
+    )
+
+    shiny::testServer(
+      mod_server,
+      args = list(
+        id = "test",
+        data_sources = list(test_table = ds),
+        executor = executor,
+        greeting = "Hello",
+        client = client_factory,
+        tools = "query",
+        history = TRUE
+      ),
+      {
+        expect_identical(
+          events[seq_len(3L)],
+          c("client", "chat_server", "handoff_server")
+        )
+        expect_identical(
+          captured_client_args$handoff_available,
+          TRUE
+        )
+        expect_identical(captured_handoff_args$chat, pre_built_client)
+        expect_identical(
+          captured_handoff_args$chat_module,
+          chat_module
+        )
+        expect_identical(
+          captured_handoff_args$data_sources,
+          list(test_table = ds)
+        )
+        expect_identical(captured_handoff_args$executor, executor)
+      }
+    )
+  })
+})
+
 test_that("restored viz widgets survive a second bookmark cycle", {
   skip_if_no_dataframe_engine()
 
@@ -698,19 +813,16 @@ test_that("mod_server() registers table/viz state with both bookmark and history
 
   local_mocked_bindings(
     chat_server = function(id, client, ...) {
-      list(
-        client = client,
-        history = list(
-          on_save = function(fn) {
-            history_save_fn <<- fn
-            invisible(fn)
-          },
-          on_restore = function(fn) {
-            history_restore_fn <<- fn
-            invisible(fn)
-          }
-        )
-      )
+      chat_module <- mock_chat_server_result(client)
+      chat_module$history$on_save <- function(fn) {
+        history_save_fn <<- fn
+        invisible(fn)
+      }
+      chat_module$history$on_restore <- function(fn) {
+        history_restore_fn <<- fn
+        invisible(fn)
+      }
+      chat_module
     },
     .package = "shinychat"
   )
@@ -759,16 +871,12 @@ test_that("history on_save callback returns merged values (R history contract)",
   history_save_fn <- NULL
   local_mocked_bindings(
     chat_server = function(id, client, ...) {
-      list(
-        client = client,
-        history = list(
-          on_save = function(fn) {
-            history_save_fn <<- fn
-            invisible(fn)
-          },
-          on_restore = function(fn) invisible(fn)
-        )
-      )
+      chat_module <- mock_chat_server_result(client)
+      chat_module$history$on_save <- function(fn) {
+        history_save_fn <<- fn
+        invisible(fn)
+      }
+      chat_module
     },
     .package = "shinychat"
   )
@@ -803,7 +911,13 @@ test_that("history on_save callback returns merged values (R history contract)",
   )
 })
 
-test_that("history on_save callback works without an active reactive context", {
+test_that("history on_save callback works with no active reactive context", {
+  # A real ExtendedTask promise continuation (e.g. a handoff generation
+  # commit calling `chat_module$history$save()`) resumes with no active
+  # reactive context. Reproduce that here by calling the captured callback
+  # only after testServer()'s own reactive context has been torn down:
+  # reading a reactiveVal without `isolate()` there raises "Operation not
+  # allowed without an active reactive context."
   skip_if_no_dataframe_engine()
 
   ds <- local_data_frame_source(new_test_df())
@@ -817,16 +931,12 @@ test_that("history on_save callback works without an active reactive context", {
   history_save_fn <- NULL
   local_mocked_bindings(
     chat_server = function(id, client, ...) {
-      list(
-        client = client,
-        history = list(
-          on_save = function(fn) {
-            history_save_fn <<- fn
-            invisible(fn)
-          },
-          on_restore = function(fn) invisible(fn)
-        )
-      )
+      chat_module <- mock_chat_server_result(client)
+      chat_module$history$on_save <- function(fn) {
+        history_save_fn <<- fn
+        invisible(fn)
+      }
+      chat_module
     },
     .package = "shinychat"
   )
@@ -851,12 +961,13 @@ test_that("history on_save callback works without an active reactive context", {
           title = "One row"
         )
       )
-      # Called bare, as shinychat's promise handler would (no reactive context).
-      expect_no_error(result <- history_save_fn(list()))
-      expect_equal(
-        result$querychat_tables$test_table$sql,
-        "SELECT * FROM test_table WHERE id = 1"
-      )
     }
+  )
+
+  # Called bare, as shinychat's promise handler would (no reactive context).
+  expect_no_error(result <- history_save_fn(list()))
+  expect_equal(
+    result$querychat_tables$test_table$sql,
+    "SELECT * FROM test_table WHERE id = 1"
   )
 })

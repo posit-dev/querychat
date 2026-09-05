@@ -25,8 +25,9 @@ Imports:
     bsicons,
     bslib (>= 0.11.0),
     cli,
+    coro,
     DBI,
-    ellmer (>= 0.4.1),
+    ellmer (> 0.5.0),
     htmltools,
     jsonlite,
     lifecycle,
@@ -38,7 +39,8 @@ Imports:
     shinychat (> 0.4.0),
     utils,
     whisker,
-    yaml
+    yaml,
+    zip
 Suggests:
     dbplyr,
     dplyr,
@@ -46,6 +48,7 @@ Suggests:
     duckdb,
     ggsql,
     knitr,
+    later,
     nanoparquet,
     palmerpenguins,
     pins,

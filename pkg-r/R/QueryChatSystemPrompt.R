@@ -122,9 +122,11 @@ QueryChatSystemPrompt <- R6::R6Class(
     #'
     #' @param tools Character vector of tool names to enable (e.g.,
     #'   `c("query", "update"))`, or `NULL` for no tools.
+    #' @param handoff_available Whether the Shiny-only handoff command is
+    #'   available.
     #'
     #' @return A character string containing the rendered system prompt.
-    render = function(tools) {
+    render = function(tools, handoff_available = FALSE) {
       # data_sources may be empty for a greeting with no included tables.
       has_sources <- length(self$data_sources) > 0
       first_source <- if (has_sources) self$data_sources[[1]] else NULL
@@ -165,6 +167,7 @@ QueryChatSystemPrompt <- R6::R6Class(
         has_tool_query = if ("query" %in% tools) "true",
         has_tool_visualize = if ("visualize" %in% tools) "true",
         include_query_guidelines = if (length(tools) > 0) "true",
+        handoff_available = handoff_available,
         multi_table = length(self$data_sources) > 1
       )
 

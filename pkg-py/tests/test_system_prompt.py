@@ -226,6 +226,19 @@ class TestQueryChatSystemPromptInit:
 class TestQueryChatSystemPromptRender:
     """Tests for QueryChatSystemPrompt.render() method."""
 
+    def test_handoff_guidance_only_rendered_when_available(self, sample_data_source):
+        prompt = QueryChatSystemPrompt(
+            prompt_template=None,
+            data_source=sample_data_source,
+        )
+
+        shiny_prompt = prompt.render(tools=None, handoff_available=True)
+        public_prompt = prompt.render(tools=None)
+
+        assert "/handoff" in shiny_prompt
+        assert "save, share, export, package, reproduce, or continue" in shiny_prompt
+        assert "/handoff" not in public_prompt
+
     def test_render_with_both_tools(self, sample_data_source, sample_prompt_template):
         """Test rendering with both tools enabled."""
         prompt = QueryChatSystemPrompt(

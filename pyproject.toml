@@ -21,8 +21,8 @@ maintainers = [
 ]
 dependencies = [
     "duckdb",
-    "shiny>=1.6.2",
-    "shinychat @ git+https://github.com/posit-dev/shinychat.git@main",
+    "shiny>=1.6.3",
+    "shinychat>=0.7.0",
     "htmltools",
     "chatlas>=0.21.2",
     "narwhals>=2.2.0",
@@ -30,6 +30,7 @@ dependencies = [
     "sqlalchemy>=2.0.0", # Using 2.0+ for improved type hints and API
     "great-tables>=0.16.0",
     "pyyaml",
+    "nbformat>=5.10.4",
 ]
 classifiers = [
     "Programming Language :: Python",
@@ -73,13 +74,15 @@ required-environments = [
     "sys_platform == 'darwin'",
 ]
 
-
 [tool.hatch.metadata]
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["pkg-py/src/querychat"]
 include = ["py.typed"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"pkg-py/src/querychat/handoff-formats.yml" = "querychat/handoff-formats.yml"
 
 [tool.hatch.build.targets.sdist]
 include = ["pkg-py/src/querychat", "pkg-py/LICENSE", "pkg-py/README.md"]

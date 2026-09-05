@@ -188,7 +188,8 @@ The package has deprecated the old functional API (`querychat_init()`, `querycha
 1. Always test changes with both R and Python implementations to maintain consistency
 2. Use the provided Make commands for development tasks
 3. Follow the existing code style (ruff for Python, `air format .` for R)
-4. Ask before running tests (the user may want to run them themselves)
+4. Run normal local tests and checks autonomously. Ask first only for destructive,
+   external, or unusually expensive commands.
 5. Update documentation when adding new features
 6. Always ask about file names before writing any new code
 7. Always pay attention to your working directory when running commands, especially when working in a sub-package.

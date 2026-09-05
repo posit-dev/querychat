@@ -276,7 +276,7 @@ copy_handoff_bundle_files <- function(bundled_files) {
   if (!all(vapply(bundled_files, is.raw, logical(1)))) {
     cli::cli_abort("{.arg bundled_files} values must be raw vectors.")
   }
-  lapply(bundled_files, \(value) value[])
+  bundled_files
 }
 
 handoff_bundle_byte_size <- function(bundled_files) {

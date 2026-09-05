@@ -185,7 +185,7 @@ handoff_server <- function(
   output$handoff_download <- shiny::downloadHandler(
     filename = function() "handoff.zip",
     content = function(file) {
-      data <- orchestrator$build_download(active_handoff_id())
+      data <- orchestrator$build_download(shiny::isolate(active_handoff_id()))
       if (!is.null(data)) {
         writeBin(data, file)
       }

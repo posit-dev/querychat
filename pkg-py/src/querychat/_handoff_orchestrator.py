@@ -192,6 +192,15 @@ def build_handoff_zip(
     readme: str,
     bundled_files: dict[str, bytes],
 ) -> bytes:
+    for name in [source_filename, *bundled_files]:
+        if (
+            "/" in name
+            or "\\" in name
+            or name in (".", "..")
+            or (len(name) > 1 and name[1] == ":")
+        ):
+            raise ValueError(f"Invalid file name in handoff bundle: {name!r}")
+
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
         zf.writestr(source_filename, source)
@@ -232,7 +241,10 @@ class HandoffOrchestrator:
     def restore_snapshot(self, saved: list[dict]) -> None:
         """Rebuild the handoff store from persisted handoff metadata."""
         states = [HandoffState.model_validate(data) for data in saved]
-        self.store.replace(states)
+        removed = self.store.replace(states)
+        self._discard_unreferenced_bundles(
+            [state.bundle_id for state in removed]
+        )
 
     def open_modal(self) -> list[GalleryItem]:
         """Extract gallery items from chat history, stash them, and show the modal."""

@@ -276,6 +276,12 @@ pkg-py/docs/_screenshots/
 # Playwright MCP
 .playwright-mcp/
 
+# Local E2E scratch artifacts
+.e2e-scratch/
+E2E_FINDINGS.md
+E2E_COVERAGE_GAPS.md
+.shinychat/
+
 # Git worktrees
 .worktrees/
 js/node_modules/

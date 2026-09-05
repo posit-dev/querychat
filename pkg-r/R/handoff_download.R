@@ -74,7 +74,19 @@ build_handoff_readme <- function(
   paste0(paste(sections, collapse = "\n\n"), "\n")
 }
 
+check_zip_entry_names <- function(names) {
+  bad <- grepl("[/\\\\]", names) |
+    names %in% c(".", "..") |
+    grepl("^[A-Za-z]:", names)
+  if (any(bad)) {
+    cli::cli_abort("Invalid file name in handoff bundle: {.val {names[bad]}}.")
+  }
+  invisible(NULL)
+}
+
 build_handoff_zip <- function(source, source_filename, readme, bundled_files) {
+  check_zip_entry_names(c(source_filename, names(bundled_files)))
+
   dir <- tempfile("querychat-handoff-")
   dir.create(dir)
   on.exit(unlink(dir, recursive = TRUE, force = TRUE), add = TRUE)

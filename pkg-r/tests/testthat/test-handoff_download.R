@@ -155,3 +155,24 @@ describe("build_handoff_zip()", {
     )
   })
 })
+
+test_that("build_handoff_zip rejects unsafe entry names", {
+  expect_error(
+    build_handoff_zip(
+      source = "x",
+      source_filename = "handoff.py",
+      readme = "# R",
+      bundled_files = list("../evil.csv" = charToRaw("a"))
+    ),
+    "Invalid file name"
+  )
+  expect_error(
+    build_handoff_zip(
+      source = "x",
+      source_filename = "..",
+      readme = "# R",
+      bundled_files = list()
+    ),
+    "Invalid file name"
+  )
+})

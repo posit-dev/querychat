@@ -66,3 +66,22 @@ def test_readme_describes_unbundled_data_as_user_supplied_access():
         "before running." in readme
     )
     assert "requires live data access and credentials" not in readme
+
+
+def test_zip_rejects_unsafe_entry_names():
+    import pytest
+
+    with pytest.raises(ValueError, match="Invalid file name"):
+        build_handoff_zip(
+            source="x",
+            source_filename="handoff.py",
+            readme="# R",
+            bundled_files={"../evil.csv": b"a"},
+        )
+    with pytest.raises(ValueError, match="Invalid file name"):
+        build_handoff_zip(
+            source="x",
+            source_filename="..",
+            readme="# R",
+            bundled_files={},
+        )

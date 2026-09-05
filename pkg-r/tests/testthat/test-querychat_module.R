@@ -396,6 +396,54 @@ test_that("restored viz widgets survive a second bookmark cycle", {
   )
 })
 
+test_that("onBookmark callback tolerates NULL state$values", {
+  skip_if_no_dataframe_engine()
+
+  ds <- local_data_frame_source(new_test_df())
+  executor <- build_query_executor(list(test_table = ds))
+  withr::defer(executor$cleanup())
+  bookmark_fn <- NULL
+
+  client_factory <- function(...) {
+    structure(list(), class = c("MockChat", "Chat"))
+  }
+
+  local_mocked_bindings(
+    chat_server = function(id, client, ...) mock_chat_server_result(client),
+    .package = "shinychat"
+  )
+  local_mock_chat_restore()
+  local_mocked_bindings(
+    onBookmark = function(fun, session = NULL) {
+      bookmark_fn <<- fun
+    },
+    onRestore = function(fun, session = NULL) NULL,
+    .package = "shiny"
+  )
+
+  shiny::testServer(
+    mod_server,
+    args = list(
+      id = "test",
+      data_sources = list(test_table = ds),
+      executor = executor,
+      greeting = "Hello",
+      client = client_factory,
+      tools = "query",
+      history = TRUE
+    ),
+    {
+      expect_true(is.function(bookmark_fn))
+
+      state <- new.env(parent = emptyenv())
+      state$values <- NULL
+      expect_no_error(shiny::isolate(bookmark_fn(state)))
+      expect_true(is.list(state$values))
+      expect_true("querychat_tables" %in% names(state$values))
+    }
+  )
+})
+
 test_that("mod_server() calls chat_server('chat', ...) with the pre-built client", {
   skip_if_no_dataframe_engine()
 

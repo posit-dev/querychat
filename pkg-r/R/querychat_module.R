@@ -209,7 +209,10 @@ mod_server <- function(
     shiny::setBookmarkExclude("chat_update")
 
     shiny::onBookmark(function(state) {
-      state$values <- utils::modifyList(state$values, build_state_snapshot())
+      state$values <- utils::modifyList(
+        state$values %||% list(),
+        build_state_snapshot()
+      )
     })
 
     shiny::onRestore(function(state) {

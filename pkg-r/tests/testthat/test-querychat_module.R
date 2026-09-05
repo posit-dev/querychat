@@ -377,7 +377,6 @@ test_that("restored viz widgets survive a second bookmark cycle", {
 
       shiny::isolate(callbacks$visualize(saved[[1]]))
 
-      # ShinySaveState$values is an environment, not a list.
       first_state <- new.env(parent = emptyenv())
       first_state$values <- new.env(parent = emptyenv())
       shiny::isolate(bookmark_fn(first_state))
@@ -852,10 +851,7 @@ test_that("history on_save callback works without an active reactive context", {
           title = "One row"
         )
       )
-      # shinychat invokes on_save from a promise handler with no reactive
-      # context. testServer's expression provides no reactive consumer context
-      # either, so calling the callback bare here reproduces that situation
-      # (while the module session is still alive).
+      # Called bare, as shinychat's promise handler would (no reactive context).
       expect_no_error(result <- history_save_fn(list()))
       expect_equal(
         result$querychat_tables$test_table$sql,

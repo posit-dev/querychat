@@ -852,13 +852,15 @@ test_that("history on_save callback works without an active reactive context", {
           title = "One row"
         )
       )
+      # shinychat invokes on_save from a promise handler with no reactive
+      # context. testServer's expression provides no reactive consumer context
+      # either, so calling the callback bare here reproduces that situation
+      # (while the module session is still alive).
+      expect_no_error(result <- history_save_fn(list()))
+      expect_equal(
+        result$querychat_tables$test_table$sql,
+        "SELECT * FROM test_table WHERE id = 1"
+      )
     }
-  )
-
-  # shinychat invokes on_save from a promise handler with no reactive context.
-  expect_no_error(result <- history_save_fn(list()))
-  expect_equal(
-    result$querychat_tables$test_table$sql,
-    "SELECT * FROM test_table WHERE id = 1"
   )
 })

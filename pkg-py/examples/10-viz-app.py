@@ -4,8 +4,6 @@ from querychat.data import titanic
 from querychat.express import QueryChat
 from shiny.express import ui
 
-app_opts(bookmark_store="server")
-
 greeting = Path(__file__).parent / "greeting-viz.md"
 
 # Omits "update" tool — this demo focuses on query + visualization only

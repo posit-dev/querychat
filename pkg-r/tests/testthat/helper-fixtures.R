@@ -457,11 +457,21 @@ MockHandoffChat <- R6::R6Class(
       turns = list(),
       system_prompt = NULL
     ) {
-      super$initialize(
-        ellmer::Provider("test", "test", "test"),
-        model = "test",
-        system_prompt = system_prompt
-      )
+      # See new_mock_chat(): ellmer 0.5.0 moved model details out of
+      # `Provider` into a separate `Model` class.
+      if (exists("Model", where = asNamespace("ellmer"), inherits = FALSE)) {
+        super$initialize(
+          ellmer::Provider("test", "test"),
+          model = ellmer::Model(name = "test"),
+          system_prompt = system_prompt
+        )
+      } else {
+        super$initialize(
+          ellmer::Provider("test", "test", "test"),
+          model = "test",
+          system_prompt = system_prompt
+        )
+      }
       self$set_turns(turns)
 
       private$state <- new.env(parent = emptyenv())
@@ -546,7 +556,6 @@ sync_promise <- function(promise, timeout = 5) {
     stop(error)
   }
   value
-  new_mock_chat(MockChat)
 }
 
 # ellmer 0.5.0 moved model details out of `Provider` and into a new `Model`

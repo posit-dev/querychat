@@ -9,9 +9,13 @@ The sections below describe the environment the handoff must work in and the wor
 The visualizations in this session were generated with ggsql, which extends SQL with VISUALISE/DRAW clauses for creating charts. The ggsql query that produced each selected visualization is included below.
 
 {{#format_quarto}}
-Use native `{ggsql}` code chunks. No data connection setup is needed — the ggsql Quarto engine handles it implicitly:
+Use native `{ggsql}` code chunks. The ggsql knitr engine must be registered before the first `{ggsql}` chunk or the chart is silently dropped at render time — registration happens when the package is loaded, so the setup chunk MUST contain `library(ggsql)`:
 
 ````
+```{r setup}
+library(ggsql)
+```
+
 ```{ggsql}
 SELECT category, SUM(amount) as total
 FROM my_table
@@ -20,6 +24,8 @@ VISUALISE category, total
 DRAW bar
 ```
 ````
+
+ggsql chunks run against an implicit in-memory DuckDB database. Bundled CSV files can be queried directly by path (e.g. `FROM 'mtcars.csv'`) — no separate data connection setup is needed.
 {{/format_quarto}}
 {{#format_marimo}}
 Use the ggsql Python API:

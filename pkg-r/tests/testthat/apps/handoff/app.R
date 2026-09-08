@@ -3,7 +3,6 @@ library(bslib)
 library(querychat)
 
 ContentJsonClass <- asNamespace("ellmer")[["ContentJson"]]
-ModelClass <- asNamespace("ellmer")[["Model"]]
 
 # Wrap a value in a promise that resolves after `delay` seconds so streamed
 # chunks arrive as separate WebSocket frames instead of all at once, letting
@@ -159,8 +158,8 @@ HandoffTestChat <- R6::R6Class(
 new_handoff_test_chat <- function(state) {
   HandoffTestChat$new(
     state,
-    ellmer::Provider("test", "test", "test"),
-    model = ModelClass(name = "test", params = list(), extra_args = list())
+    ellmer::Provider("test", "test"),
+    model = ellmer::Model(name = "test")
   )
 }
 

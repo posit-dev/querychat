@@ -457,21 +457,11 @@ MockHandoffChat <- R6::R6Class(
       turns = list(),
       system_prompt = NULL
     ) {
-      # See new_mock_chat(): ellmer 0.5.0 moved model details out of
-      # `Provider` into a separate `Model` class.
-      if (exists("Model", where = asNamespace("ellmer"), inherits = FALSE)) {
-        super$initialize(
-          ellmer::Provider("test", "test"),
-          model = ellmer::Model(name = "test"),
-          system_prompt = system_prompt
-        )
-      } else {
-        super$initialize(
-          ellmer::Provider("test", "test", "test"),
-          model = "test",
-          system_prompt = system_prompt
-        )
-      }
+      super$initialize(
+        ellmer::Provider("test", "test"),
+        model = ellmer::Model(name = "test"),
+        system_prompt = system_prompt
+      )
       self$set_turns(turns)
 
       private$state <- new.env(parent = emptyenv())
@@ -558,20 +548,12 @@ sync_promise <- function(promise, timeout = 5) {
   value
 }
 
-# ellmer 0.5.0 moved model details out of `Provider` and into a new `Model`
-# class: `Provider()` no longer takes `model` as its second positional
-# argument, and `Chat$new()` now requires a separate `model` argument. `Model`
-# doesn't exist before 0.5.0, so branch on its presence to support both.
 new_mock_chat <- function(MockChat, ...) {
-  if (exists("Model", where = asNamespace("ellmer"), inherits = FALSE)) {
-    MockChat$new(
-      ellmer::Provider("test", "test"),
-      model = ellmer::Model(name = "test"),
-      ...
-    )
-  } else {
-    MockChat$new(ellmer::Provider("test", "test", "test"), ...)
-  }
+  MockChat$new(
+    ellmer::Provider("test", "test"),
+    model = ellmer::Model(name = "test"),
+    ...
+  )
 }
 
 # shinychat::chat_restore() validates that `client` is an ellmer::Chat() R6

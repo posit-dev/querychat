@@ -39,6 +39,18 @@ HandoffOrchestrator <- R6::R6Class(
       private$discard_unreferenced_bundles(
         lapply(removed, \(state) state@bundle_id)
       )
+      # Pills are appended to the chat out-of-band (not part of an ellmer
+      # turn), so shinychat's history record never contains them and a
+      # reload would leave restored handoffs unreachable. Re-append a pill
+      # for each restored state, after the store replace succeeds so a
+      # validation failure cannot produce orphaned pills.
+      for (state in states) {
+        private$view$append_pill(
+          state@handoff_id,
+          state@handoff_type,
+          state@summary
+        )
+      }
       invisible(NULL)
     },
 

@@ -3,15 +3,12 @@
 # HandoffTestChat that returns queued, deterministic responses instead of
 # calling a real model).
 #
-# NOTE: restore-after-reload is intentionally not covered here. The pinned
-# `shinychat@dev/querychat-pr311-history-save` branch's history object
-# exposes only `on_save`/`on_restore` -- no `save()` method (confirmed via
-# `is.function(chat_module$history$save)` returning FALSE at runtime) -- so
-# `handoff_server()` skips the post-commit history save on this build. The
-# underlying generation/revision still commits correctly, but the
-# chat-history round trip that restore relies on cannot be exercised
-# reliably right now. See the PR description for this as a concrete release
-# blocker.
+# NOTE: restore-after-reload lives in the "handoff restore" describe block
+# at the bottom of this file, driven against `apps/handoff-restore/app.R`
+# (single module, browser-mode history enabled). It relies on shinychat
+# >= 0.5.0, whose history object exposes `save()` -- earlier pinned builds
+# exposed only `on_save`/`on_restore`, so `handoff_server()` skipped the
+# post-commit history save and restore could not be exercised.
 
 local_handoff_app <- function(env = parent.frame()) {
   app <- shinytest2::AppDriver$new(
@@ -329,6 +326,68 @@ describe("handoff generation", {
     expect_setequal(
       zip::zip_list(zip_path)$filename,
       c("handoff.qmd", "README.md", "sales.csv")
+    )
+  })
+})
+
+describe("handoff restore", {
+  local_handoff_restore_app <- function(env = parent.frame()) {
+    app <- shinytest2::AppDriver$new(
+      test_path("apps", "handoff-restore"),
+      name = "handoff-restore",
+      height = 1000,
+      width = 1400,
+      load_timeout = 15000
+    )
+    withr::defer(app$stop(), envir = env)
+    # Browser-mode history writes a `.shinychat/` store next to the app.
+    withr::defer(
+      unlink(
+        test_path("apps", "handoff-restore", ".shinychat"),
+        recursive = TRUE
+      ),
+      envir = env
+    )
+    app
+  }
+
+  it("re-appends the handoff pill after a page reload", {
+    app <- local_handoff_restore_app()
+
+    generate_handoff(app, "mod1")
+    expect_true(app$get_js(
+      "!!document.querySelector('.querychat-handoff-pill')"
+    ))
+
+    # Let the post-commit history save settle before reloading.
+    app$wait_for_idle(timeout = 8000)
+    Sys.sleep(1)
+
+    app$run_js("window.location.reload()")
+    # The reload destroys the JS execution context mid-poll, so
+    # wait_for_idle()/wait_for_js() can error spuriously; poll by hand
+    # until the restored conversation (and pill) finishes replaying.
+    pill_restored <- FALSE
+    for (i in seq_len(60)) {
+      Sys.sleep(0.5)
+      pill_restored <- isTRUE(tryCatch(
+        app$get_js("!!document.querySelector('.querychat-handoff-pill')"),
+        error = function(e) FALSE
+      ))
+      if (pill_restored) {
+        break
+      }
+    }
+    expect_true(pill_restored)
+
+    # The restored pill must reopen the panel with the generated source.
+    app$click(selector = ".querychat-handoff-pill")
+    Sys.sleep(0.5)
+    expect_true(panel_open(app, "mod1"))
+    expect_match(
+      source_editor_value(app, "mod1"),
+      "sales-by-region",
+      fixed = TRUE
     )
   })
 })

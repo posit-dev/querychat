@@ -351,10 +351,13 @@ describe("apply_handoff_snapshot()", {
 
     expect_identical(target_fixture$store$values(), list(saved))
     expect_null(shiny::isolate(active_handoff_id()))
+    events <- target_fixture$view$events
     expect_identical(
-      target_fixture$view$events,
-      list(list(action = "set_panel_open", open = FALSE))
+      vapply(events, function(event) event$action, character(1)),
+      c("append_pill", "set_panel_open")
     )
+    expect_identical(events[[1]]$handoff_id, "restored")
+    expect_false(events[[2]]$open)
   })
 
   it("treats a missing key as an empty snapshot", {

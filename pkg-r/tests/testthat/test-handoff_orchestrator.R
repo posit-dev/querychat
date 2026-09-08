@@ -375,6 +375,23 @@ describe("HandoffOrchestrator$restore_snapshot()", {
     expect_identical(fixture$store$snapshot(), list(restored))
   })
 
+  it("re-appends a chat pill for each restored state", {
+    fixture <- new_transaction_orchestrator(list())
+    restored <- new_revision_handoff_state("restored", source = "restored")
+
+    fixture$orchestrator$restore_snapshot(
+      list(handoff_state_record(restored))
+    )
+
+    pill_events <- Filter(
+      function(event) identical(event$action, "append_pill"),
+      fixture$view$events
+    )
+    expect_length(pill_events, 1L)
+    expect_identical(pill_events[[1]]$handoff_id, "restored")
+    expect_identical(pill_events[[1]]$summary, restored@summary)
+  })
+
   it("leaves state and bundles intact when validation fails", {
     fixture <- new_transaction_orchestrator(list())
     bundle <- fixture$bundle_store$stage(

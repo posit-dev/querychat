@@ -5,13 +5,11 @@ import math
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from chatlas.types import Content, ContentImageInline, ContentToolResult
+from chatlas.types import ContentImageInline, ContentToolResult
 
 from ._tool_names import TOOL_QUERY, TOOL_UPDATE_DASHBOARD, TOOL_VISUALIZE
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
-
     from chatlas import Turn
 
 MAX_TITLE_LENGTH = 60
@@ -43,8 +41,7 @@ def extract_gallery_items(turns: list[Turn]) -> list[GalleryItem]:
     counter = 0
 
     for turn in turns:
-        contents = turn.contents
-        for i, content in enumerate(contents):
+        for content in turn.contents:
             if not isinstance(content, ContentToolResult):
                 continue
             if content.request is None:
@@ -59,7 +56,7 @@ def extract_gallery_items(turns: list[Turn]) -> list[GalleryItem]:
                 continue
 
             if tool_name == TOOL_VISUALIZE:
-                item = extract_viz(counter, args, contents, i)
+                item = extract_viz(counter, args, content)
                 if item is not None:
                     items.append(item)
                     counter += 1
@@ -76,15 +73,14 @@ def extract_gallery_items(turns: list[Turn]) -> list[GalleryItem]:
 def extract_viz(
     index: int,
     args: dict[str, Any],
-    contents: Sequence[Content | str],
-    content_index: int,
+    result: ContentToolResult,
 ) -> VizGalleryItem | None:
     ggsql = args.get("ggsql")
     title = args.get("title", "")
     if not ggsql:
         return None
 
-    thumbnail = find_thumbnail(contents, content_index)
+    thumbnail = find_thumbnail(result)
 
     return VizGalleryItem(
         id=f"viz-{index}",
@@ -151,16 +147,15 @@ def format_cell(value: object) -> str:
     return str(value)
 
 
-def find_thumbnail(
-    contents: Sequence[Content | str], content_index: int
-) -> str | None:
-    # chatlas expands multi-part tool results, hoisting ContentImageInline
-    # out of ContentToolResult.value into the surrounding turn contents.
-    # Scan forward from the tool result for the first image, stopping at
-    # the next ContentToolResult.
-    for item in contents[content_index + 1 :]:
-        if isinstance(item, ContentToolResult):
-            break
+def find_thumbnail(result: ContentToolResult) -> str | None:
+    # The PNG preview lives inside the tool result's value: VisualizeResult
+    # sets value=[text, ContentImageInline]. chatlas only hoists images into
+    # sibling turn contents when normalizing a copy of the turns for provider
+    # submission (normalize_turn_for_provider); the stored turns inspected
+    # here keep the image nested in the value.
+    value = result.value
+    items = value if isinstance(value, (list, tuple)) else [value]
+    for item in items:
         if isinstance(item, ContentImageInline):
             return f"data:{item.image_content_type};base64,{item.data}"
     return None

@@ -55,16 +55,10 @@ def _make_update_result() -> ContentToolResult:
 
 
 def _turns_from_results(*results: ContentToolResult) -> list[Turn]:
-    # Simulate chatlas's behavior of hoisting ContentImageInline from
-    # ContentToolResult.value into the surrounding turn contents.
-    contents: list = []
-    for result in results:
-        contents.append(result)
-        if isinstance(result.value, list):
-            contents.extend(
-                item for item in result.value if isinstance(item, ContentImageInline)
-            )
-    return [Turn(role="assistant", contents=contents)]
+    # Build turns the way chatlas actually stores them: images stay nested in
+    # ContentToolResult.value. (Hoisting images into sibling turn contents
+    # only happens on a provider-bound copy via normalize_turn_for_provider.)
+    return [Turn(role="assistant", contents=list(results))]
 
 
 class TestExtractGalleryItems:
@@ -77,6 +71,19 @@ class TestExtractGalleryItems:
         assert item.title == "Sales Chart"
         assert item.ggsql == "SELECT x, y FROM t VISUALISE x, y DRAW point"
         assert item.thumbnail == "data:image/png;base64,iVBORw0KGgo="
+
+    def test_viz_thumbnail_nested_in_result_value(self):
+        # Regression: chatlas stores tool results with the ContentImageInline
+        # nested in ContentToolResult.value, not as a sibling turn content.
+        # The thumbnail must be extracted from the value.
+        result = _make_viz_result()
+        assert any(
+            isinstance(item, ContentImageInline) for item in result.value
+        )
+        turns = [Turn(role="assistant", contents=[result])]
+        items = extract_gallery_items(turns)
+        assert len(items) == 1
+        assert items[0].thumbnail == "data:image/png;base64,iVBORw0KGgo="
 
     def test_viz_without_thumbnail(self):
         turns = _turns_from_results(_make_viz_result(png_b64=None))

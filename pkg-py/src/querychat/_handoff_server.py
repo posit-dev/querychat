@@ -218,7 +218,7 @@ def handoff_server(
             raise NotifyException(str(e)) from e
         await save_handoff_revision(shinychat_chat)
 
-    @render.download(filename="handoff.zip")
+    @render.download_button(filename="handoff.zip")
     async def handoff_download():
         data = await orch.build_download(active_handoff_id.get())
         if data is not None:

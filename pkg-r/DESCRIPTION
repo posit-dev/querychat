@@ -55,7 +55,6 @@ Suggests:
     rmarkdown,
     RSQLite,
     rsvg,
-    shinytest2,
     testthat (>= 3.0.0),
     V8,
     withr

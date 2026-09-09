@@ -233,6 +233,7 @@ class QueryChatBase(Generic[IntoFrameT]):
         update_dashboard: Callable[[UpdateDashboardData], None] | None = None,
         reset_dashboard: ResetDashboardCallback | None = None,
         visualize: Callable[[VisualizeData], None] | None = None,
+        handoff_available: bool = False,
     ) -> chatlas.Chat:
         """Create a fresh, fully-configured Chat."""
         chat = self._create_client(base)
@@ -240,7 +241,10 @@ class QueryChatBase(Generic[IntoFrameT]):
         resolved_tools = normalize_tools(tools, default=self.tools)
 
         if self._system_prompt is not None:
-            chat.system_prompt = self._system_prompt.render(resolved_tools)
+            chat.system_prompt = self._system_prompt.render(
+                resolved_tools,
+                handoff_available=handoff_available,
+            )
 
         if resolved_tools is None:
             return chat

@@ -86,4 +86,54 @@ release_bullets <- function() {
 suppress_rcmdcheck <- function() {
   S7::S7_class
   whisker::whisker.render
+  # coro is used inside R6 method definitions (handoff_orchestrator.R), which
+  # R CMD check's static analysis can't see in the installed package.
+  coro::async
 }
+
+# On R < 4.3, `@` is imported from S7 (see the conditional importFrom above),
+# so codetools reads S7 property accesses like `x@label` as regular calls and
+# flags the property names as unbound globals ("no visible binding" NOTE).
+utils::globalVariables(c(
+  "arguments",
+  "bundle_id",
+  "bundled_files",
+  "bundled_tables",
+  "contents",
+  "data",
+  "data_instructions",
+  "description",
+  "directions",
+  "editor_language",
+  "error",
+  "file_extension",
+  "format_id",
+  "freeform",
+  "ggsql",
+  "handoff_id",
+  "handoff_type",
+  "icon",
+  "id",
+  "install_instructions",
+  "items",
+  "label",
+  "language",
+  "name",
+  "preview_html",
+  "properties",
+  "referenced_tables",
+  "request",
+  "run_instructions",
+  "selected_ids",
+  "sql",
+  "system_prompt",
+  "targets",
+  "text",
+  "thumbnail",
+  "title",
+  "turns",
+  "type",
+  "type_id",
+  "value",
+  "values"
+))

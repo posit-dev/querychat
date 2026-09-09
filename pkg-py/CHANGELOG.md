@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### New features
+
+* New `/handoff` slash command: turn selected query and visualization results from your chat session into a downloadable Quarto dashboard, Shiny app, or marimo notebook — with AI-assisted revision, bundled data, and handoffs that survive chat history restores and Shiny bookmarks.
+
 ## [0.7.0] - 2026-07-10
 
 ### New features

@@ -1,20 +1,27 @@
 # Main module UI function
 mod_ui <- function(id, ...) {
+  ns <- shiny::NS(id)
   htmltools::tagList(
-    htmltools::htmlDependency(
-      "querychat",
-      version = "0.0.1",
-      package = "querychat",
-      src = "htmldep",
-      script = "querychat.js",
-      stylesheet = "styles.css"
-    ),
+    querychat_dependency(),
+    handoff_html_dependency(),
     shinychat::chat_ui(
-      shiny::NS(id, "chat"),
+      ns("chat"),
       height = "100%",
       class = "querychat",
       ...
-    )
+    ),
+    handoff_panel_ui(ns)
+  )
+}
+
+querychat_dependency <- function() {
+  htmltools::htmlDependency(
+    "querychat",
+    version = "0.0.1",
+    package = "querychat",
+    src = "htmldep",
+    script = "querychat.js",
+    stylesheet = "styles.css"
   )
 }
 
@@ -95,6 +102,7 @@ mod_server <- function(
       reset_dashboard = reset_query,
       visualize = on_visualize,
       tools = tools,
+      handoff_available = TRUE,
       session = session
     )
 
@@ -118,6 +126,16 @@ mod_server <- function(
       pre_built_client,
       greeting = greeting_arg,
       history = history
+    )
+
+    handoff_server(
+      input = input,
+      output = output,
+      session = session,
+      chat = pre_built_client,
+      data_sources = data_sources,
+      executor = executor,
+      chat_module = chat_module
     )
 
     # Skipped when `history` is already in bookmark mode: chat_server() has
@@ -158,13 +176,23 @@ mod_server <- function(
     )
 
     build_state_snapshot <- function() {
-      # on_save can run from a promise handler with no reactive context.
+      # on_save can run from a promise handler with no reactive context, and
+      # can even outlive the session (e.g. an ExtendedTask settling after the
+      # page was closed). shiny 1.14.0 destroys a session's reactives on
+      # close, making them unreadable; skip those tables rather than failing
+      # the save, so any previously saved state is kept.
       table_states <- list()
       for (name in names(tables)) {
-        table_states[[name]] <- list(
-          sql = shiny::isolate(tables[[name]]$sql()),
-          title = shiny::isolate(tables[[name]]$title())
+        tbl_state <- tryCatch(
+          list(
+            sql = shiny::isolate(tables[[name]]$sql()),
+            title = shiny::isolate(tables[[name]]$title())
+          ),
+          `shiny.destroyed.error` = function(e) NULL
         )
+        if (!is.null(tbl_state)) {
+          table_states[[name]] <- tbl_state
+        }
       }
       snapshot <- list(querychat_tables = table_states)
       if (length(viz_widgets) > 0) {

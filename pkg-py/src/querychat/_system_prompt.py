@@ -165,12 +165,18 @@ class QueryChatSystemPrompt:
 
         return "\n\n".join(blocks)
 
-    def render(self, tools: set[str] | None) -> str:
+    def render(
+        self,
+        tools: set[str] | None,
+        *,
+        handoff_available: bool = False,
+    ) -> str:
         """
         Render system prompt with tool configuration.
 
         Args:
             tools: Normalized set of tool groups to enable (already normalized by caller)
+            handoff_available: Whether the Shiny-only handoff command is available.
 
         Returns:
             Fully rendered system prompt string
@@ -208,6 +214,7 @@ class QueryChatSystemPrompt:
             "has_tool_visualize": has_viz_tool(tools),
             "include_query_guidelines": len(tools or ()) > 0,
             "multi_table": len(self._data_sources) > 1,
+            "handoff_available": handoff_available,
         }
 
         prompts_dir = str(Path(__file__).parent / "prompts")

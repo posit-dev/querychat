@@ -208,8 +208,6 @@ def _start_streamlit_app_subprocess(
     Uses subprocess to run Streamlit which works reliably in CI.
     Output is redirected to DEVNULL to avoid pipe buffer deadlocks.
     """
-    import sys
-
     process = subprocess.Popen(
         [
             sys.executable,

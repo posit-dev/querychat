@@ -634,14 +634,15 @@ class HandoffOrchestrator:
             raise HandoffSnapshotUnavailableError(
                 "This handoff data snapshot is unavailable."
             )
-        bundled_files: dict[str, bytes] = {}
-        for name, source in sources.items():
-            try:
-                bundled_files[f"{name}.csv"] = export_csv(source)
-            except Exception as error:
-                raise HandoffSnapshotUnavailableError(
-                    "This handoff data snapshot could not be regenerated."
-                ) from error
+        try:
+            bundled_files = {
+                f"{name}.csv": export_csv(source)
+                for name, source in sources.items()
+            }
+        except Exception as error:
+            raise HandoffSnapshotUnavailableError(
+                "This handoff data snapshot could not be regenerated."
+            ) from error
         return bundled_files
 
     async def build_download(self, handoff_id: str | None) -> bytes | None:

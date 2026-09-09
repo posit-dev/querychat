@@ -1164,10 +1164,14 @@ check_handoff_content_record <- function(record) {
   )
   check_plain_list(record$props, "Ellmer content record `props`", named = TRUE)
 
-  if (
-    identical(record$class, "ellmer::ContentToolResult") &&
-      "request" %in% names(record$props)
-  ) {
+  if (identical(record$class, "ellmer::ContentToolResult")) {
+    # Validate explicitly: replaying a result without its request fails deep
+    # inside ellmer with an error message that varies by R version.
+    if (!"request" %in% names(record$props)) {
+      cli::cli_abort(
+        "Ellmer ContentToolResult record is missing its `request` prop."
+      )
+    }
     check_plain_list(
       record$props$request,
       "Ellmer ContentToolResult prop `request`",

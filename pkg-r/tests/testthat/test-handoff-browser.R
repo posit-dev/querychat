@@ -55,6 +55,17 @@ populate_gallery <- function(app, module_id) {
 
 open_handoff_modal <- function(app, module_id, wait = TRUE) {
   send_chat_message(app, module_id, "/handoff", wait = wait)
+  wait_for_handoff_modal(app, module_id)
+}
+
+# The modal is shown server-side while the /handoff slash command is
+# processed, but wait_for_idle() can return before it flushes on a loaded
+# runner -- wait for the modal root explicitly.
+wait_for_handoff_modal <- function(app, module_id, timeout = 15000) {
+  app$wait_for_js(
+    sprintf("!!document.getElementById('%s-handoff_modal_root')", module_id),
+    timeout = timeout
+  )
 }
 
 select_language <- function(app, module_id, language) {
@@ -146,8 +157,9 @@ describe("handoff modal", {
     app <- local_handoff_app()
 
     populate_gallery(app, "mod1")
+    # open_handoff_modal() waits for the modal root; the recommendation
+    # resolves ~0.4s later, so the gallery is still in its loading state.
     open_handoff_modal(app, "mod1", wait = FALSE)
-    Sys.sleep(0.15)
 
     expect_true(app$get_js(
       "document.querySelector('#mod1-handoff_modal_root .querychat-handoff-gallery')?.classList.contains('loading')"
@@ -156,8 +168,11 @@ describe("handoff modal", {
       "document.querySelector('#mod1-handoff_modal_root .querychat-handoff-directions-wrapper')?.classList.contains('loading')"
     ))
 
-    app$wait_for_idle(timeout = 8000)
-    Sys.sleep(0.3)
+    # Wait for the recommendation to land rather than guessing at timings.
+    app$wait_for_js(
+      "!!document.querySelector('#mod1-handoff_modal_root .querychat-handoff-gallery-item.selected')",
+      timeout = 15000
+    )
 
     expect_false(app$get_js(
       "document.querySelector('#mod1-handoff_modal_root .querychat-handoff-gallery')?.classList.contains('loading')"

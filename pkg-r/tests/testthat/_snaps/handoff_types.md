@@ -115,8 +115,8 @@
     Code
       handoff_state_from_record(missing_request)
     Condition
-      Error in `value[[3L]]()`:
-      ! Ellmer turn record could not be replayed: no applicable method for `@` applied to an object of class "NULL"
+      Error in `FUN()`:
+      ! Ellmer ContentToolResult record is missing its `request` prop.
 
 ---
 

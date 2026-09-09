@@ -1578,6 +1578,42 @@ describe("QueryChat$page()", {
   })
 })
 
+describe("QueryChat$app_obj()", {
+  skip_if_not_installed("shinychat", minimum_version = "0.4.0.9000")
+  skip_if_not_installed("DT")
+  skip_if_no_dataframe_engine()
+
+  it("builds the app UI on page_chat() with a closed data drawer", {
+    qc <- QueryChat$new(new_test_df(), "test_df", greeting = "Test")
+    withr::defer(qc$cleanup())
+
+    app <- qc$app_obj()
+    # shiny.appobj doesn't expose the UI function; it's closed over by
+    # httpHandler
+    ui <- get("ui", envir = environment(app$httpHandler))
+    html <- as.character(ui(NULL))
+
+    # Chat-primary page layout (page_chat), not the old page_sidebar dashboard
+    expect_true(grepl('id="querychat_test_df-chat_page"', html, fixed = TRUE))
+
+    # The SQL editor and data table live in the drawer
+    drawer <- regmatches(html, regexpr("<shiny-chat-drawer[^>]*>", html))
+    expect_true(nchar(drawer) > 0)
+    # htmltools drops FALSE-valued attributes; no `open` means initially
+    # closed (auto-opened server-side when a query lands)
+    expect_false(grepl("open=", drawer, fixed = TRUE))
+    expect_true(grepl('id="sql_output"', html, fixed = TRUE))
+    expect_true(grepl('id="dt"', html, fixed = TRUE))
+
+    # Handoff panel still present via the page extras
+    expect_true(grepl(
+      'id="querychat_test_df-handoff_download"',
+      html,
+      fixed = TRUE
+    ))
+  })
+})
+
 describe("QueryChat$ui()", {
   skip_if_not_installed("shinychat", minimum_version = "0.4.0.9000")
 

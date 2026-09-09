@@ -743,51 +743,58 @@ QueryChat <- R6::R6Class(
       first_table_name <- names(private$.data_sources)[[1]]
 
       ui <- function(req) {
-        bslib::page_sidebar(
+        # The data views ride in the chat drawer (auto-opened server-side
+        # when a query lands). page_chat() owns the whole document, so the
+        # busy indicators and gadget close button go through the footer slot.
+        self$page(
           title = shiny::HTML(
             sprintf(
               "<span>querychat with <code>%s</code></span>",
               first_table_name
             )
           ),
-          class = "bslib-page-dashboard",
-          sidebar = self$sidebar(),
-          shiny::useBusyIndicators(pulse = TRUE, spinners = FALSE),
-          bslib::card(
-            fill = FALSE,
-            style = bslib::css(max_height = "33%"),
-            bslib::card_header(
-              shiny::div(
-                class = "hstack w-100",
+          window_title = "querychat",
+          drawer = shinychat::chat_drawer(
+            bslib::card(
+              fill = FALSE,
+              bslib::card_header(
                 shiny::div(
-                  bsicons::bs_icon("terminal-fill"),
-                  shiny::textOutput("query_title", inline = TRUE)
-                ),
-                shiny::div(
-                  class = "ms-auto",
-                  shiny::uiOutput("ui_reset", inline = TRUE)
+                  class = "hstack w-100",
+                  shiny::div(
+                    bsicons::bs_icon("terminal-fill"),
+                    shiny::textOutput("query_title", inline = TRUE)
+                  ),
+                  shiny::div(
+                    class = "ms-auto",
+                    shiny::uiOutput("ui_reset", inline = TRUE)
+                  )
                 )
+              ),
+              shiny::uiOutput("sql_output")
+            ),
+            bslib::card(
+              full_screen = TRUE,
+              bslib::card_header(
+                bsicons::bs_icon("table"),
+                "Data \u2014 ",
+                shiny::textOutput("data_card_header_text", inline = TRUE)
+              ),
+              DT::DTOutput("dt")
+            ),
+            open = FALSE,
+            width = 720
+          ),
+          footer = htmltools::tagList(
+            shiny::useBusyIndicators(pulse = TRUE, spinners = FALSE),
+            if (rlang::is_interactive()) {
+              shiny::actionButton(
+                "close_btn",
+                label = "",
+                class = "btn-close",
+                style = "position: fixed; top: 6px; right: 6px;"
               )
-            ),
-            shiny::uiOutput("sql_output")
-          ),
-          bslib::card(
-            full_screen = TRUE,
-            bslib::card_header(
-              bsicons::bs_icon("table"),
-              "Data \u2014 ",
-              shiny::textOutput("data_card_header_text", inline = TRUE)
-            ),
-            DT::DTOutput("dt")
-          ),
-          if (rlang::is_interactive()) {
-            shiny::actionButton(
-              "close_btn",
-              label = "",
-              class = "btn-close",
-              style = "position: fixed; top: 6px; right: 6px;"
-            )
-          }
+            }
+          )
         )
       }
 
@@ -802,6 +809,14 @@ QueryChat <- R6::R6Class(
         active_table_name <- shiny::reactive({
           ct <- qc_vals$current_table()
           if (!is.null(ct)) ct else first_table_name
+        })
+
+        # Auto-open the data drawer when a new query lands
+        shiny::observe(label = "auto_open_drawer", {
+          name <- active_table_name()
+          if (shiny::isTruthy(qc_vals$.tables[[name]]$sql())) {
+            shinychat::chat_drawer_show(shiny::NS(self$id)("chat"))
+          }
         })
 
         output$data_card_header_text <- shiny::renderText({

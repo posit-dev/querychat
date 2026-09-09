@@ -247,7 +247,8 @@ class HandoffOrchestrator:
         )
 
     async def restore_pills(self) -> None:
-        """Re-append a chat pill for every stored handoff.
+        """
+        Re-append a chat pill for every stored handoff.
 
         Plain bookmark restore re-derives chat messages from client turns,
         dropping pills; rebuild them from the restored store.

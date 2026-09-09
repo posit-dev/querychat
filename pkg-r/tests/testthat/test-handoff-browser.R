@@ -20,7 +20,21 @@ local_handoff_app <- function(env = parent.frame()) {
     load_timeout = 15000
   )
   withr::defer(app$stop(), envir = env)
+  wait_for_chat_ready(app, "mod1")
   app
+}
+
+# The first interaction can race app startup on a loaded runner: the
+# greeting and the tiptap editor initialize asynchronously. Wait for both
+# before sending any messages.
+wait_for_chat_ready <- function(app, module_id, timeout = 15000) {
+  app$wait_for_js(
+    sprintf(
+      "!!document.querySelector('#%1$s-chat .shiny-chat-greeting-content') && !!document.querySelector('#%1$s-chat_user_input [contenteditable].tiptap')",
+      module_id
+    ),
+    timeout = timeout
+  )
 }
 
 # Headless Chrome leaves `com.google.Chrome.*` scratch dirs in TMPDIR that can
@@ -38,11 +52,22 @@ send_chat_message <- function(app, module_id, text, wait = TRUE) {
     "
     const editor = document.querySelector('#%s-chat_user_input [contenteditable]');
     editor.focus();
+    document.execCommand('selectAll');
     document.execCommand('insertText', false, %s);
     ",
     module_id,
     jsonlite::toJSON(text)
   ))
+  # The send button stays disabled until the editor processes the inserted
+  # text; clicking while disabled silently drops the message (this raced on
+  # loaded Windows runners). selectAll above keeps re-sends idempotent.
+  app$wait_for_js(
+    sprintf(
+      "!document.querySelector('#%s-chat .shiny-chat-btn-send').disabled",
+      module_id
+    ),
+    timeout = 5000
+  )
   app$click(selector = sprintf("#%s-chat .shiny-chat-btn-send", module_id))
   if (wait) {
     app$wait_for_idle(timeout = 8000)
@@ -60,12 +85,38 @@ open_handoff_modal <- function(app, module_id, wait = TRUE) {
 
 # The modal is shown server-side while the /handoff slash command is
 # processed, but wait_for_idle() can return before it flushes on a loaded
-# runner -- wait for the modal root explicitly.
+# runner -- and the server silently ignores /handoff while the chat is
+# busy. Poll for the modal root and re-send the command if it hasn't
+# appeared, rather than relying on a single send landing cleanly.
 wait_for_handoff_modal <- function(app, module_id, timeout = 15000) {
-  app$wait_for_js(
-    sprintf("!!document.getElementById('%s-handoff_modal_root')", module_id),
-    timeout = timeout
+  modal_present <- sprintf(
+    "!!document.getElementById('%s-handoff_modal_root')",
+    module_id
   )
+  deadline <- Sys.time() + timeout / 1000
+  last_sent <- Sys.time()
+  repeat {
+    modal_found <- isTRUE(tryCatch(
+      app$get_js(modal_present),
+      error = function(e) FALSE
+    ))
+    if (modal_found) {
+      return(invisible(TRUE))
+    }
+    if (Sys.time() > deadline) {
+      # Let wait_for_js() produce the descriptive timeout error.
+      app$wait_for_js(modal_present, timeout = 1000)
+      return(invisible(TRUE))
+    }
+    if (difftime(Sys.time(), last_sent, units = "secs") > 2.5) {
+      tryCatch(
+        send_chat_message(app, module_id, "/handoff", wait = FALSE),
+        error = function(e) NULL
+      )
+      last_sent <- Sys.time()
+    }
+    Sys.sleep(0.25)
+  }
 }
 
 select_language <- function(app, module_id, language) {
@@ -367,6 +418,7 @@ describe("handoff restore", {
       load_timeout = 15000
     )
     withr::defer(app$stop(), envir = env)
+    wait_for_chat_ready(app, "mod1")
     # Browser-mode history writes a `.shinychat/` store next to the app.
     withr::defer(
       unlink(

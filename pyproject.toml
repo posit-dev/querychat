@@ -47,9 +47,11 @@ polars = ["polars", "pyarrow<25.0.0"] # duckdb requires pyarrow for polars DataF
 ibis = [
     "ibis-framework>=9.0.0",
     "pandas", # required for ibis .execute() to return DataFrames
-    # sqlglot 30.18.0 regressed Drop SQL generation (omits the object name,
-    # e.g. `DROP VIEW IF EXISTS` with no name), breaking ibis's duckdb
-    # create_table(). Remove once fixed upstream (tobymao/sqlglot).
+    # sqlglot 30.18.0 deliberately renamed Drop.this -> Drop.tables
+    # (tobymao/sqlglot#8229), so ibis's Drop(this=...) calls emit e.g.
+    # `DROP VIEW IF EXISTS` with no name, breaking ibis's duckdb
+    # create_table(). Remove once fixed upstream:
+    # https://github.com/ibis-project/ibis/issues/12101
     "sqlglot<30.18.0",
 ]
 pins = ["pins>=0.9.1"]

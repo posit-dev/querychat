@@ -8,8 +8,9 @@
 #   4. "Reset Query" clears the query; the drawer stays open showing full data.
 #   5. Drawer is resizable via its left edge.
 #
-# Run from pkg-py/ with the worktree's sources first on the path:
-#   PYTHONPATH=src shiny run examples/13-app-drawer.py --reload
+# Run from pkg-py/ with the worktree's sources first on the path, using the
+# project venv's Python (a bare `shiny` on PATH may come from another env):
+#   PYTHONPATH=src /path/to/.venv/bin/python -m shiny run examples/13-app-drawer.py --reload
 from pathlib import Path
 
 from querychat import QueryChat

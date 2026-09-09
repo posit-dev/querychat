@@ -467,6 +467,29 @@ class TestBookmark:
         orch = make_session(data_source=FakeDataSource())
         assert orch.store.bookmark_values() == []
 
+    def test_restore_pills_reappends_pill_per_handoff(self):
+        original = make_session(data_source=FakeDataSource())
+        original.store.remember(make_state("a", "src-a"))
+        original.store.remember(make_state("b", "src-b"))
+        saved = original.store.bookmark_values()
+
+        chat_ui = FakeChatUI()
+        restored = make_session(data_source=FakeDataSource(), chat_ui=chat_ui)
+        restored.restore_snapshot(saved)
+        asyncio.run(restored.restore_pills())
+
+        assert len(chat_ui.appended) == 2
+        assert 'data-handoff-id="a"' in str(chat_ui.appended[0])
+        assert 'data-handoff-id="b"' in str(chat_ui.appended[1])
+
+    def test_restore_pills_empty_store_appends_nothing(self):
+        chat_ui = FakeChatUI()
+        orch = make_session(data_source=FakeDataSource(), chat_ui=chat_ui)
+
+        asyncio.run(orch.restore_pills())
+
+        assert chat_ui.appended == []
+
 
 class TestDownload:
     def test_restored_database_only_handoff_downloads_without_snapshot(self):

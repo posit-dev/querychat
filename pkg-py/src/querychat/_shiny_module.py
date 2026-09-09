@@ -335,6 +335,7 @@ def mod_server(
         data_sources=data_sources,
         executor=executor,
         shinychat_chat=shinychat_chat,
+        chat_history_enabled=history is not False,
     )
 
     # Skipped when `history` is already in bookmark mode: shinychat_chat.history

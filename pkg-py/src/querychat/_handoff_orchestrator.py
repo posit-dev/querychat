@@ -246,6 +246,19 @@ class HandoffOrchestrator:
             [state.bundle_id for state in removed]
         )
 
+    async def restore_pills(self) -> None:
+        """Re-append a chat pill for every stored handoff.
+
+        Plain bookmark restore re-derives chat messages from client turns,
+        dropping pills; rebuild them from the restored store.
+        """
+        for state in self.store.values():
+            await self.view.append_pill(
+                state.handoff_id,
+                state.handoff_type,
+                state.summary,
+            )
+
     def open_modal(self) -> list[GalleryItem]:
         """Extract gallery items from chat history, stash them, and show the modal."""
         items = extract_gallery_items(self.chat.history_turns())

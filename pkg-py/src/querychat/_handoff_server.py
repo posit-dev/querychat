@@ -114,6 +114,7 @@ def handoff_server(
     data_sources: dict[str, DataSource],
     executor: QueryExecutor,
     shinychat_chat: shinychat.Chat,
+    chat_history_enabled: bool = True,
 ) -> None:
     orch = HandoffOrchestrator(
         session,
@@ -253,6 +254,15 @@ def handoff_server(
     @session.bookmark.on_restore
     def on_handoff_bookmark_restore(state: RestoreState) -> None:
         restore_handoffs(state.values)
+
+    @session.bookmark.on_restored
+    async def on_handoff_bookmark_restored(state: RestoreState) -> None:
+        # Plain bookmark restore drops the pills; re-append them after the
+        # first flush so they land after the restored chat messages. With
+        # history enabled, shinychat replays the pills itself.
+        if chat_history_enabled:
+            return
+        await orch.restore_pills()
 
     @shinychat_chat.history.on_save
     def on_handoff_history_save(values: dict[str, Any]) -> None:

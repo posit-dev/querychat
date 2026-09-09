@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, Literal, Optional, overload
 from narwhals.stable.v1.typing import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
 from shiny.express._stub_session import ExpressStubSession
 from shiny.session import get_current_session
+from shinychat import chat_drawer
 from shinychat.types import HistoryOptions
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
@@ -284,8 +285,9 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         """
         Quickly chat with a dataset.
 
-        Creates a Shiny app with a chat sidebar and data view -- providing a
-        quick-and-easy way to start chatting with your data.
+        Creates a Shiny app with a chat page and a data drawer (SQL editor +
+        data table) that opens automatically when a query changes the data --
+        providing a quick-and-easy way to start chatting with your data.
 
         Parameters
         ----------
@@ -323,38 +325,39 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         first_table_name = next(iter(self._data_sources))
 
         def app_ui(request):
-            return ui.page_sidebar(
-                self.sidebar(),
-                ui.card(
-                    ui.card_header(
-                        ui.div(
+            return self.page(
+                ui.span("querychat with ", ui.code(first_table_name)),
+                window_title="querychat",
+                drawer=chat_drawer(
+                    ui.card(
+                        ui.card_header(
                             ui.div(
-                                bs_icon("terminal-fill"),
-                                ui.output_text("query_title", inline=True),
-                                class_="d-flex align-items-center gap-2",
+                                ui.div(
+                                    bs_icon("terminal-fill"),
+                                    ui.output_text("query_title", inline=True),
+                                    class_="d-flex align-items-center gap-2",
+                                ),
+                                ui.div(
+                                    ui.output_ui("ui_reset", inline=True),
+                                    class_="ms-auto",
+                                ),
+                                class_="hstack gap-3 w-100",
                             ),
-                            ui.div(
-                                ui.output_ui("ui_reset", inline=True),
-                                class_="ms-auto",
-                            ),
-                            class_="hstack gap-3 w-100",
                         ),
+                        ui.output_ui("sql_output"),
+                        fill=False,
                     ),
-                    ui.output_ui("sql_output"),
-                    fill=False,
-                    style="max-height: 33%;",
-                ),
-                ui.card(
-                    ui.card_header(
-                        bs_icon("table"),
-                        " Data — ",
-                        ui.output_text("data_card_header_text", inline=True),
+                    ui.card(
+                        ui.card_header(
+                            bs_icon("table"),
+                            " Data — ",
+                            ui.output_text("data_card_header_text", inline=True),
+                        ),
+                        ui.output_data_frame("dt"),
                     ),
-                    ui.output_data_frame("dt"),
+                    open=False,
+                    width=720,
                 ),
-                title=ui.span("querychat with ", ui.code(first_table_name)),
-                class_="bslib-page-dashboard",
-                fillable=True,
             )
 
         def app_server(input: Inputs, output: Outputs, session: Session):
@@ -427,6 +430,13 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             def sync_sql_editor():
                 name = active_table_name()
                 ui.update_code_editor("sql_editor", value=sql_text_for_editor(name))
+
+            @reactive.effect
+            async def _():
+                # Auto-open the data drawer when a new query lands
+                name = active_table_name()
+                if vals.table(name).sql() and vals.shinychat_chat is not None:
+                    await vals.shinychat_chat.drawer.show()
 
             @reactive.effect
             @reactive.event(input.sql_editor)

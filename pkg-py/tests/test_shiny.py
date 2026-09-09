@@ -203,3 +203,29 @@ def test_express_explicit_enable_bookmarking_warns():
         QueryChatExpress(
             pd.DataFrame({"a": [1, 2, 3]}), "a_table", enable_bookmarking=True
         )
+
+
+def test_app_ui_uses_page_layout_with_drawer():
+    """$app() builds on the page_chat() layout, with the SQL editor and data
+    table in an initially-closed drawer (auto-opened server-side on query)."""
+    import re
+
+    import pandas as pd
+    from querychat._shiny import QueryChat
+
+    qc = QueryChat(pd.DataFrame({"a": [1]}), "a_table")
+    app = qc.app()
+    html = str(app.ui(None))
+
+    # Chat-primary page layout (page_chat), not the old page_sidebar dashboard
+    assert 'id="querychat_a_table-chat_page"' in html
+    drawer = re.search(r"<shiny-chat-drawer\b[^>]*>", html)
+    assert drawer, "no <shiny-chat-drawer> found in app UI"
+    # htmltools omits False-valued attributes; no `open` means initially closed
+    assert "open=" not in drawer.group(0)
+    # Data views live inside the drawer
+    drawer_html = html[drawer.start() :]
+    assert 'id="sql_output"' in drawer_html
+    assert 'id="dt"' in drawer_html
+    # Handoff panel still present via the page extras
+    assert 'id="querychat_a_table-handoff_download"' in html

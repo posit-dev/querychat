@@ -2,3 +2,6 @@
 ^LICENSE\.md$
 ^\.covrignore$
 ^cran-comments\.md$
+# Local app-run artifacts (chat history stores, Shiny bookmarks)
+\.shinychat
+shiny_bookmarks

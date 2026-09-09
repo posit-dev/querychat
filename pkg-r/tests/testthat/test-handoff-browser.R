@@ -11,6 +11,7 @@
 # post-commit history save and restore could not be exercised.
 
 local_handoff_app <- function(env = parent.frame()) {
+  local_chrome_tmpdir(env)
   app <- shinytest2::AppDriver$new(
     test_path("apps", "handoff"),
     name = "handoff",
@@ -20,6 +21,16 @@ local_handoff_app <- function(env = parent.frame()) {
   )
   withr::defer(app$stop(), envir = env)
   app
+}
+
+# Headless Chrome leaves `com.google.Chrome.*` scratch dirs in TMPDIR that can
+# survive AppDriver$stop(), tripping R CMD check's temp-dir detritus check.
+# Give each app a withr-managed TMPDIR so they're removed with the test.
+local_chrome_tmpdir <- function(env = parent.frame()) {
+  withr::local_envvar(
+    TMPDIR = withr::local_tempdir(.local_envir = env),
+    .local_envir = env
+  )
 }
 
 send_chat_message <- function(app, module_id, text, wait = TRUE) {
@@ -332,6 +343,7 @@ describe("handoff generation", {
 
 describe("handoff restore", {
   local_handoff_restore_app <- function(env = parent.frame()) {
+    local_chrome_tmpdir(env)
     app <- shinytest2::AppDriver$new(
       test_path("apps", "handoff-restore"),
       name = "handoff-restore",

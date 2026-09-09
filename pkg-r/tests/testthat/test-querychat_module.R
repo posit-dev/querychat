@@ -914,10 +914,11 @@ test_that("history on_save callback returns merged values (R history contract)",
 test_that("history on_save callback works with no active reactive context", {
   # A real ExtendedTask promise continuation (e.g. a handoff generation
   # commit calling `chat_module$history$save()`) resumes with no active
-  # reactive context. Reproduce that here by calling the captured callback
-  # only after testServer()'s own reactive context has been torn down:
-  # reading a reactiveVal without `isolate()` there raises "Operation not
-  # allowed without an active reactive context."
+  # reactive context, and can outlive its session entirely. Reproduce that
+  # here by calling the captured callback only after testServer()'s session
+  # has been torn down: there is no reactive context or domain, and (on
+  # shiny 1.14.0, which destroys a session's reactives on close) the module's
+  # reactives may no longer be readable.
   skip_if_no_dataframe_engine()
 
   ds <- local_data_frame_source(new_test_df())
@@ -965,9 +966,15 @@ test_that("history on_save callback works with no active reactive context", {
   )
 
   # Called bare, as shinychat's promise handler would (no reactive context).
-  expect_no_error(result <- history_save_fn(list()))
-  expect_equal(
-    result$querychat_tables$test_table$sql,
-    "SELECT * FROM test_table WHERE id = 1"
-  )
+  expect_no_error(result <- history_save_fn(list(unrelated_key = "kept")))
+  expect_equal(result$unrelated_key, "kept")
+  # shiny 1.14.0 destroys module reactives when the session closes (later
+  # releases keep them readable), in which case the snapshot omits the
+  # unreadable table state instead of erroring.
+  if (!is.null(result$querychat_tables$test_table)) {
+    expect_equal(
+      result$querychat_tables$test_table$sql,
+      "SELECT * FROM test_table WHERE id = 1"
+    )
+  }
 })

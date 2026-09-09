@@ -176,13 +176,23 @@ mod_server <- function(
     )
 
     build_state_snapshot <- function() {
-      # on_save can run from a promise handler with no reactive context.
+      # on_save can run from a promise handler with no reactive context, and
+      # can even outlive the session (e.g. an ExtendedTask settling after the
+      # page was closed). shiny 1.14.0 destroys a session's reactives on
+      # close, making them unreadable; skip those tables rather than failing
+      # the save, so any previously saved state is kept.
       table_states <- list()
       for (name in names(tables)) {
-        table_states[[name]] <- list(
-          sql = shiny::isolate(tables[[name]]$sql()),
-          title = shiny::isolate(tables[[name]]$title())
+        tbl_state <- tryCatch(
+          list(
+            sql = shiny::isolate(tables[[name]]$sql()),
+            title = shiny::isolate(tables[[name]]$title())
+          ),
+          `shiny.destroyed.error` = function(e) NULL
         )
+        if (!is.null(tbl_state)) {
+          table_states[[name]] <- tbl_state
+        }
       }
       snapshot <- list(querychat_tables = table_states)
       if (length(viz_widgets) > 0) {

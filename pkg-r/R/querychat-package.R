@@ -86,4 +86,7 @@ release_bullets <- function() {
 suppress_rcmdcheck <- function() {
   S7::S7_class
   whisker::whisker.render
+  # coro is used inside R6 method definitions (handoff_orchestrator.R), which
+  # R CMD check's static analysis can't see in the installed package.
+  coro::async
 }

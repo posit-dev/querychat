@@ -2,7 +2,7 @@
 
 ## New features
 
-* The R package now supports `/handoff`, which turns completed query and visualization results into downloadable Quarto, Marimo, Shiny, Jupyter, or custom handoff projects with AI-assisted revisions and restorable chat history.
+* New `/handoff` slash command: turn selected query and visualization results from your chat session into a downloadable Quarto dashboard or Shiny app — with AI-assisted revision, bundled data, and handoffs that survive chat history restores and Shiny bookmarks.
 
 * The SQL panel in `querychat_app()` is now an editable code editor. Users can tweak the generated SQL directly and apply it with Ctrl/Cmd+Enter or by clicking away — no extra button required. The editor stays in sync when the LLM updates the query or the active table changes. (#265)
 

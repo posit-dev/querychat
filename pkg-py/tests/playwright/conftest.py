@@ -162,9 +162,26 @@ def open_data_drawer(page: Page, timeout: int = 15000) -> None:
 
     The drawer starts closed (it auto-opens when a query lands), so tests
     that need the table up front open it via the drawer trigger button.
+    The click is retried: on a slow first paint (e.g. loaded CI runners)
+    the React client may not have attached its handler yet, which silently
+    swallows the click.
     """
-    page.locator(".shiny-chat-drawer-trigger").click()
-    page.wait_for_selector("table", state="visible", timeout=timeout)
+    from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+
+    drawer = page.locator("aside.shiny-chat-drawer:not([hidden])")
+    trigger = page.locator(".shiny-chat-drawer-trigger")
+
+    deadline = time.monotonic() + timeout / 1000
+    while not drawer.is_visible():
+        trigger.click()
+        try:
+            drawer.wait_for(state="visible", timeout=2000)
+        except PlaywrightTimeoutError:
+            if time.monotonic() >= deadline:
+                raise
+
+    remaining_ms = max(1000, int((deadline - time.monotonic()) * 1000))
+    page.wait_for_selector("table", state="visible", timeout=remaining_ms)
 
 
 def show_sql_query(page: Page, timeout: int = 15000) -> None:

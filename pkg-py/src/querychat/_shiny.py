@@ -1014,11 +1014,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             or wrap it in other UI.
 
         """
-        try:
-            from shiny.module import namespace_context
-        except ImportError:  # shiny < 1.7
-            from shiny._namespaces import namespace_context
-        from shiny.module import ResolvedId
+        from shiny.module import ResolvedId, namespace_context
         from shinychat.express import page_chat as express_page_chat
 
         module_id = id or self.id

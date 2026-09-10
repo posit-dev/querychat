@@ -156,7 +156,7 @@ access its \verb{$tables} and \verb{$prompt}.}
   greeting = NULL,
   history = NULL,
   client = NULL,
-  tools = c("filter", "query"),
+  tools = c("filter", "query", "visualize"),
   data_description = NULL,
   categorical_threshold = 20,
   extra_instructions = NULL,
@@ -201,7 +201,10 @@ Passed straight through to \code{shinychat::chat_server(history = )}.}
 }}
       \item{\code{tools}}{Which querychat tools to include in the chat client, by
 default. \code{"filter"} includes the tools for filtering and resetting the
-dashboard and \code{"query"} includes the tool for executing SQL queries.
+dashboard, \code{"query"} includes the tool for executing SQL queries, and
+\code{"visualize"} includes the tool for rendering visualizations (requires
+the \pkg{ggsql} package; if it is not installed, the tool is dropped
+with a warning). The default is \code{c("filter", "query", "visualize")}.
 Use \code{tools = "filter"} when you only want the dashboard filtering tools,
 or when you want to disable the querying tool entirely to prevent the
 LLM from seeing any of the data in your dataset. The legacy name

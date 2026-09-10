@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   app_ui = qc.page("Titanic Explorer")  # Core
   ```
 
+### Improvements
+
+* The `"visualize"` tool is now included in the default toolset (`tools=("filter", "query", "visualize")`). If the visualization dependencies are not installed (the `viz` extra), the tool is dropped with a warning instead of raising an `ImportError`.
+
 ## [0.7.0] - 2026-07-10
 
 ### New features

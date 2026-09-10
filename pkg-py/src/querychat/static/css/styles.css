@@ -1,3 +1,4 @@
+/* Generated file. Source: js/src/styles.css. Do not edit directly. */
 .querychat shiny-chat-message table td,
 .querychat shiny-chat-message table th {
   border: var(--bs-border-width) var(--bs-border-style) var(--bs-border-color);
@@ -12,4 +13,17 @@
 .bslib-sidebar-layout:has(.querychat-sidebar):not(.sidebar-collapsed)>.collapse-toggle {
     right: 4px;
     top: 4px;
+}
+
+/* Collapse footer padding when it holds only querychat's inert extras.
+   Target the class: shinychat re-renders footer content into this div. */
+.shiny-chat-footer:has(> .querychat-extras:only-child) {
+    padding: 0 0 var(--shiny-chat-input-padding-bottom, var(--_chat-container-padding, .25rem));
+}
+
+/* The footer centers its own content (the message composer); reset that for
+   querychat's extras so the handoff panel and other footer-injected UI don't
+   inherit center alignment. */
+.querychat-extras {
+    text-align: left;
 }

@@ -280,7 +280,7 @@ class TestHandoffGeneration(HandoffModalActions):
         textarea.fill("Add a comment at the top that says BROWSER_HISTORY.")
         textarea.press("Enter")
 
-        editor = self.page.locator(".querychat-handoff-panel-body textarea")
+        editor = self.page.locator(".querychat-handoff-panel-body textarea:visible")
         expect(editor).to_have_value(re.compile("BROWSER_HISTORY"), timeout=120000)
 
     def test_generated_handoff_can_be_closed_and_reopened(self):
@@ -288,7 +288,7 @@ class TestHandoffGeneration(HandoffModalActions):
 
         panel = self.page.locator(".querychat-handoff-panel")
         expect(panel).to_have_class(re.compile(r"\bopen\b"), timeout=60000)
-        editor = self.page.locator(".querychat-handoff-panel-body textarea")
+        editor = self.page.locator(".querychat-handoff-panel-body textarea:visible")
         expect(editor).to_be_visible(timeout=60000)
         expect(editor).not_to_have_value("", timeout=120000)
         pill = self.page.locator(".querychat-handoff-pill")
@@ -319,7 +319,7 @@ class TestHandoffGeneration(HandoffModalActions):
         expect(pill.first).to_be_visible(timeout=30000)
         pill.first.click()
 
-        editor = self.page.locator(".querychat-handoff-panel-body textarea")
+        editor = self.page.locator(".querychat-handoff-panel-body textarea:visible")
         expect(editor).to_have_value(re.compile("BROWSER_HISTORY"), timeout=10000)
 
 
@@ -379,6 +379,6 @@ class TestHandoffPlainBookmarkRestore(HandoffModalActions):
 
         restored_panel = new_page.locator(".querychat-handoff-panel")
         expect(restored_panel).to_have_class(re.compile(r"\bopen\b"), timeout=5000)
-        editor = restored_panel.locator(".querychat-handoff-panel-body textarea")
+        editor = restored_panel.locator(".querychat-handoff-panel-body textarea:visible")
         expect(editor).not_to_have_value("", timeout=10000)
         new_page.close()

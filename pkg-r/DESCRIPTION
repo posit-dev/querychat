@@ -35,7 +35,7 @@ Imports:
     R6,
     rlang (>= 1.1.0),
     S7,
-    shiny (>= 1.14.0),
+    shiny,
     shinychat (>= 0.5.0),
     utils,
     whisker,

@@ -435,8 +435,8 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             async def _():
                 # Auto-open the data drawer when a new query lands
                 name = active_table_name()
-                if vals.table(name).sql() and vals.shinychat_chat is not None:
-                    await vals.shinychat_chat.drawer.show()
+                if vals.table(name).sql() and vals.chat is not None:
+                    await vals.chat.drawer.show()
 
             @reactive.effect
             @reactive.event(input.sql_editor)

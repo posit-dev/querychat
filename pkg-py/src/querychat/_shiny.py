@@ -1026,11 +1026,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             or wrap it in other UI.
 
         """
-        # namespace_context is absent from shiny.module's __all__ (works at runtime)
-        from shiny.module import (
-            ResolvedId,
-            namespace_context,  # pyright: ignore[reportPrivateImportUsage]
-        )
+        from shiny.module import ResolvedId, namespace_context
         from shinychat.express import page_chat as express_page_chat
 
         module_id = id or self.id

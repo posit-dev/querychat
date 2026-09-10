@@ -1,10 +1,8 @@
 # querychat (development version)
 
-## Breaking changes
-
-* querychat now requires shiny >= 1.14.0, whose per-output visibility tracking (replacing the old jQuery/Bootstrap event-driven approach) is needed for outputs to render correctly inside `shinychat`'s drawer.
-
 ## New features
+
+* `querychat_app()` (and `QueryChat$app()`) is now chat-first: it builds on the `$page()` layout, so the chat owns the window, and the SQL editor + data table live in a drawer that auto-opens when the LLM runs a query (including on bookmark/history restore).
 
 * New `/handoff` slash command: turn selected query and visualization results from your chat session into a downloadable Quarto dashboard or Shiny app — with AI-assisted revision, bundled data, and handoffs that survive chat history restores and Shiny bookmarks.
 

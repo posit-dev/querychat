@@ -167,6 +167,21 @@ def open_data_drawer(page: Page, timeout: int = 15000) -> None:
     page.wait_for_selector("table", state="visible", timeout=timeout)
 
 
+def show_sql_query(page: Page, timeout: int = 15000) -> None:
+    """
+    Reveal the SQL query section behind the data drawer's "Show Query" footer
+    control.
+
+    The section is `display: none` by default, and Shiny suspends rendering
+    of outputs (like the SQL code editor) inside hidden containers, so the
+    editor doesn't exist in the DOM until this toggle is clicked.
+    """
+    page.locator(".querychat-show-query-btn").first.click()
+    page.wait_for_selector(
+        "bslib-code-editor#sql_editor textarea", state="attached", timeout=timeout
+    )
+
+
 # Shiny apps run as subprocesses via shiny.pytest.create_app_fixture.
 # Running them in-process (threaded uvicorn) shares Shiny's process-global,
 # loop-bound reactive lock across apps, which crashes sessions when apps

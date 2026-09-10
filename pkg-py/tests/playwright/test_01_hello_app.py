@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 import pytest
 from playwright.sync_api import expect
 
-from .conftest import open_data_drawer
+from .conftest import open_data_drawer, show_sql_query
 
 if TYPE_CHECKING:
     from playwright.sync_api import Page
@@ -31,6 +31,7 @@ class Test01HelloApp:
         """Navigate to the app before each test."""
         page.goto(app_01_hello.url)
         open_data_drawer(page, timeout=10000)
+        show_sql_query(page, timeout=10000)
         self.page = page
         self.chat = chat_01_hello
 

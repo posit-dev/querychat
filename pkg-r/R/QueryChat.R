@@ -165,6 +165,7 @@ QueryChat <- R6::R6Class(
       if (is_na(tools)) {
         tools <- self$tools
       }
+      tools <- check_viz_deps(tools)
 
       chat$set_system_prompt(
         private$.system_prompt$render(
@@ -214,10 +215,6 @@ QueryChat <- R6::R6Class(
       }
 
       if ("visualize" %in% tools) {
-        rlang::check_installed(
-          "ggsql",
-          reason = "for visualization support."
-        )
         chat$register_tool(
           tool_visualize_dashboard(
             executor,
@@ -241,7 +238,7 @@ QueryChat <- R6::R6Class(
     #' @field id_override Whether the ID was explicitly set by the user.
     id_override = NULL,
     #' @field tools The allowed tools for the chat client.
-    tools = c("filter", "query"),
+    tools = c("filter", "query", "visualize"),
 
     #' @description
     #' Create a new QueryChat object.
@@ -276,7 +273,10 @@ QueryChat <- R6::R6Class(
     #'     [ellmer::chat_openai()]
     #' @param tools Which querychat tools to include in the chat client, by
     #'   default. `"filter"` includes the tools for filtering and resetting the
-    #'   dashboard and `"query"` includes the tool for executing SQL queries.
+    #'   dashboard, `"query"` includes the tool for executing SQL queries, and
+    #'   `"visualize"` includes the tool for rendering visualizations (requires
+    #'   the \pkg{ggsql} package; if it is not installed, the tool is dropped
+    #'   with a warning). The default is `c("filter", "query", "visualize")`.
     #'   Use `tools = "filter"` when you only want the dashboard filtering tools,
     #'   or when you want to disable the querying tool entirely to prevent the
     #'   LLM from seeing any of the data in your dataset. The legacy name
@@ -308,7 +308,7 @@ QueryChat <- R6::R6Class(
       greeting = NULL,
       history = NULL,
       client = NULL,
-      tools = c("filter", "query"),
+      tools = c("filter", "query", "visualize"),
       data_description = NULL,
       categorical_threshold = 20,
       extra_instructions = NULL,
@@ -328,6 +328,7 @@ QueryChat <- R6::R6Class(
         multiple = TRUE
       )
       tools <- normalize_tools(tools)
+      tools <- check_viz_deps(tools)
       check_string(data_description, allow_null = TRUE)
       check_number_whole(categorical_threshold, min = 1)
       check_string(extra_instructions, allow_null = TRUE)
@@ -1207,7 +1208,7 @@ querychat <- function(
   greeting = NULL,
   history = NULL,
   client = NULL,
-  tools = c("filter", "query"),
+  tools = c("filter", "query", "visualize"),
   data_description = NULL,
   categorical_threshold = 20,
   extra_instructions = NULL,
@@ -1258,7 +1259,7 @@ querychat_app <- function(
   id = NULL,
   greeting = NULL,
   client = NULL,
-  tools = c("filter", "query"),
+  tools = c("filter", "query", "visualize"),
   data_description = NULL,
   categorical_threshold = 20,
   extra_instructions = NULL,
@@ -1317,6 +1318,21 @@ normalize_tools <- function(tools) {
   }
   tools[tools == "filter"] <- "update"
   unique(tools)
+}
+
+check_viz_deps <- function(tools) {
+  if (!"visualize" %in% tools || rlang::is_installed("ggsql")) {
+    return(tools)
+  }
+  rlang::warn(
+    c(
+      'The "visualize" tool requires the {.pkg ggsql} package.',
+      "i" = 'Install it with `install.packages("ggsql")`; continuing without the "visualize" tool.'
+    ),
+    .frequency = "once",
+    .frequency_id = "querychat_viz_ggsql_missing"
+  )
+  setdiff(tools, "visualize")
 }
 
 normalize_data_source <- function(data_source, table_name) {

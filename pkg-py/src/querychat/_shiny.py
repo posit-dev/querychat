@@ -112,8 +112,10 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         - A tuple of tools: `("filter", "query", "visualize")`
         - `None` or `()` to disable all tools
 
-        Default is `("filter", "query")`. The visualization tool (`"visualize"`)
-        can be opted into by including it in the tuple.
+        Default is `("filter", "query", "visualize")`. If the visualization
+        dependencies are not installed (the `viz` extra: ggsql, altair,
+        shinywidgets, vl-convert-python), the `"visualize"` tool is dropped
+        with a warning.
 
         Pass only `"filter"` to restrict the LLM to dashboard filtering,
         omitting both the `"query"` and `"visualize"` tools so the LLM

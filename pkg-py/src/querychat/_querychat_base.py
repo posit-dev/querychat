@@ -63,7 +63,7 @@ if TYPE_CHECKING:
     from ._viz_tools import VisualizeData
 
 TOOL_GROUPS = Literal["filter", "update", "query", "visualize"]
-DEFAULT_TOOLS: tuple[TOOL_GROUPS, ...] = ("filter", "query")
+DEFAULT_TOOLS: tuple[TOOL_GROUPS, ...] = ("filter", "query", "visualize")
 
 
 class QueryChatBase(Generic[IntoFrameT]):
@@ -797,10 +797,13 @@ def normalize_tools(
     if not check_deps:
         return resolved
     if has_viz_tool(resolved) and not has_viz_deps():
-        raise ImportError(
+        warnings.warn(
             "Visualization tools require ggsql, altair, shinywidgets, and "
-            "vl-convert-python. Install them with: pip install querychat[viz]"
+            "vl-convert-python. Install them with: pip install querychat[viz]. "
+            "Continuing without the 'visualize' tool.",
+            stacklevel=2,
         )
+        resolved.discard("visualize")
     return resolved
 
 

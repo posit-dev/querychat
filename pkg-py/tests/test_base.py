@@ -197,7 +197,7 @@ class TestQueryChatBase:
     def test_init_with_dataframe(self, sample_df):
         qc = QueryChatBase(sample_df, "test_table")
         assert isinstance(qc._data_sources["test_table"], DataFrameSource)
-        assert qc.tools == {"update", "query"}
+        assert qc.tools == {"update", "query", "visualize"}
 
     def test_init_with_custom_greeting(self, sample_df):
         qc = QueryChatBase(sample_df, "test_table", greeting="Hello!")

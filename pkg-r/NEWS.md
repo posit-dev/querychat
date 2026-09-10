@@ -2,6 +2,8 @@
 
 ## New features
 
+* The `"visualize"` tool is now included in the default toolset (`tools = c("filter", "query", "visualize")`). If the suggested ggsql package is not installed, the tool is dropped with a warning instead of erroring.
+
 * New `/handoff` slash command: turn selected query and visualization results from your chat session into a downloadable Quarto dashboard or Shiny app — with AI-assisted revision, bundled data, and handoffs that survive chat history restores and Shiny bookmarks.
 
 * Added a `$page()` method to `QueryChat` that wraps `shinychat::page_chat()` for full-window, "chat-first" apps. The chat owns the page (with conversation history, optional navigation pages, sidebars, and a drawer), and reactive data views can live on secondary pages via `shinychat::chat_nav_panel()`.

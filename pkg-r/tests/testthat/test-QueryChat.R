@@ -497,6 +497,23 @@ describe("QueryChat$client()", {
     expect_false("querychat_query" %in% tool_names)
   })
 
+  it("drops the visualize tool with a warning when ggsql is missing", {
+    local_mocked_bindings(
+      is_installed = function(...) FALSE,
+      .package = "rlang"
+    )
+
+    expect_warning(
+      tools <- check_viz_deps(c("update", "query", "visualize")),
+      "ggsql"
+    )
+    expect_equal(tools, c("update", "query"))
+
+    # Non-viz tool sets pass through untouched
+    expect_equal(check_viz_deps(c("update", "query")), c("update", "query"))
+    expect_null(check_viz_deps(NULL))
+  })
+
   it("returns client with no tools when tools = NULL", {
     qc <- QueryChat$new(
       new_test_df(),

@@ -53,6 +53,10 @@
 
 * The close button in `$app()` is now hidden when running in a non-interactive context (e.g. a deployed Shiny app), preventing `stopApp()` from crashing the session for other users. (#259)
 
+## Bug fixes
+
+* Query results were being shown expanded, and often repeated in the LLM's response, far more often than intended. The LLM is now guided to expand a result only when the user explicitly asks to see the raw table. (#295)
+
 # querychat 0.3.0
 
 ## New features

@@ -1321,7 +1321,7 @@ normalize_tools <- function(tools) {
 }
 
 check_viz_deps <- function(tools) {
-  if (!"visualize" %in% tools || rlang::is_installed("ggsql")) {
+  if (is.null(tools) || !"visualize" %in% tools || rlang::is_installed("ggsql")) {
     return(tools)
   }
   rlang::warn(

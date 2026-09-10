@@ -155,6 +155,18 @@ def _create_chat_controller(page: Page, table_name: str) -> ChatControllerType:
     return ChatController(page, f"querychat_{table_name}-chat")
 
 
+def open_data_drawer(page: Page, timeout: int = 15000) -> None:
+    """
+    Open the data drawer in `QueryChat.app()`-based apps and wait for the
+    data table to render.
+
+    The drawer starts closed (it auto-opens when a query lands), so tests
+    that need the table up front open it via the drawer trigger button.
+    """
+    page.locator(".shiny-chat-drawer-trigger").click()
+    page.wait_for_selector("table", state="visible", timeout=timeout)
+
+
 # Shiny apps run as subprocesses via shiny.pytest.create_app_fixture.
 # Running them in-process (threaded uvicorn) shares Shiny's process-global,
 # loop-bound reactive lock across apps, which crashes sessions when apps

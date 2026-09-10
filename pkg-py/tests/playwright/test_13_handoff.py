@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 import pytest
 from playwright.sync_api import expect
 
-from .conftest import HandoffModalActions
+from .conftest import HandoffModalActions, open_data_drawer
 
 if TYPE_CHECKING:
     from playwright.sync_api import BrowserContext, Page
@@ -25,9 +25,11 @@ class TestHandoffAppLoads:
     """Verifies the app starts with the handoff panel closed."""
 
     @pytest.fixture(autouse=True)
-    def setup(self, page: Page, app_handoff: ShinyAppProc, chat_handoff: ChatController):
+    def setup(
+        self, page: Page, app_handoff: ShinyAppProc, chat_handoff: ChatController
+    ):
         page.goto(app_handoff.url)
-        page.wait_for_selector("table", timeout=15000)
+        open_data_drawer(page, timeout=15000)
         self.page = page
         self.chat = chat_handoff
 
@@ -43,9 +45,11 @@ class TestHandoffModal(HandoffModalActions):
     """Tests the /handoff modal wizard: opening, type selector, gallery, and buttons."""
 
     @pytest.fixture(autouse=True)
-    def setup(self, page: Page, app_handoff: ShinyAppProc, chat_handoff: ChatController):
+    def setup(
+        self, page: Page, app_handoff: ShinyAppProc, chat_handoff: ChatController
+    ):
         page.goto(app_handoff.url)
-        page.wait_for_selector("table", timeout=15000)
+        open_data_drawer(page, timeout=15000)
         expect(chat_handoff.loc_input).to_be_enabled(timeout=30000)
         self.page = page
         self.chat = chat_handoff
@@ -117,9 +121,11 @@ class TestHandoffGalleryWithResults(HandoffModalActions):
     """Tests the modal gallery after sending a query to populate it."""
 
     @pytest.fixture(autouse=True)
-    def setup(self, page: Page, app_handoff: ShinyAppProc, chat_handoff: ChatController):
+    def setup(
+        self, page: Page, app_handoff: ShinyAppProc, chat_handoff: ChatController
+    ):
         page.goto(app_handoff.url)
-        page.wait_for_selector("table", timeout=15000)
+        open_data_drawer(page, timeout=15000)
         expect(chat_handoff.loc_input).to_be_enabled(timeout=30000)
         self.page = page
         self.chat = chat_handoff
@@ -180,9 +186,11 @@ class TestHandoffLanguageSelector(HandoffModalActions):
     """Tests the modal's Language selector and per-format availability."""
 
     @pytest.fixture(autouse=True)
-    def setup(self, page: Page, app_handoff: ShinyAppProc, chat_handoff: ChatController):
+    def setup(
+        self, page: Page, app_handoff: ShinyAppProc, chat_handoff: ChatController
+    ):
         page.goto(app_handoff.url)
-        page.wait_for_selector("table", timeout=15000)
+        open_data_drawer(page, timeout=15000)
         expect(chat_handoff.loc_input).to_be_enabled(timeout=30000)
         self.page = page
         self.chat = chat_handoff
@@ -243,9 +251,11 @@ class TestHandoffGeneration(HandoffModalActions):
     """Tests the full handoff generation flow: generate, panel, pill, close."""
 
     @pytest.fixture(autouse=True)
-    def setup(self, page: Page, app_handoff: ShinyAppProc, chat_handoff: ChatController):
+    def setup(
+        self, page: Page, app_handoff: ShinyAppProc, chat_handoff: ChatController
+    ):
         page.goto(app_handoff.url)
-        page.wait_for_selector("table", timeout=15000)
+        open_data_drawer(page, timeout=15000)
         expect(chat_handoff.loc_input).to_be_enabled(timeout=30000)
         self.page = page
         self.chat = chat_handoff
@@ -379,6 +389,8 @@ class TestHandoffPlainBookmarkRestore(HandoffModalActions):
 
         restored_panel = new_page.locator(".querychat-handoff-panel")
         expect(restored_panel).to_have_class(re.compile(r"\bopen\b"), timeout=5000)
-        editor = restored_panel.locator(".querychat-handoff-panel-body textarea:visible")
+        editor = restored_panel.locator(
+            ".querychat-handoff-panel-body textarea:visible"
+        )
         expect(editor).not_to_have_value("", timeout=10000)
         new_page.close()

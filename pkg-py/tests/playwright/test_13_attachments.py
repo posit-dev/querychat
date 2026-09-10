@@ -15,6 +15,8 @@ from typing import TYPE_CHECKING
 import pytest
 from playwright.sync_api import expect
 
+from .conftest import open_data_drawer
+
 if TYPE_CHECKING:
     from playwright.sync_api import Page
     from shiny.run import ShinyAppProc
@@ -29,7 +31,7 @@ class TestAttachments:
         self, page: Page, app_01_hello: ShinyAppProc, chat_01_hello: ChatController
     ) -> None:
         page.goto(app_01_hello.url)
-        page.wait_for_selector("table", timeout=10000)
+        open_data_drawer(page, timeout=10000)
         self.page = page
         self.chat = chat_01_hello
 

@@ -2,6 +2,8 @@
 
 ## New features
 
+* `querychat_app()` (and `QueryChat$app()`) is now chat-first: it builds on the `$page()` layout, so the chat owns the window, and the SQL editor + data table live in a drawer that auto-opens when the LLM runs a query (including on bookmark/history restore).
+
 * New `/handoff` slash command: turn selected query and visualization results from your chat session into a downloadable Quarto dashboard or Shiny app — with AI-assisted revision, bundled data, and handoffs that survive chat history restores and Shiny bookmarks.
 
 * Added a `$page()` method to `QueryChat` that wraps `shinychat::page_chat()` for full-window, "chat-first" apps. The chat owns the page (with conversation history, optional navigation pages, sidebars, and a drawer), and reactive data views can live on secondary pages via `shinychat::chat_nav_panel()`.

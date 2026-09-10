@@ -177,6 +177,10 @@ class ServerValues(Generic[IntoFrameT]):
     current_table
         The name of the most recently queried table, or ``None`` if no query
         has been run yet. Call ``.current_table()`` to read reactively.
+    chat
+        The underlying ``shinychat.Chat`` instance for this session, or
+        ``None`` in stub sessions. Useful for driving chat-level UI such as
+        the drawer (e.g. ``vals.chat.drawer.show()``).
 
     """
 
@@ -190,6 +194,7 @@ class ServerValues(Generic[IntoFrameT]):
         client: ServerClient,
         data_sources: dict[str, DataSource[IntoFrameT]],
         current_table: ReactiveStringOrNone,
+        chat: shinychat.Chat | None = None,
     ):
         self.df = df
         self.sql = sql
@@ -198,6 +203,7 @@ class ServerValues(Generic[IntoFrameT]):
         self.client = client
         self._data_sources = data_sources
         self._current_table_rv = current_table
+        self.chat = chat
 
     def table(self, name: str) -> TableAccessor:
         """
@@ -451,6 +457,7 @@ def mod_server(
             client=chat,
             data_sources=data_sources,
             current_table=_current_table,
+            chat=shinychat_chat,
         )
 
     primary_name = next(iter(table_states))
@@ -477,6 +484,7 @@ def mod_server(
         client=chat,
         data_sources=data_sources,
         current_table=_current_table,
+        chat=shinychat_chat,
     )
 
 

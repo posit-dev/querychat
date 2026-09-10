@@ -1496,7 +1496,7 @@ describe("QueryChatGreeter", {
 })
 
 describe("QueryChat$page()", {
-  skip_if_not_installed("shinychat", minimum_version = "0.4.0.9000")
+  skip_if_not_installed("shinychat", minimum_version = "0.5.0")
 
   it("renders a full-window page with a namespaced chat root", {
     qc <- QueryChat$new(NULL, "users", greeting = "Test")
@@ -1578,8 +1578,94 @@ describe("QueryChat$page()", {
   })
 })
 
+describe("QueryChat$app_obj()", {
+  skip_if_not_installed("shinychat", minimum_version = "0.5.0")
+  skip_if_not_installed("DT")
+  skip_if_no_dataframe_engine()
+
+  it("builds the app UI on page_chat() with a closed data drawer", {
+    qc <- QueryChat$new(new_test_df(), "test_df", greeting = "Test")
+    withr::defer(qc$cleanup())
+
+    app <- qc$app_obj()
+    # shiny.appobj doesn't expose the UI function; it's closed over by
+    # httpHandler
+    ui <- get("ui", envir = environment(app$httpHandler))
+    html <- as.character(ui(NULL))
+
+    # Chat-primary page layout (page_chat), not the old page_sidebar dashboard
+    expect_true(grepl('id="querychat_test_df-chat_page"', html, fixed = TRUE))
+
+    # The data table is the drawer's primary content
+    drawer <- regmatches(html, regexpr("<shiny-chat-drawer[^>]*>", html))
+    expect_true(nchar(drawer) > 0)
+    # htmltools drops FALSE-valued attributes; no `open` means initially
+    # closed (auto-opened server-side when a query lands)
+    expect_false(grepl("open=", drawer, fixed = TRUE))
+    expect_true(grepl(
+      'width="calc(min(clamp(360px, 55vw, 720px), 100%))"',
+      drawer,
+      fixed = TRUE
+    ))
+    expect_true(grepl('id="dt"', html, fixed = TRUE))
+    # SQL editor is a second-class citizen: tucked into the data card's
+    # footer behind a "Show Query" toggle, not its own top-level card
+    expect_true(grepl('id="sql_output"', html, fixed = TRUE))
+    expect_true(grepl('class="querychat-show-query-btn', html, fixed = TRUE))
+    expect_true(grepl(
+      'data-querychat-action="show-query"',
+      html,
+      fixed = TRUE
+    ))
+    expect_true(grepl('id="ui_reset"', html, fixed = TRUE))
+    expect_true(grepl('title="Data Sources"', drawer, fixed = TRUE))
+    # A single-table app has nothing to browse on demand, so no accordion
+    expect_false(grepl('id="data_sources_accordion"', html, fixed = TRUE))
+
+    # Handoff panel still present via the page extras
+    expect_true(grepl(
+      'id="querychat_test_df-handoff_download"',
+      html,
+      fixed = TRUE
+    ))
+  })
+
+  it("adds a static data-sources accordion when there's more than one table", {
+    qc <- QueryChat$new(new_test_df(), "orders", greeting = "Test")
+    withr::defer(qc$cleanup())
+    qc$add_table(new_users_df(), "customers")
+
+    app <- qc$app_obj()
+    ui <- get("ui", envir = environment(app$httpHandler))
+    html <- as.character(ui(NULL))
+
+    expect_true(grepl('id="data_sources_accordion"', html, fixed = TRUE))
+    for (name in c("orders", "customers")) {
+      expect_true(grepl(paste0('id="dt_', name, '"'), html, fixed = TRUE))
+      expect_true(grepl(
+        paste0('id="active_badge_', name, '"'),
+        html,
+        fixed = TRUE
+      ))
+      expect_true(grepl(
+        paste0('data-target="sql_query_section_', name, '"'),
+        html,
+        fixed = TRUE
+      ))
+      expect_true(grepl(
+        paste0('id="sql_query_section_', name, '"'),
+        html,
+        fixed = TRUE
+      ))
+    }
+    # The pinned "active table" card is unaffected by the accordion
+    expect_true(grepl('id="dt"', html, fixed = TRUE))
+    expect_true(grepl('id="ui_reset"', html, fixed = TRUE))
+  })
+})
+
 describe("QueryChat$ui()", {
-  skip_if_not_installed("shinychat", minimum_version = "0.4.0.9000")
+  skip_if_not_installed("shinychat", minimum_version = "0.5.0")
 
   it("injects dependencies and the handoff panel via the chat footer", {
     qc <- QueryChat$new(NULL, "users", greeting = "Test")

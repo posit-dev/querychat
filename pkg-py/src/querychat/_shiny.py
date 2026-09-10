@@ -3,9 +3,11 @@ from __future__ import annotations
 import warnings
 from typing import TYPE_CHECKING, Any, Literal, Optional, overload
 
+from htmltools import TagChild, tags
 from narwhals.stable.v1.typing import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
 from shiny.express._stub_session import ExpressStubSession
 from shiny.session import get_current_session
+from shinychat import chat_drawer
 from shinychat.types import HistoryOptions
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
@@ -21,7 +23,10 @@ from ._shiny_module import (
     mod_ui,
 )
 from ._utils import MISSING, MISSING_TYPE, as_narwhals
+from ._viz_tools import viz_dep
 from ._viz_utils import has_viz_tool
+
+DRAWER_WIDTH = "calc(min(clamp(360px, 55vw, 720px), 100%))"
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -284,8 +289,9 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         """
         Quickly chat with a dataset.
 
-        Creates a Shiny app with a chat sidebar and data view -- providing a
-        quick-and-easy way to start chatting with your data.
+        Creates a Shiny app with a chat page and a data drawer (SQL editor +
+        data table) that opens automatically when a query changes the data --
+        providing a quick-and-easy way to start chatting with your data.
 
         Parameters
         ----------
@@ -321,29 +327,40 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             and resolved_history.restore_mode == "bookmark"
         )
         first_table_name = next(iter(self._data_sources))
+        table_names = list(self._data_sources)
+        multi_table = len(table_names) > 1
 
-        def app_ui(request):
-            return ui.page_sidebar(
-                self.sidebar(),
-                ui.card(
-                    ui.card_header(
-                        ui.div(
-                            ui.div(
-                                bs_icon("terminal-fill"),
-                                ui.output_text("query_title", inline=True),
-                                class_="d-flex align-items-center gap-2",
+        def show_query_footer(
+            *, target: str, content: TagChild, right: TagChild = None
+        ) -> ui.CardItem:
+            return ui.card_footer(
+                tags.div(
+                    {"class": "querychat-footer-buttons"},
+                    tags.div(
+                        {"class": "querychat-footer-left"},
+                        tags.button(
+                            {
+                                "class": "querychat-show-query-btn",
+                                "data-querychat-action": "show-query",
+                                "data-target": target,
+                            },
+                            bs_icon("chevron-down", cls="querychat-query-chevron"),
+                            tags.span(
+                                {"class": "querychat-query-label"}, "Show Query"
                             ),
-                            ui.div(
-                                ui.output_ui("ui_reset", inline=True),
-                                class_="ms-auto",
-                            ),
-                            class_="hstack gap-3 w-100",
                         ),
                     ),
-                    ui.output_ui("sql_output"),
-                    fill=False,
-                    style="max-height: 33%;",
+                    tags.div({"class": "querychat-footer-right"}, right),
                 ),
+                tags.div(
+                    {"class": "querychat-query-section", "id": target},
+                    content,
+                ),
+                viz_dep(),
+            )
+
+        def app_ui(request):
+            drawer_children = [
                 ui.card(
                     ui.card_header(
                         bs_icon("table"),
@@ -351,10 +368,44 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                         ui.output_text("data_card_header_text", inline=True),
                     ),
                     ui.output_data_frame("dt"),
+                    show_query_footer(
+                        target="sql_query_section",
+                        content=ui.output_ui("sql_output"),
+                        right=ui.output_ui("ui_reset", inline=True),
+                    ),
+                )
+            ]
+            if multi_table:
+                drawer_children.append(
+                    ui.accordion(
+                        *[
+                            ui.accordion_panel(
+                                tags.span(
+                                    name,
+                                    ui.output_ui(f"active_badge_{name}", inline=True),
+                                ),
+                                ui.output_data_frame(f"dt_{name}"),
+                                show_query_footer(
+                                    target=f"sql_query_section_{name}",
+                                    content=ui.output_ui(f"sql_view_{name}"),
+                                ),
+                                value=name,
+                            )
+                            for name in table_names
+                        ],
+                        id="data_sources_accordion",
+                        open=False,
+                    )
+                )
+            return self.page(
+                ui.span("querychat with ", ui.code(first_table_name)),
+                window_title="querychat",
+                drawer=chat_drawer(
+                    *drawer_children,
+                    title="Data Sources",
+                    open=False,
+                    width=DRAWER_WIDTH,
                 ),
-                title=ui.span("querychat with ", ui.code(first_table_name)),
-                class_="bslib-page-dashboard",
-                fillable=True,
             )
 
         def app_server(input: Inputs, output: Outputs, session: Session):
@@ -381,17 +432,13 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             def data_card_header_text():
                 return active_table_name()
 
-            @render.text
-            def query_title():
-                return vals.table(active_table_name()).title() or "SQL Query"
-
             @render.ui
             def ui_reset():
                 req(vals.table(active_table_name()).sql())
                 return ui.input_action_button(
                     "reset_query",
                     "Reset Query",
-                    class_="btn btn-outline-danger btn-sm lh-1 ms-auto",
+                    class_="btn btn-outline-danger btn-sm lh-1",
                 )
 
             @reactive.effect
@@ -429,6 +476,13 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 ui.update_code_editor("sql_editor", value=sql_text_for_editor(name))
 
             @reactive.effect
+            async def _():
+                # Auto-open the data drawer when a new query lands
+                name = active_table_name()
+                if vals.table(name).sql() and vals.chat is not None:
+                    await vals.chat.drawer.show()
+
+            @reactive.effect
             @reactive.event(input.sql_editor)
             def _():
                 name = active_table_name()
@@ -437,6 +491,46 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 vals._tables[name].sql.set(
                     query if query and query.strip() != default_query else None
                 )
+
+            if multi_table:
+                # One data grid, read-only query view, and "active" badge per
+                # registered table, for the drawer's data-sources accordion.
+                # The accordion is fully static (built once in app_ui), so
+                # each output is a closure bound to a literal table name.
+                def register_table_outputs(name: str) -> None:
+                    @output(id=f"active_badge_{name}")
+                    @render.ui
+                    def _badge():
+                        if active_table_name() == name:
+                            return tags.span(
+                                {"class": "badge bg-primary ms-2"}, "Active"
+                            )
+                        return None
+
+                    @output(id=f"dt_{name}")
+                    @render.data_frame
+                    def _dt():
+                        return as_narwhals(vals.table(name).df())
+
+                    @output(id=f"sql_view_{name}")
+                    @render.ui
+                    def _view():
+                        return ui.input_code_editor(
+                            f"sql_view_editor_{name}",
+                            value=sql_text_for_editor(name),
+                            language="sql",
+                            read_only=True,
+                            line_numbers=False,
+                            height="auto",
+                        )
+
+                for name in table_names:
+                    register_table_outputs(name)
+
+                if enable_bookmarking:
+                    session.bookmark.exclude.extend(
+                        f"sql_view_editor_{name}" for name in table_names
+                    )
 
         return App(
             app_ui,

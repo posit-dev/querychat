@@ -18,7 +18,7 @@ This is especially valuable when:
 Regardless of framework, building a custom querychat app follows the same pattern:
 
 1. **Initialize** a `QueryChat` instance with your data
-2. **Place** the chat UI in your layout (`.sidebar()` or `.ui()`)
+2. **Place** the chat UI in your layout (`.page()`, `.sidebar()`, or `.ui()`)
 3. **Access** query state (`.df()`, `.sql()`, `.title()`) to build reactive outputs
 4. **Connect** visualizations and tables to the filtered data
 

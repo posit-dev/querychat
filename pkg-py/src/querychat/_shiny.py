@@ -12,7 +12,14 @@ from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 
 from ._icons import bs_icon
 from ._querychat_base import DEFAULT_TOOLS, TOOL_GROUPS, QueryChatBase, resolve_client
-from ._shiny_module import ServerValues, mod_server, mod_ui
+from ._shiny_module import (
+    CHAT_ID,
+    ServerValues,
+    add_footer_and_class,
+    mod_page,
+    mod_server,
+    mod_ui,
+)
 from ._utils import MISSING, MISSING_TYPE, as_narwhals
 from ._viz_utils import has_viz_tool
 
@@ -496,6 +503,39 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         """
         return mod_ui(id or self.id, preload_viz=has_viz_tool(self.tools), **kwargs)
 
+    def page(self, title, *, id: Optional[str] = None, **kwargs):
+        """
+        Create a full-window page containing the querychat UI.
+
+        This wraps `shinychat.page_chat()`, making the chat the primary
+        surface of the app, with optional navigation pages, sidebars, and a
+        drawer. Use this instead of `.sidebar()` or `.ui()` when the chat
+        should own the full browser window.
+
+        Parameters
+        ----------
+        title
+            Page title displayed in the header. When it is a string and
+            `window_title` is omitted, it is also used as the document title.
+        id
+            Optional ID for the QueryChat instance. If not provided,
+            will use the ID provided at initialization.
+        **kwargs
+            Additional arguments passed to `shinychat.page_chat()`.
+
+        Returns
+        -------
+        :
+            A complete fillable Shiny page suitable for use as a Core app's UI.
+
+        """
+        return mod_page(
+            id or self.id,
+            title,
+            preload_viz=has_viz_tool(self.tools),
+            **kwargs,
+        )
+
     def server(
         self,
         *,
@@ -940,6 +980,58 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
 
         """
         result = mod_ui(id or self.id, preload_viz=has_viz_tool(self.tools), **kwargs)
+        self._ensure_server_started()
+        return result
+
+    def page(self, title, *, id: Optional[str] = None, **kwargs):
+        """
+        Create a full-window Express page containing the querychat UI.
+
+        This wraps `shinychat.express.page_chat()`, making the chat the
+        primary surface of the app, with optional navigation pages, sidebars,
+        and a drawer. Use this instead of `.sidebar()` or `.ui()` when the
+        chat should own the full browser window.
+
+        Since `page_chat()` owns the entire page layout, this must be the
+        only top-level UI item in the Express app.
+
+        Parameters
+        ----------
+        title
+            Page title displayed in the header. When it is a string and
+            `window_title` is omitted, it is also used as the document title.
+        id
+            Optional ID for the QueryChat instance. If not provided,
+            will use the ID provided at initialization.
+        **kwargs
+            Additional arguments passed to `shinychat.express.page_chat()`.
+
+        Returns
+        -------
+        :
+            The page's chat root, returned so Express can display it. It must
+            remain the sole top-level UI item: do not assign it to a variable
+            or wrap it in other UI.
+
+        """
+        # namespace_context is absent from shiny.module's __all__ (works at runtime)
+        from shiny.module import (
+            ResolvedId,
+            namespace_context,  # pyright: ignore[reportPrivateImportUsage]
+        )
+        from shinychat.express import page_chat as express_page_chat
+
+        module_id = id or self.id
+
+        # Enter the module namespace explicitly so the extras get namespaced IDs.
+        with namespace_context(module_id):
+            kwargs = add_footer_and_class(kwargs, preload_viz=has_viz_tool(self.tools))
+
+        # express page_chat() renders its shell lazily, after the
+        # namespace_context has exited, so pre-resolve the chat ID to match
+        # mod_server()'s module scope.
+        chat_id = ResolvedId(f"{module_id}-{CHAT_ID}")
+        result = express_page_chat(title, id=chat_id, **kwargs)
         self._ensure_server_started()
         return result
 

@@ -947,6 +947,37 @@ QueryChat <- R6::R6Class(
     },
 
     #' @description
+    #' Create a full-window page containing the querychat UI.
+    #'
+    #' This wraps [shinychat::page_chat()], making the chat the primary
+    #' surface of the app, with optional navigation pages, sidebars, and a
+    #' drawer. Use this instead of `$sidebar()` or `$ui()` when the chat
+    #' should own the full browser window.
+    #'
+    #' @param title Page title displayed in the header. When it is a string
+    #'   and `window_title` is omitted, it is also used as the document title.
+    #' @param ... Additional arguments passed to [shinychat::page_chat()].
+    #' @param id Optional ID for the QueryChat instance.
+    #'
+    #' @return A fillable page UI component suitable for use as the app's UI.
+    page = function(title, ..., id = NULL) {
+      check_string(id, allow_null = TRUE, allow_empty = FALSE)
+
+      id <- id %||% namespaced_id(self$id)
+
+      ns <- shiny::NS(id)
+      # Extras must ride in the footer slot; tagList() siblings of
+      # page_chat() would render outside <body>.
+      dots <- add_footer_and_class(rlang::list2(...), ns)
+      rlang::exec(
+        shinychat::page_chat,
+        title,
+        !!!dots,
+        id = ns("chat")
+      )
+    },
+
+    #' @description
     #' Initialize the querychat server logic.
     #'
     #' @param data_source Optional data source for backward compatibility.

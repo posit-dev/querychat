@@ -11,6 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * New `/handoff` slash command: turn selected query and visualization results from your chat session into a downloadable Quarto dashboard, Shiny app, or marimo notebook — with AI-assisted revision, bundled data, and handoffs that survive chat history restores and Shiny bookmarks.
 
+* Added a `.page()` method to `QueryChat` (both Core and Express) that wraps `shinychat.page_chat()` for full-window, "chat-first" apps. The chat owns the page (with conversation history, optional navigation pages, sidebars, and a drawer), and reactive data views can live on secondary pages via `shinychat.chat_nav_panel()`.
+
+  ```python
+  qc = QueryChat(titanic(), "titanic")
+  app_ui = qc.page("Titanic Explorer")  # Core
+  ```
+
 ## [0.7.0] - 2026-07-10
 
 ### New features

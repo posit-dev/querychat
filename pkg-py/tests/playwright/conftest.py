@@ -199,6 +199,28 @@ def chat_03_core(page: Page) -> ChatControllerType:
     return _create_chat_controller(page, "titanic")
 
 
+app_03_page_express = create_app_fixture(
+    EXAMPLES_DIR / "03-page-express-app.py", scope="module"
+)
+
+
+@pytest.fixture
+def chat_03_page_express(page: Page) -> ChatControllerType:
+    """Create a ChatController for the 03-page-express-app chat component."""
+    return _create_chat_controller(page, "titanic")
+
+
+app_03_page_core = create_app_fixture(
+    EXAMPLES_DIR / "03-page-core-app.py", scope="module"
+)
+
+
+@pytest.fixture
+def chat_03_page_core(page: Page) -> ChatControllerType:
+    """Create a ChatController for the 03-page-core-app chat component."""
+    return _create_chat_controller(page, "titanic")
+
+
 def _start_streamlit_app_subprocess(
     app_path: str, port: int
 ) -> tuple[subprocess.Popen, None]:

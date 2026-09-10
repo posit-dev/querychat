@@ -2,8 +2,6 @@
 
 ## New features
 
-* The `"visualize"` tool is now included in the default toolset (`tools = c("filter", "query", "visualize")`). If the suggested ggsql package is not installed, the tool is dropped with a warning instead of erroring.
-
 * New `/handoff` slash command: turn selected query and visualization results from your chat session into a downloadable Quarto dashboard or Shiny app — with AI-assisted revision, bundled data, and handoffs that survive chat history restores and Shiny bookmarks.
 
 * Added a `$page()` method to `QueryChat` that wraps `shinychat::page_chat()` for full-window, "chat-first" apps. The chat owns the page (with conversation history, optional navigation pages, sidebars, and a drawer), and reactive data views can live on secondary pages via `shinychat::chat_nav_panel()`.
@@ -53,6 +51,8 @@
 * `$server()`'s `enable_bookmarking` parameter is deprecated in favor of `history`. Pass `history = shinychat::history_options(restore_mode = "bookmark")` instead of `enable_bookmarking = TRUE` for the equivalent behavior.
 
 ## Improvements
+
+* The `"visualize"` tool is now included in the default toolset (`tools = c("filter", "query", "visualize")`). If the suggested ggsql package is not installed, the tool is dropped with a warning instead of erroring.
 
 * Chat greetings now use shinychat's greeting API (requires shinychat >= 0.4.0). A provided `greeting` renders instantly when the app loads, and when no `greeting` is given one is generated on demand — now **schema-aware**, so it can describe the data it's about to help you explore — without being added to the conversation history. Generated greetings are preserved across bookmark/restore. Tables passed to `QueryChat$new()` are described in the greeting automatically; opt additional tables in with `include_in_greeting = TRUE` on `$add_table()`/`$add_tables()`, or fine-tune which tables and which template the greeting uses via `qc$greeter`. (#249, #261)
 

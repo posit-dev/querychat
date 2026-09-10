@@ -167,6 +167,13 @@
     var(--bs-border-color, #dee2e6);
 }
 
+/* A plain bslib card_footer() (e.g. the data drawer's SQL footer) uses
+   Bootstrap's own card cap padding instead of the tool-card row padding */
+.card-footer:has(.querychat-query-section) {
+  --_querychat-footer-pad-x: var(--bs-card-cap-padding-x, 1rem);
+  --_querychat-footer-pad-y: var(--bs-card-cap-padding-y, 0.5rem);
+}
+
 .shiny-tool-card[fullscreen]:has(.querychat-viz-container) {
   max-height: none;
 }

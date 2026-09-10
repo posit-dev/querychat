@@ -1596,14 +1596,28 @@ describe("QueryChat$app_obj()", {
     # Chat-primary page layout (page_chat), not the old page_sidebar dashboard
     expect_true(grepl('id="querychat_test_df-chat_page"', html, fixed = TRUE))
 
-    # The SQL editor and data table live in the drawer
+    # The data table is the drawer's primary content
     drawer <- regmatches(html, regexpr("<shiny-chat-drawer[^>]*>", html))
     expect_true(nchar(drawer) > 0)
     # htmltools drops FALSE-valued attributes; no `open` means initially
     # closed (auto-opened server-side when a query lands)
     expect_false(grepl("open=", drawer, fixed = TRUE))
-    expect_true(grepl('id="sql_output"', html, fixed = TRUE))
+    expect_true(grepl(
+      'width="calc(min(clamp(360px, 55vw, 720px), 100%))"',
+      drawer,
+      fixed = TRUE
+    ))
     expect_true(grepl('id="dt"', html, fixed = TRUE))
+    # SQL editor is a second-class citizen: tucked into the data card's
+    # footer behind a "Show Query" toggle, not its own top-level card
+    expect_true(grepl('id="sql_output"', html, fixed = TRUE))
+    expect_true(grepl('class="querychat-show-query-btn', html, fixed = TRUE))
+    expect_true(grepl(
+      'data-querychat-action="show-query"',
+      html,
+      fixed = TRUE
+    ))
+    expect_true(grepl('id="ui_reset"', html, fixed = TRUE))
 
     # Handoff panel still present via the page extras
     expect_true(grepl(

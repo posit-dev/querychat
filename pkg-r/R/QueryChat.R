@@ -753,33 +753,47 @@ QueryChat <- R6::R6Class(
           window_title = "querychat",
           drawer = shinychat::chat_drawer(
             bslib::card(
-              fill = FALSE,
-              bslib::card_header(
-                shiny::div(
-                  class = "hstack w-100",
-                  shiny::div(
-                    bsicons::bs_icon("terminal-fill"),
-                    shiny::textOutput("query_title", inline = TRUE)
-                  ),
-                  shiny::div(
-                    class = "ms-auto",
-                    shiny::uiOutput("ui_reset", inline = TRUE)
-                  )
-                )
-              ),
-              shiny::uiOutput("sql_output")
-            ),
-            bslib::card(
               full_screen = TRUE,
               bslib::card_header(
                 bsicons::bs_icon("table"),
                 "Data \u2014 ",
                 shiny::textOutput("data_card_header_text", inline = TRUE)
               ),
-              DT::DTOutput("dt")
+              DT::DTOutput("dt"),
+              bslib::card_footer(
+                shiny::div(
+                  class = "querychat-footer-buttons",
+                  shiny::div(
+                    class = "querychat-footer-left",
+                    shiny::tags$button(
+                      class = "querychat-show-query-btn",
+                      `data-querychat-action` = "show-query",
+                      `data-target` = "sql_query_section",
+                      bsicons::bs_icon(
+                        "chevron-down",
+                        class = "querychat-query-chevron"
+                      ),
+                      shiny::tags$span(
+                        class = "querychat-query-label",
+                        "Show Query"
+                      )
+                    )
+                  ),
+                  shiny::div(
+                    class = "querychat-footer-right",
+                    shiny::uiOutput("ui_reset", inline = TRUE)
+                  )
+                ),
+                shiny::div(
+                  class = "querychat-query-section",
+                  id = "sql_query_section",
+                  shiny::uiOutput("sql_output")
+                ),
+                viz_dep()
+              )
             ),
             open = FALSE,
-            width = 720
+            width = "calc(min(clamp(360px, 55vw, 720px), 100%))"
           ),
           footer = htmltools::tagList(
             shiny::useBusyIndicators(pulse = TRUE, spinners = FALSE),
@@ -818,11 +832,6 @@ QueryChat <- R6::R6Class(
 
         output$data_card_header_text <- shiny::renderText({
           active_table_name()
-        })
-
-        output$query_title <- shiny::renderText({
-          title <- qc_vals$.tables[[active_table_name()]]$title()
-          if (shiny::isTruthy(title)) title else "SQL Query"
         })
 
         output$ui_reset <- shiny::renderUI({

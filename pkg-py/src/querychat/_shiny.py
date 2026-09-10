@@ -3,6 +3,7 @@ from __future__ import annotations
 import warnings
 from typing import TYPE_CHECKING, Any, Literal, Optional, overload
 
+from htmltools import tags
 from narwhals.stable.v1.typing import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
 from shiny.express._stub_session import ExpressStubSession
 from shiny.session import get_current_session
@@ -22,7 +23,10 @@ from ._shiny_module import (
     mod_ui,
 )
 from ._utils import MISSING, MISSING_TYPE, as_narwhals
+from ._viz_tools import viz_dep
 from ._viz_utils import has_viz_tool
+
+DRAWER_WIDTH = "calc(min(clamp(360px, 55vw, 720px), 100%))"
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -331,32 +335,49 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 drawer=chat_drawer(
                     ui.card(
                         ui.card_header(
-                            ui.div(
-                                ui.div(
-                                    bs_icon("terminal-fill"),
-                                    ui.output_text("query_title", inline=True),
-                                    class_="d-flex align-items-center gap-2",
-                                ),
-                                ui.div(
-                                    ui.output_ui("ui_reset", inline=True),
-                                    class_="ms-auto",
-                                ),
-                                class_="hstack gap-3 w-100",
-                            ),
-                        ),
-                        ui.output_ui("sql_output"),
-                        fill=False,
-                    ),
-                    ui.card(
-                        ui.card_header(
                             bs_icon("table"),
                             " Data — ",
                             ui.output_text("data_card_header_text", inline=True),
                         ),
                         ui.output_data_frame("dt"),
+                        ui.card_footer(
+                            tags.div(
+                                {"class": "querychat-footer-buttons"},
+                                tags.div(
+                                    {"class": "querychat-footer-left"},
+                                    tags.button(
+                                        {
+                                            "class": "querychat-show-query-btn",
+                                            "data-querychat-action": "show-query",
+                                            "data-target": "sql_query_section",
+                                        },
+                                        bs_icon(
+                                            "chevron-down",
+                                            cls="querychat-query-chevron",
+                                        ),
+                                        tags.span(
+                                            {"class": "querychat-query-label"},
+                                            "Show Query",
+                                        ),
+                                    ),
+                                ),
+                                tags.div(
+                                    {"class": "querychat-footer-right"},
+                                    ui.output_ui("ui_reset", inline=True),
+                                ),
+                            ),
+                            tags.div(
+                                {
+                                    "class": "querychat-query-section",
+                                    "id": "sql_query_section",
+                                },
+                                ui.output_ui("sql_output"),
+                            ),
+                            viz_dep(),
+                        ),
                     ),
                     open=False,
-                    width=720,
+                    width=DRAWER_WIDTH,
                 ),
             )
 
@@ -384,17 +405,13 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             def data_card_header_text():
                 return active_table_name()
 
-            @render.text
-            def query_title():
-                return vals.table(active_table_name()).title() or "SQL Query"
-
             @render.ui
             def ui_reset():
                 req(vals.table(active_table_name()).sql())
                 return ui.input_action_button(
                     "reset_query",
                     "Reset Query",
-                    class_="btn btn-outline-danger btn-sm lh-1 ms-auto",
+                    class_="btn btn-outline-danger btn-sm lh-1",
                 )
 
             @reactive.effect

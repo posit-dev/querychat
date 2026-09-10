@@ -796,7 +796,7 @@ def normalize_tools(
         resolved = {"update" if t == "filter" else t for t in resolved}
     if not check_deps:
         return resolved
-    if has_viz_tool(resolved) and not has_viz_deps():
+    if resolved is not None and has_viz_tool(resolved) and not has_viz_deps():
         warnings.warn(
             "Visualization tools require ggsql, altair, shinywidgets, and "
             "vl-convert-python. Install them with: pip install querychat[viz]. "

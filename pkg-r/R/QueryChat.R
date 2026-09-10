@@ -743,9 +743,6 @@ QueryChat <- R6::R6Class(
       first_table_name <- names(private$.data_sources)[[1]]
 
       ui <- function(req) {
-        # The data views ride in the chat drawer (auto-opened server-side
-        # when a query lands). page_chat() owns the whole document, so the
-        # busy indicators and gadget close button go through the footer slot.
         self$page(
           title = shiny::HTML(
             sprintf(

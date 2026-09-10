@@ -171,10 +171,10 @@ if (rlang::is_installed(c("pins", "duckdb"))) {
 
   ps$cleanup()
 }
-#> Creating new version '20260804T003152Z-c0340'
+#> Creating new version '20260910T223338Z-c0340'
 #> Writing to pin 'mtcars'
 #> duckdb keeps downloaded extensions and secrets in a temporary directory:
-#> ℹ /tmp/Rtmps3gu2r/duckdb
+#> ℹ /tmp/Rtmp5aWJni/duckdb
 #> This is removed when the R session ends.
 #> • Extensions are re-downloaded each session.
 #> • Secrets are lost.

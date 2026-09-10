@@ -107,6 +107,8 @@ connection) as input and provides methods to:
 
 - [`QueryChat$ui()`](#method-QueryChat-ui)
 
+- [`QueryChat$page()`](#method-QueryChat-page)
+
 - [`QueryChat$server()`](#method-QueryChat-server)
 
 - [`QueryChat$generate_greeting()`](#method-QueryChat-generate_greeting)
@@ -131,7 +133,7 @@ Create a new QueryChat object.
       greeting = NULL,
       history = NULL,
       client = NULL,
-      tools = c("filter", "query"),
+      tools = c("filter", "query", "visualize"),
       data_description = NULL,
       categorical_threshold = 20,
       extra_instructions = NULL,
@@ -203,11 +205,14 @@ Create a new QueryChat object.
 
   Which querychat tools to include in the chat client, by default.
   `"filter"` includes the tools for filtering and resetting the
-  dashboard and `"query"` includes the tool for executing SQL queries.
-  Use `tools = "filter"` when you only want the dashboard filtering
-  tools, or when you want to disable the querying tool entirely to
-  prevent the LLM from seeing any of the data in your dataset. The
-  legacy name `"update"` is still accepted as an alias for `"filter"`.
+  dashboard, `"query"` includes the tool for executing SQL queries, and
+  `"visualize"` includes the tool for rendering visualizations (requires
+  the ggsql package; if it is not installed, the tool is dropped with a
+  warning). The default is `c("filter", "query", "visualize")`. Use
+  `tools = "filter"` when you only want the dashboard filtering tools,
+  or when you want to disable the querying tool entirely to prevent the
+  LLM from seeing any of the data in your dataset. The legacy name
+  `"update"` is still accepted as an alias for `"filter"`.
 
 - `data_description`:
 
@@ -571,6 +576,42 @@ A UI component containing the chat interface.
 
 ------------------------------------------------------------------------
 
+### `QueryChat$page()`
+
+Create a full-window page containing the querychat UI.
+
+This wraps
+[`shinychat::page_chat()`](https://posit-dev.github.io/shinychat/r/reference/page_chat.html),
+making the chat the primary surface of the app, with optional navigation
+pages, sidebars, and a drawer. Use this instead of `$sidebar()` or
+`$ui()` when the chat should own the full browser window.
+
+#### Usage
+
+    QueryChat$page(title, ..., id = NULL)
+
+#### Arguments
+
+- `title`:
+
+  Page title displayed in the header. When it is a string and
+  `window_title` is omitted, it is also used as the document title.
+
+- `...`:
+
+  Additional arguments passed to
+  [`shinychat::page_chat()`](https://posit-dev.github.io/shinychat/r/reference/page_chat.html).
+
+- `id`:
+
+  Optional ID for the QueryChat instance.
+
+#### Returns
+
+A fillable page UI component suitable for use as the app's UI.
+
+------------------------------------------------------------------------
+
 ### `QueryChat$server()`
 
 Initialize the querychat server logic.
@@ -688,7 +729,7 @@ The objects of this class are cloneable with this method.
 # Basic usage with a data frame
 qc <- QueryChat$new(mtcars)
 #> duckdb keeps downloaded extensions and secrets in a temporary directory:
-#> ℹ /tmp/Rtmps3gu2r/duckdb
+#> ℹ /tmp/Rtmp5aWJni/duckdb
 #> This is removed when the R session ends.
 #> • Extensions are re-downloaded each session.
 #> • Secrets are lost.
@@ -703,7 +744,7 @@ app <- qc$app()
 greeting <- "Welcome! Ask me about the mtcars dataset."
 qc <- QueryChat$new(mtcars, greeting = greeting)
 #> duckdb keeps downloaded extensions and secrets in a temporary directory:
-#> ℹ /tmp/Rtmps3gu2r/duckdb
+#> ℹ /tmp/Rtmp5aWJni/duckdb
 #> This is removed when the R session ends.
 #> • Extensions are re-downloaded each session.
 #> • Secrets are lost.
@@ -714,7 +755,7 @@ qc <- QueryChat$new(mtcars, greeting = greeting)
 # With a specific LLM provider
 qc <- QueryChat$new(mtcars, client = "anthropic/claude-sonnet-4-5")
 #> duckdb keeps downloaded extensions and secrets in a temporary directory:
-#> ℹ /tmp/Rtmps3gu2r/duckdb
+#> ℹ /tmp/Rtmp5aWJni/duckdb
 #> This is removed when the R session ends.
 #> • Extensions are re-downloaded each session.
 #> • Secrets are lost.
@@ -738,7 +779,7 @@ qc <- QueryChat$new(
   data_description = "Motor Trend car road tests dataset"
 )
 #> duckdb keeps downloaded extensions and secrets in a temporary directory:
-#> ℹ /tmp/Rtmps3gu2r/duckdb
+#> ℹ /tmp/Rtmp5aWJni/duckdb
 #> This is removed when the R session ends.
 #> • Extensions are re-downloaded each session.
 #> • Secrets are lost.

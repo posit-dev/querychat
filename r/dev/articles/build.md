@@ -31,7 +31,7 @@ This is especially valuable when:
 Integrating querychat into a Shiny app requires just three steps:
 
 1.  Initialize a `QueryChat` instance with your data
-2.  Add the UI component (either `$sidebar()` or `$ui()`)
+2.  Add the UI component (`$page()`, `$sidebar()`, or `$ui()`)
 3.  Use reactive values like `$df()`, `$sql()`, and `$title()` to build
     outputs that respond to user queries
 
@@ -81,6 +81,67 @@ shinyApp(ui, server)
 You’ll need to call the `qc$server()` method within your server function
 to set up querychat’s reactive behavior, and capture its return value to
 access reactive data.
+
+## Chat-first page
+
+The starter template above uses `$sidebar()` to embed the chat alongside
+your data views. When the chat is the primary way users interact with
+your app, use `$page()` instead to give it the full browser window. It
+wraps
+[shinychat::page_chat()](https://posit-dev.github.io/shinychat/r/reference/page_chat.html),
+which provides a persistent chat with conversation history, plus
+optional navigation pages, sidebars, and a drawer. Reactive data views
+(driven by `$df()`, `$sql()`, `$title()`) work well as secondary pages
+via
+[`shinychat::chat_nav_panel()`](https://posit-dev.github.io/shinychat/r/reference/chat_nav_panel.html):
+
+``` r
+
+library(shiny)
+library(bslib)
+library(querychat)
+library(DT)
+library(palmerpenguins)
+
+qc <- QueryChat$new(penguins)
+
+ui <- qc$page(
+  "Penguins Explorer",
+  pages_navbar = list(
+    shinychat::chat_nav_panel(
+      "Data",
+      card(
+        card_header(textOutput("title")),
+        dataTableOutput("table"),
+        fill = TRUE
+      ),
+      value = "data",
+      sidebar = FALSE,
+      content_width = "100%"
+    )
+  )
+)
+
+server <- function(input, output, session) {
+  qc_vals <- qc$server()
+
+  output$table <- renderDataTable({
+    datatable(qc_vals$df(), fillContainer = TRUE)
+  })
+
+  output$title <- renderText({
+    qc_vals$title() %||% "Penguins Dataset"
+  })
+}
+
+shinyApp(ui, server)
+```
+
+Since `$page()` owns the entire page layout, don’t wrap it in another
+page container (e.g.,
+[`page_sidebar()`](https://rstudio.github.io/bslib/reference/page_sidebar.html)).
+If you need the chat embedded alongside other content in a custom
+layout, use `$sidebar()` or `$ui()` instead.
 
 ## Deferred data sources
 

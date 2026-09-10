@@ -181,6 +181,7 @@ access its <code>$tables</code> and <code>$prompt</code>.</p></dd>
 <li><p><a href="#method-QueryChat-app_obj"><code>QueryChat$app_obj()</code></a></p></li>
 <li><p><a href="#method-QueryChat-sidebar"><code>QueryChat$sidebar()</code></a></p></li>
 <li><p><a href="#method-QueryChat-ui"><code>QueryChat$ui()</code></a></p></li>
+<li><p><a href="#method-QueryChat-page"><code>QueryChat$page()</code></a></p></li>
 <li><p><a href="#method-QueryChat-server"><code>QueryChat$server()</code></a></p></li>
 <li><p><a href="#method-QueryChat-generate_greeting"><code>QueryChat$generate_greeting()</code></a></p></li>
 <li><p><a href="#method-QueryChat-cleanup"><code>QueryChat$cleanup()</code></a></p></li>
@@ -197,7 +198,7 @@ access its <code>$tables</code> and <code>$prompt</code>.</p></dd>
 <span>  greeting <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  history <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  client <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"filter"</span>, <span class="st">"query"</span><span class="op">)</span>,</span>
+<span>  tools <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"filter"</span>, <span class="st">"query"</span>, <span class="st">"visualize"</span><span class="op">)</span>,</span>
 <span>  data_description <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  categorical_threshold <span class="op">=</span> <span class="fl">20</span>,</span>
 <span>  extra_instructions <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -252,7 +253,10 @@ Passed straight through to <code>shinychat::chat_server(history = )</code>.</p><
       <dt><code>tools</code></dt>
 <dd><p>Which querychat tools to include in the chat client, by
 default. <code>"filter"</code> includes the tools for filtering and resetting the
-dashboard and <code>"query"</code> includes the tool for executing SQL queries.
+dashboard, <code>"query"</code> includes the tool for executing SQL queries, and
+<code>"visualize"</code> includes the tool for rendering visualizations (requires
+the <span class="pkg">ggsql</span> package; if it is not installed, the tool is dropped
+with a warning). The default is <code>c("filter", "query", "visualize")</code>.
 Use <code>tools = "filter"</code> when you only want the dashboard filtering tools,
 or when you want to disable the querying tool entirely to prevent the
 LLM from seeing any of the data in your dataset. The legacy name
@@ -585,10 +589,40 @@ See <code>$app()</code>.</p></dd>
 
 </div>
 
+<p></p><hr><a id="method-QueryChat-page"></a><div class="section">
+<h3 id="querychat-page-"><code>QueryChat$page()</code><a class="anchor" aria-label="anchor" href="#querychat-page-"></a></h3>
+<p>Create a full-window page containing the querychat UI.</p>
+<p>This wraps <code><a href="https://posit-dev.github.io/shinychat/r/reference/page_chat.html" class="external-link">shinychat::page_chat()</a></code>, making the chat the primary
+surface of the app, with optional navigation pages, sidebars, and a
+drawer. Use this instead of <code>$sidebar()</code> or <code>$ui()</code> when the chat
+should own the full browser window.</p><div class="section">
+<h4 id="usage-11">Usage<a class="anchor" aria-label="anchor" href="#usage-11"></a></h4>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">QueryChat</span><span class="op">$</span><span class="fu">page</span><span class="op">(</span><span class="va">title</span>, <span class="va">...</span>, id <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div><p></p></div>
+</div><p></p><div class="section">
+<h4 id="arguments-10">Arguments<a class="anchor" aria-label="anchor" href="#arguments-10"></a></h4>
+<p></p><div class="arguments"><dl><dt><code>title</code></dt>
+<dd><p>Page title displayed in the header. When it is a string
+and <code>window_title</code> is omitted, it is also used as the document title.</p></dd>
+
+      <dt><code>...</code></dt>
+<dd><p>Additional arguments passed to <code><a href="https://posit-dev.github.io/shinychat/r/reference/page_chat.html" class="external-link">shinychat::page_chat()</a></code>.</p></dd>
+
+      <dt><code>id</code></dt>
+<dd><p>Optional ID for the QueryChat instance.</p></dd>
+
+
+</dl><p></p></div>
+</div><p></p><div class="section">
+<h4 id="returns-8">Returns<a class="anchor" aria-label="anchor" href="#returns-8"></a></h4>
+<p>A fillable page UI component suitable for use as the app's UI.</p>
+</div>
+
+</div>
+
 <p></p><hr><a id="method-QueryChat-server"></a><div class="section">
 <h3 id="querychat-server-"><code>QueryChat$server()</code><a class="anchor" aria-label="anchor" href="#querychat-server-"></a></h3>
 <p>Initialize the querychat server logic.</p><div class="section">
-<h4 id="usage-11">Usage<a class="anchor" aria-label="anchor" href="#usage-11"></a></h4>
+<h4 id="usage-12">Usage<a class="anchor" aria-label="anchor" href="#usage-12"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">QueryChat</span><span class="op">$</span><span class="fu">server</span><span class="op">(</span></span>
 <span>  data_source <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  client <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -599,7 +633,7 @@ See <code>$app()</code>.</p></dd>
 <span>  session <span class="op">=</span> <span class="fu">shiny</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/shiny/man/domains.html" class="external-link">getDefaultReactiveDomain</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div><p></p><div class="section">
-<h4 id="arguments-10">Arguments<a class="anchor" aria-label="anchor" href="#arguments-10"></a></h4>
+<h4 id="arguments-11">Arguments<a class="anchor" aria-label="anchor" href="#arguments-11"></a></h4>
 <p></p><div class="arguments"><dl><dt><code>data_source</code></dt>
 <dd><p>Optional data source for backward compatibility.
 If provided, calls <code>$add_table()</code> before initializing server logic.</p></dd>
@@ -628,7 +662,7 @@ constructor's <code>history</code> was set.</p></dd>
 
 </dl><p></p></div>
 </div><p></p><div class="section">
-<h4 id="returns-8">Returns<a class="anchor" aria-label="anchor" href="#returns-8"></a></h4>
+<h4 id="returns-9">Returns<a class="anchor" aria-label="anchor" href="#returns-9"></a></h4>
 <p>A list containing session-specific reactive values and the chat
 client. For single-table usage, includes <code>df</code>, <code>sql</code>, <code>title</code> directly.
 For multi-table, use <code>qc_vals$table("name")</code> to get a <a href="TableAccessor.html">TableAccessor</a>
@@ -642,17 +676,17 @@ or <code>NULL</code> before any query.</p>
 <p></p><hr><a id="method-QueryChat-generate_greeting"></a><div class="section">
 <h3 id="querychat-generate-greeting-"><code>QueryChat$generate_greeting()</code><a class="anchor" aria-label="anchor" href="#querychat-generate-greeting-"></a></h3>
 <p>Generate a welcome greeting for the chat.</p><div class="section">
-<h4 id="usage-12">Usage<a class="anchor" aria-label="anchor" href="#usage-12"></a></h4>
+<h4 id="usage-13">Usage<a class="anchor" aria-label="anchor" href="#usage-13"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">QueryChat</span><span class="op">$</span><span class="fu">generate_greeting</span><span class="op">(</span>echo <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"none"</span>, <span class="st">"output"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div><p></p><div class="section">
-<h4 id="arguments-11">Arguments<a class="anchor" aria-label="anchor" href="#arguments-11"></a></h4>
+<h4 id="arguments-12">Arguments<a class="anchor" aria-label="anchor" href="#arguments-12"></a></h4>
 <p></p><div class="arguments"><dl><dt><code>echo</code></dt>
 <dd><p>Whether to print the greeting to the console.</p></dd>
 
 
 </dl><p></p></div>
 </div><p></p><div class="section">
-<h4 id="returns-9">Returns<a class="anchor" aria-label="anchor" href="#returns-9"></a></h4>
+<h4 id="returns-10">Returns<a class="anchor" aria-label="anchor" href="#returns-10"></a></h4>
 <p>The greeting string in Markdown format.</p>
 </div>
 
@@ -661,10 +695,10 @@ or <code>NULL</code> before any query.</p>
 <p></p><hr><a id="method-QueryChat-cleanup"></a><div class="section">
 <h3 id="querychat-cleanup-"><code>QueryChat$cleanup()</code><a class="anchor" aria-label="anchor" href="#querychat-cleanup-"></a></h3>
 <p>Clean up resources associated with the data source.</p><div class="section">
-<h4 id="usage-13">Usage<a class="anchor" aria-label="anchor" href="#usage-13"></a></h4>
+<h4 id="usage-14">Usage<a class="anchor" aria-label="anchor" href="#usage-14"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">QueryChat</span><span class="op">$</span><span class="fu">cleanup</span><span class="op">(</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div><p></p><div class="section">
-<h4 id="returns-10">Returns<a class="anchor" aria-label="anchor" href="#returns-10"></a></h4>
+<h4 id="returns-11">Returns<a class="anchor" aria-label="anchor" href="#returns-11"></a></h4>
 <p>Invisibly returns <code>NULL</code>. Resources are cleaned up internally.</p>
 </div>
 
@@ -673,10 +707,10 @@ or <code>NULL</code> before any query.</p>
 <p></p><hr><a id="method-QueryChat-clone"></a><div class="section">
 <h3 id="querychat-clone-"><code>QueryChat$clone()</code><a class="anchor" aria-label="anchor" href="#querychat-clone-"></a></h3>
 <p>The objects of this class are cloneable with this method.</p><div class="section">
-<h4 id="usage-14">Usage<a class="anchor" aria-label="anchor" href="#usage-14"></a></h4>
+<h4 id="usage-15">Usage<a class="anchor" aria-label="anchor" href="#usage-15"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">QueryChat</span><span class="op">$</span><span class="fu">clone</span><span class="op">(</span>deep <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div><p></p><div class="section">
-<h4 id="arguments-12">Arguments<a class="anchor" aria-label="anchor" href="#arguments-12"></a></h4>
+<h4 id="arguments-13">Arguments<a class="anchor" aria-label="anchor" href="#arguments-13"></a></h4>
 <p></p><div class="arguments"><dl><dt><code>deep</code></dt>
 <dd><p>Whether to make a deep clone.</p></dd>
 
@@ -694,7 +728,7 @@ or <code>NULL</code> before any query.</p>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Basic usage with a data frame</span></span></span>
 <span class="r-in"><span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="va">QueryChat</span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">mtcars</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> duckdb keeps downloaded extensions and secrets in a temporary directory:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">ℹ</span> /tmp/Rtmps3gu2r/duckdb</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">ℹ</span> /tmp/Rtmp5aWJni/duckdb</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> This is removed when the R session ends.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Extensions are re-downloaded each session.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Secrets are lost.</span>
@@ -709,7 +743,7 @@ or <code>NULL</code> before any query.</p>
 <span class="r-in"><span><span class="va">greeting</span> <span class="op">&lt;-</span> <span class="st">"Welcome! Ask me about the mtcars dataset."</span></span></span>
 <span class="r-in"><span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="va">QueryChat</span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">mtcars</span>, greeting <span class="op">=</span> <span class="va">greeting</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> duckdb keeps downloaded extensions and secrets in a temporary directory:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">ℹ</span> /tmp/Rtmps3gu2r/duckdb</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">ℹ</span> /tmp/Rtmp5aWJni/duckdb</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> This is removed when the R session ends.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Extensions are re-downloaded each session.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Secrets are lost.</span>
@@ -720,7 +754,7 @@ or <code>NULL</code> before any query.</p>
 <span class="r-in"><span><span class="co"># With a specific LLM provider</span></span></span>
 <span class="r-in"><span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="va">QueryChat</span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">mtcars</span>, client <span class="op">=</span> <span class="st">"anthropic/claude-sonnet-4-5"</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> duckdb keeps downloaded extensions and secrets in a temporary directory:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">ℹ</span> /tmp/Rtmps3gu2r/duckdb</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">ℹ</span> /tmp/Rtmp5aWJni/duckdb</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> This is removed when the R session ends.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Extensions are re-downloaded each session.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Secrets are lost.</span>
@@ -744,7 +778,7 @@ or <code>NULL</code> before any query.</p>
 <span class="r-in"><span>  data_description <span class="op">=</span> <span class="st">"Motor Trend car road tests dataset"</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> duckdb keeps downloaded extensions and secrets in a temporary directory:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">ℹ</span> /tmp/Rtmps3gu2r/duckdb</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">ℹ</span> /tmp/Rtmp5aWJni/duckdb</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> This is removed when the R session ends.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Extensions are re-downloaded each session.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Secrets are lost.</span>

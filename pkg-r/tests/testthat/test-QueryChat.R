@@ -1505,7 +1505,9 @@ describe("QueryChat$page()", {
 
     html_extra <- as.character(qc$page("Test App", class = "extra"))
     attrs <- class_attrs(html_extra)
-    expect_true(any(grepl("\\bquerychat\\b", attrs) & grepl("\\bextra\\b", attrs)))
+    expect_true(any(
+      grepl("\\bquerychat\\b", attrs) & grepl("\\bextra\\b", attrs)
+    ))
   })
 
   it("respects a custom id", {

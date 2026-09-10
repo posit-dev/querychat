@@ -206,8 +206,10 @@ def test_express_explicit_enable_bookmarking_warns():
 
 
 def test_app_ui_uses_page_layout_with_drawer():
-    """$app() builds on the page_chat() layout, with the SQL editor and data
-    table in an initially-closed drawer (auto-opened server-side on query)."""
+    """
+    $app() builds on the page_chat() layout, with the SQL editor and data
+    table in an initially-closed drawer (auto-opened server-side on query).
+    """
     import re
 
     import pandas as pd

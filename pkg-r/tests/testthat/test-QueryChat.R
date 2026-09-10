@@ -1494,11 +1494,18 @@ describe("QueryChat$page()", {
   it("adds the querychat class to the chat root, merging user classes", {
     qc <- QueryChat$new(NULL, "users", greeting = "Test")
 
+    # Assert class tokens are present regardless of order, since shinychat
+    # controls how classes are ordered/merged
+    class_attrs <- function(html) {
+      regmatches(html, gregexpr('class="[^"]*"', html))[[1]]
+    }
+
     html <- as.character(qc$page("Test App"))
-    expect_true(grepl('class="querychat', html, fixed = TRUE))
+    expect_true(any(grepl("\\bquerychat\\b", class_attrs(html))))
 
     html_extra <- as.character(qc$page("Test App", class = "extra"))
-    expect_true(grepl('class="querychat extra ', html_extra, fixed = TRUE))
+    attrs <- class_attrs(html_extra)
+    expect_true(any(grepl("\\bquerychat\\b", attrs) & grepl("\\bextra\\b", attrs)))
   })
 
   it("respects a custom id", {

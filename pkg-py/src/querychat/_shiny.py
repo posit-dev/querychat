@@ -15,7 +15,7 @@ from ._querychat_base import DEFAULT_TOOLS, TOOL_GROUPS, QueryChatBase, resolve_
 from ._shiny_module import (
     CHAT_ID,
     ServerValues,
-    _add_footer_and_class,
+    add_footer_and_class,
     mod_page,
     mod_server,
     mod_ui,
@@ -1014,7 +1014,10 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             or wrap it in other UI.
 
         """
-        from shiny._namespaces import namespace_context
+        try:
+            from shiny.module import namespace_context
+        except ImportError:  # shiny < 1.7
+            from shiny._namespaces import namespace_context
         from shiny.module import ResolvedId
         from shinychat.express import page_chat as express_page_chat
 
@@ -1022,7 +1025,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
 
         # Enter the module namespace explicitly so the extras get namespaced IDs.
         with namespace_context(module_id):
-            kwargs = _add_footer_and_class(kwargs, preload_viz=has_viz_tool(self.tools))
+            kwargs = add_footer_and_class(kwargs, preload_viz=has_viz_tool(self.tools))
 
         # express page_chat() renders its shell lazily, after the
         # namespace_context has exited, so pre-resolve the chat ID to match

@@ -1477,3 +1477,97 @@ describe("QueryChatGreeter", {
     expect_true("customers" %in% qc$greeter$tables)
   })
 })
+
+describe("QueryChat$page()", {
+  skip_if_not_installed("shinychat", minimum_version = "0.4.0.9000")
+
+  it("renders a full-window page with a namespaced chat root", {
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+    html <- as.character(qc$page("Test App"))
+
+    # The chat root ID must match what $server() (i.e., mod_server) expects
+    expect_true(grepl('id="querychat_users-chat"', html, fixed = TRUE))
+    # The page shell derives its IDs from the chat ID
+    expect_true(grepl('id="querychat_users-chat_page"', html, fixed = TRUE))
+  })
+
+  it("adds the querychat class to the chat root, merging user classes", {
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+
+    html <- as.character(qc$page("Test App"))
+    expect_true(grepl('class="querychat', html, fixed = TRUE))
+
+    html_extra <- as.character(qc$page("Test App", class = "extra"))
+    expect_true(grepl('class="querychat extra ', html_extra, fixed = TRUE))
+  })
+
+  it("respects a custom id", {
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+    html <- as.character(qc$page("Test App", id = "custom"))
+    expect_true(grepl('id="custom-chat"', html, fixed = TRUE))
+  })
+
+  it("includes the handoff panel", {
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+    # mod_server() always wires handoff_server(), so the panel must exist
+    html <- as.character(qc$page("Test App"))
+    expect_true(grepl(
+      'id="querychat_users-handoff_download"',
+      html,
+      fixed = TRUE
+    ))
+  })
+
+  it("includes the querychat HTML dependency", {
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+    deps <- htmltools::findDependencies(qc$page("Test App"))
+    expect_true("querychat" %in% vapply(deps, `[[`, "", "name"))
+  })
+
+  it("rejects page-owned chat_ui arguments", {
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+    expect_error(qc$page("Test App", height = "100px"), "owns")
+  })
+
+  it("injects dependencies and the handoff panel via the chat footer", {
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+    html <- as.character(qc$page("Test App"))
+    expect_true(grepl("shiny-chat-footer", html, fixed = TRUE))
+    expect_true(grepl("querychat-extras", html, fixed = TRUE))
+    expect_true(grepl(
+      'id="querychat_users-handoff_download"',
+      html,
+      fixed = TRUE
+    ))
+  })
+
+  it("merges user-supplied footer content", {
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+    html <- as.character(qc$page(
+      "Test App",
+      footer = htmltools::div(id = "my-footer")
+    ))
+    expect_true(grepl('id="my-footer"', html, fixed = TRUE))
+    expect_true(grepl("querychat-extras", html, fixed = TRUE))
+  })
+})
+
+describe("QueryChat$ui()", {
+  skip_if_not_installed("shinychat", minimum_version = "0.4.0.9000")
+
+  it("injects dependencies and the handoff panel via the chat footer", {
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+    html <- as.character(qc$ui())
+    expect_true(grepl("shiny-chat-footer", html, fixed = TRUE))
+    expect_true(grepl("querychat-extras", html, fixed = TRUE))
+    deps <- htmltools::findDependencies(qc$ui())
+    expect_true("querychat" %in% vapply(deps, `[[`, "", "name"))
+  })
+
+  it("merges user-supplied footer content", {
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+    html <- as.character(qc$ui(footer = htmltools::div(id = "my-footer")))
+    expect_true(grepl('id="my-footer"', html, fixed = TRUE))
+    expect_true(grepl("querychat-extras", html, fixed = TRUE))
+  })
+})

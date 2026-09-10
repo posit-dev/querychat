@@ -62,10 +62,11 @@ shiny run shiny-app.py
 
 ## Relevant methods
 
-After initializing `QueryChat`, use `.sidebar()` or `.ui()` to place the chat interface in your app. As users interact with the chat, `.df()`, `.sql()`, and `.title()` automatically update to reflect the current query. Any Shiny outputs that depend on these reactive values will re-render automatically.
+After initializing `QueryChat`, use `.page()`, `.sidebar()`, or `.ui()` to place the chat interface in your app. As users interact with the chat, `.df()`, `.sql()`, and `.title()` automatically update to reflect the current query. Any Shiny outputs that depend on these reactive values will re-render automatically.
 
 | Method | Description |
 |--------|-------------|
+| `.page()` | Create a full-window, chat-first page (wraps `shinychat.page_chat()`) |
 | `.sidebar()` | Place the chat interface in a sidebar |
 | `.ui()` | Returns just the chat component for custom placement |
 | `.df()` | Current filtered/sorted DataFrame |
@@ -77,6 +78,28 @@ After initializing `QueryChat`, use `.sidebar()` or `.ui()` to place the chat in
 ::: callout-note
 Shiny has two modes: **Express** (simple, script-based) and **Core** (explicit UI/server separation). With Core, call `qc.server()` in your server function and access reactives via the returned object (e.g., `qc_vals.df()`). With Express, access them directly on the `QueryChat` instance (e.g., `qc.df()`).
 :::
+
+## Chat-first page
+
+When the chat is the primary way users interact with your app, use `.page()` to give it the full browser window. It wraps [`shinychat.page_chat()`](https://posit-dev.github.io/shinychat/py/reference/page_chat.html), which provides a persistent chat with conversation history, plus optional navigation pages, sidebars, and a drawer. Reactive data views (driven by `.df()`, `.sql()`, `.title()`) work well as secondary pages via `shinychat.chat_nav_panel()`:
+
+::: {.panel-tabset group="shiny-mode"}
+
+#### Express
+
+```python
+{{< include /../examples/03-page-express-app.py >}}
+```
+
+#### Core
+
+```python
+{{< include /../examples/03-page-core-app.py >}}
+```
+
+:::
+
+Since `.page()` owns the entire page layout, don't wrap it in another page container (e.g., `ui.page_sidebar()`), and in Express, don't add other top-level UI. If you need the chat embedded alongside other content in a custom layout, use `.sidebar()` or `.ui()` instead.
 
 ## Basic sidebar
 

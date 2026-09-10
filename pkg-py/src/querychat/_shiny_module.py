@@ -77,8 +77,15 @@ def mod_ui(*, preload_viz: bool = False, **kwargs):
     )
 
 
+@module.ui
+def mod_page(title, *, preload_viz: bool = False, **kwargs):
+    return shinychat.page_chat(
+        title, id=CHAT_ID, **add_footer_and_class(kwargs, preload_viz=preload_viz)
+    )
+
+
 def querychat_extras(*, preload_viz: bool):
-    # The footer is the only child-injection point in chat_ui();
+    # The footer is the only child-injection point in chat_ui()/page_chat();
     # styles.css collapses it when it holds only these extras.
     return ui.div(
         querychat_head_content(),
@@ -89,6 +96,8 @@ def querychat_extras(*, preload_viz: bool):
 
 
 def add_footer_and_class(kwargs: dict, *, preload_viz: bool) -> dict:
+    # Builds namespaced IDs: callers outside a module context (Express's
+    # page()) must wrap this in namespace_context().
     user_footer = kwargs.pop("footer", None)
     extras = querychat_extras(preload_viz=preload_viz)
     kwargs["footer"] = (

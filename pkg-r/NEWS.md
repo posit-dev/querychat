@@ -55,7 +55,7 @@
 
 ## Bug fixes
 
-* The `querychat_query` tool's `collapsed` argument description no longer tells the LLM to expand a result whenever it's "the primary answer" — a bar nearly every query cleared, causing results to be shown expanded (and then often repeated in the response text) far more often than intended. It now matches the Python implementation's guidance: expand only when the user explicitly asks to see the raw table. (#295)
+* Query results were being shown expanded, and often repeated in the LLM's response, far more often than intended. The LLM is now guided to expand a result only when the user explicitly asks to see the raw table. (#295)
 
 # querychat 0.3.0
 

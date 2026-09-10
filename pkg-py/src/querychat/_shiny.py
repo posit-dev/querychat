@@ -3,7 +3,7 @@ from __future__ import annotations
 import warnings
 from typing import TYPE_CHECKING, Any, Literal, Optional, overload
 
-from htmltools import tags
+from htmltools import TagChild, tags
 from narwhals.stable.v1.typing import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
 from shiny.express._stub_session import ExpressStubSession
 from shiny.session import get_current_session
@@ -327,55 +327,82 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             and resolved_history.restore_mode == "bookmark"
         )
         first_table_name = next(iter(self._data_sources))
+        table_names = list(self._data_sources)
+        multi_table = len(table_names) > 1
+
+        def show_query_footer(
+            *, target: str, content: TagChild, right: TagChild = None
+        ) -> ui.CardItem:
+            return ui.card_footer(
+                tags.div(
+                    {"class": "querychat-footer-buttons"},
+                    tags.div(
+                        {"class": "querychat-footer-left"},
+                        tags.button(
+                            {
+                                "class": "querychat-show-query-btn",
+                                "data-querychat-action": "show-query",
+                                "data-target": target,
+                            },
+                            bs_icon("chevron-down", cls="querychat-query-chevron"),
+                            tags.span(
+                                {"class": "querychat-query-label"}, "Show Query"
+                            ),
+                        ),
+                    ),
+                    tags.div({"class": "querychat-footer-right"}, right),
+                ),
+                tags.div(
+                    {"class": "querychat-query-section", "id": target},
+                    content,
+                ),
+                viz_dep(),
+            )
 
         def app_ui(request):
+            drawer_children = [
+                ui.card(
+                    ui.card_header(
+                        bs_icon("table"),
+                        " Data — ",
+                        ui.output_text("data_card_header_text", inline=True),
+                    ),
+                    ui.output_data_frame("dt"),
+                    show_query_footer(
+                        target="sql_query_section",
+                        content=ui.output_ui("sql_output"),
+                        right=ui.output_ui("ui_reset", inline=True),
+                    ),
+                )
+            ]
+            if multi_table:
+                drawer_children.append(
+                    ui.accordion(
+                        *[
+                            ui.accordion_panel(
+                                tags.span(
+                                    name,
+                                    ui.output_ui(f"active_badge_{name}", inline=True),
+                                ),
+                                ui.output_data_frame(f"dt_{name}"),
+                                show_query_footer(
+                                    target=f"sql_query_section_{name}",
+                                    content=ui.output_ui(f"sql_view_{name}"),
+                                ),
+                                value=name,
+                            )
+                            for name in table_names
+                        ],
+                        id="data_sources_accordion",
+                        open=False,
+                    )
+                )
             return self.page(
                 ui.span("querychat with ", ui.code(first_table_name)),
                 window_title="querychat",
                 drawer=chat_drawer(
-                    ui.card(
-                        ui.card_header(
-                            bs_icon("table"),
-                            " Data — ",
-                            ui.output_text("data_card_header_text", inline=True),
-                        ),
-                        ui.output_data_frame("dt"),
-                        ui.card_footer(
-                            tags.div(
-                                {"class": "querychat-footer-buttons"},
-                                tags.div(
-                                    {"class": "querychat-footer-left"},
-                                    tags.button(
-                                        {
-                                            "class": "querychat-show-query-btn",
-                                            "data-querychat-action": "show-query",
-                                            "data-target": "sql_query_section",
-                                        },
-                                        bs_icon(
-                                            "chevron-down",
-                                            cls="querychat-query-chevron",
-                                        ),
-                                        tags.span(
-                                            {"class": "querychat-query-label"},
-                                            "Show Query",
-                                        ),
-                                    ),
-                                ),
-                                tags.div(
-                                    {"class": "querychat-footer-right"},
-                                    ui.output_ui("ui_reset", inline=True),
-                                ),
-                            ),
-                            tags.div(
-                                {
-                                    "class": "querychat-query-section",
-                                    "id": "sql_query_section",
-                                },
-                                ui.output_ui("sql_output"),
-                            ),
-                            viz_dep(),
-                        ),
-                    ),
+                    *drawer_children,
+                    title="Data Sources",
                     open=False,
                     width=DRAWER_WIDTH,
                 ),
@@ -464,6 +491,46 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 vals._tables[name].sql.set(
                     query if query and query.strip() != default_query else None
                 )
+
+            if multi_table:
+                # One data grid, read-only query view, and "active" badge per
+                # registered table, for the drawer's data-sources accordion.
+                # The accordion is fully static (built once in app_ui), so
+                # each output is a closure bound to a literal table name.
+                def register_table_outputs(name: str) -> None:
+                    @output(id=f"active_badge_{name}")
+                    @render.ui
+                    def _badge():
+                        if active_table_name() == name:
+                            return tags.span(
+                                {"class": "badge bg-primary ms-2"}, "Active"
+                            )
+                        return None
+
+                    @output(id=f"dt_{name}")
+                    @render.data_frame
+                    def _dt():
+                        return as_narwhals(vals.table(name).df())
+
+                    @output(id=f"sql_view_{name}")
+                    @render.ui
+                    def _view():
+                        return ui.input_code_editor(
+                            f"sql_view_editor_{name}",
+                            value=sql_text_for_editor(name),
+                            language="sql",
+                            read_only=True,
+                            line_numbers=False,
+                            height="auto",
+                        )
+
+                for name in table_names:
+                    register_table_outputs(name)
+
+                if enable_bookmarking:
+                    session.bookmark.exclude.extend(
+                        f"sql_view_editor_{name}" for name in table_names
+                    )
 
         return App(
             app_ui,

@@ -229,6 +229,7 @@ def test_app_ui_uses_page_layout_with_drawer():
     # htmltools omits False-valued attributes; no `open` means initially closed
     assert "open=" not in drawer.group(0)
     assert 'width="calc(min(clamp(360px, 55vw, 720px), 100%))"' in drawer.group(0)
+    assert 'title="Data Sources"' in drawer.group(0)
     # Data views live inside the drawer
     drawer_html = html[drawer.start() :]
     assert 'id="dt"' in drawer_html
@@ -238,5 +239,33 @@ def test_app_ui_uses_page_layout_with_drawer():
     assert 'class="querychat-show-query-btn' in drawer_html
     assert 'data-querychat-action="show-query"' in drawer_html
     assert 'id="ui_reset"' in drawer_html
+    # A single-table app has nothing to browse on demand, so no accordion
+    assert 'id="data_sources_accordion"' not in drawer_html
     # Handoff panel still present via the page extras
     assert 'id="querychat_a_table-handoff_download"' in html
+
+
+def test_app_ui_drawer_multi_table_accordion():
+    """
+    With more than one table, the drawer adds a fully static accordion below
+    the pinned "active table" card, giving on-demand access to every
+    registered table without disturbing the active-table-follows-the-chat
+    behavior of the pinned card.
+    """
+    import pandas as pd
+    from querychat._shiny import QueryChat
+
+    qc = QueryChat(pd.DataFrame({"a": [1]}), "orders")
+    qc.add_table(pd.DataFrame({"b": [2]}), "customers")
+    app = qc.app()
+    html = str(app.ui(None))
+
+    assert 'id="data_sources_accordion"' in html
+    for name in ("orders", "customers"):
+        assert f'id="dt_{name}"' in html
+        assert f'id="active_badge_{name}"' in html
+        assert f'data-target="sql_query_section_{name}"' in html
+        assert f'id="sql_query_section_{name}"' in html
+    # The pinned "active table" card is unaffected by the accordion
+    assert 'id="dt"' in html
+    assert 'id="ui_reset"' in html

@@ -1618,6 +1618,9 @@ describe("QueryChat$app_obj()", {
       fixed = TRUE
     ))
     expect_true(grepl('id="ui_reset"', html, fixed = TRUE))
+    expect_true(grepl('title="Data Sources"', drawer, fixed = TRUE))
+    # A single-table app has nothing to browse on demand, so no accordion
+    expect_false(grepl('id="data_sources_accordion"', html, fixed = TRUE))
 
     # Handoff panel still present via the page extras
     expect_true(grepl(
@@ -1625,6 +1628,39 @@ describe("QueryChat$app_obj()", {
       html,
       fixed = TRUE
     ))
+  })
+
+  it("adds a static data-sources accordion when there's more than one table", {
+    qc <- QueryChat$new(new_test_df(), "orders", greeting = "Test")
+    withr::defer(qc$cleanup())
+    qc$add_table(new_users_df(), "customers")
+
+    app <- qc$app_obj()
+    ui <- get("ui", envir = environment(app$httpHandler))
+    html <- as.character(ui(NULL))
+
+    expect_true(grepl('id="data_sources_accordion"', html, fixed = TRUE))
+    for (name in c("orders", "customers")) {
+      expect_true(grepl(paste0('id="dt_', name, '"'), html, fixed = TRUE))
+      expect_true(grepl(
+        paste0('id="active_badge_', name, '"'),
+        html,
+        fixed = TRUE
+      ))
+      expect_true(grepl(
+        paste0('data-target="sql_query_section_', name, '"'),
+        html,
+        fixed = TRUE
+      ))
+      expect_true(grepl(
+        paste0('id="sql_query_section_', name, '"'),
+        html,
+        fixed = TRUE
+      ))
+    }
+    # The pinned "active table" card is unaffected by the accordion
+    expect_true(grepl('id="dt"', html, fixed = TRUE))
+    expect_true(grepl('id="ui_reset"', html, fixed = TRUE))
   })
 })
 

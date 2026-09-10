@@ -741,6 +741,8 @@ QueryChat <- R6::R6Class(
         identical(resolved_history$restore_mode, "bookmark")
 
       first_table_name <- names(private$.data_sources)[[1]]
+      table_names <- names(private$.data_sources)
+      multi_table <- length(table_names) > 1
 
       ui <- function(req) {
         self$page(
@@ -760,38 +762,36 @@ QueryChat <- R6::R6Class(
                 shiny::textOutput("data_card_header_text", inline = TRUE)
               ),
               DT::DTOutput("dt"),
-              bslib::card_footer(
-                shiny::div(
-                  class = "querychat-footer-buttons",
-                  shiny::div(
-                    class = "querychat-footer-left",
-                    shiny::tags$button(
-                      class = "querychat-show-query-btn",
-                      `data-querychat-action` = "show-query",
-                      `data-target` = "sql_query_section",
-                      bsicons::bs_icon(
-                        "chevron-down",
-                        class = "querychat-query-chevron"
-                      ),
-                      shiny::tags$span(
-                        class = "querychat-query-label",
-                        "Show Query"
-                      )
-                    )
-                  ),
-                  shiny::div(
-                    class = "querychat-footer-right",
-                    shiny::uiOutput("ui_reset", inline = TRUE)
-                  )
-                ),
-                shiny::div(
-                  class = "querychat-query-section",
-                  id = "sql_query_section",
-                  shiny::uiOutput("sql_output")
-                ),
-                viz_dep()
+              show_query_footer(
+                target = "sql_query_section",
+                content = shiny::uiOutput("sql_output"),
+                right = shiny::uiOutput("ui_reset", inline = TRUE)
               )
             ),
+            if (multi_table) {
+              bslib::accordion(
+                !!!lapply(table_names, function(name) {
+                  bslib::accordion_panel(
+                    shiny::tags$span(
+                      name,
+                      shiny::uiOutput(
+                        paste0("active_badge_", name),
+                        inline = TRUE
+                      )
+                    ),
+                    DT::DTOutput(paste0("dt_", name)),
+                    show_query_footer(
+                      target = paste0("sql_query_section_", name),
+                      content = shiny::uiOutput(paste0("sql_view_", name))
+                    ),
+                    value = name
+                  )
+                }),
+                id = "data_sources_accordion",
+                open = FALSE
+              )
+            },
+            title = "Data Sources",
             open = FALSE,
             width = "calc(min(clamp(360px, 55vw, 720px), 100%))"
           ),
@@ -813,7 +813,8 @@ QueryChat <- R6::R6Class(
         shiny::setBookmarkExclude(c(
           "close_btn",
           "reset_query",
-          "sql_editor"
+          "sql_editor",
+          if (multi_table) paste0("sql_view_editor_", table_names)
         ))
         qc_vals <- self$server(history = resolved_history)
 
@@ -898,6 +899,47 @@ QueryChat <- R6::R6Class(
             }
           )
         })
+
+        if (multi_table) {
+          # One data grid, read-only query view, and "active" badge per
+          # registered table, for the drawer's data-sources accordion. The
+          # accordion is fully static (built once in `ui`), so each output
+          # is bound to a literal table name via `local()`.
+          for (name in table_names) {
+            local({
+              tbl_name <- name
+
+              output[[paste0("active_badge_", tbl_name)]] <- shiny::renderUI({
+                if (identical(active_table_name(), tbl_name)) {
+                  shiny::tags$span(class = "badge bg-primary ms-2", "Active")
+                }
+              })
+
+              output[[paste0("dt_", tbl_name)]] <- DT::renderDT({
+                df <- qc_vals$.tables[[tbl_name]]$df()
+                if (inherits(df, "tbl_sql")) {
+                  df <- dplyr::collect(df)
+                }
+                DT::datatable(
+                  df,
+                  fillContainer = TRUE,
+                  options = list(pageLength = 25, scrollX = TRUE)
+                )
+              })
+
+              output[[paste0("sql_view_", tbl_name)]] <- shiny::renderUI({
+                bslib::input_code_editor(
+                  paste0("sql_view_editor_", tbl_name),
+                  value = sql_text_for_editor(tbl_name),
+                  language = "sql",
+                  read_only = TRUE,
+                  line_numbers = FALSE,
+                  height = "auto"
+                )
+              })
+            })
+          }
+        }
 
         if (rlang::is_interactive()) {
           shiny::observeEvent(input$close_btn, label = "on_close_btn", {
@@ -1331,6 +1373,27 @@ querychat_app <- function(
   )
 
   qc$app(history = history)
+}
+
+show_query_footer <- function(target, content, right = NULL) {
+  bslib::card_footer(
+    shiny::div(
+      class = "querychat-footer-buttons",
+      shiny::div(
+        class = "querychat-footer-left",
+        shiny::tags$button(
+          class = "querychat-show-query-btn",
+          `data-querychat-action` = "show-query",
+          `data-target` = target,
+          bsicons::bs_icon("chevron-down", class = "querychat-query-chevron"),
+          shiny::tags$span(class = "querychat-query-label", "Show Query")
+        )
+      ),
+      shiny::div(class = "querychat-footer-right", right)
+    ),
+    shiny::div(class = "querychat-query-section", id = target, content),
+    viz_dep()
+  )
 }
 
 normalize_tools <- function(tools) {

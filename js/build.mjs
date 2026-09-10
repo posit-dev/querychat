@@ -36,6 +36,14 @@ const jsTargets = [
 
 const cssTargets = [
   {
+    source: "src/styles.css",
+    output: "../pkg-py/src/querychat/static/css/styles.css",
+  },
+  {
+    source: "src/styles.css",
+    output: "../pkg-r/inst/htmldep/styles.css",
+  },
+  {
     source: "src/viz.css",
     output: "../pkg-py/src/querychat/static/css/viz.css",
   },

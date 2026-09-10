@@ -311,20 +311,23 @@ test_that("mod_ui() passes enable_cancel through to chat_ui without warning", {
 
 describe("mod_ui()", {
   it("mounts both dependencies and one closed namespaced handoff panel", {
-    local_mocked_bindings(
-      chat_ui = function(id, ...) {
-        htmltools::div(id = id, class = "mock-chat")
-      },
-      .package = "shinychat"
-    )
-
+    # Uses the real chat_ui: dependencies and the handoff panel ride inside
+    # chat_ui(footer=), so a mock would swallow them.
     ui <- mod_ui("module")
     markup <- as.character(ui)
 
-    expect_identical(ui[[1]]$name, "querychat")
-    expect_identical(ui[[2]]$name, "querychat-handoff")
-    expect_identical(ui[[2]]$script, "handoff.js")
-    expect_identical(ui[[2]]$stylesheet, "handoff.css")
+    deps <- htmltools::findDependencies(ui)
+    dep_names <- vapply(deps, `[[`, "", "name")
+    expect_true("querychat" %in% dep_names)
+    expect_true("querychat-handoff" %in% dep_names)
+    handoff_dep <- deps[[which(dep_names == "querychat-handoff")]]
+    expect_identical(handoff_dep$script, "handoff.js")
+    expect_identical(handoff_dep$stylesheet, "handoff.css")
+
+    # The extras are attached inside the chat root via the footer slot
+    expect_match(markup, "shiny-chat-footer", fixed = TRUE)
+    expect_match(markup, "querychat-extras", fixed = TRUE)
+
     expect_identical(
       lengths(regmatches(
         markup,

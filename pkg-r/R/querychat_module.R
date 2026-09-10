@@ -1,17 +1,34 @@
 # Main module UI function
 mod_ui <- function(id, ...) {
   ns <- shiny::NS(id)
-  htmltools::tagList(
+  dots <- add_footer_and_class(rlang::list2(...), ns)
+  rlang::exec(
+    shinychat::chat_ui,
+    ns("chat"),
+    height = "100%",
+    !!!dots
+  )
+}
+
+add_footer_and_class <- function(dots, ns) {
+  dots$class <- paste(c("querychat", dots$class), collapse = " ")
+  dots$footer <- querychat_footer(dots$footer, ns)
+  dots
+}
+
+# The footer is the only child-injection point in chat_ui()/page_chat();
+# styles.css collapses it when it holds only these extras.
+querychat_footer <- function(user_footer = NULL, ns) {
+  extras <- htmltools::tags$div(
+    class = "querychat-extras",
     querychat_dependency(),
     handoff_html_dependency(),
-    shinychat::chat_ui(
-      ns("chat"),
-      height = "100%",
-      class = "querychat",
-      ...
-    ),
     handoff_panel_ui(ns)
   )
+  if (is.null(user_footer)) {
+    return(extras)
+  }
+  htmltools::tagList(user_footer, extras)
 }
 
 querychat_dependency <- function() {

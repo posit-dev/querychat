@@ -31,13 +31,13 @@ def _fake_chat_ui(*args, **kwargs):
 _fake_chat_ui.last_kwargs: dict = {}
 
 
-def test_mod_ui_enables_attachments_by_default():
-    """mod_ui() should pass allow_attachments=True to shinychat.chat_ui by default."""
+def test_mod_ui_defers_attachments_default_to_shinychat():
+    """mod_ui() omits allow_attachments so shinychat's client=-based auto-enable applies."""
     from querychat._shiny_module import mod_ui
 
     with patch("querychat._shiny_module.shinychat.chat_ui", side_effect=_fake_chat_ui):
         mod_ui("test")  # id is required — @module.ui injects it as first positional arg
-        assert _fake_chat_ui.last_kwargs.get("allow_attachments") is True
+        assert "allow_attachments" not in _fake_chat_ui.last_kwargs
 
 
 def test_mod_ui_allow_attachments_can_be_overridden():
@@ -50,15 +50,24 @@ def test_mod_ui_allow_attachments_can_be_overridden():
 
 
 def test_mod_ui_scopes_handoff_roots_and_deduplicates_assets():
+    # Uses the real shinychat.chat_ui: the handoff panel and dependencies ride
+    # inside chat_ui(footer=), so a fake chat_ui would swallow them.
     from querychat._shiny_module import mod_ui
 
-    with patch("querychat._shiny_module.shinychat.chat_ui", side_effect=_fake_chat_ui):
-        rendered = TagList(mod_ui("first"), mod_ui("second")).render()
+    rendered = TagList(mod_ui("first"), mod_ui("second")).render()
 
     assert 'id="first-handoff_root"' in rendered["html"]
     assert 'id="second-handoff_root"' in rendered["html"]
     dependency_names = [dependency.name for dependency in rendered["dependencies"]]
     assert dependency_names.count("querychat-handoff") == 1
+
+
+def test_mod_ui_injects_extras_via_footer_and_merges_user_footer():
+    from querychat._shiny_module import mod_ui
+
+    html = str(mod_ui("test", footer=ui.div(id="my-footer")))
+    assert 'id="my-footer"' in html
+    assert "querychat-extras" in html
 
 
 def _unwrap_module_server(decorated):

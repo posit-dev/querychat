@@ -32,7 +32,7 @@ _fake_chat_ui.last_kwargs: dict = {}
 
 
 def test_mod_ui_defers_attachments_default_to_shinychat():
-    """mod_ui() omits allow_attachments so shinychat's client=-based auto-enable applies."""
+    """mod_ui() omits allow_attachments so shinychat's client-based auto-enable applies."""
     from querychat._shiny_module import mod_ui
 
     with patch("querychat._shiny_module.shinychat.chat_ui", side_effect=_fake_chat_ui):

@@ -73,24 +73,24 @@ class TableState(Generic[IntoFrameT]):
 @module.ui
 def mod_ui(*, preload_viz: bool = False, **kwargs):
     return shinychat.chat_ui(
-        CHAT_ID, **_add_footer_and_class(kwargs, preload_viz=preload_viz)
+        CHAT_ID, **add_footer_and_class(kwargs, preload_viz=preload_viz)
     )
 
 
-def _querychat_extras(*, preload_viz: bool):
+def querychat_extras(*, preload_viz: bool):
     # The footer is the only child-injection point in chat_ui();
     # styles.css collapses it when it holds only these extras.
     return ui.div(
-        _querychat_head_content(),
+        querychat_head_content(),
         handoff_panel_ui(),
         preload_viz_deps_ui() if preload_viz else None,
         class_="querychat-extras",
     )
 
 
-def _add_footer_and_class(kwargs: dict, *, preload_viz: bool) -> dict:
+def add_footer_and_class(kwargs: dict, *, preload_viz: bool) -> dict:
     user_footer = kwargs.pop("footer", None)
-    extras = _querychat_extras(preload_viz=preload_viz)
+    extras = querychat_extras(preload_viz=preload_viz)
     kwargs["footer"] = (
         ui.TagList(user_footer, extras) if user_footer is not None else extras
     )
@@ -99,7 +99,7 @@ def _add_footer_and_class(kwargs: dict, *, preload_viz: bool) -> dict:
     return kwargs
 
 
-def _querychat_head_content():
+def querychat_head_content():
     css_path = Path(__file__).parent / "static" / "css" / "styles.css"
     js_path = Path(__file__).parent / "static" / "js" / "querychat.js"
     return ui.head_content(

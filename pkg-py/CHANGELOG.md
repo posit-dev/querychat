@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
-* `QueryChat.app()` (Core and Express) is now chat-first: it builds on the `.page()` layout, so the chat owns the window, and the SQL editor + data table live in a `chat_drawer` that auto-opens when the LLM runs a query (including on bookmark/history restore).
+* `QueryChat.app()` (Core; Express has no `.app()` entry point) is now chat-first: it builds on the `.page()` layout, so the chat owns the window, and the SQL editor + data table live in a `chat_drawer` that auto-opens when the LLM runs a query (including on bookmark/history restore).
 
 * New `/handoff` slash command: turn selected query and visualization results from your chat session into a downloadable Quarto dashboard, Shiny app, or marimo notebook — with AI-assisted revision, bundled data, and handoffs that survive chat history restores and Shiny bookmarks.
 

@@ -314,7 +314,16 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <section id="querychat.types.ServerValues" class="level1">
 <h1>types.ServerValues</h1>
-<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>types.ServerValues(df, sql, title, tables, client, data_sources, current_table)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>types.ServerValues(</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>    df,</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>    sql,</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>    title,</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    tables,</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    client,</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>    data_sources,</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>    current_table,</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>    chat<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Session-specific reactive values and client returned by QueryChat.server().</p>
 <p>Each session gets its own ServerValues to ensure proper isolation between concurrent sessions.</p>
 <section id="attributes" class="level2 doc-section doc-section-attributes">
@@ -357,6 +366,11 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>current_table</td>
 <td><a href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | None</td>
 <td>The name of the most recently queried table, or <code>None</code> if no query has been run yet. Call <code>.current_table()</code> to read reactively.</td>
+</tr>
+<tr class="odd">
+<td>chat</td>
+<td></td>
+<td>The underlying <code>shinychat.Chat</code> instance for this session, or <code>None</code> in stub sessions. Useful for driving chat-level UI such as the drawer (e.g.&nbsp;<code>vals.chat.drawer.show()</code>).</td>
 </tr>
 </tbody>
 </table>

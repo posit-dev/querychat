@@ -1496,7 +1496,7 @@ describe("QueryChatGreeter", {
 })
 
 describe("QueryChat$page()", {
-  skip_if_not_installed("shinychat", minimum_version = "0.4.0.9000")
+  skip_if_not_installed("shinychat", minimum_version = "0.5.0")
 
   it("renders a full-window page with a namespaced chat root", {
     qc <- QueryChat$new(NULL, "users", greeting = "Test")
@@ -1579,7 +1579,7 @@ describe("QueryChat$page()", {
 })
 
 describe("QueryChat$app_obj()", {
-  skip_if_not_installed("shinychat", minimum_version = "0.4.0.9000")
+  skip_if_not_installed("shinychat", minimum_version = "0.5.0")
   skip_if_not_installed("DT")
   skip_if_no_dataframe_engine()
 
@@ -1615,7 +1615,7 @@ describe("QueryChat$app_obj()", {
 })
 
 describe("QueryChat$ui()", {
-  skip_if_not_installed("shinychat", minimum_version = "0.4.0.9000")
+  skip_if_not_installed("shinychat", minimum_version = "0.5.0")
 
   it("injects dependencies and the handoff panel via the chat footer", {
     qc <- QueryChat$new(NULL, "users", greeting = "Test")

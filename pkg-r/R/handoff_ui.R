@@ -351,7 +351,7 @@ handoff_type_selector_ui <- function() {
 }
 
 handoff_language_selector_ui <- function(ns) {
-  languages <- c(python = "Python", r = "R")
+  languages <- c(r = "R", python = "Python")
   radios <- Map(
     function(language, label) {
       htmltools::tags$label(
@@ -360,7 +360,7 @@ handoff_language_selector_ui <- function(ns) {
           name = ns("handoff_language"),
           class = "querychat-handoff-language-radio",
           `data-language` = language,
-          checked = if (language == "python") "" else NULL
+          checked = if (language == "r") "" else NULL
         ),
         htmltools::tags$span(
           class = paste(

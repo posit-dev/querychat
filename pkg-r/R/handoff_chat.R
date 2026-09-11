@@ -89,17 +89,13 @@ HandoffChat <- R6::R6Class(
   )
 )
 
-# Default token cap for handoff generation. A max_tokens the user set on the
-# underlying chat takes precedence over this default.
+# Default token cap for handoff generation; a user-set max_tokens wins.
 HANDOFF_MAX_TOKENS <- 16000L
 
 # HACK: ellmer has no public setter for an existing Chat's Model params
-# (set_model() takes only a model name), so we re-run initialize() on the
-# clone to swap in a modified Model. This is currently necessary to keep the
-# chat's R6 subclass (needed by test doubles that override stream_async()) and
-# its live provider (credentials, custom endpoints). A public ellmer API for
-# updating params on an existing chat (e.g. set_model_object()/set_params())
-# would let us drop this.
+# (set_model() takes only a model name), so re-run initialize() on the clone
+# to swap in a modified Model while keeping its R6 subclass and live provider.
+# Drop this if ellmer adds a params setter (e.g. set_params()).
 apply_handoff_max_tokens_override <- function(chat, max_tokens) {
   model <- chat$get_model_object()
   if (!is.null(model@params$max_tokens)) {

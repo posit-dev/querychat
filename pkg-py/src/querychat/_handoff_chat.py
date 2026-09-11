@@ -28,8 +28,7 @@ if TYPE_CHECKING:
 M = TypeVar("M", bound=BaseModel)
 HandoffResultT = TypeVar("HandoffResultT", bound=HandoffResult)
 
-# Default token cap for handoff generation. A max_tokens the user set on the
-# underlying chat takes precedence over this default.
+# Default token cap for handoff generation; a user-set max_tokens wins.
 HANDOFF_MAX_TOKENS = 16000
 
 
@@ -66,9 +65,7 @@ class HandoffChat:
         return result, forked.get_turns()
 
     def _default_max_tokens(self) -> int | None:
-        # Respect a max_tokens the user set on the underlying chat. chatlas
-        # has no public params getter, so read the store that
-        # set_model_params() writes to.
+        # chatlas has no public params getter; read what set_model_params() wrote.
         params = getattr(self._chat, "_standard_model_params", {})
         if params.get("max_tokens") is not None:
             return None

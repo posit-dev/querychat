@@ -23,15 +23,18 @@ def sample_df():
 class TestClientOwnership:
     """querychat closes the chatlas client only if it created it."""
 
-    def test_owns_client_flag(self, monkeypatch, sample_df):
+    def test_ownership_registration(self, monkeypatch, sample_df):
         monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-key-for-testing")
 
-        # String spec: querychat-created
-        assert QueryChatBase(sample_df, "users", client="openai")._owns_client
-        # None (deferred default/env): querychat-created
-        assert QueryChatBase(sample_df, "users")._owns_client
-        # User-supplied instance: not owned
-        assert not QueryChatBase(sample_df, "users", client=ChatOpenAI())._owns_client
+        # String spec: querychat-created, tracked at construction
+        qc = QueryChatBase(sample_df, "users", client="openai")
+        assert qc._owned_clients == [qc._base_client]
+        # None (deferred default/env): tracked once resolved, not before
+        assert QueryChatBase(sample_df, "users")._owned_clients == []
+        # User-supplied instance: never tracked
+        assert (
+            QueryChatBase(sample_df, "users", client=ChatOpenAI())._owned_clients == []
+        )
 
     def test_cleanup_closes_owned_string_client(self, monkeypatch, sample_df):
         monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-key-for-testing")

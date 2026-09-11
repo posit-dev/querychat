@@ -113,15 +113,17 @@ class QueryChatBase(Generic[IntoFrameT]):
         self._extra_instructions = extra_instructions
         self._categorical_threshold = categorical_threshold
 
-        # Only clients querychat creates (None or string specs) are closed on
-        # cleanup(); user-supplied Chat instances remain the caller's responsibility.
-        self._owns_client = client is None or isinstance(client, str)
-        self._base_client: chatlas.Chat | None = (
-            resolve_client(client) if client is not None else None
-        )
-        # Clients materialized from specs outside the constructor (e.g.,
-        # .server(client=...) overrides); cleanup() closes these too.
+        # Clients querychat materializes from a spec (constructor string spec,
+        # deferred default resolution, .server() overrides) are tracked so
+        # cleanup() can close them; user-supplied Chat instances are never
+        # tracked -- their lifecycle remains the caller's responsibility.
         self._owned_clients: list[chatlas.Chat] = []
+        self._base_client: chatlas.Chat | None
+        if isinstance(client, str):
+            self._base_client = resolve_client(client)
+            self._owned_clients.append(self._base_client)
+        else:
+            self._base_client = client
         self._client_console = None
 
         self._system_prompt: QueryChatSystemPrompt | None = None
@@ -228,6 +230,7 @@ class QueryChatBase(Generic[IntoFrameT]):
         if base is None:
             if self._base_client is None:
                 self._base_client = resolve_client(None)
+                self._owned_clients.append(self._base_client)
             base = self._base_client
         return create_client(base)
 
@@ -727,8 +730,6 @@ class QueryChatBase(Generic[IntoFrameT]):
             self._query_executor.cleanup()
         for source in self._data_sources.values():
             source.cleanup()
-        if self._owns_client and self._base_client is not None:
-            self._base_client.close()
         for client in self._owned_clients:
             client.close()
         self._owned_clients.clear()

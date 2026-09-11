@@ -30,6 +30,8 @@ from querychat._handoff_types import HandoffLanguage, HandoffType, resolve_hando
 from querychat._handoff_validation import HandoffValidationError
 from querychat.data import tips
 
+from .conftest import long_enough_source
+
 
 @pytest.fixture(autouse=True)
 def no_modal(monkeypatch):
@@ -77,6 +79,10 @@ class FakeChat:
         self._structured = structured
         self._turns: list[object] = []
         self.system_prompt: str | None = None
+        self.model_params: dict[str, object] = {}
+
+    def set_model_params(self, **kwargs):
+        self.model_params.update(kwargs)
 
     @property
     def stream_count(self) -> int:
@@ -346,7 +352,7 @@ class TestStoreEviction:
         monkeypatch.setattr("querychat._handoff_store.MAX_STORED_HANDOFFS", 2)
         source = RecordingDataFrameSource("tips")
         orch = make_session(
-            FakeChat([result_chunk("new", referenced_tables=["tips"])]),
+            FakeChat([result_chunk(long_enough_source("new"), referenced_tables=["tips"])]),
             data_sources={"tips": source},
         )
         shared = orch.bundle_store.put({"shared.csv": b"shared"})
@@ -375,7 +381,7 @@ class TestStoreEviction:
         monkeypatch.setattr("querychat._handoff_store.MAX_STORED_HANDOFFS", 1)
         source = RecordingDataFrameSource("tips")
         orch = make_session(
-            FakeChat([result_chunk("new", referenced_tables=["tips"])]),
+            FakeChat([result_chunk(long_enough_source("new"), referenced_tables=["tips"])]),
             data_sources={"tips": source},
         )
         old_bundle = orch.bundle_store.put({"old.csv": b"old"})
@@ -531,7 +537,7 @@ class TestDownload:
     def test_restored_handoff_download_regenerates_bundle(self):
         source = RecordingDataFrameSource("tips")
         original = make_session(
-            FakeChat([result_chunk("source", referenced_tables=["tips"])]),
+            FakeChat([result_chunk(long_enough_source("source"), referenced_tables=["tips"])]),
             data_sources={"tips": source},
         )
         asyncio.run(
@@ -585,7 +591,7 @@ class TestDownload:
     def test_download_uses_original_bundle_after_dataframe_mutation(self):
         source = RecordingDataFrameSource("tips")
         orch = make_session(
-            FakeChat([result_chunk("source", referenced_tables=["tips"])]),
+            FakeChat([result_chunk(long_enough_source("source"), referenced_tables=["tips"])]),
             data_sources={"tips": source},
         )
 
@@ -646,8 +652,8 @@ class TestRevise:
         prior_turn = chatlas.Turn(role="assistant", contents="first")
         chat = FakeChat(
             streams=[
-                [result_chunk("second", referenced_tables=["tips"])],
-                [result_chunk("third", referenced_tables=["tips"])],
+                [result_chunk(long_enough_source("second"), referenced_tables=["tips"])],
+                [result_chunk(long_enough_source("third"), referenced_tables=["tips"])],
             ]
         )
         orch = make_session(
@@ -674,7 +680,7 @@ class TestRevise:
         third = orch.store.get("a")
         assert third is not None
         assert third is not state
-        assert third.source == "third"
+        assert third.source == long_enough_source("third")
         assert [turn.role for turn in third.turns] == [
             "assistant",
             "user",
@@ -694,7 +700,7 @@ class TestRevise:
     ):
         source = RecordingDataFrameSource("tips")
         orch = make_session(
-            FakeChat([result_chunk("second", referenced_tables=["tips"])]),
+            FakeChat([result_chunk(long_enough_source("second"), referenced_tables=["tips"])]),
             data_sources={"tips": source},
         )
         first_bundle = orch.bundle_store.put({"tips.csv": b"old!"})
@@ -738,8 +744,8 @@ class TestRevise:
         executor = RecordingExecutor()
         chat = FakeChat(
             streams=[
-                [result_chunk("csv source", referenced_tables=["tips"])],
-                [result_chunk("external source", referenced_tables=["tips"])],
+                [result_chunk(long_enough_source("csv source"), referenced_tables=["tips"])],
+                [result_chunk(long_enough_source("external source"), referenced_tables=["tips"])],
             ]
         )
         orch = make_session(
@@ -763,13 +769,13 @@ class TestRevise:
         assert chat.stream_count == 2
         assert replacement is not None
         assert replacement is not state
-        assert replacement.source == "external source"
+        assert replacement.source == long_enough_source("external source")
         assert replacement.referenced_tables == ["tips"]
         assert replacement.bundled_tables == []
         assert replacement.bundle_id is None
         assert "may need adjustment" in replacement.data_instructions
         assert replacement.turns[-1].text == result_chunk(
-            "external source",
+            long_enough_source("external source"),
             referenced_tables=["tips"],
         )
         assert executor.schema_calls == ["tips", "orders"]
@@ -786,7 +792,7 @@ class TestRevise:
         source = RecordingDataFrameSource("tips")
         chat = CancelSecondStreamChat(
             streams=[
-                [result_chunk("csv source", referenced_tables=["tips"])],
+                [result_chunk(long_enough_source("csv source"), referenced_tables=["tips"])],
                 [],
             ]
         )
@@ -828,7 +834,7 @@ class TestRevise:
         source = RecordingDataFrameSource("tips")
         executor = RecordingExecutor()
         orch = make_session(
-            FakeChat([result_chunk("new source", referenced_tables=["tips"])]),
+            FakeChat([result_chunk(long_enough_source("new source"), referenced_tables=["tips"])]),
             data_sources={"tips": source},
             executor=executor,
         )
@@ -839,7 +845,7 @@ class TestRevise:
 
         replacement = orch.store.get("a")
         assert replacement is not None
-        assert replacement.source == "new source"
+        assert replacement.source == long_enough_source("new source")
         assert executor.schema_calls == []
 
     def test_failed_external_data_correction_preserves_current_handoff(
@@ -849,8 +855,8 @@ class TestRevise:
         source = RecordingDataFrameSource("tips")
         chat = FakeChat(
             streams=[
-                [result_chunk("csv source", referenced_tables=["tips"])],
-                [result_chunk("external source", referenced_tables=[])],
+                [result_chunk(long_enough_source("csv source"), referenced_tables=["tips"])],
+                [result_chunk(long_enough_source("external source"), referenced_tables=[])],
             ]
         )
         orch = make_session(
@@ -879,7 +885,7 @@ class TestRevise:
             FakeChat(
                 [
                     result_chunk(
-                        "new source",
+                        long_enough_source("new source"),
                         referenced_tables=["mtcars"],
                         summary="s",
                     )
@@ -893,13 +899,13 @@ class TestRevise:
 
         revised = orch.store.get("a")
         assert revised is not None
-        assert revised.source == "new source"
+        assert revised.source == long_enough_source("new source")
         assert revised.summary == "s"
         assert revised.referenced_tables == ["mtcars"]
 
     def test_revise_replaces_table_references(self):
         orch = make_session(
-            FakeChat([result_chunk("new source", referenced_tables=["customers"])]),
+            FakeChat([result_chunk(long_enough_source("new source"), referenced_tables=["customers"])]),
             data_sources={
                 "orders": FakeDataSource("orders"),
                 "customers": FakeDataSource("customers"),
@@ -1044,7 +1050,9 @@ class TestStateFromResult:
 class TestGenerate:
     def test_stores_under_provided_id(self):
         chat = FakeChat(
-            [result_chunk("gen src", referenced_tables=["mtcars"], summary="sum")]
+            [result_chunk(
+                long_enough_source("gen src"), referenced_tables=["mtcars"], summary="sum"
+            )]
         )
         orch = make_session(chat, data_source=FakeDataSource())
         req = GenerateRequest(type_id="quarto-dashboard", language="python")
@@ -1052,11 +1060,13 @@ class TestGenerate:
         asyncio.run(orch.generate(req, "", "myid"))
 
         assert orch.store.has("myid")
-        assert orch.store.get("myid").source == "gen src"
+        assert orch.store.get("myid").source == long_enough_source("gen src")
 
     def test_does_not_change_panel_visibility(self):
         chat = FakeChat(
-            [result_chunk("gen src", referenced_tables=["mtcars"], summary="sum")]
+            [result_chunk(
+                long_enough_source("gen src"), referenced_tables=["mtcars"], summary="sum"
+            )]
         )
         orch = make_session(chat, data_source=FakeDataSource())
         req = GenerateRequest(type_id="quarto-dashboard", language="python")
@@ -1067,7 +1077,7 @@ class TestGenerate:
 
     def test_stores_declared_and_bundled_tables(self):
         source = RecordingDataFrameSource("tips")
-        chat = FakeChat([result_chunk("x", referenced_tables=["tips"])])
+        chat = FakeChat([result_chunk(long_enough_source("x"), referenced_tables=["tips"])])
         orch = make_session(chat, data_sources={"tips": source})
         req = GenerateRequest(type_id="quarto-dashboard", language="python")
 
@@ -1087,8 +1097,8 @@ class TestGenerate:
         source = RecordingDataFrameSource("tips")
         chat = FakeChat(
             streams=[
-                [result_chunk("csv source", referenced_tables=["tips"])],
-                [result_chunk("external source", referenced_tables=["tips"])],
+                [result_chunk(long_enough_source("csv source"), referenced_tables=["tips"])],
+                [result_chunk(long_enough_source("external source"), referenced_tables=["tips"])],
             ]
         )
         orch = make_session(chat, data_sources={"tips": source})
@@ -1105,13 +1115,13 @@ class TestGenerate:
         state = orch.store.get("a")
         assert chat.stream_count == 2
         assert state is not None
-        assert state.source == "external source"
+        assert state.source == long_enough_source("external source")
         assert state.referenced_tables == ["tips"]
         assert state.bundled_tables == []
         assert state.bundle_id is None
         assert "may need adjustment" in state.data_instructions
         assert state.turns[-1].text == result_chunk(
-            "external source",
+            long_enough_source("external source"),
             referenced_tables=["tips"],
         )
 
@@ -1122,7 +1132,7 @@ class TestGenerate:
         source = RecordingDataFrameSource("tips")
         chat = CancelSecondStreamChat(
             streams=[
-                [result_chunk("csv source", referenced_tables=["tips"])],
+                [result_chunk(long_enough_source("csv source"), referenced_tables=["tips"])],
                 [],
             ]
         )
@@ -1161,8 +1171,8 @@ class TestGenerate:
         source = RecordingDataFrameSource("tips")
         chat = FakeChat(
             streams=[
-                [result_chunk("csv source", referenced_tables=["tips"])],
-                [result_chunk("external source", referenced_tables=[])],
+                [result_chunk(long_enough_source("csv source"), referenced_tables=["tips"])],
+                [result_chunk(long_enough_source("external source"), referenced_tables=[])],
             ]
         )
         orch = make_session(chat, data_sources={"tips": source})
@@ -1188,10 +1198,10 @@ class TestGenerate:
         source = RecordingDataFrameSource("tips")
         chat = FakeChat(
             streams=[
-                [result_chunk("csv source", referenced_tables=["tips"])],
+                [result_chunk(long_enough_source("csv source"), referenced_tables=["tips"])],
                 [
                     result_chunk(
-                        "external source",
+                        long_enough_source("external source"),
                         language="r",
                         referenced_tables=["tips"],
                     )
@@ -1222,8 +1232,8 @@ class TestGenerate:
         source = RecordingDataFrameSource("tips")
         chat = FakeChat(
             streams=[
-                [result_chunk("csv source", referenced_tables=["tips"])],
-                [result_chunk("external source", referenced_tables=["unknown"])],
+                [result_chunk(long_enough_source("csv source"), referenced_tables=["tips"])],
+                [result_chunk(long_enough_source("external source"), referenced_tables=["unknown"])],
             ]
         )
         orch = make_session(chat, data_sources={"tips": source})
@@ -1262,7 +1272,7 @@ class TestGenerate:
         )
         chat = FakeChat(
             streams=[
-                [result_chunk("csv source", referenced_tables=["tips"])],
+                [result_chunk(long_enough_source("csv source"), referenced_tables=["tips"])],
                 [invalid_correction],
             ]
         )
@@ -1292,10 +1302,10 @@ class TestGenerate:
         source = RecordingDataFrameSource("tips")
         chat = FakeChat(
             streams=[
-                [result_chunk("csv source", referenced_tables=["tips"])],
+                [result_chunk(long_enough_source("csv source"), referenced_tables=["tips"])],
                 [
                     result_chunk(
-                        "external source",
+                        long_enough_source("external source"),
                         language="r",
                         referenced_tables=["unknown"],
                     )
@@ -1326,7 +1336,7 @@ class TestGenerate:
         source = RecordingDataFrameSource("tips")
         chat = FakeChat(
             streams=[
-                [result_chunk("csv source", referenced_tables=["tips"])],
+                [result_chunk(long_enough_source("csv source"), referenced_tables=["tips"])],
                 [result_chunk("", referenced_tables=["tips"])],
                 [result_chunk("must not be used", referenced_tables=["tips"])],
             ]
@@ -1351,7 +1361,7 @@ class TestGenerate:
         chat = FakeChat(
             [
                 result_chunk(
-                    "gen src",
+                    long_enough_source("gen src"),
                     language="r",
                     referenced_tables=["mtcars"],
                 )
@@ -1375,7 +1385,9 @@ class TestGenerate:
         chat = FakeChat(
             [
                 (
-                    '{"source":"{}","language":"r","run_instructions":"```bash\\n'
+                    '{"source":'
+                    + json.dumps(long_enough_source("{}"))
+                    + ',"language":"r","run_instructions":"```bash\\n'
                     'Rscript handoff.R\\n```","referenced_tables":["mtcars"]}'
                 )
             ]
@@ -1413,7 +1425,7 @@ class TestGenerate:
         monkeypatch,
     ):
         source = RecordingDataFrameSource("tips")
-        chat = FakeChat([result_chunk("new", referenced_tables=["tips"])])
+        chat = FakeChat([result_chunk(long_enough_source("new"), referenced_tables=["tips"])])
         orch = make_session(chat, data_sources={"tips": source})
         req = GenerateRequest(type_id="quarto-dashboard", language="python")
         plan = asyncio.run(orch.prepare_generation(req, ""))
@@ -1454,7 +1466,7 @@ class TestGenerate:
 
     def test_successful_generation_enforces_bundle_byte_limit(self, monkeypatch):
         source = RecordingDataFrameSource("tips")
-        chat = FakeChat([result_chunk("new", referenced_tables=["tips"])])
+        chat = FakeChat([result_chunk(long_enough_source("new"), referenced_tables=["tips"])])
         orch = make_session(chat, data_sources={"tips": source})
         req = GenerateRequest(type_id="quarto-dashboard", language="python")
         plan = asyncio.run(orch.prepare_generation(req, ""))
@@ -1487,7 +1499,7 @@ class TestGenerate:
         monkeypatch,
     ):
         source = RecordingDataFrameSource("tips")
-        chat = FakeChat([result_chunk("new", referenced_tables=["tips"])])
+        chat = FakeChat([result_chunk(long_enough_source("new"), referenced_tables=["tips"])])
         orch = make_session(chat, data_sources={"tips": source})
         req = GenerateRequest(type_id="quarto-dashboard", language="python")
 
@@ -1510,7 +1522,7 @@ class TestGenerate:
                 payload
                 for message_type, payload in orch.view.session.messages
                 if message_type == "querychat-handoff-source-update"
-                and payload["value"] == "new"
+                and payload["value"] == long_enough_source("new")
             ]
             try:
                 assert source_updates[-1]["download_available"] is False
@@ -1525,7 +1537,7 @@ class TestGenerate:
             payload
             for message_type, payload in orch.view.session.messages
             if message_type == "querychat-handoff-source-update"
-            and payload["value"] == "new"
+            and payload["value"] == long_enough_source("new")
         ]
         assert source_updates[-1]["download_available"] is True
         assert asyncio.run(orch.build_download("new")) is not None
@@ -1535,7 +1547,7 @@ class TestGenerate:
         monkeypatch,
     ):
         source = RecordingDataFrameSource("tips")
-        chat = FakeChat([result_chunk("new", referenced_tables=["tips"])])
+        chat = FakeChat([result_chunk(long_enough_source("new"), referenced_tables=["tips"])])
         orch = make_session(chat, data_sources={"tips": source})
         req = GenerateRequest(type_id="quarto-dashboard", language="python")
         show_handoff = orch.view.show_handoff
@@ -1603,6 +1615,34 @@ class TestGenerate:
         assert state.turns[:2] == first_stream_turns
         assert "failed structural validation" in state.turns[-2].text
         assert state.turns[-1].text == repaired
+
+    def test_generation_repairs_bare_filename_degenerate_source(self):
+        repaired_source = long_enough_source("print('repaired')")
+        chat = FakeChat(
+            streams=[
+                [
+                    result_chunk(
+                        "penguins-handoff.qmd", referenced_tables=["mtcars"]
+                    )
+                ],
+                [result_chunk(repaired_source, referenced_tables=["mtcars"])],
+            ]
+        )
+        orch = make_session(chat)
+
+        asyncio.run(
+            orch.generate(
+                GenerateRequest(type_id="quarto-dashboard", language="python"),
+                "",
+                "handoff-1",
+            )
+        )
+
+        assert chat.stream_count == 2
+        state = orch.store.get("handoff-1")
+        assert state is not None
+        assert state.source == repaired_source
+        assert "too short" in state.turns[-2].text
 
     def test_generation_stops_after_second_invalid_result(self):
         invalid = handoff_result_json("{")

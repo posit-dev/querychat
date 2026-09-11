@@ -149,10 +149,20 @@ describe("HandoffChat$ask()", {
         turns = replacement_turns,
         system_prompt = NULL,
         prompt = "recommend",
-        type = type
+        type = type,
+        max_tokens = NULL
       )
     )
     expect_equal(chat$get_turns(), live_turns)
+  })
+
+  it("does not apply a max_tokens override", {
+    chat <- MockHandoffChat$new(structured_result = list(answer = "42"))
+    type <- ellmer::type_object(answer = ellmer::type_string())
+
+    sync_promise(HandoffChat$new(chat)$ask("recommend", type))
+
+    expect_null(chat$requests()[[1]]$max_tokens)
   })
 })
 
@@ -190,12 +200,36 @@ describe("HandoffChat$stream()", {
         turns = replacement_turns,
         system_prompt = "handoff system",
         prompt = "generate",
-        type = type
+        type = type,
+        max_tokens = HANDOFF_MAX_TOKENS
       )
     )
     expect_equal(streamed$result@source, "print(1)")
     expect_equal(chat$get_turns(), live_turns)
     expect_equal(chat$get_system_prompt(), "live system")
+  })
+
+  it("applies HANDOFF_MAX_TOKENS to the forked chat", {
+    parsed <- new_mock_handoff_result("print(1)")
+    chat <- MockHandoffChat$new(
+      stream_chunks = paste0(
+        '{"source":"print(1)","language":"r",',
+        '"referenced_tables":["sales"]}'
+      ),
+      completed_content = new_mock_handoff_content(parsed)
+    )
+    view <- new_recording_handoff_view()
+
+    sync_promise(
+      HandoffChat$new(chat)$stream(
+        "generate",
+        type = type,
+        view = view
+      )
+    )
+
+    expect_equal(chat$requests()[[1]]$max_tokens, HANDOFF_MAX_TOKENS)
+    expect_null(chat$get_model_object()@params$max_tokens)
   })
 
   it("replaces the initial source then appends monotonic suffixes", {
@@ -481,7 +515,8 @@ describe("HandoffChat$stream()", {
         turns = list(),
         system_prompt = NULL,
         prompt = "generate",
-        type = type
+        type = type,
+        max_tokens = HANDOFF_MAX_TOKENS
       ))
     )
     expect_equal(

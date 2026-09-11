@@ -21,7 +21,11 @@ HandoffChat <- R6::R6Class(
       type,
       view
     ) {
-      chat <- private$fork(turns, system_prompt)
+      chat <- private$fork(
+        turns,
+        system_prompt,
+        max_tokens = HANDOFF_MAX_TOKENS
+      )
       check_structured_streaming(chat)
       view$set_streaming(TRUE)
 
@@ -71,16 +75,40 @@ HandoffChat <- R6::R6Class(
   private = list(
     chat = NULL,
 
-    fork = function(turns, system_prompt = NULL) {
+    fork = function(turns, system_prompt = NULL, max_tokens = NULL) {
       chat <- private$chat$clone()
       chat$set_turns(turns)
       if (!is.null(system_prompt)) {
         chat$set_system_prompt(system_prompt)
       }
+      if (!is.null(max_tokens)) {
+        apply_handoff_max_tokens_override(chat, max_tokens)
+      }
       chat
     }
   )
 )
+
+HANDOFF_MAX_TOKENS <- 16000L
+
+# ellmer has no public setter for an existing Chat's Model params; re-running
+# initialize() on the clone is the only way to swap it in without losing the
+# chat's R6 subclass (needed by test doubles that override stream_async()).
+apply_handoff_max_tokens_override <- function(chat, max_tokens) {
+  model <- chat$get_model_object()
+  new_model <- ellmer::Model(
+    name = model@name,
+    params = modifyList(model@params, list(max_tokens = max_tokens)),
+    extra_args = model@extra_args
+  )
+  chat$initialize(
+    provider = chat$get_provider(),
+    model = new_model,
+    system_prompt = chat$get_system_prompt(),
+    echo = "none"
+  )
+  invisible(chat)
+}
 
 partial_json_string <- function(buffer, field = "source") {
   marker <- paste0('"', field, '"')

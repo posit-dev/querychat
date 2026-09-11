@@ -129,15 +129,15 @@
                 </bslib-tooltip>
               </div>
               <div class="querychat-handoff-language-selector" role="radiogroup" aria-label="Programming language">
-                <label class="querychat-handoff-language-option querychat-handoff-language-pill" data-language="python">
-                  <input type="radio" name="module-handoff_language" class="querychat-handoff-language-radio" data-language="python" checked=""/>
-                  <span class="querychat-handoff-language-icon querychat-handoff-language-icon-python"></span>
-                  Python
-                </label>
                 <label class="querychat-handoff-language-option querychat-handoff-language-pill" data-language="r">
-                  <input type="radio" name="module-handoff_language" class="querychat-handoff-language-radio" data-language="r"/>
+                  <input type="radio" name="module-handoff_language" class="querychat-handoff-language-radio" data-language="r" checked=""/>
                   <span class="querychat-handoff-language-icon querychat-handoff-language-icon-r"></span>
                   R
+                </label>
+                <label class="querychat-handoff-language-option querychat-handoff-language-pill" data-language="python">
+                  <input type="radio" name="module-handoff_language" class="querychat-handoff-language-radio" data-language="python"/>
+                  <span class="querychat-handoff-language-icon querychat-handoff-language-icon-python"></span>
+                  Python
                 </label>
               </div>
               <div class="querychat-handoff-section-label-row mt-2">
@@ -273,15 +273,15 @@
                 </bslib-tooltip>
               </div>
               <div class="querychat-handoff-language-selector" role="radiogroup" aria-label="Programming language">
-                <label class="querychat-handoff-language-option querychat-handoff-language-pill" data-language="python">
-                  <input type="radio" name="module-handoff_language" class="querychat-handoff-language-radio" data-language="python" checked=""/>
-                  <span class="querychat-handoff-language-icon querychat-handoff-language-icon-python"></span>
-                  Python
-                </label>
                 <label class="querychat-handoff-language-option querychat-handoff-language-pill" data-language="r">
-                  <input type="radio" name="module-handoff_language" class="querychat-handoff-language-radio" data-language="r"/>
+                  <input type="radio" name="module-handoff_language" class="querychat-handoff-language-radio" data-language="r" checked=""/>
                   <span class="querychat-handoff-language-icon querychat-handoff-language-icon-r"></span>
                   R
+                </label>
+                <label class="querychat-handoff-language-option querychat-handoff-language-pill" data-language="python">
+                  <input type="radio" name="module-handoff_language" class="querychat-handoff-language-radio" data-language="python"/>
+                  <span class="querychat-handoff-language-icon querychat-handoff-language-icon-python"></span>
+                  Python
                 </label>
               </div>
               <div class="querychat-handoff-section-label-row mt-2">

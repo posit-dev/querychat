@@ -86,6 +86,25 @@ describe("handoff_modal_ui()", {
     expect_match(markup, 'data-languages="python,r"', fixed = TRUE)
   })
 
+  it("defaults the language selector to R, listed before Python", {
+    modal <- handoff_modal_ui(ns, list())
+    markup <- as.character(modal)
+
+    r_radio_pos <- regexpr(
+      '<input[^>]*data-language="r"[^>]*checked=""',
+      markup
+    )
+    python_radio_pos <- regexpr(
+      '<input[^>]*data-language="python"(?!.*checked)',
+      markup,
+      perl = TRUE
+    )
+
+    expect_true(r_radio_pos > 0)
+    expect_true(python_radio_pos > 0)
+    expect_true(r_radio_pos < python_radio_pos)
+  })
+
   it("renders gallery item attributes and escapes their titles", {
     unsafe_title <- '<script>alert("x")</script> & report'
     items <- list(

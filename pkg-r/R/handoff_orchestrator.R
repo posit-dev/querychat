@@ -483,7 +483,8 @@ HandoffOrchestrator <- R6::R6Class(
           {
             validate_handoff_source(
               generated$result@source,
-              handoff_type
+              handoff_type,
+              system_prompt
             )
             NULL
           },
@@ -514,7 +515,8 @@ HandoffOrchestrator <- R6::R6Class(
           }
           validate_handoff_source(
             generated$result@source,
-            handoff_type
+            handoff_type,
+            system_prompt
           )
         }
         list(
@@ -575,7 +577,8 @@ HandoffOrchestrator <- R6::R6Class(
         }
         validate_handoff_source(
           repaired_result@source,
-          generated$handoff_type
+          generated$handoff_type,
+          repair_system_prompt
         )
 
         list(

@@ -625,3 +625,10 @@ mock_chat_server_result <- function(client) {
   )
   chat
 }
+
+# A placeholder long enough to clear HANDOFF_MIN_SOURCE_LENGTH regardless of
+# `marker`'s own length, for tests that only care about a short marker value
+# appearing in the source (not the realistic length of a real handoff).
+long_enough_source <- function(marker = "placeholder") {
+  paste0(marker, "\n\n", strrep("# filler\n", 40))
+}

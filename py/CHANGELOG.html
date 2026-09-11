@@ -170,6 +170,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <ul class="collapse">
   <li><a href="#new-features" id="toc-new-features" class="nav-link" data-scroll-target="#new-features">New features</a></li>
   <li><a href="#improvements" id="toc-improvements" class="nav-link" data-scroll-target="#improvements">Improvements</a></li>
+  <li><a href="#bug-fixes" id="toc-bug-fixes" class="nav-link" data-scroll-target="#bug-fixes">Bug fixes</a></li>
   </ul></li>
   <li><a href="#section" id="toc-section" class="nav-link" data-scroll-target="#section">[0.7.0] - 2026-07-10</a>
   <ul class="collapse">
@@ -244,6 +245,12 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h3 class="anchored" data-anchor-id="improvements">Improvements</h3>
 <ul>
 <li>The <code>"visualize"</code> tool is now included in the default toolset (<code>tools=("filter", "query", "visualize")</code>). If the visualization dependencies are not installed (the <code>viz</code> extra), the tool is dropped with a warning instead of raising an <code>ImportError</code>.</li>
+</ul>
+</section>
+<section id="bug-fixes" class="level3">
+<h3 class="anchored" data-anchor-id="bug-fixes">Bug fixes</h3>
+<ul>
+<li>Fixed a phantom scrollbar on scrollable ancestors of the chat (e.g.&nbsp;a bslib sidebar created with <code>qc.sidebar()</code>): the hidden visualization preload widget is much taller than its 1px container, and its unclipped overflow leaked into the ancestor’s scrollable region, letting it scroll past the chat’s bottom edge.</li>
 </ul>
 </section>
 </section>

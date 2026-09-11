@@ -249,6 +249,11 @@ class QueryChatBase(Generic[IntoFrameT]):
             self._owned_clients.append(resolved)
         return resolved
 
+    def _close_owned_client(self, client: chatlas.Chat) -> None:
+        """Close an owned client and stop tracking it. Idempotent."""
+        client.close()
+        self._owned_clients[:] = [c for c in self._owned_clients if c is not client]
+
     def _create_session_client(
         self,
         *,

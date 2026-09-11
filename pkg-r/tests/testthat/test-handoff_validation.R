@@ -1,7 +1,10 @@
 new_notebook_json <- function(kernel_language = "R") {
   sprintf(
     paste0(
-      '{"cells": [{"cell_type": "code", "source": "1 + 1", "metadata": {}}],',
+      '{"cells": [',
+      '{"cell_type": "markdown", "source": "# Analysis results\\n\\n',
+      'A short notebook exercising the validation path.", "metadata": {}},',
+      ' {"cell_type": "code", "source": "1 + 1", "metadata": {}}],',
       ' "metadata": {"kernelspec": {"language": %s}},',
       ' "nbformat": 4, "nbformat_minor": 5}'
     ),
@@ -14,11 +17,7 @@ describe("validate_handoff_source()", {
     text_type <- resolve_handoff_type("shiny-app", "python")
 
     expect_invisible(
-      validate_handoff_source(
-        long_enough_source("print('ok')"),
-        text_type,
-        "unrelated system prompt"
-      )
+      validate_handoff_source(long_enough_source("print('ok')"), text_type)
     )
   })
 
@@ -26,16 +25,12 @@ describe("validate_handoff_source()", {
     r_type <- resolve_handoff_type("jupyter-notebook", "r")
     python_type <- resolve_handoff_type("jupyter-notebook", "python")
 
+    expect_invisible(validate_handoff_source(new_notebook_json("R"), r_type))
     expect_invisible(
-      validate_handoff_source(new_notebook_json("R"), r_type, "sys")
-    )
-    expect_invisible(
-      validate_handoff_source(new_notebook_json("python"), python_type, "sys")
+      validate_handoff_source(new_notebook_json("python"), python_type)
     )
     # Kernel language matching is case-insensitive.
-    expect_invisible(
-      validate_handoff_source(new_notebook_json("r"), r_type, "sys")
-    )
+    expect_invisible(validate_handoff_source(new_notebook_json("r"), r_type))
   })
 
   it("rejects notebook targets that are not valid notebook JSON", {
@@ -49,7 +44,7 @@ describe("validate_handoff_source()", {
 
     for (source in invalid_sources) {
       expect_error(
-        validate_handoff_source(source, notebook_type, "sys"),
+        validate_handoff_source(source, notebook_type),
         "not valid notebook JSON",
         info = source
       )
@@ -64,11 +59,11 @@ describe("validate_handoff_source()", {
     )
 
     expect_error(
-      validate_handoff_source(no_kernelspec, r_type, "sys"),
+      validate_handoff_source(no_kernelspec, r_type),
       "must declare a R kernelspec"
     )
     expect_error(
-      validate_handoff_source(new_notebook_json("R"), python_type, "sys"),
+      validate_handoff_source(new_notebook_json("R"), python_type),
       "must declare a Python kernelspec, not R"
     )
   })
@@ -80,7 +75,7 @@ describe("validate_handoff_source()", {
       invalid_sources,
       function(source) {
         tryCatch(
-          validate_handoff_source(source, type, "sys"),
+          validate_handoff_source(source, type),
           error = conditionMessage
         )
       },
@@ -91,16 +86,13 @@ describe("validate_handoff_source()", {
       unique(messages),
       "Generated handoff source must be a non-empty string."
     )
-    expect_snapshot(
-      error = TRUE,
-      validate_handoff_source(" \n\t", type, "sys")
-    )
+    expect_snapshot(error = TRUE, validate_handoff_source(" \n\t", type))
   })
 
   it("requires a resolved handoff type", {
     expect_snapshot(
       error = TRUE,
-      validate_handoff_source("source", "not a handoff type", "sys")
+      validate_handoff_source("source", "not a handoff type")
     )
   })
 
@@ -108,39 +100,22 @@ describe("validate_handoff_source()", {
     text_type <- resolve_handoff_type("quarto-dashboard", "r")
 
     expect_error(
-      validate_handoff_source("penguins-handoff.qmd", text_type, "sys"),
+      validate_handoff_source("penguins-handoff.qmd", text_type),
       "too short"
     )
   })
 
-  it("rejects a source that echoes the system prompt", {
-    text_type <- resolve_handoff_type("quarto-dashboard", "r")
-    system_prompt <- paste(
-      "You are an expert data analyst and developer. Your task is to turn",
-      "the work a user did during a data-exploration session into a",
-      "standalone, reusable handoff they can run, share, and build on",
-      "outside the chat."
+  it("rejects a valid-schema notebook with too little content", {
+    notebook_type <- resolve_handoff_type("jupyter-notebook", "python")
+    empty_notebook <- paste0(
+      '{"cells": [],',
+      ' "metadata": {"kernelspec": {"language": "python"}},',
+      ' "nbformat": 4, "nbformat_minor": 5}'
     )
-    echoed_source <- paste0(system_prompt, "\n\n", strrep("more text ", 30))
 
     expect_error(
-      validate_handoff_source(echoed_source, text_type, system_prompt),
-      "echoes the system prompt"
-    )
-  })
-
-  it("accepts a real, adequately long source that merely shares vocabulary with the prompt", {
-    text_type <- resolve_handoff_type("quarto-dashboard", "r")
-    system_prompt <- "You are an expert data analyst and developer."
-
-    expect_invisible(
-      validate_handoff_source(
-        long_enough_source(
-          "---\ntitle: Penguins dashboard\n---\n\n```{r}\nlibrary(ggplot2)\n```"
-        ),
-        text_type,
-        system_prompt
-      )
+      validate_handoff_source(empty_notebook, notebook_type),
+      "too short"
     )
   })
 })

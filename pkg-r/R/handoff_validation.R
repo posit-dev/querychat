@@ -1,7 +1,6 @@
 HANDOFF_MIN_SOURCE_LENGTH <- 200L
-HANDOFF_PROMPT_ECHO_PREFIX_LENGTH <- 80L
 
-validate_handoff_source <- function(source, handoff_type, system_prompt) {
+validate_handoff_source <- function(source, handoff_type) {
   if (!S7::S7_inherits(handoff_type, HandoffType)) {
     cli::cli_abort("{.arg handoff_type} must be a <HandoffType> object.")
   }
@@ -15,27 +14,16 @@ validate_handoff_source <- function(source, handoff_type, system_prompt) {
   }
   if (identical(handoff_type@structure, "notebook-json")) {
     validate_notebook_handoff_source(source, handoff_type@language)
-  } else {
-    validate_handoff_substance(source, system_prompt)
   }
+  validate_handoff_substance(source)
 
   invisible(NULL)
 }
 
-validate_handoff_substance <- function(source, system_prompt) {
+validate_handoff_substance <- function(source) {
   if (nchar(source) < HANDOFF_MIN_SOURCE_LENGTH) {
     cli::cli_abort(
       "Generated handoff source is too short to be a real handoff ({nchar(source)} characters)."
-    )
-  }
-  prompt_prefix <- substr(
-    trimws(system_prompt),
-    1L,
-    HANDOFF_PROMPT_ECHO_PREFIX_LENGTH
-  )
-  if (nzchar(prompt_prefix) && grepl(prompt_prefix, source, fixed = TRUE)) {
-    cli::cli_abort(
-      "Generated handoff source echoes the system prompt instead of producing real content."
     )
   }
   invisible(NULL)

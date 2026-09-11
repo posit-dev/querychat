@@ -429,7 +429,7 @@ class HandoffOrchestrator:
             model=result_model,
         )
         try:
-            validate_handoff_source(result.source, handoff_type, system_prompt)
+            validate_handoff_source(result.source, handoff_type)
         except HandoffValidationError as error:
             repair_model = handoff_result_model(
                 list(self.data_sources),
@@ -445,7 +445,7 @@ class HandoffOrchestrator:
             )
             if result.language != handoff_type.language:
                 raise ValueError("Repaired handoff changed its language.") from error
-            validate_handoff_source(result.source, handoff_type, system_prompt)
+            validate_handoff_source(result.source, handoff_type)
         return GeneratedHandoff(
             result=result,
             turns=result_turns,
@@ -506,9 +506,7 @@ class HandoffOrchestrator:
             raise HandoffDataError(
                 "Corrected handoff changed its referenced-table set."
             )
-        validate_handoff_source(
-            repaired_result.source, generated.handoff_type, repair_system_prompt
-        )
+        validate_handoff_source(repaired_result.source, generated.handoff_type)
         return (
             GeneratedHandoff(
                 result=repaired_result,

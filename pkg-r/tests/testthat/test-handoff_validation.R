@@ -1,7 +1,10 @@
 new_notebook_json <- function(kernel_language = "R") {
   sprintf(
     paste0(
-      '{"cells": [{"cell_type": "code", "source": "1 + 1", "metadata": {}}],',
+      '{"cells": [',
+      '{"cell_type": "markdown", "source": "# Analysis results\\n\\n',
+      'A short notebook exercising the validation path.", "metadata": {}},',
+      ' {"cell_type": "code", "source": "1 + 1", "metadata": {}}],',
       ' "metadata": {"kernelspec": {"language": %s}},',
       ' "nbformat": 4, "nbformat_minor": 5}'
     ),
@@ -13,7 +16,9 @@ describe("validate_handoff_source()", {
   it("accepts nonempty source for text targets", {
     text_type <- resolve_handoff_type("shiny-app", "python")
 
-    expect_invisible(validate_handoff_source("print('ok')", text_type))
+    expect_invisible(
+      validate_handoff_source(long_enough_source("print('ok')"), text_type)
+    )
   })
 
   it("accepts valid notebook JSON with a matching kernelspec", {
@@ -88,6 +93,29 @@ describe("validate_handoff_source()", {
     expect_snapshot(
       error = TRUE,
       validate_handoff_source("source", "not a handoff type")
+    )
+  })
+
+  it("rejects a source shorter than the minimum-substance floor", {
+    text_type <- resolve_handoff_type("quarto-dashboard", "r")
+
+    expect_error(
+      validate_handoff_source("penguins-handoff.qmd", text_type),
+      "too short"
+    )
+  })
+
+  it("rejects a valid-schema notebook with too little content", {
+    notebook_type <- resolve_handoff_type("jupyter-notebook", "python")
+    empty_notebook <- paste0(
+      '{"cells": [],',
+      ' "metadata": {"kernelspec": {"language": "python"}},',
+      ' "nbformat": 4, "nbformat_minor": 5}'
+    )
+
+    expect_error(
+      validate_handoff_source(empty_notebook, notebook_type),
+      "too short"
     )
   })
 })

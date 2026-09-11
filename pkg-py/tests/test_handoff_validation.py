@@ -6,6 +6,8 @@ from querychat._handoff_validation import (
     validate_handoff_source,
 )
 
+from .conftest import long_enough_source
+
 
 def notebook_source(language: str) -> str:
     notebook = nbformat.v4.new_notebook(
@@ -61,3 +63,28 @@ def test_text_target_requires_nonempty_source() -> None:
 
     with pytest.raises(HandoffValidationError, match="empty"):
         validate_handoff_source("  ", handoff_type)
+
+
+def test_text_target_accepts_adequately_long_source() -> None:
+    handoff_type = resolve_handoff_type("shiny-app", "python")
+
+    validate_handoff_source(long_enough_source("print('ok')"), handoff_type)
+
+
+def test_rejects_source_shorter_than_minimum_substance_floor() -> None:
+    handoff_type = resolve_handoff_type("quarto-dashboard", "r")
+
+    with pytest.raises(HandoffValidationError, match="too short"):
+        validate_handoff_source("penguins-handoff.qmd", handoff_type)
+
+
+def test_rejects_valid_schema_notebook_with_too_little_content() -> None:
+    handoff_type = resolve_handoff_type("jupyter-notebook", "python")
+    empty_notebook = (
+        '{"cells": [], "metadata": {"kernelspec": {"language": "python",'
+        ' "name": "python3", "display_name": "Python 3"}},'
+        ' "nbformat": 4, "nbformat_minor": 5}'
+    )
+
+    with pytest.raises(HandoffValidationError, match="too short"):
+        validate_handoff_source(empty_notebook, handoff_type)

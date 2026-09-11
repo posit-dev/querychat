@@ -28,6 +28,9 @@ if TYPE_CHECKING:
 M = TypeVar("M", bound=BaseModel)
 HandoffResultT = TypeVar("HandoffResultT", bound=HandoffResult)
 
+# Default token cap for handoff generation; a user-set max_tokens wins.
+HANDOFF_MAX_TOKENS = 16000
+
 
 class HandoffChat:
     def __init__(self, chat: chatlas.Chat) -> None:
@@ -52,13 +55,28 @@ class HandoffChat:
         model: type[HandoffResultT],
     ) -> tuple[HandoffResultT, list[chatlas.Turn]]:
         """Fork a chat, stream a structured handoff into the sink, return it."""
-        forked = self._fork(turns=turns, system_prompt=system_prompt)
+        forked = self._fork(
+            turns=turns,
+            system_prompt=system_prompt,
+            max_tokens=self._default_max_tokens(),
+        )
         tokens = await forked.stream_async(prompt, data_model=model, echo="none")
         result = await self._drive(tokens, sink, model)
         return result, forked.get_turns()
 
+    def _default_max_tokens(self) -> int | None:
+        # chatlas has no public params getter; read what set_model_params() wrote.
+        params = getattr(self._chat, "_standard_model_params", {})
+        if params.get("max_tokens") is not None:
+            return None
+        return HANDOFF_MAX_TOKENS
+
     def _fork(
-        self, *, turns: list[chatlas.Turn], system_prompt: str | None = None
+        self,
+        *,
+        turns: list[chatlas.Turn],
+        system_prompt: str | None = None,
+        max_tokens: int | None = None,
     ) -> chatlas.Chat:
         """
         Deep-copy the live chat into an isolated conversation.
@@ -70,6 +88,8 @@ class HandoffChat:
         forked.set_turns(turns)
         if system_prompt is not None:
             forked.system_prompt = system_prompt
+        if max_tokens is not None:
+            forked.set_model_params(max_tokens=max_tokens)
         return forked
 
     async def _drive(

@@ -236,7 +236,7 @@ describe("HandoffOrchestrator$prepare_generation()", {
 })
 
 new_transaction_handoff_result <- function(
-  source = "print('done')",
+  source = long_enough_source("print('done')"),
   language = "r",
   summary = "Completed handoff",
   turns = list(ellmer::UserTurn("Generate it")),
@@ -456,7 +456,7 @@ describe("HandoffOrchestrator$generate()", {
     )
     state <- fixture$store$get("handoff-1")
     expect_s7_class(state, HandoffState)
-    expect_identical(state@source, "print('done')")
+    expect_identical(state@source, long_enough_source("print('done')"))
     expect_identical(
       state@data_instructions,
       paste0(
@@ -477,7 +477,9 @@ describe("HandoffOrchestrator$generate()", {
     first_turns <- list(ellmer::UserTurn("Initial generation"))
     fixture <- new_transaction_orchestrator(list(
       new_transaction_handoff_result(source = " ", turns = first_turns),
-      new_transaction_handoff_result(source = "print('repaired')")
+      new_transaction_handoff_result(
+        source = long_enough_source("print('repaired')")
+      )
     ))
 
     sync_promise(
@@ -501,7 +503,43 @@ describe("HandoffOrchestrator$generate()", {
     expect_identical(stream_events[[2]]$turns, first_turns)
     expect_identical(
       fixture$store$get("handoff-1")@source,
-      "print('repaired')"
+      long_enough_source("print('repaired')")
+    )
+  })
+
+  it("repairs a bare-filename-style degenerate source (GLM-5.3 pattern)", {
+    first_turns <- list(ellmer::UserTurn("Initial generation"))
+    fixture <- new_transaction_orchestrator(list(
+      new_transaction_handoff_result(
+        source = "penguins-handoff.qmd",
+        turns = first_turns
+      ),
+      new_transaction_handoff_result(
+        source = long_enough_source("print('repaired')")
+      )
+    ))
+
+    sync_promise(
+      fixture$orchestrator$generate(
+        transaction_request(),
+        "",
+        "handoff-1"
+      )
+    )
+
+    stream_events <- Filter(
+      \(event) identical(event$action, "stream"),
+      fixture$journal$events
+    )
+    expect_length(stream_events, 2L)
+    expect_match(
+      stream_events[[2]]$prompt,
+      "too short",
+      fixed = TRUE
+    )
+    expect_identical(
+      fixture$store$get("handoff-1")@source,
+      long_enough_source("print('repaired')")
     )
   })
 
@@ -736,7 +774,9 @@ describe("HandoffOrchestrator$generate()", {
     fixture <- new_transaction_orchestrator(
       list(
         new_transaction_handoff_result(),
-        new_transaction_handoff_result(source = "print('corrected')")
+        new_transaction_handoff_result(
+          source = long_enough_source("print('corrected')")
+        )
       ),
       data_sources = list(sales = sales$source),
       max_bundle_bytes = 1
@@ -761,7 +801,7 @@ describe("HandoffOrchestrator$generate()", {
       fixed = TRUE
     )
     state <- fixture$store$get("handoff-1")
-    expect_identical(state@source, "print('corrected')")
+    expect_identical(state@source, long_enough_source("print('corrected')"))
     expect_identical(state@bundled_tables, character())
     expect_null(state@bundle_id)
     expect_match(state@data_instructions, "may need adjustment", fixed = TRUE)
@@ -994,7 +1034,7 @@ describe("HandoffOrchestrator$revise()", {
         old_bundle
       )
       new_transaction_handoff_result(
-        source = "new source",
+        source = long_enough_source("new source"),
         summary = "New summary",
         turns = replacement_turns
       )
@@ -1026,7 +1066,7 @@ describe("HandoffOrchestrator$revise()", {
     expect_identical(replacement@handoff_id, old@handoff_id)
     expect_identical(replacement@handoff_type, old@handoff_type)
     expect_identical(replacement@turns, replacement_turns)
-    expect_identical(replacement@source, "new source")
+    expect_identical(replacement@source, long_enough_source("new source"))
     expect_identical(
       journal_actions(fixture),
       c("stream", "show_handoff", "remember")
@@ -1036,7 +1076,9 @@ describe("HandoffOrchestrator$revise()", {
 
   it("retains a shared old bundle while another state references it", {
     fixture <- new_transaction_orchestrator(
-      list(new_transaction_handoff_result(source = "new source"))
+      list(new_transaction_handoff_result(
+        source = long_enough_source("new source")
+      ))
     )
     shared <- fixture$bundle_store$stage(
       list("sales.csv" = charToRaw("shared"))
@@ -1067,7 +1109,7 @@ describe("HandoffOrchestrator$revise()", {
   it("rejects a revised language change and restores the old handoff", {
     fixture <- new_transaction_orchestrator(list(
       new_transaction_handoff_result(
-        source = "new source",
+        source = long_enough_source("new source"),
         language = "python"
       )
     ))
@@ -1111,7 +1153,9 @@ describe("HandoffOrchestrator$revise()", {
       ),
       panel = list(
         results = list(
-          new_transaction_handoff_result(source = "new source")
+          new_transaction_handoff_result(
+            source = long_enough_source("new source")
+          )
         ),
         failures = list(show_handoff = 1L)
       )
@@ -1199,7 +1243,9 @@ describe("HandoffOrchestrator$revise()", {
       )
     )
     fixture <- new_transaction_orchestrator(
-      list(new_transaction_handoff_result(source = "new source")),
+      list(new_transaction_handoff_result(
+        source = long_enough_source("new source")
+      )),
       bundle_store = FailingEvictBundleStore$new()
     )
     old <- new_revision_handoff_state()
@@ -1215,7 +1261,7 @@ describe("HandoffOrchestrator$revise()", {
 
     expect_identical(revised, TRUE)
     replacement <- fixture$store$get("handoff-1")
-    expect_identical(replacement@source, "new source")
+    expect_identical(replacement@source, long_enough_source("new source"))
     # The view keeps showing the committed replacement; it is not reverted
     # to the pre-revision state.
     shown <- tail(fixture$view$events, 1L)[[1]]
@@ -1230,7 +1276,11 @@ describe("HandoffOrchestrator$revise()", {
       engine = "sqlite"
     )
     fixture <- new_transaction_orchestrator(
-      list(new_transaction_handoff_result(source = "revised source")),
+      list(
+        new_transaction_handoff_result(
+          source = long_enough_source("revised source")
+        )
+      ),
       data_sources = list(sales = sales$source)
     )
     old_bundle <- fixture$bundle_store$stage(
@@ -1265,7 +1315,9 @@ describe("HandoffOrchestrator$revise()", {
     chat <- new_recording_handoff_chat(
       stream_results = list(
         new_transaction_handoff_result(),
-        new_transaction_handoff_result(source = "print('corrected')")
+        new_transaction_handoff_result(
+          source = long_enough_source("print('corrected')")
+        )
       ),
       journal = journal
     )
@@ -1290,7 +1342,10 @@ describe("HandoffOrchestrator$revise()", {
     sync_promise(orchestrator$revise("handoff-1", "Make it smaller."))
 
     replacement <- store$get("handoff-1")
-    expect_identical(replacement@source, "print('corrected')")
+    expect_identical(
+      replacement@source,
+      long_enough_source("print('corrected')")
+    )
     expect_identical(replacement@bundled_tables, character())
     expect_null(replacement@bundle_id)
     expect_identical(

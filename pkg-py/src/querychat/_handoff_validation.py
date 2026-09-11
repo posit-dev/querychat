@@ -3,6 +3,8 @@ from nbformat.reader import NotJSONError
 
 from ._handoff_types import LANGUAGES, HandoffType
 
+HANDOFF_MIN_SOURCE_LENGTH = 200
+
 
 class HandoffValidationError(ValueError):
     """Generated handoff source violates its target contract."""
@@ -14,9 +16,17 @@ def validate_handoff_source(
 ) -> None:
     if not source.strip():
         raise HandoffValidationError("Generated handoff source is empty.")
-    if handoff_type.structure == "text":
-        return
-    validate_notebook_source(source, handoff_type)
+    if handoff_type.structure == "notebook-json":
+        validate_notebook_source(source, handoff_type)
+    validate_handoff_substance(source)
+
+
+def validate_handoff_substance(source: str) -> None:
+    if len(source) < HANDOFF_MIN_SOURCE_LENGTH:
+        raise HandoffValidationError(
+            "Generated handoff source is too short to be a real handoff "
+            f"({len(source)} characters)."
+        )
 
 
 def validate_notebook_source(

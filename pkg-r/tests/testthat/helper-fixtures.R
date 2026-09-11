@@ -454,25 +454,35 @@ MockHandoffChat <- R6::R6Class(
       stream_start_error = NULL,
       cancellation = NULL,
       partial_turn_reason = NULL,
-      turns = list(),
-      system_prompt = NULL
+      turns = NULL,
+      system_prompt = NULL,
+      provider = ellmer::Provider("test", "test"),
+      model = ellmer::Model(name = "test"),
+      echo = "none"
     ) {
       super$initialize(
-        ellmer::Provider("test", "test"),
-        model = ellmer::Model(name = "test"),
-        system_prompt = system_prompt
+        provider,
+        model = model,
+        system_prompt = system_prompt,
+        echo = echo
       )
-      self$set_turns(turns)
+      if (!is.null(turns)) {
+        self$set_turns(turns)
+      }
 
-      private$state <- new.env(parent = emptyenv())
-      private$state$structured_result <- structured_result
-      private$state$stream_chunks <- stream_chunks
-      private$state$completed_content <- completed_content
-      private$state$stream_error <- stream_error
-      private$state$stream_start_error <- stream_start_error
-      private$state$cancellation <- cancellation
-      private$state$partial_turn_reason <- partial_turn_reason
-      private$state$requests <- list()
+      # apply_handoff_max_tokens_override() re-runs initialize() on a fork to
+      # swap in the override Model; keep the shared state env intact then.
+      if (is.null(private$state)) {
+        private$state <- new.env(parent = emptyenv())
+        private$state$structured_result <- structured_result
+        private$state$stream_chunks <- stream_chunks
+        private$state$completed_content <- completed_content
+        private$state$stream_error <- stream_error
+        private$state$stream_start_error <- stream_start_error
+        private$state$cancellation <- cancellation
+        private$state$partial_turn_reason <- partial_turn_reason
+        private$state$requests <- list()
+      }
     },
 
     requests = function() {
@@ -509,7 +519,8 @@ MockHandoffChat <- R6::R6Class(
           turns = self$get_turns(),
           system_prompt = self$get_system_prompt(),
           prompt = prompt,
-          type = type
+          type = type,
+          max_tokens = self$get_model_object()@params$max_tokens
         )
     }
   )
@@ -613,4 +624,9 @@ mock_chat_server_result <- function(client) {
     on_restore = function(fn) invisible(fn)
   )
   chat
+}
+
+# Pad `marker` past HANDOFF_MIN_SOURCE_LENGTH so fixtures pass the floor.
+long_enough_source <- function(marker = "placeholder") {
+  paste0(marker, "\n\n", strrep("# filler\n", 40))
 }

@@ -134,6 +134,7 @@ access its \verb{$tables} and \verb{$prompt}.}
     \item \href{#method-QueryChat-app_obj}{\code{QueryChat$app_obj()}}
     \item \href{#method-QueryChat-sidebar}{\code{QueryChat$sidebar()}}
     \item \href{#method-QueryChat-ui}{\code{QueryChat$ui()}}
+    \item \href{#method-QueryChat-page}{\code{QueryChat$page()}}
     \item \href{#method-QueryChat-server}{\code{QueryChat$server()}}
     \item \href{#method-QueryChat-generate_greeting}{\code{QueryChat$generate_greeting()}}
     \item \href{#method-QueryChat-cleanup}{\code{QueryChat$cleanup()}}
@@ -155,7 +156,7 @@ access its \verb{$tables} and \verb{$prompt}.}
   greeting = NULL,
   history = NULL,
   client = NULL,
-  tools = c("filter", "query"),
+  tools = c("filter", "query", "visualize"),
   data_description = NULL,
   categorical_threshold = 20,
   extra_instructions = NULL,
@@ -200,7 +201,10 @@ Passed straight through to \code{shinychat::chat_server(history = )}.}
 }}
       \item{\code{tools}}{Which querychat tools to include in the chat client, by
 default. \code{"filter"} includes the tools for filtering and resetting the
-dashboard and \code{"query"} includes the tool for executing SQL queries.
+dashboard, \code{"query"} includes the tool for executing SQL queries, and
+\code{"visualize"} includes the tool for rendering visualizations (requires
+the \pkg{ggsql} package; if it is not installed, the tool is dropped
+with a warning). The default is \code{c("filter", "query", "visualize")}.
 Use \code{tools = "filter"} when you only want the dashboard filtering tools,
 or when you want to disable the querying tool entirely to prevent the
 LLM from seeing any of the data in your dataset. The legacy name
@@ -509,6 +513,36 @@ See \verb{$app()}.}
   }
   \subsection{Returns}{
     A UI component containing the chat interface.
+  }
+}
+
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-QueryChat-page"></a>}}
+\if{latex}{\out{\hypertarget{method-QueryChat-page}{}}}
+\subsection{\code{QueryChat$page()}}{
+  Create a full-window page containing the querychat UI.
+
+This wraps \code{\link[shinychat:page_chat]{shinychat::page_chat()}}, making the chat the primary
+surface of the app, with optional navigation pages, sidebars, and a
+drawer. Use this instead of \verb{$sidebar()} or \verb{$ui()} when the chat
+should own the full browser window.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{QueryChat$page(title, ..., id = NULL)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{title}}{Page title displayed in the header. When it is a string
+and \code{window_title} is omitted, it is also used as the document title.}
+      \item{\code{...}}{Additional arguments passed to \code{\link[shinychat:page_chat]{shinychat::page_chat()}}.}
+      \item{\code{id}}{Optional ID for the QueryChat instance.}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    A fillable page UI component suitable for use as the app's UI.
   }
 }
 

@@ -12,6 +12,8 @@ from shinychat.types import HistoryOptions
 
 from shiny import module, reactive, ui
 
+from ._handoff_panel import handoff_panel_ui
+from ._handoff_server import handoff_server
 from ._querychat_core import warn_multi_table_flat_accessor
 from ._table_accessor import TableAccessor
 from ._viz_altair_widget import AltairWidget
@@ -70,21 +72,48 @@ class TableState(Generic[IntoFrameT]):
 
 @module.ui
 def mod_ui(*, preload_viz: bool = False, **kwargs):
+    return shinychat.chat_ui(
+        CHAT_ID, **add_footer_and_class(kwargs, preload_viz=preload_viz)
+    )
+
+
+@module.ui
+def mod_page(title, *, preload_viz: bool = False, **kwargs):
+    return shinychat.page_chat(
+        title, id=CHAT_ID, **add_footer_and_class(kwargs, preload_viz=preload_viz)
+    )
+
+
+def querychat_extras(*, preload_viz: bool):
+    # The footer is the only child-injection point in chat_ui()/page_chat();
+    # styles.css collapses it when it holds only these extras.
+    return ui.div(
+        querychat_head_content(),
+        handoff_panel_ui(),
+        preload_viz_deps_ui() if preload_viz else None,
+        class_="querychat-extras",
+    )
+
+
+def add_footer_and_class(kwargs: dict, *, preload_viz: bool) -> dict:
+    # Builds namespaced IDs: callers outside a module context (Express's
+    # page()) must wrap this in namespace_context().
+    user_footer = kwargs.pop("footer", None)
+    extras = querychat_extras(preload_viz=preload_viz)
+    kwargs["footer"] = (
+        ui.TagList(user_footer, extras) if user_footer is not None else extras
+    )
+    user_class = kwargs.pop("class_", None) or ""
+    kwargs["class_"] = f"querychat {user_class}".strip()
+    return kwargs
+
+
+def querychat_head_content():
     css_path = Path(__file__).parent / "static" / "css" / "styles.css"
     js_path = Path(__file__).parent / "static" / "js" / "querychat.js"
-
-    kwargs.setdefault("enable_cancel", True)
-    kwargs.setdefault("allow_attachments", True)
-    tag = shinychat.chat_ui(CHAT_ID, **kwargs)
-    tag.add_class("querychat")
-
-    return ui.TagList(
-        ui.head_content(
-            ui.include_css(css_path),
-            ui.include_js(js_path),
-        ),
-        tag,
-        preload_viz_deps_ui() if preload_viz else None,
+    return ui.head_content(
+        ui.include_css(css_path),
+        ui.include_js(js_path),
     )
 
 
@@ -148,6 +177,10 @@ class ServerValues(Generic[IntoFrameT]):
     current_table
         The name of the most recently queried table, or ``None`` if no query
         has been run yet. Call ``.current_table()`` to read reactively.
+    chat
+        The underlying ``shinychat.Chat`` instance for this session, or
+        ``None`` in stub sessions. Useful for driving chat-level UI such as
+        the drawer (e.g. ``vals.chat.drawer.show()``).
 
     """
 
@@ -161,6 +194,7 @@ class ServerValues(Generic[IntoFrameT]):
         client: ServerClient,
         data_sources: dict[str, DataSource[IntoFrameT]],
         current_table: ReactiveStringOrNone,
+        chat: shinychat.Chat | None = None,
     ):
         self.df = df
         self.sql = sql
@@ -169,6 +203,7 @@ class ServerValues(Generic[IntoFrameT]):
         self.client = client
         self._data_sources = data_sources
         self._current_table_rv = current_table
+        self.chat = chat
 
     def table(self, name: str) -> TableAccessor:
         """
@@ -258,6 +293,7 @@ def mod_server(
             update_dashboard=update_dashboard,
             reset_dashboard=reset_dashboard,
             visualize=on_visualize,
+            handoff_available=True,
             tools=tools,
         )
 
@@ -322,6 +358,16 @@ def mod_server(
         client=chat,
         greeting=greeting_arg,
         history=history,
+    )
+
+    handoff_server(
+        input,
+        session,
+        chat,
+        data_sources=data_sources,
+        executor=executor,
+        shinychat_chat=shinychat_chat,
+        chat_history_enabled=history is not False,
     )
 
     # Skipped when `history` is already in bookmark mode: shinychat_chat.history
@@ -411,6 +457,7 @@ def mod_server(
             client=chat,
             data_sources=data_sources,
             current_table=_current_table,
+            chat=shinychat_chat,
         )
 
     primary_name = next(iter(table_states))
@@ -437,6 +484,7 @@ def mod_server(
         client=chat,
         data_sources=data_sources,
         current_table=_current_table,
+        chat=shinychat_chat,
     )
 
 

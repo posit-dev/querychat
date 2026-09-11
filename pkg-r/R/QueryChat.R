@@ -153,6 +153,7 @@ QueryChat <- R6::R6Class(
     create_session_client = function(
       client_spec = NULL,
       tools = NA,
+      handoff_available = FALSE,
       session = NULL,
       update_dashboard = function(query, title, table) {},
       reset_dashboard = function(table) {},
@@ -164,8 +165,14 @@ QueryChat <- R6::R6Class(
       if (is_na(tools)) {
         tools <- self$tools
       }
+      tools <- check_viz_deps(tools)
 
-      chat$set_system_prompt(private$.system_prompt$render(tools = tools))
+      chat$set_system_prompt(
+        private$.system_prompt$render(
+          tools = tools,
+          handoff_available = handoff_available
+        )
+      )
 
       if (is.null(tools)) {
         return(chat)
@@ -208,10 +215,6 @@ QueryChat <- R6::R6Class(
       }
 
       if ("visualize" %in% tools) {
-        rlang::check_installed(
-          "ggsql",
-          reason = "for visualization support."
-        )
         chat$register_tool(
           tool_visualize_dashboard(
             executor,
@@ -235,7 +238,7 @@ QueryChat <- R6::R6Class(
     #' @field id_override Whether the ID was explicitly set by the user.
     id_override = NULL,
     #' @field tools The allowed tools for the chat client.
-    tools = c("filter", "query"),
+    tools = c("filter", "query", "visualize"),
 
     #' @description
     #' Create a new QueryChat object.
@@ -270,7 +273,10 @@ QueryChat <- R6::R6Class(
     #'     [ellmer::chat_openai()]
     #' @param tools Which querychat tools to include in the chat client, by
     #'   default. `"filter"` includes the tools for filtering and resetting the
-    #'   dashboard and `"query"` includes the tool for executing SQL queries.
+    #'   dashboard, `"query"` includes the tool for executing SQL queries, and
+    #'   `"visualize"` includes the tool for rendering visualizations (requires
+    #'   the \pkg{ggsql} package; if it is not installed, the tool is dropped
+    #'   with a warning). The default is `c("filter", "query", "visualize")`.
     #'   Use `tools = "filter"` when you only want the dashboard filtering tools,
     #'   or when you want to disable the querying tool entirely to prevent the
     #'   LLM from seeing any of the data in your dataset. The legacy name
@@ -302,7 +308,7 @@ QueryChat <- R6::R6Class(
       greeting = NULL,
       history = NULL,
       client = NULL,
-      tools = c("filter", "query"),
+      tools = c("filter", "query", "visualize"),
       data_description = NULL,
       categorical_threshold = 20,
       extra_instructions = NULL,
@@ -322,6 +328,7 @@ QueryChat <- R6::R6Class(
         multiple = TRUE
       )
       tools <- normalize_tools(tools)
+      tools <- check_viz_deps(tools)
       check_string(data_description, allow_null = TRUE)
       check_number_whole(categorical_threshold, min = 1)
       check_string(extra_instructions, allow_null = TRUE)
@@ -734,53 +741,71 @@ QueryChat <- R6::R6Class(
         identical(resolved_history$restore_mode, "bookmark")
 
       first_table_name <- names(private$.data_sources)[[1]]
+      table_names <- names(private$.data_sources)
+      multi_table <- length(table_names) > 1
 
       ui <- function(req) {
-        bslib::page_sidebar(
+        self$page(
           title = shiny::HTML(
             sprintf(
               "<span>querychat with <code>%s</code></span>",
               first_table_name
             )
           ),
-          class = "bslib-page-dashboard",
-          sidebar = self$sidebar(),
-          shiny::useBusyIndicators(pulse = TRUE, spinners = FALSE),
-          bslib::card(
-            fill = FALSE,
-            style = bslib::css(max_height = "33%"),
-            bslib::card_header(
-              shiny::div(
-                class = "hstack w-100",
-                shiny::div(
-                  bsicons::bs_icon("terminal-fill"),
-                  shiny::textOutput("query_title", inline = TRUE)
-                ),
-                shiny::div(
-                  class = "ms-auto",
-                  shiny::uiOutput("ui_reset", inline = TRUE)
-                )
+          window_title = "querychat",
+          drawer = shinychat::chat_drawer(
+            bslib::card(
+              full_screen = TRUE,
+              bslib::card_header(
+                bsicons::bs_icon("table"),
+                "Data \u2014 ",
+                shiny::textOutput("data_card_header_text", inline = TRUE)
+              ),
+              DT::DTOutput("dt"),
+              show_query_footer(
+                target = "sql_query_section",
+                content = shiny::uiOutput("sql_output"),
+                right = shiny::uiOutput("ui_reset", inline = TRUE)
               )
             ),
-            shiny::uiOutput("sql_output")
+            if (multi_table) {
+              bslib::accordion(
+                !!!lapply(table_names, function(name) {
+                  bslib::accordion_panel(
+                    shiny::tags$span(
+                      name,
+                      shiny::uiOutput(
+                        paste0("active_badge_", name),
+                        inline = TRUE
+                      )
+                    ),
+                    DT::DTOutput(paste0("dt_", name)),
+                    show_query_footer(
+                      target = paste0("sql_query_section_", name),
+                      content = shiny::uiOutput(paste0("sql_view_", name))
+                    ),
+                    value = name
+                  )
+                }),
+                id = "data_sources_accordion",
+                open = FALSE
+              )
+            },
+            title = "Data Sources",
+            open = FALSE,
+            width = "calc(min(clamp(360px, 55vw, 720px), 100%))"
           ),
-          bslib::card(
-            full_screen = TRUE,
-            bslib::card_header(
-              bsicons::bs_icon("table"),
-              "Data \u2014 ",
-              shiny::textOutput("data_card_header_text", inline = TRUE)
-            ),
-            DT::DTOutput("dt")
-          ),
-          if (rlang::is_interactive()) {
-            shiny::actionButton(
-              "close_btn",
-              label = "",
-              class = "btn-close",
-              style = "position: fixed; top: 6px; right: 6px;"
-            )
-          }
+          footer = htmltools::tagList(
+            shiny::useBusyIndicators(pulse = TRUE, spinners = FALSE),
+            if (rlang::is_interactive()) {
+              shiny::actionButton(
+                "close_btn",
+                label = "",
+                class = "btn-close",
+                style = "position: fixed; top: 6px; right: 6px;"
+              )
+            }
+          )
         )
       }
 
@@ -788,7 +813,8 @@ QueryChat <- R6::R6Class(
         shiny::setBookmarkExclude(c(
           "close_btn",
           "reset_query",
-          "sql_editor"
+          "sql_editor",
+          if (multi_table) paste0("sql_view_editor_", table_names)
         ))
         qc_vals <- self$server(history = resolved_history)
 
@@ -797,13 +823,16 @@ QueryChat <- R6::R6Class(
           if (!is.null(ct)) ct else first_table_name
         })
 
-        output$data_card_header_text <- shiny::renderText({
-          active_table_name()
+        # Auto-open the data drawer when a new query lands
+        shiny::observe(label = "auto_open_drawer", {
+          name <- active_table_name()
+          if (shiny::isTruthy(qc_vals$.tables[[name]]$sql())) {
+            shinychat::chat_drawer_show(shiny::NS(self$id)("chat"))
+          }
         })
 
-        output$query_title <- shiny::renderText({
-          title <- qc_vals$.tables[[active_table_name()]]$title()
-          if (shiny::isTruthy(title)) title else "SQL Query"
+        output$data_card_header_text <- shiny::renderText({
+          active_table_name()
         })
 
         output$ui_reset <- shiny::renderUI({
@@ -870,6 +899,47 @@ QueryChat <- R6::R6Class(
             }
           )
         })
+
+        if (multi_table) {
+          # One data grid, read-only query view, and "active" badge per
+          # registered table, for the drawer's data-sources accordion. The
+          # accordion is fully static (built once in `ui`), so each output
+          # is bound to a literal table name via `local()`.
+          for (name in table_names) {
+            local({
+              tbl_name <- name
+
+              output[[paste0("active_badge_", tbl_name)]] <- shiny::renderUI({
+                if (identical(active_table_name(), tbl_name)) {
+                  shiny::tags$span(class = "badge bg-primary ms-2", "Active")
+                }
+              })
+
+              output[[paste0("dt_", tbl_name)]] <- DT::renderDT({
+                df <- qc_vals$.tables[[tbl_name]]$df()
+                if (inherits(df, "tbl_sql")) {
+                  df <- dplyr::collect(df)
+                }
+                DT::datatable(
+                  df,
+                  fillContainer = TRUE,
+                  options = list(pageLength = 25, scrollX = TRUE)
+                )
+              })
+
+              output[[paste0("sql_view_", tbl_name)]] <- shiny::renderUI({
+                bslib::input_code_editor(
+                  paste0("sql_view_editor_", tbl_name),
+                  value = sql_text_for_editor(tbl_name),
+                  language = "sql",
+                  read_only = TRUE,
+                  line_numbers = FALSE,
+                  height = "auto"
+                )
+              })
+            })
+          }
+        }
 
         if (rlang::is_interactive()) {
           shiny::observeEvent(input$close_btn, label = "on_close_btn", {
@@ -938,6 +1008,37 @@ QueryChat <- R6::R6Class(
       id <- id %||% namespaced_id(self$id)
 
       mod_ui(id, ...)
+    },
+
+    #' @description
+    #' Create a full-window page containing the querychat UI.
+    #'
+    #' This wraps [shinychat::page_chat()], making the chat the primary
+    #' surface of the app, with optional navigation pages, sidebars, and a
+    #' drawer. Use this instead of `$sidebar()` or `$ui()` when the chat
+    #' should own the full browser window.
+    #'
+    #' @param title Page title displayed in the header. When it is a string
+    #'   and `window_title` is omitted, it is also used as the document title.
+    #' @param ... Additional arguments passed to [shinychat::page_chat()].
+    #' @param id Optional ID for the QueryChat instance.
+    #'
+    #' @return A fillable page UI component suitable for use as the app's UI.
+    page = function(title, ..., id = NULL) {
+      check_string(id, allow_null = TRUE, allow_empty = FALSE)
+
+      id <- id %||% namespaced_id(self$id)
+
+      ns <- shiny::NS(id)
+      # Extras must ride in the footer slot; tagList() siblings of
+      # page_chat() would render outside <body>.
+      dots <- add_footer_and_class(rlang::list2(...), ns)
+      rlang::exec(
+        shinychat::page_chat,
+        title,
+        !!!dots,
+        id = ns("chat")
+      )
     },
 
     #' @description
@@ -1170,7 +1271,7 @@ querychat <- function(
   greeting = NULL,
   history = NULL,
   client = NULL,
-  tools = c("filter", "query"),
+  tools = c("filter", "query", "visualize"),
   data_description = NULL,
   categorical_threshold = 20,
   extra_instructions = NULL,
@@ -1221,7 +1322,7 @@ querychat_app <- function(
   id = NULL,
   greeting = NULL,
   client = NULL,
-  tools = c("filter", "query"),
+  tools = c("filter", "query", "visualize"),
   data_description = NULL,
   categorical_threshold = 20,
   extra_instructions = NULL,
@@ -1274,12 +1375,50 @@ querychat_app <- function(
   qc$app(history = history)
 }
 
+show_query_footer <- function(target, content, right = NULL) {
+  bslib::card_footer(
+    shiny::div(
+      class = "querychat-footer-buttons",
+      shiny::div(
+        class = "querychat-footer-left",
+        shiny::tags$button(
+          class = "querychat-show-query-btn",
+          `data-querychat-action` = "show-query",
+          `data-target` = target,
+          bsicons::bs_icon("chevron-down", class = "querychat-query-chevron"),
+          shiny::tags$span(class = "querychat-query-label", "Show Query")
+        )
+      ),
+      shiny::div(class = "querychat-footer-right", right)
+    ),
+    shiny::div(class = "querychat-query-section", id = target, content),
+    viz_dep()
+  )
+}
+
 normalize_tools <- function(tools) {
   if (is.null(tools)) {
     return(NULL)
   }
   tools[tools == "filter"] <- "update"
   unique(tools)
+}
+
+check_viz_deps <- function(tools) {
+  if (
+    is.null(tools) || !"visualize" %in% tools || rlang::is_installed("ggsql")
+  ) {
+    return(tools)
+  }
+  rlang::warn(
+    c(
+      'The "visualize" tool requires the {.pkg ggsql} package.',
+      "i" = 'Install it with `install.packages("ggsql")`; continuing without the "visualize" tool.'
+    ),
+    .frequency = "once",
+    .frequency_id = "querychat_viz_ggsql_missing"
+  )
+  setdiff(tools, "visualize")
 }
 
 normalize_data_source <- function(data_source, table_name) {

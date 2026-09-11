@@ -30,3 +30,8 @@ def pytest_collection_modifyitems(config, items):
     for item in items:
         if "ggsql" in item.keywords:
             item.add_marker(skip)
+
+
+def long_enough_source(marker: str = "placeholder") -> str:
+    """Pad `marker` past HANDOFF_MIN_SOURCE_LENGTH so fixtures pass the floor."""
+    return f"{marker}\n\n" + "# filler\n" * 40

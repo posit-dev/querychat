@@ -1,20 +1,44 @@
 # Main module UI function
 mod_ui <- function(id, ...) {
-  htmltools::tagList(
-    htmltools::htmlDependency(
-      "querychat",
-      version = "0.0.1",
-      package = "querychat",
-      src = "htmldep",
-      script = "querychat.js",
-      stylesheet = "styles.css"
-    ),
-    shinychat::chat_ui(
-      shiny::NS(id, "chat"),
-      height = "100%",
-      class = "querychat",
-      ...
-    )
+  ns <- shiny::NS(id)
+  dots <- add_footer_and_class(rlang::list2(...), ns)
+  rlang::exec(
+    shinychat::chat_ui,
+    ns("chat"),
+    height = "100%",
+    !!!dots
+  )
+}
+
+add_footer_and_class <- function(dots, ns) {
+  dots$class <- paste(c("querychat", dots$class), collapse = " ")
+  dots$footer <- querychat_footer(dots$footer, ns)
+  dots
+}
+
+# The footer is the only child-injection point in chat_ui()/page_chat();
+# styles.css collapses it when it holds only these extras.
+querychat_footer <- function(user_footer = NULL, ns) {
+  extras <- htmltools::tags$div(
+    class = "querychat-extras",
+    querychat_dependency(),
+    handoff_html_dependency(),
+    handoff_panel_ui(ns)
+  )
+  if (is.null(user_footer)) {
+    return(extras)
+  }
+  htmltools::tagList(user_footer, extras)
+}
+
+querychat_dependency <- function() {
+  htmltools::htmlDependency(
+    "querychat",
+    version = "0.0.1",
+    package = "querychat",
+    src = "htmldep",
+    script = "querychat.js",
+    stylesheet = "styles.css"
   )
 }
 
@@ -95,6 +119,7 @@ mod_server <- function(
       reset_dashboard = reset_query,
       visualize = on_visualize,
       tools = tools,
+      handoff_available = TRUE,
       session = session
     )
 
@@ -118,6 +143,16 @@ mod_server <- function(
       pre_built_client,
       greeting = greeting_arg,
       history = history
+    )
+
+    handoff_server(
+      input = input,
+      output = output,
+      session = session,
+      chat = pre_built_client,
+      data_sources = data_sources,
+      executor = executor,
+      chat_module = chat_module
     )
 
     # Skipped when `history` is already in bookmark mode: chat_server() has
@@ -158,12 +193,23 @@ mod_server <- function(
     )
 
     build_state_snapshot <- function() {
+      # on_save can run from a promise handler with no reactive context, and
+      # can even outlive the session (e.g. an ExtendedTask settling after the
+      # page was closed). shiny 1.14.0 destroys a session's reactives on
+      # close, making them unreadable; skip those tables rather than failing
+      # the save, so any previously saved state is kept.
       table_states <- list()
       for (name in names(tables)) {
-        table_states[[name]] <- list(
-          sql = tables[[name]]$sql(),
-          title = tables[[name]]$title()
+        tbl_state <- tryCatch(
+          list(
+            sql = shiny::isolate(tables[[name]]$sql()),
+            title = shiny::isolate(tables[[name]]$title())
+          ),
+          `shiny.destroyed.error` = function(e) NULL
         )
+        if (!is.null(tbl_state)) {
+          table_states[[name]] <- tbl_state
+        }
       }
       snapshot <- list(querychat_tables = table_states)
       if (length(viz_widgets) > 0) {
@@ -209,7 +255,11 @@ mod_server <- function(
     shiny::setBookmarkExclude("chat_update")
 
     shiny::onBookmark(function(state) {
-      state$values <- utils::modifyList(state$values, build_state_snapshot())
+      # state$values is a Shiny-owned environment: mutate, never replace.
+      snapshot <- build_state_snapshot()
+      for (nm in names(snapshot)) {
+        state$values[[nm]] <- snapshot[[nm]]
+      }
     })
 
     shiny::onRestore(function(state) {

@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import importlib.util
 import logging
+import re
 import socket
 import subprocess
+import sys
 import threading
 import time
 import urllib.error
@@ -14,6 +16,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from playwright.sync_api import expect
 from shiny.pytest import create_app_fixture
 
 # Configure logging for test debugging
@@ -23,6 +26,7 @@ logger = logging.getLogger(__name__)
 # Tests run from pkg-py/ but paths need to resolve correctly
 REPO_ROOT = Path(__file__).parent.parent.parent.parent
 EXAMPLES_DIR = REPO_ROOT / "pkg-py" / "examples"
+APPS_DIR = Path(__file__).parent / "apps"
 
 
 if TYPE_CHECKING:
@@ -151,6 +155,50 @@ def _create_chat_controller(page: Page, table_name: str) -> ChatControllerType:
     return ChatController(page, f"querychat_{table_name}-chat")
 
 
+def open_data_drawer(page: Page, timeout: int = 15000) -> None:
+    """
+    Open the data drawer in `QueryChat.app()`-based apps and wait for the
+    data table to render.
+
+    The drawer starts closed (it auto-opens when a query lands), so tests
+    that need the table up front open it via the drawer trigger button.
+    The click is retried: on a slow first paint (e.g. loaded CI runners)
+    the React client may not have attached its handler yet, which silently
+    swallows the click.
+    """
+    from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+
+    drawer = page.locator("aside.shiny-chat-drawer:not([hidden])")
+    trigger = page.locator(".shiny-chat-drawer-trigger")
+
+    deadline = time.monotonic() + timeout / 1000
+    while not drawer.is_visible():
+        trigger.click()
+        try:
+            drawer.wait_for(state="visible", timeout=2000)
+        except PlaywrightTimeoutError:
+            if time.monotonic() >= deadline:
+                raise
+
+    remaining_ms = max(1000, int((deadline - time.monotonic()) * 1000))
+    page.wait_for_selector("table", state="visible", timeout=remaining_ms)
+
+
+def show_sql_query(page: Page, timeout: int = 15000) -> None:
+    """
+    Reveal the SQL query section behind the data drawer's "Show Query" footer
+    control.
+
+    The section is `display: none` by default, and Shiny suspends rendering
+    of outputs (like the SQL code editor) inside hidden containers, so the
+    editor doesn't exist in the DOM until this toggle is clicked.
+    """
+    page.locator(".querychat-show-query-btn").first.click()
+    page.wait_for_selector(
+        "bslib-code-editor#sql_editor textarea", state="attached", timeout=timeout
+    )
+
+
 # Shiny apps run as subprocesses via shiny.pytest.create_app_fixture.
 # Running them in-process (threaded uvicorn) shares Shiny's process-global,
 # loop-bound reactive lock across apps, which crashes sessions when apps
@@ -195,6 +243,28 @@ def chat_03_core(page: Page) -> ChatControllerType:
     return _create_chat_controller(page, "titanic")
 
 
+app_03_page_express = create_app_fixture(
+    EXAMPLES_DIR / "03-page-express-app.py", scope="module"
+)
+
+
+@pytest.fixture
+def chat_03_page_express(page: Page) -> ChatControllerType:
+    """Create a ChatController for the 03-page-express-app chat component."""
+    return _create_chat_controller(page, "titanic")
+
+
+app_03_page_core = create_app_fixture(
+    EXAMPLES_DIR / "03-page-core-app.py", scope="module"
+)
+
+
+@pytest.fixture
+def chat_03_page_core(page: Page) -> ChatControllerType:
+    """Create a ChatController for the 03-page-core-app chat component."""
+    return _create_chat_controller(page, "titanic")
+
+
 def _start_streamlit_app_subprocess(
     app_path: str, port: int
 ) -> tuple[subprocess.Popen, None]:
@@ -204,8 +274,6 @@ def _start_streamlit_app_subprocess(
     Uses subprocess to run Streamlit which works reliably in CI.
     Output is redirected to DEVNULL to avoid pipe buffer deadlocks.
     """
-    import sys
-
     process = subprocess.Popen(
         [
             sys.executable,
@@ -489,3 +557,56 @@ app_10_viz = create_app_fixture(EXAMPLES_DIR / "10-viz-app.py", scope="module")
 def chat_10_viz(page: Page) -> ChatControllerType:
     """Create a ChatController for the 10-viz-app chat component."""
     return _create_chat_controller(page, "titanic")
+
+
+app_handoff = create_app_fixture(APPS_DIR / "handoff_app.py", scope="module")
+
+
+@pytest.fixture
+def chat_handoff(page: Page) -> ChatControllerType:
+    """Create a ChatController for the handoff_app chat component."""
+    return _create_chat_controller(page, "titanic")
+
+
+app_handoff_bookmark = create_app_fixture(
+    APPS_DIR / "handoff_bookmark_app.py", scope="module"
+)
+
+
+@pytest.fixture
+def chat_handoff_bookmark(page: Page) -> ChatControllerType:
+    """Create a ChatController for the handoff bookmark app."""
+    return _create_chat_controller(page, "titanic")
+
+
+class HandoffModalActions:
+    """
+    Shared modal/query helpers for handoff test classes.
+
+    Subclasses set ``page`` and ``chat`` in an autouse setup fixture.
+    """
+
+    page: Page
+    chat: ChatControllerType
+
+    def _open_handoff_modal(self) -> None:
+        # Trailing space closes the slash-command palette dropdown so that
+        # Enter actually submits the command rather than selecting a palette entry.
+        self.chat.set_user_input("/handoff ")
+        self.chat.send_user_input(method="enter")
+        self.page.wait_for_selector(".modal", timeout=15000)
+
+    def _send_query_and_wait(self, query: str, timeout: int = 60000) -> None:
+        self.chat.set_user_input(query)
+        self.chat.send_user_input(method="click")
+        sql_code = self.page.locator("pre code").first
+        expect(sql_code).to_contain_text(
+            re.compile(r"WHERE|SELECT", re.IGNORECASE), timeout=timeout
+        )
+        # Wait for the stream to finish. In shinychat's TipTap input the
+        # contenteditable div is always editable (to_be_editable() is always
+        # true), so we check the container's "disabled" class instead, which
+        # is added/removed by shinychat when streaming starts/ends.
+        expect(self.chat.loc_input_container).not_to_have_class(
+            re.compile(r"\bdisabled\b"), timeout=timeout
+        )

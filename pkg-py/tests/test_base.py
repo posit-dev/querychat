@@ -197,7 +197,7 @@ class TestQueryChatBase:
     def test_init_with_dataframe(self, sample_df):
         qc = QueryChatBase(sample_df, "test_table")
         assert isinstance(qc._data_sources["test_table"], DataFrameSource)
-        assert qc.tools == {"update", "query"}
+        assert qc.tools == {"update", "query", "visualize"}
 
     def test_init_with_custom_greeting(self, sample_df):
         qc = QueryChatBase(sample_df, "test_table", greeting="Hello!")
@@ -251,6 +251,26 @@ class TestQueryChatBase:
             reset_dashboard=reset_dashboard,
         )
         assert isinstance(client, chatlas.Chat)
+
+    def test_public_client_does_not_register_handoff_tool(self, sample_df):
+        qc = QueryChatBase(sample_df, "test_table")
+
+        for client in (qc.client(tools="query"), qc.client(tools=None)):
+            names = [tool.name for tool in client.get_tools()]
+            assert all("handoff" not in name for name in names)
+
+    def test_session_client_advertises_handoff_without_registering_tool(
+        self, sample_df
+    ):
+        qc = QueryChatBase(sample_df, "test_table")
+
+        client = qc._create_session_client(
+            tools=None,
+            handoff_available=True,
+        )
+
+        assert "/handoff" in client.system_prompt
+        assert client.get_tools() == []
 
     def test_cleanup(self, sample_df):
         qc = QueryChatBase(sample_df, "test_table")

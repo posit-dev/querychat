@@ -11,6 +11,11 @@ from shinychat.types import ToolResultDisplay
 
 from ._datasource import ColumnMeta, format_schema
 from ._icons import bs_icon
+from ._tool_names import (
+    TOOL_QUERY,
+    TOOL_RESET_DASHBOARD,
+    TOOL_UPDATE_DASHBOARD,
+)
 from ._utils import (
     as_narwhals,
     df_to_html,
@@ -318,7 +323,7 @@ def tool_update_dashboard(
 
     return Tool.from_func(
         impl,
-        name="querychat_update_dashboard",
+        name=TOOL_UPDATE_DASHBOARD,
         annotations={"title": "Update Dashboard"},
     )
 
@@ -394,7 +399,7 @@ def tool_reset_dashboard(
 
     return Tool.from_func(
         impl,
-        name="querychat_reset_dashboard",
+        name=TOOL_RESET_DASHBOARD,
         annotations={"title": "Reset Dashboard"},
     )
 
@@ -471,6 +476,6 @@ def tool_query(executor: QueryExecutor, *, multi_table: bool = False) -> Tool:
 
     return Tool.from_func(
         impl,
-        name="querychat_query",
+        name=TOOL_QUERY,
         annotations={"title": "Query Data"},
     )

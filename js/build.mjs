@@ -24,9 +24,25 @@ const jsTargets = [
     source: "src/viz.ts",
     output: "../pkg-r/inst/htmldep/viz.js",
   },
+  {
+    source: "src/handoff.ts",
+    output: "../pkg-py/src/querychat/static/js/handoff.js",
+  },
+  {
+    source: "src/handoff.ts",
+    output: "../pkg-r/inst/htmldep/handoff.js",
+  },
 ];
 
 const cssTargets = [
+  {
+    source: "src/styles.css",
+    output: "../pkg-py/src/querychat/static/css/styles.css",
+  },
+  {
+    source: "src/styles.css",
+    output: "../pkg-r/inst/htmldep/styles.css",
+  },
   {
     source: "src/viz.css",
     output: "../pkg-py/src/querychat/static/css/viz.css",
@@ -34,6 +50,43 @@ const cssTargets = [
   {
     source: "src/viz.css",
     output: "../pkg-r/inst/htmldep/viz.css",
+  },
+  {
+    source: "src/handoff.css",
+    output: "../pkg-py/src/querychat/static/css/handoff.css",
+  },
+  {
+    source: "src/handoff.css",
+    output: "../pkg-r/inst/htmldep/handoff.css",
+    transform: (source) =>
+      source.replaceAll("../img/handoff-language-", "img/handoff-language-"),
+  },
+];
+
+const rawTargets = [
+  {
+    source: "../shared/img/handoff-language-python.svg",
+    output: "../pkg-py/src/querychat/static/img/handoff-language-python.svg",
+  },
+  {
+    source: "../shared/img/handoff-language-python.svg",
+    output: "../pkg-r/inst/htmldep/img/handoff-language-python.svg",
+  },
+  {
+    source: "../shared/img/handoff-language-r.svg",
+    output: "../pkg-py/src/querychat/static/img/handoff-language-r.svg",
+  },
+  {
+    source: "../shared/img/handoff-language-r.svg",
+    output: "../pkg-r/inst/htmldep/img/handoff-language-r.svg",
+  },
+  {
+    source: "../shared/handoff-formats.yml",
+    output: "../pkg-py/src/querychat/handoff-formats.yml",
+  },
+  {
+    source: "../shared/handoff-formats.yml",
+    output: "../pkg-r/inst/handoff-formats.yml",
   },
 ];
 
@@ -43,7 +96,7 @@ const ensureParentDir = async (relativePath) => {
   return absolutePath;
 };
 
-export const assetTargets = [...cssTargets, ...jsTargets];
+export const assetTargets = [...cssTargets, ...jsTargets, ...rawTargets];
 
 export const resolveOutputPath = (baseDir, relativePath) =>
   path.resolve(baseDir, path.relative(repoDir, path.resolve(rootDir, relativePath)));
@@ -57,10 +110,11 @@ const findMissingSources = async (targets) => {
   const missingSources = [];
 
   for (const source of uniqueSources(targets)) {
+    const sourcePath = path.resolve(rootDir, source);
     try {
-      await access(path.resolve(rootDir, source));
+      await access(sourcePath);
     } catch {
-      missingSources.push(`js/${source}`);
+      missingSources.push(path.relative(repoDir, sourcePath));
     }
   }
 
@@ -70,8 +124,13 @@ const findMissingSources = async (targets) => {
 const reportMissingSources = async () => {
   const missingCssSources = await findMissingSources(cssTargets);
   const missingJsSources = await findMissingSources(jsTargets);
+  const missingRawSources = await findMissingSources(rawTargets);
 
-  if (missingCssSources.length === 0 && missingJsSources.length === 0) {
+  if (
+    missingCssSources.length === 0 &&
+    missingJsSources.length === 0 &&
+    missingRawSources.length === 0
+  ) {
     return;
   }
 
@@ -85,6 +144,10 @@ const reportMissingSources = async () => {
     messages.push(`Missing JS source files:\n- ${missingJsSources.join("\n- ")}`);
   }
 
+  if (missingRawSources.length > 0) {
+    messages.push(`Missing raw source files:\n- ${missingRawSources.join("\n- ")}`);
+  }
+
   throw new Error(messages.join("\n\n"));
 };
 
@@ -93,8 +156,9 @@ export const stageBuildOutputs = async (stageDir) => {
     const cssSourcePath = path.resolve(rootDir, target.source);
     const cssSource = await readFile(cssSourcePath, "utf8");
     const outputPath = resolveOutputPath(stageDir, target.output);
+    const outputSource = target.transform ? target.transform(cssSource) : cssSource;
     await mkdir(path.dirname(outputPath), { recursive: true });
-    await writeFile(outputPath, `${banner(target.source)}${cssSource}`, "utf8");
+    await writeFile(outputPath, `${banner(target.source)}${outputSource}`, "utf8");
   }
 
   for (const target of jsTargets) {
@@ -112,6 +176,13 @@ export const stageBuildOutputs = async (stageDir) => {
         js: banner(target.source),
       },
     });
+  }
+
+  for (const target of rawTargets) {
+    const sourcePath = path.resolve(rootDir, target.source);
+    const outputPath = resolveOutputPath(stageDir, target.output);
+    await mkdir(path.dirname(outputPath), { recursive: true });
+    await copyFile(sourcePath, outputPath);
   }
 };
 

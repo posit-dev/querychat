@@ -16,8 +16,8 @@ PROMPTS_DIR = Path(__file__).resolve().parents[1] / "src" / "querychat" / "promp
 
 
 class TestVizDependencyCheck:
-    def test_missing_ggsql_raises_helpful_error(self, monkeypatch):
-        """Requesting viz tools without ggsql installed should fail early."""
+    def test_missing_ggsql_warns_and_drops_viz(self, monkeypatch):
+        """Requesting viz tools without ggsql warns and drops the tool."""
         real_find_spec = importlib.util.find_spec
 
         def mock_find_spec(name, *args, **kwargs):
@@ -29,8 +29,15 @@ class TestVizDependencyCheck:
 
         from querychat._querychat_base import normalize_tools
 
-        with pytest.raises(ImportError, match="pip install querychat\\[viz\\]"):
-            normalize_tools(("visualize",), default=None)
+        with pytest.warns(UserWarning, match="pip install querychat\\[viz\\]"):
+            resolved = normalize_tools(("visualize",), default=None)
+        assert resolved == set()
+
+    def test_default_tools_include_visualize(self):
+        """The default tool set should include the visualize tool."""
+        from querychat._querychat_base import DEFAULT_TOOLS
+
+        assert "visualize" in DEFAULT_TOOLS
 
     def test_no_error_without_viz_tools(self):
         """Non-viz tool configs should not check for ggsql."""

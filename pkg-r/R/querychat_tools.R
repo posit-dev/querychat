@@ -196,7 +196,7 @@ tool_query <- function(executor, multi_table = FALSE) {
         )
       ),
       collapsed = ellmer::type_boolean(
-        "Optional (default: true). The result card starts collapsed by default; the user can expand it to see the query and results. Set to false when the query result table is the primary answer to the user's question and should be immediately visible without expanding.",
+        "Optional. If omitted, visibility follows the app-configured default behavior (typically collapsed). If you are unsure, omit this parameter. If you provide it explicitly, prefer true. Set to false only when the user explicitly asks to see the raw table immediately.",
         required = FALSE
       ),
       `_intent` = ellmer::type_string(

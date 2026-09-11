@@ -1,4 +1,4 @@
-name: Check - Shared Viz Assets
+name: Check - Shared Web Assets
 
 on:
   workflow_dispatch:
@@ -6,16 +6,50 @@ on:
     branches: ["main", "rc-*"]
     paths:
       - "js/**"
+      - "pkg-py/src/querychat/static/css/handoff.css"
       - "pkg-py/src/querychat/static/css/viz.css"
+      - "pkg-py/src/querychat/static/img/handoff-language-python.svg"
+      - "pkg-py/src/querychat/static/img/handoff-language-r.svg"
+      - "pkg-py/src/querychat/static/js/handoff.js"
+      - "pkg-py/src/querychat/static/js/schema-display.js"
       - "pkg-py/src/querychat/static/js/viz.js"
+      - "pkg-r/inst/htmldep/handoff.css"
+      - "pkg-r/inst/htmldep/handoff.js"
+      - "pkg-r/inst/htmldep/img/handoff-language-python.svg"
+      - "pkg-r/inst/htmldep/img/handoff-language-r.svg"
+      - "pkg-r/inst/htmldep/schema-display.js"
+      - "pkg-r/inst/htmldep/viz.css"
+      - "pkg-r/inst/htmldep/viz.js"
+      - "shared/handoff-formats.yml"
+      - "shared/img/handoff-language-python.svg"
+      - "shared/img/handoff-language-r.svg"
+      - "pkg-py/src/querychat/handoff-formats.yml"
+      - "pkg-r/inst/handoff-formats.yml"
       - "Makefile"
       - ".github/workflows/js-check.yml"
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - "js/**"
+      - "pkg-py/src/querychat/static/css/handoff.css"
       - "pkg-py/src/querychat/static/css/viz.css"
+      - "pkg-py/src/querychat/static/img/handoff-language-python.svg"
+      - "pkg-py/src/querychat/static/img/handoff-language-r.svg"
+      - "pkg-py/src/querychat/static/js/handoff.js"
+      - "pkg-py/src/querychat/static/js/schema-display.js"
       - "pkg-py/src/querychat/static/js/viz.js"
+      - "pkg-r/inst/htmldep/handoff.css"
+      - "pkg-r/inst/htmldep/handoff.js"
+      - "pkg-r/inst/htmldep/img/handoff-language-python.svg"
+      - "pkg-r/inst/htmldep/img/handoff-language-r.svg"
+      - "pkg-r/inst/htmldep/schema-display.js"
+      - "pkg-r/inst/htmldep/viz.css"
+      - "pkg-r/inst/htmldep/viz.js"
+      - "shared/handoff-formats.yml"
+      - "shared/img/handoff-language-python.svg"
+      - "shared/img/handoff-language-r.svg"
+      - "pkg-py/src/querychat/handoff-formats.yml"
+      - "pkg-r/inst/handoff-formats.yml"
       - "Makefile"
       - ".github/workflows/js-check.yml"
 

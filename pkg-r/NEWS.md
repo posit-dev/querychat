@@ -2,6 +2,17 @@
 
 ## New features
 
+* `querychat_app()` (and `QueryChat$app()`) is now chat-first: it builds on the `$page()` layout, so the chat owns the window, and the SQL editor + data table live in a drawer that auto-opens when the LLM runs a query (including on bookmark/history restore).
+
+* New `/handoff` slash command: turn selected query and visualization results from your chat session into a downloadable Quarto dashboard or Shiny app — with AI-assisted revision, bundled data, and handoffs that survive chat history restores and Shiny bookmarks.
+
+* Added a `$page()` method to `QueryChat` that wraps `shinychat::page_chat()` for full-window, "chat-first" apps. The chat owns the page (with conversation history, optional navigation pages, sidebars, and a drawer), and reactive data views can live on secondary pages via `shinychat::chat_nav_panel()`.
+
+  ```r
+  qc <- QueryChat$new(penguins)
+  ui <- qc$page("Penguins Explorer")
+  ```
+
 * The SQL panel in `querychat_app()` is now an editable code editor. Users can tweak the generated SQL directly and apply it with Ctrl/Cmd+Enter or by clicking away — no extra button required. The editor stays in sync when the LLM updates the query or the active table changes. (#265)
 
 * `QueryChat$new()` now supports **multiple related tables**. Register additional tables with `$add_table()` and the LLM can reason across all of them — joins, cross-table filters, aggregations. Per-table reactive state (`$df()`, `$sql()`, `$title()`) is accessible via `qc_vals$table("name")` on the list returned by `$server()`. For DBI connections, `$add_tables()` registers all tables (or a named subset) in a single call. (#195)
@@ -43,6 +54,8 @@
 
 ## Improvements
 
+* The `"visualize"` tool is now included in the default toolset (`tools = c("filter", "query", "visualize")`). If the suggested ggsql package is not installed, the tool is dropped with a warning instead of erroring.
+
 * Chat greetings now use shinychat's greeting API (requires shinychat >= 0.4.0). A provided `greeting` renders instantly when the app loads, and when no `greeting` is given one is generated on demand — now **schema-aware**, so it can describe the data it's about to help you explore — without being added to the conversation history. Generated greetings are preserved across bookmark/restore. Tables passed to `QueryChat$new()` are described in the greeting automatically; opt additional tables in with `include_in_greeting = TRUE` on `$add_table()`/`$add_tables()`, or fine-tune which tables and which template the greeting uses via `qc$greeter`. (#249, #261)
 
 * The system prompt is now lighter: full schema is no longer embedded upfront. Instead the LLM fetches per-table schema on demand via the new `querychat_get_schema` tool — and only when it needs to. When a `data_dict` is provided, the tool skips columns that already have descriptions, so the LLM only pays for what isn't already documented. (#195)
@@ -50,6 +63,10 @@
 * Fixed `data_description` and `extra_instructions` being HTML-escaped in the system prompt. Special characters like `<`, `>`, and `&` in developer-provided descriptions and instructions are now passed to the LLM verbatim. (#258)
 
 * The close button in `$app()` is now hidden when running in a non-interactive context (e.g. a deployed Shiny app), preventing `stopApp()` from crashing the session for other users. (#259)
+
+## Bug fixes
+
+* Query results were being shown expanded, and often repeated in the LLM's response, far more often than intended. The LLM is now guided to expand a result only when the user explicitly asks to see the raw table. (#295)
 
 # querychat 0.3.0
 

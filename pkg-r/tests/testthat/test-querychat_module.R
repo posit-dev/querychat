@@ -1,7 +1,6 @@
 test_that("Shiny app example loads without errors", {
   skip_if_not_installed("DT")
   skip_if_not_installed("RSQLite")
-  skip_if_not_installed("shinytest2")
 
   # Create a simplified test app with mocked ellmer
   test_app_dir <- withr::local_tempdir()
@@ -310,6 +309,124 @@ test_that("mod_ui() passes enable_cancel through to chat_ui without warning", {
   expect_false(isTRUE(captured$enable_cancel))
 })
 
+describe("mod_ui()", {
+  it("mounts both dependencies and one closed namespaced handoff panel", {
+    # Uses the real chat_ui: dependencies and the handoff panel ride inside
+    # chat_ui(footer=), so a mock would swallow them.
+    ui <- mod_ui("module")
+    markup <- as.character(ui)
+
+    deps <- htmltools::findDependencies(ui)
+    dep_names <- vapply(deps, `[[`, "", "name")
+    expect_true("querychat" %in% dep_names)
+    expect_true("querychat-handoff" %in% dep_names)
+    handoff_dep <- deps[[which(dep_names == "querychat-handoff")]]
+    expect_identical(handoff_dep$script, "handoff.js")
+    expect_identical(handoff_dep$stylesheet, "handoff.css")
+
+    # The extras are attached inside the chat root via the footer slot
+    expect_match(markup, "shiny-chat-footer", fixed = TRUE)
+    expect_match(markup, "querychat-extras", fixed = TRUE)
+
+    expect_identical(
+      lengths(regmatches(
+        markup,
+        gregexpr(
+          'id="module-handoff_root"',
+          markup,
+          fixed = TRUE
+        )
+      )),
+      1L
+    )
+    expect_identical(
+      lengths(regmatches(
+        markup,
+        gregexpr(
+          'id="module-handoff_source_editor"',
+          markup,
+          fixed = TRUE
+        )
+      )),
+      1L
+    )
+    expect_no_match(
+      markup,
+      "querychat-handoff-panel open",
+      fixed = TRUE
+    )
+  })
+})
+
+describe("mod_server() handoff startup", {
+  it("builds a handoff-aware session client and starts after chat_server", {
+    skip_if_no_dataframe_engine()
+    ds <- local_data_frame_source(new_test_df(), engine = "sqlite")
+    executor <- build_query_executor(list(test_table = ds))
+    withr::defer(executor$cleanup())
+    events <- character()
+    captured_client_args <- NULL
+    captured_handoff_args <- NULL
+    pre_built_client <- structure(list(), class = c("MockChat", "Chat"))
+    chat_module <- mock_chat_server_result(pre_built_client)
+
+    client_factory <- function(...) {
+      events <<- c(events, "client")
+      captured_client_args <<- list(...)
+      pre_built_client
+    }
+    local_mocked_bindings(
+      chat_server = function(id, client, ...) {
+        events <<- c(events, "chat_server")
+        chat_module
+      },
+      .package = "shinychat"
+    )
+    local_mock_chat_restore()
+    local_mocked_bindings(
+      handoff_server = function(...) {
+        events <<- c(events, "handoff_server")
+        captured_handoff_args <<- list(...)
+        invisible(NULL)
+      },
+      .package = "querychat"
+    )
+
+    shiny::testServer(
+      mod_server,
+      args = list(
+        id = "test",
+        data_sources = list(test_table = ds),
+        executor = executor,
+        greeting = "Hello",
+        client = client_factory,
+        tools = "query",
+        history = TRUE
+      ),
+      {
+        expect_identical(
+          events[seq_len(3L)],
+          c("client", "chat_server", "handoff_server")
+        )
+        expect_identical(
+          captured_client_args$handoff_available,
+          TRUE
+        )
+        expect_identical(captured_handoff_args$chat, pre_built_client)
+        expect_identical(
+          captured_handoff_args$chat_module,
+          chat_module
+        )
+        expect_identical(
+          captured_handoff_args$data_sources,
+          list(test_table = ds)
+        )
+        expect_identical(captured_handoff_args$executor, executor)
+      }
+    )
+  })
+})
+
 test_that("restored viz widgets survive a second bookmark cycle", {
   skip_if_no_dataframe_engine()
 
@@ -378,7 +495,7 @@ test_that("restored viz widgets survive a second bookmark cycle", {
       shiny::isolate(callbacks$visualize(saved[[1]]))
 
       first_state <- new.env(parent = emptyenv())
-      first_state$values <- list()
+      first_state$values <- new.env(parent = emptyenv())
       shiny::isolate(bookmark_fn(first_state))
       expect_equal(first_state$values$querychat_viz_widgets, saved)
 
@@ -389,9 +506,56 @@ test_that("restored viz widgets survive a second bookmark cycle", {
       expect_equal(restored_args$saved_widgets, saved)
 
       second_state <- new.env(parent = emptyenv())
-      second_state$values <- list()
+      second_state$values <- new.env(parent = emptyenv())
       shiny::isolate(bookmark_fn(second_state))
       expect_equal(second_state$values$querychat_viz_widgets, saved)
+    }
+  )
+})
+
+test_that("onBookmark callback mutates environment-backed state$values", {
+  skip_if_no_dataframe_engine()
+
+  ds <- local_data_frame_source(new_test_df())
+  executor <- build_query_executor(list(test_table = ds))
+  withr::defer(executor$cleanup())
+  bookmark_fn <- NULL
+
+  client_factory <- function(...) {
+    structure(list(), class = c("MockChat", "Chat"))
+  }
+
+  local_mocked_bindings(
+    chat_server = function(id, client, ...) mock_chat_server_result(client),
+    .package = "shinychat"
+  )
+  local_mock_chat_restore()
+  local_mocked_bindings(
+    onBookmark = function(fun, session = NULL) {
+      bookmark_fn <<- fun
+    },
+    onRestore = function(fun, session = NULL) NULL,
+    .package = "shiny"
+  )
+
+  shiny::testServer(
+    mod_server,
+    args = list(
+      id = "test",
+      data_sources = list(test_table = ds),
+      executor = executor,
+      greeting = "Hello",
+      client = client_factory,
+      tools = "query",
+      history = TRUE
+    ),
+    {
+      expect_true(is.function(bookmark_fn))
+
+      state <- new.env(parent = emptyenv())
+      state$values <- new.env(parent = emptyenv())
+      expect_no_error(shiny::isolate(bookmark_fn(state)))
+      expect_true("querychat_tables" %in% names(state$values))
     }
   )
 })
@@ -651,19 +815,16 @@ test_that("mod_server() registers table/viz state with both bookmark and history
 
   local_mocked_bindings(
     chat_server = function(id, client, ...) {
-      list(
-        client = client,
-        history = list(
-          on_save = function(fn) {
-            history_save_fn <<- fn
-            invisible(fn)
-          },
-          on_restore = function(fn) {
-            history_restore_fn <<- fn
-            invisible(fn)
-          }
-        )
-      )
+      chat_module <- mock_chat_server_result(client)
+      chat_module$history$on_save <- function(fn) {
+        history_save_fn <<- fn
+        invisible(fn)
+      }
+      chat_module$history$on_restore <- function(fn) {
+        history_restore_fn <<- fn
+        invisible(fn)
+      }
+      chat_module
     },
     .package = "shinychat"
   )
@@ -712,16 +873,12 @@ test_that("history on_save callback returns merged values (R history contract)",
   history_save_fn <- NULL
   local_mocked_bindings(
     chat_server = function(id, client, ...) {
-      list(
-        client = client,
-        history = list(
-          on_save = function(fn) {
-            history_save_fn <<- fn
-            invisible(fn)
-          },
-          on_restore = function(fn) invisible(fn)
-        )
-      )
+      chat_module <- mock_chat_server_result(client)
+      chat_module$history$on_save <- function(fn) {
+        history_save_fn <<- fn
+        invisible(fn)
+      }
+      chat_module
     },
     .package = "shinychat"
   )
@@ -754,4 +911,72 @@ test_that("history on_save callback returns merged values (R history contract)",
       )
     }
   )
+})
+
+test_that("history on_save callback works with no active reactive context", {
+  # A real ExtendedTask promise continuation (e.g. a handoff generation
+  # commit calling `chat_module$history$save()`) resumes with no active
+  # reactive context, and can outlive its session entirely. Reproduce that
+  # here by calling the captured callback only after testServer()'s session
+  # has been torn down: there is no reactive context or domain, and (on
+  # shiny 1.14.0, which destroys a session's reactives on close) the module's
+  # reactives may no longer be readable.
+  skip_if_no_dataframe_engine()
+
+  ds <- local_data_frame_source(new_test_df())
+  executor <- build_query_executor(list(test_table = ds))
+  withr::defer(executor$cleanup())
+
+  client_factory <- function(...) {
+    structure(list(), class = c("MockChat", "Chat"))
+  }
+
+  history_save_fn <- NULL
+  local_mocked_bindings(
+    chat_server = function(id, client, ...) {
+      chat_module <- mock_chat_server_result(client)
+      chat_module$history$on_save <- function(fn) {
+        history_save_fn <<- fn
+        invisible(fn)
+      }
+      chat_module
+    },
+    .package = "shinychat"
+  )
+  local_mock_chat_restore()
+
+  shiny::testServer(
+    mod_server,
+    args = list(
+      id = "test",
+      data_sources = list(test_table = ds),
+      executor = executor,
+      greeting = "Hello",
+      client = client_factory,
+      tools = "query",
+      history = TRUE
+    ),
+    {
+      session$setInputs(
+        chat_update = list(
+          table = "test_table",
+          query = "SELECT * FROM test_table WHERE id = 1",
+          title = "One row"
+        )
+      )
+    }
+  )
+
+  # Called bare, as shinychat's promise handler would (no reactive context).
+  expect_no_error(result <- history_save_fn(list(unrelated_key = "kept")))
+  expect_equal(result$unrelated_key, "kept")
+  # shiny 1.14.0 destroys module reactives when the session closes (later
+  # releases keep them readable), in which case the snapshot omits the
+  # unreadable table state instead of erroring.
+  if (!is.null(result$querychat_tables$test_table)) {
+    expect_equal(
+      result$querychat_tables$test_table$sql,
+      "SELECT * FROM test_table WHERE id = 1"
+    )
+  }
 })

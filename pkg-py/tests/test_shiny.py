@@ -203,3 +203,69 @@ def test_express_explicit_enable_bookmarking_warns():
         QueryChatExpress(
             pd.DataFrame({"a": [1, 2, 3]}), "a_table", enable_bookmarking=True
         )
+
+
+def test_app_ui_uses_page_layout_with_drawer():
+    """
+    $app() builds on the page_chat() layout, with the data table as the
+    drawer's primary content and the SQL editor tucked into a collapsible
+    "Show Query" footer control -- the drawer is auto-opened server-side on
+    query, and sized with a clamp-based width so it doesn't dominate
+    mid-size viewports.
+    """
+    import re
+
+    import pandas as pd
+    from querychat._shiny import QueryChat
+
+    qc = QueryChat(pd.DataFrame({"a": [1]}), "a_table")
+    app = qc.app()
+    html = str(app.ui(None))
+
+    # Chat-primary page layout (page_chat), not the old page_sidebar dashboard
+    assert 'id="querychat_a_table-chat_page"' in html
+    drawer = re.search(r"<shiny-chat-drawer\b[^>]*>", html)
+    assert drawer, "no <shiny-chat-drawer> found in app UI"
+    # htmltools omits False-valued attributes; no `open` means initially closed
+    assert "open=" not in drawer.group(0)
+    assert 'width="calc(min(clamp(360px, 55vw, 720px), 100%))"' in drawer.group(0)
+    assert 'title="Data Sources"' in drawer.group(0)
+    # Data views live inside the drawer
+    drawer_html = html[drawer.start() :]
+    assert 'id="dt"' in drawer_html
+    # SQL editor is a second-class citizen: tucked into the data card's
+    # footer behind a "Show Query" toggle, not its own top-level card
+    assert 'id="sql_output"' in drawer_html
+    assert 'class="querychat-show-query-btn' in drawer_html
+    assert 'data-querychat-action="show-query"' in drawer_html
+    assert 'id="ui_reset"' in drawer_html
+    # A single-table app has nothing to browse on demand, so no accordion
+    assert 'id="data_sources_accordion"' not in drawer_html
+    # Handoff panel still present via the page extras
+    assert 'id="querychat_a_table-handoff_download"' in html
+
+
+def test_app_ui_drawer_multi_table_accordion():
+    """
+    With more than one table, the drawer adds a fully static accordion below
+    the pinned "active table" card, giving on-demand access to every
+    registered table without disturbing the active-table-follows-the-chat
+    behavior of the pinned card.
+    """
+    import pandas as pd
+    from querychat._shiny import QueryChat
+
+    qc = QueryChat(pd.DataFrame({"a": [1]}), "orders")
+    qc.add_table(pd.DataFrame({"b": [2]}), "customers")
+    app = qc.app()
+    html = str(app.ui(None))
+
+    assert 'id="data_sources_accordion"' in html
+    for name in ("orders", "customers"):
+        assert f'id="dt_{name}"' in html
+        assert f'id="active_badge_{name}"' in html
+        assert f'data-target="sql_query_section_{name}"' in html
+        assert f'id="sql_query_section_{name}"' in html
+    # The pinned "active table" card is unaffected by the accordion
+    assert 'id="dt"' in html
+    assert 'id="ui_reset"' in html

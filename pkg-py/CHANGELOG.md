@@ -11,6 +11,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `QueryChat.cleanup()` now also closes the chatlas client, releasing its provider resources (HTTP connection pools, database sessions) — but only when querychat created the client itself (i.e., `client` was `None` or a string spec like `"openai/gpt-4o"`). A user-supplied `chatlas.Chat` instance is never closed by querychat; its lifecycle remains the caller's responsibility. In long-lived applications, call `qc.cleanup()` when the app shuts down.
 
+* `QueryChat.app()` (Core; Express has no `.app()` entry point) is now chat-first: it builds on the `.page()` layout, so the chat owns the window, and the SQL editor + data table live in a `chat_drawer` that auto-opens when the LLM runs a query (including on bookmark/history restore).
+
+* New `/handoff` slash command: turn selected query and visualization results from your chat session into a downloadable Quarto dashboard, Shiny app, or marimo notebook — with AI-assisted revision, bundled data, and handoffs that survive chat history restores and Shiny bookmarks.
+
+* Added a `.page()` method to `QueryChat` (both Core and Express) that wraps `shinychat.page_chat()` for full-window, "chat-first" apps. The chat owns the page (with conversation history, optional navigation pages, sidebars, and a drawer), and reactive data views can live on secondary pages via `shinychat.chat_nav_panel()`.
+
+  ```python
+  qc = QueryChat(titanic(), "titanic")
+  app_ui = qc.page("Titanic Explorer")  # Core
+  ```
+
+### Improvements
+
+* The `"visualize"` tool is now included in the default toolset (`tools=("filter", "query", "visualize")`). If the visualization dependencies are not installed (the `viz` extra), the tool is dropped with a warning instead of raising an `ImportError`.
+
+### Bug fixes
+
+* Fixed a phantom scrollbar on scrollable ancestors of the chat (e.g. a bslib sidebar created with `qc.sidebar()`): the hidden visualization preload widget is much taller than its 1px container, and its unclipped overflow leaked into the ancestor's scrollable region, letting it scroll past the chat's bottom edge.
+
 ## [0.7.0] - 2026-07-10
 
 ### New features

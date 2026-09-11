@@ -278,12 +278,11 @@ class TestPromptConditionalSections:
 class TestBackwardCompatibility:
     """Tests for backward compatibility with existing code."""
 
-    def test_default_tools_maintain_current_behavior(self, sample_df):
-        """Test that default tools parameter maintains current behavior."""
-        # Without tools parameter, should include both tools (like before)
+    def test_default_tools_include_visualize(self, sample_df):
+        """Test that the default tools include filter, query, and visualize."""
         qc = QueryChat(sample_df, "test_table", greeting="Hello!")
 
-        assert qc.tools == {"update", "query"}
+        assert qc.tools == {"update", "query", "visualize"}
 
         prompt = qc.system_prompt
         assert "Filtering and Sorting Data" in prompt
@@ -302,4 +301,4 @@ class TestBackwardCompatibility:
 
         assert qc is not None
         assert qc.id == "querychat_test_table"
-        assert qc.tools == {"update", "query"}
+        assert qc.tools == {"update", "query", "visualize"}

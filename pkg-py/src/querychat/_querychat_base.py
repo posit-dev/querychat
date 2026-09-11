@@ -63,7 +63,7 @@ if TYPE_CHECKING:
     from ._viz_tools import VisualizeData
 
 TOOL_GROUPS = Literal["filter", "update", "query", "visualize"]
-DEFAULT_TOOLS: tuple[TOOL_GROUPS, ...] = ("filter", "query")
+DEFAULT_TOOLS: tuple[TOOL_GROUPS, ...] = ("filter", "query", "visualize")
 
 
 class QueryChatBase(Generic[IntoFrameT]):
@@ -239,6 +239,7 @@ class QueryChatBase(Generic[IntoFrameT]):
         update_dashboard: Callable[[UpdateDashboardData], None] | None = None,
         reset_dashboard: ResetDashboardCallback | None = None,
         visualize: Callable[[VisualizeData], None] | None = None,
+        handoff_available: bool = False,
     ) -> chatlas.Chat:
         """Create a fresh, fully-configured Chat."""
         chat = self._create_client(base)
@@ -246,7 +247,10 @@ class QueryChatBase(Generic[IntoFrameT]):
         resolved_tools = normalize_tools(tools, default=self.tools)
 
         if self._system_prompt is not None:
-            chat.system_prompt = self._system_prompt.render(resolved_tools)
+            chat.system_prompt = self._system_prompt.render(
+                resolved_tools,
+                handoff_available=handoff_available,
+            )
 
         if resolved_tools is None:
             return chat
@@ -815,11 +819,14 @@ def normalize_tools(
         resolved = {"update" if t == "filter" else t for t in resolved}
     if not check_deps:
         return resolved
-    if has_viz_tool(resolved) and not has_viz_deps():
-        raise ImportError(
+    if resolved is not None and has_viz_tool(resolved) and not has_viz_deps():
+        warnings.warn(
             "Visualization tools require ggsql, altair, shinywidgets, and "
-            "vl-convert-python. Install them with: pip install querychat[viz]"
+            "vl-convert-python. Install them with: pip install querychat[viz]. "
+            "Continuing without the 'visualize' tool.",
+            stacklevel=2,
         )
+        resolved.discard("visualize")
     return resolved
 
 

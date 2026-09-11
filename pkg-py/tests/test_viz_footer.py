@@ -123,6 +123,16 @@ class TestVizPreloadMarkup:
         assert "<script" not in rendered["html"]
         assert preload_dep.script == [{"src": "js/viz-preload.js"}]
 
+    def test_preload_markup_clips_widget_overflow(self):
+        # The preload box is 1px but hosts a full-size widget. Without
+        # overflow:clip, the widget's box leaks scrollable overflow into
+        # ancestors, giving an overflow:auto ancestor (e.g. a bslib sidebar
+        # hosting the chat) a phantom scrollbar that scrolls past the chat.
+        from querychat._viz_utils import preload_viz_deps_ui
+
+        rendered = TagList(preload_viz_deps_ui()).render()
+        assert "overflow:clip" in rendered["html"]
+
 
 class TestVizFooterDomIds:
     def test_build_viz_footer_uses_resolved_dom_widget_id(self):

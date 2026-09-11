@@ -6,6 +6,8 @@ from querychat._handoff_validation import (
     validate_handoff_source,
 )
 
+from .conftest import long_enough_source
+
 
 def notebook_source(language: str) -> str:
     notebook = nbformat.v4.new_notebook(
@@ -25,20 +27,20 @@ def notebook_source(language: str) -> str:
 def test_valid_notebook_matches_target_language(language: HandoffLanguage) -> None:
     handoff_type = resolve_handoff_type("jupyter-notebook", language)
 
-    validate_handoff_source(notebook_source(language), handoff_type)
+    validate_handoff_source(notebook_source(language), handoff_type, "sys")
 
 
 def test_notebook_language_comparison_is_case_insensitive() -> None:
     handoff_type = resolve_handoff_type("jupyter-notebook", "r")
 
-    validate_handoff_source(notebook_source("R"), handoff_type)
+    validate_handoff_source(notebook_source("R"), handoff_type, "sys")
 
 
 def test_malformed_notebook_json_is_rejected() -> None:
     handoff_type = resolve_handoff_type("jupyter-notebook", "r")
 
     with pytest.raises(HandoffValidationError, match="valid notebook JSON"):
-        validate_handoff_source("{", handoff_type)
+        validate_handoff_source("{", handoff_type, "sys")
 
 
 def test_invalid_notebook_schema_is_rejected() -> None:
@@ -46,18 +48,58 @@ def test_invalid_notebook_schema_is_rejected() -> None:
     source = '{"nbformat": 4, "nbformat_minor": 5, "metadata": {}}'
 
     with pytest.raises(HandoffValidationError, match="valid notebook JSON"):
-        validate_handoff_source(source, handoff_type)
+        validate_handoff_source(source, handoff_type, "sys")
 
 
 def test_mismatched_kernel_language_is_rejected() -> None:
     handoff_type = resolve_handoff_type("jupyter-notebook", "r")
 
     with pytest.raises(HandoffValidationError, match="R kernelspec"):
-        validate_handoff_source(notebook_source("python"), handoff_type)
+        validate_handoff_source(notebook_source("python"), handoff_type, "sys")
 
 
 def test_text_target_requires_nonempty_source() -> None:
     handoff_type = resolve_handoff_type("shiny-app", "python")
 
     with pytest.raises(HandoffValidationError, match="empty"):
-        validate_handoff_source("  ", handoff_type)
+        validate_handoff_source("  ", handoff_type, "sys")
+
+
+def test_text_target_accepts_adequately_long_source() -> None:
+    handoff_type = resolve_handoff_type("shiny-app", "python")
+
+    validate_handoff_source(
+        long_enough_source("print('ok')"), handoff_type, "unrelated system prompt"
+    )
+
+
+def test_rejects_source_shorter_than_minimum_substance_floor() -> None:
+    handoff_type = resolve_handoff_type("quarto-dashboard", "r")
+
+    with pytest.raises(HandoffValidationError, match="too short"):
+        validate_handoff_source("penguins-handoff.qmd", handoff_type, "sys")
+
+
+def test_rejects_source_that_echoes_the_system_prompt() -> None:
+    handoff_type = resolve_handoff_type("quarto-dashboard", "r")
+    system_prompt = (
+        "You are an expert data analyst and developer. Your task is to turn "
+        "the work a user did during a data-exploration session into a "
+        "standalone, reusable handoff they can run, share, and build on "
+        "outside the chat."
+    )
+    echoed_source = f"{system_prompt}\n\n" + "more text " * 30
+
+    with pytest.raises(HandoffValidationError, match="echoes the system prompt"):
+        validate_handoff_source(echoed_source, handoff_type, system_prompt)
+
+
+def test_accepts_long_source_that_merely_shares_vocabulary_with_prompt() -> None:
+    handoff_type = resolve_handoff_type("quarto-dashboard", "r")
+    system_prompt = "You are an expert data analyst and developer."
+
+    validate_handoff_source(
+        long_enough_source("---\ntitle: Penguins dashboard\n---"),
+        handoff_type,
+        system_prompt,
+    )

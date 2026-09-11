@@ -30,3 +30,13 @@ def pytest_collection_modifyitems(config, items):
     for item in items:
         if "ggsql" in item.keywords:
             item.add_marker(skip)
+
+
+def long_enough_source(marker: str = "placeholder") -> str:
+    """
+    Return a placeholder that clears HANDOFF_MIN_SOURCE_LENGTH.
+
+    The filler pads past the length floor regardless of `marker`'s own length,
+    for tests that only care about a short marker value appearing in the source.
+    """
+    return f"{marker}\n\n" + "# filler\n" * 40

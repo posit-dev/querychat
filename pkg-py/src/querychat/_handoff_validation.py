@@ -3,6 +3,9 @@ from nbformat.reader import NotJSONError
 
 from ._handoff_types import LANGUAGES, HandoffType
 
+HANDOFF_MIN_SOURCE_LENGTH = 200
+HANDOFF_PROMPT_ECHO_PREFIX_LENGTH = 80
+
 
 class HandoffValidationError(ValueError):
     """Generated handoff source violates its target contract."""
@@ -11,12 +14,28 @@ class HandoffValidationError(ValueError):
 def validate_handoff_source(
     source: str,
     handoff_type: HandoffType,
+    system_prompt: str,
 ) -> None:
     if not source.strip():
         raise HandoffValidationError("Generated handoff source is empty.")
-    if handoff_type.structure == "text":
-        return
-    validate_notebook_source(source, handoff_type)
+    if handoff_type.structure == "notebook-json":
+        validate_notebook_source(source, handoff_type)
+    else:
+        validate_handoff_substance(source, system_prompt)
+
+
+def validate_handoff_substance(source: str, system_prompt: str) -> None:
+    if len(source) < HANDOFF_MIN_SOURCE_LENGTH:
+        raise HandoffValidationError(
+            "Generated handoff source is too short to be a real handoff "
+            f"({len(source)} characters)."
+        )
+    prompt_prefix = system_prompt.strip()[:HANDOFF_PROMPT_ECHO_PREFIX_LENGTH]
+    if prompt_prefix and prompt_prefix in source:
+        raise HandoffValidationError(
+            "Generated handoff source echoes the system prompt instead of "
+            "producing real content."
+        )
 
 
 def validate_notebook_source(

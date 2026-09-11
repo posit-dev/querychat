@@ -3,7 +3,7 @@ import asyncio
 import pytest
 import querychat._handoff_prompt as handoff_prompt
 from pydantic import BaseModel, ValidationError
-from querychat._handoff_chat import HandoffChat
+from querychat._handoff_chat import HANDOFF_MAX_TOKENS, HandoffChat
 from querychat._handoff_prompt import HandoffResult
 
 
@@ -16,6 +16,17 @@ class FakeChat:
         self._turns = []
         self.system_prompt = None
         self.expected_data_model = expected_data_model
+        self.model_params: dict[str, object] = {}
+
+    def __deepcopy__(self, memo):
+        """Share model_params across forks so tests can inspect what the fork got."""
+        forked = FakeChat(list(self._chunks), self._structured, self.expected_data_model)
+        forked.model_params = self.model_params
+        memo[id(self)] = forked
+        return forked
+
+    def set_model_params(self, **kwargs):
+        self.model_params.update(kwargs)
 
     def set_turns(self, turns):
         self._turns = list(turns)
@@ -143,6 +154,29 @@ class TestStream:
 
         assert result.referenced_tables == ["orders"]
 
+    def test_applies_handoff_max_tokens_override(self):
+        chunks = [
+            (
+                '{"source": "x", "summary": "s", '
+                '"install_instructions": "i", "language": "python", '
+                '"referenced_tables": []}'
+            )
+        ]
+        sink = FakeSink()
+        chat = HandoffChat(FakeChat(chunks))
+
+        asyncio.run(
+            chat.stream(
+                "go",
+                turns=[],
+                system_prompt=None,
+                sink=sink,
+                model=HandoffResult,
+            )
+        )
+
+        assert chat._chat.model_params == {"max_tokens": HANDOFF_MAX_TOKENS}
+
 
 class _Meta(BaseModel):
     answer: str
@@ -153,6 +187,14 @@ class TestAsk:
         chat = HandoffChat(FakeChat(structured=_Meta(answer="42")))
         result = asyncio.run(chat.ask("q", _Meta))
         assert result.answer == "42"
+
+    def test_does_not_apply_max_tokens_override(self):
+        fake = FakeChat(structured=_Meta(answer="42"))
+        chat = HandoffChat(fake)
+
+        asyncio.run(chat.ask("q", _Meta))
+
+        assert fake.model_params == {}
 
 
 class TestHistoryTurns:

@@ -35,7 +35,9 @@ def preload_viz_deps_ui():
         class_="querychat-viz-preload",
         hidden="",
         aria_hidden="true",
-        style="position:absolute; left:-9999px; width:1px; height:1px;",
+        # Clip so the full-height widget can't leak scrollable overflow into
+        # scrollable ancestors (e.g. a sidebar hosting the chat).
+        style="position:absolute; left:-9999px; width:1px; height:1px; overflow:clip;",
     )
 
 

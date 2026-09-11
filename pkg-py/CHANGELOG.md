@@ -24,6 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * The `"visualize"` tool is now included in the default toolset (`tools=("filter", "query", "visualize")`). If the visualization dependencies are not installed (the `viz` extra), the tool is dropped with a warning instead of raising an `ImportError`.
 
+### Bug fixes
+
+* Fixed a phantom scrollbar on scrollable ancestors of the chat (e.g. a bslib sidebar created with `qc.sidebar()`): the hidden visualization preload widget is much taller than its 1px container, and its unclipped overflow leaked into the ancestor's scrollable region, letting it scroll past the chat's bottom edge.
+
 ## [0.7.0] - 2026-07-10
 
 ### New features

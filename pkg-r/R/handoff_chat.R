@@ -91,9 +91,13 @@ HandoffChat <- R6::R6Class(
 
 HANDOFF_MAX_TOKENS <- 16000L
 
-# ellmer has no public setter for an existing Chat's Model params; re-running
-# initialize() on the clone is the only way to swap it in without losing the
-# chat's R6 subclass (needed by test doubles that override stream_async()).
+# HACK: ellmer has no public setter for an existing Chat's Model params
+# (set_model() takes only a model name), so we re-run initialize() on the
+# clone to swap in a modified Model. This is currently necessary to keep the
+# chat's R6 subclass (needed by test doubles that override stream_async()) and
+# its live provider (credentials, custom endpoints). A public ellmer API for
+# updating params on an existing chat (e.g. set_model_object()/set_params())
+# would let us drop this.
 apply_handoff_max_tokens_override <- function(chat, max_tokens) {
   model <- chat$get_model_object()
   new_model <- ellmer::Model(

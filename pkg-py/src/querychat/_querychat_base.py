@@ -113,11 +113,8 @@ class QueryChatBase(Generic[IntoFrameT]):
         self._extra_instructions = extra_instructions
         self._categorical_threshold = categorical_threshold
 
-        # Ownership rule: querychat closes the chatlas client only if it
-        # created it. A `None` client is resolved later from the
-        # QUERYCHAT_CLIENT env var or the "openai" default, and a string spec
-        # goes through ChatAuto -- both are querychat-created. A
-        # user-supplied Chat instance is never closed by querychat.
+        # Only clients querychat creates (None or string specs) are closed on
+        # cleanup(); user-supplied Chat instances remain the caller's responsibility.
         self._owns_client = client is None or isinstance(client, str)
         self._base_client: chatlas.Chat | None = (
             resolve_client(client) if client is not None else None
@@ -702,10 +699,6 @@ class QueryChatBase(Generic[IntoFrameT]):
         querychat created it (i.e., `client` was `None` or a string spec like
         `"openai/gpt-4o"`). A user-supplied `chatlas.Chat` instance is never
         closed here -- its lifecycle remains the caller's responsibility.
-
-        Note that session, console, and greeter clients are deepcopy clones
-        that share the base client's provider, so closing the base client
-        releases their underlying resources as well.
 
         Safe to call multiple times. In long-lived applications, call this
         when the app shuts down (e.g., via `atexit`).

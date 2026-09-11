@@ -31,9 +31,7 @@ class TestClientOwnership:
         # None (deferred default/env): querychat-created
         assert QueryChatBase(sample_df, "users")._owns_client
         # User-supplied instance: not owned
-        assert not QueryChatBase(
-            sample_df, "users", client=ChatOpenAI()
-        )._owns_client
+        assert not QueryChatBase(sample_df, "users", client=ChatOpenAI())._owns_client
 
     def test_cleanup_closes_owned_string_client(self, monkeypatch, sample_df):
         monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-key-for-testing")
@@ -53,20 +51,18 @@ class TestClientOwnership:
         qc.cleanup()
         assert qc._base_client.provider._client.is_closed()
 
-    def test_cleanup_does_not_close_user_supplied_client(
-        self, monkeypatch, sample_df
-    ):
+    def test_cleanup_does_not_close_user_supplied_client(self, monkeypatch, sample_df):
         monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-key-for-testing")
         chat = ChatOpenAI()
         qc = QueryChatBase(sample_df, "users", client=chat)
         qc.cleanup()
         assert not chat.provider._client.is_closed()
 
-    def test_cleanup_closes_clones_via_shared_provider(
-        self, monkeypatch, sample_df
-    ):
-        """Session/console clones share the base provider (deepcopy by
-        reference), so closing the owned base client covers them."""
+    def test_cleanup_closes_clones_via_shared_provider(self, monkeypatch, sample_df):
+        """
+        Session/console clones share the base provider (deepcopy by
+        reference), so closing the owned base client covers them.
+        """
         monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-key-for-testing")
         qc = QueryChatBase(sample_df, "users", client="openai")
         clone = qc._create_client()

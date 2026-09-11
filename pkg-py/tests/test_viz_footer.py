@@ -124,10 +124,8 @@ class TestVizPreloadMarkup:
         assert preload_dep.script == [{"src": "js/viz-preload.js"}]
 
     def test_preload_markup_clips_widget_overflow(self):
-        # The preload box is 1px but hosts a full-size widget. Without
-        # overflow:clip, the widget's box leaks scrollable overflow into
-        # ancestors, giving an overflow:auto ancestor (e.g. a bslib sidebar
-        # hosting the chat) a phantom scrollbar that scrolls past the chat.
+        # The 1px preload box hosts a full-height widget; without clipping,
+        # it leaks scrollable overflow into scrollable ancestors.
         from querychat._viz_utils import preload_viz_deps_ui
 
         rendered = TagList(preload_viz_deps_ui()).render()

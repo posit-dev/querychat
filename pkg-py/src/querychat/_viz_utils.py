@@ -35,10 +35,8 @@ def preload_viz_deps_ui():
         class_="querychat-viz-preload",
         hidden="",
         aria_hidden="true",
-        # overflow:clip keeps the (much taller) preloaded widget from leaking
-        # scrollable overflow into ancestors. Without it, an overflow:auto
-        # ancestor (e.g. a bslib sidebar hosting the chat) gains a phantom
-        # scrollbar and can scroll past the chat's bottom edge.
+        # Clip so the full-height widget can't leak scrollable overflow into
+        # scrollable ancestors (e.g. a sidebar hosting the chat).
         style="position:absolute; left:-9999px; width:1px; height:1px; overflow:clip;",
     )
 

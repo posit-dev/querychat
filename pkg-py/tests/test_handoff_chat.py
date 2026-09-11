@@ -17,6 +17,7 @@ class FakeChat:
         self.system_prompt = None
         self.expected_data_model = expected_data_model
         self.model_params: dict[str, object] = {}
+        self._standard_model_params: dict[str, object] = {}
 
     def __deepcopy__(self, memo):
         """Share model_params across forks so tests can inspect what the fork got."""
@@ -176,6 +177,31 @@ class TestStream:
         )
 
         assert chat._chat.model_params == {"max_tokens": HANDOFF_MAX_TOKENS}
+
+    def test_respects_user_supplied_max_tokens(self):
+        chunks = [
+            (
+                '{"source": "x", "summary": "s", '
+                '"install_instructions": "i", "language": "python", '
+                '"referenced_tables": []}'
+            )
+        ]
+        sink = FakeSink()
+        fake = FakeChat(chunks)
+        fake._standard_model_params = {"max_tokens": 32000}
+        chat = HandoffChat(fake)
+
+        asyncio.run(
+            chat.stream(
+                "go",
+                turns=[],
+                system_prompt=None,
+                sink=sink,
+                model=HandoffResult,
+            )
+        )
+
+        assert fake.model_params == {}
 
 
 class _Meta(BaseModel):

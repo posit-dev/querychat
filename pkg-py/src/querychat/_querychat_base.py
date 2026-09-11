@@ -119,6 +119,9 @@ class QueryChatBase(Generic[IntoFrameT]):
         self._base_client: chatlas.Chat | None = (
             resolve_client(client) if client is not None else None
         )
+        # Clients materialized from specs outside the constructor (e.g.,
+        # .server(client=...) overrides); cleanup() closes these too.
+        self._owned_clients: list[chatlas.Chat] = []
         self._client_console = None
 
         self._system_prompt: QueryChatSystemPrompt | None = None
@@ -227,6 +230,21 @@ class QueryChatBase(Generic[IntoFrameT]):
                 self._base_client = resolve_client(None)
             base = self._base_client
         return create_client(base)
+
+    def _resolve_override_client(
+        self, client: str | chatlas.Chat | None
+    ) -> chatlas.Chat:
+        """
+        Resolve a per-call client override (e.g., ``.server(client=...)``).
+
+        Like the constructor's ``client``, a spec-resolved override is
+        querychat-created and must be closed on cleanup(); a user-supplied
+        Chat instance is not.
+        """
+        resolved = resolve_client(client)
+        if not isinstance(client, chatlas.Chat):
+            self._owned_clients.append(resolved)
+        return resolved
 
     def _create_session_client(
         self,
@@ -697,8 +715,10 @@ class QueryChatBase(Generic[IntoFrameT]):
         This closes the query executor and all data sources (e.g., DuckDB
         connections). It also closes the chatlas client, but only if
         querychat created it (i.e., `client` was `None` or a string spec like
-        `"openai/gpt-4o"`). A user-supplied `chatlas.Chat` instance is never
-        closed here -- its lifecycle remains the caller's responsibility.
+        `"openai/gpt-4o"`, including per-call overrides such as
+        `.server(client="openai")`). A user-supplied `chatlas.Chat` instance
+        is never closed here -- its lifecycle remains the caller's
+        responsibility.
 
         Safe to call multiple times. In long-lived applications, call this
         when the app shuts down (e.g., via `atexit`).
@@ -709,6 +729,9 @@ class QueryChatBase(Generic[IntoFrameT]):
             source.cleanup()
         if self._owns_client and self._base_client is not None:
             self._base_client.close()
+        for client in self._owned_clients:
+            client.close()
+        self._owned_clients.clear()
 
 
 def normalize_data_source(

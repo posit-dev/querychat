@@ -71,6 +71,49 @@ class TestClientOwnership:
         assert clone.provider._client.is_closed()
 
 
+class TestServerClientOverrides:
+    """
+    Clients resolved for .server(client=...) overrides follow the same
+    ownership rule: spec-resolved overrides are closed, user-supplied ones
+    are not.
+    """
+
+    def test_owned_override_closed_when_base_is_user_supplied(
+        self, monkeypatch, sample_df
+    ):
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-key-for-testing")
+        user_chat = ChatOpenAI()
+        qc = QueryChatBase(sample_df, "users", client=user_chat)
+        override = qc._resolve_override_client("openai")
+        qc.cleanup()
+        assert override.provider._client.is_closed()
+        assert not user_chat.provider._client.is_closed()
+
+    def test_owned_override_closed_when_base_deferred(self, monkeypatch, sample_df):
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-key-for-testing")
+        qc = QueryChatBase(sample_df, "users")
+        override = qc._resolve_override_client("openai")
+        assert qc._base_client is None
+        qc.cleanup()
+        assert override.provider._client.is_closed()
+
+    def test_deferred_default_override_closed(self, monkeypatch, sample_df):
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-key-for-testing")
+        monkeypatch.delenv("QUERYCHAT_CLIENT", raising=False)
+        qc = QueryChatBase(sample_df, "users", client="openai")
+        override = qc._resolve_override_client(None)
+        qc.cleanup()
+        assert override.provider._client.is_closed()
+
+    def test_user_supplied_override_not_closed(self, monkeypatch, sample_df):
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-key-for-testing")
+        qc = QueryChatBase(sample_df, "users", client="openai")
+        override = ChatOpenAI()
+        qc._resolve_override_client(override)
+        qc.cleanup()
+        assert not override.provider._client.is_closed()
+
+
 class TestCleanupDataSources:
     """Existing executor/source cleanup behavior is preserved."""
 

@@ -13,7 +13,7 @@ from shinychat.types import HistoryOptions
 from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 
 from ._icons import bs_icon
-from ._querychat_base import DEFAULT_TOOLS, TOOL_GROUPS, QueryChatBase, resolve_client
+from ._querychat_base import DEFAULT_TOOLS, TOOL_GROUPS, QueryChatBase
 from ._shiny_module import (
     CHAT_ID,
     ServerValues,
@@ -686,7 +686,9 @@ class QueryChat(QueryChatBase[IntoFrameT]):
 
         self._require_initialized("server")
         resolved_client: chatlas.Chat | None = (
-            None if isinstance(client, MISSING_TYPE) else resolve_client(client)
+            None
+            if isinstance(client, MISSING_TYPE)
+            else self._resolve_override_client(client)
         )
 
         def create_session_client(**kwargs) -> chatlas.Chat:

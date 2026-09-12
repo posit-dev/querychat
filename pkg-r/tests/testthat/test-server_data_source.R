@@ -211,6 +211,20 @@ describe("QueryChat$server(data_source = ) session cleanup", {
     expect_true(source_conn_valid(config_source))
   })
 
+  it("does not close a caller-supplied DataSource when the session ends", {
+    skip_if_no_dataframe_engine()
+    withr::local_envvar(OPENAI_API_KEY = "boop")
+    local_captured_mod_server()
+    qc <- QueryChat$new(NULL, table_name = "users", greeting = "hi")
+    withr::defer(qc$cleanup())
+    caller_source <- local_data_frame_source(new_users_df(), "users")
+
+    session <- start_server_session(qc, data_source = caller_source)
+    session$close()
+
+    expect_true(source_conn_valid(caller_source))
+  })
+
   it("closes the normalized source and leaves the instance untouched when registration fails", {
     skip_if_no_dataframe_engine()
     skip_if_not_installed("RSQLite")

@@ -1209,15 +1209,21 @@ QueryChat <- R6::R6Class(
 
       if (!is.null(session_source)) {
         session_table_set <- table_set
+        # Mirrors the tryCatch() guard above: querychat only owns (and so
+        # only closes) sources it normalized itself from a raw connection or
+        # data.frame, never a DataSource the caller constructed and passed in.
+        owns_session_source <- !inherits(data_source, "DataSource")
         session$onSessionEnded(function() {
           warn_on_cleanup_failure(
             session_table_set$cleanup_executor(),
             "session query executor"
           )
-          warn_on_cleanup_failure(
-            session_source$cleanup(),
-            "session data source"
-          )
+          if (owns_session_source) {
+            warn_on_cleanup_failure(
+              session_source$cleanup(),
+              "session data source"
+            )
+          }
         })
       }
 

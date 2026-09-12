@@ -716,6 +716,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 resolved_table_name,
                 replace=True,
                 include_in_greeting=True,
+                cleanup_replaced=False,
             )
 
         self._require_initialized("server")

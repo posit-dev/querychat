@@ -1,6 +1,6 @@
 """Tests for QueryChat.server(data_source=...) parity with R (#300)."""
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
@@ -129,3 +129,38 @@ class TestServerDataSourceSurvivesSecondSession:
 
         with pytest.raises(RuntimeError, match="Cannot add tables after server"):
             qc.add_table(other_users_df, "other")
+
+
+class TestServerDataSourceCleanupSafety:
+    def test_second_session_does_not_clean_up_first_sessions_source(
+        self, users_df, other_users_df, captured_mod_server
+    ):
+        """
+        A second session's server(data_source=...) call must not tear down
+        the DataSource object an earlier, still-running session's own
+        DataSourceExecutor holds a live reference to (e.g. closing a DuckDB
+        connection or disposing a SQLAlchemy engine out from under it).
+        """
+        qc = shiny_mod.QueryChat(None, table_name="users")
+
+        qc.server(data_source=users_df)
+        first_source = qc._data_sources["users"]
+
+        with patch.object(first_source, "cleanup") as mock_cleanup:
+            qc.server(data_source=other_users_df)
+            mock_cleanup.assert_not_called()
+
+    def test_public_add_table_replace_still_cleans_up_old_source(
+        self, users_df, other_users_df
+    ):
+        """
+        Config-time add_table(replace=True) (before any session starts) has
+        exactly one owner for the replaced table, so its existing
+        cleanup-on-replace behavior must be unchanged.
+        """
+        qc = shiny_mod.QueryChat(users_df, "users")
+        first_source = qc._data_sources["users"]
+
+        with patch.object(first_source, "cleanup") as mock_cleanup:
+            qc.add_table(other_users_df, "users", replace=True)
+            mock_cleanup.assert_called_once()

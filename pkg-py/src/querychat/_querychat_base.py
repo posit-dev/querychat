@@ -505,6 +505,7 @@ class QueryChatBase(Generic[IntoFrameT]):
         *,
         replace: bool,
         include_in_greeting: bool,
+        cleanup_replaced: bool = True,
     ) -> None:
         """
         Stage a table and rebuild the system prompt/executor cache.
@@ -513,6 +514,16 @@ class QueryChatBase(Generic[IntoFrameT]):
         directly by ``.server(data_source=...)`` so that each session can
         register (or replace) its own table even after an earlier session's
         ``.server()`` call has already set ``_server_initialized``.
+
+        ``cleanup_replaced=False`` must be used for that per-session
+        replacement: a table replaced here may still be in active use by an
+        earlier, already-running session (e.g. its own
+        ``DataSourceExecutor`` holds a live reference to it), so closing/
+        disposing it here would pull the resource out from under that
+        session. Cleaning it up is then the caller's own responsibility
+        (e.g. via ``session.on_ended()`` in the code that created it). The
+        default (``True``) preserves :meth:`add_table`'s existing behavior,
+        where a config-time replacement has exactly one owner.
         """
         if not isinstance(include_in_greeting, bool):
             raise TypeError(
@@ -549,7 +560,7 @@ class QueryChatBase(Generic[IntoFrameT]):
 
         old_source = self._data_sources.get(table_name)
         self._data_sources = next_data_sources
-        if old_source is not None and old_source is not normalized:
+        if cleanup_replaced and old_source is not None and old_source is not normalized:
             old_source.cleanup()
         if self._query_executor is not None:
             with contextlib.suppress(Exception):

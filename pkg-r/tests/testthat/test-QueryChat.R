@@ -1340,13 +1340,13 @@ describe("QueryChat$add_tables()", {
     )
   })
 
-  it("calling after server initialization raises error", {
+  it("calling while a server session is active raises error", {
     conn <- local_multi_table_conn()
     qc <- QueryChat$new(NULL, "placeholder", greeting = "Test")
-    qc$.__enclos_env__$private$.server_initialized <- TRUE
+    qc$.__enclos_env__$private$.active_sessions <- 1L
     expect_error(
       qc$add_tables(conn),
-      "after server initialization"
+      "while a server session is active"
     )
   })
 

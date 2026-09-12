@@ -33,12 +33,21 @@ QueryChatGreeter <- R6::R6Class(
     #' @param data_sources Advanced/internal: overrides the QueryChat
     #'   instance's data sources for this call only, for the same reason as
     #'   `tables`.
-    build_client = function(base = NULL, tables = NULL, data_sources = NULL) {
+    #' @param data_description Advanced/internal: overrides the QueryChat
+    #'   instance's inferred data description for this call only, for the same
+    #'   reason as `tables`.
+    build_client = function(
+      base = NULL,
+      tables = NULL,
+      data_sources = NULL,
+      data_description = NULL
+    ) {
       private$.client_factory(
         tables %||% private$.tables,
         private$.prompt,
         base,
-        data_sources = data_sources
+        data_sources = data_sources,
+        data_description = data_description
       )
     },
 

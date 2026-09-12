@@ -704,8 +704,18 @@ test_that("mod_server() builds the auto-generated greeting from the greeter, not
 
   build_client_calls <- list()
   fake_greeter <- list(
-    build_client = function(base = NULL, tables = NULL, data_sources = NULL) {
-      build_client_calls[[length(build_client_calls) + 1L]] <<- base
+    build_client = function(
+      base = NULL,
+      tables = NULL,
+      data_sources = NULL,
+      data_description = NULL
+    ) {
+      build_client_calls[[length(build_client_calls) + 1L]] <<- list(
+        base = base,
+        tables = tables,
+        data_sources = data_sources,
+        data_description = data_description
+      )
       fake_greeting_client
     }
   )
@@ -732,6 +742,8 @@ test_that("mod_server() builds the auto-generated greeting from the greeter, not
       tools = "query",
       greeter = fake_greeter,
       greeting_base = "base-client",
+      greeting_tables = "test_table",
+      greeting_data_description = "snapshot description",
       history = TRUE
     ),
     {
@@ -742,9 +754,21 @@ test_that("mod_server() builds the auto-generated greeting from the greeter, not
       # dedicated greeting prompt), not from a second call to the main client
       # factory with tools = NULL (which would use the query system prompt).
       expect_equal(length(build_client_calls), 1L)
-      expect_equal(build_client_calls[[1]], "base-client")
+      expect_equal(build_client_calls[[1]]$base, "base-client")
       expect_equal(length(main_client_calls), 1L)
       expect_false(is.null(greeting_stream_prompt))
+
+      # The greeting must be built from the session's point-in-time snapshot,
+      # not live QueryChat state that a later session may have mutated
+      expect_identical(build_client_calls[[1]]$tables, "test_table")
+      expect_identical(
+        build_client_calls[[1]]$data_sources,
+        list(test_table = ds)
+      )
+      expect_identical(
+        build_client_calls[[1]]$data_description,
+        "snapshot description"
+      )
     }
   )
 })

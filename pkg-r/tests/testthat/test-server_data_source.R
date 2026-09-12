@@ -2,9 +2,27 @@
 # session without corrupting an earlier, still-running session's resources
 # or greeting (posit-dev/querychat#300).
 
-# Any non-NULL value satisfies $server()'s `is.null(session)` guard; the
-# value itself is never otherwise used (it isn't threaded into mod_server()).
-fake_shiny_session <- function() structure(list(), class = "ShinySession")
+# A fake session records onSessionEnded() callbacks so tests can simulate the
+# session ending via $end(). The session isn't threaded into mod_server();
+# $server() otherwise only NULL-checks it and registers session-end callbacks.
+fake_shiny_session <- function() {
+  ended_callbacks <- list()
+  structure(
+    list(
+      onSessionEnded = function(cb) {
+        ended_callbacks[[length(ended_callbacks) + 1L]] <<- cb
+        invisible()
+      },
+      end = function() {
+        for (cb in ended_callbacks) {
+          cb()
+        }
+        invisible()
+      }
+    ),
+    class = "ShinySession"
+  )
+}
 
 # R6 instances lock existing method bindings, so spying on $cleanup()
 # requires unlocking it first.
@@ -59,7 +77,7 @@ describe("QueryChat$server(data_source=) survives a second session", {
 
     expect_error(
       qc$add_table(new_users_df(), "other"),
-      "Cannot add tables after server initialization"
+      "Cannot add tables while a server session is active"
     )
   })
 })
@@ -129,6 +147,98 @@ describe("QueryChat$server(data_source=) cleanup safety", {
 
     expect_true(cleaned_up())
   })
+
+  it("a first $server(data_source=) call still cleans up the replaced constructor-registered source", {
+    skip_if_no_dataframe_engine()
+    local_captured_mod_server()
+
+    qc <- QueryChat$new(new_users_df(), "users", greeting = "Test")
+    withr::defer(qc$cleanup())
+
+    constructor_source <- qc_data_source(qc, "users")
+    cleaned_up <- spy_on_cleanup(constructor_source)
+
+    qc$server(data_source = new_users_df(), session = fake_shiny_session())
+
+    # No session can still be using it, so cleanup-on-replace holds here
+    expect_true(cleaned_up())
+  })
+
+  it("a second session's call skips cleanup even when the first call cleaned up", {
+    skip_if_no_dataframe_engine()
+    local_captured_mod_server()
+
+    qc <- QueryChat$new(new_users_df(), "users", greeting = "Test")
+    withr::defer(qc$cleanup())
+
+    qc$server(data_source = new_users_df(), session = fake_shiny_session())
+    session1_source <- qc_data_source(qc, "users")
+    cleaned_up <- spy_on_cleanup(session1_source)
+
+    qc$server(data_source = new_users_df(), session = fake_shiny_session())
+
+    expect_false(cleaned_up())
+  })
+})
+
+describe("QueryChat$server(data_source=) session lifecycle", {
+  # The hazard behind cleanup-on-replace and the add/remove_table guards is
+  # *live* sessions, not past ones: an ended session can no longer be using
+  # a resource it registered.
+
+  it("a replaced source is cleaned up once the session that registered it has ended", {
+    skip_if_no_dataframe_engine()
+    local_captured_mod_server()
+
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+    withr::defer(qc$cleanup())
+
+    session1 <- fake_shiny_session()
+    qc$server(data_source = new_users_df(), session = session1)
+    first_source <- qc_data_source(qc, "users")
+    cleaned_up <- spy_on_cleanup(first_source)
+
+    session1$end()
+
+    qc$server(data_source = new_users_df(), session = fake_shiny_session())
+
+    expect_true(cleaned_up())
+  })
+
+  it("a replaced source survives while any session is live", {
+    skip_if_no_dataframe_engine()
+    local_captured_mod_server()
+
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+    withr::defer(qc$cleanup())
+
+    session1 <- fake_shiny_session()
+    qc$server(data_source = new_users_df(), session = session1)
+    qc$server(data_source = new_users_df(), session = fake_shiny_session())
+    second_source <- qc_data_source(qc, "users")
+    cleaned_up <- spy_on_cleanup(second_source)
+
+    session1$end() # session 1 ends; session 2 still live
+
+    qc$server(data_source = new_users_df(), session = fake_shiny_session())
+
+    expect_false(cleaned_up())
+  })
+
+  it("$add_table() is allowed once all sessions have ended", {
+    skip_if_no_dataframe_engine()
+    local_captured_mod_server()
+
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+    withr::defer(qc$cleanup())
+
+    session1 <- fake_shiny_session()
+    qc$server(data_source = new_users_df(), session = session1)
+
+    session1$end()
+
+    expect_no_error(qc$add_table(new_users_df(), "other"))
+  })
 })
 
 describe("QueryChat$server(data_source=) greeting snapshot", {
@@ -157,6 +267,45 @@ describe("QueryChat$server(data_source=) greeting snapshot", {
     expect_equal(qc$greeter$tables, "users")
     expect_equal(calls$args[[2]]$greeting_tables, "users")
   })
+
+  it("passes a greeting_data_description snapshot to mod_server", {
+    skip_if_no_dataframe_engine()
+    calls <- local_captured_mod_server()
+
+    qc <- QueryChat$new(
+      NULL,
+      "users",
+      greeting = "Test",
+      data_description = "User accounts"
+    )
+    withr::defer(qc$cleanup())
+
+    qc$server(data_source = new_users_df(), session = fake_shiny_session())
+
+    expect_equal(calls$args[[1]]$greeting_data_description, "User accounts")
+  })
+
+  it("greeter$build_client() renders a data_description snapshot instead of live state", {
+    skip_if_no_dataframe_engine()
+
+    qc <- QueryChat$new(
+      new_users_df(),
+      "users",
+      greeting = "Test",
+      data_description = "live description",
+      client = mock_ellmer_chat_client()
+    )
+    withr::defer(qc$cleanup())
+
+    live <- qc$greeter$build_client()$get_system_prompt()
+    snapshot <- qc$greeter$build_client(
+      data_description = "snapshot description"
+    )$get_system_prompt()
+
+    expect_match(live, "live description", fixed = TRUE)
+    expect_match(snapshot, "snapshot description", fixed = TRUE)
+    expect_no_match(snapshot, "live description", fixed = TRUE)
+  })
 })
 
 describe("Mixing config-time $add_table() with $server(data_source=)", {
@@ -178,7 +327,7 @@ describe("Mixing config-time $add_table() with $server(data_source=)", {
     expect_equal(calls$args[[1]]$data_sources$orders$get_data()$id, 4:6)
   })
 
-  it("replacing a config-time table does not clean it up", {
+  it("replacing a config-time table on the first $server() call cleans it up", {
     skip_if_no_dataframe_engine()
     local_captured_mod_server()
 
@@ -191,9 +340,9 @@ describe("Mixing config-time $add_table() with $server(data_source=)", {
 
     qc$server(data_source = new_users_df(), session = fake_shiny_session())
 
-    # Consistent with per-session replacement: the replaced source's cleanup
-    # is left to whoever created it
-    expect_false(cleaned_up())
+    # No session is running yet, so the replaced source has a single owner
+    # and cleanup-on-replace still holds (only later sessions skip it)
+    expect_true(cleaned_up())
   })
 
   it("server(data_source=, table_name=) adds a second table alongside the config-time one", {

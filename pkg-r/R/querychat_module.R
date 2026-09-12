@@ -53,7 +53,8 @@ mod_server <- function(
   history,
   greeter = NULL,
   greeting_base = NULL,
-  greeting_tables = NULL
+  greeting_tables = NULL,
+  greeting_data_description = NULL
 ) {
   shiny::moduleServer(id, function(input, output, session) {
     current_table_val <- shiny::reactiveVal(NULL, label = "current_table")
@@ -134,7 +135,8 @@ mod_server <- function(
         greeting_client <- greeter$build_client(
           greeting_base,
           tables = greeting_tables,
-          data_sources = data_sources
+          data_sources = data_sources,
+          data_description = greeting_data_description
         )
         stream <- greeting_client$stream_async(GREETING_PROMPT)
         shinychat::chat_greeting(stream, persistent = TRUE)

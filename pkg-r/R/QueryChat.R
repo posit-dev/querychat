@@ -92,7 +92,9 @@ QueryChat <- R6::R6Class(
     .data_sources = list(),
     .deferred_table_name = NULL,
     .query_executor = NULL,
-    .server_initialized = FALSE,
+    # Live Shiny session count. Shared-state guards key off this: an ended
+    # session can no longer be using a resource it registered.
+    .active_sessions = 0L,
     .client_spec = NULL,
     .client_console = NULL,
     .system_prompt = NULL,
@@ -151,8 +153,8 @@ QueryChat <- R6::R6Class(
     },
 
     # Guard-free core of $add_table(), also called directly by $server()'s
-    # per-session data_source= path (which must work even after an earlier
-    # session set .server_initialized). cleanup_replaced = FALSE is for that
+    # per-session data_source= path (which must work even while earlier
+    # sessions are still running). cleanup_replaced = FALSE is for that
     # path: the replaced table may still be in use by an earlier session, so
     # cleanup becomes the caller's responsibility.
     add_or_replace_table = function(
@@ -511,8 +513,8 @@ QueryChat <- R6::R6Class(
       replace = FALSE,
       include_in_greeting = FALSE
     ) {
-      if (private$.server_initialized) {
-        cli::cli_abort("Cannot add tables after server initialization.")
+      if (private$.active_sessions > 0) {
+        cli::cli_abort("Cannot add tables while a server session is active.")
       }
       private$add_or_replace_table(
         data_source,
@@ -548,8 +550,8 @@ QueryChat <- R6::R6Class(
       replace = FALSE,
       include_in_greeting = FALSE
     ) {
-      if (private$.server_initialized) {
-        cli::cli_abort("Cannot add tables after server initialization.")
+      if (private$.active_sessions > 0) {
+        cli::cli_abort("Cannot add tables while a server session is active.")
       }
       if (!inherits(conn, "DBIConnection")) {
         cli::cli_abort(
@@ -644,8 +646,8 @@ QueryChat <- R6::R6Class(
     #'
     #' @return Invisibly returns `self` for chaining.
     remove_table = function(table_name) {
-      if (private$.server_initialized) {
-        cli::cli_abort("Cannot remove tables after server initialization.")
+      if (private$.active_sessions > 0) {
+        cli::cli_abort("Cannot remove tables while a server session is active.")
       }
       if (!table_name %in% names(private$.data_sources)) {
         cli::cli_abort("Table {.val {table_name}} not found.")
@@ -1156,13 +1158,18 @@ QueryChat <- R6::R6Class(
           tbl_name,
           replace = TRUE,
           include_in_greeting = TRUE,
-          cleanup_replaced = FALSE
+          # A live session may still be using the replaced source, so only
+          # clean it up once no sessions are active.
+          cleanup_replaced = private$.active_sessions == 0
         )
       }
 
       private$require_initialized("$server")
 
-      private$.server_initialized <- TRUE
+      private$.active_sessions <- private$.active_sessions + 1L
+      session$onSessionEnded(function() {
+        private$.active_sessions <- private$.active_sessions - 1L
+      })
 
       if (is.null(private$.query_executor)) {
         private$.query_executor <- build_query_executor(private$.data_sources)
@@ -1206,7 +1213,8 @@ QueryChat <- R6::R6Class(
         history = resolved_history,
         greeter = self$greeter,
         greeting_base = base_client,
-        greeting_tables = self$greeter$tables
+        greeting_tables = self$greeter$tables,
+        greeting_data_description = private$.data_description
       )
       result
     },
@@ -1253,12 +1261,13 @@ QueryChat <- R6::R6Class(
           tables,
           prompt,
           base = NULL,
-          data_sources = NULL
+          data_sources = NULL,
+          data_description = NULL
         ) {
           sp <- QueryChatSystemPrompt$new(
             prompt_template = prompt,
             data_sources = data_sources %||% private$.data_sources,
-            data_description = private$.data_description,
+            data_description = data_description %||% private$.data_description,
             extra_instructions = NULL,
             categorical_threshold = private$.categorical_threshold,
             data_dicts = private$.data_dicts,

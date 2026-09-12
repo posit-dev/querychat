@@ -213,6 +213,14 @@ DBISource <- R6::R6Class(
     },
 
     #' @description
+    #' Get the underlying DBI connection
+    #'
+    #' @return The DBI connection this source wraps.
+    get_connection = function() {
+      private$conn
+    },
+
+    #' @description
     #' Disconnect from the database
     #'
     #' @return NULL (invisibly)

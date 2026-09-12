@@ -69,7 +69,11 @@ local_sqlite_connection <- function(
 
   temp_db <- withr::local_tempfile(fileext = ".db", .local_envir = env)
   conn <- DBI::dbConnect(RSQLite::SQLite(), temp_db)
-  withr::defer(DBI::dbDisconnect(conn), envir = env)
+  # QueryChat may legitimately disconnect first (e.g. cleanup-on-replace tests)
+  withr::defer(
+    if (DBI::dbIsValid(conn)) DBI::dbDisconnect(conn),
+    envir = env
+  )
 
   DBI::dbWriteTable(conn, table_name, data, overwrite = TRUE)
 

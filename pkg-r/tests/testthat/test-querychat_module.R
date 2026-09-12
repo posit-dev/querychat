@@ -773,6 +773,85 @@ test_that("mod_server() builds the auto-generated greeting from the greeter, not
   )
 })
 
+test_that("mod_server() forces greeting snapshot args at entry, not at greeting time", {
+  skip_if_no_dataframe_engine()
+
+  ds <- local_data_frame_source(new_test_df())
+  executor <- build_query_executor(list(test_table = ds))
+  withr::defer(executor$cleanup())
+
+  client_factory <- function(...) {
+    structure(list(), class = c("MockChat", "Chat"))
+  }
+
+  build_client_calls <- list()
+  fake_greeting_client <- list(
+    stream_async = function(prompt) "fake-stream"
+  )
+  fake_greeter <- list(
+    build_client = function(
+      base = NULL,
+      tables = NULL,
+      data_sources = NULL,
+      data_description = NULL
+    ) {
+      build_client_calls[[length(build_client_calls) + 1L]] <<- list(
+        tables = tables,
+        data_description = data_description
+      )
+      fake_greeting_client
+    }
+  )
+
+  captured_greeting_arg <- NULL
+  local_mocked_bindings(
+    chat_server = function(id, client, greeting = NULL, ...) {
+      captured_greeting_arg <<- greeting
+      mock_chat_server_result(client)
+    },
+    chat_greeting = function(content, ...) content,
+    .package = "shinychat"
+  )
+  local_mock_chat_restore()
+
+  shiny::testServer(
+    # Indirect through a server function so the snapshot args reach mod_server()
+    # as lazy promises over these locals, as they do from QueryChat$server()
+    function(input, output, session) {
+      snapshot_tables <- "test_table"
+      snapshot_description <- "original description"
+
+      mod_server(
+        "inner",
+        data_sources = list(test_table = ds),
+        executor = executor,
+        greeting = NULL,
+        client = client_factory,
+        tools = "query",
+        history = TRUE,
+        greeter = fake_greeter,
+        greeting_base = "base-client",
+        greeting_tables = snapshot_tables,
+        greeting_data_description = snapshot_description
+      )
+
+      # A later session mutates the live state the promises point at, after
+      # this session's setup but before its greeting is built
+      snapshot_tables <- c("test_table", "other_table")
+      snapshot_description <- "mutated description"
+    },
+    {
+      suppressWarnings(captured_greeting_arg())
+
+      expect_identical(build_client_calls[[1]]$tables, "test_table")
+      expect_identical(
+        build_client_calls[[1]]$data_description,
+        "original description"
+      )
+    }
+  )
+})
+
 test_that("mod_server() chat_update input updates table state", {
   skip_if_no_dataframe_engine()
 

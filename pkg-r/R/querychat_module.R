@@ -56,6 +56,13 @@ mod_server <- function(
   greeting_tables = NULL,
   greeting_data_description = NULL
 ) {
+  # These arrive as lazy promises over live QueryChat state and are read only
+  # inside the deferred greeting callback below; force them now so the
+  # greeting reflects the point-in-time snapshot captured when this session's
+  # $server() call ran, not a later session's mutation.
+  force(greeting_tables)
+  force(greeting_data_description)
+
   shiny::moduleServer(id, function(input, output, session) {
     current_table_val <- shiny::reactiveVal(NULL, label = "current_table")
 

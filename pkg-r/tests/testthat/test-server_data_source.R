@@ -291,6 +291,141 @@ describe("QueryChat$server(data_source=) retired resource cleanup", {
       "valid SQL table name"
     )
   })
+
+  it("$cleanup() flushes retired resources even when another cleanup fails", {
+    skip_if_no_dataframe_engine()
+    local_captured_mod_server()
+
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+    withr::defer(qc$cleanup())
+
+    qc$server(data_source = new_users_df(), session = fake_shiny_session())
+    first_source <- qc_data_source(qc, "users")
+    first_cleaned <- spy_on_cleanup(first_source)
+
+    qc$server(data_source = new_users_df(), session = fake_shiny_session())
+
+    # Make the current source's cleanup fail (once, so teardown can retry)
+    current_source <- qc_data_source(qc, "users")
+    unlockBinding("cleanup", current_source)
+    fail_once <- TRUE
+    current_source$cleanup <- function() {
+      if (fail_once) {
+        fail_once <<- FALSE
+        stop("boom")
+      }
+      invisible(NULL)
+    }
+
+    expect_error(qc$cleanup(), "boom")
+    expect_true(first_cleaned())
+  })
+})
+
+describe("QueryChat$server(data_source=) registration failures", {
+  it("a failed $server() call does not count as a live session", {
+    skip_if_no_dataframe_engine()
+    testthat::local_mocked_bindings(
+      mod_server = function(...) stop("mod_server failed"),
+      .package = "querychat"
+    )
+
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+    withr::defer(qc$cleanup())
+
+    expect_error(
+      qc$server(data_source = new_users_df(), session = fake_shiny_session()),
+      "mod_server failed"
+    )
+
+    # The failed session must not linger in the live-session count, which
+    # would block config-time mutations forever
+    expect_no_error(qc$add_table(new_users_df(), "other"))
+  })
+
+  it("a failed per-session registration cleans up the staged source", {
+    skip_if_no_dataframe_engine()
+    skip_if_not_installed("RSQLite")
+    local_captured_mod_server()
+
+    qc <- QueryChat$new(new_users_df(), "users", greeting = "Test")
+    withr::defer(qc$cleanup())
+
+    # A DBI source can't be added alongside a data-frame source; registration
+    # fails after the DBISource wrapper has already been staged
+    db <- local_sqlite_connection(new_users_df(), "dbtable")
+    expect_error(
+      qc$server(
+        data_source = db$conn,
+        table_name = "dbtable",
+        session = fake_shiny_session()
+      ),
+      "all tables must be the same type"
+    )
+
+    # The staged wrapper owned the connection, so failure must not leak it
+    expect_false(DBI::dbIsValid(db$conn))
+  })
+})
+
+describe("QueryChat table replacement with a shared DBI connection", {
+  it("a session replacing a table with the same connection does not retire it", {
+    skip_if_not_installed("RSQLite")
+    local_captured_mod_server()
+
+    db <- local_sqlite_connection(new_users_df(), "users")
+    con <- db$conn
+
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+    withr::defer(qc$cleanup())
+
+    session1 <- fake_shiny_session()
+    session2 <- fake_shiny_session()
+    qc$server(data_source = con, session = session1)
+    qc$server(data_source = con, session = session2)
+
+    session1$end()
+    session2$end()
+
+    # The second session's source wraps the same connection, so flushing the
+    # retired first wrapper must not disconnect it
+    expect_true(DBI::dbIsValid(con))
+  })
+
+  it("a replaced connection is still disconnected once no session uses it", {
+    skip_if_not_installed("RSQLite")
+    local_captured_mod_server()
+
+    db1 <- local_sqlite_connection(new_users_df(), "users")
+    db2 <- local_sqlite_connection(new_users_df(), "users")
+
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+    withr::defer(qc$cleanup())
+
+    session1 <- fake_shiny_session()
+    session2 <- fake_shiny_session()
+    qc$server(data_source = db1$conn, session = session1)
+    qc$server(data_source = db2$conn, session = session2)
+
+    session1$end()
+    session2$end()
+
+    expect_false(DBI::dbIsValid(db1$conn))
+    expect_true(DBI::dbIsValid(db2$conn))
+  })
+
+  it("$add_table(replace=TRUE) does not disconnect a shared connection", {
+    skip_if_not_installed("RSQLite")
+
+    db <- local_sqlite_connection(new_users_df(), "users")
+
+    qc <- QueryChat$new(db$conn, "users", greeting = "Test")
+    withr::defer(qc$cleanup())
+
+    qc$add_table(db$conn, "users", replace = TRUE)
+
+    expect_true(DBI::dbIsValid(db$conn))
+  })
 })
 
 describe("QueryChat$server(data_source=) greeting snapshot", {

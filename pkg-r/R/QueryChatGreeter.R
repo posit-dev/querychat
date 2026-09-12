@@ -13,7 +13,7 @@ QueryChatGreeter <- R6::R6Class(
     .prompt = NULL
   ),
   public = list(
-    #' @param client_factory function(tables, prompt, base, data_sources) returning a configured greeting client.
+    #' @param client_factory function(tables, prompt, base, data_sources, data_description) returning a configured greeting client.
     initialize = function(client_factory) {
       private$.client_factory <- client_factory
       private$.tables <- character()

@@ -192,7 +192,6 @@ QueryChat <- R6::R6Class(
       other_sources <- private$.data_sources[
         names(private$.data_sources) != table_name
       ]
-      check_source_compatibility(other_sources, normalized, table_name)
 
       next_sources <- private$.data_sources
       next_sources[[table_name]] <- normalized
@@ -200,9 +199,12 @@ QueryChat <- R6::R6Class(
       private$auto_fill_data_description(next_sources)
       tryCatch(
         {
+          check_source_compatibility(other_sources, normalized, table_name)
           private$build_system_prompt(data_sources = next_sources)
         },
         error = function(e) {
+          # A source normalized here (not user-supplied) owns a fresh
+          # connection; don't leak it when staging fails.
           if (!inherits(data_source, "DataSource")) {
             normalized$cleanup()
           }
@@ -212,7 +214,11 @@ QueryChat <- R6::R6Class(
 
       old_source <- private$.data_sources[[table_name]]
       private$.data_sources <- next_sources
-      if (!is.null(old_source) && !identical(old_source, normalized)) {
+      if (
+        !is.null(old_source) &&
+          !identical(old_source, normalized) &&
+          !shares_underlying_connection(old_source, normalized)
+      ) {
         if (cleanup_replaced) {
           old_source$cleanup()
         } else {
@@ -648,7 +654,8 @@ QueryChat <- R6::R6Class(
         old_source <- private$.data_sources[[table_name]]
         if (
           !is.null(old_source) &&
-            !identical(old_source, normalized[[table_name]])
+            !identical(old_source, normalized[[table_name]]) &&
+            !shares_underlying_connection(old_source, normalized[[table_name]])
         ) {
           old_source$cleanup()
         }
@@ -1194,14 +1201,6 @@ QueryChat <- R6::R6Class(
 
       private$require_initialized("$server")
 
-      private$.active_sessions <- private$.active_sessions + 1L
-      session$onSessionEnded(function() {
-        private$.active_sessions <- private$.active_sessions - 1L
-        if (private$.active_sessions == 0) {
-          private$flush_retired_resources()
-        }
-      })
-
       if (is.null(private$.query_executor)) {
         private$.query_executor <- build_query_executor(private$.data_sources)
       }
@@ -1247,6 +1246,18 @@ QueryChat <- R6::R6Class(
         greeting_tables = self$greeter$tables,
         greeting_data_description = private$.data_description
       )
+
+      # Count the session (and arm the end-of-session flush) only after setup
+      # has fully succeeded: a failed $server() call on a still-live session
+      # must not block table mutations or defer replacement cleanup forever.
+      private$.active_sessions <- private$.active_sessions + 1L
+      session$onSessionEnded(function() {
+        private$.active_sessions <- private$.active_sessions - 1L
+        if (private$.active_sessions == 0) {
+          private$flush_retired_resources()
+        }
+      })
+
       result
     },
 
@@ -1268,13 +1279,15 @@ QueryChat <- R6::R6Class(
     #'
     #' @return Invisibly returns `NULL`. Resources are cleaned up internally.
     cleanup = function() {
+      # The retired-resource flush is the fallback cleanup path; make sure it
+      # runs even if cleaning the current executor or sources throws.
+      on.exit(private$flush_retired_resources(), add = TRUE)
       if (!is.null(private$.query_executor)) {
         private$.query_executor$cleanup()
       }
       for (source in private$.data_sources) {
         source$cleanup()
       }
-      private$flush_retired_resources()
       invisible(NULL)
     }
   ),
@@ -1574,6 +1587,19 @@ normalize_data_source <- function(data_source, table_name) {
   cli::cli_abort(
     "{.arg data_source} must be a {.cls DataSource}, {.cls data.frame}, or {.cls DBIConnection}, not {.obj_type_friendly {data_source}}."
   )
+}
+
+# Do the two sources wrap the same DBI connection? Each registration of a raw
+# connection gets its own DBISource wrapper, so two sources can share one
+# connection; the replacement then inherits ownership of it, and cleaning the
+# replaced wrapper would disconnect the connection out from under it.
+shares_underlying_connection <- function(old_source, new_source) {
+  if (
+    !inherits(old_source, "DBISource") || !inherits(new_source, "DBISource")
+  ) {
+    return(FALSE)
+  }
+  identical(old_source$get_connection(), new_source$get_connection())
 }
 
 normalize_data_dicts <- function(data_dict) {

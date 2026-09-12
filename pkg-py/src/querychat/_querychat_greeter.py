@@ -12,6 +12,8 @@ if TYPE_CHECKING:
 
     import chatlas
 
+    from ._datasource import DataSource
+
 
 class QueryChatGreeter:
     """Controls greeting generation for a QueryChat instance. Access via ``qc.greeter``."""
@@ -67,4 +69,31 @@ class QueryChatGreeter:
     async def generate_async(self, *, base: chatlas.Chat | None = None):
         """Stream a greeting response from the greeting client."""
         client = self.build_client(base)
+        return await client.stream_async(GREETING_PROMPT, echo="none")
+
+    async def _generate_async_snapshot(
+        self,
+        *,
+        base: chatlas.Chat | None,
+        tables: list[str] | None,
+        data_sources: dict[str, DataSource],
+    ):
+        """
+        Stream a greeting response from an explicit session snapshot.
+
+        Internal counterpart to :meth:`generate_async`, used by
+        ``mod_server()`` for Shiny sessions. `tables` and `data_sources`
+        override the live `self.tables` and the QueryChat instance's data
+        sources with a point-in-time snapshot captured when the session's
+        `.server()` call ran, rather than reading that shared, mutable state
+        whenever shinychat gets around to invoking the (lazily-scheduled,
+        asynchronous) greeting callback -- by then, a *later* session's own
+        `.server(data_source=...)` call may have already mutated it.
+        """
+        client = self._client_factory(
+            self._tables if tables is None else tables,
+            self._prompt,
+            base,
+            data_sources=data_sources,
+        )
         return await client.stream_async(GREETING_PROMPT, echo="none")

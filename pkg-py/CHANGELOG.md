@@ -31,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
       qc.server(data_source=conn.table("my_table"), client=chat_client)
   ```
 
-  Registering a table this way is no longer blocked by an earlier session having already registered one, and no longer tears down a still-in-use data source from an earlier session (replacing it via `server(data_source=)` leaves the replaced source's cleanup to whoever created it).
+  Registering a table this way is no longer blocked by an earlier session having already registered one, no longer tears down a still-in-use data source from an earlier session (replacing it via `server(data_source=)` leaves the replaced source's cleanup to whoever created it), and each session's auto-generated greeting reflects its own table even if a later session registers a different one before that greeting is generated.
 
 ### Improvements
 

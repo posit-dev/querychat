@@ -383,10 +383,14 @@ class QueryChatBase(Generic[IntoFrameT]):
                 tables: list[str],
                 prompt: str | Path,
                 base: chatlas.Chat | None = None,
+                *,
+                data_sources: dict[str, DataSource] | None = None,
             ) -> chatlas.Chat:
                 sp = QueryChatSystemPrompt(
                     prompt_template=prompt,
-                    data_sources=self._data_sources,
+                    data_sources=(
+                        self._data_sources if data_sources is None else data_sources
+                    ),
                     data_description=self._data_description,
                     extra_instructions=None,
                     categorical_threshold=self._categorical_threshold,

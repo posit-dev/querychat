@@ -420,6 +420,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 tools=self.tools,
                 greeter=self.greeter,
                 greeting_base=None,
+                greeting_tables=list(self.greeter.tables),
             )
 
             @reactive.calc
@@ -768,6 +769,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             tools=self.tools,
             greeter=self.greeter,
             greeting_base=resolved_client,
+            greeting_tables=list(self.greeter.tables),
         )
 
 
@@ -1055,6 +1057,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             tools=self.tools,
             greeter=self.greeter,
             greeting_base=None,
+            greeting_tables=list(self.greeter.tables),
         )
 
     def sidebar(

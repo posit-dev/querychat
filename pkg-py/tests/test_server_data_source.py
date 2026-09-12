@@ -197,3 +197,19 @@ class TestServerDataSourceCleanupSafety:
         with patch.object(first_executor, "cleanup") as mock_cleanup:
             qc.add_table(other_users_df, "users", replace=True)
             mock_cleanup.assert_called_once()
+
+
+class TestServerDataSourceGreetingSnapshot:
+    def test_server_passes_greeting_tables_snapshot_to_mod_server(
+        self, users_df, captured_mod_server
+    ):
+        """
+        .server() must pass a snapshot of greeter.tables captured at call
+        time, so mod_server's greeting generation doesn't read the live,
+        mutable greeter.tables from an async task that may run after a
+        later session has changed it.
+        """
+        qc = shiny_mod.QueryChat(None, table_name="users")
+        qc.server(data_source=users_df)
+
+        assert captured_mod_server[0]["greeting_tables"] == ["users"]

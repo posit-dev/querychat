@@ -104,6 +104,11 @@ class QueryChatBase(Generic[IntoFrameT]):
         # ended session can no longer be using a resource it registered.
         self._active_sessions = 0
 
+        # Sources/executors replaced while sessions were still live. Their
+        # cleanup is deferred until the last live session ends (or cleanup()
+        # runs) so a still-running session never loses a resource it uses.
+        self._retired_resources: list[DataSource | QueryExecutor] = []
+
         # Name to register at .server(data_source=...) time when constructed
         # with data_source=None (the deferred pattern).
         self._deferred_table_name: str | None = None
@@ -522,8 +527,9 @@ class QueryChatBase(Generic[IntoFrameT]):
         ``cleanup_replaced=False`` is for that per-session path: the
         replaced table may still be in active use by an earlier,
         still-running session, so cleaning it up here would pull the
-        resource out from under it. Cleanup becomes the caller's
-        responsibility (e.g. via ``session.on_ended()``).
+        resource out from under it. The retired source and cached executor
+        are retained and cleaned up once the last live session ends
+        (see ``_mark_server_initialized``).
         """
         if not isinstance(include_in_greeting, bool):
             raise TypeError(
@@ -560,12 +566,17 @@ class QueryChatBase(Generic[IntoFrameT]):
 
         old_source = self._data_sources.get(table_name)
         self._data_sources = next_data_sources
-        if cleanup_replaced and old_source is not None and old_source is not normalized:
-            old_source.cleanup()
+        if old_source is not None and old_source is not normalized:
+            if cleanup_replaced:
+                old_source.cleanup()
+            else:
+                self._retired_resources.append(old_source)
         if self._query_executor is not None:
             if cleanup_replaced:
                 with contextlib.suppress(Exception):
                     self._query_executor.cleanup()
+            else:
+                self._retired_resources.append(self._query_executor)
             self._query_executor = None
 
         if include_in_greeting and table_name not in self.greeter.tables:
@@ -611,7 +622,7 @@ class QueryChatBase(Generic[IntoFrameT]):
             If the resolved table list is empty, any name is invalid, or any
             name already exists (and ``replace=False``).
         RuntimeError
-            If called after :meth:`server` has been invoked.
+            If called while a server session is active.
 
         Examples
         --------
@@ -764,10 +775,26 @@ class QueryChatBase(Generic[IntoFrameT]):
         """
         self._active_sessions += 1
 
-        def _untrack_session() -> None:
+        def untrack_session() -> None:
             self._active_sessions -= 1
+            if self._active_sessions == 0:
+                self._flush_retired_resources()
 
-        session.on_ended(_untrack_session)
+        session.on_ended(untrack_session)
+
+    def _flush_retired_resources(self) -> None:
+        """
+        Clean up resources retired while sessions were still live.
+
+        Retired sources/executors may still be in use by a live session, so
+        this only runs once no sessions remain (or from ``cleanup()``).
+        """
+        retired = self._retired_resources
+        self._retired_resources = []
+        for resource in retired:
+            # Best-effort: one failing cleanup must not leave the rest open.
+            with contextlib.suppress(Exception):
+                resource.cleanup()
 
     def cleanup(self) -> None:
         """
@@ -788,6 +815,7 @@ class QueryChatBase(Generic[IntoFrameT]):
             self._query_executor.cleanup()
         for source in self._data_sources.values():
             source.cleanup()
+        self._flush_retired_resources()
         for client in self._owned_clients:
             # Best-effort: one provider's close() failing must not leave the
             # remaining owned clients open.

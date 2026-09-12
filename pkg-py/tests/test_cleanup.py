@@ -185,6 +185,74 @@ class TestServerSessionEndClosing:
         assert override.provider._client.is_closed()
 
 
+class TestRetiredResourceCleanup:
+    """Resources replaced while sessions are live are cleaned once they end."""
+
+    @pytest.fixture
+    def ended_callbacks(self, monkeypatch):
+        callbacks = []
+        fake_session = MagicMock()
+        fake_session.on_ended = callbacks.append
+        monkeypatch.setattr(shiny_mod, "get_current_session", lambda: fake_session)
+        monkeypatch.setattr(shiny_mod, "mod_server", lambda *args, **kwargs: None)
+        return callbacks
+
+    def test_replacement_with_live_session_defers_cleanup(
+        self, sample_df, ended_callbacks
+    ):
+        qc = shiny_mod.QueryChat(sample_df, "users")
+        qc.server()
+        old_source = qc._data_sources["users"]
+        old_executor = qc._query_executor
+
+        # Second session replaces the table while the first is still live
+        replacement = sample_df.copy()
+        qc.server(data_source=replacement)
+
+        assert old_source in qc._retired_resources
+        assert old_executor in qc._retired_resources
+        with (
+            patch.object(old_source, "cleanup") as source_cleanup,
+            patch.object(old_executor, "cleanup") as executor_cleanup,
+        ):
+            for cb in ended_callbacks:
+                cb()
+            source_cleanup.assert_called_once()
+            executor_cleanup.assert_called_once()
+        assert qc._retired_resources == []
+
+    def test_replacement_without_live_session_cleans_immediately(
+        self, sample_df, ended_callbacks
+    ):
+        qc = shiny_mod.QueryChat(sample_df, "users")
+        qc.server()
+        for cb in ended_callbacks:
+            cb()
+        old_source = qc._data_sources["users"]
+
+        with patch.object(old_source, "cleanup") as source_cleanup:
+            qc.server(data_source=sample_df.copy())
+            source_cleanup.assert_called_once()
+        assert qc._retired_resources == []
+
+    def test_cleanup_cleans_retired_resources(self, sample_df, ended_callbacks):
+        qc = shiny_mod.QueryChat(sample_df, "users")
+        qc.server()
+        old_source = qc._data_sources["users"]
+        old_executor = qc._query_executor
+        qc.server(data_source=sample_df.copy())
+
+        # Sessions never end: cleanup() still releases retired resources
+        with (
+            patch.object(old_source, "cleanup") as source_cleanup,
+            patch.object(old_executor, "cleanup") as executor_cleanup,
+        ):
+            qc.cleanup()
+            source_cleanup.assert_called_once()
+            executor_cleanup.assert_called_once()
+        assert qc._retired_resources == []
+
+
 class TestCleanupDataSources:
     """Existing executor/source cleanup behavior is preserved."""
 

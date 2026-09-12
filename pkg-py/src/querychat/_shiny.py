@@ -718,7 +718,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 replace=True,
                 include_in_greeting=True,
                 # A live session may still be using the replaced source,
-                # so only clean it up once no sessions are active.
+                # so defer its cleanup until no sessions are active.
                 cleanup_replaced=self._active_sessions == 0,
             )
 

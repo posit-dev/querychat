@@ -103,6 +103,10 @@ class QueryChatBase(Generic[IntoFrameT]):
         # Track server initialization state for add/remove table validation
         self._server_initialized = False
 
+        # Name to register at .server(data_source=...) time when constructed
+        # with data_source=None (the deferred pattern).
+        self._deferred_table_name: str | None = None
+
         self.tools = normalize_tools(tools, default=DEFAULT_TOOLS)
         self.greeting = greeting.read_text() if isinstance(greeting, Path) else greeting
         self.history = history
@@ -138,6 +142,8 @@ class QueryChatBase(Generic[IntoFrameT]):
                         "table_name is required when data_source is provided"
                     )
             self.add_table(data_source, table_name, include_in_greeting=True)
+        else:
+            self._deferred_table_name = table_name
 
     def _build_system_prompt(
         self,

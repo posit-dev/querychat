@@ -22,6 +22,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   app_ui = qc.page("Titanic Explorer")  # Core
   ```
 
+* Restored `data_source` (and added `table_name`) parameters on `QueryChat.server()`, matching R's `$server(data_source = )`. This supports the deferred pattern where the data source can only be created inside the Shiny server function (e.g. per-user OAuth-scoped database connections on Posit Connect). (#300)
+
+  ```python
+  qc = QueryChat(None, table_name="my_table")
+
+  def server(input, output, session):
+      qc.server(data_source=conn.table("my_table"), client=chat_client)
+  ```
+
 ### Improvements
 
 * The `"visualize"` tool is now included in the default toolset (`tools=("filter", "query", "visualize")`). If the visualization dependencies are not installed (the `viz` extra), the tool is dropped with a warning instead of raising an `ImportError`.

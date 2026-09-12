@@ -42,6 +42,7 @@ db_source$cleanup()
     \item \href{#method-DBISource-execute_query}{\code{DBISource$execute_query()}}
     \item \href{#method-DBISource-test_query}{\code{DBISource$test_query()}}
     \item \href{#method-DBISource-get_data}{\code{DBISource$get_data()}}
+    \item \href{#method-DBISource-get_connection}{\code{DBISource$get_connection()}}
     \item \href{#method-DBISource-cleanup}{\code{DBISource$cleanup()}}
     \item \href{#method-DBISource-clone}{\code{DBISource$clone()}}
   }
@@ -197,6 +198,21 @@ all original table columns (default: \code{FALSE})}
   }
   \subsection{Returns}{
     A data frame containing all data
+  }
+}
+
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-DBISource-get_connection"></a>}}
+\if{latex}{\out{\hypertarget{method-DBISource-get_connection}{}}}
+\subsection{\code{DBISource$get_connection()}}{
+  Get the underlying DBI connection
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{DBISource$get_connection()}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    The DBI connection this source wraps.
   }
 }
 

@@ -74,6 +74,7 @@ if (rlang::is_installed(c("pins", "duckdb"))) {
 <ul>
   <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="cleanup"><a href='../../querychat/html/DBISource.html#method-DBISource-cleanup'><code>DBISource$cleanup()</code></a></span></li>
   <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="execute_query"><a href='../../querychat/html/DBISource.html#method-DBISource-execute_query'><code>DBISource$execute_query()</code></a></span></li>
+  <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_connection"><a href='../../querychat/html/DBISource.html#method-DBISource-get_connection'><code>DBISource$get_connection()</code></a></span></li>
   <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_data"><a href='../../querychat/html/DBISource.html#method-DBISource-get_data'><code>DBISource$get_data()</code></a></span></li>
   <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_db_type"><a href='../../querychat/html/DBISource.html#method-DBISource-get_db_type'><code>DBISource$get_db_type()</code></a></span></li>
   <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_schema"><a href='../../querychat/html/DBISource.html#method-DBISource-get_schema'><code>DBISource$get_schema()</code></a></span></li>

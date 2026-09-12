@@ -200,3 +200,17 @@ class TestCleanupDataSources:
         qc = QueryChatBase(sample_df, "users", client="openai")
         qc.cleanup()
         qc.cleanup()  # should not raise
+
+    def test_cleanup_closes_remaining_clients_after_close_failure(
+        self, monkeypatch, sample_df
+    ):
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-key-for-testing")
+        qc = QueryChatBase(sample_df, "users", client="openai")
+        override = qc.resolve_override_client("openai")
+        with (
+            patch.object(qc._base_client, "close", side_effect=RuntimeError("boom")),
+            pytest.warns(UserWarning, match="Failed to close chatlas client"),
+        ):
+            qc.cleanup()
+        assert override.provider._client.is_closed()
+        assert qc._owned_clients == []

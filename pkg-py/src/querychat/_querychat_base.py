@@ -251,8 +251,10 @@ class QueryChatBase(Generic[IntoFrameT]):
 
     def close_owned_client(self, client: chatlas.Chat) -> None:
         """Close an owned client and stop tracking it. Idempotent."""
-        client.close()
-        self._owned_clients[:] = [c for c in self._owned_clients if c is not client]
+        try:
+            client.close()
+        finally:
+            self._owned_clients[:] = [c for c in self._owned_clients if c is not client]
 
     def _create_session_client(
         self,
@@ -736,7 +738,12 @@ class QueryChatBase(Generic[IntoFrameT]):
         for source in self._data_sources.values():
             source.cleanup()
         for client in self._owned_clients:
-            client.close()
+            # Best-effort: one provider's close() failing must not leave the
+            # remaining owned clients open.
+            try:
+                client.close()
+            except Exception as e:  # noqa: PERF203 (teardown of a few clients, not a hot loop)
+                warnings.warn(f"Failed to close chatlas client: {e}", stacklevel=2)
         self._owned_clients.clear()
 
 

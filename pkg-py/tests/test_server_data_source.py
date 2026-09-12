@@ -105,6 +105,11 @@ class TestServerDataSourceRegistersDeferredTable:
         with pytest.raises(ValueError, match="table_name"):
             qc.server(data_source=users_df)
 
+    def test_invalid_deferred_table_name_raises_at_construction(self):
+        """A bad deferred name must fail fast, not at .server() registration."""
+        with pytest.raises(ValueError, match="must begin with a letter"):
+            shiny_mod.QueryChat(None, table_name="bad-name")
+
     def test_empty_explicit_table_name_raises_instead_of_falling_back(
         self, users_df, captured_mod_server
     ):

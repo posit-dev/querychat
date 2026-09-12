@@ -149,6 +149,15 @@ class QueryChatBase(Generic[IntoFrameT]):
                     )
             self.add_table(data_source, table_name, include_in_greeting=True)
         else:
+            # Validate now: a bad deferred name would otherwise surface at
+            # .server() registration time, after the module id is built.
+            if table_name is not None and not re.match(
+                r"^[a-zA-Z][a-zA-Z0-9_]*$", table_name
+            ):
+                raise ValueError(
+                    "Table name must begin with a letter and contain only "
+                    "letters, numbers, and underscores"
+                )
             self._deferred_table_name = table_name
 
     def _build_system_prompt(

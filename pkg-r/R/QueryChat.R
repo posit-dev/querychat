@@ -398,6 +398,11 @@ QueryChat <- R6::R6Class(
           "querychat"
         }
         self$id <- id %||% default_id
+        # $ui()/$sidebar() may render with this id before any session's
+        # $server(data_source = ) call registers a table -- pin id_override
+        # so add_table()'s single-table auto-rename doesn't fire later and
+        # desync the module namespace from what's already been rendered.
+        self$id_override <- self$id
       }
 
       # By default, only close automatically if a Shiny session is active
@@ -1057,8 +1062,6 @@ QueryChat <- R6::R6Class(
     #'   per-user OAuth credentials). Registered under `table_name` if given,
     #'   otherwise the `table_name` passed to `$new()`, or the first
     #'   already-registered table.
-    #' @param table_name Table name to register `data_source` under. Only
-    #'   used when `data_source` is provided.
     #' @param client Optional chat client override for this session.
     #' @param history Conversation history configuration for this call. Overrides
     #'   the value set on `$new()`. Resolves to `TRUE` when neither this nor the
@@ -1069,6 +1072,9 @@ QueryChat <- R6::R6Class(
     #' @param ... Ignored.
     #' @param id Optional module ID override.
     #' @param session The Shiny session object.
+    #' @param table_name Table name to register `data_source` under. Only
+    #'   used when `data_source` is provided. Named-only (placed after `...`)
+    #'   so it can't shift the meaning of existing positional calls.
     #'
     #' @return A list containing session-specific reactive values and the chat
     #'   client. For single-table usage, includes `df`, `sql`, `title` directly.
@@ -1078,13 +1084,13 @@ QueryChat <- R6::R6Class(
     #'   or `NULL` before any query.
     server = function(
       data_source = NULL,
-      table_name = NULL,
       client = NULL,
       history = NULL,
       enable_bookmarking = NULL,
       ...,
       id = NULL,
-      session = shiny::getDefaultReactiveDomain()
+      session = shiny::getDefaultReactiveDomain(),
+      table_name = NULL
     ) {
       check_string(table_name, allow_null = TRUE, allow_empty = FALSE)
       check_string(id, allow_null = TRUE, allow_empty = FALSE)

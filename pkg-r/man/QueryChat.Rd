@@ -557,13 +557,13 @@ and \code{window_title} is omitted, it is also used as the document title.}
     \if{html}{\out{<div class="r">}}
     \preformatted{QueryChat$server(
   data_source = NULL,
-  table_name = NULL,
   client = NULL,
   history = NULL,
   enable_bookmarking = NULL,
   ...,
   id = NULL,
-  session = shiny::getDefaultReactiveDomain()
+  session = shiny::getDefaultReactiveDomain(),
+  table_name = NULL
 )}
     \if{html}{\out{</div>}}
   }
@@ -576,8 +576,6 @@ until the server function runs (e.g. a connection scoped to
 per-user OAuth credentials). Registered under \code{table_name} if given,
 otherwise the \code{table_name} passed to \verb{$new()}, or the first
 already-registered table.}
-      \item{\code{table_name}}{Table name to register \code{data_source} under. Only
-used when \code{data_source} is provided.}
       \item{\code{client}}{Optional chat client override for this session.}
       \item{\code{history}}{Conversation history configuration for this call. Overrides
 the value set on \verb{$new()}. Resolves to \code{TRUE} when neither this nor the
@@ -587,6 +585,9 @@ constructor's \code{history} was set.}
       \item{\code{...}}{Ignored.}
       \item{\code{id}}{Optional module ID override.}
       \item{\code{session}}{The Shiny session object.}
+      \item{\code{table_name}}{Table name to register \code{data_source} under. Only
+used when \code{data_source} is provided. Named-only (placed after \code{...})
+so it can't shift the meaning of existing positional calls.}
     }
     \if{html}{\out{</div>}}
   }

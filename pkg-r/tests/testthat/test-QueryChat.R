@@ -1158,6 +1158,60 @@ describe("QueryChat deferred client with $server()", {
     )
     expect_equal(qc$table_names(), "users")
   })
+
+  it("id stays fixed across deferred registration (no desync from an already-rendered UI)", {
+    skip_if_no_dataframe_engine()
+    qc <- QueryChat$new(
+      NULL,
+      greeting = "Test",
+      client = mock_ellmer_chat_client()
+    )
+    id_before_server <- qc$id # simulates $ui()/$sidebar() having already rendered
+
+    shiny::testServer(
+      function(input, output, session) {
+        qc$server(data_source = new_users_df(), table_name = "users")
+      },
+      {}
+    )
+
+    expect_equal(qc$id, id_before_server)
+  })
+
+  it("id stays fixed when a table_name was given at $new() too", {
+    skip_if_no_dataframe_engine()
+    qc <- QueryChat$new(
+      NULL,
+      "orders",
+      greeting = "Test",
+      client = mock_ellmer_chat_client()
+    )
+    id_before_server <- qc$id
+
+    shiny::testServer(
+      function(input, output, session) {
+        qc$server(data_source = new_users_df(), table_name = "different_name")
+      },
+      {}
+    )
+
+    expect_equal(qc$id, id_before_server)
+  })
+
+  it("$server() preserves positional data_source/client call compatibility", {
+    skip_if_no_dataframe_engine()
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+
+    expect_error(
+      shiny::testServer(
+        function(input, output, session) {
+          qc$server(new_users_df(), mock_ellmer_chat_client())
+        },
+        {}
+      ),
+      NA
+    )
+  })
 })
 
 describe("QueryChat$add_tables()", {

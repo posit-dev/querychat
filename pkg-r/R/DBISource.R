@@ -213,13 +213,11 @@ DBISource <- R6::R6Class(
     },
 
     #' @description
-    #' Disconnect from the database
+    #' No-op: the DBI connection is owned by the caller. Disconnect it
+    #' yourself with `DBI::dbDisconnect()` when your application shuts down.
     #'
-    #' @return NULL (invisibly)
+    #' @return `NULL` (invisibly)
     cleanup = function() {
-      if (!is.null(private$conn) && DBI::dbIsValid(private$conn)) {
-        DBI::dbDisconnect(private$conn)
-      }
       invisible(NULL)
     }
   )

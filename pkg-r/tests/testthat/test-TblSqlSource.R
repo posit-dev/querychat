@@ -300,6 +300,15 @@ describe("TblSqlSource edge cases - Category B: Column Naming Issues", {
   })
 })
 
+test_that("TblSqlSource$cleanup() leaves the caller's connection open", {
+  source <- local_tbl_sql_source(new_test_df())
+  conn <- dbplyr::remote_con(source$get_data())
+
+  source$cleanup()
+
+  expect_true(DBI::dbIsValid(conn))
+})
+
 describe("TblSqlSource edge cases - Category C: ORDER BY behavior", {
   it("handles ORDER BY without LIMIT", {
     source <- local_tbl_sql_source()

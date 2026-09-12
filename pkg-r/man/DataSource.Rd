@@ -176,7 +176,10 @@ Subclasses may override this to provide metadata-derived descriptions
 \if{html}{\out{<a id="method-DataSource-cleanup"></a>}}
 \if{latex}{\out{\hypertarget{method-DataSource-cleanup}{}}}
 \subsection{\code{DataSource$cleanup()}}{
-  Clean up resources (close connections, etc.)
+  Release resources this data source created. Only resources querychat
+opened itself are closed (for example the in-memory DuckDB connection a
+\link{DataFrameSource} creates). Connections passed in by the caller are
+never closed; their lifecycle stays with the caller.
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
     \preformatted{DataSource$cleanup()}

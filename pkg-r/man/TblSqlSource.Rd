@@ -221,14 +221,14 @@ all original table columns (default: \code{FALSE})}
 \if{html}{\out{<a id="method-TblSqlSource-cleanup"></a>}}
 \if{latex}{\out{\hypertarget{method-TblSqlSource-cleanup}{}}}
 \subsection{\code{TblSqlSource$cleanup()}}{
-  Clean up resources (close connections, etc.)
+  No-op: the connection behind the \code{tbl_sql} is owned by the caller.
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
     \preformatted{TblSqlSource$cleanup()}
     \if{html}{\out{</div>}}
   }
   \subsection{Returns}{
-    NULL (invisibly)
+    \code{NULL} (invisibly)
   }
 }
 

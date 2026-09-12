@@ -5,24 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.8.0] - 2026-09-12
 
 ### New features
 
-* `QueryChat.cleanup()` now also closes the chatlas client, releasing its provider resources (HTTP connection pools, database sessions) — but only when querychat created the client itself (i.e., `client` was `None` or a string spec like `"openai/gpt-4o"`). A user-supplied `chatlas.Chat` instance is never closed by querychat; its lifecycle remains the caller's responsibility. In long-lived applications, call `qc.cleanup()` when the app shuts down. Clients resolved from a spec passed to `.server(client=...)` are session-scoped and are closed automatically when their Shiny session ends.
+* New `/handoff` slash command: turn selected query and visualization results from your chat session into a downloadable Quarto dashboard, Shiny app, or marimo notebook — with AI-assisted revision and bundled data. Handoffs survive chat history restores and Shiny bookmarks.
 
-* `QueryChat.app()` (Core; Express has no `.app()` entry point) is now chat-first: it builds on the `.page()` layout, so the chat owns the window, and the SQL editor + data table live in a `chat_drawer` that auto-opens when the LLM runs a query (including on bookmark/history restore).
-
-* New `/handoff` slash command: turn selected query and visualization results from your chat session into a downloadable Quarto dashboard, Shiny app, or marimo notebook — with AI-assisted revision, bundled data, and handoffs that survive chat history restores and Shiny bookmarks.
-
-* Added a `.page()` method to `QueryChat` (both Core and Express) that wraps `shinychat.page_chat()` for full-window, "chat-first" apps. The chat owns the page (with conversation history, optional navigation pages, sidebars, and a drawer), and reactive data views can live on secondary pages via `shinychat.chat_nav_panel()`.
+* New `.page()` method (Core and Express) for full-window, "chat-first" apps, built on `shinychat.page_chat()`. The chat owns the page, with optional navigation pages, sidebars, and a drawer; reactive data views can live on secondary pages via `shinychat.chat_nav_panel()`.
 
   ```python
   qc = QueryChat(titanic(), "titanic")
   app_ui = qc.page("Titanic Explorer")  # Core
   ```
 
-* Restored `data_source` (and added `table_name`) parameters on `QueryChat.server()`, matching R's `$server(data_source = )`. This supports the deferred pattern where the data source can only be created inside the Shiny server function (e.g. per-user OAuth-scoped database connections on Posit Connect). (#300)
+* `QueryChat.app()` is now chat-first: it builds on `.page()`, with the SQL editor and data table in a drawer that auto-opens when the LLM runs a query (including on bookmark/history restore).
+
+* Restored the `data_source` parameter (and added `table_name`) on `QueryChat.server()`, matching R's `$server(data_source = )`. This supports creating the data source inside the server function — e.g. per-user database connections on Posit Connect. Concurrent sessions no longer clobber each other's data sources or greetings. (#300)
 
   ```python
   qc = QueryChat(None, table_name="my_table")
@@ -31,15 +29,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
       qc.server(data_source=conn.table("my_table"), client=chat_client)
   ```
 
-  Registering a table this way is no longer blocked by an earlier session having already registered one, no longer tears down a still-in-use data source from an earlier session (replacing it via `server(data_source=)` leaves the replaced source's cleanup to whoever created it), and each session's auto-generated greeting reflects its own table even if a later session registers a different one before that greeting is generated.
+* `QueryChat.cleanup()` now also closes the chat client, releasing provider resources (HTTP connections, database sessions) — but only when querychat created the client itself; a user-supplied `chatlas.Chat` is never closed. In long-lived apps, call `qc.cleanup()` on shutdown. Clients created from a spec passed to `.server(client=...)` are closed automatically when the Shiny session ends.
 
-### Improvements
+### Changes
 
-* The `"visualize"` tool is now included in the default toolset (`tools=("filter", "query", "visualize")`). If the visualization dependencies are not installed (the `viz` extra), the tool is dropped with a warning instead of raising an `ImportError`.
+* The `"visualize"` tool is now enabled by default (`tools=("filter", "query", "visualize")`). If the `viz` extra isn't installed, the tool is skipped with a warning instead of raising an `ImportError`.
 
 ### Bug fixes
 
-* Fixed a phantom scrollbar on scrollable ancestors of the chat (e.g. a bslib sidebar created with `qc.sidebar()`): the hidden visualization preload widget is much taller than its 1px container, and its unclipped overflow leaked into the ancestor's scrollable region, letting it scroll past the chat's bottom edge.
+* `server(data_source=)` now cleans up the data source it replaces on the first call — when no other session can still be using it — matching the long-standing `add_table(replace=True)` behavior; only subsequent sessions' registrations leave cleanup to the source's creator. (#300)
+
+* Fixed a phantom scrollbar that could let containers holding the chat (e.g. a bslib sidebar created with `qc.sidebar()`) scroll past the chat's bottom edge.
 
 ## [0.7.0] - 2026-07-10
 

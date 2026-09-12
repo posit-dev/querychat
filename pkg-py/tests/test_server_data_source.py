@@ -36,6 +36,38 @@ def captured_mod_server(monkeypatch):
     return calls
 
 
+class FakeSession(MagicMock):
+    """A fake Shiny session whose on_ended callbacks can be fired manually."""
+
+    def __init__(self):
+        super().__init__()
+        self._ended_callbacks: list = []
+        self.on_ended = self._ended_callbacks.append
+
+    def end(self):
+        """Simulate the session ending (fires registered on_ended callbacks)."""
+        for cb in self._ended_callbacks:
+            cb()
+
+
+@pytest.fixture
+def fake_sessions(monkeypatch):
+    """Patch mod_server/get_current_session; each server() call gets a new session."""
+    sessions: list[FakeSession] = []
+
+    def fake_mod_server(*args, **kwargs):
+        return MagicMock()
+
+    def next_session():
+        session = FakeSession()
+        sessions.append(session)
+        return session
+
+    monkeypatch.setattr(shiny_mod, "mod_server", fake_mod_server)
+    monkeypatch.setattr(shiny_mod, "get_current_session", next_session)
+    return sessions
+
+
 class TestServerDataSourceRegistersDeferredTable:
     def test_registers_deferred_table_by_constructor_name(
         self, users_df, captured_mod_server
@@ -72,6 +104,11 @@ class TestServerDataSourceRegistersDeferredTable:
         qc = shiny_mod.QueryChat()
         with pytest.raises(ValueError, match="table_name"):
             qc.server(data_source=users_df)
+
+    def test_invalid_deferred_table_name_raises_at_construction(self):
+        """A bad deferred name must fail fast, not at .server() registration."""
+        with pytest.raises(ValueError, match="must begin with a letter"):
+            shiny_mod.QueryChat(None, table_name="bad-name")
 
     def test_empty_explicit_table_name_raises_instead_of_falling_back(
         self, users_df, captured_mod_server
@@ -117,7 +154,7 @@ class TestServerDataSourceSurvivesSecondSession:
         qc = shiny_mod.QueryChat(None, table_name="users")
         qc.server(data_source=users_df)
 
-        with pytest.raises(RuntimeError, match="Cannot add tables after server"):
+        with pytest.raises(RuntimeError, match="Cannot add tables while a server session"):
             qc.add_table(other_users_df, "other")
 
 
@@ -182,6 +219,77 @@ class TestServerDataSourceCleanupSafety:
             qc.add_table(other_users_df, "users", replace=True)
             mock_cleanup.assert_called_once()
 
+    def test_first_server_call_cleans_up_constructor_registered_source(
+        self, users_df, other_users_df, captured_mod_server
+    ):
+        """No session can still be using it, so cleanup-on-replace holds."""
+        qc = shiny_mod.QueryChat(users_df, "users")
+        constructor_source = qc._data_sources["users"]
+
+        with patch.object(constructor_source, "cleanup") as mock_cleanup:
+            qc.server(data_source=other_users_df)
+            mock_cleanup.assert_called_once()
+
+    def test_second_session_skips_cleanup_even_when_first_cleaned_up(
+        self, users_df, other_users_df, captured_mod_server
+    ):
+        qc = shiny_mod.QueryChat(users_df, "users")
+
+        qc.server(data_source=other_users_df)
+        session1_source = qc._data_sources["users"]
+
+        third_df = pd.DataFrame({"id": [7, 8, 9], "name": ["F", "G", "H"]})
+        with patch.object(session1_source, "cleanup") as mock_cleanup:
+            qc.server(data_source=third_df)
+            mock_cleanup.assert_not_called()
+
+
+class TestServerDataSourceSessionLifecycle:
+    """
+    The hazard behind cleanup-on-replace and the add/remove_table guards is
+    *live* sessions, not past ones: a session that has ended can no longer
+    be using a resource it registered.
+    """
+
+    def test_ended_sessions_source_is_cleaned_up_on_replace(
+        self, users_df, other_users_df, fake_sessions
+    ):
+        qc = shiny_mod.QueryChat(None, table_name="users")
+        qc.server(data_source=users_df)
+        first_source = qc._data_sources["users"]
+
+        fake_sessions[0].end()
+
+        with patch.object(first_source, "cleanup") as mock_cleanup:
+            qc.server(data_source=other_users_df)
+            mock_cleanup.assert_called_once()
+
+    def test_replaced_source_survives_while_any_session_is_live(
+        self, users_df, other_users_df, fake_sessions
+    ):
+        qc = shiny_mod.QueryChat(None, table_name="users")
+        qc.server(data_source=users_df)  # session 1
+        qc.server(data_source=other_users_df)  # session 2 replaces s1's source
+        second_source = qc._data_sources["users"]
+
+        fake_sessions[0].end()  # s1 ends; s2 still live
+
+        third_df = pd.DataFrame({"id": [7], "name": ["F"]})
+        with patch.object(second_source, "cleanup") as mock_cleanup:
+            qc.server(data_source=third_df)  # session 3 replaces s2's source
+            mock_cleanup.assert_not_called()
+
+    def test_add_table_allowed_once_all_sessions_have_ended(
+        self, users_df, other_users_df, fake_sessions
+    ):
+        qc = shiny_mod.QueryChat(None, table_name="users")
+        qc.server(data_source=users_df)
+
+        fake_sessions[0].end()
+
+        qc.add_table(other_users_df, "other")  # must not raise
+        assert qc.table_names() == ["users", "other"]
+
 
 class TestServerDataSourceGreetingSnapshot:
     def test_server_passes_greeting_tables_snapshot_to_mod_server(
@@ -211,12 +319,12 @@ class TestServerDataSourceMixedWithConfigTimeAddTable:
         assert list(sources.keys()) == ["orders"]
         assert sources["orders"].get_data()["id"].tolist() == [4, 5]
 
-    def test_replacing_config_time_table_does_not_clean_it_up(
+    def test_replacing_config_time_table_on_first_server_call_cleans_it_up(
         self, users_df, other_users_df, captured_mod_server
     ):
         """
-        Consistent with per-session replacement: the replaced source's
-        cleanup is left to whoever created it.
+        No session is running yet, so the replaced source has a single owner
+        and cleanup-on-replace still holds (only later sessions skip it).
         """
         qc = shiny_mod.QueryChat()
         qc.add_table(users_df, "orders")
@@ -224,7 +332,7 @@ class TestServerDataSourceMixedWithConfigTimeAddTable:
 
         with patch.object(config_source, "cleanup") as mock_cleanup:
             qc.server(data_source=other_users_df)
-            mock_cleanup.assert_not_called()
+            mock_cleanup.assert_called_once()
 
     def test_explicit_table_name_adds_alongside_config_time_table(
         self, users_df, other_users_df, captured_mod_server

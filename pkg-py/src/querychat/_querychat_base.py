@@ -100,8 +100,14 @@ class QueryChatBase(Generic[IntoFrameT]):
         self._data_sources: dict[str, DataSource] = {}
         self._query_executor: QueryExecutor | None = None
 
-        # Track server initialization state for add/remove table validation
-        self._server_initialized = False
+        # Live Shiny session count. Shared-state guards key off this: an
+        # ended session can no longer be using a resource it registered.
+        self._active_sessions = 0
+
+        # Sources/executors replaced while sessions were still live. Their
+        # cleanup is deferred until the last live session ends (or cleanup()
+        # runs) so a still-running session never loses a resource it uses.
+        self._retired_resources: list[DataSource | QueryExecutor] = []
 
         # Name to register at .server(data_source=...) time when constructed
         # with data_source=None (the deferred pattern).
@@ -143,6 +149,15 @@ class QueryChatBase(Generic[IntoFrameT]):
                     )
             self.add_table(data_source, table_name, include_in_greeting=True)
         else:
+            # Validate now: a bad deferred name would otherwise surface at
+            # .server() registration time, after the module id is built.
+            if table_name is not None and not re.match(
+                r"^[a-zA-Z][a-zA-Z0-9_]*$", table_name
+            ):
+                raise ValueError(
+                    "Table name must begin with a letter and contain only "
+                    "letters, numbers, and underscores"
+                )
             self._deferred_table_name = table_name
 
     def _build_system_prompt(
@@ -487,12 +502,12 @@ class QueryChatBase(Generic[IntoFrameT]):
         ValueError
             If table_name already exists (and replace=False) or is invalid.
         RuntimeError
-            If called after server() has been invoked.
+            If called while a server session is active.
 
         """
-        if self._server_initialized:
+        if self._active_sessions > 0:
             raise RuntimeError(
-                "Cannot add tables after server initialization. "
+                "Cannot add tables while a server session is active. "
                 "Add all tables before calling .server() or .app()."
             )
         self._add_or_replace_table(
@@ -516,14 +531,14 @@ class QueryChatBase(Generic[IntoFrameT]):
 
         Guard-free core of :meth:`add_table`, also called directly by
         ``.server(data_source=...)`` so each session can register its own
-        table even after an earlier session's ``.server()`` call has set
-        ``_server_initialized``.
+        table even while earlier sessions are still running.
 
         ``cleanup_replaced=False`` is for that per-session path: the
         replaced table may still be in active use by an earlier,
         still-running session, so cleaning it up here would pull the
-        resource out from under it. Cleanup becomes the caller's
-        responsibility (e.g. via ``session.on_ended()``).
+        resource out from under it. The retired source and cached executor
+        are retained and cleaned up once the last live session ends
+        (see ``_mark_server_initialized``).
         """
         if not isinstance(include_in_greeting, bool):
             raise TypeError(
@@ -560,12 +575,17 @@ class QueryChatBase(Generic[IntoFrameT]):
 
         old_source = self._data_sources.get(table_name)
         self._data_sources = next_data_sources
-        if cleanup_replaced and old_source is not None and old_source is not normalized:
-            old_source.cleanup()
+        if old_source is not None and old_source is not normalized:
+            if cleanup_replaced:
+                old_source.cleanup()
+            else:
+                self._retired_resources.append(old_source)
         if self._query_executor is not None:
             if cleanup_replaced:
                 with contextlib.suppress(Exception):
                     self._query_executor.cleanup()
+            else:
+                self._retired_resources.append(self._query_executor)
             self._query_executor = None
 
         if include_in_greeting and table_name not in self.greeter.tables:
@@ -611,7 +631,7 @@ class QueryChatBase(Generic[IntoFrameT]):
             If the resolved table list is empty, any name is invalid, or any
             name already exists (and ``replace=False``).
         RuntimeError
-            If called after :meth:`server` has been invoked.
+            If called while a server session is active.
 
         Examples
         --------
@@ -631,9 +651,9 @@ class QueryChatBase(Generic[IntoFrameT]):
         >>> qc.add_tables(backend)
 
         """
-        if self._server_initialized:
+        if self._active_sessions > 0:
             raise RuntimeError(
-                "Cannot add tables after server initialization. "
+                "Cannot add tables while a server session is active. "
                 "Add all tables before calling .server() or .app()."
             )
 
@@ -722,12 +742,12 @@ class QueryChatBase(Generic[IntoFrameT]):
         ValueError
             If table doesn't exist or is the last remaining table.
         RuntimeError
-            If called after server() has been invoked.
+            If called while a server session is active.
 
         """
-        if self._server_initialized:
+        if self._active_sessions > 0:
             raise RuntimeError(
-                "Cannot remove tables after server initialization. "
+                "Cannot remove tables while a server session is active. "
                 "Configure all tables before calling .server() or .app()."
             )
 
@@ -754,9 +774,36 @@ class QueryChatBase(Generic[IntoFrameT]):
             self._query_executor = None
         removed_source.cleanup()
 
-    def _mark_server_initialized(self) -> None:
-        """Mark that the server has been initialized. Prevents add/remove_table."""
-        self._server_initialized = True
+    def _mark_server_initialized(self, session) -> None:
+        """
+        Track a newly started session until it ends.
+
+        The add/remove_table guards and cleanup-on-replace in
+        ``server(data_source=...)`` key off the number of *live* sessions:
+        a session that has ended can no longer be using a replaced resource.
+        """
+        self._active_sessions += 1
+
+        def untrack_session() -> None:
+            self._active_sessions -= 1
+            if self._active_sessions == 0:
+                self._flush_retired_resources()
+
+        session.on_ended(untrack_session)
+
+    def _flush_retired_resources(self) -> None:
+        """
+        Clean up resources retired while sessions were still live.
+
+        Retired sources/executors may still be in use by a live session, so
+        this only runs once no sessions remain (or from ``cleanup()``).
+        """
+        retired = self._retired_resources
+        self._retired_resources = []
+        for resource in retired:
+            # Best-effort: one failing cleanup must not leave the rest open.
+            with contextlib.suppress(Exception):
+                resource.cleanup()
 
     def cleanup(self) -> None:
         """
@@ -777,6 +824,7 @@ class QueryChatBase(Generic[IntoFrameT]):
             self._query_executor.cleanup()
         for source in self._data_sources.values():
             source.cleanup()
+        self._flush_retired_resources()
         for client in self._owned_clients:
             # Best-effort: one provider's close() failing must not leave the
             # remaining owned clients open.

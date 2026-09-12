@@ -298,15 +298,12 @@ class DataSource(ABC, Generic[IntoFrameT]):
     @abstractmethod
     def cleanup(self) -> None:
         """
-        Clean up resources associated with the data source.
+        Release resources this data source created.
 
-        This method should clean up any connections or resources used by the
-        data source.
-
-        Returns
-        -------
-        None
-
+        Only resources querychat created are closed here (for example the
+        in-memory DuckDB connection a ``DataFrameSource`` opens). Connections,
+        engines, and backends passed in by the caller are never closed; their
+        lifecycle stays with the caller.
         """
 
     def get_data_description(self) -> str:
@@ -819,15 +816,11 @@ class SQLAlchemySource(DataSource[nw.DataFrame]):
 
     def cleanup(self) -> None:
         """
-        Dispose of the SQLAlchemy engine.
+        No-op: the SQLAlchemy engine is owned by the caller.
 
-        Returns
-        -------
-        None
-
+        Dispose it yourself with ``engine.dispose()`` when your application
+        shuts down.
         """
-        if self._engine:
-            self._engine.dispose()
 
 
 class PolarsLazySource(DataSource["pl.LazyFrame"]):

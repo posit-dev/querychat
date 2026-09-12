@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changes
+
+* `.server(data_source=)` no longer modifies the `QueryChat` instance. The table is registered for that session only: the instance's tables, greeting tables, and system prompt are unchanged, a same-named instance table is shadowed for that session, and the session's data source is cleaned up when the session ends. This removes the concurrent-session edge cases that `0.8.0` patched around (#300, #302, #303, #304, #308).
+
+* `cleanup()` follows one rule: querychat closes only what it created. `SQLAlchemySource.cleanup()` no longer disposes your engine; dispose it yourself on shutdown. `DataFrameSource`/`PinSource` DuckDB connections and querychat-created chat clients are still closed.
+
+* Adding a *new* table with `add_table()`/`add_tables()` after a session has started now warns instead of raising; running sessions keep their tables and new sessions see the addition. Replacing or removing an existing table after a session has started still raises.
+
+* `cleanup()` no longer closes a spec-resolved `.server(client=...)` override while its session is still running; it is closed when the session ends.
+
 ## [0.8.0] - 2026-09-12
 
 ### New features

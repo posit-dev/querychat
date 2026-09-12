@@ -1240,6 +1240,20 @@ describe("QueryChat deferred client with $server()", {
   })
 })
 
+describe("QueryChat$add_table()", {
+  it("errors when a DataSource's own table_name conflicts with the registration name", {
+    skip_if_no_dataframe_engine()
+    qc <- QueryChat$new(NULL, greeting = "Test")
+    mismatched_source <- local_data_frame_source(new_users_df(), "orders")
+
+    expect_error(
+      qc$add_table(mismatched_source, "users"),
+      "table name"
+    )
+    expect_equal(length(qc$table_names()), 0L)
+  })
+})
+
 describe("QueryChat$add_tables()", {
   local_multi_table_conn <- function(env = parent.frame()) {
     skip_if_not_installed("RSQLite")

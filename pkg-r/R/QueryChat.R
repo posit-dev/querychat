@@ -449,6 +449,17 @@ QueryChat <- R6::R6Class(
           "Table {.val {table_name}} already exists. Use {.code replace = TRUE} to replace."
         )
       }
+      if (
+        is_data_source(data_source) &&
+          !identical(data_source$table_name, table_name)
+      ) {
+        cli::cli_abort(
+          c(
+            "{.arg data_source}'s own table name ({.val {data_source$table_name}}) does not match the given {.arg table_name} ({.val {table_name}}).",
+            "i" = "Pass a matching {.arg table_name}, or omit it to use {.val {data_source$table_name}}."
+          )
+        )
+      }
       normalized <- normalize_data_source(data_source, table_name)
 
       other_sources <- private$.data_sources[
@@ -1123,17 +1134,6 @@ QueryChat <- R6::R6Class(
             c(
               "{.arg table_name} is required when {.arg data_source} is provided and no table name can be inferred.",
               "i" = "Pass {.arg table_name} to {.fn $server}, or {.arg table_name} to {.fn QueryChat$new}, or register a table first with {.fn $add_table}."
-            )
-          )
-        }
-        if (
-          is_data_source(data_source) &&
-            !identical(data_source$table_name, tbl_name)
-        ) {
-          cli::cli_abort(
-            c(
-              "{.arg data_source}'s own table name ({.val {data_source$table_name}}) does not match the resolved {.arg table_name} ({.val {tbl_name}}).",
-              "i" = "Pass a matching {.arg table_name}, or omit it to use {.val {data_source$table_name}}."
             )
           )
         }

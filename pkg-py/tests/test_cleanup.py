@@ -88,7 +88,7 @@ class TestServerClientOverrides:
         monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-key-for-testing")
         user_chat = ChatOpenAI()
         qc = QueryChatBase(sample_df, "users", client=user_chat)
-        override = qc.resolve_override_client("openai")
+        override = qc._resolve_override_client("openai")
         qc.cleanup()
         assert override.provider._client.is_closed()
         assert not user_chat.provider._client.is_closed()
@@ -96,7 +96,7 @@ class TestServerClientOverrides:
     def test_owned_override_closed_when_base_deferred(self, monkeypatch, sample_df):
         monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-key-for-testing")
         qc = QueryChatBase(sample_df, "users")
-        override = qc.resolve_override_client("openai")
+        override = qc._resolve_override_client("openai")
         assert qc._base_client is None
         qc.cleanup()
         assert override.provider._client.is_closed()
@@ -105,7 +105,7 @@ class TestServerClientOverrides:
         monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-key-for-testing")
         monkeypatch.delenv("QUERYCHAT_CLIENT", raising=False)
         qc = QueryChatBase(sample_df, "users", client="openai")
-        override = qc.resolve_override_client(None)
+        override = qc._resolve_override_client(None)
         qc.cleanup()
         assert override.provider._client.is_closed()
 
@@ -113,15 +113,15 @@ class TestServerClientOverrides:
         monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-key-for-testing")
         qc = QueryChatBase(sample_df, "users", client="openai")
         override = ChatOpenAI()
-        qc.resolve_override_client(override)
+        qc._resolve_override_client(override)
         qc.cleanup()
         assert not override.provider._client.is_closed()
 
     def test_close_owned_client_closes_and_untracks(self, monkeypatch, sample_df):
         monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-key-for-testing")
         qc = QueryChatBase(sample_df, "users", client="openai")
-        override = qc.resolve_override_client("openai")
-        qc.close_owned_client(override)
+        override = qc._resolve_override_client("openai")
+        qc._close_owned_client(override)
         assert override.provider._client.is_closed()
         assert all(c is not override for c in qc._owned_clients)
         qc.cleanup()  # already untracked: no double-close
@@ -129,9 +129,9 @@ class TestServerClientOverrides:
     def test_close_owned_client_is_idempotent(self, monkeypatch, sample_df):
         monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-key-for-testing")
         qc = QueryChatBase(sample_df, "users", client="openai")
-        override = qc.resolve_override_client("openai")
-        qc.close_owned_client(override)
-        qc.close_owned_client(override)  # should not raise
+        override = qc._resolve_override_client("openai")
+        qc._close_owned_client(override)
+        qc._close_owned_client(override)  # should not raise
 
 
 class TestServerSessionEndClosing:
@@ -206,7 +206,7 @@ class TestCleanupDataSources:
     ):
         monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-key-for-testing")
         qc = QueryChatBase(sample_df, "users", client="openai")
-        override = qc.resolve_override_client("openai")
+        override = qc._resolve_override_client("openai")
         with (
             patch.object(qc._base_client, "close", side_effect=RuntimeError("boom")),
             pytest.warns(UserWarning, match="Failed to close chatlas client"),

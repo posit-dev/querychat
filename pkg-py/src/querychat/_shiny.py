@@ -688,12 +688,12 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         resolved_client: chatlas.Chat | None = (
             None
             if isinstance(client, MISSING_TYPE)
-            else self._resolve_override_client(client)
+            else self.resolve_override_client(client)
         )
         if resolved_client is not None and not isinstance(client, chatlas.Chat):
             # Owned overrides are session-scoped: close and untrack them when
             # this session ends rather than holding them open until cleanup().
-            session.on_ended(lambda: self._close_owned_client(resolved_client))
+            session.on_ended(lambda: self.close_owned_client(resolved_client))
 
         def create_session_client(**kwargs) -> chatlas.Chat:
             return self._create_session_client(base=resolved_client, **kwargs)

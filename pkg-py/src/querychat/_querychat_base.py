@@ -234,7 +234,7 @@ class QueryChatBase(Generic[IntoFrameT]):
             base = self._base_client
         return create_client(base)
 
-    def _resolve_override_client(
+    def resolve_override_client(
         self, client: str | chatlas.Chat | None
     ) -> chatlas.Chat:
         """
@@ -249,7 +249,7 @@ class QueryChatBase(Generic[IntoFrameT]):
             self._owned_clients.append(resolved)
         return resolved
 
-    def _close_owned_client(self, client: chatlas.Chat) -> None:
+    def close_owned_client(self, client: chatlas.Chat) -> None:
         """Close an owned client and stop tracking it. Idempotent."""
         client.close()
         self._owned_clients[:] = [c for c in self._owned_clients if c is not client]

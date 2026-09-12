@@ -740,10 +740,6 @@ test_that("QueryChat$server() resolves history (explicit > constructor > TRUE) a
   skip_if_no_dataframe_engine()
   withr::local_envvar(OPENAI_API_KEY = "boop")
 
-  ds <- local_data_frame_source(new_test_df())
-  executor <- build_query_executor(list(test_table = ds))
-  withr::defer(executor$cleanup())
-
   captured <- NULL
   local_mocked_bindings(
     mod_server = function(id, ..., history) {
@@ -754,7 +750,6 @@ test_that("QueryChat$server() resolves history (explicit > constructor > TRUE) a
   )
 
   qc <- local_querychat(history = FALSE)
-  qc$.__enclos_env__$private$.query_executor <- executor
 
   expect_no_warning(
     shiny::testServer(
@@ -774,7 +769,6 @@ test_that("QueryChat$server() resolves history (explicit > constructor > TRUE) a
   )
 
   qc_no_history <- local_querychat(client = mock_ellmer_chat_client())
-  qc_no_history$.__enclos_env__$private$.query_executor <- executor
   shiny::testServer(
     function(input, output, session) qc_no_history$server(),
     {
@@ -846,6 +840,7 @@ describe("QueryChat internal client handoff availability", {
     public = list(
       internal_client = function(handoff_available = FALSE) {
         private$create_session_client(
+          table_set = private$.table_set,
           tools = NULL,
           handoff_available = handoff_available
         )
@@ -1142,7 +1137,7 @@ describe("QueryChat deferred client with $server()", {
     )
   })
 
-  it("$server(data_source=, table_name=) registers under the given name", {
+  it("$server(data_source=, table_name=) registers under the given name for that session only", {
     skip_if_no_dataframe_engine()
     qc <- QueryChat$new(
       NULL,
@@ -1154,9 +1149,11 @@ describe("QueryChat deferred client with $server()", {
       function(input, output, session) {
         qc$server(data_source = new_users_df(), table_name = "users")
       },
-      {}
+      {
+        expect_equal(session$returned$table_names(), "users")
+      }
     )
-    expect_equal(qc$table_names(), "users")
+    expect_equal(qc$table_names(), character())
   })
 
   it("id stays fixed across deferred registration (no desync from an already-rendered UI)", {
@@ -1340,16 +1337,6 @@ describe("QueryChat$add_tables()", {
     )
   })
 
-  it("calling after server initialization raises error", {
-    conn <- local_multi_table_conn()
-    qc <- QueryChat$new(NULL, "placeholder", greeting = "Test")
-    qc$.__enclos_env__$private$.server_initialized <- TRUE
-    expect_error(
-      qc$add_tables(conn),
-      "after server initialization"
-    )
-  })
-
   it("system prompt built exactly once for multiple tables", {
     conn <- local_multi_table_conn()
     qc <- QueryChat$new(NULL, "placeholder", greeting = "Test")
@@ -1363,6 +1350,62 @@ describe("QueryChat$add_tables()", {
     )
     multi_table_warns <- warns[grepl("Multiple tables", warns)]
     expect_length(multi_table_warns, 1L)
+  })
+})
+
+describe("QueryChat table changes after a session has started", {
+  it("warns when adding a new table and keeps the old set for $cleanup()", {
+    skip_if_no_dataframe_engine()
+    qc <- local_querychat(new_users_df(), "users", greeting = "hi")
+    old_set <- qc$.__enclos_env__$private$.table_set
+    old_set$executor()
+    qc$.__enclos_env__$private$.sessions_started <- TRUE
+
+    expect_warning(
+      qc$add_table(new_test_df(), "other"),
+      "after a session has started"
+    )
+
+    expect_equal(qc$table_names(), c("users", "other"))
+    expect_identical(
+      qc$.__enclos_env__$private$.superseded_table_sets[[1]],
+      old_set
+    )
+    expect_true(old_set$executor_built())
+    qc$cleanup()
+    expect_length(qc$.__enclos_env__$private$.superseded_table_sets, 0)
+  })
+
+  it("errors when replacing an existing table", {
+    skip_if_no_dataframe_engine()
+    qc <- local_querychat(new_users_df(), "users", greeting = "hi")
+    qc$.__enclos_env__$private$.sessions_started <- TRUE
+
+    expect_error(
+      qc$add_table(new_test_df(), "users", replace = TRUE),
+      "replace or remove"
+    )
+    expect_length(qc$.__enclos_env__$private$.superseded_table_sets, 0)
+  })
+
+  it("errors when removing a table", {
+    skip_if_not_installed("duckdb")
+    qc <- local_querychat(new_users_df(), "users", greeting = "hi")
+    qc$add_table(new_test_df(), "other")
+    qc$.__enclos_env__$private$.sessions_started <- TRUE
+
+    expect_error(qc$remove_table("other"), "replace or remove")
+    expect_equal(qc$table_names(), c("users", "other"))
+  })
+
+  it("closes a replaced source immediately before any session starts", {
+    skip_if_no_dataframe_engine()
+    qc <- local_querychat(new_users_df(), "users", greeting = "hi")
+    old_source <- qc_data_source(qc, "users")
+
+    qc$add_table(new_test_df(), "users", replace = TRUE)
+
+    expect_false(DBI::dbIsValid(old_source$.__enclos_env__$private$conn))
   })
 })
 

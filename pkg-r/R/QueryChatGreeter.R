@@ -13,7 +13,7 @@ QueryChatGreeter <- R6::R6Class(
     .prompt = NULL
   ),
   public = list(
-    #' @param client_factory function(tables, prompt, base) returning a configured greeting client.
+    #' @param client_factory function(tables, prompt, base = NULL, table_set = NULL) returning a configured greeting client.
     initialize = function(client_factory) {
       private$.client_factory <- client_factory
       private$.tables <- character()
@@ -26,8 +26,18 @@ QueryChatGreeter <- R6::R6Class(
 
     #' @description Build a fresh greeting client (no history) configured with the greeting system prompt.
     #' @param base Optional resolved client to clone (resolve-once base from `$server()`).
-    build_client = function(base = NULL) {
-      private$.client_factory(private$.tables, private$.prompt, base)
+    #' @param tables Table names to describe. Defaults to `$tables`. `$server()`
+    #'   passes the session's snapshot so a lazily generated greeting describes
+    #'   the session that asked for it.
+    #' @param table_set Optional `TableSet` to build the prompt from. Defaults to
+    #'   the owning QueryChat's instance set.
+    build_client = function(base = NULL, tables = NULL, table_set = NULL) {
+      private$.client_factory(
+        tables %||% private$.tables,
+        private$.prompt,
+        base,
+        table_set = table_set
+      )
     },
 
     #' @description Generate a greeting synchronously and return it as text.

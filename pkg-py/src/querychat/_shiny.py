@@ -711,7 +711,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                     "or table_name to the QueryChat constructor, or register a "
                     "table first with add_table()."
                 )
-            self.add_table(
+            self._add_or_replace_table(
                 data_source,
                 resolved_table_name,
                 replace=True,

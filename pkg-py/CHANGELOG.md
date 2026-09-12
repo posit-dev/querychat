@@ -31,6 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
       qc.server(data_source=conn.table("my_table"), client=chat_client)
   ```
 
+  Registering a table this way is no longer blocked by an earlier session having already registered one.
+
 ### Improvements
 
 * The `"visualize"` tool is now included in the default toolset (`tools=("filter", "query", "visualize")`). If the visualization dependencies are not installed (the `viz` extra), the tool is dropped with a warning instead of raising an `ImportError`.

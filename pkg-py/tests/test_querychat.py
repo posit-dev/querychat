@@ -1,14 +1,21 @@
+import asyncio
 import os
 import tempfile
 from pathlib import Path
 from unittest.mock import patch
 
 import ibis
+import narwhals.stable.v1 as nw
 import pandas as pd
 import polars as pl
 import pytest
 from querychat import QueryChat
-from querychat._datasource import IbisSource, PolarsLazySource
+from querychat._datasource import (
+    DataFrameSource,
+    DataSource,
+    IbisSource,
+    PolarsLazySource,
+)
 from sqlalchemy import create_engine, text
 
 
@@ -429,3 +436,62 @@ def test_remove_table_prunes_greeter_tables(sqlite_engine):
     qc.remove_table("orders")
     assert "orders" not in qc.greeter.tables
     assert "customers" in qc.greeter.tables
+
+
+class TestGreeterSnapshotOverrides:
+    """
+    _generate_async_snapshot() renders from an explicit tables/data_sources
+    snapshot instead of live shared state, which a later Shiny session may
+    have mutated before an earlier session's async greeting runs. The
+    public build_client()/generate()/generate_async() API is unaffected.
+    """
+
+    def test_build_client_uses_live_state(self, sample_df):
+        qc = QueryChat(sample_df, "test_table")
+        prompt = qc.greeter.build_client().system_prompt
+        assert prompt is not None
+        assert "test_table" in prompt
+
+    def test_snapshot_tables_override_ignores_live_greeter_tables(self, sample_df):
+        qc = QueryChat(sample_df, "test_table")
+        qc.greeter.tables = []  # live state says "no tables"
+        seen: dict[str, str | None] = {}
+
+        async def fake_stream_async(self, *args, **kwargs):
+            seen["system_prompt"] = self.system_prompt
+            return "stream"
+
+        with patch("chatlas.Chat.stream_async", fake_stream_async):
+            asyncio.run(
+                qc.greeter._generate_async_snapshot(
+                    base=None, tables=["test_table"], data_sources=qc._data_sources
+                )
+            )
+
+        assert seen["system_prompt"] is not None
+        assert "test_table" in seen["system_prompt"]
+
+    def test_snapshot_data_sources_override_ignores_live_data_sources(self, sample_df):
+        qc = QueryChat(sample_df, "test_table")
+        other_df = pd.DataFrame({"z": [1, 2, 3]})
+        snapshot: dict[str, DataSource] = {
+            "other_table": DataFrameSource(
+                nw.from_native(other_df, eager_only=True), "other_table"
+            )
+        }
+        seen: dict[str, str | None] = {}
+
+        async def fake_stream_async(self, *args, **kwargs):
+            seen["system_prompt"] = self.system_prompt
+            return "stream"
+
+        with patch("chatlas.Chat.stream_async", fake_stream_async):
+            asyncio.run(
+                qc.greeter._generate_async_snapshot(
+                    base=None, tables=["other_table"], data_sources=snapshot
+                )
+            )
+
+        assert seen["system_prompt"] is not None
+        assert "other_table" in seen["system_prompt"]
+        assert "test_table" not in seen["system_prompt"]

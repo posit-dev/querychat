@@ -12,6 +12,8 @@ if TYPE_CHECKING:
 
     import chatlas
 
+    from ._datasource import DataSource
+
 
 class QueryChatGreeter:
     """Controls greeting generation for a QueryChat instance. Access via ``qc.greeter``."""
@@ -67,4 +69,28 @@ class QueryChatGreeter:
     async def generate_async(self, *, base: chatlas.Chat | None = None):
         """Stream a greeting response from the greeting client."""
         client = self.build_client(base)
+        return await client.stream_async(GREETING_PROMPT, echo="none")
+
+    async def _generate_async_snapshot(
+        self,
+        *,
+        base: chatlas.Chat | None,
+        tables: list[str] | None,
+        data_sources: dict[str, DataSource],
+    ):
+        """
+        Stream a greeting response from an explicit session snapshot.
+
+        Internal counterpart to :meth:`generate_async`, used by
+        ``mod_server()``. The snapshot matters because greeting generation
+        is scheduled lazily: by the time it runs, a later session's
+        ``.server(data_source=...)`` call may have already mutated the
+        shared live state.
+        """
+        client = self._client_factory(
+            self._tables if tables is None else tables,
+            self._prompt,
+            base,
+            data_sources=data_sources,
+        )
         return await client.stream_async(GREETING_PROMPT, echo="none")

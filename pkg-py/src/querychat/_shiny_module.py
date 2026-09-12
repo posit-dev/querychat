@@ -248,6 +248,7 @@ def mod_server(
     tools: set[str] | None = None,
     greeter: QueryChatGreeter,
     greeting_base: chatlas.Chat | None = None,
+    greeting_tables: list[str] | None = None,
 ) -> ServerValues[IntoFrameT]:
     if not callable(client):
         raise TypeError("mod_server() requires a callable client factory.")
@@ -344,7 +345,11 @@ def mod_server(
             GreetWarning,
             stacklevel=1,
         )
-        stream = await greeter.generate_async(base=greeting_base)
+        stream = await greeter._generate_async_snapshot(
+            base=greeting_base,
+            tables=greeting_tables,
+            data_sources=data_sources,
+        )
         return shinychat.chat_greeting(stream, persistent=True)
 
     greeting_arg = (

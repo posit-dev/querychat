@@ -156,6 +156,77 @@ def test_mod_server_passes_client_and_history_to_chat():
     assert handoff_server_mock.call_args.kwargs["executor"] is fake_executor
 
 
+def test_mod_server_generates_greeting_from_session_snapshot_not_live_state():
+    """
+    _make_greeting() must render from this session's own snapshot, not the
+    shared live state, which a later session's server(data_source=...) call
+    may have mutated before an earlier session's greeting streams.
+    """
+    import asyncio
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    from querychat._shiny_module import mod_server
+
+    captured = {}
+
+    def fake_chat_constructor(
+        id, *, client=None, greeting=None, history=None, **kwargs
+    ):
+        captured["greeting"] = greeting
+        return MagicMock()
+
+    fake_source = MagicMock()
+    fake_source.get_data.return_value = []
+    fake_executor = MagicMock()
+    fake_executor.execute_query.return_value = []
+
+    def client_factory(**kwargs):
+        return MagicMock(spec=["stream_async"])
+
+    fake_greeter = MagicMock()
+    fake_greeter._generate_async_snapshot = AsyncMock(return_value=MagicMock())
+    fake_greeting_base = MagicMock()
+
+    inner_fn = _unwrap_module_server(mod_server)
+
+    fake_input = MagicMock()
+    fake_input.__getitem__ = MagicMock(return_value=MagicMock())
+    fake_session = MagicMock()
+    fake_session.is_stub_session.return_value = False
+
+    with (
+        patch(
+            "querychat._shiny_module.shinychat.Chat", side_effect=fake_chat_constructor
+        ),
+        patch("querychat._shiny_module.has_viz_tool", return_value=False),
+        patch(
+            "querychat._shiny_module.shinychat.chat_greeting", return_value=MagicMock()
+        ),
+    ):
+        inner_fn(
+            fake_input,
+            MagicMock(),
+            fake_session,
+            data_sources={"t": fake_source},
+            executor=fake_executor,
+            greeting=None,
+            client=client_factory,
+            history=True,
+            tools=None,
+            greeter=fake_greeter,
+            greeting_base=fake_greeting_base,
+            greeting_tables=["t"],
+        )
+
+    asyncio.run(captured["greeting"]())
+
+    fake_greeter._generate_async_snapshot.assert_called_once_with(
+        base=fake_greeting_base,
+        tables=["t"],
+        data_sources={"t": fake_source},
+    )
+
+
 def test_mod_server_registers_chat_bookmarking_with_no_auto_trigger_when_history_not_bookmark_mode():
     """
     Chat.enable_bookmarking() is called when `history` isn't bookmark mode, so
@@ -348,9 +419,7 @@ def test_shinychat_chat_contract_used_by_mod_server():
     mock_session.app = None
 
     with session_context(mock_session):
-        chat = shinychat.Chat(
-            "chat", client=MagicMock(), greeting=None, history=True
-        )
+        chat = shinychat.Chat("chat", client=MagicMock(), greeting=None, history=True)
 
         @chat.history.on_save
         def _on_save(values):

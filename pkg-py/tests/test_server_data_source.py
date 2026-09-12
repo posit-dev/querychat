@@ -76,11 +76,7 @@ class TestServerDataSourceRegistersDeferredTable:
     def test_empty_explicit_table_name_raises_instead_of_falling_back(
         self, users_df, captured_mod_server
     ):
-        """
-        An explicit but invalid table_name="" must be validated and rejected,
-        not silently treated as omitted and fall back to the deferred/first
-        table name.
-        """
+        """An explicit table_name="" must be rejected, not treated as omitted."""
         qc = shiny_mod.QueryChat(None, table_name="users")
         with pytest.raises(ValueError, match="must begin with a letter"):
             qc.server(data_source=users_df, table_name="")
@@ -101,12 +97,6 @@ class TestServerDataSourceRegistersDeferredTable:
 
 
 class TestServerDataSourceSurvivesSecondSession:
-    """
-    server(data_source=...) must not be blocked by an earlier session having
-    already registered a table -- unlike the public add_table(), which still
-    guards against changes after server initialization.
-    """
-
     def test_second_session_does_not_raise(
         self, users_df, other_users_df, captured_mod_server
     ):
@@ -136,10 +126,8 @@ class TestServerDataSourceCleanupSafety:
         self, users_df, other_users_df, captured_mod_server
     ):
         """
-        A second session's server(data_source=...) call must not tear down
-        the DataSource object an earlier, still-running session's own
-        DataSourceExecutor holds a live reference to (e.g. closing a DuckDB
-        connection or disposing a SQLAlchemy engine out from under it).
+        An earlier, still-running session's executor holds a live
+        reference to the source a later session's registration replaces.
         """
         qc = shiny_mod.QueryChat(None, table_name="users")
 
@@ -154,9 +142,8 @@ class TestServerDataSourceCleanupSafety:
         self, users_df, other_users_df
     ):
         """
-        Config-time add_table(replace=True) (before any session starts) has
-        exactly one owner for the replaced table, so its existing
-        cleanup-on-replace behavior must be unchanged.
+        Config-time replacement has a single owner, so cleanup-on-replace
+        is unchanged on the public path.
         """
         qc = shiny_mod.QueryChat(users_df, "users")
         first_source = qc._data_sources["users"]
@@ -169,10 +156,8 @@ class TestServerDataSourceCleanupSafety:
         self, users_df, other_users_df, captured_mod_server
     ):
         """
-        A second session's server(data_source=...) call must not close the
-        cached QueryExecutor an earlier, still-running session's chat has
-        already captured (e.g. via _create_session_client) and is actively
-        querying through.
+        An earlier, still-running session's chat has already captured the
+        cached executor and may be querying through it.
         """
         qc = shiny_mod.QueryChat(None, table_name="users")
 
@@ -187,9 +172,8 @@ class TestServerDataSourceCleanupSafety:
         self, users_df, other_users_df
     ):
         """
-        Config-time add_table(replace=True) has exactly one owner, so its
-        existing cleanup-on-replace behavior for the cached executor must be
-        unchanged.
+        Config-time replacement has a single owner, so executor cleanup
+        is unchanged on the public path.
         """
         qc = shiny_mod.QueryChat(users_df, "users")
         first_executor = qc._require_query_executor("test")
@@ -197,3 +181,79 @@ class TestServerDataSourceCleanupSafety:
         with patch.object(first_executor, "cleanup") as mock_cleanup:
             qc.add_table(other_users_df, "users", replace=True)
             mock_cleanup.assert_called_once()
+
+
+class TestServerDataSourceGreetingSnapshot:
+    def test_server_passes_greeting_tables_snapshot_to_mod_server(
+        self, users_df, captured_mod_server
+    ):
+        """
+        Greeting generation runs lazily, after a later session may have
+        mutated the live greeter.tables -- hence the call-time snapshot.
+        """
+        qc = shiny_mod.QueryChat(None, table_name="users")
+        qc.server(data_source=users_df)
+
+        assert captured_mod_server[0]["greeting_tables"] == ["users"]
+
+
+class TestServerDataSourceMixedWithConfigTimeAddTable:
+    def test_unnamed_registration_replaces_config_time_table(
+        self, users_df, other_users_df, captured_mod_server
+    ):
+        qc = shiny_mod.QueryChat()
+        qc.add_table(users_df, "orders")
+
+        qc.server(data_source=other_users_df)
+
+        # Same table name, but the session's data replaces the config-time data
+        sources = captured_mod_server[0]["data_sources"]
+        assert list(sources.keys()) == ["orders"]
+        assert sources["orders"].get_data()["id"].tolist() == [4, 5]
+
+    def test_replacing_config_time_table_does_not_clean_it_up(
+        self, users_df, other_users_df, captured_mod_server
+    ):
+        """
+        Consistent with per-session replacement: the replaced source's
+        cleanup is left to whoever created it.
+        """
+        qc = shiny_mod.QueryChat()
+        qc.add_table(users_df, "orders")
+        config_source = qc._data_sources["orders"]
+
+        with patch.object(config_source, "cleanup") as mock_cleanup:
+            qc.server(data_source=other_users_df)
+            mock_cleanup.assert_not_called()
+
+    def test_explicit_table_name_adds_alongside_config_time_table(
+        self, users_df, other_users_df, captured_mod_server
+    ):
+        qc = shiny_mod.QueryChat()
+        qc.add_table(users_df, "orders")
+
+        qc.server(data_source=other_users_df, table_name="returns")
+
+        sources = captured_mod_server[0]["data_sources"]
+        assert list(sources.keys()) == ["orders", "returns"]
+        # The config-time table's own data is untouched
+        assert sources["orders"].get_data()["id"].tolist() == [1, 2, 3]
+        assert sources["returns"].get_data()["id"].tolist() == [4, 5]
+
+    def test_later_session_snapshot_includes_earlier_sessions_table(
+        self, users_df, other_users_df, captured_mod_server
+    ):
+        """The registry is shared and cumulative across sessions."""
+        qc = shiny_mod.QueryChat()
+        qc.add_table(users_df, "orders")
+
+        # Session 1 adds its own table alongside the config-time one
+        qc.server(data_source=other_users_df, table_name="returns")
+        # Session 2 replaces "orders" only -- but still sees session 1's table
+        third_df = pd.DataFrame({"id": [7, 8, 9]})
+        qc.server(data_source=third_df, table_name="orders")
+
+        sources = captured_mod_server[1]["data_sources"]
+        assert list(sources.keys()) == ["orders", "returns"]
+        assert sources["orders"].get_data()["id"].tolist() == [7, 8, 9]
+        assert sources["returns"].get_data()["id"].tolist() == [4, 5]

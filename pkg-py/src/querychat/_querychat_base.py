@@ -383,10 +383,14 @@ class QueryChatBase(Generic[IntoFrameT]):
                 tables: list[str],
                 prompt: str | Path,
                 base: chatlas.Chat | None = None,
+                *,
+                data_sources: dict[str, DataSource] | None = None,
             ) -> chatlas.Chat:
                 sp = QueryChatSystemPrompt(
                     prompt_template=prompt,
-                    data_sources=self._data_sources,
+                    data_sources=(
+                        self._data_sources if data_sources is None else data_sources
+                    ),
                     data_description=self._data_description,
                     extra_instructions=None,
                     categorical_threshold=self._categorical_threshold,
@@ -510,20 +514,16 @@ class QueryChatBase(Generic[IntoFrameT]):
         """
         Stage a table and rebuild the system prompt/executor cache.
 
-        This is the guard-free core of :meth:`add_table`. It's also called
-        directly by ``.server(data_source=...)`` so that each session can
-        register (or replace) its own table even after an earlier session's
-        ``.server()`` call has already set ``_server_initialized``.
+        Guard-free core of :meth:`add_table`, also called directly by
+        ``.server(data_source=...)`` so each session can register its own
+        table even after an earlier session's ``.server()`` call has set
+        ``_server_initialized``.
 
-        ``cleanup_replaced=False`` must be used for that per-session
-        replacement: a table replaced here may still be in active use by an
-        earlier, already-running session (e.g. its own
-        ``DataSourceExecutor`` holds a live reference to it), so closing/
-        disposing it here would pull the resource out from under that
-        session. Cleaning it up is then the caller's own responsibility
-        (e.g. via ``session.on_ended()`` in the code that created it). The
-        default (``True``) preserves :meth:`add_table`'s existing behavior,
-        where a config-time replacement has exactly one owner.
+        ``cleanup_replaced=False`` is for that per-session path: the
+        replaced table may still be in active use by an earlier,
+        still-running session, so cleaning it up here would pull the
+        resource out from under it. Cleanup becomes the caller's
+        responsibility (e.g. via ``session.on_ended()``).
         """
         if not isinstance(include_in_greeting, bool):
             raise TypeError(

@@ -156,8 +156,11 @@ Create a new QueryChat object.
   A string specifying the table name to use in SQL queries. If
   `data_source` is a data.frame, this is the name to refer to it by in
   queries (typically the variable name). If not provided, will be
-  inferred from the variable name for data.frame inputs. For database
-  connections or `NULL` data sources, this parameter is required.
+  inferred from the variable name for data.frame inputs. Required for
+  database connections. Optional when `data_source` is `NULL`: if
+  omitted, `$id` falls back to a generic default, and a table name must
+  be supplied later via `$add_table()` or
+  `$server(data_source =, table_name = )`.
 
 - `...`:
 
@@ -166,8 +169,9 @@ Create a new QueryChat object.
 - `id`:
 
   Optional module ID for the QueryChat instance. If not provided, will
-  be auto-generated from `table_name`. The ID is used to namespace the
-  Shiny module.
+  be auto-generated from `table_name` (or a generic default when
+  `data_source` is `NULL` and `table_name` is also omitted). The ID is
+  used to namespace the Shiny module.
 
 - `greeting`:
 
@@ -624,6 +628,7 @@ Initialize the querychat server logic.
       history = NULL,
       enable_bookmarking = NULL,
       ...,
+      table_name = NULL,
       id = NULL,
       session = shiny::getDefaultReactiveDomain()
     )
@@ -632,8 +637,12 @@ Initialize the querychat server logic.
 
 - `data_source`:
 
-  Optional data source for backward compatibility. If provided, calls
-  `$add_table()` before initializing server logic.
+  Optional data source to register for this session, for the deferred
+  pattern where the data source can't be created until the server
+  function runs (e.g. a connection scoped to per-user OAuth
+  credentials). Registered under `table_name` if given, otherwise the
+  `table_name` passed to `$new()`, or the first already-registered
+  table.
 
 - `client`:
 
@@ -654,6 +663,12 @@ Initialize the querychat server logic.
 - `...`:
 
   Ignored.
+
+- `table_name`:
+
+  Table name to register `data_source` under. Only used when
+  `data_source` is provided. Named-only (placed after `...`) so it can't
+  shift the meaning of existing positional calls.
 
 - `id`:
 
@@ -729,7 +744,7 @@ The objects of this class are cloneable with this method.
 # Basic usage with a data frame
 qc <- QueryChat$new(mtcars)
 #> duckdb keeps downloaded extensions and secrets in a temporary directory:
-#> ℹ /tmp/Rtmp5aWJni/duckdb
+#> ℹ /tmp/RtmplOeeRB/duckdb
 #> This is removed when the R session ends.
 #> • Extensions are re-downloaded each session.
 #> • Secrets are lost.
@@ -744,7 +759,7 @@ app <- qc$app()
 greeting <- "Welcome! Ask me about the mtcars dataset."
 qc <- QueryChat$new(mtcars, greeting = greeting)
 #> duckdb keeps downloaded extensions and secrets in a temporary directory:
-#> ℹ /tmp/Rtmp5aWJni/duckdb
+#> ℹ /tmp/RtmplOeeRB/duckdb
 #> This is removed when the R session ends.
 #> • Extensions are re-downloaded each session.
 #> • Secrets are lost.
@@ -755,7 +770,7 @@ qc <- QueryChat$new(mtcars, greeting = greeting)
 # With a specific LLM provider
 qc <- QueryChat$new(mtcars, client = "anthropic/claude-sonnet-4-5")
 #> duckdb keeps downloaded extensions and secrets in a temporary directory:
-#> ℹ /tmp/Rtmp5aWJni/duckdb
+#> ℹ /tmp/RtmplOeeRB/duckdb
 #> This is removed when the R session ends.
 #> • Extensions are re-downloaded each session.
 #> • Secrets are lost.
@@ -779,7 +794,7 @@ qc <- QueryChat$new(
   data_description = "Motor Trend car road tests dataset"
 )
 #> duckdb keeps downloaded extensions and secrets in a temporary directory:
-#> ℹ /tmp/Rtmp5aWJni/duckdb
+#> ℹ /tmp/RtmplOeeRB/duckdb
 #> This is removed when the R session ends.
 #> • Extensions are re-downloaded each session.
 #> • Secrets are lost.

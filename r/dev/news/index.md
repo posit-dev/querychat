@@ -94,13 +94,18 @@
   `restore_mode = "bookmark"` to fold the conversation into a full Shiny
   bookmark. Disable with `history = FALSE`.
 
+- Deferred construction is more flexible: `table_name` is now optional
+  in `QueryChat$new(NULL)` (if omitted, `$id` falls back to a generic
+  `"querychat"` default), and `$server()` gains a `table_name` parameter
+  so the table can be named per session when registering a data source
+  via `$server(data_source = )`.
+  ([\#305](https://github.com/posit-dev/querychat/issues/305))
+
 ### Breaking changes
 
 - The `$data_source` property has been removed. Use
   `qc$table("name")$data_source` to read a table’s data source, and
-  `qc$add_table(df, "name", replace = TRUE)` to replace it. The
-  `data_source` parameter to `$server()` has also been removed; call
-  `$add_table()` before `$server()` instead.
+  `qc$add_table(df, "name", replace = TRUE)` to replace it.
   ([\#195](https://github.com/posit-dev/querychat/issues/195))
 
 - `$app()`/`$app_obj()`’s `bookmark_store` parameter has been removed.
@@ -170,6 +175,13 @@
   LLM’s response, far more often than intended. The LLM is now guided to
   expand a result only when the user explicitly asks to see the raw
   table. ([\#295](https://github.com/posit-dev/querychat/issues/295))
+
+- `$add_table()` no longer rewrites the Shiny module `$id` when the
+  registered table is the only one; the id is now fixed at construction
+  time, matching Python. The rewrite could desync the module namespace
+  from an already-rendered UI when a table was registered between
+  `$ui()` and `$server()` (e.g. via `$server(data_source = )`).
+  ([\#305](https://github.com/posit-dev/querychat/issues/305))
 
 ## querychat 0.3.0
 

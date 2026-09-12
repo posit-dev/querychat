@@ -234,7 +234,7 @@ The objects of this class are cloneable with this method.
 ``` r
 con <- DBI::dbConnect(duckdb::duckdb())
 #> duckdb keeps downloaded extensions and secrets in a temporary directory:
-#> ℹ /tmp/Rtmp5aWJni/duckdb
+#> ℹ /tmp/RtmplOeeRB/duckdb
 #> This is removed when the R session ends.
 #> • Extensions are re-downloaded each session.
 #> • Secrets are lost.
@@ -273,11 +273,11 @@ dplyr::count(result, cyl, gear)
 #> # Database: DuckDB 1.5.5 [unknown@Linux 6.17.0-1022-azure:R 4.6.1/:memory:]
 #>     cyl  gear     n
 #>   <dbl> <dbl> <dbl>
-#> 1     6     3     2
-#> 2     8     5     2
-#> 3     6     4     4
-#> 4     8     3    12
-#> 5     6     5     1
+#> 1     6     5     1
+#> 2     6     3     2
+#> 3     8     5     2
+#> 4     6     4     4
+#> 5     8     3    12
 
 # Or collect the entire data frame into local memory
 dplyr::collect(result)

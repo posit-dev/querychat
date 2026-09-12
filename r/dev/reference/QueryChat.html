@@ -218,16 +218,19 @@ to <code>$server()</code> before calling methods that require data access.</p></
 <dd><p>A string specifying the table name to use in SQL
 queries. If <code>data_source</code> is a data.frame, this is the name to refer to
 it by in queries (typically the variable name). If not provided, will
-be inferred from the variable name for data.frame inputs. For database
-connections or <code>NULL</code> data sources, this parameter is required.</p></dd>
+be inferred from the variable name for data.frame inputs. Required for
+database connections. Optional when <code>data_source</code> is <code>NULL</code>: if
+omitted, <code>$id</code> falls back to a generic default, and a table name must
+be supplied later via <code>$add_table()</code> or <code>$server(data_source =, table_name = )</code>.</p></dd>
 
       <dt><code>...</code></dt>
 <dd><p>Additional arguments (currently unused).</p></dd>
 
       <dt><code>id</code></dt>
 <dd><p>Optional module ID for the QueryChat instance. If not provided,
-will be auto-generated from <code>table_name</code>. The ID is used to namespace
-the Shiny module.</p></dd>
+will be auto-generated from <code>table_name</code> (or a generic default when
+<code>data_source</code> is <code>NULL</code> and <code>table_name</code> is also omitted). The ID is
+used to namespace the Shiny module.</p></dd>
 
       <dt><code>greeting</code></dt>
 <dd><p>Optional initial message to display to users. Can be a
@@ -629,14 +632,19 @@ and <code>window_title</code> is omitted, it is also used as the document title.
 <span>  history <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  enable_bookmarking <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  <span class="va">...</span>,</span>
+<span>  table_name <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  id <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  session <span class="op">=</span> <span class="fu">shiny</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/shiny/man/domains.html" class="external-link">getDefaultReactiveDomain</a></span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div><p></p><div class="section">
 <h4 id="arguments-11">Arguments<a class="anchor" aria-label="anchor" href="#arguments-11"></a></h4>
 <p></p><div class="arguments"><dl><dt><code>data_source</code></dt>
-<dd><p>Optional data source for backward compatibility.
-If provided, calls <code>$add_table()</code> before initializing server logic.</p></dd>
+<dd><p>Optional data source to register for this session,
+for the deferred pattern where the data source can't be created
+until the server function runs (e.g. a connection scoped to
+per-user OAuth credentials). Registered under <code>table_name</code> if given,
+otherwise the <code>table_name</code> passed to <code>$new()</code>, or the first
+already-registered table.</p></dd>
 
       <dt><code>client</code></dt>
 <dd><p>Optional chat client override for this session.</p></dd>
@@ -652,6 +660,11 @@ constructor's <code>history</code> was set.</p></dd>
 
       <dt><code>...</code></dt>
 <dd><p>Ignored.</p></dd>
+
+      <dt><code>table_name</code></dt>
+<dd><p>Table name to register <code>data_source</code> under. Only
+used when <code>data_source</code> is provided. Named-only (placed after <code>...</code>)
+so it can't shift the meaning of existing positional calls.</p></dd>
 
       <dt><code>id</code></dt>
 <dd><p>Optional module ID override.</p></dd>
@@ -728,7 +741,7 @@ or <code>NULL</code> before any query.</p>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Basic usage with a data frame</span></span></span>
 <span class="r-in"><span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="va">QueryChat</span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">mtcars</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> duckdb keeps downloaded extensions and secrets in a temporary directory:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">ℹ</span> /tmp/Rtmp5aWJni/duckdb</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">ℹ</span> /tmp/RtmplOeeRB/duckdb</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> This is removed when the R session ends.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Extensions are re-downloaded each session.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Secrets are lost.</span>
@@ -743,7 +756,7 @@ or <code>NULL</code> before any query.</p>
 <span class="r-in"><span><span class="va">greeting</span> <span class="op">&lt;-</span> <span class="st">"Welcome! Ask me about the mtcars dataset."</span></span></span>
 <span class="r-in"><span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="va">QueryChat</span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">mtcars</span>, greeting <span class="op">=</span> <span class="va">greeting</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> duckdb keeps downloaded extensions and secrets in a temporary directory:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">ℹ</span> /tmp/Rtmp5aWJni/duckdb</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">ℹ</span> /tmp/RtmplOeeRB/duckdb</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> This is removed when the R session ends.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Extensions are re-downloaded each session.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Secrets are lost.</span>
@@ -754,7 +767,7 @@ or <code>NULL</code> before any query.</p>
 <span class="r-in"><span><span class="co"># With a specific LLM provider</span></span></span>
 <span class="r-in"><span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="va">QueryChat</span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">mtcars</span>, client <span class="op">=</span> <span class="st">"anthropic/claude-sonnet-4-5"</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> duckdb keeps downloaded extensions and secrets in a temporary directory:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">ℹ</span> /tmp/Rtmp5aWJni/duckdb</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">ℹ</span> /tmp/RtmplOeeRB/duckdb</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> This is removed when the R session ends.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Extensions are re-downloaded each session.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Secrets are lost.</span>
@@ -778,7 +791,7 @@ or <code>NULL</code> before any query.</p>
 <span class="r-in"><span>  data_description <span class="op">=</span> <span class="st">"Motor Trend car road tests dataset"</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> duckdb keeps downloaded extensions and secrets in a temporary directory:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">ℹ</span> /tmp/Rtmp5aWJni/duckdb</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">ℹ</span> /tmp/RtmplOeeRB/duckdb</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> This is removed when the R session ends.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Extensions are re-downloaded each session.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Secrets are lost.</span>

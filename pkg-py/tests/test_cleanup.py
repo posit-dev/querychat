@@ -153,13 +153,13 @@ class TestServerSessionEndClosing:
         qc = shiny_mod.QueryChat(sample_df, "users")
         qc.server(client="openai")
 
-        assert len(ended_callbacks) == 1
         (override,) = qc._owned_clients
-        ended_callbacks[0]()
+        for cb in ended_callbacks:
+            cb()
         assert override.provider._client.is_closed()
         assert qc._owned_clients == []
 
-    def test_user_supplied_override_gets_no_on_ended(
+    def test_user_supplied_override_not_closed_on_session_end(
         self, monkeypatch, sample_df, ended_callbacks
     ):
         monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-key-for-testing")
@@ -167,7 +167,8 @@ class TestServerSessionEndClosing:
         chat = ChatOpenAI()
         qc.server(client=chat)
 
-        assert ended_callbacks == []
+        for cb in ended_callbacks:
+            cb()
         qc.cleanup()
         assert not chat.provider._client.is_closed()
 

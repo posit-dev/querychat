@@ -215,9 +215,9 @@ class TestAddTable:
     def test_add_table_after_server_raises(self, orders_df, customers_df):
         """Test that adding table after server init raises error."""
         qc = QueryChat(orders_df, "orders", greeting="Hello!")
-        qc._server_initialized = True  # Simulate server initialization
+        qc._active_sessions = 1  # Simulate a live session
 
-        with pytest.raises(RuntimeError, match="Cannot add tables after server"):
+        with pytest.raises(RuntimeError, match="Cannot add tables while a server session"):
             qc.add_table(customers_df, "customers")
 
 
@@ -251,9 +251,9 @@ class TestRemoveTable:
         """Test that removing table after server init raises error."""
         qc = QueryChat(orders_df, "orders", greeting="Hello!")
         qc.add_table(customers_df, "customers")
-        qc._server_initialized = True
+        qc._active_sessions = 1
 
-        with pytest.raises(RuntimeError, match="Cannot remove tables after server"):
+        with pytest.raises(RuntimeError, match="Cannot remove tables while a server session"):
             qc.remove_table("customers")
 
 

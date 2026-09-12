@@ -372,8 +372,8 @@ class TestAddTables:
 
     def test_after_server_raises(self, multi_table_engine):
         qc = QueryChatBase()
-        qc._server_initialized = True
-        with pytest.raises(RuntimeError, match="Cannot add tables after server"):
+        qc._active_sessions = 1
+        with pytest.raises(RuntimeError, match="Cannot add tables while a server session"):
             qc.add_tables(multi_table_engine)
 
     def test_system_prompt_built_exactly_once(self, multi_table_engine):

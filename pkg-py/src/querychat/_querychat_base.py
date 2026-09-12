@@ -100,8 +100,9 @@ class QueryChatBase(Generic[IntoFrameT]):
         self._data_sources: dict[str, DataSource] = {}
         self._query_executor: QueryExecutor | None = None
 
-        # Track server initialization state for add/remove table validation
-        self._server_initialized = False
+        # Live Shiny session count. Shared-state guards key off this: an
+        # ended session can no longer be using a resource it registered.
+        self._active_sessions = 0
 
         # Name to register at .server(data_source=...) time when constructed
         # with data_source=None (the deferred pattern).
@@ -487,12 +488,12 @@ class QueryChatBase(Generic[IntoFrameT]):
         ValueError
             If table_name already exists (and replace=False) or is invalid.
         RuntimeError
-            If called after server() has been invoked.
+            If called while a server session is active.
 
         """
-        if self._server_initialized:
+        if self._active_sessions > 0:
             raise RuntimeError(
-                "Cannot add tables after server initialization. "
+                "Cannot add tables while a server session is active. "
                 "Add all tables before calling .server() or .app()."
             )
         self._add_or_replace_table(
@@ -516,8 +517,7 @@ class QueryChatBase(Generic[IntoFrameT]):
 
         Guard-free core of :meth:`add_table`, also called directly by
         ``.server(data_source=...)`` so each session can register its own
-        table even after an earlier session's ``.server()`` call has set
-        ``_server_initialized``.
+        table even while earlier sessions are still running.
 
         ``cleanup_replaced=False`` is for that per-session path: the
         replaced table may still be in active use by an earlier,
@@ -631,9 +631,9 @@ class QueryChatBase(Generic[IntoFrameT]):
         >>> qc.add_tables(backend)
 
         """
-        if self._server_initialized:
+        if self._active_sessions > 0:
             raise RuntimeError(
-                "Cannot add tables after server initialization. "
+                "Cannot add tables while a server session is active. "
                 "Add all tables before calling .server() or .app()."
             )
 
@@ -722,12 +722,12 @@ class QueryChatBase(Generic[IntoFrameT]):
         ValueError
             If table doesn't exist or is the last remaining table.
         RuntimeError
-            If called after server() has been invoked.
+            If called while a server session is active.
 
         """
-        if self._server_initialized:
+        if self._active_sessions > 0:
             raise RuntimeError(
-                "Cannot remove tables after server initialization. "
+                "Cannot remove tables while a server session is active. "
                 "Configure all tables before calling .server() or .app()."
             )
 
@@ -754,9 +754,20 @@ class QueryChatBase(Generic[IntoFrameT]):
             self._query_executor = None
         removed_source.cleanup()
 
-    def _mark_server_initialized(self) -> None:
-        """Mark that the server has been initialized. Prevents add/remove_table."""
-        self._server_initialized = True
+    def _mark_server_initialized(self, session) -> None:
+        """
+        Track a newly started session until it ends.
+
+        The add/remove_table guards and cleanup-on-replace in
+        ``server(data_source=...)`` key off the number of *live* sessions:
+        a session that has ended can no longer be using a replaced resource.
+        """
+        self._active_sessions += 1
+
+        def _untrack_session() -> None:
+            self._active_sessions -= 1
+
+        session.on_ended(_untrack_session)
 
     def cleanup(self) -> None:
         """

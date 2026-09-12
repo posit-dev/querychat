@@ -125,8 +125,8 @@ class TestShinyDeferredDataSource:
         with session_context(ExpressStubSession()):
             qc.server(client=first_override)
 
-        # Reset server_initialized for sequential test
-        qc._server_initialized = False
+        # Reset live-session count for sequential test
+        qc._active_sessions = 0
 
         with session_context(ExpressStubSession()):
             qc.server(client=second_override)
@@ -151,17 +151,17 @@ class TestExpressMultiTable:
         """add_table() must succeed after __init__ during stub session."""
         with session_context(ExpressStubSession()):
             qc = ExpressQueryChat(orders_df, "orders")
-            # Without the fix, _server_initialized would be True here and
+            # Without the fix, a session would be tracked here and
             # add_table() would raise RuntimeError.
             qc.add_table(customers_df, "customers")
 
         assert qc.table_names() == ["orders", "customers"]
 
     def test_server_not_initialized_after_init_stub_session(self, orders_df):
-        """_server_initialized must remain False after __init__ in stub session."""
+        """No session may be tracked after __init__ in a stub session."""
         with session_context(ExpressStubSession()):
             qc = ExpressQueryChat(orders_df, "orders")
-            assert not qc._server_initialized
+            assert qc._active_sessions == 0
 
     def test_ensure_server_started_noop_during_stub_session(
         self, orders_df, monkeypatch
@@ -196,11 +196,11 @@ class TestExpressMultiTable:
         mock_session.ns = Root
         with session_context(mock_session):
             qc = ExpressQueryChat(orders_df, "orders")
-            assert not qc._server_initialized
+            assert qc._active_sessions == 0
             qc._ensure_server_started()
 
         assert len(called) == 1
-        assert qc._server_initialized
+        assert qc._active_sessions == 1
 
     def test_ensure_server_started_idempotent(self, orders_df, monkeypatch):
         """_ensure_server_started() called twice starts server only once."""

@@ -407,7 +407,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             )
 
         def app_server(input: Inputs, output: Outputs, session: Session):
-            self._mark_server_initialized()
+            self._mark_server_initialized(session)
             if enable_bookmarking:
                 session.bookmark.exclude.extend(["reset_query", "sql_editor"])
             vals = mod_server(
@@ -717,7 +717,9 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 resolved_table_name,
                 replace=True,
                 include_in_greeting=True,
-                cleanup_replaced=False,
+                # A live session may still be using the replaced source,
+                # so only clean it up once no sessions are active.
+                cleanup_replaced=self._active_sessions == 0,
             )
 
         self._require_initialized("server")
@@ -758,7 +760,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             )
         )
 
-        self._mark_server_initialized()
+        self._mark_server_initialized(session)
         return mod_server(
             id or self.id,
             data_sources=dict(self._data_sources),
@@ -1029,15 +1031,15 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         sidebar()/ui()) can complete before server initialization locks the
         table set.
         """
-        if self._server_initialized:
+        if self._active_sessions > 0:
             return
         session = get_current_session()
-        if isinstance(session, ExpressStubSession):
+        if session is None or isinstance(session, ExpressStubSession):
             return
         if not self._data_sources:
             return
         self._require_initialized("_ensure_server_started")
-        self._mark_server_initialized()
+        self._mark_server_initialized(session)
         resolved_history: bool | HistoryOptions = (
             self.history
             if self.history is not None

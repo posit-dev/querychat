@@ -440,13 +440,10 @@ def test_remove_table_prunes_greeter_tables(sqlite_engine):
 
 class TestGreeterSnapshotOverrides:
     """
-    _generate_async_snapshot() (private; used internally by mod_server() for
-    Shiny sessions) renders a greeting from an explicit tables/data_sources
-    snapshot instead of the live, shared greeter.tables/
-    QueryChat._data_sources -- which can be mutated by a later Shiny
-    session's server(data_source=...) call before an earlier session's async
-    greeting generation runs. The public build_client()/generate()/
-    generate_async() API is unaffected and keeps reading live state.
+    _generate_async_snapshot() renders from an explicit tables/data_sources
+    snapshot instead of live shared state, which a later Shiny session may
+    have mutated before an earlier session's async greeting runs. The
+    public build_client()/generate()/generate_async() API is unaffected.
     """
 
     def test_build_client_uses_live_state(self, sample_df):

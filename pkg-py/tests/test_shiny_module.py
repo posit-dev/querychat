@@ -158,11 +158,9 @@ def test_mod_server_passes_client_and_history_to_chat():
 
 def test_mod_server_generates_greeting_from_session_snapshot_not_live_state():
     """
-    _make_greeting() must render the greeting from this session's own
-    data_sources/greeting_tables snapshot, not by reading the shared,
-    mutable greeter/QueryChat._data_sources live at async-generation time --
-    a later Shiny session's server(data_source=...) call can mutate that
-    shared state before an earlier session's greeting finishes streaming.
+    _make_greeting() must render from this session's own snapshot, not the
+    shared live state, which a later session's server(data_source=...) call
+    may have mutated before an earlier session's greeting streams.
     """
     import asyncio
     from unittest.mock import AsyncMock, MagicMock, patch
@@ -171,7 +169,9 @@ def test_mod_server_generates_greeting_from_session_snapshot_not_live_state():
 
     captured = {}
 
-    def fake_chat_constructor(id, *, client=None, greeting=None, history=None, **kwargs):
+    def fake_chat_constructor(
+        id, *, client=None, greeting=None, history=None, **kwargs
+    ):
         captured["greeting"] = greeting
         return MagicMock()
 
@@ -199,7 +199,9 @@ def test_mod_server_generates_greeting_from_session_snapshot_not_live_state():
             "querychat._shiny_module.shinychat.Chat", side_effect=fake_chat_constructor
         ),
         patch("querychat._shiny_module.has_viz_tool", return_value=False),
-        patch("querychat._shiny_module.shinychat.chat_greeting", return_value=MagicMock()),
+        patch(
+            "querychat._shiny_module.shinychat.chat_greeting", return_value=MagicMock()
+        ),
     ):
         inner_fn(
             fake_input,
@@ -417,9 +419,7 @@ def test_shinychat_chat_contract_used_by_mod_server():
     mock_session.app = None
 
     with session_context(mock_session):
-        chat = shinychat.Chat(
-            "chat", client=MagicMock(), greeting=None, history=True
-        )
+        chat = shinychat.Chat("chat", client=MagicMock(), greeting=None, history=True)
 
         @chat.history.on_save
         def _on_save(values):

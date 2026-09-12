@@ -76,11 +76,7 @@ class TestServerDataSourceRegistersDeferredTable:
     def test_empty_explicit_table_name_raises_instead_of_falling_back(
         self, users_df, captured_mod_server
     ):
-        """
-        An explicit but invalid table_name="" must be validated and rejected,
-        not silently treated as omitted and fall back to the deferred/first
-        table name.
-        """
+        """An explicit table_name="" must be rejected, not treated as omitted."""
         qc = shiny_mod.QueryChat(None, table_name="users")
         with pytest.raises(ValueError, match="must begin with a letter"):
             qc.server(data_source=users_df, table_name="")
@@ -101,12 +97,6 @@ class TestServerDataSourceRegistersDeferredTable:
 
 
 class TestServerDataSourceSurvivesSecondSession:
-    """
-    server(data_source=...) must not be blocked by an earlier session having
-    already registered a table -- unlike the public add_table(), which still
-    guards against changes after server initialization.
-    """
-
     def test_second_session_does_not_raise(
         self, users_df, other_users_df, captured_mod_server
     ):
@@ -136,10 +126,8 @@ class TestServerDataSourceCleanupSafety:
         self, users_df, other_users_df, captured_mod_server
     ):
         """
-        A second session's server(data_source=...) call must not tear down
-        the DataSource object an earlier, still-running session's own
-        DataSourceExecutor holds a live reference to (e.g. closing a DuckDB
-        connection or disposing a SQLAlchemy engine out from under it).
+        An earlier, still-running session's executor holds a live
+        reference to the source a later session's registration replaces.
         """
         qc = shiny_mod.QueryChat(None, table_name="users")
 
@@ -154,9 +142,8 @@ class TestServerDataSourceCleanupSafety:
         self, users_df, other_users_df
     ):
         """
-        Config-time add_table(replace=True) (before any session starts) has
-        exactly one owner for the replaced table, so its existing
-        cleanup-on-replace behavior must be unchanged.
+        Config-time replacement has a single owner, so cleanup-on-replace
+        is unchanged on the public path.
         """
         qc = shiny_mod.QueryChat(users_df, "users")
         first_source = qc._data_sources["users"]
@@ -169,10 +156,8 @@ class TestServerDataSourceCleanupSafety:
         self, users_df, other_users_df, captured_mod_server
     ):
         """
-        A second session's server(data_source=...) call must not close the
-        cached QueryExecutor an earlier, still-running session's chat has
-        already captured (e.g. via _create_session_client) and is actively
-        querying through.
+        An earlier, still-running session's chat has already captured the
+        cached executor and may be querying through it.
         """
         qc = shiny_mod.QueryChat(None, table_name="users")
 
@@ -187,9 +172,8 @@ class TestServerDataSourceCleanupSafety:
         self, users_df, other_users_df
     ):
         """
-        Config-time add_table(replace=True) has exactly one owner, so its
-        existing cleanup-on-replace behavior for the cached executor must be
-        unchanged.
+        Config-time replacement has a single owner, so executor cleanup
+        is unchanged on the public path.
         """
         qc = shiny_mod.QueryChat(users_df, "users")
         first_executor = qc._require_query_executor("test")
@@ -204,10 +188,8 @@ class TestServerDataSourceGreetingSnapshot:
         self, users_df, captured_mod_server
     ):
         """
-        .server() must pass a snapshot of greeter.tables captured at call
-        time, so mod_server's greeting generation doesn't read the live,
-        mutable greeter.tables from an async task that may run after a
-        later session has changed it.
+        Greeting generation runs lazily, after a later session may have
+        mutated the live greeter.tables -- hence the call-time snapshot.
         """
         qc = shiny_mod.QueryChat(None, table_name="users")
         qc.server(data_source=users_df)

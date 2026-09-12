@@ -82,13 +82,10 @@ class QueryChatGreeter:
         Stream a greeting response from an explicit session snapshot.
 
         Internal counterpart to :meth:`generate_async`, used by
-        ``mod_server()`` for Shiny sessions. `tables` and `data_sources`
-        override the live `self.tables` and the QueryChat instance's data
-        sources with a point-in-time snapshot captured when the session's
-        `.server()` call ran, rather than reading that shared, mutable state
-        whenever shinychat gets around to invoking the (lazily-scheduled,
-        asynchronous) greeting callback -- by then, a *later* session's own
-        `.server(data_source=...)` call may have already mutated it.
+        ``mod_server()``. The snapshot matters because greeting generation
+        is scheduled lazily: by the time it runs, a later session's
+        ``.server(data_source=...)`` call may have already mutated the
+        shared live state.
         """
         client = self._client_factory(
             self._tables if tables is None else tables,

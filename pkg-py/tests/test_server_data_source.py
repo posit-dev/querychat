@@ -195,3 +195,65 @@ class TestServerDataSourceGreetingSnapshot:
         qc.server(data_source=users_df)
 
         assert captured_mod_server[0]["greeting_tables"] == ["users"]
+
+
+class TestServerDataSourceMixedWithConfigTimeAddTable:
+    def test_unnamed_registration_replaces_config_time_table(
+        self, users_df, other_users_df, captured_mod_server
+    ):
+        qc = shiny_mod.QueryChat()
+        qc.add_table(users_df, "orders")
+
+        qc.server(data_source=other_users_df)
+
+        # Same table name, but the session's data replaces the config-time data
+        sources = captured_mod_server[0]["data_sources"]
+        assert list(sources.keys()) == ["orders"]
+        assert sources["orders"].get_data()["id"].tolist() == [4, 5]
+
+    def test_replacing_config_time_table_does_not_clean_it_up(
+        self, users_df, other_users_df, captured_mod_server
+    ):
+        """
+        Consistent with per-session replacement: the replaced source's
+        cleanup is left to whoever created it.
+        """
+        qc = shiny_mod.QueryChat()
+        qc.add_table(users_df, "orders")
+        config_source = qc._data_sources["orders"]
+
+        with patch.object(config_source, "cleanup") as mock_cleanup:
+            qc.server(data_source=other_users_df)
+            mock_cleanup.assert_not_called()
+
+    def test_explicit_table_name_adds_alongside_config_time_table(
+        self, users_df, other_users_df, captured_mod_server
+    ):
+        qc = shiny_mod.QueryChat()
+        qc.add_table(users_df, "orders")
+
+        qc.server(data_source=other_users_df, table_name="returns")
+
+        sources = captured_mod_server[0]["data_sources"]
+        assert list(sources.keys()) == ["orders", "returns"]
+        # The config-time table's own data is untouched
+        assert sources["orders"].get_data()["id"].tolist() == [1, 2, 3]
+        assert sources["returns"].get_data()["id"].tolist() == [4, 5]
+
+    def test_later_session_snapshot_includes_earlier_sessions_table(
+        self, users_df, other_users_df, captured_mod_server
+    ):
+        """The registry is shared and cumulative across sessions."""
+        qc = shiny_mod.QueryChat()
+        qc.add_table(users_df, "orders")
+
+        # Session 1 adds its own table alongside the config-time one
+        qc.server(data_source=other_users_df, table_name="returns")
+        # Session 2 replaces "orders" only -- but still sees session 1's table
+        third_df = pd.DataFrame({"id": [7, 8, 9]})
+        qc.server(data_source=third_df, table_name="orders")
+
+        sources = captured_mod_server[1]["data_sources"]
+        assert list(sources.keys()) == ["orders", "returns"]
+        assert sources["orders"].get_data()["id"].tolist() == [7, 8, 9]
+        assert sources["returns"].get_data()["id"].tolist() == [4, 5]

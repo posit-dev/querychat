@@ -108,11 +108,15 @@ describe("QueryChat deferred client", {
     expect_equal(qc$id, "querychat_users")
   })
 
-  it("requires table_name when data_source is NULL", {
-    expect_error(
-      QueryChat$new(NULL),
-      "table_name.*required"
-    )
+  it("does not require table_name when data_source is NULL", {
+    qc <- QueryChat$new(NULL, greeting = "Test")
+    expect_equal(qc$id, "querychat")
+    expect_equal(length(qc$table_names()), 0L)
+  })
+
+  it("explicit table_name = NULL is treated the same as omitting it", {
+    qc <- QueryChat$new(NULL, table_name = NULL, greeting = "Test")
+    expect_equal(qc$id, "querychat")
   })
 
   it("stores client spec without resolving it", {
@@ -1117,6 +1121,146 @@ describe("QueryChat deferred client with $server()", {
       qc$server(data_source = new_users_df()),
       "must be called within a Shiny server function"
     )
+  })
+
+  it("$server(data_source=...) gives a clear error when no table name can be inferred", {
+    skip_if_no_dataframe_engine()
+    qc <- QueryChat$new(
+      NULL,
+      greeting = "Test",
+      client = mock_ellmer_chat_client()
+    )
+
+    expect_error(
+      shiny::testServer(
+        function(input, output, session) {
+          qc$server(data_source = new_users_df())
+        },
+        {}
+      ),
+      "table_name.*required"
+    )
+  })
+
+  it("$server(data_source=, table_name=) registers under the given name", {
+    skip_if_no_dataframe_engine()
+    qc <- QueryChat$new(
+      NULL,
+      greeting = "Test",
+      client = mock_ellmer_chat_client()
+    )
+
+    shiny::testServer(
+      function(input, output, session) {
+        qc$server(data_source = new_users_df(), table_name = "users")
+      },
+      {}
+    )
+    expect_equal(qc$table_names(), "users")
+  })
+
+  it("id stays fixed across deferred registration (no desync from an already-rendered UI)", {
+    skip_if_no_dataframe_engine()
+    qc <- QueryChat$new(
+      NULL,
+      greeting = "Test",
+      client = mock_ellmer_chat_client()
+    )
+    id_before_server <- qc$id # simulates $ui()/$sidebar() having already rendered
+
+    shiny::testServer(
+      function(input, output, session) {
+        qc$server(data_source = new_users_df(), table_name = "users")
+      },
+      {}
+    )
+
+    expect_equal(qc$id, id_before_server)
+  })
+
+  it("id stays fixed when a table_name was given at $new() too", {
+    skip_if_no_dataframe_engine()
+    qc <- QueryChat$new(
+      NULL,
+      "orders",
+      greeting = "Test",
+      client = mock_ellmer_chat_client()
+    )
+    id_before_server <- qc$id
+
+    shiny::testServer(
+      function(input, output, session) {
+        qc$server(data_source = new_users_df(), table_name = "different_name")
+      },
+      {}
+    )
+
+    expect_equal(qc$id, id_before_server)
+  })
+
+  it("$server() preserves positional data_source/client call compatibility", {
+    skip_if_no_dataframe_engine()
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+
+    expect_error(
+      shiny::testServer(
+        function(input, output, session) {
+          qc$server(new_users_df(), mock_ellmer_chat_client())
+        },
+        {}
+      ),
+      NA
+    )
+  })
+
+  it("$server(data_source=, table_name=) errors when a DataSource's own name conflicts", {
+    skip_if_no_dataframe_engine()
+    qc <- QueryChat$new(
+      NULL,
+      greeting = "Test",
+      client = mock_ellmer_chat_client()
+    )
+    mismatched_source <- local_data_frame_source(new_users_df(), "orders")
+
+    expect_error(
+      shiny::testServer(
+        function(input, output, session) {
+          qc$server(data_source = mismatched_source, table_name = "users")
+        },
+        {}
+      ),
+      "table name"
+    )
+  })
+
+  it("id_override stays NULL for the generic deferred fallback", {
+    qc <- QueryChat$new(NULL, greeting = "Test")
+    expect_null(qc$id_override)
+    expect_equal(qc$id, "querychat")
+  })
+
+  it("$add_table() never rewrites $id (it is fixed at construction time)", {
+    skip_if_no_dataframe_engine()
+    qc <- QueryChat$new(NULL, "placeholder", greeting = "Test")
+    id_before <- qc$id
+
+    qc$add_table(new_users_df(), "users")
+
+    expect_equal(qc$id, id_before)
+  })
+})
+
+describe("QueryChat$add_table()", {
+  it("errors when a DataSource's own table_name conflicts with the registration name", {
+    skip_if_no_dataframe_engine()
+    qc <- QueryChat$new(NULL, greeting = "Test")
+    mismatched_source <- local_data_frame_source(new_users_df(), "orders")
+
+    expect_error(
+      qc$add_table(mismatched_source, "users"),
+      "table name"
+    )
+    expect_equal(length(qc$table_names()), 0L)
   })
 })
 

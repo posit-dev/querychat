@@ -250,12 +250,16 @@ QueryChat <- R6::R6Class(
     #' @param table_name A string specifying the table name to use in SQL
     #'   queries. If `data_source` is a data.frame, this is the name to refer to
     #'   it by in queries (typically the variable name). If not provided, will
-    #'   be inferred from the variable name for data.frame inputs. For database
-    #'   connections or `NULL` data sources, this parameter is required.
+    #'   be inferred from the variable name for data.frame inputs. Required for
+    #'   database connections. Optional when `data_source` is `NULL`: if
+    #'   omitted, `$id` falls back to a generic default, and a table name must
+    #'   be supplied later via `$add_table()` or `$server(data_source =,
+    #'   table_name = )`.
     #' @param ... Additional arguments (currently unused).
     #' @param id Optional module ID for the QueryChat instance. If not provided,
-    #'   will be auto-generated from `table_name`. The ID is used to namespace
-    #'   the Shiny module.
+    #'   will be auto-generated from `table_name` (or a generic default when
+    #'   `data_source` is `NULL` and `table_name` is also omitted). The ID is
+    #'   used to namespace the Shiny module.
     #' @param greeting Optional initial message to display to users. Can be a
     #'   character string (in Markdown format) or a file path. If not provided,
     #'   a greeting will be generated at the start of each conversation using
@@ -383,14 +387,18 @@ QueryChat <- R6::R6Class(
         self$greeter$tables <- c(self$greeter$tables, normalized$table_name)
         self$id <- id %||% sprintf("querychat_%s", normalized$table_name)
       } else {
-        # Deferred pattern: data_source is NULL
-        if (is_missing(table_name)) {
-          cli::cli_abort(
-            "{.arg table_name} is required when {.arg data_source} is {.val NULL}."
-          )
+        # Deferred pattern: data_source is NULL. table_name is optional here;
+        # explicit NULL is treated the same as omitting it.
+        table_name_given <- !is_missing(table_name) && !is.null(table_name)
+        if (table_name_given) {
+          private$.deferred_table_name <- table_name
         }
-        private$.deferred_table_name <- table_name
-        self$id <- id %||% sprintf("querychat_%s", table_name)
+        default_id <- if (table_name_given) {
+          sprintf("querychat_%s", table_name)
+        } else {
+          "querychat"
+        }
+        self$id <- id %||% default_id
       }
 
       # By default, only close automatically if a Shiny session is active
@@ -433,6 +441,17 @@ QueryChat <- R6::R6Class(
           "Table {.val {table_name}} already exists. Use {.code replace = TRUE} to replace."
         )
       }
+      if (
+        is_data_source(data_source) &&
+          !identical(data_source$table_name, table_name)
+      ) {
+        cli::cli_abort(
+          c(
+            "{.arg data_source}'s own table name ({.val {data_source$table_name}}) does not match the given {.arg table_name} ({.val {table_name}}).",
+            "i" = "Pass a matching {.arg table_name}, or omit it to use {.val {data_source$table_name}}."
+          )
+        )
+      }
       normalized <- normalize_data_source(data_source, table_name)
 
       other_sources <- private$.data_sources[
@@ -465,10 +484,6 @@ QueryChat <- R6::R6Class(
       if (!is.null(private$.query_executor)) {
         tryCatch(private$.query_executor$cleanup(), error = function(e) NULL)
         private$.query_executor <- NULL
-      }
-
-      if (length(private$.data_sources) == 1 && is.null(self$id_override)) {
-        self$id <- sprintf("querychat_%s", table_name)
       }
 
       if (isTRUE(include_in_greeting)) {
@@ -1044,8 +1059,12 @@ QueryChat <- R6::R6Class(
     #' @description
     #' Initialize the querychat server logic.
     #'
-    #' @param data_source Optional data source for backward compatibility.
-    #'   If provided, calls `$add_table()` before initializing server logic.
+    #' @param data_source Optional data source to register for this session,
+    #'   for the deferred pattern where the data source can't be created
+    #'   until the server function runs (e.g. a connection scoped to
+    #'   per-user OAuth credentials). Registered under `table_name` if given,
+    #'   otherwise the `table_name` passed to `$new()`, or the first
+    #'   already-registered table.
     #' @param client Optional chat client override for this session.
     #' @param history Conversation history configuration for this call. Overrides
     #'   the value set on `$new()`. Resolves to `TRUE` when neither this nor the
@@ -1054,6 +1073,9 @@ QueryChat <- R6::R6Class(
     #'   shinychat::history_options(restore_mode = "bookmark")` instead (set on
     #'   `$new()`, or passed here).
     #' @param ... Ignored.
+    #' @param table_name Table name to register `data_source` under. Only
+    #'   used when `data_source` is provided. Named-only (placed after `...`)
+    #'   so it can't shift the meaning of existing positional calls.
     #' @param id Optional module ID override.
     #' @param session The Shiny session object.
     #'
@@ -1069,9 +1091,11 @@ QueryChat <- R6::R6Class(
       history = NULL,
       enable_bookmarking = NULL,
       ...,
+      table_name = NULL,
       id = NULL,
       session = shiny::getDefaultReactiveDomain()
     ) {
+      check_string(table_name, allow_null = TRUE, allow_empty = FALSE)
       check_string(id, allow_null = TRUE, allow_empty = FALSE)
       check_dots_empty()
 
@@ -1082,8 +1106,21 @@ QueryChat <- R6::R6Class(
       }
 
       if (!is.null(data_source)) {
-        tbl_name <- private$.deferred_table_name %||%
-          names(private$.data_sources)[[1]]
+        tbl_name <- table_name %||% private$.deferred_table_name
+        if (is.null(tbl_name)) {
+          existing_tables <- names(private$.data_sources)
+          if (length(existing_tables) > 0) {
+            tbl_name <- existing_tables[[1]]
+          }
+        }
+        if (is.null(tbl_name)) {
+          cli::cli_abort(
+            c(
+              "{.arg table_name} is required when {.arg data_source} is provided and no table name can be inferred.",
+              "i" = "Pass {.arg table_name} to {.fn $server}, or {.arg table_name} to {.fn QueryChat$new}, or register a table first with {.fn $add_table}."
+            )
+          )
+        }
         self$add_table(
           data_source,
           tbl_name,

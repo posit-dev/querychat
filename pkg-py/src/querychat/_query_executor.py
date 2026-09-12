@@ -19,6 +19,8 @@ from ._datasource import (
 from ._utils import check_query
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from ._datasource import DataFrameSource, DataSource, PolarsLazySource
 
 
@@ -314,3 +316,26 @@ def get_dataframe_backend_name(source: DataFrameSource) -> str:
     return nw.get_native_namespace(
         nw.from_native(source.get_data(), eager_only=True)
     ).__name__
+
+
+def build_query_executor(sources: Mapping[str, DataSource]) -> QueryExecutor:
+    """Pick the executor for a compatible group of sources."""
+    from ._datasource import DataFrameSource, PolarsLazySource
+
+    validate_source_group_compatibility(dict(sources))
+
+    if len(sources) == 1:
+        return DataSourceExecutor(dict(sources))
+
+    first_source = next(iter(sources.values()))
+
+    if isinstance(first_source, DataFrameSource):
+        return DuckDBExecutor(
+            {n: s for n, s in sources.items() if isinstance(s, DataFrameSource)}
+        )
+    if isinstance(first_source, PolarsLazySource):
+        return PolarsSQLExecutor(
+            {n: s for n, s in sources.items() if isinstance(s, PolarsLazySource)}
+        )
+
+    return DataSourceExecutor(dict(sources))

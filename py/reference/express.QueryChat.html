@@ -496,7 +496,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tr>
 <tr class="odd">
 <td><a href="#querychat.express.QueryChat.cleanup">cleanup</a></td>
-<td>Clean up resources associated with all data sources.</td>
+<td>Clean up resources held by this object.</td>
 </tr>
 <tr class="even">
 <td><a href="#querychat.express.QueryChat.client">client</a></td>
@@ -726,7 +726,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="querychat.express.QueryChat.cleanup" class="level3">
 <h3 class="anchored" data-anchor-id="querychat.express.QueryChat.cleanup">cleanup</h3>
 <div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>express.QueryChat.cleanup()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>Clean up resources associated with all data sources.</p>
+<p>Clean up resources held by this object.</p>
+<p>This closes the query executor and all data sources (e.g., DuckDB connections). It also closes the chatlas client, but only if querychat created it (i.e., <code>client</code> was <code>None</code> or a string spec like <code>"openai/gpt-4o"</code>, including per-call overrides such as <code>.server(client="openai")</code>). A user-supplied <code>chatlas.Chat</code> instance is never closed here – its lifecycle remains the caller’s responsibility.</p>
+<p>Safe to call multiple times. In long-lived applications, call this when the app shuts down (e.g., via <code>atexit</code>).</p>
 </section>
 <section id="querychat.express.QueryChat.client" class="level3">
 <h3 class="anchored" data-anchor-id="querychat.express.QueryChat.client">client</h3>

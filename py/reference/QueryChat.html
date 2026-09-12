@@ -497,7 +497,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tr>
 <tr class="even">
 <td><a href="#querychat.QueryChat.cleanup">cleanup</a></td>
-<td>Clean up resources associated with all data sources.</td>
+<td>Clean up resources held by this object.</td>
 </tr>
 <tr class="odd">
 <td><a href="#querychat.QueryChat.client">client</a></td>
@@ -762,7 +762,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="querychat.QueryChat.cleanup" class="level3">
 <h3 class="anchored" data-anchor-id="querychat.QueryChat.cleanup">cleanup</h3>
 <div class="sourceCode" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>QueryChat.cleanup()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>Clean up resources associated with all data sources.</p>
+<p>Clean up resources held by this object.</p>
+<p>This closes the query executor and all data sources (e.g., DuckDB connections). It also closes the chatlas client, but only if querychat created it (i.e., <code>client</code> was <code>None</code> or a string spec like <code>"openai/gpt-4o"</code>, including per-call overrides such as <code>.server(client="openai")</code>). A user-supplied <code>chatlas.Chat</code> instance is never closed here – its lifecycle remains the caller’s responsibility.</p>
+<p>Safe to call multiple times. In long-lived applications, call this when the app shuts down (e.g., via <code>atexit</code>).</p>
 </section>
 <section id="querychat.QueryChat.client" class="level3">
 <h3 class="anchored" data-anchor-id="querychat.QueryChat.client">client</h3>
@@ -980,7 +982,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tr class="odd">
 <td>client</td>
 <td><a href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | <code>chatlas</code>.<code>Chat</code> | <code>MISSING_TYPE</code></td>
-<td>Optional chat client to use for this session. If provided, overrides any client set at initialization time for this call only. This is useful for the deferred pattern where the client cannot be created at initialization time (e.g., when using Posit Connect managed OAuth credentials that require session access).</td>
+<td>Optional chat client to use for this session. If provided, overrides any client set at initialization time for this call only. This is useful for the deferred pattern where the client cannot be created at initialization time (e.g., when using Posit Connect managed OAuth credentials that require session access). Clients resolved from a spec are closed automatically when the session ends; a user-supplied <code>chatlas.Chat</code> instance is never closed by querychat.</td>
 <td><code>MISSING</code></td>
 </tr>
 <tr class="even">

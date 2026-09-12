@@ -108,11 +108,15 @@ describe("QueryChat deferred client", {
     expect_equal(qc$id, "querychat_users")
   })
 
-  it("requires table_name when data_source is NULL", {
-    expect_error(
-      QueryChat$new(NULL),
-      "table_name.*required"
-    )
+  it("does not require table_name when data_source is NULL", {
+    qc <- QueryChat$new(NULL, greeting = "Test")
+    expect_equal(qc$id, "querychat")
+    expect_equal(length(qc$table_names()), 0L)
+  })
+
+  it("explicit table_name = NULL is treated the same as omitting it", {
+    qc <- QueryChat$new(NULL, table_name = NULL, greeting = "Test")
+    expect_equal(qc$id, "querychat")
   })
 
   it("stores client spec without resolving it", {
@@ -1117,6 +1121,42 @@ describe("QueryChat deferred client with $server()", {
       qc$server(data_source = new_users_df()),
       "must be called within a Shiny server function"
     )
+  })
+
+  it("$server(data_source=...) gives a clear error when no table name can be inferred", {
+    skip_if_no_dataframe_engine()
+    qc <- QueryChat$new(
+      NULL,
+      greeting = "Test",
+      client = mock_ellmer_chat_client()
+    )
+
+    expect_error(
+      shiny::testServer(
+        function(input, output, session) {
+          qc$server(data_source = new_users_df())
+        },
+        {}
+      ),
+      "table_name.*required"
+    )
+  })
+
+  it("$server(data_source=, table_name=) registers under the given name", {
+    skip_if_no_dataframe_engine()
+    qc <- QueryChat$new(
+      NULL,
+      greeting = "Test",
+      client = mock_ellmer_chat_client()
+    )
+
+    shiny::testServer(
+      function(input, output, session) {
+        qc$server(data_source = new_users_df(), table_name = "users")
+      },
+      {}
+    )
+    expect_equal(qc$table_names(), "users")
   })
 })
 

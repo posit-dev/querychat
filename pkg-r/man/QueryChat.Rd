@@ -176,8 +176,10 @@ to \verb{$server()} before calling methods that require data access.}
       \item{\code{table_name}}{A string specifying the table name to use in SQL
 queries. If \code{data_source} is a data.frame, this is the name to refer to
 it by in queries (typically the variable name). If not provided, will
-be inferred from the variable name for data.frame inputs. For database
-connections or \code{NULL} data sources, this parameter is required.}
+be inferred from the variable name for data.frame inputs. Required for
+database connections. Optional when \code{data_source} is \code{NULL}: if
+omitted, \verb{$id} falls back to a generic default, and a table name must
+be supplied later via \verb{$add_table()} or \verb{$server(data_source =, table_name = )}.}
       \item{\code{...}}{Additional arguments (currently unused).}
       \item{\code{id}}{Optional module ID for the QueryChat instance. If not provided,
 will be auto-generated from \code{table_name}. The ID is used to namespace
@@ -555,6 +557,7 @@ and \code{window_title} is omitted, it is also used as the document title.}
     \if{html}{\out{<div class="r">}}
     \preformatted{QueryChat$server(
   data_source = NULL,
+  table_name = NULL,
   client = NULL,
   history = NULL,
   enable_bookmarking = NULL,
@@ -567,8 +570,14 @@ and \code{window_title} is omitted, it is also used as the document title.}
   \subsection{Arguments}{
     \if{html}{\out{<div class="arguments">}}
     \describe{
-      \item{\code{data_source}}{Optional data source for backward compatibility.
-If provided, calls \verb{$add_table()} before initializing server logic.}
+      \item{\code{data_source}}{Optional data source to register for this session,
+for the deferred pattern where the data source can't be created
+until the server function runs (e.g. a connection scoped to
+per-user OAuth credentials). Registered under \code{table_name} if given,
+otherwise the \code{table_name} passed to \verb{$new()}, or the first
+already-registered table.}
+      \item{\code{table_name}}{Table name to register \code{data_source} under. Only
+used when \code{data_source} is provided.}
       \item{\code{client}}{Optional chat client override for this session.}
       \item{\code{history}}{Conversation history configuration for this call. Overrides
 the value set on \verb{$new()}. Resolves to \code{TRUE} when neither this nor the

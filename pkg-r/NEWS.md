@@ -70,6 +70,8 @@
 
 * Query results were being shown expanded, and often repeated in the LLM's response, far more often than intended. The LLM is now guided to expand a result only when the user explicitly asks to see the raw table. (#295)
 
+* `$add_table()` no longer rewrites the Shiny module `$id` when the registered table is the only one; the id is now fixed at construction time, matching Python. The rewrite could desync the module namespace from an already-rendered UI when a table was registered between `$ui()` and `$server()` (e.g. via `$server(data_source = )`). (#305)
+
 # querychat 0.3.0
 
 ## New features

@@ -1233,10 +1233,20 @@ describe("QueryChat deferred client with $server()", {
     )
   })
 
-  it("id_override stays NULL for the generic deferred fallback (only $id is pinned)", {
+  it("id_override stays NULL for the generic deferred fallback", {
     qc <- QueryChat$new(NULL, greeting = "Test")
     expect_null(qc$id_override)
     expect_equal(qc$id, "querychat")
+  })
+
+  it("$add_table() never rewrites $id (it is fixed at construction time)", {
+    skip_if_no_dataframe_engine()
+    qc <- QueryChat$new(NULL, "placeholder", greeting = "Test")
+    id_before <- qc$id
+
+    qc$add_table(new_users_df(), "users")
+
+    expect_equal(qc$id, id_before)
   })
 })
 

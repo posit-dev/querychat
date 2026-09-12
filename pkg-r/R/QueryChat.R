@@ -91,7 +91,6 @@ QueryChat <- R6::R6Class(
   private = list(
     .data_sources = list(),
     .deferred_table_name = NULL,
-    .id_pinned = FALSE,
     .query_executor = NULL,
     .server_initialized = FALSE,
     .client_spec = NULL,
@@ -400,13 +399,6 @@ QueryChat <- R6::R6Class(
           "querychat"
         }
         self$id <- id %||% default_id
-        # $ui()/$sidebar() may render with this id before any session's
-        # $server(data_source = ) call registers a table -- pin it (via a
-        # private flag, not id_override, which specifically means "the user
-        # passed id =") so add_table()'s single-table auto-rename doesn't
-        # fire later and desync the module namespace from what's already
-        # been rendered.
-        private$.id_pinned <- TRUE
       }
 
       # By default, only close automatically if a Shiny session is active
@@ -492,14 +484,6 @@ QueryChat <- R6::R6Class(
       if (!is.null(private$.query_executor)) {
         tryCatch(private$.query_executor$cleanup(), error = function(e) NULL)
         private$.query_executor <- NULL
-      }
-
-      if (
-        length(private$.data_sources) == 1 &&
-          is.null(self$id_override) &&
-          !private$.id_pinned
-      ) {
-        self$id <- sprintf("querychat_%s", table_name)
       }
 
       if (isTRUE(include_in_greeting)) {

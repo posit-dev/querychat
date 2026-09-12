@@ -151,16 +151,10 @@ QueryChat <- R6::R6Class(
     },
 
     # Guard-free core of $add_table(), also called directly by $server()'s
-    # data_source= path so a session can register its own table even after
-    # an earlier session's $server() call has set .server_initialized.
-    #
-    # cleanup_replaced = FALSE must be used for that per-session replacement:
-    # a table replaced here may still be in active use by an earlier,
-    # already-running session (its own query executor may hold a live
-    # reference to it), so cleaning it up here would pull the resource out
-    # from under that session. The default (TRUE) preserves $add_table()'s
-    # existing behavior, where a config-time replacement has exactly one
-    # owner.
+    # per-session data_source= path (which must work even after an earlier
+    # session set .server_initialized). cleanup_replaced = FALSE is for that
+    # path: the replaced table may still be in use by an earlier session, so
+    # cleanup becomes the caller's responsibility.
     add_or_replace_table = function(
       data_source,
       table_name,
@@ -474,8 +468,7 @@ QueryChat <- R6::R6Class(
         self$greeter$tables <- c(self$greeter$tables, normalized$table_name)
         self$id <- id %||% sprintf("querychat_%s", normalized$table_name)
       } else {
-        # Deferred pattern: data_source is NULL. table_name is optional here;
-        # explicit NULL is treated the same as omitting it.
+        # An explicit table_name = NULL is treated the same as omitting it.
         table_name_given <- !is_missing(table_name) && !is.null(table_name)
         if (table_name_given) {
           private$.deferred_table_name <- table_name

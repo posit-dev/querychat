@@ -633,6 +633,8 @@ class QueryChat(QueryChatBase[IntoFrameT]):
     def server(
         self,
         *,
+        data_source: IntoFrame | sqlalchemy.Engine | ibis.Table | None = None,
+        table_name: str | None = None,
         client: str | chatlas.Chat | MISSING_TYPE = MISSING,
         history: Optional[bool | HistoryOptions] = None,
         enable_bookmarking: bool | None = None,
@@ -648,6 +650,17 @@ class QueryChat(QueryChatBase[IntoFrameT]):
 
         Parameters
         ----------
+        data_source
+            Optional data source to register for this session, for the
+            deferred pattern where the data source can't be created until the
+            server function runs (e.g., a database connection scoped to
+            per-user OAuth credentials on Posit Connect). Registered under
+            `table_name` if given, otherwise the `table_name` passed to the
+            constructor (when it was created with `data_source=None`), or the
+            first already-registered table.
+        table_name
+            Table name to register `data_source` under. Only used when
+            `data_source` is provided.
         client
             Optional chat client to use for this session. If provided, overrides
             any client set at initialization time for this call only. This is useful
@@ -682,6 +695,27 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         if session is None:
             raise RuntimeError(
                 ".server() must be called within an active Shiny session (i.e., within the server function). "
+            )
+
+        if data_source is not None:
+            if table_name is not None:
+                resolved_table_name = table_name
+            elif self._deferred_table_name is not None:
+                resolved_table_name = self._deferred_table_name
+            else:
+                resolved_table_name = next(iter(self._data_sources), None)
+            if resolved_table_name is None:
+                raise ValueError(
+                    "table_name is required when data_source is provided and no "
+                    "table name can be inferred. Pass table_name to .server(), "
+                    "or table_name to the QueryChat constructor, or register a "
+                    "table first with add_table()."
+                )
+            self.add_table(
+                data_source,
+                resolved_table_name,
+                replace=True,
+                include_in_greeting=True,
             )
 
         self._require_initialized("server")

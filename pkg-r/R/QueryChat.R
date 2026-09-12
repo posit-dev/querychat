@@ -228,7 +228,9 @@ QueryChat <- R6::R6Class(
 
       # Guard against duplicates: the per-session $server(data_source=) path
       # reaches this once per session under the same table name.
-      if (isTRUE(include_in_greeting) && !(table_name %in% self$greeter$tables)) {
+      if (
+        isTRUE(include_in_greeting) && !(table_name %in% self$greeter$tables)
+      ) {
         self$greeter$tables <- c(self$greeter$tables, table_name)
       }
 

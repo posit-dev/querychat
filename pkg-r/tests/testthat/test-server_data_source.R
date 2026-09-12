@@ -143,4 +143,18 @@ describe("QueryChat$server(data_source=) greeting snapshot", {
 
     expect_equal(calls$args[[1]]$greeting_tables, "users")
   })
+
+  it("per-session registration does not duplicate greeter$tables", {
+    skip_if_no_dataframe_engine()
+    calls <- local_captured_mod_server()
+
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+    withr::defer(qc$cleanup())
+
+    qc$server(data_source = new_users_df(), session = fake_shiny_session())
+    qc$server(data_source = new_users_df(), session = fake_shiny_session())
+
+    expect_equal(qc$greeter$tables, "users")
+    expect_equal(calls$args[[2]]$greeting_tables, "users")
+  })
 })

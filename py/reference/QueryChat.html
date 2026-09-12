@@ -964,7 +964,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </section>
 <section id="querychat.QueryChat.server" class="level3">
 <h3 class="anchored" data-anchor-id="querychat.QueryChat.server">server</h3>
-<div class="sourceCode" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>QueryChat.server(client<span class="op">=</span>MISSING, history<span class="op">=</span><span class="va">None</span>, enable_bookmarking<span class="op">=</span><span class="va">None</span>, <span class="bu">id</span><span class="op">=</span><span class="va">None</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>QueryChat.server(</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>    data_source<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>    table_name<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>    client<span class="op">=</span>MISSING,</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>    history<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>    enable_bookmarking<span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>    <span class="bu">id</span><span class="op">=</span><span class="va">None</span>,</span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Initialize Shiny server logic.</p>
 <p>This method is intended for use in Shiny Code mode, where the user must explicitly call <code>.server()</code> within the Shiny server function. In Shiny Express mode, you can use <code>querychat.express.QueryChat</code> instead of <code>querychat.QueryChat</code>, which calls <code>.server()</code> automatically.</p>
 <section id="parameters-7" class="level4 doc-section doc-section-parameters">
@@ -979,6 +986,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tr>
 </thead>
 <tbody>
+<tr class="odd">
+<td>data_source</td>
+<td><code>IntoFrame</code> | <code>sqlalchemy</code>.<code>Engine</code> | <code>ibis</code>.<code>Table</code> | None</td>
+<td>Optional data source to register for this session, for the deferred pattern where the data source can’t be created until the server function runs (e.g., a database connection scoped to per-user OAuth credentials on Posit Connect). Registered under <code>table_name</code> if given, otherwise the <code>table_name</code> passed to the constructor (when it was created with <code>data_source=None</code>), or the first already-registered table.</td>
+<td><code>None</code></td>
+</tr>
+<tr class="even">
+<td>table_name</td>
+<td><a href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | None</td>
+<td>Table name to register <code>data_source</code> under. Only used when <code>data_source</code> is provided.</td>
+<td><code>None</code></td>
+</tr>
 <tr class="odd">
 <td>client</td>
 <td><a href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | <code>chatlas</code>.<code>Chat</code> | <code>MISSING_TYPE</code></td>

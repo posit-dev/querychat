@@ -100,20 +100,32 @@ class TestServerDataSourceRegistersDeferredTable:
         assert qc.table_names() == ["users"]
 
 
-class TestServerDataSourceCurrentSingleSessionLimitation:
+class TestServerDataSourceSurvivesSecondSession:
     """
-    Known limitation (tracked by a follow-up PR): server(data_source=...)
-    reuses the public add_table(), so it still hits the "no changes after
-    server initialization" guard on a second session -- the same bug R's
-    existing $server(data_source=) has today. Making this survive a second
-    session is a separate, focused change.
+    server(data_source=...) must not be blocked by an earlier session having
+    already registered a table -- unlike the public add_table(), which still
+    guards against changes after server initialization.
     """
 
-    def test_second_session_currently_raises(
+    def test_second_session_does_not_raise(
         self, users_df, other_users_df, captured_mod_server
     ):
         qc = shiny_mod.QueryChat(None, table_name="users")
         qc.server(data_source=users_df)
 
+        qc.server(data_source=other_users_df)  # must not raise
+
+        assert list(captured_mod_server[1]["data_sources"].keys()) == ["users"]
+
+    def test_add_table_still_blocked_after_server_init(
+        self, users_df, other_users_df, captured_mod_server
+    ):
+        """
+        The public add_table() guard must remain intact; only the
+        server(data_source=...) path bypasses it.
+        """
+        qc = shiny_mod.QueryChat(None, table_name="users")
+        qc.server(data_source=users_df)
+
         with pytest.raises(RuntimeError, match="Cannot add tables after server"):
-            qc.server(data_source=other_users_df)
+            qc.add_table(other_users_df, "other")

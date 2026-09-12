@@ -491,7 +491,29 @@ class QueryChatBase(Generic[IntoFrameT]):
                 "Cannot add tables after server initialization. "
                 "Add all tables before calling .server() or .app()."
             )
+        self._add_or_replace_table(
+            data_source,
+            table_name,
+            replace=replace,
+            include_in_greeting=include_in_greeting,
+        )
 
+    def _add_or_replace_table(
+        self,
+        data_source: IntoFrame | sqlalchemy.Engine | BaseBoard,
+        table_name: str,
+        *,
+        replace: bool,
+        include_in_greeting: bool,
+    ) -> None:
+        """
+        Stage a table and rebuild the system prompt/executor cache.
+
+        This is the guard-free core of :meth:`add_table`. It's also called
+        directly by ``.server(data_source=...)`` so that each session can
+        register (or replace) its own table even after an earlier session's
+        ``.server()`` call has already set ``_server_initialized``.
+        """
         if not isinstance(include_in_greeting, bool):
             raise TypeError(
                 "include_in_greeting must be True or False, got "

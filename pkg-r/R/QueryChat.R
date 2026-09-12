@@ -91,6 +91,7 @@ QueryChat <- R6::R6Class(
   private = list(
     .data_sources = list(),
     .deferred_table_name = NULL,
+    .id_pinned = FALSE,
     .query_executor = NULL,
     .server_initialized = FALSE,
     .client_spec = NULL,
@@ -257,8 +258,9 @@ QueryChat <- R6::R6Class(
     #'   table_name = )`.
     #' @param ... Additional arguments (currently unused).
     #' @param id Optional module ID for the QueryChat instance. If not provided,
-    #'   will be auto-generated from `table_name`. The ID is used to namespace
-    #'   the Shiny module.
+    #'   will be auto-generated from `table_name` (or a generic default when
+    #'   `data_source` is `NULL` and `table_name` is also omitted). The ID is
+    #'   used to namespace the Shiny module.
     #' @param greeting Optional initial message to display to users. Can be a
     #'   character string (in Markdown format) or a file path. If not provided,
     #'   a greeting will be generated at the start of each conversation using
@@ -399,10 +401,12 @@ QueryChat <- R6::R6Class(
         }
         self$id <- id %||% default_id
         # $ui()/$sidebar() may render with this id before any session's
-        # $server(data_source = ) call registers a table -- pin id_override
-        # so add_table()'s single-table auto-rename doesn't fire later and
-        # desync the module namespace from what's already been rendered.
-        self$id_override <- self$id
+        # $server(data_source = ) call registers a table -- pin it (via a
+        # private flag, not id_override, which specifically means "the user
+        # passed id =") so add_table()'s single-table auto-rename doesn't
+        # fire later and desync the module namespace from what's already
+        # been rendered.
+        private$.id_pinned <- TRUE
       }
 
       # By default, only close automatically if a Shiny session is active
@@ -479,7 +483,11 @@ QueryChat <- R6::R6Class(
         private$.query_executor <- NULL
       }
 
-      if (length(private$.data_sources) == 1 && is.null(self$id_override)) {
+      if (
+        length(private$.data_sources) == 1 &&
+          is.null(self$id_override) &&
+          !private$.id_pinned
+      ) {
         self$id <- sprintf("querychat_%s", table_name)
       }
 
@@ -1115,6 +1123,17 @@ QueryChat <- R6::R6Class(
             c(
               "{.arg table_name} is required when {.arg data_source} is provided and no table name can be inferred.",
               "i" = "Pass {.arg table_name} to {.fn $server}, or {.arg table_name} to {.fn QueryChat$new}, or register a table first with {.fn $add_table}."
+            )
+          )
+        }
+        if (
+          is_data_source(data_source) &&
+            !identical(data_source$table_name, tbl_name)
+        ) {
+          cli::cli_abort(
+            c(
+              "{.arg data_source}'s own table name ({.val {data_source$table_name}}) does not match the resolved {.arg table_name} ({.val {tbl_name}}).",
+              "i" = "Pass a matching {.arg table_name}, or omit it to use {.val {data_source$table_name}}."
             )
           )
         }

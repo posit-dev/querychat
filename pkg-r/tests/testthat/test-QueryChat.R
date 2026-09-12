@@ -1212,6 +1212,32 @@ describe("QueryChat deferred client with $server()", {
       NA
     )
   })
+
+  it("$server(data_source=, table_name=) errors when a DataSource's own name conflicts", {
+    skip_if_no_dataframe_engine()
+    qc <- QueryChat$new(
+      NULL,
+      greeting = "Test",
+      client = mock_ellmer_chat_client()
+    )
+    mismatched_source <- local_data_frame_source(new_users_df(), "orders")
+
+    expect_error(
+      shiny::testServer(
+        function(input, output, session) {
+          qc$server(data_source = mismatched_source, table_name = "users")
+        },
+        {}
+      ),
+      "table name"
+    )
+  })
+
+  it("id_override stays NULL for the generic deferred fallback (only $id is pinned)", {
+    qc <- QueryChat$new(NULL, greeting = "Test")
+    expect_null(qc$id_override)
+    expect_equal(qc$id, "querychat")
+  })
 })
 
 describe("QueryChat$add_tables()", {

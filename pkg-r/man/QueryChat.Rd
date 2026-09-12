@@ -182,8 +182,9 @@ omitted, \verb{$id} falls back to a generic default, and a table name must
 be supplied later via \verb{$add_table()} or \verb{$server(data_source =, table_name = )}.}
       \item{\code{...}}{Additional arguments (currently unused).}
       \item{\code{id}}{Optional module ID for the QueryChat instance. If not provided,
-will be auto-generated from \code{table_name}. The ID is used to namespace
-the Shiny module.}
+will be auto-generated from \code{table_name} (or a generic default when
+\code{data_source} is \code{NULL} and \code{table_name} is also omitted). The ID is
+used to namespace the Shiny module.}
       \item{\code{greeting}}{Optional initial message to display to users. Can be a
 character string (in Markdown format) or a file path. If not provided,
 a greeting will be generated at the start of each conversation using

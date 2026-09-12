@@ -53,6 +53,8 @@ if TYPE_CHECKING:
     from pins.boards import BaseBoard
     from shinychat.types import HistoryOptions
 
+    from shiny import Session
+
     from ._data_dict import DataDict
     from ._viz_tools import VisualizeData
 
@@ -107,17 +109,15 @@ class QueryChatBase(Generic[IntoFrameT]):
         self._extra_instructions = extra_instructions
         self._categorical_threshold = categorical_threshold
 
-        # Clients querychat materializes from a spec (constructor string spec,
-        # deferred default resolution, .server() overrides) are tracked so
-        # cleanup() can close them; user-supplied Chat instances are never
-        # tracked -- their lifecycle remains the caller's responsibility.
-        self._owned_clients: list[chatlas.Chat] = []
+        # Owned iff querychat resolved it from a spec; a user-supplied Chat is
+        # never closed by cleanup().
         self._base_client: chatlas.Chat | None
         if isinstance(client, str):
             self._base_client = resolve_client(client)
-            self._owned_clients.append(self._base_client)
+            self._base_client_owned = True
         else:
             self._base_client = client
+            self._base_client_owned = False
         self._client_console = None
 
         self._greeter: QueryChatGreeter | None = None
@@ -232,31 +232,25 @@ class QueryChatBase(Generic[IntoFrameT]):
         if base is None:
             if self._base_client is None:
                 self._base_client = resolve_client(None)
-                self._owned_clients.append(self._base_client)
+                self._base_client_owned = True
             base = self._base_client
         return create_client(base)
 
-    def _resolve_override_client(
-        self, client: str | chatlas.Chat | None
-    ) -> chatlas.Chat:
+    def _resolve_session_client(
+        self, client: str | chatlas.Chat | MISSING_TYPE, session: Session
+    ) -> chatlas.Chat | None:
         """
-        Resolve a per-call client override (e.g., ``.server(client=...)``).
+        Resolve a ``.server(client=...)`` override.
 
-        Like the constructor's ``client``, a spec-resolved override is
-        querychat-created and must be closed on cleanup(); a user-supplied
-        Chat instance is not.
+        A spec-resolved override is owned by the session and closed on
+        ``session.on_ended``; a user-supplied Chat is returned untouched.
         """
+        if isinstance(client, MISSING_TYPE):
+            return None
         resolved = resolve_client(client)
         if not isinstance(client, chatlas.Chat):
-            self._owned_clients.append(resolved)
+            session.on_ended(resolved.close)
         return resolved
-
-    def _close_owned_client(self, client: chatlas.Chat) -> None:
-        """Close an owned client and stop tracking it. Idempotent."""
-        try:
-            client.close()
-        finally:
-            self._owned_clients[:] = [c for c in self._owned_clients if c is not client]
 
     def _create_session_client(
         self,
@@ -681,9 +675,8 @@ class QueryChatBase(Generic[IntoFrameT]):
             warn_on_failure(self._table_set.cleanup_executor, "query executor")
             for source in self._table_set.data_sources.values():
                 warn_on_failure(source.cleanup, "data source")
-        for client in self._owned_clients:
-            warn_on_failure(client.close, "chatlas client")
-        self._owned_clients.clear()
+        if self._base_client is not None and self._base_client_owned:
+            warn_on_failure(self._base_client.close, "chatlas client")
 
 
 def normalize_data_source(

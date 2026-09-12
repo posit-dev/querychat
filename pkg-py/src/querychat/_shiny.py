@@ -3,7 +3,6 @@ from __future__ import annotations
 import warnings
 from typing import TYPE_CHECKING, Any, Literal, Optional, overload
 
-import chatlas
 from htmltools import TagChild, tags
 from narwhals.stable.v1.typing import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
 from shiny.express._stub_session import ExpressStubSession
@@ -39,6 +38,7 @@ DRAWER_WIDTH = "calc(min(clamp(360px, 55vw, 720px), 100%))"
 if TYPE_CHECKING:
     from pathlib import Path
 
+    import chatlas
     import ibis
     import narwhals.stable.v1 as nw
     import sqlalchemy
@@ -640,7 +640,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             **kwargs,
         )
 
-    def server(  # noqa: PLR0912
+    def server(
         self,
         *,
         data_source: IntoFrame | sqlalchemy.Engine | ibis.Table | None = None,
@@ -745,13 +745,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         if table_set is None:
             table_set = self._require_table_set("server")
 
-        resolved_client: chatlas.Chat | None = (
-            None
-            if isinstance(client, MISSING_TYPE)
-            else self._resolve_override_client(client)
-        )
-        if resolved_client is not None and not isinstance(client, chatlas.Chat):
-            session.on_ended(lambda: self._close_owned_client(resolved_client))
+        resolved_client = self._resolve_session_client(client, session)
 
         if session_source is not None:
             session_set, owned_source = table_set, session_source

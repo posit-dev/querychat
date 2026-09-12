@@ -95,6 +95,10 @@ QueryChat <- R6::R6Class(
     # Live Shiny session count. Shared-state guards key off this: an ended
     # session can no longer be using a resource it registered.
     .active_sessions = 0L,
+    # Sources/executors replaced while sessions were still live. Their
+    # cleanup is deferred until the last live session ends (or $cleanup()
+    # runs) so a still-running session never loses a resource it uses.
+    .retired_resources = list(),
     .client_spec = NULL,
     .client_console = NULL,
     .system_prompt = NULL,
@@ -156,7 +160,8 @@ QueryChat <- R6::R6Class(
     # per-session data_source= path (which must work even while earlier
     # sessions are still running). cleanup_replaced = FALSE is for that
     # path: the replaced table may still be in use by an earlier session, so
-    # cleanup becomes the caller's responsibility.
+    # the retired source and cached executor are retained and cleaned up
+    # once the last live session ends (see $server()).
     add_or_replace_table = function(
       data_source,
       table_name,
@@ -207,17 +212,25 @@ QueryChat <- R6::R6Class(
 
       old_source <- private$.data_sources[[table_name]]
       private$.data_sources <- next_sources
-      if (
-        cleanup_replaced &&
-          !is.null(old_source) &&
-          !identical(old_source, normalized)
-      ) {
-        old_source$cleanup()
+      if (!is.null(old_source) && !identical(old_source, normalized)) {
+        if (cleanup_replaced) {
+          old_source$cleanup()
+        } else {
+          private$.retired_resources <- c(
+            private$.retired_resources,
+            list(old_source)
+          )
+        }
       }
 
       if (!is.null(private$.query_executor)) {
         if (cleanup_replaced) {
           tryCatch(private$.query_executor$cleanup(), error = function(e) NULL)
+        } else {
+          private$.retired_resources <- c(
+            private$.retired_resources,
+            list(private$.query_executor)
+          )
         }
         private$.query_executor <- NULL
       }
@@ -231,6 +244,18 @@ QueryChat <- R6::R6Class(
       }
 
       invisible(NULL)
+    },
+
+    # Clean up resources retired while sessions were still live. Retired
+    # resources may still be in use by a live session, so this only runs
+    # once no sessions remain (or from $cleanup()).
+    flush_retired_resources = function() {
+      retired <- private$.retired_resources
+      private$.retired_resources <- list()
+      for (resource in retired) {
+        # Best-effort: one failing cleanup must not leave the rest open.
+        tryCatch(resource$cleanup(), error = function(e) NULL)
+      }
     },
 
     create_session_client = function(
@@ -473,6 +498,9 @@ QueryChat <- R6::R6Class(
         # An explicit table_name = NULL is treated the same as omitting it.
         table_name_given <- !is_missing(table_name) && !is.null(table_name)
         if (table_name_given) {
+          # Validate now: a bad deferred name would otherwise only surface at
+          # $server() registration time, after the module id is built.
+          check_sql_table_name(table_name)
           private$.deferred_table_name <- table_name
         }
         default_id <- if (table_name_given) {
@@ -1158,8 +1186,8 @@ QueryChat <- R6::R6Class(
           tbl_name,
           replace = TRUE,
           include_in_greeting = TRUE,
-          # A live session may still be using the replaced source, so only
-          # clean it up once no sessions are active.
+          # A live session may still be using the replaced source, so defer
+          # its cleanup until no sessions are active.
           cleanup_replaced = private$.active_sessions == 0
         )
       }
@@ -1169,6 +1197,9 @@ QueryChat <- R6::R6Class(
       private$.active_sessions <- private$.active_sessions + 1L
       session$onSessionEnded(function() {
         private$.active_sessions <- private$.active_sessions - 1L
+        if (private$.active_sessions == 0) {
+          private$flush_retired_resources()
+        }
       })
 
       if (is.null(private$.query_executor)) {
@@ -1243,6 +1274,7 @@ QueryChat <- R6::R6Class(
       for (source in private$.data_sources) {
         source$cleanup()
       }
+      private$flush_retired_resources()
       invisible(NULL)
     }
   ),
@@ -1261,13 +1293,21 @@ QueryChat <- R6::R6Class(
           tables,
           prompt,
           base = NULL,
-          data_sources = NULL,
-          data_description = NULL
+          data_sources,
+          data_description
         ) {
+          # An explicit snapshot (possibly NULL) wins over live state; only
+          # an omitted override falls back to it.
+          if (missing(data_sources)) {
+            data_sources <- private$.data_sources
+          }
+          if (missing(data_description)) {
+            data_description <- private$.data_description
+          }
           sp <- QueryChatSystemPrompt$new(
             prompt_template = prompt,
-            data_sources = data_sources %||% private$.data_sources,
-            data_description = data_description %||% private$.data_description,
+            data_sources = data_sources,
+            data_description = data_description,
             extra_instructions = NULL,
             categorical_threshold = private$.categorical_threshold,
             data_dicts = private$.data_dicts,

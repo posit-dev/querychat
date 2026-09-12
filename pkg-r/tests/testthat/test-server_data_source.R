@@ -241,6 +241,58 @@ describe("QueryChat$server(data_source=) session lifecycle", {
   })
 })
 
+describe("QueryChat$server(data_source=) retired resource cleanup", {
+  it("resources replaced while a session is live are cleaned up when the last session ends", {
+    skip_if_no_dataframe_engine()
+    local_captured_mod_server()
+
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+    withr::defer(qc$cleanup())
+
+    session1 <- fake_shiny_session()
+    session2 <- fake_shiny_session()
+    qc$server(data_source = new_users_df(), session = session1)
+    first_source <- qc_data_source(qc, "users")
+    first_executor <- qc$.__enclos_env__$private$.query_executor
+    source_cleaned <- spy_on_cleanup(first_source)
+    executor_cleaned <- spy_on_cleanup(first_executor)
+
+    qc$server(data_source = new_users_df(), session = session2)
+
+    session1$end() # session 2 still live: nothing cleaned yet
+    expect_false(source_cleaned())
+    expect_false(executor_cleaned())
+
+    session2$end() # last live session: retired resources are flushed
+    expect_true(source_cleaned())
+    expect_true(executor_cleaned())
+  })
+
+  it("retired resources are also cleaned up by $cleanup()", {
+    skip_if_no_dataframe_engine()
+    local_captured_mod_server()
+
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+
+    qc$server(data_source = new_users_df(), session = fake_shiny_session())
+    first_source <- qc_data_source(qc, "users")
+    source_cleaned <- spy_on_cleanup(first_source)
+
+    qc$server(data_source = new_users_df(), session = fake_shiny_session())
+    expect_false(source_cleaned())
+
+    qc$cleanup()
+    expect_true(source_cleaned())
+  })
+
+  it("an invalid deferred table_name fails fast at construction", {
+    expect_error(
+      QueryChat$new(NULL, table_name = "bad-name"),
+      "valid SQL table name"
+    )
+  })
+})
+
 describe("QueryChat$server(data_source=) greeting snapshot", {
   it("passes a greeting_tables snapshot to mod_server", {
     skip_if_no_dataframe_engine()
@@ -305,6 +357,27 @@ describe("QueryChat$server(data_source=) greeting snapshot", {
     expect_match(live, "live description", fixed = TRUE)
     expect_match(snapshot, "snapshot description", fixed = TRUE)
     expect_no_match(snapshot, "live description", fixed = TRUE)
+  })
+
+  it("an explicit NULL data_description snapshot does not fall back to live state", {
+    skip_if_no_dataframe_engine()
+
+    qc <- QueryChat$new(
+      new_users_df(),
+      "users",
+      greeting = "Test",
+      data_description = "live description",
+      client = mock_ellmer_chat_client()
+    )
+    withr::defer(qc$cleanup())
+
+    # A session whose snapshot had no description must not pick up a
+    # description inferred by a later session's registration.
+    prompt <- qc$greeter$build_client(
+      data_description = NULL
+    )$get_system_prompt()
+
+    expect_no_match(prompt, "live description", fixed = TRUE)
   })
 })
 

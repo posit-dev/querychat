@@ -36,19 +36,30 @@ QueryChatGreeter <- R6::R6Class(
     #' @param data_description Advanced/internal: overrides the QueryChat
     #'   instance's inferred data description for this call only, for the same
     #'   reason as `tables`.
+    #'
+    #'   For `data_sources` and `data_description`, an explicitly passed value
+    #'   (including `NULL`) is the snapshot and wins over live state; only an
+    #'   omitted argument falls back to live state.
     build_client = function(
       base = NULL,
       tables = NULL,
-      data_sources = NULL,
-      data_description = NULL
+      data_sources,
+      data_description
     ) {
-      private$.client_factory(
+      args <- list(
         tables %||% private$.tables,
         private$.prompt,
-        base,
-        data_sources = data_sources,
-        data_description = data_description
+        base
       )
+      # Single-bracket assignment: `$<-` would delete the element when the
+      # snapshot value is NULL, turning an explicit NULL back into "omitted".
+      if (!missing(data_sources)) {
+        args["data_sources"] <- list(data_sources)
+      }
+      if (!missing(data_description)) {
+        args["data_description"] <- list(data_description)
+      }
+      do.call(private$.client_factory, args)
     },
 
     #' @description Generate a greeting synchronously and return it as text.

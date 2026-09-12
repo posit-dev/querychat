@@ -3,6 +3,7 @@ from __future__ import annotations
 import warnings
 from typing import TYPE_CHECKING, Any, Literal, Optional, overload
 
+import chatlas
 from htmltools import TagChild, tags
 from narwhals.stable.v1.typing import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
 from shiny.express._stub_session import ExpressStubSession
@@ -13,7 +14,7 @@ from shinychat.types import HistoryOptions
 from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 
 from ._icons import bs_icon
-from ._querychat_base import DEFAULT_TOOLS, TOOL_GROUPS, QueryChatBase, resolve_client
+from ._querychat_base import DEFAULT_TOOLS, TOOL_GROUPS, QueryChatBase
 from ._shiny_module import (
     CHAT_ID,
     ServerValues,
@@ -31,7 +32,6 @@ DRAWER_WIDTH = "calc(min(clamp(360px, 55vw, 720px), 100%))"
 if TYPE_CHECKING:
     from pathlib import Path
 
-    import chatlas
     import ibis
     import narwhals.stable.v1 as nw
     import sqlalchemy
@@ -345,9 +345,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                                 "data-target": target,
                             },
                             bs_icon("chevron-down", cls="querychat-query-chevron"),
-                            tags.span(
-                                {"class": "querychat-query-label"}, "Show Query"
-                            ),
+                            tags.span({"class": "querychat-query-label"}, "Show Query"),
                         ),
                     ),
                     tags.div({"class": "querychat-footer-right"}, right),
@@ -655,7 +653,9 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             any client set at initialization time for this call only. This is useful
             for the deferred pattern where the client cannot be created at
             initialization time (e.g., when using Posit Connect managed OAuth
-            credentials that require session access).
+            credentials that require session access). Clients resolved from a
+            spec are closed automatically when the session ends; a user-supplied
+            `chatlas.Chat` instance is never closed by querychat.
         history
             Conversation history configuration, passed through to
             `shinychat.Chat(history=)`. Overrides the value set on the `QueryChat`
@@ -686,8 +686,14 @@ class QueryChat(QueryChatBase[IntoFrameT]):
 
         self._require_initialized("server")
         resolved_client: chatlas.Chat | None = (
-            None if isinstance(client, MISSING_TYPE) else resolve_client(client)
+            None
+            if isinstance(client, MISSING_TYPE)
+            else self._resolve_override_client(client)
         )
+        if resolved_client is not None and not isinstance(client, chatlas.Chat):
+            # Owned overrides are session-scoped: close and untrack them when
+            # this session ends rather than holding them open until cleanup().
+            session.on_ended(lambda: self._close_owned_client(resolved_client))
 
         def create_session_client(**kwargs) -> chatlas.Chat:
             return self._create_session_client(base=resolved_client, **kwargs)

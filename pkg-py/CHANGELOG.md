@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
+* `QueryChat.cleanup()` now also closes the chatlas client, releasing its provider resources (HTTP connection pools, database sessions) — but only when querychat created the client itself (i.e., `client` was `None` or a string spec like `"openai/gpt-4o"`). A user-supplied `chatlas.Chat` instance is never closed by querychat; its lifecycle remains the caller's responsibility. In long-lived applications, call `qc.cleanup()` when the app shuts down. Clients resolved from a spec passed to `.server(client=...)` are session-scoped and are closed automatically when their Shiny session ends.
+
 * `QueryChat.app()` (Core; Express has no `.app()` entry point) is now chat-first: it builds on the `.page()` layout, so the chat owns the window, and the SQL editor + data table live in a `chat_drawer` that auto-opens when the LLM runs a query (including on bookmark/history restore).
 
 * New `/handoff` slash command: turn selected query and visualization results from your chat session into a downloadable Quarto dashboard, Shiny app, or marimo notebook — with AI-assisted revision, bundled data, and handoffs that survive chat history restores and Shiny bookmarks.

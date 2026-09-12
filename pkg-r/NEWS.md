@@ -42,9 +42,11 @@
 
 * Conversation history is now persisted by default. `QueryChat` keeps a user's chat around across page reloads and browser sessions, backed by shinychat's history support. The default `restore_mode = "browser"` stores the active conversation in the browser's localStorage, but you can pass `history = shinychat::history_options(restore_mode = "url")` to restore via a plain, shareable URL instead, or `restore_mode = "bookmark"` to fold the conversation into a full Shiny bookmark. Disable with `history = FALSE`.
 
+* Deferred construction is more flexible: `table_name` is now optional in `QueryChat$new(NULL)` (if omitted, `$id` falls back to a generic `"querychat"` default), and `$server()` gains a `table_name` parameter so the table can be named per session when registering a data source via `$server(data_source = )`. (#305)
+
 ## Breaking changes
 
-* The `$data_source` property has been removed. Use `qc$table("name")$data_source` to read a table's data source, and `qc$add_table(df, "name", replace = TRUE)` to replace it. The `data_source` parameter to `$server()` has also been removed; call `$add_table()` before `$server()` instead. (#195)
+* The `$data_source` property has been removed. Use `qc$table("name")$data_source` to read a table's data source, and `qc$add_table(df, "name", replace = TRUE)` to replace it. (#195)
 
 * `$app()`/`$app_obj()`'s `bookmark_store` parameter has been removed. Pass `history = shinychat::history_options(restore_mode = "bookmark")` to get the same shareable-bookmark behavior; any other `history` value disables Shiny-level bookmarking for the generated app. `$app()` defaults to `restore_mode = "bookmark"` when no `history` is set anywhere, so existing `$app()` callers keep working without changes. Note this default is a storage-mechanism change, not just a rename: the old default (`bookmark_store = "url"`) encoded the entire bookmark state in the URL itself, requiring no server storage; the new default requires server-side bookmark storage (`bookmarkStore = "server"`), with just a short state ID in the URL. Deployments that relied on `$app()` being fully stateless should pass `history = FALSE` or a non-bookmark `history_options()`.
 

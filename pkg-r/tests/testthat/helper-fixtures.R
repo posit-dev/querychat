@@ -95,6 +95,24 @@ local_data_frame_source <- function(
   df_source
 }
 
+# Build a TableSet for tests, deferring executor cleanup to `env`.
+local_table_set <- function(data_sources, env = parent.frame()) {
+  sp <- suppressWarnings(
+    # The multi-table "consider a data_dict" advice is noise for these tests.
+    QueryChatSystemPrompt$new(
+      prompt_template = system.file(
+        "prompts",
+        "prompt.md",
+        package = "querychat"
+      ),
+      data_sources = data_sources
+    )
+  )
+  ts <- TableSet$new(data_sources, sp)
+  withr::defer(ts$cleanup_executor(), envir = env)
+  ts
+}
+
 local_recording_data_frame_source <- function(
   data = new_test_df(),
   table_name = "test_table",

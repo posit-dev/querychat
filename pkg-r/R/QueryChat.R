@@ -196,13 +196,19 @@ QueryChat <- R6::R6Class(
       next_sources <- private$.data_sources
       next_sources[[table_name]] <- normalized
 
-      private$auto_fill_data_description(next_sources)
+      # Snapshot so a staging failure can be rolled back: a failed
+      # registration must leave the existing registration fully intact.
+      prev_description <- private$.data_description
+      prev_description_mode <- private$.data_description_mode
       tryCatch(
         {
           check_source_compatibility(other_sources, normalized, table_name)
+          private$auto_fill_data_description(next_sources)
           private$build_system_prompt(data_sources = next_sources)
         },
         error = function(e) {
+          private$.data_description <- prev_description
+          private$.data_description_mode <- prev_description_mode
           # A source normalized here (not user-supplied) owns a fresh
           # connection; don't leak it when staging fails.
           if (!inherits(data_source, "DataSource")) {
@@ -259,8 +265,28 @@ QueryChat <- R6::R6Class(
       retired <- private$.retired_resources
       private$.retired_resources <- list()
       for (resource in retired) {
-        # Best-effort: one failing cleanup must not leave the rest open.
-        tryCatch(resource$cleanup(), error = function(e) NULL)
+        # Registrations can alternate connections (C1 -> C2 -> C1) while
+        # sessions are live, so a retired wrapper may share its connection
+        # with the now-current source, which owns it. Never clean those.
+        in_use <- any(vapply(
+          private$.data_sources,
+          function(source) shares_underlying_connection(resource, source),
+          logical(1)
+        ))
+        if (in_use) {
+          next
+        }
+        # Best-effort: one failing cleanup must not leave the rest open, but
+        # retain the failed entry so a later flush (or $cleanup()) can retry.
+        tryCatch(
+          resource$cleanup(),
+          error = function(e) {
+            private$.retired_resources <- c(
+              private$.retired_resources,
+              list(resource)
+            )
+          }
+        )
       }
     },
 

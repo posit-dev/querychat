@@ -320,6 +320,42 @@ describe("QueryChat$server(data_source=) retired resource cleanup", {
     expect_error(qc$cleanup(), "boom")
     expect_true(first_cleaned())
   })
+
+  it("a failed retired-resource cleanup is retained and retried", {
+    skip_if_no_dataframe_engine()
+    local_captured_mod_server()
+
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+    withr::defer(qc$cleanup())
+
+    session1 <- fake_shiny_session()
+    qc$server(data_source = new_users_df(), session = session1)
+    first_source <- qc_data_source(qc, "users")
+
+    # Fail the first cleanup attempt (transiently), succeed on retry
+    unlockBinding("cleanup", first_source)
+    attempts <- 0
+    first_source$cleanup <- function() {
+      attempts <<- attempts + 1
+      if (attempts == 1) {
+        stop("transient failure")
+      }
+      invisible(NULL)
+    }
+
+    session2 <- fake_shiny_session()
+    qc$server(data_source = new_users_df(), session = session2)
+
+    session1$end() # session 2 still live: no flush yet
+    expect_equal(attempts, 0)
+
+    session2$end() # last live session: flush runs, cleanup fails transiently
+    expect_equal(attempts, 1)
+
+    # The failed resource is retained, so $cleanup()'s flush retries it
+    qc$cleanup()
+    expect_equal(attempts, 2)
+  })
 })
 
 describe("QueryChat$server(data_source=) registration failures", {
@@ -365,6 +401,55 @@ describe("QueryChat$server(data_source=) registration failures", {
 
     # The staged wrapper owned the connection, so failure must not leak it
     expect_false(DBI::dbIsValid(db$conn))
+  })
+
+  it("a failed registration restores the inferred data description", {
+    skip_if_no_dataframe_engine()
+    local_captured_mod_server()
+
+    # A data-frame source carrying a description, so registration infers one
+    described_df_source <- function(description) {
+      klass <- R6::R6Class(
+        "DescribedDataFrameSource",
+        inherit = DataFrameSource,
+        public = list(
+          get_data_description = function() description
+        )
+      )
+      klass$new(new_users_df(), "users")
+    }
+
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+    withr::defer(qc$cleanup())
+    qc$add_table(described_df_source("original description"), "users")
+    expect_identical(
+      qc$.__enclos_env__$private$.data_description,
+      "original description"
+    )
+
+    testthat::local_mocked_bindings(
+      QueryChatSystemPrompt = list(
+        new = function(...) stop("prompt build failed")
+      ),
+      .package = "querychat"
+    )
+
+    replacement <- described_df_source("replacement description")
+    withr::defer(replacement$cleanup())
+    expect_error(
+      qc$server(data_source = replacement, session = fake_shiny_session()),
+      "prompt build failed"
+    )
+
+    # The failed registration must not disturb the existing description state
+    expect_identical(
+      qc$.__enclos_env__$private$.data_description,
+      "original description"
+    )
+    expect_identical(
+      qc$.__enclos_env__$private$.data_description_mode,
+      "inferred"
+    )
   })
 })
 
@@ -412,6 +497,35 @@ describe("QueryChat table replacement with a shared DBI connection", {
 
     expect_false(DBI::dbIsValid(db1$conn))
     expect_true(DBI::dbIsValid(db2$conn))
+  })
+
+  it("registrations alternating between connections keep the live connection open", {
+    skip_if_not_installed("RSQLite")
+    local_captured_mod_server()
+
+    db1 <- local_sqlite_connection(new_users_df(), "users")
+    db2 <- local_sqlite_connection(new_users_df(), "users")
+
+    qc <- QueryChat$new(NULL, "users", greeting = "Test")
+    withr::defer(qc$cleanup())
+
+    session1 <- fake_shiny_session()
+    session2 <- fake_shiny_session()
+    session3 <- fake_shiny_session()
+    qc$server(data_source = db1$conn, session = session1)
+    qc$server(data_source = db2$conn, session = session2)
+    # Back to db1's connection: the retired first wrapper shares it with the
+    # now-current source
+    qc$server(data_source = db1$conn, session = session3)
+
+    session1$end()
+    session2$end()
+    session3$end()
+
+    # Flushing retired wrappers must not disconnect the connection the
+    # current source uses, but db2's retired wrapper is still cleaned up
+    expect_true(DBI::dbIsValid(db1$conn))
+    expect_false(DBI::dbIsValid(db2$conn))
   })
 
   it("$add_table(replace=TRUE) does not disconnect a shared connection", {

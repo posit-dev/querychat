@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import warnings
+import weakref
 from typing import TYPE_CHECKING, Any, Literal, Optional, overload
 
 import chatlas
@@ -407,7 +408,6 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             )
 
         def app_server(input: Inputs, output: Outputs, session: Session):
-            self._mark_server_initialized(session)
             if enable_bookmarking:
                 session.bookmark.exclude.extend(["reset_query", "sql_editor"])
             vals = mod_server(
@@ -422,6 +422,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 greeting_base=None,
                 greeting_tables=list(self.greeter.tables),
             )
+            self._mark_server_initialized(session)
 
             @reactive.calc
             def active_table_name() -> str:
@@ -760,8 +761,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             )
         )
 
-        self._mark_server_initialized(session)
-        return mod_server(
+        result = mod_server(
             id or self.id,
             data_sources=dict(self._data_sources),
             executor=self._require_query_executor("server"),
@@ -773,6 +773,8 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             greeting_base=resolved_client,
             greeting_tables=list(self.greeter.tables),
         )
+        self._mark_server_initialized(session)
+        return result
 
 
 class QueryChatExpress(QueryChatBase[IntoFrameT]):
@@ -1021,6 +1023,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
 
         self._enable_bookmarking = enable_bookmarking
         self._vals: ServerValues[IntoFrameT] | None = None
+        self._attempted_sessions: weakref.WeakSet[Session] = weakref.WeakSet()
 
     def _ensure_server_started(self) -> None:
         """
@@ -1030,6 +1033,10 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         module-level add_table() calls (which happen after __init__ but before
         sidebar()/ui()) can complete before server initialization locks the
         table set.
+
+        Each session gets at most one mod_server() attempt: retrying after a
+        failed attempt would re-register its non-idempotent reactive effects
+        and bookmark/history hooks a second time.
         """
         if self._active_sessions > 0:
             return
@@ -1038,8 +1045,10 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             return
         if not self._data_sources:
             return
+        if session in self._attempted_sessions:
+            return
+        self._attempted_sessions.add(session)
         self._require_initialized("_ensure_server_started")
-        self._mark_server_initialized(session)
         resolved_history: bool | HistoryOptions = (
             self.history
             if self.history is not None
@@ -1061,6 +1070,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             greeting_base=None,
             greeting_tables=list(self.greeter.tables),
         )
+        self._mark_server_initialized(session)
 
     def sidebar(
         self,

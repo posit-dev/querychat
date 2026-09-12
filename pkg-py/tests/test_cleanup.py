@@ -252,6 +252,118 @@ class TestRetiredResourceCleanup:
             executor_cleanup.assert_called_once()
         assert qc._retired_resources == []
 
+    def test_cleanup_flushes_retired_resources_when_a_cleanup_fails(
+        self, sample_df, ended_callbacks
+    ):
+        """
+        The retired-resource flush is the fallback cleanup path; a failing
+        source cleanup must not prevent it from running, nor abort the rest
+        of cleanup().
+        """
+        qc = shiny_mod.QueryChat(sample_df, "users")
+        qc.server()
+        old_source = qc._data_sources["users"]
+        qc.server(data_source=sample_df.copy())  # retires old_source
+
+        with (
+            patch.object(old_source, "cleanup") as retired_cleanup,
+            patch.object(
+                qc._data_sources["users"],
+                "cleanup",
+                side_effect=RuntimeError("boom"),
+            ),
+            pytest.warns(UserWarning, match="Failed to clean up data source"),
+        ):
+            qc.cleanup()
+        retired_cleanup.assert_called_once()
+
+    def test_cleanup_continues_to_other_sources_after_one_fails(
+        self, monkeypatch, sample_df
+    ):
+        """
+        One data source's cleanup() raising must not skip the rest of
+        cleanup(): remaining sources and owned clients still get closed.
+        """
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-key-for-testing")
+        qc = QueryChatBase(sample_df, "users", client="openai")
+        qc.add_table(sample_df.copy(), "more_users")
+        failing_source = qc._data_sources["users"]
+        other_source = qc._data_sources["more_users"]
+
+        with (
+            patch.object(failing_source, "cleanup", side_effect=RuntimeError("boom")),
+            patch.object(other_source, "cleanup") as other_cleanup,
+            pytest.warns(UserWarning, match="Failed to clean up data source"),
+        ):
+            qc.cleanup()
+        other_cleanup.assert_called_once()
+        assert qc._base_client.provider._client.is_closed()
+
+    def test_flush_retired_resources_warns_when_cleanup_fails(
+        self, sample_df, ended_callbacks
+    ):
+        qc = shiny_mod.QueryChat(sample_df, "users")
+        qc.server()
+        old_source = qc._data_sources["users"]
+        qc.server(data_source=sample_df.copy())  # retires old_source
+
+        def end_sessions() -> None:
+            for cb in ended_callbacks:
+                cb()
+
+        with (
+            patch.object(old_source, "cleanup", side_effect=RuntimeError("boom")),
+            pytest.warns(UserWarning, match="Failed to clean up retired resource"),
+        ):
+            end_sessions()
+        assert old_source in qc._retired_resources
+
+    def test_failed_retired_cleanup_is_retained_and_retried(
+        self, monkeypatch, sample_df
+    ):
+        """A transient cleanup failure must not permanently drop the resource."""
+        sessions = []
+
+        def next_session():
+            session = MagicMock()
+            session._ended_callbacks = []
+            session.on_ended = session._ended_callbacks.append
+            sessions.append(session)
+            return session
+
+        monkeypatch.setattr(shiny_mod, "get_current_session", next_session)
+        monkeypatch.setattr(shiny_mod, "mod_server", lambda *args, **kwargs: None)
+
+        qc = shiny_mod.QueryChat(sample_df, "users")
+        qc.server()
+        old_source = qc._data_sources["users"]
+        qc.server(data_source=sample_df.copy())  # session 2 retires old_source
+
+        attempts = 0
+
+        def fail_once():
+            nonlocal attempts
+            attempts += 1
+            if attempts == 1:
+                raise RuntimeError("transient failure")
+
+        def end_session(index: int) -> None:
+            for cb in sessions[index]._ended_callbacks:
+                cb()
+
+        with patch.object(old_source, "cleanup", side_effect=fail_once):
+            end_session(0)
+            assert attempts == 0  # session 2 still live: no flush yet
+
+            with pytest.warns(UserWarning, match="Failed to clean up retired resource"):
+                end_session(1)
+            assert attempts == 1  # flush ran; cleanup failed transiently
+            assert old_source in qc._retired_resources
+
+            qc.cleanup()  # retries the retained resource
+            assert attempts == 2
+            assert qc._retired_resources == []
+
 
 class TestCleanupDataSources:
     """Existing executor/source cleanup behavior is preserved."""

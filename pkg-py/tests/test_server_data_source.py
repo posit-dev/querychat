@@ -290,6 +290,28 @@ class TestServerDataSourceSessionLifecycle:
         qc.add_table(other_users_df, "other")  # must not raise
         assert qc.table_names() == ["users", "other"]
 
+    def test_failed_server_call_does_not_count_as_live_session(
+        self, users_df, other_users_df, monkeypatch
+    ):
+        """
+        A .server() call that fails mid-setup (after registration) must not
+        linger in the live-session count, which would block add_table() and
+        defer replacement cleanup forever.
+        """
+
+        def boom(*args, **kwargs):
+            raise RuntimeError("mod_server failed")
+
+        monkeypatch.setattr(shiny_mod, "mod_server", boom)
+        monkeypatch.setattr(shiny_mod, "get_current_session", lambda: MagicMock())
+
+        qc = shiny_mod.QueryChat(None, table_name="users")
+        with pytest.raises(RuntimeError, match="mod_server failed"):
+            qc.server(data_source=users_df)
+
+        qc.add_table(other_users_df, "other")  # must not raise
+        assert qc.table_names() == ["users", "other"]
+
 
 class TestServerDataSourceGreetingSnapshot:
     def test_server_passes_greeting_tables_snapshot_to_mod_server(

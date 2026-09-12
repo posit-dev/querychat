@@ -781,6 +781,8 @@ class QueryChatBase(Generic[IntoFrameT]):
         The add/remove_table guards and cleanup-on-replace in
         ``server(data_source=...)`` key off the number of *live* sessions:
         a session that has ended can no longer be using a replaced resource.
+        Call this only after ``mod_server()`` has returned successfully --
+        counting a session whose setup failed would treat it as live.
         """
         self._active_sessions += 1
 
@@ -801,9 +803,14 @@ class QueryChatBase(Generic[IntoFrameT]):
         retired = self._retired_resources
         self._retired_resources = []
         for resource in retired:
-            # Best-effort: one failing cleanup must not leave the rest open.
-            with contextlib.suppress(Exception):
+            # Best-effort: one failing cleanup must not leave the rest open,
+            # but retain the failed entry so a later flush (or cleanup()) can
+            # retry it.
+            try:
                 resource.cleanup()
+            except Exception as e:  # noqa: PERF203 (teardown of a few resources, not a hot loop)
+                warnings.warn(f"Failed to clean up retired resource: {e}", stacklevel=2)
+                self._retired_resources.append(resource)
 
     def cleanup(self) -> None:
         """
@@ -821,9 +828,15 @@ class QueryChatBase(Generic[IntoFrameT]):
         when the app shuts down (e.g., via `atexit`).
         """
         if self._query_executor is not None:
-            self._query_executor.cleanup()
+            try:
+                self._query_executor.cleanup()
+            except Exception as e:
+                warnings.warn(f"Failed to clean up query executor: {e}", stacklevel=2)
         for source in self._data_sources.values():
-            source.cleanup()
+            try:
+                source.cleanup()
+            except Exception as e:  # noqa: PERF203 (teardown of a few resources, not a hot loop)
+                warnings.warn(f"Failed to clean up data source: {e}", stacklevel=2)
         self._flush_retired_resources()
         for client in self._owned_clients:
             # Best-effort: one provider's close() failing must not leave the

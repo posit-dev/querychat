@@ -186,6 +186,44 @@ def test_express_enable_bookmarking_resolves_to_bookmark_mode_history(monkeypatc
     assert captured["history"].restore_mode == "bookmark"
 
 
+def test_ensure_server_started_does_not_retry_after_failed_attempt(monkeypatch):
+    """
+    A mod_server() failure must not be retried within the same session by a
+    later lazy call (e.g. from .df()/.sql()/.ui()) -- retrying would
+    re-register mod_server()'s non-idempotent reactive effects and
+    bookmark/history hooks a second time.
+    """
+    from unittest.mock import MagicMock
+
+    import pandas as pd
+    from querychat._shiny import QueryChatExpress
+    from shiny._namespaces import Root
+    from shiny.session import session_context
+
+    calls = 0
+
+    def failing_mod_server(*args, **kwargs):
+        nonlocal calls
+        calls += 1
+        raise RuntimeError("mod_server failed")
+
+    monkeypatch.setattr("querychat._shiny.mod_server", failing_mod_server)
+
+    mock_session = MagicMock()
+    mock_session.ns = Root
+    with session_context(mock_session):
+        qc = QueryChatExpress(pd.DataFrame({"a": [1, 2, 3]}), "a_table")
+
+        with pytest.raises(RuntimeError, match="mod_server failed"):
+            qc._ensure_server_started()
+        assert calls == 1
+
+        # A later lazy call must not retry mod_server() a second time.
+        with pytest.raises(RuntimeError, match="not initialized"):
+            qc._require_vals()
+        assert calls == 1
+
+
 def test_express_explicit_enable_bookmarking_warns():
     from unittest.mock import MagicMock, patch
 

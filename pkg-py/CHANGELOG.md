@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Bug fixes
+
+* `.server()` now counts a session as live only after its setup has fully succeeded, so a failed `.server()` call no longer blocks `add_table()`/`remove_table()` or defers replacement cleanup for as long as the session lives. In Shiny Express apps, a session whose setup fails this way no longer risks a duplicate `mod_server()` attempt (and duplicate reactive-effect/bookmark registration) on a later lazy call from `.df()`, `.sql()`, etc.
+
+* `cleanup()` now always flushes resources retired by concurrent sessions, even if cleaning a current data source or the query executor throws, and no longer aborts partway through a failure: remaining data sources and owned chatlas clients still get cleaned up, with a warning for each failure. Retired resources whose cleanup fails are retained and retried (with a warning) on the next flush instead of being dropped permanently or retried silently.
+
 ## [0.8.0] - 2026-09-12
 
 ### New features

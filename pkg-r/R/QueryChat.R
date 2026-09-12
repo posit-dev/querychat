@@ -150,6 +150,91 @@ QueryChat <- R6::R6Class(
       )
     },
 
+    # Guard-free core of $add_table(), also called directly by $server()'s
+    # data_source= path so a session can register its own table even after
+    # an earlier session's $server() call has set .server_initialized.
+    #
+    # cleanup_replaced = FALSE must be used for that per-session replacement:
+    # a table replaced here may still be in active use by an earlier,
+    # already-running session (its own query executor may hold a live
+    # reference to it), so cleaning it up here would pull the resource out
+    # from under that session. The default (TRUE) preserves $add_table()'s
+    # existing behavior, where a config-time replacement has exactly one
+    # owner.
+    add_or_replace_table = function(
+      data_source,
+      table_name,
+      replace = FALSE,
+      include_in_greeting = FALSE,
+      cleanup_replaced = TRUE
+    ) {
+      check_bool(include_in_greeting)
+      check_sql_table_name(table_name)
+      if (table_name %in% names(private$.data_sources) && !replace) {
+        cli::cli_abort(
+          "Table {.val {table_name}} already exists. Use {.code replace = TRUE} to replace."
+        )
+      }
+      if (
+        is_data_source(data_source) &&
+          !identical(data_source$table_name, table_name)
+      ) {
+        cli::cli_abort(
+          c(
+            "{.arg data_source}'s own table name ({.val {data_source$table_name}}) does not match the given {.arg table_name} ({.val {table_name}}).",
+            "i" = "Pass a matching {.arg table_name}, or omit it to use {.val {data_source$table_name}}."
+          )
+        )
+      }
+      normalized <- normalize_data_source(data_source, table_name)
+
+      other_sources <- private$.data_sources[
+        names(private$.data_sources) != table_name
+      ]
+      check_source_compatibility(other_sources, normalized, table_name)
+
+      next_sources <- private$.data_sources
+      next_sources[[table_name]] <- normalized
+
+      private$auto_fill_data_description(next_sources)
+      tryCatch(
+        {
+          private$build_system_prompt(data_sources = next_sources)
+        },
+        error = function(e) {
+          if (!inherits(data_source, "DataSource")) {
+            normalized$cleanup()
+          }
+          stop(e)
+        }
+      )
+
+      old_source <- private$.data_sources[[table_name]]
+      private$.data_sources <- next_sources
+      if (
+        cleanup_replaced &&
+          !is.null(old_source) &&
+          !identical(old_source, normalized)
+      ) {
+        old_source$cleanup()
+      }
+
+      if (!is.null(private$.query_executor)) {
+        if (cleanup_replaced) {
+          tryCatch(private$.query_executor$cleanup(), error = function(e) NULL)
+        }
+        private$.query_executor <- NULL
+      }
+
+      # Guard against duplicates: the per-session $server(data_source=) path
+      # reaches this once per session under the same table name.
+      if (isTRUE(include_in_greeting) && !(table_name %in% self$greeter$tables)) {
+        self$greeter$tables <- c(self$greeter$tables, table_name)
+      }
+
+      invisible(NULL)
+    },
+
     create_session_client = function(
       client_spec = NULL,
       tools = NA,
@@ -434,62 +519,12 @@ QueryChat <- R6::R6Class(
       if (private$.server_initialized) {
         cli::cli_abort("Cannot add tables after server initialization.")
       }
-      check_bool(include_in_greeting)
-      check_sql_table_name(table_name)
-      if (table_name %in% names(private$.data_sources) && !replace) {
-        cli::cli_abort(
-          "Table {.val {table_name}} already exists. Use {.code replace = TRUE} to replace."
-        )
-      }
-      if (
-        is_data_source(data_source) &&
-          !identical(data_source$table_name, table_name)
-      ) {
-        cli::cli_abort(
-          c(
-            "{.arg data_source}'s own table name ({.val {data_source$table_name}}) does not match the given {.arg table_name} ({.val {table_name}}).",
-            "i" = "Pass a matching {.arg table_name}, or omit it to use {.val {data_source$table_name}}."
-          )
-        )
-      }
-      normalized <- normalize_data_source(data_source, table_name)
-
-      other_sources <- private$.data_sources[
-        names(private$.data_sources) != table_name
-      ]
-      check_source_compatibility(other_sources, normalized, table_name)
-
-      next_sources <- private$.data_sources
-      next_sources[[table_name]] <- normalized
-
-      private$auto_fill_data_description(next_sources)
-      tryCatch(
-        {
-          private$build_system_prompt(data_sources = next_sources)
-        },
-        error = function(e) {
-          if (!inherits(data_source, "DataSource")) {
-            normalized$cleanup()
-          }
-          stop(e)
-        }
+      private$add_or_replace_table(
+        data_source,
+        table_name,
+        replace = replace,
+        include_in_greeting = include_in_greeting
       )
-
-      old_source <- private$.data_sources[[table_name]]
-      private$.data_sources <- next_sources
-      if (!is.null(old_source) && !identical(old_source, normalized)) {
-        old_source$cleanup()
-      }
-
-      if (!is.null(private$.query_executor)) {
-        tryCatch(private$.query_executor$cleanup(), error = function(e) NULL)
-        private$.query_executor <- NULL
-      }
-
-      if (isTRUE(include_in_greeting)) {
-        self$greeter$tables <- c(self$greeter$tables, table_name)
-      }
-
       invisible(self)
     },
 
@@ -1121,11 +1156,12 @@ QueryChat <- R6::R6Class(
             )
           )
         }
-        self$add_table(
+        private$add_or_replace_table(
           data_source,
           tbl_name,
           replace = TRUE,
-          include_in_greeting = TRUE
+          include_in_greeting = TRUE,
+          cleanup_replaced = FALSE
         )
       }
 
@@ -1174,7 +1210,8 @@ QueryChat <- R6::R6Class(
         tools = self$tools,
         history = resolved_history,
         greeter = self$greeter,
-        greeting_base = base_client
+        greeting_base = base_client,
+        greeting_tables = self$greeter$tables
       )
       result
     },
@@ -1217,10 +1254,15 @@ QueryChat <- R6::R6Class(
         return(invisible(value))
       }
       if (is.null(private$.greeter)) {
-        client_factory <- function(tables, prompt, base = NULL) {
+        client_factory <- function(
+          tables,
+          prompt,
+          base = NULL,
+          data_sources = NULL
+        ) {
           sp <- QueryChatSystemPrompt$new(
             prompt_template = prompt,
-            data_sources = private$.data_sources,
+            data_sources = data_sources %||% private$.data_sources,
             data_description = private$.data_description,
             extra_instructions = NULL,
             categorical_threshold = private$.categorical_threshold,

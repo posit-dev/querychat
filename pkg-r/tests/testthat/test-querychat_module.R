@@ -704,7 +704,7 @@ test_that("mod_server() builds the auto-generated greeting from the greeter, not
 
   build_client_calls <- list()
   fake_greeter <- list(
-    build_client = function(base = NULL) {
+    build_client = function(base = NULL, tables = NULL, data_sources = NULL) {
       build_client_calls[[length(build_client_calls) + 1L]] <<- base
       fake_greeting_client
     }

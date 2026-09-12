@@ -72,6 +72,8 @@
 
 * `$add_table()` no longer rewrites the Shiny module `$id` when the registered table is the only one; the id is now fixed at construction time, matching Python. The rewrite could desync the module namespace from an already-rendered UI when a table was registered between `$ui()` and `$server()` (e.g. via `$server(data_source = )`). (#305)
 
+* `$server(data_source = )` — used for the deferred pattern where a table's data source can only be created inside the server function (e.g. a per-user database connection scoped to Posit Connect OAuth credentials) — only ever worked for the first Shiny session: a second session hit `"Cannot add tables after server initialization"`, and even bypassing that, replacing a table cleaned up the resource an earlier, still-running session depended on, and the auto-generated greeting could reflect the wrong session's table. All three are fixed: each session can now register its own data source, and neither the replaced resource nor the greeting is affected by a later session's registration. (#300)
+
 # querychat 0.3.0
 
 ## New features

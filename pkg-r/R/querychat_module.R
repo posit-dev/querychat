@@ -52,7 +52,8 @@ mod_server <- function(
   tools,
   history,
   greeter = NULL,
-  greeting_base = NULL
+  greeting_base = NULL,
+  greeting_tables = NULL
 ) {
   shiny::moduleServer(id, function(input, output, session) {
     current_table_val <- shiny::reactiveVal(NULL, label = "current_table")
@@ -130,7 +131,11 @@ mod_server <- function(
           "i" = "For faster startup, lower cost, and determinism, consider providing a {.arg greeting} to {.fn QueryChat}.",
           "i" = "You can use your {.help querychat::QueryChat} object's {.fn $generate_greeting} method to generate a greeting."
         ))
-        greeting_client <- greeter$build_client(greeting_base)
+        greeting_client <- greeter$build_client(
+          greeting_base,
+          tables = greeting_tables,
+          data_sources = data_sources
+        )
         stream <- greeting_client$stream_async(GREETING_PROMPT)
         shinychat::chat_greeting(stream, persistent = TRUE)
       }

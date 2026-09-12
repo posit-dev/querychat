@@ -164,3 +164,36 @@ class TestServerDataSourceCleanupSafety:
         with patch.object(first_source, "cleanup") as mock_cleanup:
             qc.add_table(other_users_df, "users", replace=True)
             mock_cleanup.assert_called_once()
+
+    def test_second_session_does_not_clean_up_first_sessions_query_executor(
+        self, users_df, other_users_df, captured_mod_server
+    ):
+        """
+        A second session's server(data_source=...) call must not close the
+        cached QueryExecutor an earlier, still-running session's chat has
+        already captured (e.g. via _create_session_client) and is actively
+        querying through.
+        """
+        qc = shiny_mod.QueryChat(None, table_name="users")
+
+        qc.server(data_source=users_df)
+        first_executor = qc._require_query_executor("test")
+
+        with patch.object(first_executor, "cleanup") as mock_cleanup:
+            qc.server(data_source=other_users_df)
+            mock_cleanup.assert_not_called()
+
+    def test_public_add_table_replace_still_cleans_up_old_query_executor(
+        self, users_df, other_users_df
+    ):
+        """
+        Config-time add_table(replace=True) has exactly one owner, so its
+        existing cleanup-on-replace behavior for the cached executor must be
+        unchanged.
+        """
+        qc = shiny_mod.QueryChat(users_df, "users")
+        first_executor = qc._require_query_executor("test")
+
+        with patch.object(first_executor, "cleanup") as mock_cleanup:
+            qc.add_table(other_users_df, "users", replace=True)
+            mock_cleanup.assert_called_once()

@@ -563,8 +563,9 @@ class QueryChatBase(Generic[IntoFrameT]):
         if cleanup_replaced and old_source is not None and old_source is not normalized:
             old_source.cleanup()
         if self._query_executor is not None:
-            with contextlib.suppress(Exception):
-                self._query_executor.cleanup()
+            if cleanup_replaced:
+                with contextlib.suppress(Exception):
+                    self._query_executor.cleanup()
             self._query_executor = None
 
         if include_in_greeting and table_name not in self.greeter.tables:

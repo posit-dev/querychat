@@ -12,13 +12,14 @@ if TYPE_CHECKING:
 
     import chatlas
 
-    from ._datasource import DataSource
+    from ._table_set import TableSet
 
 
 class QueryChatGreeter:
     """Controls greeting generation for a QueryChat instance. Access via ``qc.greeter``."""
 
     def __init__(self, client_factory: Callable[..., chatlas.Chat]) -> None:
+        """``client_factory`` signature: ``(tables, prompt, base, *, table_set)``."""
         self._client_factory = client_factory
         self._tables: list[str] = []
         self._prompt: str | Path = Path(__file__).parent / "prompts" / "greeting.md"
@@ -53,9 +54,27 @@ class QueryChatGreeter:
     def prompt(self, value: str | Path) -> None:
         self._prompt = value
 
-    def build_client(self, base: chatlas.Chat | None = None) -> chatlas.Chat:
-        """Build a greeting chat client using the injected factory."""
-        return self._client_factory(self._tables, self._prompt, base)
+    def build_client(
+        self,
+        base: chatlas.Chat | None = None,
+        *,
+        tables: list[str] | None = None,
+        table_set: TableSet | None = None,
+    ) -> chatlas.Chat:
+        """
+        Build a greeting chat client using the injected factory.
+
+        ``tables`` and ``table_set`` default to this greeter's configured
+        tables and the owning QueryChat's instance table set. ``server()``
+        passes explicit values so a lazily generated greeting describes the
+        session that requested it, not whatever the instance holds later.
+        """
+        return self._client_factory(
+            self._tables if tables is None else tables,
+            self._prompt,
+            base,
+            table_set=table_set,
+        )
 
     def generate(
         self,
@@ -66,31 +85,13 @@ class QueryChatGreeter:
         """Generate a greeting using the greeting system prompt."""
         return str(self.build_client(base).chat(GREETING_PROMPT, echo=echo))
 
-    async def generate_async(self, *, base: chatlas.Chat | None = None):
-        """Stream a greeting response from the greeting client."""
-        client = self.build_client(base)
-        return await client.stream_async(GREETING_PROMPT, echo="none")
-
-    async def _generate_async_snapshot(
+    async def generate_async(
         self,
         *,
-        base: chatlas.Chat | None,
-        tables: list[str] | None,
-        data_sources: dict[str, DataSource],
+        base: chatlas.Chat | None = None,
+        tables: list[str] | None = None,
+        table_set: TableSet | None = None,
     ):
-        """
-        Stream a greeting response from an explicit session snapshot.
-
-        Internal counterpart to :meth:`generate_async`, used by
-        ``mod_server()``. The snapshot matters because greeting generation
-        is scheduled lazily: by the time it runs, a later session's
-        ``.server(data_source=...)`` call may have already mutated the
-        shared live state.
-        """
-        client = self._client_factory(
-            self._tables if tables is None else tables,
-            self._prompt,
-            base,
-            data_sources=data_sources,
-        )
+        """Stream a greeting response from the greeting client."""
+        client = self.build_client(base, tables=tables, table_set=table_set)
         return await client.stream_async(GREETING_PROMPT, echo="none")

@@ -125,9 +125,6 @@ class TestShinyDeferredDataSource:
         with session_context(ExpressStubSession()):
             qc.server(client=first_override)
 
-        # Reset live-session count for sequential test
-        qc._active_sessions = 0
-
         with session_context(ExpressStubSession()):
             qc.server(client=second_override)
 
@@ -161,7 +158,7 @@ class TestExpressMultiTable:
         """No session may be tracked after __init__ in a stub session."""
         with session_context(ExpressStubSession()):
             qc = ExpressQueryChat(orders_df, "orders")
-            assert qc._active_sessions == 0
+            assert qc._server_attempted is False
 
     def test_ensure_server_started_noop_during_stub_session(
         self, orders_df, monkeypatch
@@ -196,11 +193,11 @@ class TestExpressMultiTable:
         mock_session.ns = Root
         with session_context(mock_session):
             qc = ExpressQueryChat(orders_df, "orders")
-            assert qc._active_sessions == 0
+            assert qc._server_attempted is False
             qc._ensure_server_started()
 
         assert len(called) == 1
-        assert qc._active_sessions == 1
+        assert qc._server_attempted is True
 
     def test_ensure_server_started_idempotent(self, orders_df, monkeypatch):
         """_ensure_server_started() called twice starts server only once."""
@@ -228,7 +225,7 @@ class TestExpressMultiTable:
         started_with_sources: list[list[str]] = []
 
         def fake_mod_server(*args, **kwargs):
-            started_with_sources.append(list(kwargs["data_sources"].keys()))
+            started_with_sources.append(list(kwargs["table_set"].data_sources.keys()))
             return MagicMock()
 
         monkeypatch.setattr("querychat._shiny.mod_server", fake_mod_server)

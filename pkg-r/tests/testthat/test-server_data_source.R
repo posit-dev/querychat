@@ -158,3 +158,92 @@ describe("QueryChat$server(data_source=) greeting snapshot", {
     expect_equal(calls$args[[2]]$greeting_tables, "users")
   })
 })
+
+describe("Mixing config-time $add_table() with $server(data_source=)", {
+  it("server(data_source=) without a name replaces the config-time table", {
+    skip_if_no_dataframe_engine()
+    calls <- local_captured_mod_server()
+
+    qc <- QueryChat$new(NULL, greeting = "Test")
+    withr::defer(qc$cleanup())
+
+    config_df <- data.frame(id = 1:3)
+    session_df <- data.frame(id = 4:6)
+    qc$add_table(config_df, "orders")
+
+    qc$server(data_source = session_df, session = fake_shiny_session())
+
+    # Same table name, but the session's data replaces the config-time data
+    expect_equal(names(calls$args[[1]]$data_sources), "orders")
+    expect_equal(calls$args[[1]]$data_sources$orders$get_data()$id, 4:6)
+  })
+
+  it("replacing a config-time table does not clean it up", {
+    skip_if_no_dataframe_engine()
+    local_captured_mod_server()
+
+    qc <- QueryChat$new(NULL, greeting = "Test")
+    withr::defer(qc$cleanup())
+
+    qc$add_table(new_users_df(), "orders")
+    config_source <- qc_data_source(qc, "orders")
+    cleaned_up <- spy_on_cleanup(config_source)
+
+    qc$server(data_source = new_users_df(), session = fake_shiny_session())
+
+    # Consistent with per-session replacement: the replaced source's cleanup
+    # is left to whoever created it
+    expect_false(cleaned_up())
+  })
+
+  it("server(data_source=, table_name=) adds a second table alongside the config-time one", {
+    skip_if_no_dataframe_engine()
+    calls <- local_captured_mod_server()
+
+    qc <- QueryChat$new(NULL, greeting = "Test")
+    withr::defer(qc$cleanup())
+
+    config_df <- data.frame(id = 1:3)
+    session_df <- data.frame(id = 4:6)
+    qc$add_table(config_df, "orders")
+
+    qc$server(
+      data_source = session_df,
+      table_name = "returns",
+      session = fake_shiny_session()
+    )
+
+    expect_equal(names(calls$args[[1]]$data_sources), c("orders", "returns"))
+    # The config-time table's own data is untouched
+    expect_equal(calls$args[[1]]$data_sources$orders$get_data()$id, 1:3)
+    expect_equal(calls$args[[1]]$data_sources$returns$get_data()$id, 4:6)
+  })
+
+  it("registration state is shared: a later session's snapshot includes an earlier session's differently-named table", {
+    skip_if_no_dataframe_engine()
+    calls <- local_captured_mod_server()
+
+    qc <- QueryChat$new(NULL, greeting = "Test")
+    withr::defer(qc$cleanup())
+
+    qc$add_table(data.frame(id = 1:3), "orders")
+
+    # Session 1 adds its own table alongside the config-time one
+    qc$server(
+      data_source = data.frame(id = 4:6),
+      table_name = "returns",
+      session = fake_shiny_session()
+    )
+    # Session 2 replaces "orders" only -- but still sees session 1's table,
+    # since the registry is shared and cumulative across sessions
+    qc$server(
+      data_source = data.frame(id = 7:9),
+      table_name = "orders",
+      session = fake_shiny_session()
+    )
+
+    expect_equal(names(calls$args[[2]]$data_sources), c("orders", "returns"))
+    expect_equal(calls$args[[2]]$data_sources$orders$get_data()$id, 7:9)
+    expect_equal(calls$args[[2]]$data_sources$returns$get_data()$id, 4:6)
+  })
+})

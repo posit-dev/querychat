@@ -1073,11 +1073,11 @@ QueryChat <- R6::R6Class(
     #'   shinychat::history_options(restore_mode = "bookmark")` instead (set on
     #'   `$new()`, or passed here).
     #' @param ... Ignored.
-    #' @param id Optional module ID override.
-    #' @param session The Shiny session object.
     #' @param table_name Table name to register `data_source` under. Only
     #'   used when `data_source` is provided. Named-only (placed after `...`)
     #'   so it can't shift the meaning of existing positional calls.
+    #' @param id Optional module ID override.
+    #' @param session The Shiny session object.
     #'
     #' @return A list containing session-specific reactive values and the chat
     #'   client. For single-table usage, includes `df`, `sql`, `title` directly.
@@ -1091,9 +1091,9 @@ QueryChat <- R6::R6Class(
       history = NULL,
       enable_bookmarking = NULL,
       ...,
+      table_name = NULL,
       id = NULL,
-      session = shiny::getDefaultReactiveDomain(),
-      table_name = NULL
+      session = shiny::getDefaultReactiveDomain()
     ) {
       check_string(table_name, allow_null = TRUE, allow_empty = FALSE)
       check_string(id, allow_null = TRUE, allow_empty = FALSE)

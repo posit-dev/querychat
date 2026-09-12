@@ -562,9 +562,9 @@ and \code{window_title} is omitted, it is also used as the document title.}
   history = NULL,
   enable_bookmarking = NULL,
   ...,
+  table_name = NULL,
   id = NULL,
-  session = shiny::getDefaultReactiveDomain(),
-  table_name = NULL
+  session = shiny::getDefaultReactiveDomain()
 )}
     \if{html}{\out{</div>}}
   }
@@ -584,11 +584,11 @@ constructor's \code{history} was set.}
       \item{\code{enable_bookmarking}}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}} Use \code{history = shinychat::history_options(restore_mode = "bookmark")} instead (set on
 \verb{$new()}, or passed here).}
       \item{\code{...}}{Ignored.}
-      \item{\code{id}}{Optional module ID override.}
-      \item{\code{session}}{The Shiny session object.}
       \item{\code{table_name}}{Table name to register \code{data_source} under. Only
 used when \code{data_source} is provided. Named-only (placed after \code{...})
 so it can't shift the meaning of existing positional calls.}
+      \item{\code{id}}{Optional module ID override.}
+      \item{\code{session}}{The Shiny session object.}
     }
     \if{html}{\out{</div>}}
   }

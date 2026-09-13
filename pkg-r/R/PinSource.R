@@ -105,7 +105,9 @@ PinSource <- R6::R6Class(
       # connection when it joins a multi-table executor (register_into()).
       private$.board <- board
       private$.name <- name
-      private$.version <- version
+      # Snapshot the resolved version so register_into() reads the same pin
+      # content even if the pin is updated after construction.
+      private$.version <- private$.pin_meta$local$version %||% version
       private$.engine <- engine
 
       pin_type <- private$.pin_meta$type
@@ -168,21 +170,36 @@ PinSource <- R6::R6Class(
       check_installed("duckdb")
 
       pin_type <- private$.pin_meta$type
-      if (pin_type %in% c("parquet", "csv", "json")) {
-        private$materialize_duckdb_file(con, table_name)
-      } else {
-        data <- pins::pin_read(
-          private$.board,
-          private$.name,
-          version = private$.version
-        )
-        if (!is.data.frame(data)) {
-          cli::cli_abort(
-            "Pin {.val {private$.name}} contains {.obj_type_friendly {data}}, not a data frame."
+      tryCatch(
+        {
+          if (pin_type %in% c("parquet", "csv", "json")) {
+            private$materialize_duckdb_file(con, table_name)
+          } else {
+            data <- pins::pin_read(
+              private$.board,
+              private$.name,
+              version = private$.version
+            )
+            if (!is.data.frame(data)) {
+              cli::cli_abort(
+                "Pin {.val {private$.name}} contains {.obj_type_friendly {data}}, not a data frame."
+              )
+            }
+            duckdb::duckdb_register(con, table_name, data, experimental = FALSE)
+          }
+        },
+        # The snapshotted pin version may no longer exist on the board (e.g.
+        # a non-versioned board rewritten after construction); fall back to
+        # this source's own copy so the shared table matches the private one.
+        error = function(e) {
+          duckdb::duckdb_register(
+            con,
+            table_name,
+            self$get_data(),
+            experimental = FALSE
           )
         }
-        duckdb::duckdb_register(con, table_name, data, experimental = FALSE)
-      }
+      )
       invisible(NULL)
     },
 

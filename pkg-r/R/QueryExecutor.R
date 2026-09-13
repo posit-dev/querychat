@@ -66,6 +66,11 @@ DuckDBExecutor <- R6::R6Class(
       check_installed("duckdb")
 
       private$conn <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
+      conn_ok <- FALSE
+      on.exit(
+        if (!conn_ok) DBI::dbDisconnect(private$conn, shutdown = TRUE),
+        add = TRUE
+      )
 
       for (name in names(data_sources)) {
         data_sources[[name]]$register_into(private$conn, name)
@@ -86,6 +91,7 @@ DuckDBExecutor <- R6::R6Class(
       }
 
       duckdb_lock_down(private$conn)
+      conn_ok <- TRUE
     },
 
     execute_query = function(query) {

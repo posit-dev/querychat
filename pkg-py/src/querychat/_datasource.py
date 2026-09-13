@@ -117,6 +117,11 @@ def duckdb_column_meta(name: str, duckdb_type: Any) -> ColumnMeta:
     return ColumnMeta(name=name, sql_type=sql_type, kind=kind)
 
 
+def quote_identifier(name: str) -> str:
+    """Return ``name`` as a double-quoted SQL identifier."""
+    return '"' + name.replace('"', '""') + '"'
+
+
 def duckdb_column_stats(
     conn: duckdb.DuckDBPyConnection,
     table_name: str,
@@ -137,7 +142,9 @@ def duckdb_column_stats(
         return
 
     try:
-        stats_query = f'SELECT {", ".join(select_parts)} FROM "{table_name}"'
+        stats_query = (
+            f"SELECT {', '.join(select_parts)} FROM {quote_identifier(table_name)}"
+        )
         result = conn.execute(stats_query).fetchone()
         if not result:
             return
@@ -162,7 +169,7 @@ def duckdb_column_stats(
     try:
         for col in categorical_cols:
             cat_result = conn.execute(
-                f'SELECT DISTINCT "{col.name}" FROM "{table_name}" '
+                f'SELECT DISTINCT "{col.name}" FROM {quote_identifier(table_name)} '
                 f'WHERE "{col.name}" IS NOT NULL ORDER BY "{col.name}"'
             ).fetchall()
             col.categories = [str(row[0]) for row in cat_result]

@@ -15,6 +15,7 @@ from ._datasource import (
     duckdb_column_stats,
     duckdb_lock_down,
     format_schema,
+    quote_identifier,
 )
 from ._utils import check_query
 
@@ -89,17 +90,22 @@ class DuckDBExecutor(QueryExecutor):
     def __init__(self, sources: dict[str, DataFrameSource | PinSource]):
         self._df_lib = get_shared_duckdb_result_backend(sources)
         self._conn = duckdb.connect(database=":memory:")
+        try:
+            for name, source in sources.items():
+                source.register_into(self._conn, name)
 
-        for name, source in sources.items():
-            source.register_into(self._conn, name)
+            # Cache column names per table before lockdown
+            self._table_columns: dict[str, list[str]] = {}
+            for name in sources:
+                result = self._conn.execute(
+                    f"SELECT * FROM {quote_identifier(name)} LIMIT 0"
+                )
+                self._table_columns[name] = [desc[0] for desc in result.description]
 
-        # Cache column names per table before lockdown
-        self._table_columns: dict[str, list[str]] = {}
-        for name in sources:
-            result = self._conn.execute(f'SELECT * FROM "{name}" LIMIT 0')
-            self._table_columns[name] = [desc[0] for desc in result.description]
-
-        duckdb_lock_down(self._conn)
+            duckdb_lock_down(self._conn)
+        except Exception:
+            self._conn.close()
+            raise
 
     def execute_query(self, query: str) -> Any:
         check_query(query)
@@ -139,7 +145,9 @@ class DuckDBExecutor(QueryExecutor):
             self._conn.close()
 
     def get_column_metas(self, table_name: str) -> list[ColumnMeta]:
-        result = self._conn.execute(f'SELECT * FROM "{table_name}" LIMIT 0')
+        result = self._conn.execute(
+            f"SELECT * FROM {quote_identifier(table_name)} LIMIT 0"
+        )
         return [duckdb_column_meta(desc[0], desc[1]) for desc in result.description]
 
     def populate_column_stats(

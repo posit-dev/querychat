@@ -390,6 +390,68 @@ class TestMultiplePins:
         finally:
             qc.cleanup()
 
+    def test_pin_with_non_sql_safe_name(self, board, sample_df):
+        """Registry keys that need quoting work in the shared executor."""
+        from querychat import QueryChat
+
+        board.pin_write(sample_df, "sales-2026", type="parquet")
+        board.pin_write(sample_df, "pin_b", type="parquet")
+        qc = QueryChat(board, "sales-2026")
+        try:
+            qc.add_table(board, "pin_b")
+            executor = qc._table_set.executor
+            result = nw.from_native(
+                executor.execute_query('SELECT COUNT(*) AS n FROM "sales-2026"')
+            )
+            assert result.rows(named=True) == [{"n": 4}]
+        finally:
+            qc.cleanup()
+
+    def test_shared_executor_uses_version_resolved_at_construction(
+        self, board, sample_df
+    ):
+        """Updating a pin after construction doesn't change the shared table."""
+        from querychat import QueryChat
+
+        board.pin_write(sample_df, "pin_a", type="parquet")
+        board.pin_write(sample_df, "pin_b", type="parquet")
+        qc = QueryChat(board, "pin_a")
+        try:
+            qc.add_table(board, "pin_b")
+            # New version of pin_a published after its PinSource was built
+            board.pin_write(sample_df.head(1), "pin_a", type="parquet")
+            executor = qc._table_set.executor
+            result = nw.from_native(
+                executor.execute_query("SELECT COUNT(*) AS n FROM pin_a")
+            )
+            assert result.rows(named=True) == [{"n": 4}]
+        finally:
+            qc.cleanup()
+
+    def test_shared_executor_falls_back_when_snapshot_version_is_pruned(
+        self, tmp_path, sample_df
+    ):
+        """
+        Non-versioned boards drop old versions on rewrite; the shared table
+        must still match the source's own copy.
+        """
+        from querychat import QueryChat
+
+        unversioned = pins.board_folder(str(tmp_path / "unversioned"), versioned=False)
+        unversioned.pin_write(sample_df, "pin_a", type="parquet")
+        unversioned.pin_write(sample_df, "pin_b", type="parquet")
+        qc = QueryChat(unversioned, "pin_a")
+        try:
+            qc.add_table(unversioned, "pin_b")
+            unversioned.pin_write(sample_df.head(1), "pin_a", type="parquet")
+            executor = qc._table_set.executor
+            result = nw.from_native(
+                executor.execute_query("SELECT COUNT(*) AS n FROM pin_a")
+            )
+            assert result.rows(named=True) == [{"n": 4}]
+        finally:
+            qc.cleanup()
+
     def test_executor_cleanup_leaves_pin_connections(self, board, sample_df):
         """The shared connection is executor-owned; pins keep their own."""
         from querychat import QueryChat

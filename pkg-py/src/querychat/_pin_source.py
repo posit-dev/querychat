@@ -14,6 +14,7 @@ from ._datasource import (
     duckdb_column_stats,
     duckdb_lock_down,
     format_schema,
+    quote_identifier,
 )
 from ._utils import check_query
 
@@ -131,9 +132,13 @@ class PinSource(DataSource[nw.DataFrame]):
         # connection when it joins a multi-table executor (register_into()).
         self._board = board
         self._pin_name = name
-        self._version = version
 
         self._pin_meta_obj = board.pin_meta(name, version=version)
+        # Snapshot the resolved version so register_into() reads the same pin
+        # content even if the pin is updated after construction.
+        self._version: str | None = (
+            getattr(self._pin_meta_obj.version, "version", None) or version
+        )
 
         conn = duckdb.connect()
         try:
@@ -171,7 +176,8 @@ class PinSource(DataSource[nw.DataFrame]):
                 conn.execute("INSTALL json")
                 conn.execute("LOAD json")
             conn.execute(
-                f'CREATE TABLE "{table_name}" AS SELECT * FROM {reader_fn}(?)',
+                f"CREATE TABLE {quote_identifier(table_name)} AS "
+                f"SELECT * FROM {reader_fn}(?)",
                 [paths[0]],
             )
         elif pin_type == "arrow" and _has_polars():
@@ -188,7 +194,10 @@ class PinSource(DataSource[nw.DataFrame]):
             arrow_df = pl.read_ipc(paths[0])
             vname = f"__pin_staging_{table_name}"
             conn.register(vname, arrow_df)
-            conn.execute(f'CREATE TABLE "{table_name}" AS SELECT * FROM "{vname}"')
+            conn.execute(
+                f"CREATE TABLE {quote_identifier(table_name)} AS "
+                f"SELECT * FROM {quote_identifier(vname)}"
+            )
             conn.unregister(vname)
         else:
             import pandas as pd
@@ -201,7 +210,10 @@ class PinSource(DataSource[nw.DataFrame]):
                 )
             vname = f"__pin_staging_{table_name}"
             conn.register(vname, data)
-            conn.execute(f'CREATE TABLE "{table_name}" AS SELECT * FROM "{vname}"')
+            conn.execute(
+                f"CREATE TABLE {quote_identifier(table_name)} AS "
+                f"SELECT * FROM {quote_identifier(vname)}"
+            )
             conn.unregister(vname)
 
     def register_into(
@@ -214,7 +226,21 @@ class PinSource(DataSource[nw.DataFrame]):
         pins mixed with data frames). The caller owns ``conn`` and locks it
         down once all tables are materialized.
         """
-        self._materialize_into(conn, table_name or self.table_name)
+        target = table_name or self.table_name
+        try:
+            self._materialize_into(conn, target)
+        except Exception:
+            # The snapshotted pin version may no longer exist on the board
+            # (e.g. a non-versioned board rewritten after construction); fall
+            # back to this source's own copy so the shared table matches the
+            # private connection.
+            vname = f"__pin_staging_{target}"
+            conn.register(vname, self.get_data().to_native())
+            conn.execute(
+                f"CREATE TABLE {quote_identifier(target)} AS "
+                f"SELECT * FROM {quote_identifier(vname)}"
+            )
+            conn.unregister(vname)
 
     def get_db_type(self) -> str:
         return "DuckDB"

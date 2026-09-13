@@ -484,6 +484,47 @@ describe("PinSource multi-table support", {
     expect_equal(result$n, 10 * nrow(new_test_df()))
   })
 
+  it("materializes the snapshotted version on versioned boards", {
+    board <- pins::board_temp(versioned = TRUE)
+    suppressMessages(
+      pins::pin_write(board, data.frame(x = 1:4), "pin_a", type = "parquet")
+    )
+    ps1 <- PinSource$new(board, "pin_a")
+    withr::defer(ps1$cleanup())
+    ps2 <- local_pin_source(name = "pin_b", type = "parquet")
+
+    # New version of pin_a published after its PinSource was built
+    suppressMessages(
+      pins::pin_write(board, data.frame(x = 1), "pin_a", type = "parquet")
+    )
+
+    executor <- build_query_executor(list(pin_a = ps1, pin_b = ps2))
+    withr::defer(executor$cleanup())
+
+    expect_equal(nrow(executor$execute_query("SELECT * FROM pin_a")), 4)
+  })
+
+  it("falls back to the source's copy when the snapshot version is pruned", {
+    # Non-versioned boards drop the old version on rewrite, so the version
+    # snapshotted at construction no longer exists at registration time.
+    board <- pins::board_temp()
+    suppressMessages(
+      pins::pin_write(board, data.frame(x = 1:4), "pin_a", type = "parquet")
+    )
+    ps1 <- PinSource$new(board, "pin_a")
+    withr::defer(ps1$cleanup())
+    ps2 <- local_pin_source(name = "pin_b", type = "parquet")
+
+    suppressMessages(
+      pins::pin_write(board, data.frame(x = 1), "pin_a", type = "parquet")
+    )
+
+    executor <- build_query_executor(list(pin_a = ps1, pin_b = ps2))
+    withr::defer(executor$cleanup())
+
+    expect_equal(nrow(executor$execute_query("SELECT * FROM pin_a")), 4)
+  })
+
   it("leaves pin connections open when the executor is cleaned up", {
     ps1 <- local_pin_source(name = "pin_a", type = "parquet")
     ps2 <- local_pin_source(name = "pin_b", type = "parquet")

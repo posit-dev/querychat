@@ -5,7 +5,9 @@ test_that("packaged handoff-formats.yml matches the canonical shared copy", {
     "shared/handoff-formats.yml only exists in the source repo"
   )
 
-  packaged <- test_path("..", "..", "inst", "handoff-formats.yml")
+  # Resolve via system.file() so this works under R CMD check too, where
+  # tests run from <pkg>.Rcheck/tests/ and inst/ has been installed away
+  packaged <- system.file("handoff-formats.yml", package = "querychat")
 
   expect_identical(
     readBin(packaged, "raw", file.size(packaged)),

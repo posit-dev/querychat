@@ -314,6 +314,19 @@ class TestMultiTableCleanup:
         # Connections should be closed after cleanup
         # (DuckDB connections don't have is_closed, but they're closed)
 
+    def test_replace_warns_instead_of_raising_on_replaced_source_cleanup_failure(
+        self, orders_df
+    ):
+        """A failing cleanup() on a replaced source warns rather than raising."""
+        qc = QueryChat(orders_df, "orders", greeting="Hello!")
+        old_source = qc._data_sources["orders"]
+        with (
+            patch.object(old_source, "cleanup", side_effect=RuntimeError("boom")),
+            pytest.warns(UserWarning, match="Failed to clean up data source"),
+        ):
+            qc.add_table(orders_df, "orders", replace=True)
+        assert qc.table_names() == ["orders"]
+
 
 @pytest.fixture
 def orders_qc(orders_df):

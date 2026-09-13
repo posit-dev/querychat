@@ -186,6 +186,37 @@ def test_express_enable_bookmarking_resolves_to_bookmark_mode_history(monkeypatc
     assert captured["history"].restore_mode == "bookmark"
 
 
+def test_express_mod_server_failure_does_not_mark_sessions_started():
+    """
+    A failed mod_server() call must not lock the instance out of later
+    add_table()/remove_table() calls (mirrors QueryChat.server()'s ordering
+    fix). _server_attempted still flips immediately so Express never retries
+    mod_server() -- that invariant is intentionally unaffected.
+    """
+    from unittest.mock import MagicMock, patch
+
+    import pandas as pd
+    from querychat._shiny import QueryChatExpress
+    from shiny._namespaces import Root
+    from shiny.session import session_context
+
+    def failing_mod_server(*args, **kwargs):
+        raise RuntimeError("boom")
+
+    mock_session = MagicMock()
+    mock_session.ns = Root
+    with session_context(mock_session):
+        qc = QueryChatExpress(pd.DataFrame({"a": [1, 2, 3]}), "a_table")
+        with (
+            patch("querychat._shiny.mod_server", failing_mod_server),
+            pytest.raises(RuntimeError, match="boom"),
+        ):
+            qc._ensure_server_started()
+
+    assert qc._server_attempted is True
+    assert qc._sessions_started is False
+
+
 def test_express_explicit_enable_bookmarking_warns():
     from unittest.mock import MagicMock, patch
 

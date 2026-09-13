@@ -220,7 +220,7 @@ class QueryChatBase(Generic[IntoFrameT]):
             return
         warn_on_failure(old_set.cleanup_executor, "query executor")
         for source in replaced:
-            source.cleanup()
+            warn_on_failure(source.cleanup, "data source")
 
     def _require_single_table(self, method_name: str) -> None:
         """Raise if multiple tables are registered, directing to per-table API."""
@@ -253,7 +253,7 @@ class QueryChatBase(Generic[IntoFrameT]):
             return None
         resolved = resolve_client(client)
         if not isinstance(client, chatlas.Chat):
-            session.on_ended(resolved.close)
+            session.on_ended(lambda: warn_on_failure(resolved.close, "chatlas client"))
         return resolved
 
     def _create_session_client(

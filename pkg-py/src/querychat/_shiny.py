@@ -1066,7 +1066,6 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         if self._table_set is None:
             return
         self._server_attempted = True
-        self._sessions_started = True
         table_set = self._table_set
         resolved_history: bool | HistoryOptions = (
             self.history
@@ -1088,6 +1087,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             greeting_base=None,
             greeting_tables=list(self.greeter.tables),
         )
+        self._sessions_started = True
 
     def sidebar(
         self,

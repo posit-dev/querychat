@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
+import querychat._querychat_base as base_mod
 import querychat._shiny as shiny_mod
 
 
@@ -348,3 +349,21 @@ class TestServerDataSourceSessionCleanup:
             warnings.simplefilter("always")
             qc.add_table(pd.DataFrame({"id": [1]}), "other")
         assert not any("session has started" in str(w.message) for w in caught)
+
+    def test_client_override_close_failure_warns_on_session_end(
+        self, users_df, session_runs, monkeypatch
+    ):
+        """
+        A spec-resolved `.server(client=...)` override that fails to close on
+        session end warns instead of raising.
+        """
+        sessions, _calls = session_runs
+        fake_client = MagicMock()
+        fake_client.close.side_effect = RuntimeError("boom")
+        monkeypatch.setattr(base_mod, "resolve_client", lambda client: fake_client)
+
+        qc = shiny_mod.QueryChat(users_df, "users")
+        qc.server(client="openai")
+
+        with pytest.warns(UserWarning, match="Failed to clean up chatlas client"):
+            sessions[0].end()

@@ -65,13 +65,10 @@
 
 * `$cleanup()` follows one rule: querychat closes only what it created. `DBISource$cleanup()` and `TblSqlSource$cleanup()` no longer disconnect your connection; disconnect it yourself on shutdown. `DataFrameSource`/`PinSource` DuckDB connections are still closed.
 
-* The automatic `$cleanup()` registered when `QueryChat` is created while a Shiny app is running (`cleanup = NA`, the default) no longer disconnects caller-supplied DBI connections at app stop, for the same reason. If you relied on that to close a connection you passed to `QueryChat$new()`, register your own `shiny::onStop(function() DBI::dbDisconnect(con))` (or disconnect when the session ends). Data frames are unaffected: the in-memory DuckDB connection querychat creates for them is still closed automatically.
+* The automatic `$cleanup()` registered when `QueryChat` is created while a Shiny app is running (`cleanup = NA`, the default) no longer disconnects caller-supplied DBI connections when the session or app stops, for the same reason. If you relied on that to close a connection you passed to `QueryChat$new()`, register your own `shiny::onStop(function() DBI::dbDisconnect(con))` (or disconnect when the session ends). Data frames are unaffected: the in-memory DuckDB connection querychat creates for them is still closed automatically.
 
 * Adding a *new* table with `$add_table()`/`$add_tables()` after a session has started now warns instead of erroring; running sessions keep their tables and new sessions see the addition. Replacing or removing an existing table after a session has started still errors.
 
-* Registering a second pins table now fails at `$add_table()` time with a clear error instead of failing at query time: each pin queries through its own connection, so cross-pin queries can't run. To combine a pin with other tables, register them in a shared DuckDB connection and pass that instead.
-
-* `$add_table()`/`$add_tables()` now reject database tables that use a different DBI connection than the existing tables, matching the Python package. Mixed connections used to validate but then fail at query time, since all queries execute against one shared connection.
 
 # querychat 0.3.0
 

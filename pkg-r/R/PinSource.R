@@ -132,7 +132,7 @@ PinSource <- R6::R6Class(
             )
           )
         }
-        data <- pins::pin_read(board, name, version = version)
+        data <- pins::pin_read(board, name, version = private$.version)
         if (!is.data.frame(data)) {
           cli::cli_abort(
             "Pin {.val {name}} contains {.obj_type_friendly {data}}, not a data frame."
@@ -188,10 +188,11 @@ PinSource <- R6::R6Class(
             duckdb::duckdb_register(con, table_name, data, experimental = FALSE)
           }
         },
-        # The snapshotted pin version may no longer exist on the board (e.g.
-        # a non-versioned board rewritten after construction); fall back to
-        # this source's own copy so the shared table matches the private one.
-        error = function(e) {
+        # The snapshotted pin version may have been pruned (e.g. a
+        # non-versioned board rewritten after construction); fall back to
+        # this source's own copy so the shared table matches the private
+        # connection. Other materialization failures still raise.
+        pins_pin_version_missing = function(e) {
           duckdb::duckdb_register(
             con,
             table_name,

@@ -67,7 +67,7 @@ def _convert_result(result: duckdb.DuckDBPyConnection) -> nw.DataFrame:
     return nw.from_native(result.df())
 
 
-def _stage_frame_as_table(
+def stage_frame_as_table(
     conn: duckdb.DuckDBPyConnection, frame: Any, table_name: str
 ) -> None:
     """Materialize a DataFrame as a real table via a unique staging view."""
@@ -211,7 +211,7 @@ class PinSource(DataSource[nw.DataFrame]):
                     "requires a single-file pin (as created by pin_write())."
                 )
             arrow_df = pl.read_ipc(paths[0])
-            _stage_frame_as_table(conn, arrow_df, table_name)
+            stage_frame_as_table(conn, arrow_df, table_name)
         else:
             import pandas as pd
 
@@ -221,7 +221,7 @@ class PinSource(DataSource[nw.DataFrame]):
                     f"Pin '{name}' contains {type(data).__name__}, not a DataFrame. "
                     "PinSource requires the pin to contain a pandas DataFrame."
                 )
-            _stage_frame_as_table(conn, data, table_name)
+            stage_frame_as_table(conn, data, table_name)
 
     def register_into(
         self, conn: duckdb.DuckDBPyConnection, table_name: str | None = None
@@ -234,14 +234,18 @@ class PinSource(DataSource[nw.DataFrame]):
         down once all tables are materialized.
         """
         target = table_name or self.table_name
+        from pins.errors import PinsError
+
         try:
             self._materialize_into(conn, target)
-        except Exception:
-            # The snapshotted pin version may no longer exist on the board
-            # (e.g. a non-versioned board rewritten after construction); fall
-            # back to this source's own copy so the shared table matches the
-            # private connection.
-            _stage_frame_as_table(conn, self.get_data().to_native(), target)
+        except PinsError as e:
+            # The snapshotted pin version may have been pruned (e.g. a
+            # non-versioned board rewritten after construction); fall back to
+            # this source's own copy so the shared table matches the private
+            # connection. Other materialization failures still raise.
+            if "missing version" not in str(e):
+                raise
+            stage_frame_as_table(conn, self.get_data().to_native(), target)
 
     def get_db_type(self) -> str:
         return "DuckDB"

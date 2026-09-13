@@ -1407,6 +1407,26 @@ describe("QueryChat table changes after a session has started", {
 
     expect_false(DBI::dbIsValid(old_source$.__enclos_env__$private$conn))
   })
+
+  it("does not mark sessions as started when $server() fails", {
+    skip_if_no_dataframe_engine()
+    qc <- local_querychat(new_users_df(), "users", greeting = "hi")
+    local_mocked_bindings(
+      mod_server = function(...) stop("boom"),
+      .package = "querychat"
+    )
+
+    expect_error(
+      shiny::testServer(function(input, output, session) qc$server(), {}),
+      "boom"
+    )
+
+    expect_false(qc$.__enclos_env__$private$.sessions_started)
+    expect_no_warning(
+      qc$add_table(new_test_df(), "other"),
+      message = "after a session has started"
+    )
+  })
 })
 
 describe("auto_fill_data_description()/resolve_data_description() parity", {

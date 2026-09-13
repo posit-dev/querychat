@@ -418,7 +418,6 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         def app_server(input: Inputs, output: Outputs, session: Session):
             if enable_bookmarking:
                 session.bookmark.exclude.extend(["reset_query", "sql_editor"])
-            self._sessions_started = True
             table_set = self._require_table_set("app")
             vals = mod_server(
                 self.id,
@@ -431,6 +430,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 greeting_base=None,
                 greeting_tables=list(self.greeter.tables),
             )
+            self._sessions_started = True
 
             @reactive.calc
             def active_table_name() -> str:
@@ -710,7 +710,6 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 ".server() must be called within an active Shiny session (i.e., within the server function). "
             )
 
-        self._sessions_started = True
         table_set: TableSet | None = self._table_set
         greeting_tables = list(self.greeter.tables)
         session_source: DataSource | None = None
@@ -785,7 +784,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             )
         )
 
-        return mod_server(
+        result = mod_server(
             id or self.id,
             table_set=table_set,
             greeting=self.greeting,
@@ -796,6 +795,8 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             greeting_base=resolved_client,
             greeting_tables=greeting_tables,
         )
+        self._sessions_started = True
+        return result
 
 
 class QueryChatExpress(QueryChatBase[IntoFrameT]):

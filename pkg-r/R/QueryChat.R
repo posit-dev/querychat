@@ -1310,8 +1310,7 @@ QueryChat <- R6::R6Class(
         }) %||%
         TRUE
 
-      private$.sessions_started <- TRUE
-      mod_server(
+      result <- mod_server(
         id %||% self$id,
         table_set = table_set,
         greeting = self$greeting,
@@ -1322,6 +1321,8 @@ QueryChat <- R6::R6Class(
         greeting_base = base_client,
         greeting_tables = greeting_tables
       )
+      private$.sessions_started <- TRUE
+      result
     },
 
     #' @description

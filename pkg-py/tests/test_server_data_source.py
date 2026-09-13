@@ -1,5 +1,6 @@
 """Tests for QueryChat.server(data_source=...) parity with R (#300)."""
 
+import warnings
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
@@ -326,3 +327,24 @@ class TestServerDataSourceSessionCleanup:
         sessions[0].end()
         with pytest.raises(duckdb.ConnectionException):
             session_source.execute_query("SELECT 1")
+
+    def test_mod_server_failure_does_not_mark_sessions_started(
+        self, users_df, monkeypatch
+    ):
+        """A failed mod_server() call must not lock out later add_table()/remove_table()."""
+        monkeypatch.setattr(shiny_mod, "get_current_session", lambda: MagicMock())
+
+        def failing_mod_server(*args, **kwargs):
+            raise RuntimeError("boom")
+
+        monkeypatch.setattr(shiny_mod, "mod_server", failing_mod_server)
+
+        qc = shiny_mod.QueryChat(users_df, "users")
+        with pytest.raises(RuntimeError, match="boom"):
+            qc.server()
+
+        assert qc._sessions_started is False
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            qc.add_table(pd.DataFrame({"id": [1]}), "other")
+        assert not any("session has started" in str(w.message) for w in caught)

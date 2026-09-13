@@ -490,7 +490,7 @@ class QueryChatBase(Generic[IntoFrameT]):
             new_set = self._build_table_set(merged)
         except Exception:
             if normalized is not data_source:
-                normalized.cleanup()
+                warn_on_failure(normalized.cleanup, "data source")
             raise
 
         old_source = self._data_sources.get(table_name)

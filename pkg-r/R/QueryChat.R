@@ -548,7 +548,7 @@ QueryChat <- R6::R6Class(
       normalized <- normalize_data_source(data_source, table_name)
       cleanup_normalized <- function() {
         if (!inherits(data_source, "DataSource")) {
-          normalized$cleanup()
+          warn_on_cleanup_failure(normalized$cleanup(), "data source")
         }
       }
       next_sources <- current
@@ -576,7 +576,7 @@ QueryChat <- R6::R6Class(
       tryCatch(
         private$check_late_change("add_table", destructive = exists),
         error = function(e) {
-          new_set$cleanup_executor()
+          warn_on_cleanup_failure(new_set$cleanup_executor(), "query executor")
           cleanup_normalized()
           stop(e)
         }
@@ -1247,7 +1247,10 @@ QueryChat <- R6::R6Class(
           ),
           error = function(e) {
             if (!inherits(data_source, "DataSource")) {
-              session_source$cleanup()
+              warn_on_cleanup_failure(
+                session_source$cleanup(),
+                "session data source"
+              )
             }
             stop(e)
           }

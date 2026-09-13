@@ -736,7 +736,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 )
             except Exception:
                 if session_source is not data_source:
-                    session_source.cleanup()
+                    warn_on_failure(session_source.cleanup, "session data source")
                 raise
             if resolved_table_name not in greeting_tables:
                 greeting_tables.append(resolved_table_name)
@@ -758,7 +758,9 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         resolved_client = self._resolve_session_client(client, session)
 
         def create_session_client(**kwargs) -> chatlas.Chat:
-            return self._create_session_client(table_set, base=resolved_client, **kwargs)
+            return self._create_session_client(
+                table_set, base=resolved_client, **kwargs
+            )
 
         if enable_bookmarking is not None:
             warnings.warn(

@@ -297,6 +297,23 @@ class TestServerDataSourceSessionCleanup:
         qc.server()
         assert calls[-1]["table_set"].table_names == ["users"]
 
+    def test_failed_registration_warns_but_preserves_original_error_if_rollback_cleanup_fails(
+        self, users_df, session_runs, monkeypatch
+    ):
+        """A rollback cleanup() failure must not mask the original registration error."""
+        import polars as pl
+        from querychat._datasource import DataFrameSource
+
+        _sessions, _calls = session_runs
+        qc = shiny_mod.QueryChat(users_df, "users")
+
+        with (
+            patch.object(DataFrameSource, "cleanup", side_effect=RuntimeError("boom")),
+            pytest.warns(UserWarning, match="Failed to clean up session data source"),
+            pytest.raises(ValueError, match="same DataFrame backend"),
+        ):
+            qc.server(data_source=pl.DataFrame({"id": [1]}), table_name="other")
+
     def test_client_resolution_failure_still_cleans_up_session_source(
         self, users_df, session_runs, monkeypatch
     ):

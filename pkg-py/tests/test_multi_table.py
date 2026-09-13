@@ -520,6 +520,28 @@ class TestBuildQueryExecutor:
             staged_source.execute_query("SELECT 1")
         assert orders_qc.table_names() == original_table_names
 
+    def test_add_table_failure_warns_but_preserves_original_error_if_rollback_cleanup_fails(
+        self, orders_qc, customers_df, monkeypatch
+    ):
+        """A rollback cleanup() failure must not mask the original build error."""
+
+        def fail_compat(*a, **kw):
+            raise ValueError("compat check failed")
+
+        monkeypatch.setattr(
+            "querychat._query_executor.check_source_compatibility",
+            fail_compat,
+        )
+
+        with (
+            patch.object(
+                DataFrameSource, "cleanup", side_effect=RuntimeError("cleanup boom")
+            ),
+            pytest.warns(UserWarning, match="Failed to clean up data source"),
+            pytest.raises(ValueError, match="compat check failed"),
+        ):
+            orders_qc.add_table(customers_df, "customers")
+
     def test_add_table_replace_failure_cleans_staged_source_and_preserves_state(
         self, orders_qc, customers_df, monkeypatch
     ):

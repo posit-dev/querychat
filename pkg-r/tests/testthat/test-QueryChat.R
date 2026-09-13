@@ -1259,6 +1259,31 @@ describe("QueryChat$add_table()", {
     )
     expect_equal(length(qc$table_names()), 0L)
   })
+
+  it("warns but preserves the original error if rollback cleanup fails", {
+    skip_if_no_dataframe_engine()
+    qc <- local_querychat(new_users_df(), "users", greeting = "hi")
+
+    attempt_add_table <- function() {
+      testthat::local_mocked_bindings(
+        dbDisconnect = function(...) stop("boom"),
+        .package = "DBI"
+      )
+      testthat::local_mocked_bindings(
+        check_source_compatibility = function(...) {
+          cli::cli_abort("compat check failed")
+        },
+        .package = "querychat"
+      )
+      qc$add_table(new_test_df(), "other")
+    }
+
+    expect_warning(
+      expect_error(attempt_add_table(), "compat check failed"),
+      "Failed to clean up data source"
+    )
+    expect_equal(qc$table_names(), "users")
+  })
 })
 
 describe("QueryChat$add_tables()", {

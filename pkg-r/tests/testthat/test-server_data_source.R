@@ -246,4 +246,36 @@ describe("QueryChat$server(data_source = ) session cleanup", {
       "users"
     )
   })
+
+  it("warns but preserves the original error if rollback cleanup fails", {
+    skip_if_no_dataframe_engine()
+    withr::local_envvar(OPENAI_API_KEY = "boop")
+    local_captured_mod_server()
+    qc <- QueryChat$new(new_users_df(), "users", greeting = "hi")
+    withr::defer(qc$cleanup())
+
+    attempt_registration <- function() {
+      testthat::local_mocked_bindings(
+        dbDisconnect = function(...) stop("boom"),
+        .package = "DBI"
+      )
+      testthat::local_mocked_bindings(
+        check_source_compatibility = function(...) {
+          cli::cli_abort("compat check failed")
+        },
+        .package = "querychat"
+      )
+      start_server_session(
+        qc,
+        data_source = new_test_df(),
+        table_name = "other"
+      )
+    }
+
+    expect_warning(
+      expect_error(attempt_registration(), "compat check failed"),
+      "Failed to clean up session data source"
+    )
+    expect_equal(qc$table_names(), "users")
+  })
 })

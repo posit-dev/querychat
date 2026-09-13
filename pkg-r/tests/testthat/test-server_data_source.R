@@ -225,7 +225,7 @@ describe("QueryChat$server(data_source = ) session cleanup", {
     expect_true(source_conn_valid(caller_source))
   })
 
-  it("closes the normalized source and leaves the instance untouched when registration fails", {
+  it("leaves the instance untouched when registration fails", {
     skip_if_no_dataframe_engine()
     skip_if_not_installed("RSQLite")
     withr::local_envvar(OPENAI_API_KEY = "boop")

@@ -31,6 +31,8 @@ be installed.
 
 - [`DataFrameSource$new()`](#method-DataFrameSource-initialize)
 
+- [`DataFrameSource$register_into()`](#method-DataFrameSource-register_into)
+
 - [`DataFrameSource$cleanup()`](#method-DataFrameSource-cleanup)
 
 - [`DataFrameSource$clone()`](#method-DataFrameSource-clone)
@@ -84,6 +86,33 @@ A new DataFrameSource object
 
 ------------------------------------------------------------------------
 
+### `DataFrameSource$register_into()`
+
+Register this data frame in a shared DuckDB connection.
+
+Internal hook for joining a shared `DuckDBExecutor`. The caller owns
+`con` and locks it down once all tables are registered.
+
+#### Usage
+
+    DataFrameSource$register_into(con, table_name = self$table_name)
+
+#### Arguments
+
+- `con`:
+
+  A DuckDB DBI connection, owned by the caller.
+
+- `table_name`:
+
+  Name for the table in `con`. Defaults to the source's own table name.
+
+#### Returns
+
+`NULL` (invisibly)
+
+------------------------------------------------------------------------
+
 ### `DataFrameSource$cleanup()`
 
 Disconnect from the database and shut down the DuckDB instance if used.
@@ -118,7 +147,7 @@ The objects of this class are cloneable with this method.
 # Create a data frame source (uses first available: duckdb or sqlite)
 df_source <- DataFrameSource$new(mtcars, "mtcars")
 #> duckdb keeps downloaded extensions and secrets in a temporary directory:
-#> ℹ /tmp/RtmplOeeRB/duckdb
+#> ℹ /tmp/Rtmp7ycu3t/duckdb
 #> This is removed when the R session ends.
 #> • Extensions are re-downloaded each session.
 #> • Secrets are lost.

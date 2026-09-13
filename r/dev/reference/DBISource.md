@@ -9,6 +9,12 @@ SQL query execution against a single table in the database.
 [`DataSource`](https://posit-dev.github.io/querychat/dev/reference/DataSource.md)
 -\> `DBISource`
 
+## Active bindings
+
+- `conn`:
+
+  The DBI connection backing this source (read-only).
+
 ## Methods
 
 ### Public methods
@@ -183,7 +189,10 @@ A data frame containing all data
 
 ### `DBISource$cleanup()`
 
-Disconnect from the database
+No-op: the DBI connection is owned by the caller. Disconnect it yourself
+with
+[`DBI::dbDisconnect()`](https://dbi.r-dbi.org/reference/dbDisconnect.html)
+when your application shuts down.
 
 #### Usage
 
@@ -191,7 +200,7 @@ Disconnect from the database
 
 #### Returns
 
-NULL (invisibly)
+`NULL` (invisibly)
 
 ------------------------------------------------------------------------
 
@@ -226,7 +235,7 @@ db_source$get_db_type()  # Returns "SQLite"
 # Execute a query
 result <- db_source$execute_query("SELECT * FROM mtcars WHERE mpg > 25")
 
-# Note: cleanup() will disconnect the connection
-# If you want to keep the connection open, don't call cleanup()
+# cleanup() is a no-op: you own `con`, so disconnect it yourself
 db_source$cleanup()
+DBI::dbDisconnect(con)
 ```

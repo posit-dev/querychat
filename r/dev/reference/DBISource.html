@@ -67,6 +67,14 @@ execution against a single table in the database.</p>
     <p><code><a href="DataSource.html">DataSource</a></code> -&gt; <code>DBISource</code></p>
     </div>
     <div class="section level2">
+    <h2 id="active-bindings">Active bindings<a class="anchor" aria-label="anchor" href="#active-bindings"></a></h2>
+    <p></p><div class="r6-active-bindings"><dl><dt><code>conn</code></dt>
+<dd><p>The DBI connection backing this source (read-only).</p></dd>
+
+
+</dl><p></p></div>
+    </div>
+    <div class="section level2">
     <h2 id="methods">Methods<a class="anchor" aria-label="anchor" href="#methods"></a></h2>
 
 <div class="section">
@@ -214,12 +222,13 @@ all original table columns (default: <code>FALSE</code>)</p></dd>
 
 <p></p><hr><a id="method-DBISource-cleanup"></a><div class="section">
 <h3 id="dbisource-cleanup-"><code>DBISource$cleanup()</code><a class="anchor" aria-label="anchor" href="#dbisource-cleanup-"></a></h3>
-<p>Disconnect from the database</p><div class="section">
+<p>No-op: the DBI connection is owned by the caller. Disconnect it
+yourself with <code><a href="https://dbi.r-dbi.org/reference/dbDisconnect.html" class="external-link">DBI::dbDisconnect()</a></code> when your application shuts down.</p><div class="section">
 <h4 id="usage-8">Usage<a class="anchor" aria-label="anchor" href="#usage-8"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">DBISource</span><span class="op">$</span><span class="fu">cleanup</span><span class="op">(</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div><p></p><div class="section">
 <h4 id="returns-7">Returns<a class="anchor" aria-label="anchor" href="#returns-7"></a></h4>
-<p>NULL (invisibly)</p>
+<p><code>NULL</code> (invisibly)</p>
 </div>
 
 </div>
@@ -259,9 +268,9 @@ all original table columns (default: <code>FALSE</code>)</p></dd>
 <span class="r-in"><span><span class="co"># Execute a query</span></span></span>
 <span class="r-in"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="va">db_source</span><span class="op">$</span><span class="fu">execute_query</span><span class="op">(</span><span class="st">"SELECT * FROM mtcars WHERE mpg &gt; 25"</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Note: cleanup() will disconnect the connection</span></span></span>
-<span class="r-in"><span><span class="co"># If you want to keep the connection open, don't call cleanup()</span></span></span>
+<span class="r-in"><span><span class="co"># cleanup() is a no-op: you own `con`, so disconnect it yourself</span></span></span>
 <span class="r-in"><span><span class="va">db_source</span><span class="op">$</span><span class="fu">cleanup</span><span class="op">(</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">DBI</span><span class="fu">::</span><span class="fu"><a href="https://dbi.r-dbi.org/reference/dbDisconnect.html" class="external-link">dbDisconnect</a></span><span class="op">(</span><span class="va">con</span><span class="op">)</span></span></span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

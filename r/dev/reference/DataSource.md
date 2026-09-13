@@ -158,7 +158,11 @@ A string, or empty string if no description is available.
 
 ### `DataSource$cleanup()`
 
-Clean up resources (close connections, etc.)
+Release resources this data source created. Only resources querychat
+opened itself are closed (for example the in-memory DuckDB connection a
+[DataFrameSource](https://posit-dev.github.io/querychat/dev/reference/DataFrameSource.md)
+creates). Connections passed in by the caller are never closed; their
+lifecycle stays with the caller.
 
 #### Usage
 

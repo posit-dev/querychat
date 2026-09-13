@@ -13,6 +13,11 @@ the chosen engine just like
 When loaded into DuckDB, the connection's external file access is locked
 down so that LLM-generated SQL cannot reach the filesystem.
 
+Multiple pins (and pins mixed with data frames) can be combined in one
+chat: every table is materialized into a shared DuckDB connection, so
+the LLM can join and filter across them. Pins using `engine = "sqlite"`
+can't join multi-table chats.
+
 If the pin has a title, description, or tags,
 [QueryChat](https://posit-dev.github.io/querychat/dev/reference/QueryChat.md)
 uses them as the default `data_description`, which you can override.
@@ -47,19 +52,29 @@ LLM-generated SQL can access files on the local system.
 [`DBISource`](https://posit-dev.github.io/querychat/dev/reference/DBISource.md)
 -\> `PinSource`
 
+## Active bindings
+
+- `engine`:
+
+  The database engine backing this pin (`"duckdb"` or `"sqlite"`,
+  read-only).
+
 ## Methods
 
 ### Public methods
 
 - [`PinSource$new()`](#method-PinSource-initialize)
 
+- [`PinSource$register_into()`](#method-PinSource-register_into)
+
 - [`PinSource$get_data_description()`](#method-PinSource-get_data_description)
+
+- [`PinSource$cleanup()`](#method-PinSource-cleanup)
 
 - [`PinSource$clone()`](#method-PinSource-clone)
 
 Inherited methods
 
-- [`DBISource$cleanup()`](https://posit-dev.github.io/querychat/dev/reference/DBISource.html#method-cleanup)
 - [`DBISource$execute_query()`](https://posit-dev.github.io/querychat/dev/reference/DBISource.html#method-execute_query)
 - [`DBISource$get_data()`](https://posit-dev.github.io/querychat/dev/reference/DBISource.html#method-get_data)
 - [`DBISource$get_db_type()`](https://posit-dev.github.io/querychat/dev/reference/DBISource.html#method-get_db_type)
@@ -125,6 +140,33 @@ A new PinSource object
 
 ------------------------------------------------------------------------
 
+### `PinSource$register_into()`
+
+Materialize this pin into a shared DuckDB connection.
+
+Internal hook for joining a shared `DuckDBExecutor`. The caller owns
+`con` and locks it down once all tables are materialized.
+
+#### Usage
+
+    PinSource$register_into(con, table_name = self$table_name)
+
+#### Arguments
+
+- `con`:
+
+  A DuckDB DBI connection, owned by the caller.
+
+- `table_name`:
+
+  Name for the table in `con`. Defaults to the pin's own table name.
+
+#### Returns
+
+`NULL` (invisibly)
+
+------------------------------------------------------------------------
+
 ### `PinSource$get_data_description()`
 
 Get a human-readable description of the pin for use in the system
@@ -138,6 +180,26 @@ prompt.
 
 A string with the pin title, description, and tags, or an empty string
 if none are set.
+
+------------------------------------------------------------------------
+
+### `PinSource$cleanup()`
+
+Disconnect the DuckDB or SQLite connection this PinSource opened, and
+shut down the DuckDB instance if used.
+
+Unlike
+[DBISource](https://posit-dev.github.io/querychat/dev/reference/DBISource.md)'s
+`cleanup()`, this isn't a no-op: PinSource always opens its own
+connection (never a caller-supplied one), so it owns it.
+
+#### Usage
+
+    PinSource$cleanup()
+
+#### Returns
+
+`NULL` (invisibly)
 
 ------------------------------------------------------------------------
 
@@ -171,10 +233,10 @@ if (rlang::is_installed(c("pins", "duckdb"))) {
 
   ps$cleanup()
 }
-#> Creating new version '20260912T230933Z-c0340'
+#> Creating new version '20260913T191422Z-c0340'
 #> Writing to pin 'mtcars'
 #> duckdb keeps downloaded extensions and secrets in a temporary directory:
-#> ℹ /tmp/RtmplOeeRB/duckdb
+#> ℹ /tmp/Rtmp7ycu3t/duckdb
 #> This is removed when the R session ends.
 #> • Extensions are re-downloaded each session.
 #> • Secrets are lost.

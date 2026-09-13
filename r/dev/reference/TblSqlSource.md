@@ -203,7 +203,7 @@ containing the original, unfiltered data
 
 ### `TblSqlSource$cleanup()`
 
-Clean up resources (close connections, etc.)
+No-op: the connection behind the `tbl_sql` is owned by the caller.
 
 #### Usage
 
@@ -211,7 +211,7 @@ Clean up resources (close connections, etc.)
 
 #### Returns
 
-NULL (invisibly)
+`NULL` (invisibly)
 
 ------------------------------------------------------------------------
 
@@ -234,7 +234,7 @@ The objects of this class are cloneable with this method.
 ``` r
 con <- DBI::dbConnect(duckdb::duckdb())
 #> duckdb keeps downloaded extensions and secrets in a temporary directory:
-#> ℹ /tmp/RtmplOeeRB/duckdb
+#> ℹ /tmp/Rtmp7ycu3t/duckdb
 #> This is removed when the R session ends.
 #> • Extensions are re-downloaded each session.
 #> • Secrets are lost.
@@ -273,8 +273,8 @@ dplyr::count(result, cyl, gear)
 #> # Database: DuckDB 1.5.5 [unknown@Linux 6.17.0-1022-azure:R 4.6.1/:memory:]
 #>     cyl  gear     n
 #>   <dbl> <dbl> <dbl>
-#> 1     6     5     1
-#> 2     6     3     2
+#> 1     6     3     2
+#> 2     6     5     1
 #> 3     8     5     2
 #> 4     6     4     4
 #> 5     8     3    12
@@ -296,6 +296,7 @@ dplyr::collect(result)
 #> 10  17.3     8  276.   180  3.07  3.73  17.6     0     0     3     3
 #> # ℹ 11 more rows
 
-# Finally, clean up when done with the database (closes the DB connection)
+# cleanup() is a no-op: you own `con`, so disconnect it yourself when done
 mtcars_source$cleanup()
+DBI::dbDisconnect(con, shutdown = TRUE)
 ```

@@ -199,7 +199,10 @@ matches)</p>
 
 <p></p><hr><a id="method-DataSource-cleanup"></a><div class="section">
 <h3 id="datasource-cleanup-"><code>DataSource$cleanup()</code><a class="anchor" aria-label="anchor" href="#datasource-cleanup-"></a></h3>
-<p>Clean up resources (close connections, etc.)</p><div class="section">
+<p>Release resources this data source created. Only resources querychat
+opened itself are closed (for example the in-memory DuckDB connection a
+<a href="DataFrameSource.html">DataFrameSource</a> creates). Connections passed in by the caller are
+never closed; their lifecycle stays with the caller.</p><div class="section">
 <h4 id="usage-7">Usage<a class="anchor" aria-label="anchor" href="#usage-7"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">DataSource</span><span class="op">$</span><span class="fu">cleanup</span><span class="op">(</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div><p></p><div class="section">

@@ -258,6 +258,12 @@ without a data source and provide it later, like this:</p>
 <span><span class="op">}</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/pkg/shiny/man/shinyApp.html" class="external-link">shinyApp</a></span><span class="op">(</span><span class="va">ui</span>, <span class="va">server</span><span class="op">)</span></span></code></pre></div>
+<p>A data source passed to <code>$server()</code> belongs to that
+session: other sessions never see it, it does not change the tables
+registered on the <code>QueryChat</code> object, and querychat cleans up
+any connection it created for it when the session ends. Connections you
+open yourself are yours to close; <code>session$onSessionEnded()</code>
+is a good place.</p>
 <p>If your chat client also depends on session-scoped credentials, you
 can defer that too by passing it to <code>qc$server(client = ...)</code>
 alongside the <code>data_source</code>.</p>

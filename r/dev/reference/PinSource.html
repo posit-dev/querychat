@@ -9,6 +9,10 @@ a data frame (or tibble), which is then registered with the chosen engine
 just like DataFrameSource.
 When loaded into DuckDB, the connection's external file access is locked
 down so that LLM-generated SQL cannot reach the filesystem.
+Multiple pins (and pins mixed with data frames) can be combined in one
+chat: every table is materialized into a shared DuckDB connection, so the
+LLM can join and filter across them. Pins using engine = &quot;sqlite&quot; can't
+join multi-table chats.
 If the pin has a title, description, or tags, QueryChat uses them as
 the default data_description, which you can override."><meta property="og:description" content="A DataSource implementation that reads data from a
 pins board. When the &quot;duckdb&quot; engine is used
@@ -20,6 +24,10 @@ a data frame (or tibble), which is then registered with the chosen engine
 just like DataFrameSource.
 When loaded into DuckDB, the connection's external file access is locked
 down so that LLM-generated SQL cannot reach the filesystem.
+Multiple pins (and pins mixed with data frames) can be combined in one
+chat: every table is materialized into a shared DuckDB connection, so the
+LLM can join and filter across them. Pins using engine = &quot;sqlite&quot; can't
+join multi-table chats.
 If the pin has a title, description, or tags, QueryChat uses them as
 the default data_description, which you can override."><meta property="og:image" content="https://posit-dev.github.io/querychat/logo.png"><meta name="robots" content="noindex"><!-- Privacy-friendly analytics by Plausible --><script async src="https://plausible.io/js/pa-wgo-tEXQwSOuN51WDI0ry.js"></script><script>
   window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};
@@ -84,6 +92,10 @@ a data frame (or tibble), which is then registered with the chosen engine
 just like <a href="DataFrameSource.html">DataFrameSource</a>.</p>
 <p>When loaded into DuckDB, the connection's external file access is locked
 down so that LLM-generated SQL cannot reach the filesystem.</p>
+<p>Multiple pins (and pins mixed with data frames) can be combined in one
+chat: every table is materialized into a shared DuckDB connection, so the
+LLM can join and filter across them. Pins using <code>engine = "sqlite"</code> can't
+join multi-table chats.</p>
 <p>If the pin has a title, description, or tags, <a href="QueryChat.html">QueryChat</a> uses them as
 the default <code>data_description</code>, which you can override.</p>
     </div>
@@ -115,15 +127,25 @@ LLM-generated SQL can access files on the local system.</p>
     <p><code><a href="DataSource.html">DataSource</a></code> -&gt; <code><a href="DBISource.html">DBISource</a></code> -&gt; <code>PinSource</code></p>
     </div>
     <div class="section level2">
+    <h2 id="active-bindings">Active bindings<a class="anchor" aria-label="anchor" href="#active-bindings"></a></h2>
+    <p></p><div class="r6-active-bindings"><dl><dt><code>engine</code></dt>
+<dd><p>The database engine backing this pin (<code>"duckdb"</code> or
+<code>"sqlite"</code>, read-only).</p></dd>
+
+
+</dl><p></p></div>
+    </div>
+    <div class="section level2">
     <h2 id="methods">Methods<a class="anchor" aria-label="anchor" href="#methods"></a></h2>
 
 <div class="section">
 <h3 id="public-methods">Public methods<a class="anchor" aria-label="anchor" href="#public-methods"></a></h3>
 <p></p><ul><li><p><a href="#method-PinSource-initialize"><code>PinSource$new()</code></a></p></li>
+<li><p><a href="#method-PinSource-register_into"><code>PinSource$register_into()</code></a></p></li>
 <li><p><a href="#method-PinSource-get_data_description"><code>PinSource$get_data_description()</code></a></p></li>
+<li><p><a href="#method-PinSource-cleanup"><code>PinSource$cleanup()</code></a></p></li>
 <li><p><a href="#method-PinSource-clone"><code>PinSource$clone()</code></a></p></li>
-</ul></div><p><details><summary>Inherited methods</summary><ul><li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="cleanup"><a href="DBISource.html#method-cleanup"><code>DBISource$cleanup()</code></a></span></li>
-  <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="execute_query"><a href="DBISource.html#method-execute_query"><code>DBISource$execute_query()</code></a></span></li>
+</ul></div><p><details><summary>Inherited methods</summary><ul><li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="execute_query"><a href="DBISource.html#method-execute_query"><code>DBISource$execute_query()</code></a></span></li>
   <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_data"><a href="DBISource.html#method-get_data"><code>DBISource$get_data()</code></a></span></li>
   <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_db_type"><a href="DBISource.html#method-get_db_type"><code>DBISource$get_db_type()</code></a></span></li>
   <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_schema"><a href="DBISource.html#method-get_schema"><code>DBISource$get_schema()</code></a></span></li>
@@ -179,15 +201,55 @@ deserialized via <code>pin_read()</code> instead.</p></dd>
 
 </div>
 
+<p></p><hr><a id="method-PinSource-register_into"></a><div class="section">
+<h3 id="pinsource-register-into-"><code>PinSource$register_into()</code><a class="anchor" aria-label="anchor" href="#pinsource-register-into-"></a></h3>
+<p>Materialize this pin into a shared DuckDB connection.</p>
+<p>Internal hook for joining a shared <code>DuckDBExecutor</code>. The caller owns
+<code>con</code> and locks it down once all tables are materialized.</p><div class="section">
+<h4 id="usage-1">Usage<a class="anchor" aria-label="anchor" href="#usage-1"></a></h4>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">PinSource</span><span class="op">$</span><span class="fu">register_into</span><span class="op">(</span><span class="va">con</span>, table_name <span class="op">=</span> <span class="va">self</span><span class="op">$</span><span class="va">table_name</span><span class="op">)</span></span></code></pre></div><p></p></div>
+</div><p></p><div class="section">
+<h4 id="arguments-1">Arguments<a class="anchor" aria-label="anchor" href="#arguments-1"></a></h4>
+<p></p><div class="arguments"><dl><dt><code>con</code></dt>
+<dd><p>A DuckDB DBI connection, owned by the caller.</p></dd>
+
+      <dt><code>table_name</code></dt>
+<dd><p>Name for the table in <code>con</code>. Defaults to the pin's
+own table name.</p></dd>
+
+
+</dl><p></p></div>
+</div><p></p><div class="section">
+<h4 id="returns-1">Returns<a class="anchor" aria-label="anchor" href="#returns-1"></a></h4>
+<p><code>NULL</code> (invisibly)</p>
+</div>
+
+</div>
+
 <p></p><hr><a id="method-PinSource-get_data_description"></a><div class="section">
 <h3 id="pinsource-get-data-description-"><code>PinSource$get_data_description()</code><a class="anchor" aria-label="anchor" href="#pinsource-get-data-description-"></a></h3>
 <p>Get a human-readable description of the pin for use in the system prompt.</p><div class="section">
-<h4 id="usage-1">Usage<a class="anchor" aria-label="anchor" href="#usage-1"></a></h4>
+<h4 id="usage-2">Usage<a class="anchor" aria-label="anchor" href="#usage-2"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">PinSource</span><span class="op">$</span><span class="fu">get_data_description</span><span class="op">(</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div><p></p><div class="section">
-<h4 id="returns-1">Returns<a class="anchor" aria-label="anchor" href="#returns-1"></a></h4>
+<h4 id="returns-2">Returns<a class="anchor" aria-label="anchor" href="#returns-2"></a></h4>
 <p>A string with the pin title, description, and tags, or an empty
 string if none are set.</p>
+</div>
+
+</div>
+
+<p></p><hr><a id="method-PinSource-cleanup"></a><div class="section">
+<h3 id="pinsource-cleanup-"><code>PinSource$cleanup()</code><a class="anchor" aria-label="anchor" href="#pinsource-cleanup-"></a></h3>
+<p>Disconnect the DuckDB or SQLite connection this PinSource opened, and
+shut down the DuckDB instance if used.</p>
+<p>Unlike <a href="DBISource.html">DBISource</a>'s <code>cleanup()</code>, this isn't a no-op: PinSource always
+opens its own connection (never a caller-supplied one), so it owns it.</p><div class="section">
+<h4 id="usage-3">Usage<a class="anchor" aria-label="anchor" href="#usage-3"></a></h4>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">PinSource</span><span class="op">$</span><span class="fu">cleanup</span><span class="op">(</span><span class="op">)</span></span></code></pre></div><p></p></div>
+</div><p></p><div class="section">
+<h4 id="returns-3">Returns<a class="anchor" aria-label="anchor" href="#returns-3"></a></h4>
+<p><code>NULL</code> (invisibly)</p>
 </div>
 
 </div>
@@ -195,10 +257,10 @@ string if none are set.</p>
 <p></p><hr><a id="method-PinSource-clone"></a><div class="section">
 <h3 id="pinsource-clone-"><code>PinSource$clone()</code><a class="anchor" aria-label="anchor" href="#pinsource-clone-"></a></h3>
 <p>The objects of this class are cloneable with this method.</p><div class="section">
-<h4 id="usage-2">Usage<a class="anchor" aria-label="anchor" href="#usage-2"></a></h4>
+<h4 id="usage-4">Usage<a class="anchor" aria-label="anchor" href="#usage-4"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">PinSource</span><span class="op">$</span><span class="fu">clone</span><span class="op">(</span>deep <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div><p></p><div class="section">
-<h4 id="arguments-1">Arguments<a class="anchor" aria-label="anchor" href="#arguments-1"></a></h4>
+<h4 id="arguments-2">Arguments<a class="anchor" aria-label="anchor" href="#arguments-2"></a></h4>
 <p></p><div class="arguments"><dl><dt><code>deep</code></dt>
 <dd><p>Whether to make a deep clone.</p></dd>
 
@@ -226,10 +288,10 @@ string if none are set.</p>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span>  <span class="va">ps</span><span class="op">$</span><span class="fu">cleanup</span><span class="op">(</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Creating new version '20260912T230933Z-c0340'</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Creating new version '20260913T191422Z-c0340'</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Writing to pin 'mtcars'</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> duckdb keeps downloaded extensions and secrets in a temporary directory:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">ℹ</span> /tmp/RtmplOeeRB/duckdb</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">ℹ</span> /tmp/Rtmp7ycu3t/duckdb</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> This is removed when the R session ends.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Extensions are re-downloaded each session.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Secrets are lost.</span>

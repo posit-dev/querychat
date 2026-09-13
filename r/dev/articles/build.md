@@ -177,6 +177,12 @@ server <- function(input, output, session) {
 shinyApp(ui, server)
 ```
 
+A data source passed to `$server()` belongs to that session: other
+sessions never see it, it does not change the tables registered on the
+`QueryChat` object, and querychat cleans up any connection it created
+for it when the session ends. Connections you open yourself are yours to
+close; `session$onSessionEnded()` is a good place.
+
 If your chat client also depends on session-scoped credentials, you can
 defer that too by passing it to `qc$server(client = ...)` alongside the
 `data_source`.

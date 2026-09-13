@@ -249,10 +249,12 @@ Create a new QueryChat object.
 
 - `cleanup`:
 
-  Whether or not to automatically run `$cleanup()` when the Shiny
-  session/app stops. By default, cleanup only occurs if `QueryChat` gets
-  created within a Shiny session. Set to `TRUE` to always clean up, or
-  `FALSE` to never clean up automatically.
+  Whether or not to automatically run `$cleanup()`. By default, cleanup
+  only occurs if `QueryChat` gets created while a Shiny app is running:
+  when created inside a session (e.g., in the server function), cleanup
+  runs when that session ends; when created outside a session (e.g., at
+  the top level of `app.R`), it runs when the app stops. Set to `TRUE`
+  to always clean up, or `FALSE` to never clean up automatically.
 
 #### Returns
 
@@ -263,6 +265,9 @@ A new `QueryChat` object.
 ### `QueryChat$add_table()`
 
 Add a table to this QueryChat instance.
+
+Replacing or removing an existing table after a session has started is
+an error; adding a new one warns.
 
 #### Usage
 
@@ -307,6 +312,9 @@ Unlike calling `$add_table()` repeatedly, this method builds the system
 prompt exactly once after all tables have been staged, avoiding N-1
 spurious intermediate rebuilds.
 
+Replacing or removing an existing table after a session has started is
+an error; adding a new one warns.
+
 #### Usage
 
     QueryChat$add_tables(
@@ -349,6 +357,8 @@ Invisibly returns `self` for chaining.
 ### `QueryChat$remove_table()`
 
 Remove a table from this QueryChat instance.
+
+Removing an existing table after a session has started is an error.
 
 #### Usage
 
@@ -637,12 +647,12 @@ Initialize the querychat server logic.
 
 - `data_source`:
 
-  Optional data source to register for this session, for the deferred
-  pattern where the data source can't be created until the server
-  function runs (e.g. a connection scoped to per-user OAuth
-  credentials). Registered under `table_name` if given, otherwise the
-  `table_name` passed to `$new()`, or the first already-registered
-  table.
+  Optional data source to register for this session only, for the
+  deferred pattern where the source can't be created until the server
+  function runs (for example a per-user database connection). The
+  instance's own tables are not modified; a same-named instance table is
+  shadowed for this session; any connection querychat created for it is
+  cleaned up when the session ends.
 
 - `client`:
 
@@ -712,7 +722,11 @@ The greeting string in Markdown format.
 
 ### `QueryChat$cleanup()`
 
-Clean up resources associated with the data source.
+Clean up resources this object created.
+
+Closes the query executors and data-source connections querychat opened
+(in-memory DuckDB), including those of table sets superseded by a late
+`$add_table()`. Connections you passed in are never closed.
 
 #### Usage
 
@@ -720,7 +734,7 @@ Clean up resources associated with the data source.
 
 #### Returns
 
-Invisibly returns `NULL`. Resources are cleaned up internally.
+Invisibly returns `NULL`.
 
 ------------------------------------------------------------------------
 
@@ -744,7 +758,7 @@ The objects of this class are cloneable with this method.
 # Basic usage with a data frame
 qc <- QueryChat$new(mtcars)
 #> duckdb keeps downloaded extensions and secrets in a temporary directory:
-#> ℹ /tmp/RtmplOeeRB/duckdb
+#> ℹ /tmp/Rtmp7ycu3t/duckdb
 #> This is removed when the R session ends.
 #> • Extensions are re-downloaded each session.
 #> • Secrets are lost.
@@ -759,7 +773,7 @@ app <- qc$app()
 greeting <- "Welcome! Ask me about the mtcars dataset."
 qc <- QueryChat$new(mtcars, greeting = greeting)
 #> duckdb keeps downloaded extensions and secrets in a temporary directory:
-#> ℹ /tmp/RtmplOeeRB/duckdb
+#> ℹ /tmp/Rtmp7ycu3t/duckdb
 #> This is removed when the R session ends.
 #> • Extensions are re-downloaded each session.
 #> • Secrets are lost.
@@ -770,7 +784,7 @@ qc <- QueryChat$new(mtcars, greeting = greeting)
 # With a specific LLM provider
 qc <- QueryChat$new(mtcars, client = "anthropic/claude-sonnet-4-5")
 #> duckdb keeps downloaded extensions and secrets in a temporary directory:
-#> ℹ /tmp/RtmplOeeRB/duckdb
+#> ℹ /tmp/Rtmp7ycu3t/duckdb
 #> This is removed when the R session ends.
 #> • Extensions are re-downloaded each session.
 #> • Secrets are lost.
@@ -794,7 +808,7 @@ qc <- QueryChat$new(
   data_description = "Motor Trend car road tests dataset"
 )
 #> duckdb keeps downloaded extensions and secrets in a temporary directory:
-#> ℹ /tmp/RtmplOeeRB/duckdb
+#> ℹ /tmp/Rtmp7ycu3t/duckdb
 #> This is removed when the R session ends.
 #> • Extensions are re-downloaded each session.
 #> • Secrets are lost.

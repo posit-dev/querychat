@@ -4,45 +4,12 @@
 
 ### New features
 
-- [`querychat_app()`](https://posit-dev.github.io/querychat/dev/reference/querychat-convenience.md)
-  (and `QueryChat$app()`) is now chat-first: it builds on the `$page()`
-  layout, so the chat owns the window, and the SQL editor + data table
-  live in a drawer that auto-opens when the LLM runs a query (including
-  on bookmark/history restore).
-
-- New `/handoff` slash command: turn selected query and visualization
-  results from your chat session into a downloadable Quarto dashboard or
-  Shiny app — with AI-assisted revision, bundled data, and handoffs that
-  survive chat history restores and Shiny bookmarks.
-
-- Added a `$page()` method to `QueryChat` that wraps
-  [`shinychat::page_chat()`](https://posit-dev.github.io/shinychat/r/reference/page_chat.html)
-  for full-window, “chat-first” apps. The chat owns the page (with
-  conversation history, optional navigation pages, sidebars, and a
-  drawer), and reactive data views can live on secondary pages via
-  [`shinychat::chat_nav_panel()`](https://posit-dev.github.io/shinychat/r/reference/chat_nav_panel.html).
-
-  ``` r
-
-  qc <- QueryChat$new(penguins)
-  ui <- qc$page("Penguins Explorer")
-  ```
-
-- The SQL panel in
-  [`querychat_app()`](https://posit-dev.github.io/querychat/dev/reference/querychat-convenience.md)
-  is now an editable code editor. Users can tweak the generated SQL
-  directly and apply it with Ctrl/Cmd+Enter or by clicking away — no
-  extra button required. The editor stays in sync when the LLM updates
-  the query or the active table changes.
-  ([\#265](https://github.com/posit-dev/querychat/issues/265))
-
-- `QueryChat$new()` now supports **multiple related tables**. Register
-  additional tables with `$add_table()` and the LLM can reason across
-  all of them — joins, cross-table filters, aggregations. Per-table
-  reactive state (`$df()`, `$sql()`, `$title()`) is accessible via
-  `qc_vals$table("name")` on the list returned by `$server()`. For DBI
-  connections, `$add_tables()` registers all tables (or a named subset)
-  in a single call.
+- **Multiple related tables**: register additional tables with
+  `$add_table()` (or every table from a DBI connection at once with
+  `$add_tables()`), and the LLM can reason across them — joins,
+  cross-table filters, aggregations. Per-table reactive state (`$df()`,
+  `$sql()`, `$title()`) is available via `qc_vals$table("name")` on the
+  list returned by `$server()`.
   ([\#195](https://github.com/posit-dev/querychat/issues/195))
 
   ``` r
@@ -50,55 +17,62 @@
   qc <- QueryChat$new(orders_df, "orders")
   qc$add_table(customers_df, "customers")
 
-  # Or, register all tables from a DBI connection at once:
-  qc <- QueryChat$new()
-  qc$add_tables(con)
-
   qc_vals <- qc$server()
   qc_vals$table("orders")$df()
-  qc_vals$table("customers")$sql()
   ```
 
-- A new **`data_dict`** parameter — integrating with the
-  [data-dict](https://data-dict.tidyverse.org/) spec — lets you annotate
-  tables and columns with plain-English descriptions loaded from a YAML
-  file. This is the preferred way to provide additional context for the
-  data, especially when multiple tables are relevant. The LLM receives
-  these descriptions when it fetches the schema, helping it interpret
-  ambiguous or domain-specific column names without any extra prompting.
+- **`data_dict`**: annotate tables and columns with plain-English
+  descriptions from a YAML file (following the
+  [data-dict](https://data-dict.tidyverse.org/) spec). This is now the
+  preferred way to give the LLM context about your data, especially with
+  multiple tables — no extra prompting required.
   ([\#195](https://github.com/posit-dev/querychat/issues/195))
+
+- **Chat-first apps**:
+  [`querychat_app()`](https://posit-dev.github.io/querychat/dev/reference/querychat-convenience.md)
+  (and `QueryChat$app()`) now put the chat front and center — the SQL
+  editor and data table live in a drawer that opens automatically when
+  the LLM runs a query. The new `$page()` method brings the same
+  full-window layout to your own apps:
 
   ``` r
 
-  QueryChat$new(data_dict = "data_dict.yaml")
+  qc <- QueryChat$new(penguins)
+  ui <- qc$page("Penguins Explorer")
   ```
 
-- Added `PinSource`, a data source for chatting with datasets pinned to
-  a [pins](https://pins.rstudio.com/) board. Works with parquet, CSV,
-  JSON, and RDS pins, and uses the pin’s title, description, and tags as
-  the default data description.
-  ([\#246](https://github.com/posit-dev/querychat/issues/246))
+- **`/handoff` slash command**: turn selected query and visualization
+  results from a chat session into a downloadable Quarto dashboard or
+  Shiny app, with AI-assisted revision and bundled data.
 
-- File attachments are now enabled by default in the Shiny chat UI.
-  Users can attach images, PDFs, and text files to their messages and
-  the LLM will receive them. Disable with `allow_attachments = FALSE` in
-  `mod_ui()` or `QueryChat$ui()`.
+- **Persistent conversation history**: chats now survive page reloads
+  and browser sessions by default. For a shareable URL or full Shiny
+  bookmark instead, pass
+  `history = shinychat::history_options(restore_mode = "url")` or
+  `"bookmark"`. Disable with `history = FALSE`.
+
+- **File attachments** are now enabled by default: users can attach
+  images, PDFs, and text files to their messages. Disable with
+  `allow_attachments = FALSE`.
   ([\#253](https://github.com/posit-dev/querychat/issues/253))
 
-- Conversation history is now persisted by default. `QueryChat` keeps a
-  user’s chat around across page reloads and browser sessions, backed by
-  shinychat’s history support. The default `restore_mode = "browser"`
-  stores the active conversation in the browser’s localStorage, but you
-  can pass `history = shinychat::history_options(restore_mode = "url")`
-  to restore via a plain, shareable URL instead, or
-  `restore_mode = "bookmark"` to fold the conversation into a full Shiny
-  bookmark. Disable with `history = FALSE`.
+- **Editable SQL panel**: the SQL panel in
+  [`querychat_app()`](https://posit-dev.github.io/querychat/dev/reference/querychat-convenience.md)
+  is now a code editor — tweak the generated SQL and apply it with
+  Ctrl/Cmd+Enter.
+  ([\#265](https://github.com/posit-dev/querychat/issues/265))
+
+- `PinSource`: chat with datasets pinned to a
+  [pins](https://pins.rstudio.com/) board (parquet, CSV, JSON, RDS); the
+  pin’s title, description, and tags serve as the default data
+  description. Multiple pins (and pins mixed with data frames) work in
+  one chat via a shared DuckDB connection.
+  ([\#246](https://github.com/posit-dev/querychat/issues/246),
+  [\#312](https://github.com/posit-dev/querychat/issues/312))
 
 - Deferred construction is more flexible: `table_name` is now optional
-  in `QueryChat$new(NULL)` (if omitted, `$id` falls back to a generic
-  `"querychat"` default), and `$server()` gains a `table_name` parameter
-  so the table can be named per session when registering a data source
-  via `$server(data_source = )`.
+  in `QueryChat$new(NULL)`, and `$server()` gains a `table_name`
+  parameter so the table can be named per session.
   ([\#305](https://github.com/posit-dev/querychat/issues/305))
 
 ### Breaking changes
@@ -108,80 +82,98 @@
   `qc$add_table(df, "name", replace = TRUE)` to replace it.
   ([\#195](https://github.com/posit-dev/querychat/issues/195))
 
-- `$app()`/`$app_obj()`’s `bookmark_store` parameter has been removed.
-  Pass `history = shinychat::history_options(restore_mode = "bookmark")`
-  to get the same shareable-bookmark behavior; any other `history` value
-  disables Shiny-level bookmarking for the generated app. `$app()`
-  defaults to `restore_mode = "bookmark"` when no `history` is set
-  anywhere, so existing `$app()` callers keep working without changes.
-  Note this default is a storage-mechanism change, not just a rename:
-  the old default (`bookmark_store = "url"`) encoded the entire bookmark
-  state in the URL itself, requiring no server storage; the new default
-  requires server-side bookmark storage (`bookmarkStore = "server"`),
-  with just a short state ID in the URL. Deployments that relied on
-  `$app()` being fully stateless should pass `history = FALSE` or a
-  non-bookmark `history_options()`.
+- `$app()`/`$app_obj()`’s `bookmark_store` parameter has been removed;
+  pass `history = shinychat::history_options(restore_mode = "bookmark")`
+  for equivalent behavior (existing `$app()` callers get this default
+  automatically). Note the storage mechanism changed: server-side
+  bookmark storage is now required rather than encoding state in the
+  URL, so deployments that relied on `$app()` being fully stateless
+  should pass `history = FALSE`.
 
 ### Deprecated
 
 - `$server()`’s `enable_bookmarking` parameter is deprecated in favor of
-  `history`. Pass
-  `history = shinychat::history_options(restore_mode = "bookmark")`
-  instead of `enable_bookmarking = TRUE` for the equivalent behavior.
+  `history`.
 
 ### Improvements
 
-- The `"visualize"` tool is now included in the default toolset
-  (`tools = c("filter", "query", "visualize")`). If the suggested ggsql
-  package is not installed, the tool is dropped with a warning instead
-  of erroring.
+- The `"visualize"` tool is now included in the default toolset. If the
+  suggested ggsql package is not installed, the tool is dropped with a
+  warning instead of erroring.
 
-- Chat greetings now use shinychat’s greeting API (requires shinychat
-  \>= 0.4.0). A provided `greeting` renders instantly when the app
-  loads, and when no `greeting` is given one is generated on demand —
-  now **schema-aware**, so it can describe the data it’s about to help
-  you explore — without being added to the conversation history.
-  Generated greetings are preserved across bookmark/restore. Tables
-  passed to `QueryChat$new()` are described in the greeting
-  automatically; opt additional tables in with
-  `include_in_greeting = TRUE` on `$add_table()`/`$add_tables()`, or
-  fine-tune which tables and which template the greeting uses via
-  `qc$greeter`.
+- Chat greetings render instantly when provided, and generated greetings
+  are now schema-aware — they describe the data at hand — and are
+  preserved across bookmark/restore. Opt additional tables into the
+  greeting with `include_in_greeting = TRUE` on
+  `$add_table()`/`$add_tables()`.
   ([\#249](https://github.com/posit-dev/querychat/issues/249),
   [\#261](https://github.com/posit-dev/querychat/issues/261))
 
-- The system prompt is now lighter: full schema is no longer embedded
-  upfront. Instead the LLM fetches per-table schema on demand via the
-  new `querychat_get_schema` tool — and only when it needs to. When a
-  `data_dict` is provided, the tool skips columns that already have
-  descriptions, so the LLM only pays for what isn’t already documented.
+- The system prompt no longer embeds the full schema upfront; the LLM
+  fetches per-table schema on demand, skipping columns already described
+  by a `data_dict`.
   ([\#195](https://github.com/posit-dev/querychat/issues/195))
 
-- Fixed `data_description` and `extra_instructions` being HTML-escaped
-  in the system prompt. Special characters like `<`, `>`, and `&` in
-  developer-provided descriptions and instructions are now passed to the
-  LLM verbatim.
+- Special characters like `<`, `>`, and `&` in `data_description` and
+  `extra_instructions` are no longer HTML-escaped in the system prompt.
   ([\#258](https://github.com/posit-dev/querychat/issues/258))
 
-- The close button in `$app()` is now hidden when running in a
-  non-interactive context (e.g. a deployed Shiny app), preventing
-  [`stopApp()`](https://rdrr.io/pkg/shiny/man/stopApp.html) from
-  crashing the session for other users.
+- The close button in `$app()` is now hidden in deployed
+  (non-interactive) contexts, where
+  [`stopApp()`](https://rdrr.io/pkg/shiny/man/stopApp.html) would crash
+  the session for other users.
   ([\#259](https://github.com/posit-dev/querychat/issues/259))
 
 ### Bug fixes
 
-- Query results were being shown expanded, and often repeated in the
-  LLM’s response, far more often than intended. The LLM is now guided to
-  expand a result only when the user explicitly asks to see the raw
-  table. ([\#295](https://github.com/posit-dev/querychat/issues/295))
+- Query results are now expanded in the chat only when the user asks to
+  see the raw table, instead of far more often than intended.
+  ([\#295](https://github.com/posit-dev/querychat/issues/295))
 
-- `$add_table()` no longer rewrites the Shiny module `$id` when the
-  registered table is the only one; the id is now fixed at construction
-  time, matching Python. The rewrite could desync the module namespace
-  from an already-rendered UI when a table was registered between
+- Fixed a module-namespace desync when a table was registered between
   `$ui()` and `$server()` (e.g. via `$server(data_source = )`).
   ([\#305](https://github.com/posit-dev/querychat/issues/305))
+
+- `$server(data_source = )` no longer modifies the `QueryChat` instance.
+  The table is registered for that session only: the instance’s tables,
+  greeting tables, and system prompt are unchanged, a same-named
+  instance table is shadowed for that session, and any connection
+  querychat created for it is cleaned up when the session ends. A second
+  session’s `$server(data_source = )` call therefore no longer errors
+  with “Cannot add tables after server initialization.”
+  ([\#300](https://github.com/posit-dev/querychat/issues/300),
+  [\#306](https://github.com/posit-dev/querychat/issues/306))
+
+- `$cleanup()` follows one rule: querychat closes only what it created.
+  `DBISource$cleanup()` and `TblSqlSource$cleanup()` no longer
+  disconnect your connection; disconnect it yourself on shutdown.
+  `DataFrameSource`/`PinSource` DuckDB connections are still closed.
+
+- The automatic `$cleanup()` registered when `QueryChat` is created
+  while a Shiny app is running (`cleanup = NA`, the default) no longer
+  disconnects caller-supplied DBI connections when the session or app
+  stops, for the same reason. If you relied on that to close a
+  connection you passed to `QueryChat$new()`, register your own
+  `shiny::onStop(function() DBI::dbDisconnect(con))` (or disconnect when
+  the session ends). Data frames are unaffected: the in-memory DuckDB
+  connection querychat creates for them is still closed automatically.
+
+- Adding a *new* table with `$add_table()`/`$add_tables()` after a
+  session has started now warns instead of erroring; running sessions
+  keep their tables and new sessions see the addition. Replacing or
+  removing an existing table after a session has started still errors.
+
+- A rejected or failed `$add_table()`/`$add_tables()` call (e.g. an
+  incompatible source type) after a session has started no longer warns
+  about the late change or otherwise affects the instance, since the
+  change never took effect.
+  ([\#311](https://github.com/posit-dev/querychat/issues/311))
+
+- A failed `QueryChat$new()` (e.g. an unreadable `prompt_template`) no
+  longer leaks the data source connection querychat created while
+  normalizing its input; the source is cleaned up before the error
+  propagates. Caller-supplied `DataSource` objects remain the caller’s
+  responsibility.
 
 ## querychat 0.3.0
 

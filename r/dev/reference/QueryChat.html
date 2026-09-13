@@ -289,10 +289,13 @@ format.</p></dd>
 list of YAML file paths. See <code><a href="read_data_dict.html">read_data_dict()</a></code> for the expected format.</p></dd>
 
       <dt><code>cleanup</code></dt>
-<dd><p>Whether or not to automatically run <code>$cleanup()</code> when the
-Shiny session/app stops. By default, cleanup only occurs if <code>QueryChat</code>
-gets created within a Shiny session. Set to <code>TRUE</code> to always clean up,
-or <code>FALSE</code> to never clean up automatically.</p></dd>
+<dd><p>Whether or not to automatically run <code>$cleanup()</code>. By
+default, cleanup only occurs if <code>QueryChat</code> gets created while a Shiny
+app is running: when created inside a session (e.g., in the server
+function), cleanup runs when that session ends; when created outside
+a session (e.g., at the top level of <code>app.R</code>), it runs when the app
+stops. Set to <code>TRUE</code> to always clean up, or <code>FALSE</code> to never clean up
+automatically.</p></dd>
 
 
 </dl><p></p></div>
@@ -305,7 +308,9 @@ or <code>FALSE</code> to never clean up automatically.</p></dd>
 
 <p></p><hr><a id="method-QueryChat-add_table"></a><div class="section">
 <h3 id="querychat-add-table-"><code>QueryChat$add_table()</code><a class="anchor" aria-label="anchor" href="#querychat-add-table-"></a></h3>
-<p>Add a table to this QueryChat instance.</p><div class="section">
+<p>Add a table to this QueryChat instance.</p>
+<p>Replacing or removing an existing table after a session has started is
+an error; adding a new one warns.</p><div class="section">
 <h4 id="usage-1">Usage<a class="anchor" aria-label="anchor" href="#usage-1"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">QueryChat</span><span class="op">$</span><span class="fu">add_table</span><span class="op">(</span></span>
 <span>  <span class="va">data_source</span>,</span>
@@ -343,7 +348,9 @@ context. Default is <code>FALSE</code>.</p></dd>
 <p>Add multiple tables from a DBI connection in a single call.</p>
 <p>Unlike calling <code>$add_table()</code> repeatedly, this method builds the
 system prompt exactly once after all tables have been staged, avoiding
-N-1 spurious intermediate rebuilds.</p><div class="section">
+N-1 spurious intermediate rebuilds.</p>
+<p>Replacing or removing an existing table after a session has started is
+an error; adding a new one warns.</p><div class="section">
 <h4 id="usage-2">Usage<a class="anchor" aria-label="anchor" href="#usage-2"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">QueryChat</span><span class="op">$</span><span class="fu">add_tables</span><span class="op">(</span></span>
 <span>  <span class="va">conn</span>,</span>
@@ -382,7 +389,8 @@ the tables being added). Any other type raises an error.</p></dd>
 
 <p></p><hr><a id="method-QueryChat-remove_table"></a><div class="section">
 <h3 id="querychat-remove-table-"><code>QueryChat$remove_table()</code><a class="anchor" aria-label="anchor" href="#querychat-remove-table-"></a></h3>
-<p>Remove a table from this QueryChat instance.</p><div class="section">
+<p>Remove a table from this QueryChat instance.</p>
+<p>Removing an existing table after a session has started is an error.</p><div class="section">
 <h4 id="usage-3">Usage<a class="anchor" aria-label="anchor" href="#usage-3"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">QueryChat</span><span class="op">$</span><span class="fu">remove_table</span><span class="op">(</span><span class="va">table_name</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div><p></p><div class="section">
@@ -639,12 +647,13 @@ and <code>window_title</code> is omitted, it is also used as the document title.
 </div><p></p><div class="section">
 <h4 id="arguments-11">Arguments<a class="anchor" aria-label="anchor" href="#arguments-11"></a></h4>
 <p></p><div class="arguments"><dl><dt><code>data_source</code></dt>
-<dd><p>Optional data source to register for this session,
-for the deferred pattern where the data source can't be created
-until the server function runs (e.g. a connection scoped to
-per-user OAuth credentials). Registered under <code>table_name</code> if given,
-otherwise the <code>table_name</code> passed to <code>$new()</code>, or the first
-already-registered table.</p></dd>
+<dd><p>Optional data source to register for this session
+only, for the deferred pattern where the source can't be created
+until the server function runs (for example a per-user database
+connection). The instance's own tables are not modified; a
+same-named instance table is shadowed for this session; any
+connection querychat created for it is cleaned up when the session
+ends.</p></dd>
 
       <dt><code>client</code></dt>
 <dd><p>Optional chat client override for this session.</p></dd>
@@ -707,12 +716,15 @@ or <code>NULL</code> before any query.</p>
 
 <p></p><hr><a id="method-QueryChat-cleanup"></a><div class="section">
 <h3 id="querychat-cleanup-"><code>QueryChat$cleanup()</code><a class="anchor" aria-label="anchor" href="#querychat-cleanup-"></a></h3>
-<p>Clean up resources associated with the data source.</p><div class="section">
+<p>Clean up resources this object created.</p>
+<p>Closes the query executors and data-source connections querychat opened
+(in-memory DuckDB), including those of table sets superseded by a late
+<code>$add_table()</code>. Connections you passed in are never closed.</p><div class="section">
 <h4 id="usage-14">Usage<a class="anchor" aria-label="anchor" href="#usage-14"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">QueryChat</span><span class="op">$</span><span class="fu">cleanup</span><span class="op">(</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div><p></p><div class="section">
 <h4 id="returns-11">Returns<a class="anchor" aria-label="anchor" href="#returns-11"></a></h4>
-<p>Invisibly returns <code>NULL</code>. Resources are cleaned up internally.</p>
+<p>Invisibly returns <code>NULL</code>.</p>
 </div>
 
 </div>
@@ -741,7 +753,7 @@ or <code>NULL</code> before any query.</p>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Basic usage with a data frame</span></span></span>
 <span class="r-in"><span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="va">QueryChat</span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">mtcars</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> duckdb keeps downloaded extensions and secrets in a temporary directory:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">ℹ</span> /tmp/RtmplOeeRB/duckdb</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">ℹ</span> /tmp/Rtmp7ycu3t/duckdb</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> This is removed when the R session ends.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Extensions are re-downloaded each session.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Secrets are lost.</span>
@@ -756,7 +768,7 @@ or <code>NULL</code> before any query.</p>
 <span class="r-in"><span><span class="va">greeting</span> <span class="op">&lt;-</span> <span class="st">"Welcome! Ask me about the mtcars dataset."</span></span></span>
 <span class="r-in"><span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="va">QueryChat</span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">mtcars</span>, greeting <span class="op">=</span> <span class="va">greeting</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> duckdb keeps downloaded extensions and secrets in a temporary directory:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">ℹ</span> /tmp/RtmplOeeRB/duckdb</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">ℹ</span> /tmp/Rtmp7ycu3t/duckdb</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> This is removed when the R session ends.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Extensions are re-downloaded each session.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Secrets are lost.</span>
@@ -767,7 +779,7 @@ or <code>NULL</code> before any query.</p>
 <span class="r-in"><span><span class="co"># With a specific LLM provider</span></span></span>
 <span class="r-in"><span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="va">QueryChat</span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">mtcars</span>, client <span class="op">=</span> <span class="st">"anthropic/claude-sonnet-4-5"</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> duckdb keeps downloaded extensions and secrets in a temporary directory:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">ℹ</span> /tmp/RtmplOeeRB/duckdb</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">ℹ</span> /tmp/Rtmp7ycu3t/duckdb</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> This is removed when the R session ends.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Extensions are re-downloaded each session.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Secrets are lost.</span>
@@ -791,7 +803,7 @@ or <code>NULL</code> before any query.</p>
 <span class="r-in"><span>  data_description <span class="op">=</span> <span class="st">"Motor Trend car road tests dataset"</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> duckdb keeps downloaded extensions and secrets in a temporary directory:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">ℹ</span> /tmp/RtmplOeeRB/duckdb</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">ℹ</span> /tmp/Rtmp7ycu3t/duckdb</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> This is removed when the R session ends.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Extensions are re-downloaded each session.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Secrets are lost.</span>

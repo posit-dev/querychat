@@ -102,9 +102,7 @@ class PinSource(DataSource[nw.DataFrame]):
 
     Multiple pins (and pins mixed with data frames) can be combined in one
     chat: every table is materialized into a shared DuckDB connection, so
-    the LLM can join and filter across them. Each pin still keeps its own
-    private connection for source-level operations; the shared connection
-    is owned by the query executor.
+    the LLM can join and filter across them.
 
     Lazy queries with pins
     ~~~~~~~~~~~~~~~~~~~~~~

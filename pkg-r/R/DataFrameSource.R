@@ -73,6 +73,28 @@ DataFrameSource <- R6::R6Class(
     },
 
     #' @description
+    #' Register this data frame in a shared DuckDB connection.
+    #'
+    #' Internal hook for joining a shared `DuckDBExecutor`. The caller owns
+    #' `con` and locks it down once all tables are registered.
+    #'
+    #' @param con A DuckDB DBI connection, owned by the caller.
+    #' @param table_name Name for the table in `con`. Defaults to the source's
+    #'   own table name.
+    #'
+    #' @return `NULL` (invisibly)
+    register_into = function(con, table_name = self$table_name) {
+      check_installed("duckdb")
+      duckdb::duckdb_register(
+        con,
+        table_name,
+        self$get_data(),
+        experimental = FALSE
+      )
+      invisible(NULL)
+    },
+
+    #' @description
     #' Disconnect from the database and shut down the DuckDB instance if used.
     #'
     #' @return NULL (invisibly)

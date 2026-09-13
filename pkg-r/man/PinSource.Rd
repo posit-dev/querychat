@@ -16,6 +16,11 @@ just like \link{DataFrameSource}.
 When loaded into DuckDB, the connection's external file access is locked
 down so that LLM-generated SQL cannot reach the filesystem.
 
+Multiple pins (and pins mixed with data frames) can be combined in one
+chat: every table is materialized into a shared DuckDB connection, so the
+LLM can join and filter across them. Pins using \code{engine = "sqlite"} can't
+join multi-table chats.
+
 If the pin has a title, description, or tags, \link{QueryChat} uses them as
 the default \code{data_description}, which you can override.
 }
@@ -62,10 +67,19 @@ if (rlang::is_installed(c("pins", "duckdb"))) {
 \section{Super classes}{
 \code{\link[querychat:DataSource]{DataSource}} -> \code{\link[querychat:DBISource]{DBISource}} -> \code{PinSource}
 }
+\section{Active bindings}{
+  \if{html}{\out{<div class="r6-active-bindings">}}
+  \describe{
+    \item{\code{engine}}{The database engine backing this pin (\code{"duckdb"} or
+\code{"sqlite"}, read-only).}
+  }
+  \if{html}{\out{</div>}}
+}
 \section{Methods}{
 \subsection{Public methods}{
   \itemize{
     \item \href{#method-PinSource-initialize}{\code{PinSource$new()}}
+    \item \href{#method-PinSource-register_into}{\code{PinSource$register_into()}}
     \item \href{#method-PinSource-get_data_description}{\code{PinSource$get_data_description()}}
     \item \href{#method-PinSource-cleanup}{\code{PinSource$cleanup()}}
     \item \href{#method-PinSource-clone}{\code{PinSource$clone()}}
@@ -121,6 +135,33 @@ deserialized via \code{pin_read()} instead.}
   }
   \subsection{Returns}{
     A new PinSource object
+  }
+}
+
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-PinSource-register_into"></a>}}
+\if{latex}{\out{\hypertarget{method-PinSource-register_into}{}}}
+\subsection{\code{PinSource$register_into()}}{
+  Materialize this pin into a shared DuckDB connection.
+
+Internal hook for joining a shared \code{DuckDBExecutor}. The caller owns
+\code{con} and locks it down once all tables are materialized.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{PinSource$register_into(con, table_name = self$table_name)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{con}}{A DuckDB DBI connection, owned by the caller.}
+      \item{\code{table_name}}{Name for the table in \code{con}. Defaults to the pin's
+own table name.}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    \code{NULL} (invisibly)
   }
 }
 

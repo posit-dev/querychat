@@ -302,9 +302,9 @@ class TestQueryChatPinSourceIntegration:
 
 
 class TestMultiplePins:
-    """A second pin must fail at registration, not at query time."""
+    """Multiple pins (and pin + data frame mixes) share a DuckDB executor."""
 
-    def test_second_pin_rejected_by_compatibility_check(self, board, sample_df):
+    def test_second_pin_passes_compatibility_check(self, board, sample_df):
         from querychat._query_executor import check_source_compatibility
 
         board.pin_write(sample_df, "pin_a", type="parquet")
@@ -312,20 +312,164 @@ class TestMultiplePins:
         first = PinSource(board, "pin_a")
         second = PinSource(board, "pin_b")
         try:
-            with pytest.raises(ValueError, match="only one pin"):
-                check_source_compatibility({"pin_a": first}, second, "pin_b")
+            check_source_compatibility({"pin_a": first}, second, "pin_b")
         finally:
             first.cleanup()
             second.cleanup()
 
-    def test_add_table_rejects_second_pin(self, board, sample_df):
+    def test_two_pins_query_through_shared_executor(self, board, sample_df):
+        from querychat import QueryChat
+        from querychat._query_executor import DuckDBExecutor
+
+        board.pin_write(sample_df, "pin_a", type="parquet")
+        cities = pd.DataFrame(
+            {"name": ["Alice", "Diana"], "city": ["Springfield", "Shelbyville"]}
+        )
+        board.pin_write(cities, "pin_b", type="csv")
+
+        qc = QueryChat(board, "pin_a")
+        try:
+            qc.add_table(board, "pin_b")
+            executor = qc._table_set.executor
+            assert isinstance(executor, DuckDBExecutor)
+
+            result = nw.from_native(
+                executor.execute_query(
+                    "SELECT a.name, b.city FROM pin_a a "
+                    "JOIN pin_b b ON a.name = b.name ORDER BY a.name"
+                )
+            )
+            assert result.rows(named=True) == [
+                {"name": "Alice", "city": "Springfield"},
+                {"name": "Diana", "city": "Shelbyville"},
+            ]
+
+            # Per-table schema and validation work for both pins
+            metas = executor.get_column_metas("pin_b")
+            assert {m.name for m in metas} == {"name", "city"}
+            executor.test_query(
+                "SELECT * FROM pin_b", table_name="pin_b", require_all_columns=True
+            )
+        finally:
+            qc.cleanup()
+
+    def test_pin_and_dataframe_mix(self, board, sample_df):
+        from querychat import QueryChat
+        from querychat._query_executor import DuckDBExecutor
+
+        board.pin_write(sample_df, "pin_a", type="parquet")
+        qc = QueryChat(board, "pin_a")
+        try:
+            qc.add_table(
+                pd.DataFrame({"name": ["Bob"], "dept": ["Engineering"]}),
+                "employees",
+            )
+            executor = qc._table_set.executor
+            assert isinstance(executor, DuckDBExecutor)
+
+            result = nw.from_native(
+                executor.execute_query(
+                    "SELECT e.dept FROM pin_a p JOIN employees e ON p.name = e.name"
+                )
+            )
+            assert result.rows(named=True) == [{"dept": "Engineering"}]
+        finally:
+            qc.cleanup()
+
+    def test_mixed_dataframe_backends_still_rejected_with_pin(self, board, sample_df):
+        pl = pytest.importorskip("polars")
+
+        from querychat import QueryChat
+
+        board.pin_write(sample_df, "pin_a", type="parquet")
+        qc = QueryChat(board, "pin_a")
+        try:
+            qc.add_table(sample_df, "pandas_table")
+            with pytest.raises(ValueError, match="same DataFrame backend"):
+                qc.add_table(pl.DataFrame({"x": [1]}), "polars_table")
+        finally:
+            qc.cleanup()
+
+    def test_pin_with_non_sql_safe_name(self, board, sample_df):
+        """Registry keys that need quoting work in the shared executor."""
+        from querychat import QueryChat
+
+        board.pin_write(sample_df, "sales-2026", type="parquet")
+        board.pin_write(sample_df, "pin_b", type="parquet")
+        qc = QueryChat(board, "sales-2026")
+        try:
+            qc.add_table(board, "pin_b")
+            executor = qc._table_set.executor
+            result = nw.from_native(
+                executor.execute_query('SELECT COUNT(*) AS n FROM "sales-2026"')
+            )
+            assert result.rows(named=True) == [{"n": 4}]
+        finally:
+            qc.cleanup()
+
+    def test_shared_executor_uses_version_resolved_at_construction(
+        self, board, sample_df
+    ):
+        """Updating a pin after construction doesn't change the shared table."""
         from querychat import QueryChat
 
         board.pin_write(sample_df, "pin_a", type="parquet")
         board.pin_write(sample_df, "pin_b", type="parquet")
         qc = QueryChat(board, "pin_a")
         try:
-            with pytest.raises(ValueError, match="only one pin"):
-                qc.add_table(board, "pin_b")
+            qc.add_table(board, "pin_b")
+            # New version of pin_a published after its PinSource was built
+            board.pin_write(sample_df.head(1), "pin_a", type="parquet")
+            executor = qc._table_set.executor
+            result = nw.from_native(
+                executor.execute_query("SELECT COUNT(*) AS n FROM pin_a")
+            )
+            assert result.rows(named=True) == [{"n": 4}]
+        finally:
+            qc.cleanup()
+
+    def test_shared_executor_falls_back_when_snapshot_version_is_pruned(
+        self, tmp_path, sample_df
+    ):
+        """
+        Non-versioned boards drop old versions on rewrite; the shared table
+        must still match the source's own copy.
+        """
+        from querychat import QueryChat
+
+        unversioned = pins.board_folder(str(tmp_path / "unversioned"), versioned=False)
+        unversioned.pin_write(sample_df, "pin_a", type="parquet")
+        unversioned.pin_write(sample_df, "pin_b", type="parquet")
+        qc = QueryChat(unversioned, "pin_a")
+        try:
+            qc.add_table(unversioned, "pin_b")
+            unversioned.pin_write(sample_df.head(1), "pin_a", type="parquet")
+            executor = qc._table_set.executor
+            result = nw.from_native(
+                executor.execute_query("SELECT COUNT(*) AS n FROM pin_a")
+            )
+            assert result.rows(named=True) == [{"n": 4}]
+        finally:
+            qc.cleanup()
+
+    def test_executor_cleanup_leaves_pin_connections(self, board, sample_df):
+        """The shared connection is executor-owned; pins keep their own."""
+        from querychat import QueryChat
+
+        board.pin_write(sample_df, "pin_a", type="parquet")
+        board.pin_write(sample_df, "pin_b", type="parquet")
+        qc = QueryChat(board, "pin_a")
+        try:
+            qc.add_table(board, "pin_b")
+            _ = qc._table_set.executor  # build the shared executor
+            qc._table_set.cleanup_executor()
+
+            # Both pins still answer source-level queries through their
+            # private connections.
+            for name in ("pin_a", "pin_b"):
+                result = qc._data_sources[name].execute_query(
+                    f"SELECT COUNT(*) AS n FROM {name}"
+                )
+                assert result.rows(named=True) == [{"n": 4}]
         finally:
             qc.cleanup()

@@ -130,7 +130,7 @@ QueryChatSystemPrompt <- R6::R6Class(
       # data_sources may be empty for a greeting with no included tables.
       has_sources <- length(self$data_sources) > 0
       first_source <- if (has_sources) self$data_sources[[1]] else NULL
-      db_type <- if (has_sources) first_source$get_db_type() else "SQL"
+      db_type <- if (has_sources) group_db_type(self$data_sources) else "SQL"
       # Data dicts can carry global (table-less) descriptions, so they may
       # render even when no tables are selected (e.g. a generic greeting).
       has_dicts <- length(self$data_dicts) > 0

@@ -388,9 +388,10 @@ QueryChat <- R6::R6Class(
     #' @param data_dict Optional data dictionary. A path to a YAML file, or a
     #'   list of YAML file paths. See [read_data_dict()] for the expected format.
     #' @param cleanup Whether or not to automatically run `$cleanup()` when the
-    #'   Shiny session/app stops. By default, cleanup only occurs if `QueryChat`
-    #'   gets created within a Shiny session. Set to `TRUE` to always clean up,
-    #'   or `FALSE` to never clean up automatically.
+    #'   Shiny app stops. By default, cleanup only occurs if `QueryChat` gets
+    #'   created while a Shiny app is running (for example, at the top level of
+    #'   `app.R`). Set to `TRUE` to always clean up, or `FALSE` to never clean
+    #'   up automatically.
     #'
     #' @return A new `QueryChat` object.
     initialize = function(

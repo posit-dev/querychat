@@ -226,9 +226,10 @@ format.}
       \item{\code{data_dict}}{Optional data dictionary. A path to a YAML file, or a
 list of YAML file paths. See \code{\link[=read_data_dict]{read_data_dict()}} for the expected format.}
       \item{\code{cleanup}}{Whether or not to automatically run \verb{$cleanup()} when the
-Shiny session/app stops. By default, cleanup only occurs if \code{QueryChat}
-gets created within a Shiny session. Set to \code{TRUE} to always clean up,
-or \code{FALSE} to never clean up automatically.}
+Shiny app stops. By default, cleanup only occurs if \code{QueryChat} gets
+created while a Shiny app is running (for example, at the top level of
+\code{app.R}). Set to \code{TRUE} to always clean up, or \code{FALSE} to never clean
+up automatically.}
     }
     \if{html}{\out{</div>}}
   }

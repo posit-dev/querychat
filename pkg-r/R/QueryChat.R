@@ -128,36 +128,46 @@ QueryChat <- R6::R6Class(
       invisible(NULL)
     },
 
-    # Non-mutating counterpart of auto_fill_data_description(), for sets built
-    # on behalf of a session.
+    # Non-mutating counterpart of auto_fill_data_description(): the single
+    # source of truth for "what description should this set of sources get",
+    # given the instance's current mode/description. Used both to compute the
+    # value auto_fill_data_description() mutates in, and to build sets on
+    # behalf of a session (which must never mutate the instance).
+    #
+    # When sources isn't a single table and the mode isn't "supplied", this
+    # falls back to whatever description is already stored (bug-for-bug with
+    # auto_fill_data_description()'s historical early return): a multi-table
+    # set doesn't clear a stale single-source "inferred" description.
     resolve_data_description = function(sources) {
       if (private$.data_description_mode == "supplied") {
         return(private$.data_description)
       }
-      if (length(sources) == 1) {
-        desc <- sources[[1]]$get_data_description()
-        if (nzchar(desc %||% "")) {
-          return(desc)
-        }
+      if (length(sources) != 1) {
+        return(private$.data_description)
+      }
+      desc <- sources[[1]]$get_data_description()
+      if (nzchar(desc %||% "")) {
+        return(desc)
       }
       NULL
     },
 
     auto_fill_data_description = function(sources = private$data_sources()) {
+      if (private$.data_description_mode == "supplied") {
+        return(invisible(NULL))
+      }
       if (length(sources) != 1) {
-        return()
+        return(invisible(NULL))
       }
-      if (private$.data_description_mode == "inferred") {
-        private$.data_description <- NULL
-        private$.data_description_mode <- "empty"
+      private$.data_description <- private$resolve_data_description(sources)
+      private$.data_description_mode <- if (
+        is.null(private$.data_description)
+      ) {
+        "empty"
+      } else {
+        "inferred"
       }
-      if (private$.data_description_mode == "empty") {
-        desc <- sources[[1]]$get_data_description()
-        if (nzchar(desc %||% "")) {
-          private$.data_description <- desc
-          private$.data_description_mode <- "inferred"
-        }
-      }
+      invisible(NULL)
     },
 
     build_table_set = function(
@@ -213,9 +223,9 @@ QueryChat <- R6::R6Class(
         )
         return(invisible(NULL))
       }
-      tryCatch(old_set$cleanup_executor(), error = function(e) NULL)
+      warn_on_cleanup_failure(old_set$cleanup_executor(), "query executor")
       for (source in replaced) {
-        source$cleanup()
+        warn_on_cleanup_failure(source$cleanup(), "data source")
       }
       invisible(NULL)
     },
@@ -509,7 +519,6 @@ QueryChat <- R6::R6Class(
           "Table {.val {table_name}} already exists. Use {.code replace = TRUE} to replace."
         )
       }
-      private$check_late_change("add_table", destructive = exists)
 
       if (
         is_data_source(data_source) &&
@@ -524,15 +533,29 @@ QueryChat <- R6::R6Class(
       }
 
       normalized <- normalize_data_source(data_source, table_name)
+      cleanup_normalized <- function() {
+        if (!inherits(data_source, "DataSource")) {
+          normalized$cleanup()
+        }
+      }
       next_sources <- current
       next_sources[[table_name]] <- normalized
       private$auto_fill_data_description(next_sources)
       new_set <- tryCatch(
         private$build_table_set(next_sources),
         error = function(e) {
-          if (!inherits(data_source, "DataSource")) {
-            normalized$cleanup()
-          }
+          cleanup_normalized()
+          stop(e)
+        }
+      )
+
+      # Only after the change is known to be valid do we check whether it's
+      # too late to apply it, so a rejected/failed add_table() doesn't warn.
+      tryCatch(
+        private$check_late_change("add_table", destructive = exists),
+        error = function(e) {
+          new_set$cleanup_executor()
+          cleanup_normalized()
           stop(e)
         }
       )
@@ -1150,7 +1173,6 @@ QueryChat <- R6::R6Class(
         )
       }
 
-      private$.sessions_started <- TRUE
       table_set <- private$.table_set
       greeting_tables <- self$greeter$tables
       session_source <- NULL
@@ -1256,6 +1278,7 @@ QueryChat <- R6::R6Class(
         }) %||%
         TRUE
 
+      private$.sessions_started <- TRUE
       mod_server(
         id %||% self$id,
         table_set = table_set,

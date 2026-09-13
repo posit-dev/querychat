@@ -1409,6 +1409,89 @@ describe("QueryChat table changes after a session has started", {
   })
 })
 
+describe("auto_fill_data_description()/resolve_data_description() parity", {
+  # A DataFrameSource subclass that infers a description the way PinSource
+  # does (from its own metadata), without depending on the pins package. All
+  # tables in a set must share the same source class, so both the
+  # description-bearing table and the second table use this same class.
+  DescribedDataFrameSource <- R6::R6Class(
+    "DescribedDataFrameSource",
+    inherit = DataFrameSource,
+    public = list(
+      description = "",
+      get_data_description = function() self$description
+    )
+  )
+
+  local_described_source <- function(
+    description = "",
+    data = new_test_df(),
+    table_name = "primary",
+    env = parent.frame()
+  ) {
+    source <- DescribedDataFrameSource$new(data, table_name)
+    source$description <- description
+    withr::defer(source$cleanup(), envir = env)
+    source
+  }
+
+  it("keeps a single source's inferred description once a second table is added, identically via $add_table() and $server(data_source=)", {
+    skip_if_no_dataframe_engine()
+
+    # Instance path: $add_table() adds a second table to a single-source
+    # instance that had inferred a description from its only source.
+    qc <- local_querychat(
+      local_described_source("Motor Trend Cars"),
+      "primary",
+      greeting = "hi"
+    )
+    instance_desc_before <- qc$.__enclos_env__$private$.table_set$data_description
+    expect_equal(instance_desc_before, "Motor Trend Cars")
+
+    qc$add_table(
+      local_described_source(data = new_metrics_df(), table_name = "secondary"),
+      "secondary"
+    )
+    instance_desc_after <- qc$.__enclos_env__$private$.table_set$data_description
+    expect_equal(instance_desc_after, "Motor Trend Cars")
+
+    # Session path: $server(data_source=) builds an equivalent two-table set
+    # for one session, starting from the same single inferred-description
+    # instance state. Before the fix, this produced NULL instead of the
+    # stale "Motor Trend Cars" description the instance path kept.
+    qc2 <- local_querychat(
+      local_described_source("Motor Trend Cars"),
+      "primary",
+      greeting = "hi",
+      client = mock_ellmer_chat_client()
+    )
+    calls <- new.env(parent = emptyenv())
+    calls$args <- list()
+    testthat::local_mocked_bindings(
+      mod_server = function(id, ...) {
+        calls$args[[length(calls$args) + 1L]] <- list(...)
+        list()
+      },
+      .package = "querychat"
+    )
+    session <- shiny::MockShinySession$new()
+    withr::defer(if (!session$isClosed()) session$close())
+    shiny::withReactiveDomain(
+      session,
+      qc2$server(
+        data_source = local_described_source(
+          data = new_metrics_df(),
+          table_name = "secondary"
+        ),
+        table_name = "secondary"
+      )
+    )
+
+    session_table_set <- calls$args[[1]]$table_set
+    expect_equal(session_table_set$data_description, instance_desc_after)
+  })
+})
+
 describe("QueryChatGreeter", {
   skip_if_no_dataframe_engine()
 

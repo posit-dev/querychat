@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from typing import TYPE_CHECKING, Any, TypeGuard
+from uuid import uuid4
 
 import duckdb
 import narwhals.stable.v1 as nw
@@ -64,6 +65,21 @@ def _convert_result(result: duckdb.DuckDBPyConnection) -> nw.DataFrame:
     if _has_polars():
         return nw.from_native(result.pl())
     return nw.from_native(result.df())
+
+
+def _stage_frame_as_table(
+    conn: duckdb.DuckDBPyConnection, frame: Any, table_name: str
+) -> None:
+    """Materialize a DataFrame as a real table via a unique staging view."""
+    vname = f"__pin_staging_{table_name}_{uuid4().hex[:8]}"
+    conn.register(vname, frame)
+    try:
+        conn.execute(
+            f"CREATE TABLE {quote_identifier(table_name)} AS "
+            f"SELECT * FROM {quote_identifier(vname)}"
+        )
+    finally:
+        conn.unregister(vname)
 
 
 class PinSource(DataSource[nw.DataFrame]):
@@ -195,13 +211,7 @@ class PinSource(DataSource[nw.DataFrame]):
                     "requires a single-file pin (as created by pin_write())."
                 )
             arrow_df = pl.read_ipc(paths[0])
-            vname = f"__pin_staging_{table_name}"
-            conn.register(vname, arrow_df)
-            conn.execute(
-                f"CREATE TABLE {quote_identifier(table_name)} AS "
-                f"SELECT * FROM {quote_identifier(vname)}"
-            )
-            conn.unregister(vname)
+            _stage_frame_as_table(conn, arrow_df, table_name)
         else:
             import pandas as pd
 
@@ -211,13 +221,7 @@ class PinSource(DataSource[nw.DataFrame]):
                     f"Pin '{name}' contains {type(data).__name__}, not a DataFrame. "
                     "PinSource requires the pin to contain a pandas DataFrame."
                 )
-            vname = f"__pin_staging_{table_name}"
-            conn.register(vname, data)
-            conn.execute(
-                f"CREATE TABLE {quote_identifier(table_name)} AS "
-                f"SELECT * FROM {quote_identifier(vname)}"
-            )
-            conn.unregister(vname)
+            _stage_frame_as_table(conn, data, table_name)
 
     def register_into(
         self, conn: duckdb.DuckDBPyConnection, table_name: str | None = None
@@ -237,13 +241,7 @@ class PinSource(DataSource[nw.DataFrame]):
             # (e.g. a non-versioned board rewritten after construction); fall
             # back to this source's own copy so the shared table matches the
             # private connection.
-            vname = f"__pin_staging_{target}"
-            conn.register(vname, self.get_data().to_native())
-            conn.execute(
-                f"CREATE TABLE {quote_identifier(target)} AS "
-                f"SELECT * FROM {quote_identifier(vname)}"
-            )
-            conn.unregister(vname)
+            _stage_frame_as_table(conn, self.get_data().to_native(), target)
 
     def get_db_type(self) -> str:
         return "DuckDB"

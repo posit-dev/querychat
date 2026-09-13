@@ -92,10 +92,10 @@ class QueryChatBase(Generic[IntoFrameT]):
         history: Optional[bool | HistoryOptions] = None,
     ):
         self._data_dicts: list[DataDict] = _normalize_data_dicts(data_dict)
-        self._table_set: TableSet | None = None
+        self._table_set: TableSet[IntoFrameT] | None = None
         # Instance sets swapped out by add_table()/add_tables() after a session
         # started. A running session may still hold one, so cleanup() closes them.
-        self._superseded_table_sets: list[TableSet] = []
+        self._superseded_table_sets: list[TableSet[IntoFrameT]] = []
         self._sessions_started = False
         self._deferred_table_name: str | None = None
 
@@ -139,13 +139,13 @@ class QueryChatBase(Generic[IntoFrameT]):
             self._deferred_table_name = table_name
 
     @property
-    def _data_sources(self) -> Mapping[str, DataSource]:
+    def _data_sources(self) -> Mapping[str, DataSource[IntoFrameT]]:
         """Read-only view of the instance's registered tables."""
         if self._table_set is None:
             return {}
         return self._table_set.data_sources
 
-    def _require_table_set(self, method_name: str) -> TableSet:
+    def _require_table_set(self, method_name: str) -> TableSet[IntoFrameT]:
         if self._table_set is None:
             raise RuntimeError(
                 f"At least one data source must be set before calling {method_name}(). "
@@ -159,7 +159,9 @@ class QueryChatBase(Generic[IntoFrameT]):
     def _require_query_executor(self, method_name: str) -> QueryExecutor:
         return self._require_table_set(method_name).executor
 
-    def _build_table_set(self, sources: dict[str, DataSource]) -> TableSet:
+    def _build_table_set(
+        self, sources: dict[str, DataSource[IntoFrameT]]
+    ) -> TableSet[IntoFrameT]:
         validate_source_group_compatibility(sources)
         prompt = QueryChatSystemPrompt(
             prompt_template=self._prompt_template,
@@ -203,7 +205,9 @@ class QueryChatBase(Generic[IntoFrameT]):
             stacklevel=3,
         )
 
-    def _swap_table_set(self, new_set: TableSet, *, replaced: list[DataSource]) -> None:
+    def _swap_table_set(
+        self, new_set: TableSet[IntoFrameT], *, replaced: list[DataSource]
+    ) -> None:
         old_set, self._table_set = self._table_set, new_set
         if old_set is None:
             return
@@ -258,7 +262,7 @@ class QueryChatBase(Generic[IntoFrameT]):
 
     def _create_session_client(
         self,
-        table_set: TableSet,
+        table_set: TableSet[IntoFrameT],
         *,
         base: chatlas.Chat | None = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | MISSING_TYPE | None = MISSING,
@@ -368,7 +372,7 @@ class QueryChatBase(Generic[IntoFrameT]):
                 prompt: str | Path,
                 base: chatlas.Chat | None = None,
                 *,
-                table_set: TableSet | None = None,
+                table_set: TableSet[IntoFrameT] | None = None,
             ) -> chatlas.Chat:
                 resolved = table_set if table_set is not None else self._table_set
                 sp = QueryChatSystemPrompt(

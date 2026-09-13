@@ -710,7 +710,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 ".server() must be called within an active Shiny session (i.e., within the server function). "
             )
 
-        table_set: TableSet | None = self._table_set
+        table_set: TableSet[IntoFrameT] | None = self._table_set
         greeting_tables = list(self.greeter.tables)
         session_source: DataSource | None = None
 

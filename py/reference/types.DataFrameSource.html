@@ -302,6 +302,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#querychat.types.DataFrameSource.get_data" id="toc-querychat.types.DataFrameSource.get_data" class="nav-link" data-scroll-target="#querychat.types.DataFrameSource.get_data">get_data</a></li>
   <li><a href="#querychat.types.DataFrameSource.get_db_type" id="toc-querychat.types.DataFrameSource.get_db_type" class="nav-link" data-scroll-target="#querychat.types.DataFrameSource.get_db_type">get_db_type</a></li>
   <li><a href="#querychat.types.DataFrameSource.get_schema" id="toc-querychat.types.DataFrameSource.get_schema" class="nav-link" data-scroll-target="#querychat.types.DataFrameSource.get_schema">get_schema</a></li>
+  <li><a href="#querychat.types.DataFrameSource.register_into" id="toc-querychat.types.DataFrameSource.register_into" class="nav-link" data-scroll-target="#querychat.types.DataFrameSource.register_into">register_into</a></li>
   <li><a href="#querychat.types.DataFrameSource.test_query" id="toc-querychat.types.DataFrameSource.test_query" class="nav-link" data-scroll-target="#querychat.types.DataFrameSource.test_query">test_query</a></li>
   </ul></li>
   </ul></li>
@@ -349,6 +350,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <td>Generate schema information from DataFrame.</td>
 </tr>
 <tr class="even">
+<td><a href="#querychat.types.DataFrameSource.register_into">register_into</a></td>
+<td>Register this DataFrame in a shared DuckDB connection.</td>
+</tr>
+<tr class="odd">
 <td><a href="#querychat.types.DataFrameSource.test_query">test_query</a></td>
 <td>Test query by fetching only one row.</td>
 </tr>
@@ -397,7 +402,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td>query</td>
-<td><a href="https://docs.python.org/3/library/stdtypes.html#str">str</a></td>
+<td><a href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a></td>
 <td>SQL query to execute</td>
 <td><em>required</em></td>
 </tr>
@@ -499,7 +504,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td></td>
-<td><a href="https://docs.python.org/3/library/stdtypes.html#str">str</a></td>
+<td><a href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a></td>
 <td>The string “DuckDB”</td>
 </tr>
 </tbody>
@@ -524,7 +529,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td>categorical_threshold</td>
-<td><a href="https://docs.python.org/3/library/functions.html#int">int</a></td>
+<td><a href="https://docs.python.org/3/builtins/functions.html#int">int</a></td>
 <td>Maximum number of unique values for a text column to be considered categorical</td>
 <td><em>required</em></td>
 </tr>
@@ -544,16 +549,22 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td></td>
-<td><a href="https://docs.python.org/3/library/stdtypes.html#str">str</a></td>
+<td><a href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a></td>
 <td>String describing the schema</td>
 </tr>
 </tbody>
 </table>
 </section>
 </section>
+<section id="querychat.types.DataFrameSource.register_into" class="level3">
+<h3 class="anchored" data-anchor-id="querychat.types.DataFrameSource.register_into">register_into</h3>
+<div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>types.DataFrameSource.register_into(conn, table_name<span class="op">=</span><span class="va">None</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<p>Register this DataFrame in a shared DuckDB connection.</p>
+<p>Internal hook for joining a shared DuckDB executor. The caller owns <code>conn</code> and locks it down once all tables are registered.</p>
+</section>
 <section id="querychat.types.DataFrameSource.test_query" class="level3">
 <h3 class="anchored" data-anchor-id="querychat.types.DataFrameSource.test_query">test_query</h3>
-<div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>types.DataFrameSource.test_query(query, <span class="op">*</span>, require_all_columns<span class="op">=</span><span class="va">False</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>types.DataFrameSource.test_query(query, <span class="op">*</span>, require_all_columns<span class="op">=</span><span class="va">False</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <p>Test query by fetching only one row.</p>
 <section id="parameters-2" class="level4 doc-section doc-section-parameters">
 <h4 class="doc-section doc-section-parameters anchored" data-anchor-id="parameters-2">Parameters</h4>
@@ -569,13 +580,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td>query</td>
-<td><a href="https://docs.python.org/3/library/stdtypes.html#str">str</a></td>
+<td><a href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a></td>
 <td>SQL query to test</td>
 <td><em>required</em></td>
 </tr>
 <tr class="even">
 <td>require_all_columns</td>
-<td><a href="https://docs.python.org/3/library/functions.html#bool">bool</a></td>
+<td><a href="https://docs.python.org/3/builtins/functions.html#bool">bool</a></td>
 <td>If True, validates that result includes all original table columns</td>
 <td><code>False</code></td>
 </tr>

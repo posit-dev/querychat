@@ -396,55 +396,55 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tr>
 <tr class="even">
 <td>table_name</td>
-<td><a href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | None</td>
+<td><a href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a> | None</td>
 <td>If a data_source is a data frame, a name to use to refer to the table in SQL queries (usually the variable name of the data frame, but it doesn’t have to be). If a data_source is a SQLAlchemy engine, the table_name is the name of the table in the database to query against.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="odd">
 <td>id</td>
-<td><a href="https://docs.python.org/3/library/typing.html#typing.Optional">Optional</a>[<a href="https://docs.python.org/3/library/stdtypes.html#str">str</a>]</td>
+<td><a href="https://docs.python.org/3/library/typing.html#typing.Optional">Optional</a>[<a href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a>]</td>
 <td>An optional ID for the QueryChat module. If not provided, an ID will be generated based on the table_name.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
 <td>greeting</td>
-<td><a href="https://docs.python.org/3/library/typing.html#typing.Optional">Optional</a>[<a href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | <a href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a>]</td>
+<td><a href="https://docs.python.org/3/library/typing.html#typing.Optional">Optional</a>[<a href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a> | <a href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a>]</td>
 <td>A string in Markdown format, containing the initial message. If a pathlib.Path object is passed, querychat will read the contents of the path into a string with <code>.read_text()</code>. You can use <code>querychat.greeting()</code> to help generate a greeting from a querychat configuration. If no greeting is provided, one will be generated at the start of every new conversation.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="odd">
 <td>client</td>
-<td><a href="https://docs.python.org/3/library/typing.html#typing.Optional">Optional</a>[<a href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | <code>chatlas</code>.<code>Chat</code>]</td>
+<td><a href="https://docs.python.org/3/library/typing.html#typing.Optional">Optional</a>[<a href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a> | <code>chatlas</code>.<code>Chat</code>]</td>
 <td>A <code>chatlas.Chat</code> object or a string to be passed to <code>chatlas.ChatAuto()</code>’s <code>provider_model</code> parameter, describing the provider and model combination to use (e.g.&nbsp;<code>"openai/gpt-4.1"</code>, “anthropic/claude-sonnet-4-5”, “google/gemini-2.5-flash”. etc). If <code>client</code> is not provided, querychat consults the <code>QUERYCHAT_CLIENT</code> environment variable. If that is not set, it defaults to <code>"openai"</code>.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
 <td>data_dict</td>
-<td><code>DataDict</code> | <a href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | <a href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a> | None</td>
+<td><code>DataDict</code> | <a href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a> | <a href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a> | None</td>
 <td>A :class:<code>~querychat.DataDict</code> instance, or a path (<code>str</code> or <code>pathlib.Path</code>) to a YAML file, that provides rich per-table and per-column metadata. When set, documented columns use the dict’s <code>values</code>, <code>range</code>, and <code>description</code> fields instead of querying the data source for statistics, which speeds up schema generation and improves LLM context. Supersedes <code>data_description</code>.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="odd">
 <td>extra_instructions</td>
-<td><a href="https://docs.python.org/3/library/typing.html#typing.Optional">Optional</a>[<a href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | <a href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a>]</td>
+<td><a href="https://docs.python.org/3/library/typing.html#typing.Optional">Optional</a>[<a href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a> | <a href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a>]</td>
 <td>Additional instructions for the chat model. If a pathlib.Path object is passed, querychat will read the contents of the path into a string with <code>.read_text()</code>.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="even">
 <td>prompt_template</td>
-<td><a href="https://docs.python.org/3/library/typing.html#typing.Optional">Optional</a>[<a href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | <a href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a>]</td>
+<td><a href="https://docs.python.org/3/library/typing.html#typing.Optional">Optional</a>[<a href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a> | <a href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a>]</td>
 <td>Path to or a string of a custom prompt file. If not provided, the default querychat template will be used. This should be a Markdown file that contains the system prompt template. The mustache template can use the following variables: - <code>{db_engine}</code>: The database engine used (e.g., “DuckDB”) - <code>{schema}</code>: The schema of the data source, generated by <code>data_source.get_schema()</code> - <code>{data_description}</code>: The optional data description provided - <code>{extra_instructions}</code>: Any additional instructions provided</td>
 <td><code>None</code></td>
 </tr>
 <tr class="odd">
 <td>categorical_threshold</td>
-<td><a href="https://docs.python.org/3/library/functions.html#int">int</a></td>
+<td><a href="https://docs.python.org/3/builtins/functions.html#int">int</a></td>
 <td>Threshold for determining if a column is categorical based on number of unique values.</td>
 <td><code>20</code></td>
 </tr>
 <tr class="even">
 <td>data_description</td>
-<td><a href="https://docs.python.org/3/library/typing.html#typing.Optional">Optional</a>[<a href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | <a href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a>]</td>
+<td><a href="https://docs.python.org/3/library/typing.html#typing.Optional">Optional</a>[<a href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a> | <a href="https://docs.python.org/3/library/pathlib.html#pathlib.Path">Path</a>]</td>
 <td>Optional plain-text or Markdown description of the data, as a string or file path. Superseded by <code>data_dict</code> for new code.</td>
 <td><code>None</code></td>
 </tr>
@@ -496,7 +496,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tr>
 <tr class="odd">
 <td><a href="#querychat.express.QueryChat.cleanup">cleanup</a></td>
-<td>Clean up resources held by this object.</td>
+<td>Clean up resources this object created.</td>
 </tr>
 <tr class="even">
 <td><a href="#querychat.express.QueryChat.client">client</a></td>
@@ -582,19 +582,19 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tr>
 <tr class="even">
 <td>table_name</td>
-<td><a href="https://docs.python.org/3/library/stdtypes.html#str">str</a></td>
+<td><a href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a></td>
 <td>Name for the table.</td>
 <td><em>required</em></td>
 </tr>
 <tr class="odd">
 <td>replace</td>
-<td><a href="https://docs.python.org/3/library/functions.html#bool">bool</a></td>
+<td><a href="https://docs.python.org/3/builtins/functions.html#bool">bool</a></td>
 <td>If True, replace an existing table with the same name. If False (default), raise ValueError if the table already exists.</td>
 <td><code>False</code></td>
 </tr>
 <tr class="even">
 <td>include_in_greeting</td>
-<td><a href="https://docs.python.org/3/library/functions.html#bool">bool</a></td>
+<td><a href="https://docs.python.org/3/builtins/functions.html#bool">bool</a></td>
 <td>If True, include this table’s schema in the greeting system prompt.</td>
 <td><code>False</code></td>
 </tr>
@@ -614,18 +614,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td></td>
-<td><a href="https://docs.python.org/3/library/exceptions.html#TypeError">TypeError</a></td>
+<td><a href="https://docs.python.org/3/builtins/exceptions.html#TypeError">TypeError</a></td>
 <td>If include_in_greeting is not a bool.</td>
 </tr>
 <tr class="even">
 <td></td>
-<td><a href="https://docs.python.org/3/library/exceptions.html#ValueError">ValueError</a></td>
+<td><a href="https://docs.python.org/3/builtins/exceptions.html#ValueError">ValueError</a></td>
 <td>If table_name already exists (and replace=False) or is invalid.</td>
 </tr>
 <tr class="odd">
 <td></td>
-<td><a href="https://docs.python.org/3/library/exceptions.html#RuntimeError">RuntimeError</a></td>
-<td>If called while a server session is active.</td>
+<td><a href="https://docs.python.org/3/builtins/exceptions.html#RuntimeError">RuntimeError</a></td>
+<td>If called to replace or remove an existing table after a session has started.</td>
 </tr>
 </tbody>
 </table>
@@ -662,19 +662,19 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tr>
 <tr class="even">
 <td>tables</td>
-<td><a href="https://docs.python.org/3/library/stdtypes.html#list">list</a>[<a href="https://docs.python.org/3/library/stdtypes.html#str">str</a>] | None</td>
+<td><a href="https://docs.python.org/3/builtins/stdtypes.html#list">list</a>[<a href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a>] | None</td>
 <td>Table names to register. When <code>None</code>, all tables returned by the backend’s table-discovery method are used.</td>
 <td><code>None</code></td>
 </tr>
 <tr class="odd">
 <td>replace</td>
-<td><a href="https://docs.python.org/3/library/functions.html#bool">bool</a></td>
+<td><a href="https://docs.python.org/3/builtins/functions.html#bool">bool</a></td>
 <td>If <code>True</code>, replace any existing table whose name appears in <code>tables</code>. If <code>False</code> (default), raise <code>ValueError</code> if any name already exists.</td>
 <td><code>False</code></td>
 </tr>
 <tr class="even">
 <td>include_in_greeting</td>
-<td><a href="https://docs.python.org/3/library/functions.html#bool">bool</a> | <a href="https://docs.python.org/3/library/stdtypes.html#list">list</a>[<a href="https://docs.python.org/3/library/stdtypes.html#str">str</a>]</td>
+<td><a href="https://docs.python.org/3/builtins/functions.html#bool">bool</a> | <a href="https://docs.python.org/3/builtins/stdtypes.html#list">list</a>[<a href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a>]</td>
 <td><code>True</code> to include all added tables in the greeting, <code>False</code> (default) for none, or a list of table names to include. Any other type raises <code>TypeError</code>.</td>
 <td><code>False</code></td>
 </tr>
@@ -694,18 +694,18 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td></td>
-<td><a href="https://docs.python.org/3/library/exceptions.html#TypeError">TypeError</a></td>
+<td><a href="https://docs.python.org/3/builtins/exceptions.html#TypeError">TypeError</a></td>
 <td>If <code>data_source</code> is not a <code>sqlalchemy.Engine</code> or Ibis SQL backend.</td>
 </tr>
 <tr class="even">
 <td></td>
-<td><a href="https://docs.python.org/3/library/exceptions.html#ValueError">ValueError</a></td>
+<td><a href="https://docs.python.org/3/builtins/exceptions.html#ValueError">ValueError</a></td>
 <td>If the resolved table list is empty, any name is invalid, or any name already exists (and <code>replace=False</code>).</td>
 </tr>
 <tr class="odd">
 <td></td>
-<td><a href="https://docs.python.org/3/library/exceptions.html#RuntimeError">RuntimeError</a></td>
-<td>If called while a server session is active.</td>
+<td><a href="https://docs.python.org/3/builtins/exceptions.html#RuntimeError">RuntimeError</a></td>
+<td>If called to replace or remove an existing table after a session has started.</td>
 </tr>
 </tbody>
 </table>
@@ -726,8 +726,9 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="querychat.express.QueryChat.cleanup" class="level3">
 <h3 class="anchored" data-anchor-id="querychat.express.QueryChat.cleanup">cleanup</h3>
 <div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>express.QueryChat.cleanup()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<p>Clean up resources held by this object.</p>
-<p>This closes the query executor and all data sources (e.g., DuckDB connections). It also closes the chatlas client, but only if querychat created it (i.e., <code>client</code> was <code>None</code> or a string spec like <code>"openai/gpt-4o"</code>, including per-call overrides such as <code>.server(client="openai")</code>). A user-supplied <code>chatlas.Chat</code> instance is never closed here – its lifecycle remains the caller’s responsibility.</p>
+<p>Clean up resources this object created.</p>
+<p>Closes the query executors and data-source connections querychat opened (in-memory DuckDB), including those of table sets superseded by a late <code>add_table()</code>. Connections, engines, and backends you passed in are never closed. Also closes the chatlas client, but only if querychat created it from a spec (<code>client=None</code> or a string such as <code>"openai/gpt-4o"</code>); a <code>chatlas.Chat</code> you supplied is left open.</p>
+<p>Resources a session registers via <code>.server(data_source=...)</code> are released when that session ends, not here.</p>
 <p>Safe to call multiple times. In long-lived applications, call this when the app shuts down (e.g., via <code>atexit</code>).</p>
 </section>
 <section id="querychat.express.QueryChat.client" class="level3">
@@ -753,7 +754,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td>tools</td>
-<td><code>TOOL_GROUPS</code> | <a href="https://docs.python.org/3/library/stdtypes.html#tuple">tuple</a>[<code>TOOL_GROUPS</code>, …] | <code>MISSING_TYPE</code> | None</td>
+<td><code>TOOL_GROUPS</code> | <a href="https://docs.python.org/3/builtins/stdtypes.html#tuple">tuple</a>[<code>TOOL_GROUPS</code>, …] | <code>MISSING_TYPE</code> | None</td>
 <td>Which tools to include: <code>"filter"</code>, <code>"query"</code>, <code>"visualize"</code>, or a combination. The legacy name <code>"update"</code> is still accepted as an alias for <code>"filter"</code>.</td>
 <td><code>MISSING</code></td>
 </tr>
@@ -826,7 +827,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td></td>
-<td><a href="https://docs.python.org/3/library/stdtypes.html#str">str</a> or None</td>
+<td><a href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a> or None</td>
 <td>Table name, or <code>None</code>.</td>
 </tr>
 </tbody>
@@ -893,7 +894,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </tr>
 <tr class="even">
 <td>id</td>
-<td><a href="https://docs.python.org/3/library/typing.html#typing.Optional">Optional</a>[<a href="https://docs.python.org/3/library/stdtypes.html#str">str</a>]</td>
+<td><a href="https://docs.python.org/3/library/typing.html#typing.Optional">Optional</a>[<a href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a>]</td>
 <td>Optional ID for the QueryChat instance. If not provided, will use the ID provided at initialization.</td>
 <td><code>None</code></td>
 </tr>
@@ -949,7 +950,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td>table_name</td>
-<td><a href="https://docs.python.org/3/library/stdtypes.html#str">str</a></td>
+<td><a href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a></td>
 <td>Name of the table to remove.</td>
 <td><em>required</em></td>
 </tr>
@@ -969,13 +970,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td></td>
-<td><a href="https://docs.python.org/3/library/exceptions.html#ValueError">ValueError</a></td>
+<td><a href="https://docs.python.org/3/builtins/exceptions.html#ValueError">ValueError</a></td>
 <td>If table doesn’t exist or is the last remaining table.</td>
 </tr>
 <tr class="even">
 <td></td>
-<td><a href="https://docs.python.org/3/library/exceptions.html#RuntimeError">RuntimeError</a></td>
-<td>If called while a server session is active.</td>
+<td><a href="https://docs.python.org/3/builtins/exceptions.html#RuntimeError">RuntimeError</a></td>
+<td>If called to replace or remove an existing table after a session has started.</td>
 </tr>
 </tbody>
 </table>
@@ -1005,25 +1006,25 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td>width</td>
-<td><a href="https://docs.python.org/3/library/functions.html#int">int</a></td>
+<td><a href="https://docs.python.org/3/builtins/functions.html#int">int</a></td>
 <td>Width of the sidebar in pixels.</td>
 <td><code>400</code></td>
 </tr>
 <tr class="even">
 <td>height</td>
-<td><a href="https://docs.python.org/3/library/stdtypes.html#str">str</a></td>
+<td><a href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a></td>
 <td>Height of the sidebar.</td>
 <td><code>'100%'</code></td>
 </tr>
 <tr class="odd">
 <td>fillable</td>
-<td><a href="https://docs.python.org/3/library/functions.html#bool">bool</a></td>
+<td><a href="https://docs.python.org/3/builtins/functions.html#bool">bool</a></td>
 <td>Whether the sidebar should be fillable. Default is <code>True</code>.</td>
 <td><code>True</code></td>
 </tr>
 <tr class="even">
 <td>id</td>
-<td><a href="https://docs.python.org/3/library/typing.html#typing.Optional">Optional</a>[<a href="https://docs.python.org/3/library/stdtypes.html#str">str</a>]</td>
+<td><a href="https://docs.python.org/3/library/typing.html#typing.Optional">Optional</a>[<a href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a>]</td>
 <td>Optional ID for the QueryChat instance. If not provided, will use the ID provided at initialization.</td>
 <td><code>None</code></td>
 </tr>
@@ -1074,7 +1075,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td>query</td>
-<td><a href="https://docs.python.org/3/library/typing.html#typing.Optional">Optional</a>[<a href="https://docs.python.org/3/library/stdtypes.html#str">str</a>]</td>
+<td><a href="https://docs.python.org/3/library/typing.html#typing.Optional">Optional</a>[<a href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a>]</td>
 <td>If provided, sets the current SQL query to this value.</td>
 <td><code>None</code></td>
 </tr>
@@ -1094,7 +1095,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td></td>
-<td><a href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | <a href="https://docs.python.org/3/library/functions.html#bool">bool</a> | None</td>
+<td><a href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a> | <a href="https://docs.python.org/3/builtins/functions.html#bool">bool</a> | None</td>
 <td>If no <code>query</code> is provided, returns the current SQL query as a string (or <code>None</code> if no query has been set). If a <code>query</code> is provided, returns <code>True</code> if the query was changed to a new value, or <code>False</code> if it was the same as the current value.</td>
 </tr>
 </tbody>
@@ -1119,7 +1120,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td>name</td>
-<td><a href="https://docs.python.org/3/library/stdtypes.html#str">str</a></td>
+<td><a href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a></td>
 <td>Table name (must match a name passed to <code>add_table()</code>).</td>
 <td><em>required</em></td>
 </tr>
@@ -1187,7 +1188,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td></td>
-<td><a href="https://docs.python.org/3/library/stdtypes.html#list">list</a>[<a href="https://docs.python.org/3/library/stdtypes.html#str">str</a>]</td>
+<td><a href="https://docs.python.org/3/builtins/stdtypes.html#list">list</a>[<a href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a>]</td>
 <td>List of table names in the order they were added.</td>
 </tr>
 </tbody>
@@ -1213,7 +1214,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td>value</td>
-<td><a href="https://docs.python.org/3/library/typing.html#typing.Optional">Optional</a>[<a href="https://docs.python.org/3/library/stdtypes.html#str">str</a>]</td>
+<td><a href="https://docs.python.org/3/library/typing.html#typing.Optional">Optional</a>[<a href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a>]</td>
 <td>If provided, sets the current title to this value.</td>
 <td><code>None</code></td>
 </tr>
@@ -1233,7 +1234,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td></td>
-<td><a href="https://docs.python.org/3/library/stdtypes.html#str">str</a> | <a href="https://docs.python.org/3/library/functions.html#bool">bool</a> | None</td>
+<td><a href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a> | <a href="https://docs.python.org/3/builtins/functions.html#bool">bool</a> | None</td>
 <td>If no <code>value</code> is provided, returns the current title as a string, or <code>None</code> if no title has been set due to no SQL query being set. If a <code>value</code> is provided, sets the current title to this value and returns <code>True</code> if the title was changed to a new value, or <code>False</code> if it was the same as the current value.</td>
 </tr>
 </tbody>
@@ -1258,7 +1259,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <tbody>
 <tr class="odd">
 <td>id</td>
-<td><a href="https://docs.python.org/3/library/typing.html#typing.Optional">Optional</a>[<a href="https://docs.python.org/3/library/stdtypes.html#str">str</a>]</td>
+<td><a href="https://docs.python.org/3/library/typing.html#typing.Optional">Optional</a>[<a href="https://docs.python.org/3/builtins/stdtypes.html#str">str</a>]</td>
 <td>Optional ID for the QueryChat instance. If not provided, will use the ID provided at initialization.</td>
 <td><code>None</code></td>
 </tr>

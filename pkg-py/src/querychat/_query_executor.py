@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import duckdb
 import narwhals.stable.v1 as nw
@@ -19,6 +19,8 @@ from ._datasource import (
 from ._utils import check_query
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from ._datasource import DataFrameSource, DataSource, PolarsLazySource
 
 
@@ -266,6 +268,7 @@ def check_source_compatibility(
         IbisSource,
         SQLAlchemySource,
     )
+    from ._pin_source import PinSource
 
     first_source = next(iter(existing.values()))
 
@@ -274,6 +277,21 @@ def check_source_compatibility(
             f"Cannot add {type(new_source).__name__} table '{new_name}': "
             f"all tables must be the same type. "
             f"Existing tables use {type(first_source).__name__}."
+        )
+
+    # Reached only when the existing sources are also PinSources: a second pin
+    # would validate here but fail at query time, since each pin queries
+    # through its own private connection and DataSourceExecutor delegates all
+    # queries to the first one.
+    if isinstance(new_source, PinSource):
+        # ValueError like the neighboring checks: this is a group constraint
+        # violation, not a wrong-argument-type error (contra TRY004).
+        raise ValueError(  # noqa: TRY004
+            f"Cannot add pin '{new_name}': only one pin table is supported per "
+            "chat. Each pin queries through its own DuckDB connection, so only "
+            "the first pin's table would be queryable. To combine a pin with "
+            "other tables, register them in a shared DuckDB connection and "
+            "pass that instead."
         )
 
     if isinstance(new_source, DataFrameSource) and isinstance(
@@ -314,3 +332,23 @@ def get_dataframe_backend_name(source: DataFrameSource) -> str:
     return nw.get_native_namespace(
         nw.from_native(source.get_data(), eager_only=True)
     ).__name__
+
+
+def build_query_executor(sources: Mapping[str, DataSource]) -> QueryExecutor:
+    """Pick the executor for a compatible group of sources."""
+    from ._datasource import DataFrameSource, PolarsLazySource
+
+    # After validation, every source has the same type as the first one.
+    validate_source_group_compatibility(dict(sources))
+
+    if len(sources) == 1:
+        return DataSourceExecutor(dict(sources))
+
+    first_source = next(iter(sources.values()))
+
+    if isinstance(first_source, DataFrameSource):
+        return DuckDBExecutor(cast("dict[str, DataFrameSource]", dict(sources)))
+    if isinstance(first_source, PolarsLazySource):
+        return PolarsSQLExecutor(cast("dict[str, PolarsLazySource]", dict(sources)))
+
+    return DataSourceExecutor(dict(sources))

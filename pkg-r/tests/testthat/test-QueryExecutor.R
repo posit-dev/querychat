@@ -185,4 +185,24 @@ describe("check_source_compatibility()", {
       check_source_compatibility(existing, dbi_source, "test_table")
     )
   })
+
+  it("rejects DBISources on different connections", {
+    skip_if_not_installed("RSQLite")
+
+    conn1 <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
+    withr::defer(DBI::dbDisconnect(conn1))
+    conn2 <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
+    withr::defer(DBI::dbDisconnect(conn2))
+
+    DBI::dbWriteTable(conn1, "users", new_users_df())
+    DBI::dbWriteTable(conn2, "test_table", new_test_df())
+
+    source1 <- DBISource$new(conn1, "users")
+    source2 <- DBISource$new(conn2, "test_table")
+
+    expect_error(
+      check_source_compatibility(list(users = source1), source2, "test_table"),
+      "same connection"
+    )
+  })
 })

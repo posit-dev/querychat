@@ -3,12 +3,19 @@
 from __future__ import annotations
 
 import os
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
 from htmltools import TagList
 
 from shiny import ui
+
+
+def fake_table_set(source, executor):
+    return SimpleNamespace(
+        data_sources={"t": source}, executor=executor, table_names=["t"]
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -131,8 +138,7 @@ def test_mod_server_passes_client_and_history_to_chat():
             fake_input,
             MagicMock(),
             fake_session,
-            data_sources={"t": fake_source},
-            executor=fake_executor,
+            table_set=fake_table_set(fake_source, fake_executor),
             greeting=None,
             client=client_factory,
             history=True,
@@ -184,8 +190,9 @@ def test_mod_server_generates_greeting_from_session_snapshot_not_live_state():
         return MagicMock(spec=["stream_async"])
 
     fake_greeter = MagicMock()
-    fake_greeter._generate_async_snapshot = AsyncMock(return_value=MagicMock())
+    fake_greeter.generate_async = AsyncMock(return_value=MagicMock())
     fake_greeting_base = MagicMock()
+    table_set = fake_table_set(fake_source, fake_executor)
 
     inner_fn = _unwrap_module_server(mod_server)
 
@@ -207,8 +214,7 @@ def test_mod_server_generates_greeting_from_session_snapshot_not_live_state():
             fake_input,
             MagicMock(),
             fake_session,
-            data_sources={"t": fake_source},
-            executor=fake_executor,
+            table_set=table_set,
             greeting=None,
             client=client_factory,
             history=True,
@@ -220,10 +226,10 @@ def test_mod_server_generates_greeting_from_session_snapshot_not_live_state():
 
     asyncio.run(captured["greeting"]())
 
-    fake_greeter._generate_async_snapshot.assert_called_once_with(
+    fake_greeter.generate_async.assert_called_once_with(
         base=fake_greeting_base,
         tables=["t"],
-        data_sources={"t": fake_source},
+        table_set=table_set,
     )
 
 
@@ -271,8 +277,7 @@ def test_mod_server_registers_chat_bookmarking_with_no_auto_trigger_when_history
             fake_input,
             MagicMock(),
             fake_session,
-            data_sources={"t": fake_source},
-            executor=fake_executor,
+            table_set=fake_table_set(fake_source, fake_executor),
             greeting=None,
             client=client_factory,
             history=True,
@@ -329,8 +334,7 @@ def test_mod_server_skips_chat_bookmarking_when_history_is_bookmark_mode():
             fake_input,
             MagicMock(),
             fake_session,
-            data_sources={"t": fake_source},
-            executor=fake_executor,
+            table_set=fake_table_set(fake_source, fake_executor),
             greeting=None,
             client=client_factory,
             history=HistoryOptions(restore_mode="bookmark"),
@@ -381,8 +385,7 @@ def test_mod_server_registers_app_state_with_both_bookmark_and_history_hooks():
             fake_input,
             MagicMock(),
             fake_session,
-            data_sources={"t": fake_source},
-            executor=fake_executor,
+            table_set=fake_table_set(fake_source, fake_executor),
             greeting=None,
             client=client_factory,
             history=False,  # even with history disabled, registration must still happen

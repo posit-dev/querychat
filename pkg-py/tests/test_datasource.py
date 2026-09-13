@@ -568,3 +568,19 @@ def test_dataframe_source_get_schema_unchanged(sample_df) -> None:
     schema = source.get_schema(categorical_threshold=10)
     assert "Table: test" in schema
     assert "Columns:" in schema
+
+
+def test_sqlalchemy_cleanup_does_not_dispose_caller_owned_engine(
+    test_db_engine, monkeypatch
+):
+    """The engine belongs to the caller; querychat must not dispose it."""
+    from unittest.mock import MagicMock
+
+    dispose = MagicMock()
+    monkeypatch.setattr(test_db_engine, "dispose", dispose)
+    source = SQLAlchemySource(test_db_engine, "test_table")
+
+    source.cleanup()
+
+    dispose.assert_not_called()
+    assert len(source.get_data()) > 0

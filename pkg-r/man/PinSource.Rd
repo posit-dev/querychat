@@ -67,12 +67,12 @@ if (rlang::is_installed(c("pins", "duckdb"))) {
   \itemize{
     \item \href{#method-PinSource-initialize}{\code{PinSource$new()}}
     \item \href{#method-PinSource-get_data_description}{\code{PinSource$get_data_description()}}
+    \item \href{#method-PinSource-cleanup}{\code{PinSource$cleanup()}}
     \item \href{#method-PinSource-clone}{\code{PinSource$clone()}}
   }
 }
 \if{html}{\out{<details><summary>Inherited methods</summary>
 <ul>
-  <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="cleanup"><a href='../../querychat/html/DBISource.html#method-DBISource-cleanup'><code>DBISource$cleanup()</code></a></span></li>
   <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="execute_query"><a href='../../querychat/html/DBISource.html#method-DBISource-execute_query'><code>DBISource$execute_query()</code></a></span></li>
   <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_data"><a href='../../querychat/html/DBISource.html#method-DBISource-get_data'><code>DBISource$get_data()</code></a></span></li>
   <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_db_type"><a href='../../querychat/html/DBISource.html#method-DBISource-get_db_type'><code>DBISource$get_db_type()</code></a></span></li>
@@ -137,6 +137,25 @@ deserialized via \code{pin_read()} instead.}
   \subsection{Returns}{
     A string with the pin title, description, and tags, or an empty
 string if none are set.
+  }
+}
+
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-PinSource-cleanup"></a>}}
+\if{latex}{\out{\hypertarget{method-PinSource-cleanup}{}}}
+\subsection{\code{PinSource$cleanup()}}{
+  Disconnect the DuckDB or SQLite connection this PinSource opened, and
+shut down the DuckDB instance if used.
+
+Unlike \link{DBISource}'s \code{cleanup()}, this isn't a no-op: PinSource always
+opens its own connection (never a caller-supplied one), so it owns it.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{PinSource$cleanup()}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    \code{NULL} (invisibly)
   }
 }
 

@@ -112,7 +112,10 @@ DataSource <- R6::R6Class(
     },
 
     #' @description
-    #' Clean up resources (close connections, etc.)
+    #' Release resources this data source created. Only resources querychat
+    #' opened itself are closed (for example the in-memory DuckDB connection a
+    #' [DataFrameSource] creates). Connections passed in by the caller are
+    #' never closed; their lifecycle stays with the caller.
     #'
     #' @return NULL (invisibly)
     cleanup = function() {

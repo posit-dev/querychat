@@ -740,10 +740,6 @@ test_that("QueryChat$server() resolves history (explicit > constructor > TRUE) a
   skip_if_no_dataframe_engine()
   withr::local_envvar(OPENAI_API_KEY = "boop")
 
-  ds <- local_data_frame_source(new_test_df())
-  executor <- build_query_executor(list(test_table = ds))
-  withr::defer(executor$cleanup())
-
   captured <- NULL
   local_mocked_bindings(
     mod_server = function(id, ..., history) {
@@ -754,7 +750,6 @@ test_that("QueryChat$server() resolves history (explicit > constructor > TRUE) a
   )
 
   qc <- local_querychat(history = FALSE)
-  qc$.__enclos_env__$private$.query_executor <- executor
 
   expect_no_warning(
     shiny::testServer(
@@ -774,7 +769,6 @@ test_that("QueryChat$server() resolves history (explicit > constructor > TRUE) a
   )
 
   qc_no_history <- local_querychat(client = mock_ellmer_chat_client())
-  qc_no_history$.__enclos_env__$private$.query_executor <- executor
   shiny::testServer(
     function(input, output, session) qc_no_history$server(),
     {
@@ -846,6 +840,7 @@ describe("QueryChat internal client handoff availability", {
     public = list(
       internal_client = function(handoff_available = FALSE) {
         private$create_session_client(
+          table_set = private$.table_set,
           tools = NULL,
           handoff_available = handoff_available
         )
@@ -1142,7 +1137,7 @@ describe("QueryChat deferred client with $server()", {
     )
   })
 
-  it("$server(data_source=, table_name=) registers under the given name", {
+  it("$server(data_source=, table_name=) registers under the given name for that session only", {
     skip_if_no_dataframe_engine()
     qc <- QueryChat$new(
       NULL,
@@ -1154,9 +1149,11 @@ describe("QueryChat deferred client with $server()", {
       function(input, output, session) {
         qc$server(data_source = new_users_df(), table_name = "users")
       },
-      {}
+      {
+        expect_equal(session$returned$table_names(), "users")
+      }
     )
-    expect_equal(qc$table_names(), "users")
+    expect_equal(qc$table_names(), character())
   })
 
   it("id stays fixed across deferred registration (no desync from an already-rendered UI)", {
@@ -1262,6 +1259,74 @@ describe("QueryChat$add_table()", {
     )
     expect_equal(length(qc$table_names()), 0L)
   })
+
+  it("warns but preserves the original error if rollback cleanup fails", {
+    skip_if_no_dataframe_engine()
+    qc <- local_querychat(new_users_df(), "users", greeting = "hi")
+
+    attempt_add_table <- function() {
+      testthat::local_mocked_bindings(
+        dbDisconnect = function(...) stop("boom"),
+        .package = "DBI"
+      )
+      testthat::local_mocked_bindings(
+        check_source_compatibility = function(...) {
+          cli::cli_abort("compat check failed")
+        },
+        .package = "querychat"
+      )
+      qc$add_table(new_test_df(), "other")
+    }
+
+    expect_warning(
+      expect_error(attempt_add_table(), "compat check failed"),
+      "Failed to clean up data source"
+    )
+    expect_equal(qc$table_names(), "users")
+  })
+})
+
+describe("QueryChat constructor rollback", {
+  it("cleans up a querychat-owned source when construction fails after normalization", {
+    skip_if_no_dataframe_engine()
+    disconnected <- FALSE
+    local_mocked_bindings(
+      dbDisconnect = function(...) {
+        disconnected <<- TRUE
+        TRUE
+      },
+      .package = "DBI"
+    )
+    local_mocked_bindings(
+      check_source_compatibility = function(...) {
+        cli::cli_abort("compat check failed")
+      },
+      .package = "querychat"
+    )
+
+    expect_error(
+      QueryChat$new(new_users_df(), "users", greeting = "hi"),
+      "compat check failed"
+    )
+    expect_true(disconnected)
+  })
+
+  it("leaves a caller-owned DataSource open when construction fails", {
+    skip_if_no_dataframe_engine()
+    source <- local_data_frame_source(new_users_df(), "users")
+    local_mocked_bindings(
+      check_source_compatibility = function(...) {
+        cli::cli_abort("compat check failed")
+      },
+      .package = "querychat"
+    )
+
+    expect_error(
+      QueryChat$new(source, "users", greeting = "hi"),
+      "compat check failed"
+    )
+    expect_true(DBI::dbIsValid(source$conn))
+  })
 })
 
 describe("QueryChat$add_tables()", {
@@ -1340,16 +1405,6 @@ describe("QueryChat$add_tables()", {
     )
   })
 
-  it("calling after server initialization raises error", {
-    conn <- local_multi_table_conn()
-    qc <- QueryChat$new(NULL, "placeholder", greeting = "Test")
-    qc$.__enclos_env__$private$.server_initialized <- TRUE
-    expect_error(
-      qc$add_tables(conn),
-      "after server initialization"
-    )
-  })
-
   it("system prompt built exactly once for multiple tables", {
     conn <- local_multi_table_conn()
     qc <- QueryChat$new(NULL, "placeholder", greeting = "Test")
@@ -1363,6 +1418,231 @@ describe("QueryChat$add_tables()", {
     )
     multi_table_warns <- warns[grepl("Multiple tables", warns)]
     expect_length(multi_table_warns, 1L)
+  })
+
+  it("failed $add_tables() after a session started does not warn about the late change", {
+    skip_if_no_dataframe_engine()
+    conn <- local_multi_table_conn()
+    qc <- local_querychat(new_users_df(), "users", greeting = "hi")
+    qc$.__enclos_env__$private$.sessions_started <- TRUE
+
+    # Mixing DBI sources with the existing data-frame source fails validation;
+    # a change that never took effect must not warn about sessions missing it.
+    warns <- character(0)
+    withCallingHandlers(
+      expect_error(qc$add_tables(conn), "same type"),
+      warning = function(w) {
+        warns <<- c(warns, conditionMessage(w))
+        invokeRestart("muffleWarning")
+      }
+    )
+    expect_false(any(grepl("after a session has started", warns)))
+    expect_equal(qc$table_names(), "users")
+  })
+
+  it("rejected destructive $add_tables() after a session started leaves the instance untouched", {
+    conn <- local_multi_table_conn()
+    qc <- QueryChat$new(NULL, "placeholder", greeting = "Test")
+    suppressWarnings(qc$add_tables(conn))
+    old_set <- qc$.__enclos_env__$private$.table_set
+    qc$.__enclos_env__$private$.sessions_started <- TRUE
+
+    expect_error(
+      qc$add_tables(conn, tables = "orders", replace = TRUE),
+      "replace or remove"
+    )
+    expect_identical(qc$.__enclos_env__$private$.table_set, old_set)
+    expect_setequal(qc$table_names(), c("orders", "customers"))
+  })
+})
+
+describe("QueryChat table changes after a session has started", {
+  it("warns when adding a new table and keeps the old set for $cleanup()", {
+    skip_if_no_dataframe_engine()
+    qc <- local_querychat(new_users_df(), "users", greeting = "hi")
+    old_set <- qc$.__enclos_env__$private$.table_set
+    old_set$executor()
+    qc$.__enclos_env__$private$.sessions_started <- TRUE
+
+    expect_warning(
+      qc$add_table(new_test_df(), "other"),
+      "after a session has started"
+    )
+
+    expect_equal(qc$table_names(), c("users", "other"))
+    expect_identical(
+      qc$.__enclos_env__$private$.superseded_table_sets[[1]],
+      old_set
+    )
+    expect_true(old_set$executor_built())
+    qc$cleanup()
+    expect_length(qc$.__enclos_env__$private$.superseded_table_sets, 0)
+  })
+
+  it("errors when replacing an existing table", {
+    skip_if_no_dataframe_engine()
+    qc <- local_querychat(new_users_df(), "users", greeting = "hi")
+    qc$.__enclos_env__$private$.sessions_started <- TRUE
+
+    expect_error(
+      qc$add_table(new_test_df(), "users", replace = TRUE),
+      "replace or remove"
+    )
+    expect_length(qc$.__enclos_env__$private$.superseded_table_sets, 0)
+  })
+
+  it("errors when removing a table", {
+    skip_if_not_installed("duckdb")
+    qc <- local_querychat(new_users_df(), "users", greeting = "hi")
+    qc$add_table(new_test_df(), "other")
+    qc$.__enclos_env__$private$.sessions_started <- TRUE
+
+    expect_error(qc$remove_table("other"), "replace or remove")
+    expect_equal(qc$table_names(), c("users", "other"))
+  })
+
+  it("closes a replaced source immediately before any session starts", {
+    skip_if_no_dataframe_engine()
+    qc <- local_querychat(new_users_df(), "users", greeting = "hi")
+    old_source <- qc_data_source(qc, "users")
+
+    qc$add_table(new_test_df(), "users", replace = TRUE)
+
+    expect_false(DBI::dbIsValid(old_source$conn))
+  })
+
+  it("does not mark sessions as started when $server() fails", {
+    skip_if_no_dataframe_engine()
+    qc <- local_querychat(new_users_df(), "users", greeting = "hi")
+    local_mocked_bindings(
+      mod_server = function(...) stop("boom"),
+      .package = "querychat"
+    )
+
+    expect_error(
+      shiny::testServer(function(input, output, session) qc$server(), {}),
+      "boom"
+    )
+
+    expect_false(qc$.__enclos_env__$private$.sessions_started)
+    expect_no_warning(
+      qc$add_table(new_test_df(), "other"),
+      message = "after a session has started"
+    )
+  })
+})
+
+describe("auto_fill_data_description()/resolve_data_description() parity", {
+  # A DataFrameSource subclass that infers a description the way PinSource
+  # does (from its own metadata), without depending on the pins package. All
+  # tables in a set must share the same source class, so both the
+  # description-bearing table and the second table use this same class.
+  DescribedDataFrameSource <- R6::R6Class(
+    "DescribedDataFrameSource",
+    inherit = DataFrameSource,
+    public = list(
+      description = "",
+      get_data_description = function() self$description
+    )
+  )
+
+  local_described_source <- function(
+    description = "",
+    data = new_test_df(),
+    table_name = "primary",
+    env = parent.frame()
+  ) {
+    source <- DescribedDataFrameSource$new(data, table_name)
+    source$description <- description
+    withr::defer(source$cleanup(), envir = env)
+    source
+  }
+
+  it("keeps a single source's inferred description once a second table is added, identically via $add_table() and $server(data_source=)", {
+    skip_if_no_dataframe_engine()
+
+    # Instance path: $add_table() adds a second table to a single-source
+    # instance that had inferred a description from its only source.
+    qc <- local_querychat(
+      local_described_source("Motor Trend Cars"),
+      "primary",
+      greeting = "hi"
+    )
+    instance_desc_before <- qc$.__enclos_env__$private$.table_set$data_description
+    expect_equal(instance_desc_before, "Motor Trend Cars")
+
+    qc$add_table(
+      local_described_source(data = new_metrics_df(), table_name = "secondary"),
+      "secondary"
+    )
+    instance_desc_after <- qc$.__enclos_env__$private$.table_set$data_description
+    expect_equal(instance_desc_after, "Motor Trend Cars")
+
+    # Session path: $server(data_source=) builds an equivalent two-table set
+    # for one session, starting from the same single inferred-description
+    # instance state. Before the fix, this produced NULL instead of the
+    # stale "Motor Trend Cars" description the instance path kept.
+    qc2 <- local_querychat(
+      local_described_source("Motor Trend Cars"),
+      "primary",
+      greeting = "hi",
+      client = mock_ellmer_chat_client()
+    )
+    calls <- new.env(parent = emptyenv())
+    calls$args <- list()
+    testthat::local_mocked_bindings(
+      mod_server = function(id, ...) {
+        calls$args[[length(calls$args) + 1L]] <- list(...)
+        list()
+      },
+      .package = "querychat"
+    )
+    session <- shiny::MockShinySession$new()
+    withr::defer(if (!session$isClosed()) session$close())
+    shiny::withReactiveDomain(
+      session,
+      qc2$server(
+        data_source = local_described_source(
+          data = new_metrics_df(),
+          table_name = "secondary"
+        ),
+        table_name = "secondary"
+      )
+    )
+
+    session_table_set <- calls$args[[1]]$table_set
+    expect_equal(session_table_set$data_description, instance_desc_after)
+  })
+
+  it("rejected destructive $add_table() after a session started leaves the data description untouched", {
+    skip_if_no_dataframe_engine()
+
+    qc <- local_querychat(
+      local_described_source("Motor Trend Cars", table_name = "primary"),
+      "primary",
+      greeting = "hi"
+    )
+    desc_before <- qc$.__enclos_env__$private$.data_description
+    mode_before <- qc$.__enclos_env__$private$.data_description_mode
+    expect_equal(desc_before, "Motor Trend Cars")
+    expect_equal(mode_before, "inferred")
+
+    qc$.__enclos_env__$private$.sessions_started <- TRUE
+
+    expect_error(
+      qc$add_table(
+        local_described_source(table_name = "primary"),
+        "primary",
+        replace = TRUE
+      ),
+      "replace or remove"
+    )
+
+    expect_equal(qc$.__enclos_env__$private$.data_description, desc_before)
+    expect_equal(
+      qc$.__enclos_env__$private$.data_description_mode,
+      mode_before
+    )
   })
 })
 

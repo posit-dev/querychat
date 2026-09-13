@@ -3,7 +3,6 @@ from __future__ import annotations
 import warnings
 from typing import TYPE_CHECKING, Any, Literal, Optional, overload
 
-import chatlas
 from htmltools import TagChild, tags
 from narwhals.stable.v1.typing import IntoDataFrameT, IntoFrameT, IntoLazyFrameT
 from shiny.express._stub_session import ExpressStubSession
@@ -13,8 +12,16 @@ from shinychat.types import HistoryOptions
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 
+from ._datasource import DataSource
 from ._icons import bs_icon
-from ._querychat_base import DEFAULT_TOOLS, TOOL_GROUPS, QueryChatBase
+from ._querychat_base import (
+    DEFAULT_TOOLS,
+    TOOL_GROUPS,
+    QueryChatBase,
+    check_table_name,
+    normalize_data_source,
+    warn_on_failure,
+)
 from ._shiny_module import (
     CHAT_ID,
     ServerValues,
@@ -32,6 +39,7 @@ DRAWER_WIDTH = "calc(min(clamp(360px, 55vw, 720px), 100%))"
 if TYPE_CHECKING:
     from pathlib import Path
 
+    import chatlas
     import ibis
     import narwhals.stable.v1 as nw
     import sqlalchemy
@@ -39,6 +47,7 @@ if TYPE_CHECKING:
 
     from ._data_dict import DataDict
     from ._table_accessor import TableAccessor
+    from ._table_set import TableSet
 
 
 class QueryChat(QueryChatBase[IntoFrameT]):
@@ -312,7 +321,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             A Shiny App object that can be run with `app.run()` or served with `shiny run`.
 
         """
-        self._require_initialized("app")
+        self._require_table_set("app")
         resolved_history: bool | HistoryOptions = (
             history
             if history is not None
@@ -407,21 +416,21 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             )
 
         def app_server(input: Inputs, output: Outputs, session: Session):
-            self._mark_server_initialized(session)
             if enable_bookmarking:
                 session.bookmark.exclude.extend(["reset_query", "sql_editor"])
+            table_set = self._require_table_set("app")
             vals = mod_server(
                 self.id,
-                data_sources=dict(self._data_sources),
-                executor=self._require_query_executor("server"),
+                table_set=table_set,
                 greeting=self.greeting,
-                client=self._create_session_client,
+                client=lambda **kw: self._create_session_client(table_set, **kw),
                 history=resolved_history,
                 tools=self.tools,
                 greeter=self.greeter,
                 greeting_base=None,
                 greeting_tables=list(self.greeter.tables),
             )
+            self._sessions_started = True
 
             @reactive.calc
             def active_table_name() -> str:
@@ -631,7 +640,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             **kwargs,
         )
 
-    def server(
+    def server(  # noqa: PLR0912
         self,
         *,
         data_source: IntoFrame | sqlalchemy.Engine | ibis.Table | None = None,
@@ -658,7 +667,10 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             per-user OAuth credentials on Posit Connect). Registered under
             `table_name` if given, otherwise the `table_name` passed to the
             constructor (when it was created with `data_source=None`), or the
-            first already-registered table.
+            first already-registered table. The table is registered for this
+            session only: the instance's own tables are not modified, a
+            same-named instance table is shadowed for this session, and the
+            session's data source is cleaned up when the session ends.
         table_name
             Table name to register `data_source` under. Only used when
             `data_source` is provided.
@@ -698,6 +710,10 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                 ".server() must be called within an active Shiny session (i.e., within the server function). "
             )
 
+        table_set: TableSet[IntoFrameT] | None = self._table_set
+        greeting_tables = list(self.greeter.tables)
+        session_source: DataSource | None = None
+
         if data_source is not None:
             if table_name is not None:
                 resolved_table_name = table_name
@@ -712,29 +728,49 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                     "or table_name to the QueryChat constructor, or register a "
                     "table first with add_table()."
                 )
-            self._add_or_replace_table(
-                data_source,
-                resolved_table_name,
-                replace=True,
-                include_in_greeting=True,
-                # A live session may still be using the replaced source,
-                # so defer its cleanup until no sessions are active.
-                cleanup_replaced=self._active_sessions == 0,
-            )
+            check_table_name(resolved_table_name, data_source=data_source)
+            if (
+                isinstance(data_source, DataSource)
+                and data_source.table_name != resolved_table_name
+            ):
+                raise ValueError(
+                    f"data_source's own table name ('{data_source.table_name}') "
+                    f"does not match the given table_name ('{resolved_table_name}'). "
+                    "Pass a matching table_name, or omit it to use "
+                    f"'{data_source.table_name}'."
+                )
+            session_source = normalize_data_source(data_source, resolved_table_name)
+            try:
+                table_set = self._build_table_set(
+                    {**self._data_sources, resolved_table_name: session_source}
+                )
+            except Exception:
+                if session_source is not data_source:
+                    warn_on_failure(session_source.cleanup, "session data source")
+                raise
+            if resolved_table_name not in greeting_tables:
+                greeting_tables.append(resolved_table_name)
 
-        self._require_initialized("server")
-        resolved_client: chatlas.Chat | None = (
-            None
-            if isinstance(client, MISSING_TYPE)
-            else self._resolve_override_client(client)
-        )
-        if resolved_client is not None and not isinstance(client, chatlas.Chat):
-            # Owned overrides are session-scoped: close and untrack them when
-            # this session ends rather than holding them open until cleanup().
-            session.on_ended(lambda: self._close_owned_client(resolved_client))
+        if table_set is None:
+            table_set = self._require_table_set("server")
+
+        if session_source is not None:
+            session_set = table_set
+            owned_source = session_source if session_source is not data_source else None
+
+            def cleanup_session() -> None:
+                warn_on_failure(session_set.cleanup_executor, "session query executor")
+                if owned_source is not None:
+                    warn_on_failure(owned_source.cleanup, "session data source")
+
+            session.on_ended(cleanup_session)
+
+        resolved_client = self._resolve_session_client(client, session)
 
         def create_session_client(**kwargs) -> chatlas.Chat:
-            return self._create_session_client(base=resolved_client, **kwargs)
+            return self._create_session_client(
+                table_set, base=resolved_client, **kwargs
+            )
 
         if enable_bookmarking is not None:
             warnings.warn(
@@ -760,19 +796,19 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             )
         )
 
-        self._mark_server_initialized(session)
-        return mod_server(
+        result = mod_server(
             id or self.id,
-            data_sources=dict(self._data_sources),
-            executor=self._require_query_executor("server"),
+            table_set=table_set,
             greeting=self.greeting,
             client=create_session_client,
             history=resolved_history,
             tools=self.tools,
             greeter=self.greeter,
             greeting_base=resolved_client,
-            greeting_tables=list(self.greeter.tables),
+            greeting_tables=greeting_tables,
         )
+        self._sessions_started = True
+        return result
 
 
 class QueryChatExpress(QueryChatBase[IntoFrameT]):
@@ -1020,26 +1056,29 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
             )
 
         self._enable_bookmarking = enable_bookmarking
+        self._server_attempted = False
         self._vals: ServerValues[IntoFrameT] | None = None
 
     def _ensure_server_started(self) -> None:
         """
         Start the Shiny module server if not already started.
 
-        Called lazily from ui()/sidebar() and the reactive accessors so that
-        module-level add_table() calls (which happen after __init__ but before
-        sidebar()/ui()) can complete before server initialization locks the
-        table set.
+        Called lazily from ui()/sidebar()/page() and the reactive accessors so
+        module-level add_table() calls, which run after __init__ but before
+        the UI is built, are included. Express re-executes the app file per
+        session, so this instance only ever sees one real session; a single
+        flag guarantees mod_server() runs at most once even if the first
+        attempt raised.
         """
-        if self._active_sessions > 0:
+        if self._server_attempted:
             return
         session = get_current_session()
         if session is None or isinstance(session, ExpressStubSession):
             return
-        if not self._data_sources:
+        if self._table_set is None:
             return
-        self._require_initialized("_ensure_server_started")
-        self._mark_server_initialized(session)
+        self._server_attempted = True
+        table_set = self._table_set
         resolved_history: bool | HistoryOptions = (
             self.history
             if self.history is not None
@@ -1051,16 +1090,16 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         )
         self._vals = mod_server(
             self.id,
-            data_sources=dict(self._data_sources),
-            executor=self._require_query_executor("_ensure_server_started"),
+            table_set=table_set,
             greeting=self.greeting,
-            client=self._create_session_client,
+            client=lambda **kw: self._create_session_client(table_set, **kw),
             history=resolved_history,
             tools=self.tools,
             greeter=self.greeter,
             greeting_base=None,
             greeting_tables=list(self.greeter.tables),
         )
+        self._sessions_started = True
 
     def sidebar(
         self,

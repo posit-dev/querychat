@@ -23,13 +23,20 @@ db_source$get_db_type()  # Returns "SQLite"
 # Execute a query
 result <- db_source$execute_query("SELECT * FROM mtcars WHERE mpg > 25")
 
-# Note: cleanup() will disconnect the connection
-# If you want to keep the connection open, don't call cleanup()
+# cleanup() is a no-op: you own `con`, so disconnect it yourself
 db_source$cleanup()
+DBI::dbDisconnect(con)
 \dontshow{\}) # examplesIf}
 }
 \section{Super class}{
 \code{\link[querychat:DataSource]{DataSource}} -> \code{DBISource}
+}
+\section{Active bindings}{
+  \if{html}{\out{<div class="r6-active-bindings">}}
+  \describe{
+    \item{\code{conn}}{The DBI connection backing this source (read-only).}
+  }
+  \if{html}{\out{</div>}}
 }
 \section{Methods}{
 \subsection{Public methods}{
@@ -204,14 +211,15 @@ all original table columns (default: \code{FALSE})}
 \if{html}{\out{<a id="method-DBISource-cleanup"></a>}}
 \if{latex}{\out{\hypertarget{method-DBISource-cleanup}{}}}
 \subsection{\code{DBISource$cleanup()}}{
-  Disconnect from the database
+  No-op: the DBI connection is owned by the caller. Disconnect it
+yourself with \code{DBI::dbDisconnect()} when your application shuts down.
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
     \preformatted{DBISource$cleanup()}
     \if{html}{\out{</div>}}
   }
   \subsection{Returns}{
-    NULL (invisibly)
+    \code{NULL} (invisibly)
   }
 }
 

@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changes
+
+* `.server(data_source=)` no longer modifies the `QueryChat` instance. The table is registered for that session only: the instance's tables, greeting tables, and system prompt are unchanged, a same-named instance table is shadowed for that session, and the session's data source is cleaned up when the session ends. This removes the concurrent-session edge cases that `0.8.0` patched around (#300, #302, #303, #304, #308).
+
+* `cleanup()` follows one rule: querychat closes only what it created. `SQLAlchemySource.cleanup()` no longer disposes your engine; dispose it yourself on shutdown. `DataFrameSource`/`PinSource` DuckDB connections and querychat-created chat clients are still closed.
+
+* Adding a *new* table with `add_table()`/`add_tables()` after a session has started now warns instead of raising; running sessions keep their tables and new sessions see the addition. Replacing or removing an existing table after a session has started still raises.
+
+* A rejected or failed `add_table()`/`add_tables()` call (e.g. an incompatible source type) after a session has started no longer warns about the late change or otherwise affects the instance, since the change never took effect. (#311)
+
+* `add_table()` and `server(data_source=, table_name=)` now reject a `DataSource` whose own `table_name` differs from the registration name, matching R — previously the table was stored under an alias its underlying connection didn't have, so generated queries failed.
+
+* `cleanup()` no longer closes a spec-resolved `.server(client=...)` override while its session is still running; it is closed when the session ends.
+
+* Registering a second pins table with `add_table()` now raises a clear error at registration time instead of failing at query time: each pin queries through its own DuckDB connection, so only the first pin's table would be queryable. To combine a pin with other tables, register them in a shared DuckDB connection and pass that instead.
+
 ## [0.8.0] - 2026-09-12
 
 ### New features

@@ -386,3 +386,12 @@ describe("TblSqlSource edge cases - Category C: ORDER BY behavior", {
     expect_equal(collected$value[5], 10)
   })
 })
+
+test_that("TblSqlSource$cleanup() leaves the caller's connection open", {
+  source <- local_tbl_sql_source(new_test_df())
+  conn <- dbplyr::remote_con(source$get_data())
+
+  source$cleanup()
+
+  expect_true(DBI::dbIsValid(conn))
+})

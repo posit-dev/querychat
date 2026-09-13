@@ -26,8 +26,9 @@ dplyr::count(result, cyl, gear)
 # Or collect the entire data frame into local memory
 dplyr::collect(result)
 
-# Finally, clean up when done with the database (closes the DB connection)
+# cleanup() is a no-op: you own `con`, so disconnect it yourself when done
 mtcars_source$cleanup()
+DBI::dbDisconnect(con, shutdown = TRUE)
 \dontshow{\}) # examplesIf}
 }
 \section{Super classes}{
@@ -221,14 +222,14 @@ all original table columns (default: \code{FALSE})}
 \if{html}{\out{<a id="method-TblSqlSource-cleanup"></a>}}
 \if{latex}{\out{\hypertarget{method-TblSqlSource-cleanup}{}}}
 \subsection{\code{TblSqlSource$cleanup()}}{
-  Clean up resources (close connections, etc.)
+  No-op: the connection behind the \code{tbl_sql} is owned by the caller.
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
     \preformatted{TblSqlSource$cleanup()}
     \if{html}{\out{</div>}}
   }
   \subsection{Returns}{
-    NULL (invisibly)
+    \code{NULL} (invisibly)
   }
 }
 

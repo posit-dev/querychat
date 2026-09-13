@@ -255,5 +255,45 @@ check_source_compatibility <- function(existing_sources, new_source, new_name) {
     )
   }
 
+  # Reached only when the existing sources are also PinSources: a second pin
+  # would validate here but fail at query time, since each pin queries
+  # through its own private connection and DataSourceExecutor delegates all
+  # queries to the first one.
+  if (inherits(new_source, "PinSource")) {
+    cli::cli_abort(
+      c(
+        "Cannot add pin {.val {new_name}}: only one pin table is supported per chat.",
+        "i" = "Each pin queries through its own connection, so only the first pin's table would be queryable.",
+        "i" = "To combine a pin with other tables, register them in a shared DuckDB connection and pass that instead."
+      )
+    )
+  }
+
+  # DataFrameSource inherits DBISource but is exempt: each instance opens its
+  # own in-memory connection by design, and multi-table data frames are served
+  # by a shared DuckDBExecutor instead.
+  if (
+    inherits(new_source, "DBISource") &&
+      !inherits(new_source, "DataFrameSource") &&
+      !identical(new_source$conn, first_source$conn)
+  ) {
+    cli::cli_abort(
+      c(
+        "Cannot add table {.val {new_name}}: all database tables must share the same connection.",
+        "i" = "Use {.fn $add_tables} to register tables from a single connection."
+      )
+    )
+  }
+
+  invisible(NULL)
+}
+
+# Validates that every source in a group is compatible with the others.
+validate_source_group_compatibility <- function(data_sources) {
+  existing <- list()
+  for (name in names(data_sources)) {
+    check_source_compatibility(existing, data_sources[[name]], name)
+    existing[[name]] <- data_sources[[name]]
+  }
   invisible(NULL)
 }

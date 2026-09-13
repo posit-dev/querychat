@@ -61,6 +61,19 @@
 
 * Fixed a module-namespace desync when a table was registered between `$ui()` and `$server()` (e.g. via `$server(data_source = )`). (#305)
 
+* `$server(data_source = )` no longer modifies the `QueryChat` instance. The table is registered for that session only: the instance's tables, greeting tables, and system prompt are unchanged, a same-named instance table is shadowed for that session, and any connection querychat created for it is cleaned up when the session ends. A second session's `$server(data_source = )` call therefore no longer errors with "Cannot add tables after server initialization." (#300, #306)
+
+* `$cleanup()` follows one rule: querychat closes only what it created. `DBISource$cleanup()` and `TblSqlSource$cleanup()` no longer disconnect your connection; disconnect it yourself on shutdown. `DataFrameSource`/`PinSource` DuckDB connections are still closed.
+
+* The automatic `$cleanup()` registered when `QueryChat` is created while a Shiny app is running (`cleanup = NA`, the default) no longer disconnects caller-supplied DBI connections when the session or app stops, for the same reason. If you relied on that to close a connection you passed to `QueryChat$new()`, register your own `shiny::onStop(function() DBI::dbDisconnect(con))` (or disconnect when the session ends). Data frames are unaffected: the in-memory DuckDB connection querychat creates for them is still closed automatically.
+
+* Adding a *new* table with `$add_table()`/`$add_tables()` after a session has started now warns instead of erroring; running sessions keep their tables and new sessions see the addition. Replacing or removing an existing table after a session has started still errors.
+
+* A rejected or failed `$add_table()`/`$add_tables()` call (e.g. an incompatible source type) after a session has started no longer warns about the late change or otherwise affects the instance, since the change never took effect. (#311)
+
+* A failed `QueryChat$new()` (e.g. an unreadable `prompt_template`) no longer leaks the data source connection querychat created while normalizing its input; the source is cleaned up before the error propagates. Caller-supplied `DataSource` objects remain the caller's responsibility.
+
+
 # querychat 0.3.0
 
 ## New features

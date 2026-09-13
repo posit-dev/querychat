@@ -102,3 +102,13 @@ describe("DBISource$test_query()", {
     expect_type(result$bool_col, "integer")
   })
 })
+
+test_that("DBISource$cleanup() leaves the caller's connection open", {
+  db <- local_sqlite_connection()
+  source <- DBISource$new(db$conn, "test_table")
+
+  source$cleanup()
+
+  expect_true(DBI::dbIsValid(db$conn))
+  expect_equal(nrow(source$get_data()), 5L)
+})

@@ -23,14 +23,7 @@ from ._datasource import (
     SQLAlchemySource,
 )
 from ._pin_source import PinSource, is_pins_board
-from ._query_executor import (
-    DataSourceExecutor,
-    DuckDBExecutor,
-    PolarsSQLExecutor,
-    QueryExecutor,
-    check_source_compatibility,
-    validate_source_group_compatibility,
-)
+from ._query_executor import QueryExecutor, validate_source_group_compatibility
 from ._querychat_core import (
     AppState,
     AppStateDict,
@@ -39,6 +32,7 @@ from ._querychat_core import (
 )
 from ._querychat_greeter import QueryChatGreeter
 from ._system_prompt import QueryChatSystemPrompt
+from ._table_set import TableSet
 from ._utils import MISSING, MISSING_TYPE, is_ibis_backend, is_ibis_table
 from ._viz_utils import has_viz_deps, has_viz_tool
 from .tools import (
@@ -52,18 +46,21 @@ from .tools import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Mapping
 
     from ibis.backends.sql import SQLBackend
     from narwhals.stable.v1.typing import IntoFrame
     from pins.boards import BaseBoard
     from shinychat.types import HistoryOptions
 
+    from shiny import Session
+
     from ._data_dict import DataDict
     from ._viz_tools import VisualizeData
 
 TOOL_GROUPS = Literal["filter", "update", "query", "visualize"]
 DEFAULT_TOOLS: tuple[TOOL_GROUPS, ...] = ("filter", "query", "visualize")
+TABLE_NAME_PATTERN = r"^[a-zA-Z][a-zA-Z0-9_]*$"
 
 
 class QueryChatBase(Generic[IntoFrameT]):
@@ -95,22 +92,11 @@ class QueryChatBase(Generic[IntoFrameT]):
         history: Optional[bool | HistoryOptions] = None,
     ):
         self._data_dicts: list[DataDict] = _normalize_data_dicts(data_dict)
-
-        # Multi-table storage: dict of data sources keyed by table name
-        self._data_sources: dict[str, DataSource] = {}
-        self._query_executor: QueryExecutor | None = None
-
-        # Live Shiny session count. Shared-state guards key off this: an
-        # ended session can no longer be using a resource it registered.
-        self._active_sessions = 0
-
-        # Sources/executors replaced while sessions were still live. Their
-        # cleanup is deferred until the last live session ends (or cleanup()
-        # runs) so a still-running session never loses a resource it uses.
-        self._retired_resources: list[DataSource | QueryExecutor] = []
-
-        # Name to register at .server(data_source=...) time when constructed
-        # with data_source=None (the deferred pattern).
+        self._table_set: TableSet[IntoFrameT] | None = None
+        # Instance sets swapped out by add_table()/add_tables() after a session
+        # started. A running session may still hold one, so cleanup() closes them.
+        self._superseded_table_sets: list[TableSet[IntoFrameT]] = []
+        self._sessions_started = False
         self._deferred_table_name: str | None = None
 
         self.tools = normalize_tools(tools, default=DEFAULT_TOOLS)
@@ -123,20 +109,17 @@ class QueryChatBase(Generic[IntoFrameT]):
         self._extra_instructions = extra_instructions
         self._categorical_threshold = categorical_threshold
 
-        # Clients querychat materializes from a spec (constructor string spec,
-        # deferred default resolution, .server() overrides) are tracked so
-        # cleanup() can close them; user-supplied Chat instances are never
-        # tracked -- their lifecycle remains the caller's responsibility.
-        self._owned_clients: list[chatlas.Chat] = []
+        # Owned iff querychat resolved it from a spec; a user-supplied Chat is
+        # never closed by cleanup().
         self._base_client: chatlas.Chat | None
         if isinstance(client, str):
             self._base_client = resolve_client(client)
-            self._owned_clients.append(self._base_client)
+            self._base_client_owned = True
         else:
             self._base_client = client
+            self._base_client_owned = False
         self._client_console = None
 
-        self._system_prompt: QueryChatSystemPrompt | None = None
         self._greeter: QueryChatGreeter | None = None
 
         if data_source is not None:
@@ -151,32 +134,52 @@ class QueryChatBase(Generic[IntoFrameT]):
         else:
             # Validate now: a bad deferred name would otherwise surface at
             # .server() registration time, after the module id is built.
-            if table_name is not None and not re.match(
-                r"^[a-zA-Z][a-zA-Z0-9_]*$", table_name
-            ):
-                raise ValueError(
-                    "Table name must begin with a letter and contain only "
-                    "letters, numbers, and underscores"
-                )
+            if table_name is not None:
+                check_table_name(table_name)
             self._deferred_table_name = table_name
 
-    def _build_system_prompt(
-        self,
-        *,
-        data_sources: dict[str, DataSource] | None = None,
-    ) -> None:
-        """Build/rebuild the system prompt from current or staged data sources."""
-        next_data_sources = self._data_sources if data_sources is None else data_sources
+    @property
+    def _data_sources(self) -> Mapping[str, DataSource[IntoFrameT]]:
+        """Read-only view of the instance's registered tables."""
+        if self._table_set is None:
+            return {}
+        return self._table_set.data_sources
 
-        if not next_data_sources:
-            raise RuntimeError("Cannot build system prompt without data_source")
+    def _require_table_set(self, method_name: str) -> TableSet[IntoFrameT]:
+        if self._table_set is None:
+            raise RuntimeError(
+                f"At least one data source must be set before calling {method_name}(). "
+                "Either pass data_source to __init__() or call add_table()."
+            )
+        return self._table_set
 
-        client_has_history = (
+    def _require_initialized(self, method_name: str) -> None:
+        self._require_table_set(method_name)
+
+    def _require_query_executor(self, method_name: str) -> QueryExecutor:
+        return self._require_table_set(method_name).executor
+
+    def _build_table_set(
+        self, sources: dict[str, DataSource[IntoFrameT]]
+    ) -> TableSet[IntoFrameT]:
+        validate_source_group_compatibility(sources)
+        prompt = QueryChatSystemPrompt(
+            prompt_template=self._prompt_template,
+            data_sources=sources,
+            data_description=self._data_description,
+            extra_instructions=self._extra_instructions,
+            categorical_threshold=self._categorical_threshold,
+            data_dicts=self._data_dicts,
+        )
+        return TableSet(sources, prompt)
+
+    def _warn_if_prompt_rebuilt_with_history(self) -> None:
+        has_history = (
             self._base_client is not None and bool(self._base_client.get_turns())
         ) or (
             self._client_console is not None and bool(self._client_console.get_turns())
         )
-        if client_has_history:
+        if has_history:
             warnings.warn(
                 "System prompt rebuilt after chat history exists. "
                 "This invalidates any prompt caching from prior turns. "
@@ -185,46 +188,43 @@ class QueryChatBase(Generic[IntoFrameT]):
                 stacklevel=3,
             )
 
-        self._system_prompt = QueryChatSystemPrompt(
-            prompt_template=self._prompt_template,
-            data_sources=next_data_sources,
-            data_description=self._data_description,
-            extra_instructions=self._extra_instructions,
-            categorical_threshold=self._categorical_threshold,
-            data_dicts=self._data_dicts,
+    def _check_late_change(self, method_name: str, *, destructive: bool) -> None:
+        if not self._sessions_started:
+            return
+        if destructive:
+            raise RuntimeError(
+                f"Cannot call {method_name}() to replace or remove a table while "
+                "sessions may be using it. Configure all tables before calling "
+                ".server() or .app()."
+            )
+        warnings.warn(
+            f"{method_name}() called after a session has started. Sessions that "
+            "are already running keep the tables they started with; only new "
+            "sessions will see this change.",
+            UserWarning,
+            stacklevel=3,
         )
 
-    def _build_query_executor(
-        self, *, data_sources: dict[str, DataSource] | None = None
-    ) -> QueryExecutor:
-        """Build a query executor from current or staged data sources."""
-        sources = self._data_sources if data_sources is None else data_sources
-
-        validate_source_group_compatibility(sources)
-
-        if len(sources) == 1:
-            return DataSourceExecutor(dict(sources))
-
-        first_source = next(iter(sources.values()))
-
-        if isinstance(first_source, DataFrameSource):
-            return DuckDBExecutor(
-                {n: s for n, s in sources.items() if isinstance(s, DataFrameSource)}
-            )
-        if isinstance(first_source, PolarsLazySource):
-            return PolarsSQLExecutor(
-                {n: s for n, s in sources.items() if isinstance(s, PolarsLazySource)}
-            )
-
-        return DataSourceExecutor(dict(sources))
-
-    def _require_initialized(self, method_name: str) -> None:
-        """Raise if no data sources have been registered."""
-        if not self._data_sources:
-            raise RuntimeError(
-                f"At least one data source must be set before calling {method_name}(). "
-                "Either pass data_source to __init__() or call add_table()."
-            )
+    def _swap_table_set(
+        self, new_set: TableSet[IntoFrameT], *, replaced: list[DataSource]
+    ) -> None:
+        old_set, self._table_set = self._table_set, new_set
+        if old_set is None:
+            return
+        if self._sessions_started:
+            # A running session may still query through old_set's executor;
+            # cleanup() closes it. `replaced` is always empty here because
+            # _check_late_change() rejects replacement once sessions started.
+            if replaced:
+                raise AssertionError(
+                    "_swap_table_set() received replaced sources after sessions "
+                    "started; _check_late_change() should have rejected this."
+                )
+            self._superseded_table_sets.append(old_set)
+            return
+        warn_on_failure(old_set.cleanup_executor, "query executor")
+        for source in replaced:
+            warn_on_failure(source.cleanup, "data source")
 
     def _require_single_table(self, method_name: str) -> None:
         """Raise if multiple tables are registered, directing to per-table API."""
@@ -235,50 +235,34 @@ class QueryChatBase(Generic[IntoFrameT]):
                 f"Use .table('name').{method_name}() for per-table access."
             )
 
-    def _require_query_executor(self, method_name: str) -> QueryExecutor:
-        """Return the cached executor, building it lazily on first use."""
-        if self._query_executor is None:
-            if not self._data_sources:
-                raise RuntimeError(
-                    f"query executor must be set before calling {method_name}(). "
-                    "Set the data_source first so querychat can build an executor."
-                )
-            self._query_executor = self._build_query_executor()
-        return self._query_executor
-
     def _create_client(self, base: chatlas.Chat | None = None) -> chatlas.Chat:
         """Clone a Chat from ``base`` or the resolved ``_base_client``."""
         if base is None:
             if self._base_client is None:
                 self._base_client = resolve_client(None)
-                self._owned_clients.append(self._base_client)
+                self._base_client_owned = True
             base = self._base_client
         return create_client(base)
 
-    def _resolve_override_client(
-        self, client: str | chatlas.Chat | None
-    ) -> chatlas.Chat:
+    def _resolve_session_client(
+        self, client: str | chatlas.Chat | MISSING_TYPE, session: Session
+    ) -> chatlas.Chat | None:
         """
-        Resolve a per-call client override (e.g., ``.server(client=...)``).
+        Resolve a ``.server(client=...)`` override.
 
-        Like the constructor's ``client``, a spec-resolved override is
-        querychat-created and must be closed on cleanup(); a user-supplied
-        Chat instance is not.
+        A spec-resolved override is owned by the session and closed on
+        ``session.on_ended``; a user-supplied Chat is returned untouched.
         """
+        if isinstance(client, MISSING_TYPE):
+            return None
         resolved = resolve_client(client)
         if not isinstance(client, chatlas.Chat):
-            self._owned_clients.append(resolved)
+            session.on_ended(lambda: warn_on_failure(resolved.close, "chatlas client"))
         return resolved
-
-    def _close_owned_client(self, client: chatlas.Chat) -> None:
-        """Close an owned client and stop tracking it. Idempotent."""
-        try:
-            client.close()
-        finally:
-            self._owned_clients[:] = [c for c in self._owned_clients if c is not client]
 
     def _create_session_client(
         self,
+        table_set: TableSet[IntoFrameT],
         *,
         base: chatlas.Chat | None = None,
         tools: TOOL_GROUPS | tuple[TOOL_GROUPS, ...] | MISSING_TYPE | None = MISSING,
@@ -287,28 +271,27 @@ class QueryChatBase(Generic[IntoFrameT]):
         visualize: Callable[[VisualizeData], None] | None = None,
         handoff_available: bool = False,
     ) -> chatlas.Chat:
-        """Create a fresh, fully-configured Chat."""
+        """Create a fresh Chat configured for ``table_set``."""
         chat = self._create_client(base)
 
         resolved_tools = normalize_tools(tools, default=self.tools)
-
-        if self._system_prompt is not None:
-            chat.system_prompt = self._system_prompt.render(
-                resolved_tools,
-                handoff_available=handoff_available,
-            )
+        chat.system_prompt = table_set.system_prompt.render(
+            resolved_tools,
+            handoff_available=handoff_available,
+        )
 
         if resolved_tools is None:
             return chat
 
-        executor = self._require_query_executor("_create_session_client")
+        executor = table_set.executor
+        table_names = table_set.table_names
+        multi_table = len(table_names) > 1
 
-        # Always register the schema tool (for all non-None tool sets)
         chat.register_tool(
             tool_get_schema(
                 self._data_dicts,
                 executor,
-                list(self._data_sources.keys()),
+                table_names,
                 self._categorical_threshold,
             )
         )
@@ -316,30 +299,20 @@ class QueryChatBase(Generic[IntoFrameT]):
         if "update" in resolved_tools:
             update_fn = update_dashboard or (lambda _: None)
             user_reset = reset_dashboard or (lambda _table: None)
-
             chat.register_tool(
                 tool_update_dashboard(
-                    executor,
-                    list(self._data_sources.keys()),
-                    update_fn,
-                    multi_table=len(self._data_sources) > 1,
+                    executor, table_names, update_fn, multi_table=multi_table
                 )
             )
-            chat.register_tool(
-                tool_reset_dashboard(user_reset, list(self._data_sources.keys()))
-            )
+            chat.register_tool(tool_reset_dashboard(user_reset, table_names))
 
         if "query" in resolved_tools:
-            chat.register_tool(
-                tool_query(executor, multi_table=len(self._data_sources) > 1)
-            )
+            chat.register_tool(tool_query(executor, multi_table=multi_table))
 
         if "visualize" in resolved_tools:
             viz_fn = visualize or (lambda _: None)
             chat.register_tool(
-                tool_visualize(
-                    executor, viz_fn, multi_table=len(self._data_sources) > 1
-                )
+                tool_visualize(executor, viz_fn, multi_table=multi_table)
             )
 
         return chat
@@ -374,8 +347,8 @@ class QueryChatBase(Generic[IntoFrameT]):
             A configured chat client.
 
         """
-        self._require_initialized("client")
         return self._create_session_client(
+            self._require_table_set("client"),
             tools=tools,
             update_dashboard=update_dashboard,
             reset_dashboard=reset_dashboard,
@@ -399,13 +372,12 @@ class QueryChatBase(Generic[IntoFrameT]):
                 prompt: str | Path,
                 base: chatlas.Chat | None = None,
                 *,
-                data_sources: dict[str, DataSource] | None = None,
+                table_set: TableSet[IntoFrameT] | None = None,
             ) -> chatlas.Chat:
+                resolved = table_set if table_set is not None else self._table_set
                 sp = QueryChatSystemPrompt(
                     prompt_template=prompt,
-                    data_sources=(
-                        self._data_sources if data_sources is None else data_sources
-                    ),
+                    data_sources=dict(resolved.data_sources) if resolved else {},
                     data_description=self._data_description,
                     extra_instructions=None,
                     categorical_threshold=self._categorical_threshold,
@@ -438,10 +410,7 @@ class QueryChatBase(Generic[IntoFrameT]):
     @property
     def system_prompt(self) -> str:
         """Get the system prompt."""
-        self._require_initialized("system_prompt")
-        if self._system_prompt is None:
-            raise RuntimeError("System prompt not initialized")
-        return self._system_prompt.render(self.tools)
+        return self._require_table_set("system_prompt").system_prompt.render(self.tools)
 
     @property
     def data_source(self) -> DataSource:
@@ -502,91 +471,57 @@ class QueryChatBase(Generic[IntoFrameT]):
         ValueError
             If table_name already exists (and replace=False) or is invalid.
         RuntimeError
-            If called while a server session is active.
+            If called to replace or remove an existing table after a session has started.
 
-        """
-        if self._active_sessions > 0:
-            raise RuntimeError(
-                "Cannot add tables while a server session is active. "
-                "Add all tables before calling .server() or .app()."
-            )
-        self._add_or_replace_table(
-            data_source,
-            table_name,
-            replace=replace,
-            include_in_greeting=include_in_greeting,
-        )
-
-    def _add_or_replace_table(
-        self,
-        data_source: IntoFrame | sqlalchemy.Engine | BaseBoard,
-        table_name: str,
-        *,
-        replace: bool,
-        include_in_greeting: bool,
-        cleanup_replaced: bool = True,
-    ) -> None:
-        """
-        Stage a table and rebuild the system prompt/executor cache.
-
-        Guard-free core of :meth:`add_table`, also called directly by
-        ``.server(data_source=...)`` so each session can register its own
-        table even while earlier sessions are still running.
-
-        ``cleanup_replaced=False`` is for that per-session path: the
-        replaced table may still be in active use by an earlier,
-        still-running session, so cleaning it up here would pull the
-        resource out from under it. The retired source and cached executor
-        are retained and cleaned up once the last live session ends
-        (see ``_mark_server_initialized``).
         """
         if not isinstance(include_in_greeting, bool):
             raise TypeError(
                 "include_in_greeting must be True or False, got "
                 f"{type(include_in_greeting).__name__}."
             )
+        check_table_name(table_name, data_source=data_source)
 
-        if not is_pins_board(data_source) and not re.match(
-            r"^[a-zA-Z][a-zA-Z0-9_]*$", table_name
+        exists = table_name in self._data_sources
+        if exists and not replace:
+            raise ValueError(f"Table '{table_name}' already exists")
+        if (
+            isinstance(data_source, DataSource)
+            and data_source.table_name != table_name
         ):
             raise ValueError(
-                "Table name must begin with a letter and contain only "
-                "letters, numbers, and underscores"
+                f"data_source's own table name ('{data_source.table_name}') "
+                f"does not match the given table_name ('{table_name}'). "
+                "Pass a matching table_name."
             )
-
-        if table_name in self._data_sources and not replace:
-            raise ValueError(f"Table '{table_name}' already exists")
 
         normalized = normalize_data_source(data_source, table_name)
         try:
-            other_sources = {
-                name: source
-                for name, source in self._data_sources.items()
-                if name != table_name
-            }
-            check_source_compatibility(other_sources, normalized, table_name)
-            next_data_sources = dict(self._data_sources)
-            next_data_sources[table_name] = normalized
-
-            self._build_system_prompt(data_sources=next_data_sources)
+            merged = dict(self._data_sources)
+            merged[table_name] = normalized
+            new_set = self._build_table_set(merged)
         except Exception:
-            cleanup_failed_staged_source(data_source, normalized)
+            if normalized is not data_source:
+                warn_on_failure(normalized.cleanup, "data source")
             raise
 
+        # Only after the change is known to be valid do we check whether it's
+        # too late to apply it, so a rejected/failed add_table() doesn't warn.
+        try:
+            self._check_late_change("add_table", destructive=exists)
+        except Exception:
+            warn_on_failure(new_set.cleanup_executor, "query executor")
+            if normalized is not data_source:
+                warn_on_failure(normalized.cleanup, "data source")
+            raise
+
+        self._warn_if_prompt_rebuilt_with_history()
         old_source = self._data_sources.get(table_name)
-        self._data_sources = next_data_sources
-        if old_source is not None and old_source is not normalized:
-            if cleanup_replaced:
-                old_source.cleanup()
-            else:
-                self._retired_resources.append(old_source)
-        if self._query_executor is not None:
-            if cleanup_replaced:
-                with contextlib.suppress(Exception):
-                    self._query_executor.cleanup()
-            else:
-                self._retired_resources.append(self._query_executor)
-            self._query_executor = None
+        replaced = (
+            [old_source]
+            if old_source is not None and old_source is not normalized
+            else []
+        )
+        self._swap_table_set(new_set, replaced=replaced)
 
         if include_in_greeting and table_name not in self.greeter.tables:
             self.greeter.tables = [*self.greeter.tables, table_name]
@@ -631,7 +566,7 @@ class QueryChatBase(Generic[IntoFrameT]):
             If the resolved table list is empty, any name is invalid, or any
             name already exists (and ``replace=False``).
         RuntimeError
-            If called while a server session is active.
+            If called to replace or remove an existing table after a session has started.
 
         Examples
         --------
@@ -651,12 +586,6 @@ class QueryChatBase(Generic[IntoFrameT]):
         >>> qc.add_tables(backend)
 
         """
-        if self._active_sessions > 0:
-            raise RuntimeError(
-                "Cannot add tables while a server session is active. "
-                "Add all tables before calling .server() or .app()."
-            )
-
         if isinstance(data_source, sqlalchemy.Engine):
             if tables is None:
                 tables = sqlalchemy.inspect(data_source).get_table_names()
@@ -680,13 +609,10 @@ class QueryChatBase(Generic[IntoFrameT]):
             raise ValueError("No tables found in database")
 
         for table_name in tables:
-            if not re.match(r"^[a-zA-Z][a-zA-Z0-9_]*$", table_name):
-                raise ValueError(
-                    "Table name must begin with a letter and contain only "
-                    "letters, numbers, and underscores"
-                )
-            if table_name in self._data_sources and not replace:
-                raise ValueError(f"Table '{table_name}' already exists")
+            check_table_name(table_name)
+        existing = [name for name in tables if name in self._data_sources]
+        if existing and not replace:
+            raise ValueError(f"Table '{existing[0]}' already exists")
 
         if isinstance(include_in_greeting, bool):
             greeting_names = list(tables) if include_in_greeting else []
@@ -701,26 +627,33 @@ class QueryChatBase(Generic[IntoFrameT]):
             )
 
         normalized = {name: normalized_builder(name) for name in tables}
+        merged = dict(self._data_sources)
+        merged.update(normalized)
+        try:
+            new_set = self._build_table_set(merged)
+        except Exception:
+            for source in normalized.values():
+                warn_on_failure(source.cleanup, "data source")
+            raise
 
-        staged: dict[str, DataSource] = {}
-        for name, source in normalized.items():
-            other_sources = {n: s for n, s in self._data_sources.items() if n != name}
-            check_source_compatibility({**other_sources, **staged}, source, name)
-            staged[name] = source
+        # Only after the change is known to be valid do we check whether it's
+        # too late to apply it, so a rejected/failed add_tables() doesn't warn.
+        try:
+            self._check_late_change("add_tables", destructive=bool(existing))
+        except Exception:
+            warn_on_failure(new_set.cleanup_executor, "query executor")
+            for source in normalized.values():
+                warn_on_failure(source.cleanup, "data source")
+            raise
 
-        next_data_sources = {**self._data_sources, **normalized}
-        self._build_system_prompt(data_sources=next_data_sources)
-
-        for name, normalized_source in normalized.items():
-            old_source = self._data_sources.get(name)
-            if old_source is not None and old_source is not normalized_source:
-                old_source.cleanup()
-
-        self._data_sources = next_data_sources
-        if self._query_executor is not None:
-            with contextlib.suppress(Exception):
-                self._query_executor.cleanup()
-            self._query_executor = None
+        self._warn_if_prompt_rebuilt_with_history()
+        replaced = [
+            old
+            for name in tables
+            if (old := self._data_sources.get(name)) is not None
+            and old is not normalized[name]
+        ]
+        self._swap_table_set(new_set, replaced=replaced)
 
         new_greeting = list(self.greeter.tables)
         for name in greeting_names:
@@ -742,15 +675,9 @@ class QueryChatBase(Generic[IntoFrameT]):
         ValueError
             If table doesn't exist or is the last remaining table.
         RuntimeError
-            If called while a server session is active.
+            If called to replace or remove an existing table after a session has started.
 
         """
-        if self._active_sessions > 0:
-            raise RuntimeError(
-                "Cannot remove tables while a server session is active. "
-                "Configure all tables before calling .server() or .app()."
-            )
-
         if table_name not in self._data_sources:
             available = ", ".join(self._data_sources.keys())
             raise ValueError(f"Table '{table_name}' not found. Available: {available}")
@@ -760,79 +687,43 @@ class QueryChatBase(Generic[IntoFrameT]):
                 "Cannot remove last table. At least one table is required."
             )
 
-        removed_source = self._data_sources[table_name]
-        next_data_sources = dict(self._data_sources)
-        del next_data_sources[table_name]
+        self._check_late_change("remove_table", destructive=True)
 
-        self._build_system_prompt(data_sources=next_data_sources)
-        self._data_sources = next_data_sources
+        removed = self._data_sources[table_name]
+        remaining = {n: s for n, s in self._data_sources.items() if n != table_name}
+        self._warn_if_prompt_rebuilt_with_history()
+        new_set = self._build_table_set(remaining)
+        self._swap_table_set(new_set, replaced=[removed])
+
         if self._greeter is not None:
             self._greeter.tables = [n for n in self._greeter.tables if n != table_name]
-        if self._query_executor is not None:
-            with contextlib.suppress(Exception):
-                self._query_executor.cleanup()
-            self._query_executor = None
-        removed_source.cleanup()
-
-    def _mark_server_initialized(self, session) -> None:
-        """
-        Track a newly started session until it ends.
-
-        The add/remove_table guards and cleanup-on-replace in
-        ``server(data_source=...)`` key off the number of *live* sessions:
-        a session that has ended can no longer be using a replaced resource.
-        """
-        self._active_sessions += 1
-
-        def untrack_session() -> None:
-            self._active_sessions -= 1
-            if self._active_sessions == 0:
-                self._flush_retired_resources()
-
-        session.on_ended(untrack_session)
-
-    def _flush_retired_resources(self) -> None:
-        """
-        Clean up resources retired while sessions were still live.
-
-        Retired sources/executors may still be in use by a live session, so
-        this only runs once no sessions remain (or from ``cleanup()``).
-        """
-        retired = self._retired_resources
-        self._retired_resources = []
-        for resource in retired:
-            # Best-effort: one failing cleanup must not leave the rest open.
-            with contextlib.suppress(Exception):
-                resource.cleanup()
 
     def cleanup(self) -> None:
         """
-        Clean up resources held by this object.
+        Clean up resources this object created.
 
-        This closes the query executor and all data sources (e.g., DuckDB
-        connections). It also closes the chatlas client, but only if
-        querychat created it (i.e., `client` was `None` or a string spec like
-        `"openai/gpt-4o"`, including per-call overrides such as
-        `.server(client="openai")`). A user-supplied `chatlas.Chat` instance
-        is never closed here -- its lifecycle remains the caller's
-        responsibility.
+        Closes the query executors and data-source connections querychat
+        opened (in-memory DuckDB), including those of table sets superseded
+        by a late ``add_table()``. Connections, engines, and backends you
+        passed in are never closed. Also closes the chatlas client, but only
+        if querychat created it from a spec (``client=None`` or a string such
+        as ``"openai/gpt-4o"``); a ``chatlas.Chat`` you supplied is left open.
+
+        Resources a session registers via ``.server(data_source=...)`` are
+        released when that session ends, not here.
 
         Safe to call multiple times. In long-lived applications, call this
-        when the app shuts down (e.g., via `atexit`).
+        when the app shuts down (e.g., via ``atexit``).
         """
-        if self._query_executor is not None:
-            self._query_executor.cleanup()
-        for source in self._data_sources.values():
-            source.cleanup()
-        self._flush_retired_resources()
-        for client in self._owned_clients:
-            # Best-effort: one provider's close() failing must not leave the
-            # remaining owned clients open.
-            try:
-                client.close()
-            except Exception as e:  # noqa: PERF203 (teardown of a few clients, not a hot loop)
-                warnings.warn(f"Failed to close chatlas client: {e}", stacklevel=2)
-        self._owned_clients.clear()
+        for superseded in self._superseded_table_sets:
+            warn_on_failure(superseded.cleanup_executor, "query executor")
+        self._superseded_table_sets.clear()
+        if self._table_set is not None:
+            warn_on_failure(self._table_set.cleanup_executor, "query executor")
+            for source in self._table_set.data_sources.values():
+                warn_on_failure(source.cleanup, "data source")
+        if self._base_client is not None and self._base_client_owned:
+            warn_on_failure(self._base_client.close, "chatlas client")
 
 
 def normalize_data_source(
@@ -879,22 +770,23 @@ def normalize_data_source(
     )
 
 
-def cleanup_failed_staged_source(
-    original_source: IntoFrame | sqlalchemy.Engine | BaseBoard | DataSource,
-    normalized_source: DataSource,
-) -> None:
-    """
-    Clean up transient resources created during a failed staged rebuild.
-
-    DataFrameSource and PinSource both allocate disposable connections during
-    normalization. SQLAlchemySource wraps a caller-owned engine, while
-    PolarsLazySource and IbisSource do not allocate disposable resources here.
-    """
-    if isinstance(original_source, (DataSource, sqlalchemy.Engine)):
+def check_table_name(table_name: str, *, data_source: object = None) -> None:
+    """Reject SQL table names querychat can't safely interpolate. Pins are exempt."""
+    if data_source is not None and is_pins_board(data_source):
         return
+    if not re.match(TABLE_NAME_PATTERN, table_name):
+        raise ValueError(
+            "Table name must begin with a letter and contain only "
+            "letters, numbers, and underscores"
+        )
 
-    if isinstance(normalized_source, (DataFrameSource, PinSource)):
-        normalized_source.cleanup()
+
+def warn_on_failure(fn: Callable[[], None], what: str) -> None:
+    """Run a teardown step, warning instead of raising so the rest still runs."""
+    try:
+        fn()
+    except Exception as e:
+        warnings.warn(f"Failed to clean up {what}: {e}", stacklevel=3)
 
 
 def resolve_client(client: str | chatlas.Chat | None) -> chatlas.Chat:

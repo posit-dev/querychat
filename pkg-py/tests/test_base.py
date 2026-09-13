@@ -4,6 +4,7 @@ import os
 import warnings
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
 import chatlas
 import narwhals.stable.v1 as nw
@@ -265,6 +266,7 @@ class TestQueryChatBase:
         qc = QueryChatBase(sample_df, "test_table")
 
         client = qc._create_session_client(
+            qc._table_set,
             tools=None,
             handoff_available=True,
         )
@@ -360,6 +362,13 @@ class TestAddTables:
         qc.add_tables(multi_table_engine, ["orders"], replace=True)
         assert "orders" in qc.table_names()
 
+    def test_replace_preserves_table_order(self, multi_table_engine):
+        """Replacing a non-last table keeps its original registration order."""
+        qc = QueryChatBase()
+        qc.add_tables(multi_table_engine, ["orders", "customers"])
+        qc.add_tables(multi_table_engine, ["orders"], replace=True)
+        assert qc.table_names() == ["orders", "customers"]
+
     def test_non_engine_raises_type_error(self, sample_df):
         qc = QueryChatBase()
         with pytest.raises(TypeError, match=r"sqlalchemy\.Engine or ibis SQLBackend"):
@@ -369,12 +378,6 @@ class TestAddTables:
         qc = QueryChatBase()
         with pytest.raises(ValueError, match="No tables found"):
             qc.add_tables(multi_table_engine, [])
-
-    def test_after_server_raises(self, multi_table_engine):
-        qc = QueryChatBase()
-        qc._active_sessions = 1
-        with pytest.raises(RuntimeError, match="Cannot add tables while a server session"):
-            qc.add_tables(multi_table_engine)
 
     def test_system_prompt_built_exactly_once(self, multi_table_engine):
         qc = QueryChatBase()
@@ -460,6 +463,17 @@ class TestAddTablesIbis:
         assert len(multi_table_warns) == 1
 
 
+def test_add_table_rejects_data_source_name_mismatch(sample_df):
+    """Reject registering a DataSource under a name its connection doesn't have."""
+    qc = QueryChatBase()
+    mismatched = DataFrameSource(sample_df, "orders")
+
+    with pytest.raises(ValueError, match="does not match"):
+        qc.add_table(mismatched, "users")
+    mismatched.cleanup()
+    assert qc.table_names() == []
+
+
 def test_history_stored_verbatim_no_default_substitution():
     """
     QueryChatBase stores history exactly as given -- including None -- so callers
@@ -475,3 +489,116 @@ def test_history_stored_verbatim_no_default_substitution():
 
     qc_explicit_true = QueryChatBase(df, "a_table3", history=True)
     assert qc_explicit_true.history is True
+
+
+class TestLateConfigurationChanges:
+    def test_add_new_table_after_sessions_started_warns(self, sample_df):
+        qc = QueryChatBase(sample_df, "users")
+        qc._sessions_started = True
+
+        with pytest.warns(UserWarning, match="after a session has started"):
+            qc.add_table(sample_df, "other")
+
+        assert qc.table_names() == ["users", "other"]
+
+    def test_add_new_table_after_sessions_started_parks_old_set(self, sample_df):
+        qc = QueryChatBase(sample_df, "users")
+        old_set = qc._table_set
+        old_set.executor  # noqa: B018 (forces the cached executor to build)
+        qc._sessions_started = True
+
+        with (  # noqa: PT031 (asserts before/after cleanup() inside the same warns block)
+            pytest.warns(UserWarning, match="after a session has started"),
+            patch.object(old_set, "cleanup_executor") as cleanup_executor,
+        ):
+            qc.add_table(sample_df, "other")
+            cleanup_executor.assert_not_called()
+            assert qc._superseded_table_sets == [old_set]
+
+            qc.cleanup()
+            cleanup_executor.assert_called_once()
+        assert qc._superseded_table_sets == []
+
+    def test_replace_after_sessions_started_raises(self, sample_df):
+        qc = QueryChatBase(sample_df, "users")
+        qc._sessions_started = True
+
+        with pytest.raises(RuntimeError, match="replace or remove"):
+            qc.add_table(sample_df, "users", replace=True)
+        assert qc._superseded_table_sets == []
+
+    def test_failed_add_table_after_sessions_started_does_not_warn(
+        self, sample_df, multi_table_engine
+    ):
+        qc = QueryChatBase(sample_df, "users")
+        qc._sessions_started = True
+
+        # Mixing a SQLAlchemy source with the existing DataFrame source fails
+        # validation; a change that never took effect must not warn about it.
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            with pytest.raises(ValueError, match="same type"):
+                qc.add_table(multi_table_engine, "orders")
+        assert not any("after a session has started" in str(x.message) for x in w)
+        assert qc.table_names() == ["users"]
+
+    def test_rejected_replace_after_sessions_started_leaves_set_untouched(
+        self, sample_df
+    ):
+        qc = QueryChatBase(sample_df, "users")
+        old_set = qc._table_set
+        qc._sessions_started = True
+
+        with pytest.raises(RuntimeError, match="replace or remove"):
+            qc.add_table(sample_df, "users", replace=True)
+        assert qc._table_set is old_set
+
+    def test_failed_add_tables_after_sessions_started_does_not_warn(
+        self, sample_df, multi_table_engine
+    ):
+        qc = QueryChatBase(sample_df, "users")
+        qc._sessions_started = True
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            with pytest.raises(ValueError, match="same type"):
+                qc.add_tables(multi_table_engine)
+        assert not any("after a session has started" in str(x.message) for x in w)
+        assert qc.table_names() == ["users"]
+
+    def test_remove_after_sessions_started_raises(self, sample_df):
+        qc = QueryChatBase(sample_df, "users")
+        qc.add_table(sample_df, "other")
+        qc._sessions_started = True
+
+        with pytest.raises(RuntimeError, match="replace or remove"):
+            qc.remove_table("other")
+        assert qc.table_names() == ["users", "other"]
+
+    def test_add_tables_replace_after_sessions_started_raises(
+        self, multi_table_engine
+    ):
+        qc = QueryChatBase()
+        qc.add_tables(multi_table_engine)
+        qc._sessions_started = True
+
+        with pytest.raises(RuntimeError, match="replace or remove"):
+            qc.add_tables(multi_table_engine, replace=True)
+
+    def test_before_sessions_start_replace_closes_old_source_immediately(
+        self, sample_df
+    ):
+        qc = QueryChatBase(sample_df, "users")
+        old_source = qc._data_sources["users"]
+
+        with patch.object(old_source, "cleanup") as cleanup:
+            qc.add_table(sample_df, "users", replace=True)
+            cleanup.assert_called_once()
+
+    def test_data_sources_accessor_is_read_only(self, sample_df):
+        qc = QueryChatBase(sample_df, "users")
+        with pytest.raises(TypeError):
+            qc._data_sources["x"] = object()  # type: ignore[index]
+
+    def test_data_sources_accessor_is_empty_when_deferred(self):
+        assert dict(QueryChatBase(None, "users")._data_sources) == {}

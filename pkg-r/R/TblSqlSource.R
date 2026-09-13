@@ -22,8 +22,9 @@
 #' # Or collect the entire data frame into local memory
 #' dplyr::collect(result)
 #'
-#' # Finally, clean up when done with the database (closes the DB connection)
+#' # cleanup() is a no-op: you own `con`, so disconnect it yourself when done
 #' mtcars_source$cleanup()
+#' DBI::dbDisconnect(con, shutdown = TRUE)
 #'
 #' @export
 TblSqlSource <- R6::R6Class(
@@ -55,7 +56,7 @@ TblSqlSource <- R6::R6Class(
         )
       }
 
-      private$conn <- dbplyr::remote_con(tbl)
+      private$.conn <- dbplyr::remote_con(tbl)
       private$tbl <- tbl
 
       # Collect various signals to infer the table name
@@ -105,7 +106,7 @@ TblSqlSource <- R6::R6Class(
     #' @return A string containing schema information formatted for LLM prompts
     get_schema = function(categorical_threshold = 20, table_spec = NULL) {
       get_schema_impl(
-        private$conn,
+        private$.conn,
         self$table_name,
         categorical_threshold,
         columns = colnames(private$tbl),
@@ -119,7 +120,7 @@ TblSqlSource <- R6::R6Class(
       table_spec = NULL
     ) {
       details <- build_column_details_impl(
-        private$conn,
+        private$.conn,
         self$table_name,
         categorical_threshold,
         columns = colnames(private$tbl),
@@ -128,7 +129,7 @@ TblSqlSource <- R6::R6Class(
       )
       list(
         text = format_schema_from_details(
-          as.character(DBI::dbQuoteIdentifier(private$conn, self$table_name)),
+          as.character(DBI::dbQuoteIdentifier(private$.conn, self$table_name)),
           details
         ),
         columns = details
@@ -142,7 +143,7 @@ TblSqlSource <- R6::R6Class(
     #' @return A data frame containing query results
     execute_query = function(query) {
       sql_query <- self$prep_query(query)
-      dplyr::tbl(private$conn, dplyr::sql(sql_query))
+      dplyr::tbl(private$.conn, dplyr::sql(sql_query))
     },
 
     #' @description
@@ -173,7 +174,7 @@ TblSqlSource <- R6::R6Class(
 
       sprintf(
         "WITH %s AS (\n%s\n)\n%s",
-        DBI::dbQuoteIdentifier(private$conn, self$table_name),
+        DBI::dbQuoteIdentifier(private$.conn, self$table_name),
         private$tbl_cte,
         query
       )
@@ -188,9 +189,9 @@ TblSqlSource <- R6::R6Class(
     },
 
     #' @description
-    #' Clean up resources (close connections, etc.)
+    #' No-op: the connection behind the `tbl_sql` is owned by the caller.
     #'
-    #' @return NULL (invisibly)
+    #' @return `NULL` (invisibly)
     cleanup = function() {
       super$cleanup()
     }

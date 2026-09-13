@@ -69,7 +69,7 @@ DataFrameSource <- R6::R6Class(
       self$table_name <- table_name
       private$colnames <- colnames(df)
 
-      private$conn <- new_dataframe_connection(df, table_name, engine)
+      private$.conn <- new_dataframe_connection(df, table_name, engine)
     },
 
     #' @description
@@ -77,11 +77,11 @@ DataFrameSource <- R6::R6Class(
     #'
     #' @return NULL (invisibly)
     cleanup = function() {
-      if (!is.null(private$conn) && DBI::dbIsValid(private$conn)) {
-        if (inherits(private$conn, "duckdb_connection")) {
-          DBI::dbDisconnect(private$conn, shutdown = TRUE)
+      if (!is.null(private$.conn) && DBI::dbIsValid(private$.conn)) {
+        if (inherits(private$.conn, "duckdb_connection")) {
+          DBI::dbDisconnect(private$.conn, shutdown = TRUE)
         } else {
-          DBI::dbDisconnect(private$conn)
+          DBI::dbDisconnect(private$.conn)
         }
       }
       invisible(NULL)

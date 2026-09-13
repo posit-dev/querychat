@@ -398,3 +398,47 @@ describe("QueryChat + PinSource integration", {
     qc$cleanup()
   })
 })
+
+test_that("PinSource$cleanup() disconnects the connection it opened", {
+  skip_if_not_installed("pins")
+  skip_if_not_installed("duckdb")
+  skip_if_not_installed("nanoparquet")
+
+  ps <- local_pin_source(type = "parquet")
+  conn <- ps$conn
+
+  ps$cleanup()
+
+  expect_false(DBI::dbIsValid(conn))
+})
+
+describe("PinSource multi-table registration", {
+  skip_if_not_installed("pins")
+  skip_if_not_installed("duckdb")
+  skip_if_not_installed("nanoparquet")
+
+  it("rejects a second pin via check_source_compatibility", {
+    ps1 <- local_pin_source(name = "pin_a", type = "parquet")
+    ps2 <- local_pin_source(name = "pin_b", type = "parquet")
+
+    expect_error(
+      check_source_compatibility(list(pin_a = ps1), ps2, "pin_b"),
+      "only one pin"
+    )
+  })
+
+  it("QueryChat$add_table() rejects a second pin", {
+    board <- pins::board_temp()
+    suppressMessages(
+      pins::pin_write(board, mtcars[1:5, ], "pin_a", type = "parquet")
+    )
+    suppressMessages(
+      pins::pin_write(board, mtcars[1:5, ], "pin_b", type = "parquet")
+    )
+
+    qc <- QueryChat$new(board, "pin_a")
+    withr::defer(qc$cleanup())
+
+    expect_error(qc$add_table(board, "pin_b"), "only one pin")
+  })
+})

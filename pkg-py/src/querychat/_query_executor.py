@@ -284,7 +284,9 @@ def check_source_compatibility(
     # through its own private connection and DataSourceExecutor delegates all
     # queries to the first one.
     if isinstance(new_source, PinSource):
-        raise ValueError(
+        # ValueError like the neighboring checks: this is a group constraint
+        # violation, not a wrong-argument-type error (contra TRY004).
+        raise ValueError(  # noqa: TRY004
             f"Cannot add pin '{new_name}': only one pin table is supported per "
             "chat. Each pin queries through its own DuckDB connection, so "
             "cross-pin queries can't run. To combine a pin with other tables, "

@@ -263,7 +263,7 @@ check_source_compatibility <- function(existing_sources, new_source, new_name) {
     cli::cli_abort(
       c(
         "Cannot add pin {.val {new_name}}: only one pin table is supported per chat.",
-        "i" = "Each pin queries through its own connection, so cross-pin queries can't run.",
+        "i" = "Each pin queries through its own connection, so only the first pin's table would be queryable.",
         "i" = "To combine a pin with other tables, register them in a shared DuckDB connection and pass that instead."
       )
     )

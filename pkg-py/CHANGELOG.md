@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `cleanup()` no longer closes a spec-resolved `.server(client=...)` override while its session is still running; it is closed when the session ends.
 
-* Registering a second pins table with `add_table()` now raises a clear error at registration time instead of failing at query time: each pin queries through its own DuckDB connection, so cross-pin queries can't run. To combine a pin with other tables, register them in a shared DuckDB connection and pass that instead.
+* Registering a second pins table with `add_table()` now raises a clear error at registration time instead of failing at query time: each pin queries through its own DuckDB connection, so only the first pin's table would be queryable. To combine a pin with other tables, register them in a shared DuckDB connection and pass that instead.
 
 ## [0.8.0] - 2026-09-12
 

@@ -288,9 +288,10 @@ def check_source_compatibility(
         # violation, not a wrong-argument-type error (contra TRY004).
         raise ValueError(  # noqa: TRY004
             f"Cannot add pin '{new_name}': only one pin table is supported per "
-            "chat. Each pin queries through its own DuckDB connection, so "
-            "cross-pin queries can't run. To combine a pin with other tables, "
-            "register them in a shared DuckDB connection and pass that instead."
+            "chat. Each pin queries through its own DuckDB connection, so only "
+            "the first pin's table would be queryable. To combine a pin with "
+            "other tables, register them in a shared DuckDB connection and "
+            "pass that instead."
         )
 
     if isinstance(new_source, DataFrameSource) and isinstance(

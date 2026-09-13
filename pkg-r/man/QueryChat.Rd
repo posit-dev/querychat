@@ -225,11 +225,13 @@ used. See the package prompts directory for the default template
 format.}
       \item{\code{data_dict}}{Optional data dictionary. A path to a YAML file, or a
 list of YAML file paths. See \code{\link[=read_data_dict]{read_data_dict()}} for the expected format.}
-      \item{\code{cleanup}}{Whether or not to automatically run \verb{$cleanup()} when the
-Shiny app stops. By default, cleanup only occurs if \code{QueryChat} gets
-created while a Shiny app is running (for example, at the top level of
-\code{app.R}). Set to \code{TRUE} to always clean up, or \code{FALSE} to never clean
-up automatically.}
+      \item{\code{cleanup}}{Whether or not to automatically run \verb{$cleanup()}. By
+default, cleanup only occurs if \code{QueryChat} gets created while a Shiny
+app is running: when created inside a session (e.g., in the server
+function), cleanup runs when that session ends; when created outside
+a session (e.g., at the top level of \code{app.R}), it runs when the app
+stops. Set to \code{TRUE} to always clean up, or \code{FALSE} to never clean up
+automatically.}
     }
     \if{html}{\out{</div>}}
   }

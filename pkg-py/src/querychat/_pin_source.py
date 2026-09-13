@@ -135,10 +135,13 @@ class PinSource(DataSource[nw.DataFrame]):
 
         self._pin_meta_obj = board.pin_meta(name, version=version)
         # Snapshot the resolved version so register_into() reads the same pin
-        # content even if the pin is updated after construction.
-        self._version: str | None = (
-            getattr(self._pin_meta_obj.version, "version", None) or version
-        )
+        # content even if the pin is updated after construction. meta.version
+        # is a Version/VersionRaw (unwrap .version) or a plain string on some
+        # boards (e.g. Connect GUIDs).
+        resolved = getattr(self._pin_meta_obj.version, "version", None)
+        if not isinstance(resolved, str):
+            resolved = self._pin_meta_obj.version
+        self._version: str | None = resolved if isinstance(resolved, str) else version
 
         conn = duckdb.connect()
         try:

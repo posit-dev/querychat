@@ -80,6 +80,15 @@ class PinSource(DataSource[nw.DataFrame]):
     :class:`~querychat.QueryChat` uses them as the default
     ``data_description``, which you can override.
 
+    Multiple pins
+    ~~~~~~~~~~~~~
+
+    Multiple pins (and pins mixed with data frames) can be combined in one
+    chat: every table is materialized into a shared DuckDB connection, so
+    the LLM can join and filter across them. Each pin still keeps its own
+    private connection for source-level operations; the shared connection
+    is owned by the query executor.
+
     Lazy queries with pins
     ~~~~~~~~~~~~~~~~~~~~~~
 
@@ -118,61 +127,17 @@ class PinSource(DataSource[nw.DataFrame]):
         effective_table_name = _sanitize_table_name(table_name or name)
         self.table_name = effective_table_name
 
+        # Retained so the pin can be re-materialized into a shared DuckDB
+        # connection when it joins a multi-table executor (register_into()).
+        self._board = board
+        self._pin_name = name
+        self._version = version
+
         self._pin_meta_obj = board.pin_meta(name, version=version)
-        pin_type = self._pin_meta_obj.type
 
         conn = duckdb.connect()
         try:
-            if pin_type in DUCKDB_FILE_TYPES:
-                paths = board.pin_download(name, version=version)
-                if len(paths) != 1:
-                    raise ValueError(
-                        f"Pin '{name}' contains {len(paths)} files, but PinSource "
-                        "requires a single-file pin (as created by pin_write())."
-                    )
-                reader_fn = DUCKDB_READER_FN[pin_type]
-                if pin_type == "json":
-                    conn.execute("INSTALL json")
-                    conn.execute("LOAD json")
-                conn.execute(
-                    f'CREATE TABLE "{effective_table_name}" AS '
-                    f"SELECT * FROM {reader_fn}(?)",
-                    [paths[0]],
-                )
-            elif pin_type == "arrow" and _has_polars():
-                # Arrow/IPC files can't be read natively by DuckDB, but
-                # polars can read them directly — avoiding pin_read() overhead.
-                import polars as pl
-
-                paths = board.pin_download(name, version=version)
-                if len(paths) != 1:
-                    raise ValueError(
-                        f"Pin '{name}' contains {len(paths)} files, but PinSource "
-                        "requires a single-file pin (as created by pin_write())."
-                    )
-                arrow_df = pl.read_ipc(paths[0])
-                vname = f"__pin_staging_{effective_table_name}"
-                conn.register(vname, arrow_df)
-                conn.execute(
-                    f'CREATE TABLE "{effective_table_name}" AS SELECT * FROM "{vname}"'
-                )
-                conn.unregister(vname)
-            else:
-                import pandas as pd
-
-                data = board.pin_read(name, version=version)
-                if not isinstance(data, pd.DataFrame):
-                    raise TypeError(
-                        f"Pin '{name}' contains {type(data).__name__}, not a DataFrame. "
-                        "PinSource requires the pin to contain a pandas DataFrame."
-                    )
-                vname = f"__pin_staging_{effective_table_name}"
-                conn.register(vname, data)
-                conn.execute(
-                    f'CREATE TABLE "{effective_table_name}" AS SELECT * FROM "{vname}"'
-                )
-                conn.unregister(vname)
-
+            self._materialize_into(conn, effective_table_name)
             duckdb_lock_down(conn)
         except Exception:
             conn.close()
@@ -183,6 +148,73 @@ class PinSource(DataSource[nw.DataFrame]):
         # Store column names for validation
         result = self._conn.execute(f'SELECT * FROM "{effective_table_name}" LIMIT 0')
         self._colnames = [desc[0] for desc in result.description]
+
+    def _materialize_into(self, conn: duckdb.DuckDBPyConnection, table_name: str):
+        """
+        Materialize the pin as a real table in ``conn``.
+
+        Does not lock the connection down; the caller owns ``conn`` and
+        decides when (or whether) to call :func:`duckdb_lock_down`.
+        """
+        board, name, version = self._board, self._pin_name, self._version
+        pin_type = self._pin_meta_obj.type
+
+        if pin_type in DUCKDB_FILE_TYPES:
+            paths = board.pin_download(name, version=version)
+            if len(paths) != 1:
+                raise ValueError(
+                    f"Pin '{name}' contains {len(paths)} files, but PinSource "
+                    "requires a single-file pin (as created by pin_write())."
+                )
+            reader_fn = DUCKDB_READER_FN[pin_type]
+            if pin_type == "json":
+                conn.execute("INSTALL json")
+                conn.execute("LOAD json")
+            conn.execute(
+                f'CREATE TABLE "{table_name}" AS SELECT * FROM {reader_fn}(?)',
+                [paths[0]],
+            )
+        elif pin_type == "arrow" and _has_polars():
+            # Arrow/IPC files can't be read natively by DuckDB, but
+            # polars can read them directly — avoiding pin_read() overhead.
+            import polars as pl
+
+            paths = board.pin_download(name, version=version)
+            if len(paths) != 1:
+                raise ValueError(
+                    f"Pin '{name}' contains {len(paths)} files, but PinSource "
+                    "requires a single-file pin (as created by pin_write())."
+                )
+            arrow_df = pl.read_ipc(paths[0])
+            vname = f"__pin_staging_{table_name}"
+            conn.register(vname, arrow_df)
+            conn.execute(f'CREATE TABLE "{table_name}" AS SELECT * FROM "{vname}"')
+            conn.unregister(vname)
+        else:
+            import pandas as pd
+
+            data = board.pin_read(name, version=version)
+            if not isinstance(data, pd.DataFrame):
+                raise TypeError(
+                    f"Pin '{name}' contains {type(data).__name__}, not a DataFrame. "
+                    "PinSource requires the pin to contain a pandas DataFrame."
+                )
+            vname = f"__pin_staging_{table_name}"
+            conn.register(vname, data)
+            conn.execute(f'CREATE TABLE "{table_name}" AS SELECT * FROM "{vname}"')
+            conn.unregister(vname)
+
+    def register_into(
+        self, conn: duckdb.DuckDBPyConnection, table_name: str | None = None
+    ) -> None:
+        """
+        Materialize this pin into a shared DuckDB connection.
+
+        Internal hook for joining a shared DuckDB executor (multiple pins, or
+        pins mixed with data frames). The caller owns ``conn`` and locks it
+        down once all tables are materialized.
+        """
+        self._materialize_into(conn, table_name or self.table_name)
 
     def get_db_type(self) -> str:
         return "DuckDB"

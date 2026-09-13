@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from ._datasource import DataFrameSource, DataSource, PolarsLazySource
+    from ._pin_source import PinSource
 
 
 class QueryExecutor(ABC):
@@ -77,14 +78,20 @@ class QueryExecutor(ABC):
 
 
 class DuckDBExecutor(QueryExecutor):
-    """Shared DuckDB connection for multi-table DataFrameSource queries."""
+    """
+    Shared DuckDB connection for multi-table DataFrameSource/PinSource queries.
 
-    def __init__(self, sources: dict[str, DataFrameSource]):
-        self._df_lib = get_shared_dataframe_backend(sources)
+    Every source materializes its table into one connection (data frames via
+    ``register()``, pins via their file-based materialization), then the
+    connection is locked down once.
+    """
+
+    def __init__(self, sources: dict[str, DataFrameSource | PinSource]):
+        self._df_lib = get_shared_duckdb_result_backend(sources)
         self._conn = duckdb.connect(database=":memory:")
 
         for name, source in sources.items():
-            self._conn.register(name, source.get_data())
+            source.register_into(self._conn, name)
 
         # Cache column names per table before lockdown
         self._table_columns: dict[str, list[str]] = {}
@@ -228,22 +235,38 @@ class DataSourceExecutor(QueryExecutor):
         )
 
 
-def get_shared_dataframe_backend(sources: dict[str, DataFrameSource]) -> str:
-    """Return the shared backend name, rejecting mixed DataFrameSource backends."""
-    source_items = iter(sources.items())
-    _, first_source = next(source_items)
-    shared_lib = get_dataframe_backend_name(first_source)
+def get_shared_duckdb_result_backend(
+    sources: dict[str, DataFrameSource | PinSource],
+) -> str:
+    """
+    Pick the result DataFrame backend for a shared DuckDB executor.
 
-    for name, source in source_items:
+    DataFrameSources determine the backend (and must agree with each other);
+    pins have no native backend of their own, so an all-pin group follows
+    PinSource's own convention: polars when available, pandas otherwise.
+    """
+    from ._datasource import DataFrameSource
+
+    shared_lib: str | None = None
+    for name, source in sources.items():
+        if not isinstance(source, DataFrameSource):
+            continue
         source_lib = get_dataframe_backend_name(source)
-        if source_lib != shared_lib:
+        if shared_lib is None:
+            shared_lib = source_lib
+        elif source_lib != shared_lib:
             raise ValueError(
                 f"Cannot add table '{name}': all DataFrameSources must use "
                 f"the same DataFrame backend. "
                 f"Existing tables use {shared_lib}, new table uses {source_lib}."
             )
 
-    return shared_lib
+    if shared_lib is not None:
+        return shared_lib
+
+    from ._pin_source import _has_polars
+
+    return "polars" if _has_polars() else "pandas"
 
 
 def validate_source_group_compatibility(data_sources: dict[str, DataSource]) -> None:
@@ -272,39 +295,41 @@ def check_source_compatibility(
 
     first_source = next(iter(existing.values()))
 
+    duckdb_family = (DataFrameSource, PinSource)
+    new_is_duckdb = isinstance(new_source, duckdb_family)
+    first_is_duckdb = isinstance(first_source, duckdb_family)
+
+    # DataFrameSources and PinSources may mix freely: both materialize their
+    # tables into a shared DuckDBExecutor connection.
+    if new_is_duckdb and first_is_duckdb:
+        if isinstance(new_source, DataFrameSource):
+            new_lib = get_dataframe_backend_name(new_source)
+            for source in existing.values():
+                if not isinstance(source, DataFrameSource):
+                    continue
+                existing_lib = get_dataframe_backend_name(source)
+                if new_lib != existing_lib:
+                    raise ValueError(
+                        f"Cannot add table '{new_name}': all DataFrameSources "
+                        f"must use the same DataFrame backend. "
+                        f"Existing tables use {existing_lib}, new table uses {new_lib}."
+                    )
+        return
+
+    if new_is_duckdb != first_is_duckdb:
+        raise ValueError(
+            f"Cannot add {type(new_source).__name__} table '{new_name}': "
+            f"{type(first_source).__name__} tables can only be combined with "
+            "other tables of the same type. Pins and data frames may be "
+            "combined with each other, but not with database-backed sources."
+        )
+
     if type(new_source) is not type(first_source):
         raise ValueError(
             f"Cannot add {type(new_source).__name__} table '{new_name}': "
             f"all tables must be the same type. "
             f"Existing tables use {type(first_source).__name__}."
         )
-
-    # Reached only when the existing sources are also PinSources: a second pin
-    # would validate here but fail at query time, since each pin queries
-    # through its own private connection and DataSourceExecutor delegates all
-    # queries to the first one.
-    if isinstance(new_source, PinSource):
-        # ValueError like the neighboring checks: this is a group constraint
-        # violation, not a wrong-argument-type error (contra TRY004).
-        raise ValueError(  # noqa: TRY004
-            f"Cannot add pin '{new_name}': only one pin table is supported per "
-            "chat. Each pin queries through its own DuckDB connection, so only "
-            "the first pin's table would be queryable. To combine a pin with "
-            "other tables, register them in a shared DuckDB connection and "
-            "pass that instead."
-        )
-
-    if isinstance(new_source, DataFrameSource) and isinstance(
-        first_source, DataFrameSource
-    ):
-        new_lib = get_dataframe_backend_name(new_source)
-        existing_lib = get_dataframe_backend_name(first_source)
-        if new_lib != existing_lib:
-            raise ValueError(
-                f"Cannot add table '{new_name}': all DataFrameSources must use "
-                f"the same DataFrame backend. "
-                f"Existing tables use {existing_lib}, new table uses {new_lib}."
-            )
 
     if (
         isinstance(new_source, SQLAlchemySource)
@@ -337,8 +362,10 @@ def get_dataframe_backend_name(source: DataFrameSource) -> str:
 def build_query_executor(sources: Mapping[str, DataSource]) -> QueryExecutor:
     """Pick the executor for a compatible group of sources."""
     from ._datasource import DataFrameSource, PolarsLazySource
+    from ._pin_source import PinSource
 
-    # After validation, every source has the same type as the first one.
+    # After validation, every source has the same type as the first one,
+    # or the whole group is in the DuckDB family (DataFrameSource/PinSource).
     validate_source_group_compatibility(dict(sources))
 
     if len(sources) == 1:
@@ -346,8 +373,10 @@ def build_query_executor(sources: Mapping[str, DataSource]) -> QueryExecutor:
 
     first_source = next(iter(sources.values()))
 
-    if isinstance(first_source, DataFrameSource):
-        return DuckDBExecutor(cast("dict[str, DataFrameSource]", dict(sources)))
+    if isinstance(first_source, (DataFrameSource, PinSource)):
+        return DuckDBExecutor(
+            cast("dict[str, DataFrameSource | PinSource]", dict(sources))
+        )
     if isinstance(first_source, PolarsLazySource):
         return PolarsSQLExecutor(cast("dict[str, PolarsLazySource]", dict(sources)))
 

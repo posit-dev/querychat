@@ -501,6 +501,18 @@ class DataFrameSource(DataSource[IntoDataFrameT]):
         """
         return self._df.to_native()
 
+    def register_into(
+        self, conn: duckdb.DuckDBPyConnection, table_name: str | None = None
+    ) -> None:
+        """
+        Register this DataFrame in a shared DuckDB connection.
+
+        Internal hook for joining a shared DuckDB executor. The caller owns
+        ``conn`` and locks it down once all tables are registered.
+        """
+        # NOTE: if native representation is polars, pyarrow is required for registration
+        conn.register(table_name or self.table_name, self.get_data())
+
     def cleanup(self) -> None:
         """
         Close the DuckDB connection.

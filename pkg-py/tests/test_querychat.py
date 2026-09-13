@@ -2,20 +2,15 @@ import asyncio
 import os
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import ibis
-import narwhals.stable.v1 as nw
 import pandas as pd
 import polars as pl
 import pytest
 from querychat import QueryChat
-from querychat._datasource import (
-    DataFrameSource,
-    DataSource,
-    IbisSource,
-    PolarsLazySource,
-)
+from querychat._datasource import IbisSource, PolarsLazySource
+from querychat._querychat_base import normalize_data_source
 from sqlalchemy import create_engine, text
 
 
@@ -440,10 +435,10 @@ def test_remove_table_prunes_greeter_tables(sqlite_engine):
 
 class TestGreeterSnapshotOverrides:
     """
-    _generate_async_snapshot() renders from an explicit tables/data_sources
-    snapshot instead of live shared state, which a later Shiny session may
-    have mutated before an earlier session's async greeting runs. The
-    public build_client()/generate()/generate_async() API is unaffected.
+    generate_async() renders from an explicit tables/table_set snapshot
+    instead of live shared state, which a later Shiny session may have
+    mutated before an earlier session's async greeting runs. The public
+    build_client()/generate()/generate_async() API is unaffected.
     """
 
     def test_build_client_uses_live_state(self, sample_df):
@@ -463,8 +458,8 @@ class TestGreeterSnapshotOverrides:
 
         with patch("chatlas.Chat.stream_async", fake_stream_async):
             asyncio.run(
-                qc.greeter._generate_async_snapshot(
-                    base=None, tables=["test_table"], data_sources=qc._data_sources
+                qc.greeter.generate_async(
+                    base=None, tables=["test_table"], table_set=qc._table_set
                 )
             )
 
@@ -473,25 +468,16 @@ class TestGreeterSnapshotOverrides:
 
     def test_snapshot_data_sources_override_ignores_live_data_sources(self, sample_df):
         qc = QueryChat(sample_df, "test_table")
-        other_df = pd.DataFrame({"z": [1, 2, 3]})
-        snapshot: dict[str, DataSource] = {
-            "other_table": DataFrameSource(
-                nw.from_native(other_df, eager_only=True), "other_table"
-            )
-        }
-        seen: dict[str, str | None] = {}
+        other_set = qc._build_table_set(
+            {"other": normalize_data_source(pd.DataFrame({"x": [1]}), "other")}
+        )
+        seen = {}
 
-        async def fake_stream_async(self, *args, **kwargs):
-            seen["system_prompt"] = self.system_prompt
-            return "stream"
+        def factory(tables, prompt, base=None, *, table_set=None):
+            seen["tables"] = tables
+            seen["table_set"] = table_set
+            return MagicMock(stream_async=AsyncMock(return_value="stream"))
 
-        with patch("chatlas.Chat.stream_async", fake_stream_async):
-            asyncio.run(
-                qc.greeter._generate_async_snapshot(
-                    base=None, tables=["other_table"], data_sources=snapshot
-                )
-            )
-
-        assert seen["system_prompt"] is not None
-        assert "other_table" in seen["system_prompt"]
-        assert "test_table" not in seen["system_prompt"]
+        qc.greeter._client_factory = factory
+        asyncio.run(qc.greeter.generate_async(tables=["other"], table_set=other_set))
+        assert seen == {"tables": ["other"], "table_set": other_set}

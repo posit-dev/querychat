@@ -226,7 +226,7 @@ class TestQueryChatPinSourceIntegration:
         ps = PinSource(board, "cars")
         qc = QueryChat(data_source=ps, table_name="cars", greeting="Hi")
         try:
-            prompt = qc._system_prompt.render(qc.tools)
+            prompt = qc._table_set.system_prompt.render(qc.tools)
             assert "Motor Trend Cars" in prompt
             assert "Road test data" in prompt
         finally:
@@ -249,7 +249,7 @@ class TestQueryChatPinSourceIntegration:
             data_description="Custom description",
         )
         try:
-            prompt = qc._system_prompt.render(qc.tools)
+            prompt = qc._table_set.system_prompt.render(qc.tools)
             assert "Custom description" in prompt
             assert "Motor Trend Cars" not in prompt
         finally:
@@ -273,7 +273,7 @@ class TestQueryChatPinSourceIntegration:
         )
         try:
             qc.add_table(sample_df, "cars", replace=True)
-            prompt = qc._system_prompt.render(qc.tools)
+            prompt = qc._table_set.system_prompt.render(qc.tools)
             assert "Custom description" in prompt
             assert "Motor Trend Cars" not in prompt
         finally:
@@ -291,11 +291,11 @@ class TestQueryChatPinSourceIntegration:
         ps = PinSource(board, "cars")
         qc = QueryChat(data_source=ps, table_name="cars", greeting="Hi")
         try:
-            prompt_before = qc._system_prompt.render(qc.tools)
+            prompt_before = qc._table_set.system_prompt.render(qc.tools)
             assert "Motor Trend Cars" in prompt_before
 
             qc.add_table(sample_df, "cars", replace=True)
-            prompt_after = qc._system_prompt.render(qc.tools)
+            prompt_after = qc._table_set.system_prompt.render(qc.tools)
             assert "Motor Trend Cars" not in prompt_after
         finally:
             qc.cleanup()

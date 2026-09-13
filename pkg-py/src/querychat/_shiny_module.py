@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from ._datasource import DataSource
     from ._query_executor import QueryExecutor
     from ._querychat_greeter import QueryChatGreeter
+    from ._table_set import TableSet
     from ._viz_tools import VisualizeData
     from .types import UpdateDashboardData
 
@@ -240,8 +241,7 @@ def mod_server(
     output: Outputs,
     session: Session,
     *,
-    data_sources: dict[str, DataSource[IntoFrameT]] | None,
-    executor: QueryExecutor | None,
+    table_set: TableSet | None,
     greeting: str | None,
     client: Callable[..., chatlas.Chat],
     history: bool | HistoryOptions,
@@ -249,21 +249,25 @@ def mod_server(
     greeter: QueryChatGreeter,
     greeting_base: chatlas.Chat | None = None,
     greeting_tables: list[str] | None = None,
-) -> ServerValues[IntoFrameT]:
+    # TableSet erases each DataSource's frame type for uniform executor handling,
+    # so IntoFrameT can't be bound from any parameter here. There's no way to
+    # express the real return type, so callers (e.g. QueryChat.server()) must
+    # cast/annotate the result as ServerValues[IntoFrameT] themselves.
+) -> ServerValues[Any]:
     if not callable(client):
         raise TypeError("mod_server() requires a callable client factory.")
 
-    table_states: dict[str, TableState[IntoFrameT]] = {}
+    table_states: dict[str, TableState[Any]] = {}
     _current_table: ReactiveStringOrNone = ReactiveStringOrNone(None)
 
     def _make_table_state(
-        source: DataSource[IntoFrameT], exec: QueryExecutor
-    ) -> TableState[IntoFrameT]:
+        source: DataSource[Any], exec: QueryExecutor
+    ) -> TableState[Any]:
         table_sql = ReactiveStringOrNone(None)
         table_title = ReactiveStringOrNone(None)
 
         @reactive.calc
-        def filtered_df() -> IntoFrameT:
+        def filtered_df() -> Any:
             query = table_sql.get()
             if query:
                 return exec.execute_query(query)
@@ -299,14 +303,14 @@ def mod_server(
         )
 
     # Short-circuit for stub sessions (e.g. 1st run of an Express app)
-    # data_sources may be None during stub session for deferred pattern
+    # table_set may be None during stub session for deferred pattern
     if session.is_stub_session():
         # Mock the error that would otherwise occur in a real session
         def _stub_df():
             raise RuntimeError("RuntimeError: No current reactive context")
 
         stub_client = (
-            _DeferredStubChatClient() if data_sources is None else build_chat_client()
+            _DeferredStubChatClient() if table_set is None else build_chat_client()
         )
 
         return ServerValues(
@@ -315,16 +319,18 @@ def mod_server(
             title=ReactiveStringOrNone(None),
             tables={},
             client=stub_client,
-            data_sources=data_sources or {},
+            data_sources=dict(table_set.data_sources) if table_set else {},
             current_table=ReactiveStringOrNone(None),
         )
 
-    # Real session requires data_sources and executor
-    if data_sources is None or executor is None:
+    if table_set is None:
         raise RuntimeError(
             "At least one table must be registered before the session starts. "
             "Call add_table() before server(), or pass the data to the QueryChat constructor."
         )
+
+    data_sources = dict(table_set.data_sources)
+    executor = table_set.executor
 
     for name, source in data_sources.items():
         table_states[name] = _make_table_state(source, executor)
@@ -345,10 +351,10 @@ def mod_server(
             GreetWarning,
             stacklevel=1,
         )
-        stream = await greeter._generate_async_snapshot(
+        stream = await greeter.generate_async(
             base=greeting_base,
             tables=greeting_tables,
-            data_sources=data_sources,
+            table_set=table_set,
         )
         return shinychat.chat_greeting(stream, persistent=True)
 
@@ -472,7 +478,7 @@ def mod_server(
     df_warned = False
 
     @reactive.calc
-    def _multi_table_df() -> IntoFrameT:
+    def _multi_table_df() -> Any:
         nonlocal df_warned
         if not df_warned:
             df_warned = True

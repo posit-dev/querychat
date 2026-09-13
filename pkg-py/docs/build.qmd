@@ -187,6 +187,8 @@ app = App(app_ui, server)
 
 If your chat client also depends on session-scoped credentials, you can defer that too by passing it to `qc.server(client=...)` alongside the `data_source`.
 
+A data source passed to `qc.server()` belongs to that session: other sessions never see it, it does not change the tables registered on `qc`, and querychat cleans up any connection it created for it when the session ends. If you create the connection yourself (a SQLAlchemy engine, an Ibis backend), closing it is up to you; `session.on_ended` is a good place.
+
 :::
 
 :::

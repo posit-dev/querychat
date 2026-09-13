@@ -105,7 +105,7 @@ class TestStateDictQueryChatMultiTable:
 
         class DummyAccessor(StateDictQueryChat):
             def __init__(self):
-                self._data_sources = dict(qc._data_sources)
+                self._table_set = qc._table_set
                 self._query_executor = qc._require_query_executor("test")
                 self.greeting = None
 

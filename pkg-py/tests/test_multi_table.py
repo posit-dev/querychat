@@ -2,6 +2,7 @@
 
 import os
 import tempfile
+from collections.abc import Mapping
 from pathlib import Path
 from unittest.mock import patch
 
@@ -13,6 +14,7 @@ from querychat._datasource import DataFrameSource
 from querychat._query_executor import (
     DataSourceExecutor,
     DuckDBExecutor,
+    build_query_executor,
     check_source_compatibility,
 )
 from querychat._querychat_base import QueryChatBase, normalize_data_source
@@ -169,12 +171,12 @@ class TestMultiSourceStorage:
     """Tests for multi-source storage infrastructure."""
 
     def test_single_table_stored_in_data_sources(self, orders_df):
-        """Test that single table is stored in _data_sources dict."""
+        """Test that single table is stored in the _data_sources mapping."""
         qc = QueryChat(orders_df, "orders", greeting="Hello!")
 
-        # Should have _data_sources dict with one entry
+        # Should have a read-only _data_sources mapping with one entry
         assert hasattr(qc, "_data_sources")
-        assert isinstance(qc._data_sources, dict)
+        assert isinstance(qc._data_sources, Mapping)
         assert "orders" in qc._data_sources
         assert len(qc._data_sources) == 1
 
@@ -215,10 +217,10 @@ class TestAddTable:
     def test_add_table_after_server_raises(self, orders_df, customers_df):
         """Test that adding table after server init raises error."""
         qc = QueryChat(orders_df, "orders", greeting="Hello!")
-        qc._active_sessions = 1  # Simulate a live session
+        qc._sessions_started = True  # Simulate a live session
 
-        with pytest.raises(RuntimeError, match="Cannot add tables while a server session"):
-            qc.add_table(customers_df, "customers")
+        with pytest.raises(RuntimeError, match="replace or remove"):
+            qc.add_table(orders_df, "orders", replace=True)
 
 
 class TestRemoveTable:
@@ -251,9 +253,9 @@ class TestRemoveTable:
         """Test that removing table after server init raises error."""
         qc = QueryChat(orders_df, "orders", greeting="Hello!")
         qc.add_table(customers_df, "customers")
-        qc._active_sessions = 1
+        qc._sessions_started = True
 
-        with pytest.raises(RuntimeError, match="Cannot remove tables while a server session"):
+        with pytest.raises(RuntimeError, match="replace or remove"):
             qc.remove_table("customers")
 
 
@@ -408,7 +410,7 @@ class TestSourceCompatibility:
 
 class TestBuildQueryExecutor:
     def test_executor_none_before_first_use(self, orders_qc):
-        assert orders_qc._query_executor is None
+        assert orders_qc._table_set.executor_built is False
 
     def test_single_table_uses_data_source_executor(self, orders_qc):
         assert isinstance(orders_qc._require_query_executor("test"), DataSourceExecutor)
@@ -418,15 +420,19 @@ class TestBuildQueryExecutor:
         assert isinstance(orders_qc._require_query_executor("test"), DuckDBExecutor)
 
     def test_executor_invalidated_on_add_table(self, orders_qc, customers_df):
-        orders_qc._require_query_executor("test")  # build it
+        before = orders_qc._table_set
+        orders_qc._require_query_executor("test")
         orders_qc.add_table(customers_df, "customers")
-        assert orders_qc._query_executor is None
+        assert orders_qc._table_set is not before
+        assert orders_qc._table_set.executor_built is False
 
     def test_executor_invalidated_on_remove_table(self, orders_qc, customers_df):
         orders_qc.add_table(customers_df, "customers")
-        orders_qc._require_query_executor("test")  # build it
+        before = orders_qc._table_set
+        orders_qc._require_query_executor("test")
         orders_qc.remove_table("customers")
-        assert orders_qc._query_executor is None
+        assert orders_qc._table_set is not before
+        assert orders_qc._table_set.executor_built is False
 
     def test_executor_cached_after_build(self, orders_qc):
         first = orders_qc._require_query_executor("test")
@@ -445,46 +451,18 @@ class TestBuildQueryExecutor:
 
     def test_deferred_executor_is_none(self):
         qc = QueryChatBase(None, "test")
-        assert qc._query_executor is None
+        assert qc._table_set is None
 
     def test_rejects_inconsistent_internal_source_group(self, orders_qc):
-        orders_qc._data_sources["customers"] = normalize_data_source(
-            pl.DataFrame(
-                {
-                    "id": [101, 102],
-                    "name": ["Alice", "Bob"],
-                }
+        sources = {
+            "orders": orders_qc._data_sources["orders"],
+            "customers": normalize_data_source(
+                pl.DataFrame({"id": [101, 102], "name": ["Alice", "Bob"]}),
+                "customers",
             ),
-            "customers",
-        )
-
+        }
         with pytest.raises(ValueError, match="same DataFrame backend"):
-            orders_qc._build_query_executor()
-
-    def test_cached_executor_survives_direct_source_mutation(
-        self, orders_qc, customers_df
-    ):
-        """Executor built lazily is not invalidated by direct _data_sources mutation."""
-        orders_qc.add_table(customers_df, "customers")
-        built = orders_qc._require_query_executor("test")
-
-        # Directly corrupt _data_sources (bypassing add_table) — executor should
-        # not be affected since invalidation only happens through add/remove_table.
-        orders_qc._data_sources["customers"] = normalize_data_source(
-            pl.DataFrame({"id": [101, 102], "name": ["Alice", "Bob"]}),
-            "customers",
-        )
-
-        assert orders_qc._query_executor is built
-        result = built.execute_query(
-            """
-            SELECT customers.name, orders.amount
-            FROM orders
-            JOIN customers ON orders.customer_id = customers.id
-            WHERE orders.id = 1
-            """
-        )
-        assert result.to_dict("records") == [{"name": "Alice", "amount": 100.0}]
+            build_query_executor(sources)
 
     def test_add_table_failure_cleans_staged_source_and_preserves_state(
         self, orders_qc, customers_df, monkeypatch
@@ -508,7 +486,7 @@ class TestBuildQueryExecutor:
             raise ValueError("compat check failed")
 
         monkeypatch.setattr(
-            "querychat._querychat_base.check_source_compatibility",
+            "querychat._query_executor.check_source_compatibility",
             fail_compat,
         )
 
@@ -546,7 +524,7 @@ class TestBuildQueryExecutor:
             raise ValueError("compat check failed")
 
         monkeypatch.setattr(
-            "querychat._querychat_base.check_source_compatibility",
+            "querychat._query_executor.check_source_compatibility",
             fail_compat,
         )
 
@@ -925,8 +903,8 @@ class TestMultiTableGuardrails:
 
         class DummyAccessor(StateDictQueryChat):
             def __init__(self):
-                self._data_sources = dict(qc._data_sources)
-                self._query_executor = qc._query_executor
+                self._table_set = qc._table_set
+                self._query_executor = qc._require_query_executor("test")
                 self.greeting = None
 
             def _require_initialized(self, _m):
@@ -954,8 +932,8 @@ class TestMultiTableGuardrails:
 
         class DummyAccessor(StateDictQueryChat):
             def __init__(self):
-                self._data_sources = dict(qc._data_sources)
-                self._query_executor = qc._query_executor
+                self._table_set = qc._table_set
+                self._query_executor = qc._require_query_executor("test")
                 self.greeting = None
 
             def _require_initialized(self, _m):
@@ -993,8 +971,8 @@ class TestMultiTableGuardrails:
 
         class DummyAccessor(StateDictQueryChat):
             def __init__(self):
-                self._data_sources = dict(qc._data_sources)
-                self._query_executor = qc._query_executor
+                self._table_set = qc._table_set
+                self._query_executor = qc._require_query_executor("test")
                 self.greeting = None
 
             def _require_initialized(self, _m):
@@ -1034,8 +1012,8 @@ class TestMultiTableGuardrails:
 
         class DummyAccessor(StateDictQueryChat):
             def __init__(self):
-                self._data_sources = dict(qc._data_sources)
-                self._query_executor = qc._query_executor
+                self._table_set = qc._table_set
+                self._query_executor = qc._require_query_executor("test")
                 self.greeting = None
 
             def _require_initialized(self, _m):
@@ -1135,7 +1113,6 @@ class TestDataDictListInput:
         )
         qc = QueryChat(orders_df, "orders", data_dict=[dd1, dd2])
         qc.add_table(customers_df, "customers")
-        qc._build_system_prompt()
-        rendered = qc._system_prompt.render(qc.tools)
+        rendered = qc._table_set.system_prompt.render(qc.tools)
         assert 'name="sales"' in rendered
         assert 'name="people"' in rendered

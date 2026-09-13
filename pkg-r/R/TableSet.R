@@ -48,7 +48,12 @@ TableSet <- R6::R6Class(
     # Closes the executor if it was ever built. Never touches data sources.
     cleanup_executor = function() {
       if (!is.null(private$.executor)) {
-        private$.executor$cleanup()
+        tryCatch(
+          private$.executor$cleanup(),
+          finally = {
+            private$.executor <- NULL
+          }
+        )
       }
       invisible(NULL)
     }

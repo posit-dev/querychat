@@ -68,6 +68,17 @@ test_that("TableSet$cleanup_executor() closes a built DuckDB executor", {
   ex <- ts$executor()
   ts$cleanup_executor()
   expect_error(ex$execute_query("SELECT 1"))
+  expect_false(ts$executor_built())
+})
+
+test_that("TableSet$cleanup_executor() is safe to call twice", {
+  skip_if_not_installed("duckdb")
+  a <- local_data_frame_source(new_test_df(), "a")
+  b <- local_data_frame_source(new_users_df(), "b")
+  ts <- local_table_set(list(a = a, b = b))
+  ts$executor()
+  ts$cleanup_executor()
+  expect_no_error(ts$cleanup_executor())
 })
 
 test_that("TableSet fields are read-only", {

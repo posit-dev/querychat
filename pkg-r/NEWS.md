@@ -71,6 +71,8 @@
 
 * A rejected or failed `$add_table()`/`$add_tables()` call (e.g. an incompatible source type) after a session has started no longer warns about the late change or otherwise affects the instance, since the change never took effect. (#311)
 
+* A failed `QueryChat$new()` (e.g. an unreadable `prompt_template`) no longer leaks the data source connection querychat created while normalizing its input; the source is cleaned up before the error propagates. Caller-supplied `DataSource` objects remain the caller's responsibility.
+
 
 # querychat 0.3.0
 

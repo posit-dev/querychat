@@ -1286,6 +1286,49 @@ describe("QueryChat$add_table()", {
   })
 })
 
+describe("QueryChat constructor rollback", {
+  it("cleans up a querychat-owned source when construction fails after normalization", {
+    skip_if_no_dataframe_engine()
+    disconnected <- FALSE
+    local_mocked_bindings(
+      dbDisconnect = function(...) {
+        disconnected <<- TRUE
+        TRUE
+      },
+      .package = "DBI"
+    )
+    local_mocked_bindings(
+      check_source_compatibility = function(...) {
+        cli::cli_abort("compat check failed")
+      },
+      .package = "querychat"
+    )
+
+    expect_error(
+      QueryChat$new(new_users_df(), "users", greeting = "hi"),
+      "compat check failed"
+    )
+    expect_true(disconnected)
+  })
+
+  it("leaves a caller-owned DataSource open when construction fails", {
+    skip_if_no_dataframe_engine()
+    source <- local_data_frame_source(new_users_df(), "users")
+    local_mocked_bindings(
+      check_source_compatibility = function(...) {
+        cli::cli_abort("compat check failed")
+      },
+      .package = "querychat"
+    )
+
+    expect_error(
+      QueryChat$new(source, "users", greeting = "hi"),
+      "compat check failed"
+    )
+    expect_true(DBI::dbIsValid(source$conn))
+  })
+})
+
 describe("QueryChat$add_tables()", {
   local_multi_table_conn <- function(env = parent.frame()) {
     skip_if_not_installed("RSQLite")

@@ -474,8 +474,21 @@ QueryChat <- R6::R6Class(
         }
         normalized <- normalize_data_source(data_source, table_name)
         sources <- stats::setNames(list(normalized), normalized$table_name)
-        private$auto_fill_data_description(sources)
-        private$.table_set <- private$build_table_set(sources)
+        # If construction fails from here on, no QueryChat object exists to
+        # clean up a source we created, so roll it back here. Caller-owned
+        # DataSource inputs are left alone, as in $add_table().
+        tryCatch(
+          {
+            private$auto_fill_data_description(sources)
+            private$.table_set <- private$build_table_set(sources)
+          },
+          error = function(e) {
+            if (!inherits(data_source, "DataSource")) {
+              warn_on_cleanup_failure(normalized$cleanup(), "data source")
+            }
+            stop(e)
+          }
+        )
         self$greeter$tables <- c(self$greeter$tables, normalized$table_name)
         self$id <- id %||% sprintf("querychat_%s", normalized$table_name)
       } else {

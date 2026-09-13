@@ -103,7 +103,7 @@ apply_handoff_max_tokens_override <- function(chat, max_tokens) {
   }
   new_model <- ellmer::Model(
     name = model@name,
-    params = modifyList(model@params, list(max_tokens = max_tokens)),
+    params = utils::modifyList(model@params, list(max_tokens = max_tokens)),
     extra_args = model@extra_args
   )
   chat$initialize(

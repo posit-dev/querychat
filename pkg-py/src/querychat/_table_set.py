@@ -32,10 +32,18 @@ class TableSet:
     ) -> None:
         if not data_sources:
             raise ValueError("TableSet requires at least one data source")
-        self.data_sources: Mapping[str, DataSource] = MappingProxyType(
+        self._data_sources: Mapping[str, DataSource] = MappingProxyType(
             dict(data_sources)
         )
-        self.system_prompt = system_prompt
+        self._system_prompt = system_prompt
+
+    @property
+    def data_sources(self) -> Mapping[str, DataSource]:
+        return self._data_sources
+
+    @property
+    def system_prompt(self) -> QueryChatSystemPrompt:
+        return self._system_prompt
 
     @cached_property
     def executor(self) -> QueryExecutor:

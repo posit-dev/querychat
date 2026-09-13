@@ -37,6 +37,18 @@ def test_data_sources_is_read_only(users):
         ts.data_sources["other"] = ts.data_sources["users"]  # type: ignore[index]
 
 
+def test_data_sources_attribute_is_read_only(users):
+    ts = make_table_set(users=users)
+    with pytest.raises(AttributeError):
+        ts.data_sources = {}  # type: ignore[misc]
+
+
+def test_system_prompt_attribute_is_read_only(users):
+    ts = make_table_set(users=users)
+    with pytest.raises(AttributeError):
+        ts.system_prompt = None  # type: ignore[misc]
+
+
 def test_table_names_preserve_insertion_order(users, orders):
     with pytest.warns(UserWarning, match="without a data_dict"):
         ts = make_table_set(users=users, orders=orders)

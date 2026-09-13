@@ -51,24 +51,6 @@ class FakeSession(MagicMock):
 
 
 @pytest.fixture
-def fake_sessions(monkeypatch):
-    """Patch mod_server/get_current_session; each server() call gets a new session."""
-    sessions: list[FakeSession] = []
-
-    def fake_mod_server(*args, **kwargs):
-        return MagicMock()
-
-    def next_session():
-        session = FakeSession()
-        sessions.append(session)
-        return session
-
-    monkeypatch.setattr(shiny_mod, "mod_server", fake_mod_server)
-    monkeypatch.setattr(shiny_mod, "get_current_session", next_session)
-    return sessions
-
-
-@pytest.fixture
 def session_runs(monkeypatch):
     """Each server() call gets a fresh FakeSession; mod_server kwargs are captured."""
     sessions: list[FakeSession] = []
@@ -259,6 +241,8 @@ class TestServerDataSourceSessionCleanup:
         qc.server()
         config_source = qc._data_sources["users"]
 
+        assert sessions[0]._ended_callbacks == []
+
         with (
             patch.object(config_source, "cleanup") as cleanup,
             patch.object(qc._table_set, "cleanup_executor") as cleanup_executor,
@@ -310,3 +294,35 @@ class TestServerDataSourceSessionCleanup:
 
         qc.server()
         assert calls[-1]["table_set"].table_names == ["users"]
+
+    def test_client_resolution_failure_still_cleans_up_session_source(
+        self, users_df, session_runs, monkeypatch
+    ):
+        """
+        A `.server(client=...)` override that fails to resolve must not leak
+        the session's own normalized data source: on_ended cleanup must already
+        be registered by the time client resolution can raise.
+        """
+        import duckdb
+
+        sessions, _calls = session_runs
+        qc = shiny_mod.QueryChat(None, table_name="users")
+        created = []
+        real_normalize = shiny_mod.normalize_data_source
+
+        def spy(data_source, table_name):
+            source = real_normalize(data_source, table_name)
+            created.append(source)
+            return source
+
+        monkeypatch.setattr(shiny_mod, "normalize_data_source", spy)
+
+        with pytest.raises(ValueError, match="not a known chatlas provider"):
+            qc.server(data_source=users_df, client="not-a-real-provider")
+
+        (session_source,) = created
+        assert sessions[0]._ended_callbacks != []
+
+        sessions[0].end()
+        with pytest.raises(duckdb.ConnectionException):
+            session_source.execute_query("SELECT 1")

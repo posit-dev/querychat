@@ -745,16 +745,18 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         if table_set is None:
             table_set = self._require_table_set("server")
 
-        resolved_client = self._resolve_session_client(client, session)
-
         if session_source is not None:
-            session_set, owned_source = table_set, session_source
+            session_set = table_set
+            owned_source = session_source if session_source is not data_source else None
 
             def cleanup_session() -> None:
                 warn_on_failure(session_set.cleanup_executor, "session query executor")
-                warn_on_failure(owned_source.cleanup, "session data source")
+                if owned_source is not None:
+                    warn_on_failure(owned_source.cleanup, "session data source")
 
             session.on_ended(cleanup_session)
+
+        resolved_client = self._resolve_session_client(client, session)
 
         def create_session_client(**kwargs) -> chatlas.Chat:
             return self._create_session_client(table_set, base=resolved_client, **kwargs)

@@ -250,23 +250,24 @@ def mod_server(
     greeting_base: chatlas.Chat | None = None,
     greeting_tables: list[str] | None = None,
     # TableSet erases each DataSource's frame type for uniform executor handling,
-    # so IntoFrameT can't be bound from a parameter here -- only from callers'
-    # annotated return-type usage (e.g. QueryChat.server() -> ServerValues[IntoFrameT]).
-) -> ServerValues[IntoFrameT]:  # pyright: ignore[reportInvalidTypeVarUse]
+    # so IntoFrameT can't be bound from any parameter here. There's no way to
+    # express the real return type, so callers (e.g. QueryChat.server()) must
+    # cast/annotate the result as ServerValues[IntoFrameT] themselves.
+) -> ServerValues[Any]:
     if not callable(client):
         raise TypeError("mod_server() requires a callable client factory.")
 
-    table_states: dict[str, TableState[IntoFrameT]] = {}
+    table_states: dict[str, TableState[Any]] = {}
     _current_table: ReactiveStringOrNone = ReactiveStringOrNone(None)
 
     def _make_table_state(
-        source: DataSource[IntoFrameT], exec: QueryExecutor
-    ) -> TableState[IntoFrameT]:
+        source: DataSource[Any], exec: QueryExecutor
+    ) -> TableState[Any]:
         table_sql = ReactiveStringOrNone(None)
         table_title = ReactiveStringOrNone(None)
 
         @reactive.calc
-        def filtered_df() -> IntoFrameT:
+        def filtered_df() -> Any:
             query = table_sql.get()
             if query:
                 return exec.execute_query(query)
@@ -477,7 +478,7 @@ def mod_server(
     df_warned = False
 
     @reactive.calc
-    def _multi_table_df() -> IntoFrameT:
+    def _multi_table_df() -> Any:
         nonlocal df_warned
         if not df_warned:
             df_warned = True

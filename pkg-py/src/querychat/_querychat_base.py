@@ -211,6 +211,11 @@ class QueryChatBase(Generic[IntoFrameT]):
             # A running session may still query through old_set's executor;
             # cleanup() closes it. `replaced` is always empty here because
             # _check_late_change() rejects replacement once sessions started.
+            if replaced:
+                raise AssertionError(
+                    "_swap_table_set() received replaced sources after sessions "
+                    "started; _check_late_change() should have rejected this."
+                )
             self._superseded_table_sets.append(old_set)
             return
         with contextlib.suppress(Exception):
@@ -481,7 +486,11 @@ class QueryChatBase(Generic[IntoFrameT]):
         normalized = normalize_data_source(data_source, table_name)
         try:
             self._warn_if_prompt_rebuilt_with_history()
-            new_set = self._build_table_set({**self._data_sources, table_name: normalized})
+            merged = {
+                **{k: v for k, v in self._data_sources.items() if k != table_name},
+                table_name: normalized,
+            }
+            new_set = self._build_table_set(merged)
         except Exception:
             if normalized is not data_source:
                 normalized.cleanup()
@@ -601,7 +610,11 @@ class QueryChatBase(Generic[IntoFrameT]):
 
         normalized = {name: normalized_builder(name) for name in tables}
         self._warn_if_prompt_rebuilt_with_history()
-        new_set = self._build_table_set({**self._data_sources, **normalized})
+        merged = {
+            **{k: v for k, v in self._data_sources.items() if k not in normalized},
+            **normalized,
+        }
+        new_set = self._build_table_set(merged)
 
         replaced = [
             old
@@ -634,8 +647,6 @@ class QueryChatBase(Generic[IntoFrameT]):
             If called to replace or remove an existing table after a session has started.
 
         """
-        self._check_late_change("remove_table", destructive=True)
-
         if table_name not in self._data_sources:
             available = ", ".join(self._data_sources.keys())
             raise ValueError(f"Table '{table_name}' not found. Available: {available}")
@@ -644,6 +655,8 @@ class QueryChatBase(Generic[IntoFrameT]):
             raise ValueError(
                 "Cannot remove last table. At least one table is required."
             )
+
+        self._check_late_change("remove_table", destructive=True)
 
         removed = self._data_sources[table_name]
         remaining = {n: s for n, s in self._data_sources.items() if n != table_name}
@@ -664,6 +677,9 @@ class QueryChatBase(Generic[IntoFrameT]):
         passed in are never closed. Also closes the chatlas client, but only
         if querychat created it from a spec (``client=None`` or a string such
         as ``"openai/gpt-4o"``); a ``chatlas.Chat`` you supplied is left open.
+
+        Resources a session registers via ``.server(data_source=...)`` are
+        released when that session ends, not here.
 
         Safe to call multiple times. In long-lived applications, call this
         when the app shuts down (e.g., via ``atexit``).

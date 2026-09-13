@@ -1490,6 +1490,37 @@ describe("auto_fill_data_description()/resolve_data_description() parity", {
     session_table_set <- calls$args[[1]]$table_set
     expect_equal(session_table_set$data_description, instance_desc_after)
   })
+
+  it("rejected destructive $add_table() after a session started leaves the data description untouched", {
+    skip_if_no_dataframe_engine()
+
+    qc <- local_querychat(
+      local_described_source("Motor Trend Cars", table_name = "primary"),
+      "primary",
+      greeting = "hi"
+    )
+    desc_before <- qc$.__enclos_env__$private$.data_description
+    mode_before <- qc$.__enclos_env__$private$.data_description_mode
+    expect_equal(desc_before, "Motor Trend Cars")
+    expect_equal(mode_before, "inferred")
+
+    qc$.__enclos_env__$private$.sessions_started <- TRUE
+
+    expect_error(
+      qc$add_table(
+        local_described_source(table_name = "primary"),
+        "primary",
+        replace = TRUE
+      ),
+      "replace or remove"
+    )
+
+    expect_equal(qc$.__enclos_env__$private$.data_description, desc_before)
+    expect_equal(
+      qc$.__enclos_env__$private$.data_description_mode,
+      mode_before
+    )
+  })
 })
 
 describe("QueryChatGreeter", {

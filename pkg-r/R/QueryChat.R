@@ -152,22 +152,35 @@ QueryChat <- R6::R6Class(
       NULL
     },
 
-    auto_fill_data_description = function(sources = private$data_sources()) {
+    # Non-mutating: computes what auto_fill_data_description() would set, but
+    # leaves the caller to decide when (or whether) to actually commit it via
+    # commit_data_description(). Returns NULL when there's nothing to update,
+    # matching auto_fill_data_description()'s early-return conditions.
+    pending_data_description = function(sources) {
       if (private$.data_description_mode == "supplied") {
-        return(invisible(NULL))
+        return(NULL)
       }
       if (length(sources) != 1) {
+        return(NULL)
+      }
+      desc <- private$resolve_data_description(sources)
+      list(
+        description = desc,
+        mode = if (is.null(desc)) "empty" else "inferred"
+      )
+    },
+
+    commit_data_description = function(pending) {
+      if (is.null(pending)) {
         return(invisible(NULL))
       }
-      private$.data_description <- private$resolve_data_description(sources)
-      private$.data_description_mode <- if (
-        is.null(private$.data_description)
-      ) {
-        "empty"
-      } else {
-        "inferred"
-      }
+      private$.data_description <- pending$description
+      private$.data_description_mode <- pending$mode
       invisible(NULL)
+    },
+
+    auto_fill_data_description = function(sources = private$data_sources()) {
+      private$commit_data_description(private$pending_data_description(sources))
     },
 
     build_table_set = function(
@@ -540,9 +553,17 @@ QueryChat <- R6::R6Class(
       }
       next_sources <- current
       next_sources[[table_name]] <- normalized
-      private$auto_fill_data_description(next_sources)
+      pending_description <- private$pending_data_description(next_sources)
+      candidate_description <- if (is.null(pending_description)) {
+        private$.data_description
+      } else {
+        pending_description$description
+      }
       new_set <- tryCatch(
-        private$build_table_set(next_sources),
+        private$build_table_set(
+          next_sources,
+          data_description = candidate_description
+        ),
         error = function(e) {
           cleanup_normalized()
           stop(e)
@@ -550,7 +571,8 @@ QueryChat <- R6::R6Class(
       )
 
       # Only after the change is known to be valid do we check whether it's
-      # too late to apply it, so a rejected/failed add_table() doesn't warn.
+      # too late to apply it, so a rejected/failed add_table() doesn't warn,
+      # and doesn't commit the data description either.
       tryCatch(
         private$check_late_change("add_table", destructive = exists),
         error = function(e) {
@@ -559,6 +581,7 @@ QueryChat <- R6::R6Class(
           stop(e)
         }
       )
+      private$commit_data_description(pending_description)
 
       old_source <- current[[table_name]]
       replaced <- if (
@@ -656,8 +679,17 @@ QueryChat <- R6::R6Class(
       for (table_name in tables) {
         next_sources[[table_name]] <- normalized[[table_name]]
       }
-      private$auto_fill_data_description(next_sources)
-      new_set <- private$build_table_set(next_sources)
+      pending_description <- private$pending_data_description(next_sources)
+      candidate_description <- if (is.null(pending_description)) {
+        private$.data_description
+      } else {
+        pending_description$description
+      }
+      new_set <- private$build_table_set(
+        next_sources,
+        data_description = candidate_description
+      )
+      private$commit_data_description(pending_description)
 
       replaced <- list()
       for (table_name in tables) {

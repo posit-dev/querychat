@@ -257,3 +257,13 @@ check_source_compatibility <- function(existing_sources, new_source, new_name) {
 
   invisible(NULL)
 }
+
+# Validates that every source in a group is compatible with the others.
+validate_source_group_compatibility <- function(data_sources) {
+  existing <- list()
+  for (name in names(data_sources)) {
+    check_source_compatibility(existing, data_sources[[name]], name)
+    existing[[name]] <- data_sources[[name]]
+  }
+  invisible(NULL)
+}

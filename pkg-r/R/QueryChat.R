@@ -89,13 +89,14 @@
 QueryChat <- R6::R6Class(
   "QueryChat",
   private = list(
-    .data_sources = list(),
+    .table_set = NULL,
+    # Instance sets swapped out by $add_table()/$add_tables() after a session
+    # started. A running session may still hold one, so $cleanup() closes them.
+    .superseded_table_sets = list(),
+    .sessions_started = FALSE,
     .deferred_table_name = NULL,
-    .query_executor = NULL,
-    .server_initialized = FALSE,
     .client_spec = NULL,
     .client_console = NULL,
-    .system_prompt = NULL,
     # Store init parameters for deferred system prompt building
     .prompt_template = NULL,
     .data_description = NULL,
@@ -105,52 +106,145 @@ QueryChat <- R6::R6Class(
     .data_dicts = list(),
     .greeter = NULL,
 
-    require_initialized = function(method_name) {
-      if (length(private$.data_sources) == 0) {
+    data_sources = function() {
+      if (is.null(private$.table_set)) {
+        return(list())
+      }
+      private$.table_set$data_sources
+    },
+
+    require_table_set = function(method_name) {
+      if (is.null(private$.table_set)) {
         cli::cli_abort(
           "{.arg data_source} must be set before calling {.fn ${method_name}}.
            Either pass {.arg data_source} to {.fn $new}, or call {.fn $add_table}."
         )
       }
+      private$.table_set
     },
 
-    auto_fill_data_description = function(sources = private$.data_sources) {
+    require_initialized = function(method_name) {
+      private$require_table_set(method_name)
+      invisible(NULL)
+    },
+
+    # Non-mutating counterpart of auto_fill_data_description(): the single
+    # source of truth for "what description should this set of sources get",
+    # given the instance's current mode/description. Used both to compute the
+    # value auto_fill_data_description() mutates in, and to build sets on
+    # behalf of a session (which must never mutate the instance).
+    #
+    # When sources isn't a single table and the mode isn't "supplied", this
+    # falls back to whatever description is already stored (bug-for-bug with
+    # auto_fill_data_description()'s historical early return): a multi-table
+    # set doesn't clear a stale single-source "inferred" description.
+    resolve_data_description = function(sources) {
+      if (private$.data_description_mode == "supplied") {
+        return(private$.data_description)
+      }
       if (length(sources) != 1) {
-        return()
+        return(private$.data_description)
       }
-      if (private$.data_description_mode == "inferred") {
-        private$.data_description <- NULL
-        private$.data_description_mode <- "empty"
+      desc <- sources[[1]]$get_data_description()
+      if (nzchar(desc %||% "")) {
+        return(desc)
       }
-      if (private$.data_description_mode == "empty") {
-        desc <- sources[[1]]$get_data_description()
-        if (nzchar(desc %||% "")) {
-          private$.data_description <- desc
-          private$.data_description_mode <- "inferred"
-        }
-      }
+      NULL
     },
 
-    build_system_prompt = function(data_sources = NULL) {
-      sources <- data_sources %||% private$.data_sources
+    # Non-mutating: computes what auto_fill_data_description() would set, but
+    # leaves the caller to decide when (or whether) to actually commit it via
+    # commit_data_description(). Returns NULL when there's nothing to update,
+    # matching auto_fill_data_description()'s early-return conditions.
+    pending_data_description = function(sources) {
+      if (private$.data_description_mode == "supplied") {
+        return(NULL)
+      }
+      if (length(sources) != 1) {
+        return(NULL)
+      }
+      desc <- private$resolve_data_description(sources)
+      list(
+        description = desc,
+        mode = if (is.null(desc)) "empty" else "inferred"
+      )
+    },
+
+    commit_data_description = function(pending) {
+      if (is.null(pending)) {
+        return(invisible(NULL))
+      }
+      private$.data_description <- pending$description
+      private$.data_description_mode <- pending$mode
+      invisible(NULL)
+    },
+
+    auto_fill_data_description = function(sources = private$data_sources()) {
+      private$commit_data_description(private$pending_data_description(sources))
+    },
+
+    build_table_set = function(
+      sources,
+      data_description = private$.data_description
+    ) {
       if (length(sources) == 0) {
         cli::cli_abort("Cannot build system prompt without data sources")
       }
-
+      validate_source_group_compatibility(sources)
       prompt_template <- private$.prompt_template %||%
         system.file("prompts", "prompt.md", package = "querychat")
-
-      private$.system_prompt <- QueryChatSystemPrompt$new(
+      system_prompt <- QueryChatSystemPrompt$new(
         prompt_template = prompt_template,
         data_sources = sources,
-        data_description = private$.data_description,
+        data_description = data_description,
         extra_instructions = private$.extra_instructions,
         categorical_threshold = private$.categorical_threshold,
         data_dicts = private$.data_dicts
       )
+      TableSet$new(sources, system_prompt, data_description = data_description)
+    },
+
+    check_late_change = function(method_name, destructive) {
+      if (!private$.sessions_started) {
+        return(invisible(NULL))
+      }
+      if (destructive) {
+        cli::cli_abort(c(
+          "Cannot call {.fn ${method_name}} to replace or remove a table while sessions may be using it.",
+          "i" = "Configure all tables before calling {.fn $server} or {.fn $app}."
+        ))
+      }
+      cli::cli_warn(c(
+        "{.fn ${method_name}} called after a session has started.",
+        "i" = "Sessions that are already running keep the tables they started with; only new sessions will see this change."
+      ))
+      invisible(NULL)
+    },
+
+    swap_table_set = function(new_set, replaced = list()) {
+      old_set <- private$.table_set
+      private$.table_set <- new_set
+      if (is.null(old_set)) {
+        return(invisible(NULL))
+      }
+      if (private$.sessions_started) {
+        # `replaced` is empty here: check_late_change() rejects replacement
+        # once sessions have started.
+        private$.superseded_table_sets <- c(
+          private$.superseded_table_sets,
+          list(old_set)
+        )
+        return(invisible(NULL))
+      }
+      warn_on_cleanup_failure(old_set$cleanup_executor(), "query executor")
+      for (source in replaced) {
+        warn_on_cleanup_failure(source$cleanup(), "data source")
+      }
+      invisible(NULL)
     },
 
     create_session_client = function(
+      table_set,
       client_spec = NULL,
       tools = NA,
       handoff_available = FALSE,
@@ -168,7 +262,7 @@ QueryChat <- R6::R6Class(
       tools <- check_viz_deps(tools)
 
       chat$set_system_prompt(
-        private$.system_prompt$render(
+        table_set$system_prompt$render(
           tools = tools,
           handoff_available = handoff_available
         )
@@ -178,14 +272,9 @@ QueryChat <- R6::R6Class(
         return(chat)
       }
 
-      # Build executor lazily
-      if (is.null(private$.query_executor)) {
-        private$.query_executor <- build_query_executor(private$.data_sources)
-      }
-      executor <- private$.query_executor
-      tbl_names <- names(private$.data_sources)
+      executor <- table_set$executor()
+      tbl_names <- table_set$table_names()
 
-      # Always register get_schema tool
       chat$register_tool(
         tool_get_schema(
           private$.data_dicts,
@@ -381,9 +470,9 @@ QueryChat <- R6::R6Class(
           }
         }
         normalized <- normalize_data_source(data_source, table_name)
-        private$.data_sources[[normalized$table_name]] <- normalized
-        private$auto_fill_data_description()
-        private$build_system_prompt()
+        sources <- stats::setNames(list(normalized), normalized$table_name)
+        private$auto_fill_data_description(sources)
+        private$.table_set <- private$build_table_set(sources)
         self$greeter$tables <- c(self$greeter$tables, normalized$table_name)
         self$id <- id %||% sprintf("querychat_%s", normalized$table_name)
       } else {
@@ -417,6 +506,9 @@ QueryChat <- R6::R6Class(
     #' @description
     #' Add a table to this QueryChat instance.
     #'
+    #' Replacing or removing an existing table after a session has started is
+    #' an error; adding a new one warns.
+    #'
     #' @param data_source A data frame, database connection, or DataSource object.
     #' @param table_name The SQL table name for this data source.
     #' @param replace Whether to replace an existing table with this name.
@@ -431,16 +523,16 @@ QueryChat <- R6::R6Class(
       replace = FALSE,
       include_in_greeting = FALSE
     ) {
-      if (private$.server_initialized) {
-        cli::cli_abort("Cannot add tables after server initialization.")
-      }
       check_bool(include_in_greeting)
       check_sql_table_name(table_name)
-      if (table_name %in% names(private$.data_sources) && !replace) {
+      current <- private$data_sources()
+      exists <- table_name %in% names(current)
+      if (exists && !replace) {
         cli::cli_abort(
           "Table {.val {table_name}} already exists. Use {.code replace = TRUE} to replace."
         )
       }
+
       if (
         is_data_source(data_source) &&
           !identical(data_source$table_name, table_name)
@@ -452,41 +544,56 @@ QueryChat <- R6::R6Class(
           )
         )
       }
+
       normalized <- normalize_data_source(data_source, table_name)
-
-      other_sources <- private$.data_sources[
-        names(private$.data_sources) != table_name
-      ]
-      check_source_compatibility(other_sources, normalized, table_name)
-
-      next_sources <- private$.data_sources
+      cleanup_normalized <- function() {
+        if (!inherits(data_source, "DataSource")) {
+          normalized$cleanup()
+        }
+      }
+      next_sources <- current
       next_sources[[table_name]] <- normalized
-
-      private$auto_fill_data_description(next_sources)
-      tryCatch(
-        {
-          private$build_system_prompt(data_sources = next_sources)
-        },
+      pending_description <- private$pending_data_description(next_sources)
+      candidate_description <- if (is.null(pending_description)) {
+        private$.data_description
+      } else {
+        pending_description$description
+      }
+      new_set <- tryCatch(
+        private$build_table_set(
+          next_sources,
+          data_description = candidate_description
+        ),
         error = function(e) {
-          if (!inherits(data_source, "DataSource")) {
-            normalized$cleanup()
-          }
+          cleanup_normalized()
           stop(e)
         }
       )
 
-      old_source <- private$.data_sources[[table_name]]
-      private$.data_sources <- next_sources
-      if (!is.null(old_source) && !identical(old_source, normalized)) {
-        old_source$cleanup()
-      }
+      # Only after the change is known to be valid do we check whether it's
+      # too late to apply it, so a rejected/failed add_table() doesn't warn,
+      # and doesn't commit the data description either.
+      tryCatch(
+        private$check_late_change("add_table", destructive = exists),
+        error = function(e) {
+          new_set$cleanup_executor()
+          cleanup_normalized()
+          stop(e)
+        }
+      )
+      private$commit_data_description(pending_description)
 
-      if (!is.null(private$.query_executor)) {
-        tryCatch(private$.query_executor$cleanup(), error = function(e) NULL)
-        private$.query_executor <- NULL
+      old_source <- current[[table_name]]
+      replaced <- if (
+        !is.null(old_source) && !identical(old_source, normalized)
+      ) {
+        list(old_source)
+      } else {
+        list()
       }
+      private$swap_table_set(new_set, replaced = replaced)
 
-      if (isTRUE(include_in_greeting)) {
+      if (isTRUE(include_in_greeting) && !table_name %in% self$greeter$tables) {
         self$greeter$tables <- c(self$greeter$tables, table_name)
       }
 
@@ -499,6 +606,9 @@ QueryChat <- R6::R6Class(
     #' Unlike calling `$add_table()` repeatedly, this method builds the
     #' system prompt exactly once after all tables have been staged, avoiding
     #' N-1 spurious intermediate rebuilds.
+    #'
+    #' Replacing or removing an existing table after a session has started is
+    #' an error; adding a new one warns.
     #'
     #' @param conn A DBI connection. Only DBI connections are supported; pass
     #'   individual data frames or other sources via `$add_table()`.
@@ -518,9 +628,6 @@ QueryChat <- R6::R6Class(
       replace = FALSE,
       include_in_greeting = FALSE
     ) {
-      if (private$.server_initialized) {
-        cli::cli_abort("Cannot add tables after server initialization.")
-      }
       if (!inherits(conn, "DBIConnection")) {
         cli::cli_abort(
           "{.fn add_tables} requires a {.cls DBIConnection}, not {.obj_type_friendly {conn}}.",
@@ -533,14 +640,20 @@ QueryChat <- R6::R6Class(
       if (length(tables) == 0) {
         cli::cli_abort("No tables found in database.")
       }
+      current <- private$data_sources()
       for (table_name in tables) {
         check_sql_table_name(table_name)
-        if (table_name %in% names(private$.data_sources) && !replace) {
-          cli::cli_abort(
-            "Table {.val {table_name}} already exists. Use {.code replace = TRUE} to replace."
-          )
-        }
       }
+      existing <- intersect(tables, names(current))
+      if (length(existing) > 0 && !replace) {
+        cli::cli_abort(
+          "Table {.val {existing[[1]]}} already exists. Use {.code replace = TRUE} to replace."
+        )
+      }
+      private$check_late_change(
+        "add_tables",
+        destructive = length(existing) > 0
+      )
 
       if (
         !rlang::is_bool(include_in_greeting) &&
@@ -562,47 +675,41 @@ QueryChat <- R6::R6Class(
         lapply(tables, function(tbl) normalize_data_source(conn, tbl)),
         tables
       )
-
-      staged <- list()
-      for (table_name in tables) {
-        other_sources <- private$.data_sources[
-          names(private$.data_sources) != table_name
-        ]
-        check_source_compatibility(
-          c(other_sources, staged),
-          normalized[[table_name]],
-          table_name
-        )
-        staged[[table_name]] <- normalized[[table_name]]
-      }
-
-      next_sources <- private$.data_sources
+      next_sources <- current
       for (table_name in tables) {
         next_sources[[table_name]] <- normalized[[table_name]]
       }
+      pending_description <- private$pending_data_description(next_sources)
+      candidate_description <- if (is.null(pending_description)) {
+        private$.data_description
+      } else {
+        pending_description$description
+      }
+      new_set <- private$build_table_set(
+        next_sources,
+        data_description = candidate_description
+      )
+      private$commit_data_description(pending_description)
 
-      private$auto_fill_data_description(next_sources)
-      private$build_system_prompt(data_sources = next_sources)
-
+      replaced <- list()
       for (table_name in tables) {
-        old_source <- private$.data_sources[[table_name]]
+        old_source <- current[[table_name]]
         if (
           !is.null(old_source) &&
             !identical(old_source, normalized[[table_name]])
         ) {
-          old_source$cleanup()
+          replaced <- c(replaced, list(old_source))
         }
       }
-      private$.data_sources <- next_sources
+      private$swap_table_set(new_set, replaced = replaced)
 
-      if (!is.null(private$.query_executor)) {
-        tryCatch(private$.query_executor$cleanup(), error = function(e) NULL)
-        private$.query_executor <- NULL
+      new_greeting <- self$greeter$tables
+      for (name in greeting_tbls) {
+        if (!name %in% new_greeting) {
+          new_greeting <- c(new_greeting, name)
+        }
       }
-
-      if (length(greeting_tbls) > 0) {
-        self$greeter$tables <- c(self$greeter$tables, greeting_tbls)
-      }
+      self$greeter$tables <- new_greeting
 
       invisible(self)
     },
@@ -610,44 +717,35 @@ QueryChat <- R6::R6Class(
     #' @description
     #' Remove a table from this QueryChat instance.
     #'
+    #' Removing an existing table after a session has started is an error.
+    #'
     #' @param table_name The name of the table to remove.
     #'
     #' @return Invisibly returns `self` for chaining.
     remove_table = function(table_name) {
-      if (private$.server_initialized) {
-        cli::cli_abort("Cannot remove tables after server initialization.")
-      }
-      if (!table_name %in% names(private$.data_sources)) {
+      private$check_late_change("remove_table", destructive = TRUE)
+      current <- private$data_sources()
+      if (!table_name %in% names(current)) {
         cli::cli_abort("Table {.val {table_name}} not found.")
       }
-      if (length(private$.data_sources) == 1) {
+      if (length(current) == 1) {
         cli::cli_abort(
           "Cannot remove last table. At least one table is required."
         )
       }
-      removed <- private$.data_sources[[table_name]]
-      next_sources <- private$.data_sources[
-        names(private$.data_sources) != table_name
-      ]
-      private$build_system_prompt(data_sources = next_sources)
-      private$.data_sources <- next_sources
+      removed <- current[[table_name]]
+      next_sources <- current[names(current) != table_name]
+      new_set <- private$build_table_set(next_sources)
+      private$swap_table_set(new_set, replaced = list(removed))
       if (!is.null(private$.greeter)) {
-        private$.greeter$tables <- setdiff(
-          private$.greeter$tables,
-          table_name
-        )
+        private$.greeter$tables <- setdiff(private$.greeter$tables, table_name)
       }
-      if (!is.null(private$.query_executor)) {
-        tryCatch(private$.query_executor$cleanup(), error = function(e) NULL)
-        private$.query_executor <- NULL
-      }
-      removed$cleanup()
       invisible(self)
     },
 
     #' @description
     #' Return the names of all registered tables.
-    table_names = function() names(private$.data_sources),
+    table_names = function() names(private$data_sources()) %||% character(),
 
     #' @description
     #' Create a chat client, complete with registered tools, for the current
@@ -687,6 +785,7 @@ QueryChat <- R6::R6Class(
       }
 
       private$create_session_client(
+        table_set = private$require_table_set("$client"),
         tools = tools,
         session = session,
         update_dashboard = update_dashboard,
@@ -755,8 +854,8 @@ QueryChat <- R6::R6Class(
       ) &&
         identical(resolved_history$restore_mode, "bookmark")
 
-      first_table_name <- names(private$.data_sources)[[1]]
-      table_names <- names(private$.data_sources)
+      first_table_name <- names(private$data_sources())[[1]]
+      table_names <- names(private$data_sources())
       multi_table <- length(table_names) > 1
 
       ui <- function(req) {
@@ -1059,12 +1158,13 @@ QueryChat <- R6::R6Class(
     #' @description
     #' Initialize the querychat server logic.
     #'
-    #' @param data_source Optional data source to register for this session,
-    #'   for the deferred pattern where the data source can't be created
-    #'   until the server function runs (e.g. a connection scoped to
-    #'   per-user OAuth credentials). Registered under `table_name` if given,
-    #'   otherwise the `table_name` passed to `$new()`, or the first
-    #'   already-registered table.
+    #' @param data_source Optional data source to register for this session
+    #'   only, for the deferred pattern where the source can't be created
+    #'   until the server function runs (for example a per-user database
+    #'   connection). The instance's own tables are not modified; a
+    #'   same-named instance table is shadowed for this session; any
+    #'   connection querychat created for it is cleaned up when the session
+    #'   ends.
     #' @param client Optional chat client override for this session.
     #' @param history Conversation history configuration for this call. Overrides
     #'   the value set on `$new()`. Resolves to `TRUE` when neither this nor the
@@ -1105,10 +1205,14 @@ QueryChat <- R6::R6Class(
         )
       }
 
+      table_set <- private$.table_set
+      greeting_tables <- self$greeter$tables
+      session_source <- NULL
+
       if (!is.null(data_source)) {
         tbl_name <- table_name %||% private$.deferred_table_name
         if (is.null(tbl_name)) {
-          existing_tables <- names(private$.data_sources)
+          existing_tables <- names(private$data_sources())
           if (length(existing_tables) > 0) {
             tbl_name <- existing_tables[[1]]
           }
@@ -1121,20 +1225,60 @@ QueryChat <- R6::R6Class(
             )
           )
         }
-        self$add_table(
-          data_source,
-          tbl_name,
-          replace = TRUE,
-          include_in_greeting = TRUE
+        check_sql_table_name(tbl_name)
+        if (
+          is_data_source(data_source) &&
+            !identical(data_source$table_name, tbl_name)
+        ) {
+          cli::cli_abort(
+            c(
+              "{.arg data_source}'s own table name ({.val {data_source$table_name}}) does not match the given {.arg table_name} ({.val {tbl_name}}).",
+              "i" = "Pass a matching {.arg table_name}, or omit it to use {.val {data_source$table_name}}."
+            )
+          )
+        }
+        session_source <- normalize_data_source(data_source, tbl_name)
+        next_sources <- private$data_sources()
+        next_sources[[tbl_name]] <- session_source
+        table_set <- tryCatch(
+          private$build_table_set(
+            next_sources,
+            data_description = private$resolve_data_description(next_sources)
+          ),
+          error = function(e) {
+            if (!inherits(data_source, "DataSource")) {
+              session_source$cleanup()
+            }
+            stop(e)
+          }
         )
+        if (!tbl_name %in% greeting_tables) {
+          greeting_tables <- c(greeting_tables, tbl_name)
+        }
       }
 
-      private$require_initialized("$server")
+      if (is.null(table_set)) {
+        private$require_table_set("$server")
+      }
 
-      private$.server_initialized <- TRUE
-
-      if (is.null(private$.query_executor)) {
-        private$.query_executor <- build_query_executor(private$.data_sources)
+      if (!is.null(session_source)) {
+        session_table_set <- table_set
+        # Mirrors the tryCatch() guard above: querychat only owns (and so
+        # only closes) sources it normalized itself from a raw connection or
+        # data.frame, never a DataSource the caller constructed and passed in.
+        owns_session_source <- !inherits(data_source, "DataSource")
+        session$onSessionEnded(function() {
+          warn_on_cleanup_failure(
+            session_table_set$cleanup_executor(),
+            "session query executor"
+          )
+          if (owns_session_source) {
+            warn_on_cleanup_failure(
+              session_source$cleanup(),
+              "session data source"
+            )
+          }
+        })
       }
 
       resolved_client_spec <- client %||% private$.client_spec
@@ -1142,6 +1286,7 @@ QueryChat <- R6::R6Class(
 
       create_session_client <- function(...) {
         private$create_session_client(
+          table_set = table_set,
           client_spec = base_client,
           ...
         )
@@ -1165,18 +1310,18 @@ QueryChat <- R6::R6Class(
         }) %||%
         TRUE
 
-      result <- mod_server(
+      private$.sessions_started <- TRUE
+      mod_server(
         id %||% self$id,
-        data_sources = private$.data_sources,
-        executor = private$.query_executor,
+        table_set = table_set,
         greeting = self$greeting,
         client = create_session_client,
         tools = self$tools,
         history = resolved_history,
         greeter = self$greeter,
-        greeting_base = base_client
+        greeting_base = base_client,
+        greeting_tables = greeting_tables
       )
-      result
     },
 
     #' @description
@@ -1193,15 +1338,26 @@ QueryChat <- R6::R6Class(
     },
 
     #' @description
-    #' Clean up resources associated with the data source.
+    #' Clean up resources this object created.
     #'
-    #' @return Invisibly returns `NULL`. Resources are cleaned up internally.
+    #' Closes the query executors and data-source connections querychat opened
+    #' (in-memory DuckDB), including those of table sets superseded by a late
+    #' `$add_table()`. Connections you passed in are never closed.
+    #'
+    #' @return Invisibly returns `NULL`.
     cleanup = function() {
-      if (!is.null(private$.query_executor)) {
-        private$.query_executor$cleanup()
+      for (ts in private$.superseded_table_sets) {
+        warn_on_cleanup_failure(ts$cleanup_executor(), "query executor")
       }
-      for (source in private$.data_sources) {
-        source$cleanup()
+      private$.superseded_table_sets <- list()
+      if (!is.null(private$.table_set)) {
+        warn_on_cleanup_failure(
+          private$.table_set$cleanup_executor(),
+          "query executor"
+        )
+        for (source in private$.table_set$data_sources) {
+          warn_on_cleanup_failure(source$cleanup(), "data source")
+        }
       }
       invisible(NULL)
     }
@@ -1217,11 +1373,21 @@ QueryChat <- R6::R6Class(
         return(invisible(value))
       }
       if (is.null(private$.greeter)) {
-        client_factory <- function(tables, prompt, base = NULL) {
+        client_factory <- function(
+          tables,
+          prompt,
+          base = NULL,
+          table_set = NULL
+        ) {
+          ts <- table_set %||% private$.table_set
           sp <- QueryChatSystemPrompt$new(
             prompt_template = prompt,
-            data_sources = private$.data_sources,
-            data_description = private$.data_description,
+            data_sources = if (is.null(ts)) list() else ts$data_sources,
+            data_description = if (is.null(ts)) {
+              private$.data_description
+            } else {
+              ts$data_description
+            },
             extra_instructions = NULL,
             categorical_threshold = private$.categorical_threshold,
             data_dicts = private$.data_dicts,
@@ -1242,8 +1408,9 @@ QueryChat <- R6::R6Class(
 
     #' @field system_prompt Get the system prompt.
     system_prompt = function() {
-      private$require_initialized("$system_prompt")
-      private$.system_prompt$render(tools = self$tools)
+      private$require_table_set("$system_prompt")$system_prompt$render(
+        tools = self$tools
+      )
     },
 
     #' @field data_source Removed. Use `$add_table()` and `$remove_table()` to manage tables.
@@ -1456,6 +1623,17 @@ check_viz_deps <- function(tools) {
     .frequency_id = "querychat_viz_ggsql_missing"
   )
   setdiff(tools, "visualize")
+}
+
+# Runs one teardown step, warning instead of erroring so the rest still runs.
+warn_on_cleanup_failure <- function(expr, what) {
+  tryCatch(
+    expr,
+    error = function(e) {
+      cli::cli_warn("Failed to clean up {what}: {conditionMessage(e)}")
+    }
+  )
+  invisible(NULL)
 }
 
 normalize_data_source <- function(data_source, table_name) {

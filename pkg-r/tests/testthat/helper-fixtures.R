@@ -2,7 +2,7 @@
 
 # Access the internal data source for a named table (test helper only)
 qc_data_source <- function(qc, table_name) {
-  qc$.__enclos_env__$private$.data_sources[[table_name]]
+  qc$.__enclos_env__$private$.table_set$data_sources[[table_name]]
 }
 
 # Simple data frame with id, name, and value columns
@@ -93,6 +93,24 @@ local_data_frame_source <- function(
   df_source <- DataFrameSource$new(data, table_name, engine = engine)
   withr::defer(df_source$cleanup(), envir = env)
   df_source
+}
+
+# Build a TableSet for tests, deferring executor cleanup to `env`.
+local_table_set <- function(data_sources, env = parent.frame()) {
+  sp <- suppressWarnings(
+    # The multi-table "consider a data_dict" advice is noise for these tests.
+    QueryChatSystemPrompt$new(
+      prompt_template = system.file(
+        "prompts",
+        "prompt.md",
+        package = "querychat"
+      ),
+      data_sources = data_sources
+    )
+  )
+  ts <- TableSet$new(data_sources, sp)
+  withr::defer(ts$cleanup_executor(), envir = env)
+  ts
 }
 
 local_recording_data_frame_source <- function(

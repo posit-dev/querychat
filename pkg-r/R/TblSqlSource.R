@@ -188,9 +188,9 @@ TblSqlSource <- R6::R6Class(
     },
 
     #' @description
-    #' Clean up resources (close connections, etc.)
+    #' No-op: the connection behind the `tbl_sql` is owned by the caller.
     #'
-    #' @return NULL (invisibly)
+    #' @return `NULL` (invisibly)
     cleanup = function() {
       super$cleanup()
     }

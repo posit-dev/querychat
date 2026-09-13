@@ -20,8 +20,6 @@ test_that("mod_server() return includes table() and table_names() for single-tab
   skip_if_no_dataframe_engine()
 
   ds <- local_data_frame_source(new_test_df())
-  executor <- build_query_executor(list(test_table = ds))
-  withr::defer(executor$cleanup())
 
   client_factory <- function(...) {
     structure(list(), class = c("MockChat", "Chat"))
@@ -37,8 +35,7 @@ test_that("mod_server() return includes table() and table_names() for single-tab
     mod_server,
     args = list(
       id = "test",
-      data_sources = list(test_table = ds),
-      executor = executor,
+      table_set = local_table_set(list(test_table = ds)),
       greeting = "Hello",
       client = client_factory,
       tools = "query",
@@ -79,8 +76,6 @@ test_that("mod_server() return includes table() and table_names() for multi-tabl
   ds1 <- local_data_frame_source(new_test_df(), table_name = "tbl_a")
   ds2 <- local_data_frame_source(new_test_df(), table_name = "tbl_b")
   data_sources <- list(tbl_a = ds1, tbl_b = ds2)
-  executor <- build_query_executor(data_sources)
-  withr::defer(executor$cleanup())
 
   result <- NULL
   client_factory <- function(...) {
@@ -98,8 +93,7 @@ test_that("mod_server() return includes table() and table_names() for multi-tabl
     mod_server,
     args = list(
       id = "test",
-      data_sources = data_sources,
-      executor = executor,
+      table_set = local_table_set(data_sources),
       greeting = "Hello",
       client = client_factory,
       tools = "query",
@@ -133,8 +127,6 @@ test_that("mod_server() passes visualize callback and tools to client factory", 
   skip_if_no_dataframe_engine()
 
   ds <- local_data_frame_source(new_test_df())
-  executor <- build_query_executor(list(test_table = ds))
-  withr::defer(executor$cleanup())
   captured <- NULL
 
   client_factory <- function(...) {
@@ -152,8 +144,7 @@ test_that("mod_server() passes visualize callback and tools to client factory", 
     mod_server,
     args = list(
       id = "test",
-      data_sources = list(test_table = ds),
-      executor = executor,
+      table_set = local_table_set(list(test_table = ds)),
       greeting = "Hello",
       client = client_factory,
       tools = c("query", "visualize"),
@@ -173,8 +164,6 @@ test_that("mod_server() exposes current_table() starting as NULL", {
   skip_if_no_dataframe_engine()
 
   ds <- local_data_frame_source(new_test_df())
-  executor <- build_query_executor(list(test_table = ds))
-  withr::defer(executor$cleanup())
 
   client_factory <- function(...) {
     structure(list(), class = c("MockChat", "Chat"))
@@ -190,8 +179,7 @@ test_that("mod_server() exposes current_table() starting as NULL", {
     mod_server,
     args = list(
       id = "test",
-      data_sources = list(test_table = ds),
-      executor = executor,
+      table_set = local_table_set(list(test_table = ds)),
       greeting = "Hello",
       client = client_factory,
       tools = "query",
@@ -210,8 +198,6 @@ test_that("mod_server() current_table() updates on update_dashboard and reset_qu
   ds1 <- local_data_frame_source(new_test_df(), table_name = "tbl_a")
   ds2 <- local_data_frame_source(new_test_df(), table_name = "tbl_b")
   data_sources <- list(tbl_a = ds1, tbl_b = ds2)
-  executor <- build_query_executor(data_sources)
-  withr::defer(executor$cleanup())
 
   captured_callbacks <- NULL
   client_factory <- function(...) {
@@ -229,8 +215,7 @@ test_that("mod_server() current_table() updates on update_dashboard and reset_qu
     mod_server,
     args = list(
       id = "test",
-      data_sources = data_sources,
-      executor = executor,
+      table_set = local_table_set(data_sources),
       greeting = "Hello",
       client = client_factory,
       tools = "query",
@@ -362,8 +347,8 @@ describe("mod_server() handoff startup", {
   it("builds a handoff-aware session client and starts after chat_server", {
     skip_if_no_dataframe_engine()
     ds <- local_data_frame_source(new_test_df(), engine = "sqlite")
-    executor <- build_query_executor(list(test_table = ds))
-    withr::defer(executor$cleanup())
+    table_set <- local_table_set(list(test_table = ds))
+    executor <- table_set$executor()
     events <- character()
     captured_client_args <- NULL
     captured_handoff_args <- NULL
@@ -396,8 +381,7 @@ describe("mod_server() handoff startup", {
       mod_server,
       args = list(
         id = "test",
-        data_sources = list(test_table = ds),
-        executor = executor,
+        table_set = table_set,
         greeting = "Hello",
         client = client_factory,
         tools = "query",
@@ -431,8 +415,6 @@ test_that("restored viz widgets survive a second bookmark cycle", {
   skip_if_no_dataframe_engine()
 
   ds <- local_data_frame_source(new_test_df())
-  executor <- build_query_executor(list(test_table = ds))
-  withr::defer(executor$cleanup())
   callbacks <- NULL
   bookmark_fn <- NULL
   restore_fn <- NULL
@@ -473,8 +455,7 @@ test_that("restored viz widgets survive a second bookmark cycle", {
     mod_server,
     args = list(
       id = "test",
-      data_sources = list(test_table = ds),
-      executor = executor,
+      table_set = local_table_set(list(test_table = ds)),
       greeting = "Hello",
       client = client_factory,
       tools = c("query", "visualize"),
@@ -517,8 +498,6 @@ test_that("onBookmark callback mutates environment-backed state$values", {
   skip_if_no_dataframe_engine()
 
   ds <- local_data_frame_source(new_test_df())
-  executor <- build_query_executor(list(test_table = ds))
-  withr::defer(executor$cleanup())
   bookmark_fn <- NULL
 
   client_factory <- function(...) {
@@ -542,8 +521,7 @@ test_that("onBookmark callback mutates environment-backed state$values", {
     mod_server,
     args = list(
       id = "test",
-      data_sources = list(test_table = ds),
-      executor = executor,
+      table_set = local_table_set(list(test_table = ds)),
       greeting = "Hello",
       client = client_factory,
       tools = "query",
@@ -564,8 +542,6 @@ test_that("mod_server() calls chat_server('chat', ...) with the pre-built client
   skip_if_no_dataframe_engine()
 
   ds <- local_data_frame_source(new_test_df())
-  executor <- build_query_executor(list(test_table = ds))
-  withr::defer(executor$cleanup())
 
   captured_chat_args <- NULL
   client_factory <- function(...) {
@@ -585,8 +561,7 @@ test_that("mod_server() calls chat_server('chat', ...) with the pre-built client
     mod_server,
     args = list(
       id = "test",
-      data_sources = list(test_table = ds),
-      executor = executor,
+      table_set = local_table_set(list(test_table = ds)),
       greeting = "Hello",
       client = client_factory,
       tools = "query",
@@ -603,8 +578,6 @@ test_that("mod_server() calls chat_restore() with the auto-bookmark trigger disa
   skip_if_no_dataframe_engine()
 
   ds <- local_data_frame_source(new_test_df())
-  executor <- build_query_executor(list(test_table = ds))
-  withr::defer(executor$cleanup())
 
   client_factory <- function(...) {
     structure(list(), class = c("MockChat", "Chat"))
@@ -624,8 +597,7 @@ test_that("mod_server() calls chat_restore() with the auto-bookmark trigger disa
     mod_server,
     args = list(
       id = "test",
-      data_sources = list(test_table = ds),
-      executor = executor,
+      table_set = local_table_set(list(test_table = ds)),
       greeting = "Hello",
       client = client_factory,
       tools = "query",
@@ -647,8 +619,6 @@ test_that("mod_server() skips chat_restore() when history is bookmark mode", {
   skip_if_no_dataframe_engine()
 
   ds <- local_data_frame_source(new_test_df())
-  executor <- build_query_executor(list(test_table = ds))
-  withr::defer(executor$cleanup())
 
   client_factory <- function(...) {
     structure(list(), class = c("MockChat", "Chat"))
@@ -668,8 +638,7 @@ test_that("mod_server() skips chat_restore() when history is bookmark mode", {
     mod_server,
     args = list(
       id = "test",
-      data_sources = list(test_table = ds),
-      executor = executor,
+      table_set = local_table_set(list(test_table = ds)),
       greeting = "Hello",
       client = client_factory,
       tools = "query",
@@ -685,8 +654,6 @@ test_that("mod_server() builds the auto-generated greeting from the greeter, not
   skip_if_no_dataframe_engine()
 
   ds <- local_data_frame_source(new_test_df())
-  executor <- build_query_executor(list(test_table = ds))
-  withr::defer(executor$cleanup())
 
   main_client_calls <- list()
   client_factory <- function(...) {
@@ -704,7 +671,7 @@ test_that("mod_server() builds the auto-generated greeting from the greeter, not
 
   build_client_calls <- list()
   fake_greeter <- list(
-    build_client = function(base = NULL) {
+    build_client = function(base = NULL, tables = NULL, table_set = NULL) {
       build_client_calls[[length(build_client_calls) + 1L]] <<- base
       fake_greeting_client
     }
@@ -725,8 +692,7 @@ test_that("mod_server() builds the auto-generated greeting from the greeter, not
     mod_server,
     args = list(
       id = "test",
-      data_sources = list(test_table = ds),
-      executor = executor,
+      table_set = local_table_set(list(test_table = ds)),
       greeting = NULL,
       client = client_factory,
       tools = "query",
@@ -753,8 +719,6 @@ test_that("mod_server() chat_update input updates table state", {
   skip_if_no_dataframe_engine()
 
   ds <- local_data_frame_source(new_test_df())
-  executor <- build_query_executor(list(test_table = ds))
-  withr::defer(executor$cleanup())
 
   client_factory <- function(...) {
     structure(list(), class = c("MockChat", "Chat"))
@@ -770,8 +734,7 @@ test_that("mod_server() chat_update input updates table state", {
     mod_server,
     args = list(
       id = "test",
-      data_sources = list(test_table = ds),
-      executor = executor,
+      table_set = local_table_set(list(test_table = ds)),
       greeting = "Hello",
       client = client_factory,
       tools = "query",
@@ -801,8 +764,6 @@ test_that("mod_server() registers table/viz state with both bookmark and history
   skip_if_no_dataframe_engine()
 
   ds <- local_data_frame_source(new_test_df())
-  executor <- build_query_executor(list(test_table = ds))
-  withr::defer(executor$cleanup())
 
   client_factory <- function(...) {
     structure(list(), class = c("MockChat", "Chat"))
@@ -843,8 +804,7 @@ test_that("mod_server() registers table/viz state with both bookmark and history
     mod_server,
     args = list(
       id = "test",
-      data_sources = list(test_table = ds),
-      executor = executor,
+      table_set = local_table_set(list(test_table = ds)),
       greeting = "Hello",
       client = client_factory,
       tools = "query",
@@ -863,8 +823,6 @@ test_that("history on_save callback returns merged values (R history contract)",
   skip_if_no_dataframe_engine()
 
   ds <- local_data_frame_source(new_test_df())
-  executor <- build_query_executor(list(test_table = ds))
-  withr::defer(executor$cleanup())
 
   client_factory <- function(...) {
     structure(list(), class = c("MockChat", "Chat"))
@@ -888,8 +846,7 @@ test_that("history on_save callback returns merged values (R history contract)",
     mod_server,
     args = list(
       id = "test",
-      data_sources = list(test_table = ds),
-      executor = executor,
+      table_set = local_table_set(list(test_table = ds)),
       greeting = "Hello",
       client = client_factory,
       tools = "query",
@@ -924,8 +881,6 @@ test_that("history on_save callback works with no active reactive context", {
   skip_if_no_dataframe_engine()
 
   ds <- local_data_frame_source(new_test_df())
-  executor <- build_query_executor(list(test_table = ds))
-  withr::defer(executor$cleanup())
 
   client_factory <- function(...) {
     structure(list(), class = c("MockChat", "Chat"))
@@ -949,8 +904,7 @@ test_that("history on_save callback works with no active reactive context", {
     mod_server,
     args = list(
       id = "test",
-      data_sources = list(test_table = ds),
-      executor = executor,
+      table_set = local_table_set(list(test_table = ds)),
       greeting = "Hello",
       client = client_factory,
       tools = "query",

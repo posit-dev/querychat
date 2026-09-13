@@ -174,6 +174,25 @@ PinSource <- R6::R6Class(
         parts <- c(parts, paste("Tags:", paste(meta$tags, collapse = ", ")))
       }
       paste(parts, collapse = "\n\n")
+    },
+
+    #' @description
+    #' Disconnect the DuckDB or SQLite connection this PinSource opened, and
+    #' shut down the DuckDB instance if used.
+    #'
+    #' Unlike [DBISource]'s `cleanup()`, this isn't a no-op: PinSource always
+    #' opens its own connection (never a caller-supplied one), so it owns it.
+    #'
+    #' @return `NULL` (invisibly)
+    cleanup = function() {
+      if (!is.null(private$conn) && DBI::dbIsValid(private$conn)) {
+        if (inherits(private$conn, "duckdb_connection")) {
+          DBI::dbDisconnect(private$conn, shutdown = TRUE)
+        } else {
+          DBI::dbDisconnect(private$conn)
+        }
+      }
+      invisible(NULL)
     }
   ),
   private = list(

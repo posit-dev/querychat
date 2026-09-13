@@ -398,3 +398,16 @@ describe("QueryChat + PinSource integration", {
     qc$cleanup()
   })
 })
+
+test_that("PinSource$cleanup() disconnects the connection it opened", {
+  skip_if_not_installed("pins")
+  skip_if_not_installed("duckdb")
+  skip_if_not_installed("nanoparquet")
+
+  ps <- local_pin_source(type = "parquet")
+  conn <- ps$.__enclos_env__$private$conn
+
+  ps$cleanup()
+
+  expect_false(DBI::dbIsValid(conn))
+})

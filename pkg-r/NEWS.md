@@ -61,6 +61,12 @@
 
 * Fixed a module-namespace desync when a table was registered between `$ui()` and `$server()` (e.g. via `$server(data_source = )`). (#305)
 
+* `$server(data_source = )` no longer modifies the `QueryChat` instance. The table is registered for that session only: the instance's tables, greeting tables, and system prompt are unchanged, a same-named instance table is shadowed for that session, and any connection querychat created for it is cleaned up when the session ends. A second session's `$server(data_source = )` call therefore no longer errors with "Cannot add tables after server initialization." (#300, #306)
+
+* `$cleanup()` follows one rule: querychat closes only what it created. `DBISource$cleanup()` and `TblSqlSource$cleanup()` no longer disconnect your connection; disconnect it yourself on shutdown. `DataFrameSource`/`PinSource` DuckDB connections are still closed.
+
+* Adding a *new* table with `$add_table()`/`$add_tables()` after a session has started now warns instead of erroring; running sessions keep their tables and new sessions see the addition. Replacing or removing an existing table after a session has started still errors.
+
 # querychat 0.3.0
 
 ## New features

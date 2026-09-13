@@ -242,6 +242,9 @@ or \code{FALSE} to never clean up automatically.}
 \if{latex}{\out{\hypertarget{method-QueryChat-add_table}{}}}
 \subsection{\code{QueryChat$add_table()}}{
   Add a table to this QueryChat instance.
+
+Replacing or removing an existing table after a session has started is
+an error; adding a new one warns.
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
     \preformatted{QueryChat$add_table(
@@ -278,6 +281,9 @@ context. Default is \code{FALSE}.}
 Unlike calling \verb{$add_table()} repeatedly, this method builds the
 system prompt exactly once after all tables have been staged, avoiding
 N-1 spurious intermediate rebuilds.
+
+Replacing or removing an existing table after a session has started is
+an error; adding a new one warns.
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
     \preformatted{QueryChat$add_tables(
@@ -314,6 +320,8 @@ the tables being added). Any other type raises an error.}
 \if{latex}{\out{\hypertarget{method-QueryChat-remove_table}{}}}
 \subsection{\code{QueryChat$remove_table()}}{
   Remove a table from this QueryChat instance.
+
+Removing an existing table after a session has started is an error.
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
     \preformatted{QueryChat$remove_table(table_name)}
@@ -571,12 +579,13 @@ and \code{window_title} is omitted, it is also used as the document title.}
   \subsection{Arguments}{
     \if{html}{\out{<div class="arguments">}}
     \describe{
-      \item{\code{data_source}}{Optional data source to register for this session,
-for the deferred pattern where the data source can't be created
-until the server function runs (e.g. a connection scoped to
-per-user OAuth credentials). Registered under \code{table_name} if given,
-otherwise the \code{table_name} passed to \verb{$new()}, or the first
-already-registered table.}
+      \item{\code{data_source}}{Optional data source to register for this session
+only, for the deferred pattern where the source can't be created
+until the server function runs (for example a per-user database
+connection). The instance's own tables are not modified; a
+same-named instance table is shadowed for this session; any
+connection querychat created for it is cleaned up when the session
+ends.}
       \item{\code{client}}{Optional chat client override for this session.}
       \item{\code{history}}{Conversation history configuration for this call. Overrides
 the value set on \verb{$new()}. Resolves to \code{TRUE} when neither this nor the
@@ -628,14 +637,18 @@ or \code{NULL} before any query.
 \if{html}{\out{<a id="method-QueryChat-cleanup"></a>}}
 \if{latex}{\out{\hypertarget{method-QueryChat-cleanup}{}}}
 \subsection{\code{QueryChat$cleanup()}}{
-  Clean up resources associated with the data source.
+  Clean up resources this object created.
+
+Closes the query executors and data-source connections querychat opened
+(in-memory DuckDB), including those of table sets superseded by a late
+\verb{$add_table()}. Connections you passed in are never closed.
   \subsection{Usage}{
     \if{html}{\out{<div class="r">}}
     \preformatted{QueryChat$cleanup()}
     \if{html}{\out{</div>}}
   }
   \subsection{Returns}{
-    Invisibly returns \code{NULL}. Resources are cleaned up internally.
+    Invisibly returns \code{NULL}.
   }
 }
 

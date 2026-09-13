@@ -22,8 +22,9 @@
 #' # Or collect the entire data frame into local memory
 #' dplyr::collect(result)
 #'
-#' # Finally, clean up when done with the database (closes the DB connection)
+#' # cleanup() is a no-op: you own `con`, so disconnect it yourself when done
 #' mtcars_source$cleanup()
+#' DBI::dbDisconnect(con, shutdown = TRUE)
 #'
 #' @export
 TblSqlSource <- R6::R6Class(

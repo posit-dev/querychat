@@ -18,9 +18,9 @@
 #' # Execute a query
 #' result <- db_source$execute_query("SELECT * FROM mtcars WHERE mpg > 25")
 #'
-#' # Note: cleanup() will disconnect the connection
-#' # If you want to keep the connection open, don't call cleanup()
+#' # cleanup() is a no-op: you own `con`, so disconnect it yourself
 #' db_source$cleanup()
+#' DBI::dbDisconnect(con)
 #'
 #' @export
 DBISource <- R6::R6Class(

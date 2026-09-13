@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import duckdb
 import narwhals.stable.v1 as nw
@@ -268,6 +268,7 @@ def check_source_compatibility(
         IbisSource,
         SQLAlchemySource,
     )
+    from ._pin_source import PinSource
 
     first_source = next(iter(existing.values()))
 
@@ -276,6 +277,18 @@ def check_source_compatibility(
             f"Cannot add {type(new_source).__name__} table '{new_name}': "
             f"all tables must be the same type. "
             f"Existing tables use {type(first_source).__name__}."
+        )
+
+    # Reached only when the existing sources are also PinSources: a second pin
+    # would validate here but fail at query time, since each pin queries
+    # through its own private connection and DataSourceExecutor delegates all
+    # queries to the first one.
+    if isinstance(new_source, PinSource):
+        raise ValueError(
+            f"Cannot add pin '{new_name}': only one pin table is supported per "
+            "chat. Each pin queries through its own DuckDB connection, so "
+            "cross-pin queries can't run. To combine a pin with other tables, "
+            "register them in a shared DuckDB connection and pass that instead."
         )
 
     if isinstance(new_source, DataFrameSource) and isinstance(
@@ -322,6 +335,7 @@ def build_query_executor(sources: Mapping[str, DataSource]) -> QueryExecutor:
     """Pick the executor for a compatible group of sources."""
     from ._datasource import DataFrameSource, PolarsLazySource
 
+    # After validation, every source has the same type as the first one.
     validate_source_group_compatibility(dict(sources))
 
     if len(sources) == 1:
@@ -330,12 +344,8 @@ def build_query_executor(sources: Mapping[str, DataSource]) -> QueryExecutor:
     first_source = next(iter(sources.values()))
 
     if isinstance(first_source, DataFrameSource):
-        return DuckDBExecutor(
-            {n: s for n, s in sources.items() if isinstance(s, DataFrameSource)}
-        )
+        return DuckDBExecutor(cast("dict[str, DataFrameSource]", dict(sources)))
     if isinstance(first_source, PolarsLazySource):
-        return PolarsSQLExecutor(
-            {n: s for n, s in sources.items() if isinstance(s, PolarsLazySource)}
-        )
+        return PolarsSQLExecutor(cast("dict[str, PolarsLazySource]", dict(sources)))
 
     return DataSourceExecutor(dict(sources))

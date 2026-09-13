@@ -60,6 +60,13 @@ class TableSet(Generic[IntoFrameT]):
         return list(self.data_sources)
 
     def cleanup_executor(self) -> None:
-        """Close the executor if it was ever built. Never touches data sources."""
+        """Close the executor if it was ever built. Never touches data sources.
+
+        The cached executor is reset (matching R's ``TableSet``), so a later
+        access rebuilds it.
+        """
         if self.executor_built:
-            self.executor.cleanup()
+            try:
+                self.executor.cleanup()
+            finally:
+                del self.__dict__["executor"]

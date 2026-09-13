@@ -299,3 +299,33 @@ class TestQueryChatPinSourceIntegration:
             assert "Motor Trend Cars" not in prompt_after
         finally:
             qc.cleanup()
+
+
+class TestMultiplePins:
+    """A second pin must fail at registration, not at query time."""
+
+    def test_second_pin_rejected_by_compatibility_check(self, board, sample_df):
+        from querychat._query_executor import check_source_compatibility
+
+        board.pin_write(sample_df, "pin_a", type="parquet")
+        board.pin_write(sample_df, "pin_b", type="parquet")
+        first = PinSource(board, "pin_a")
+        second = PinSource(board, "pin_b")
+        try:
+            with pytest.raises(ValueError, match="only one pin"):
+                check_source_compatibility({"pin_a": first}, second, "pin_b")
+        finally:
+            first.cleanup()
+            second.cleanup()
+
+    def test_add_table_rejects_second_pin(self, board, sample_df):
+        from querychat import QueryChat
+
+        board.pin_write(sample_df, "pin_a", type="parquet")
+        board.pin_write(sample_df, "pin_b", type="parquet")
+        qc = QueryChat(board, "pin_a")
+        try:
+            with pytest.raises(ValueError, match="only one pin"):
+                qc.add_table(board, "pin_b")
+        finally:
+            qc.cleanup()

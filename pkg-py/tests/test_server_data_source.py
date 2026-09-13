@@ -106,6 +106,18 @@ class TestServerDataSourceRegistersDeferredTable:
         with pytest.raises(ValueError, match="table_name"):
             qc.server(data_source=users_df)
 
+    def test_data_source_name_mismatch_raises(self, users_df, captured_mod_server):
+        import narwhals.stable.v1 as nw
+        from querychat._datasource import DataFrameSource
+
+        qc = shiny_mod.QueryChat()
+        mismatched = DataFrameSource(nw.from_native(users_df), "orders")
+        with pytest.raises(ValueError, match="does not match"):
+            qc.server(data_source=mismatched, table_name="users")
+        mismatched.cleanup()
+        assert qc.table_names() == []
+        assert captured_mod_server == []
+
     def test_invalid_deferred_table_name_raises_at_construction(self):
         """A bad deferred name must fail fast, not at .server() registration."""
         with pytest.raises(ValueError, match="must begin with a letter"):

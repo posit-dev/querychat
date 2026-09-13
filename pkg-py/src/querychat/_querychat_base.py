@@ -484,6 +484,15 @@ class QueryChatBase(Generic[IntoFrameT]):
         exists = table_name in self._data_sources
         if exists and not replace:
             raise ValueError(f"Table '{table_name}' already exists")
+        if (
+            isinstance(data_source, DataSource)
+            and data_source.table_name != table_name
+        ):
+            raise ValueError(
+                f"data_source's own table name ('{data_source.table_name}') "
+                f"does not match the given table_name ('{table_name}'). "
+                "Pass a matching table_name."
+            )
 
         normalized = normalize_data_source(data_source, table_name)
         try:

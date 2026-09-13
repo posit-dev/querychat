@@ -12,6 +12,7 @@ from shinychat.types import HistoryOptions
 
 from shiny import App, Inputs, Outputs, Session, reactive, render, req, ui
 
+from ._datasource import DataSource
 from ._icons import bs_icon
 from ._querychat_base import (
     DEFAULT_TOOLS,
@@ -45,7 +46,6 @@ if TYPE_CHECKING:
     from narwhals.stable.v1.typing import IntoFrame
 
     from ._data_dict import DataDict
-    from ._datasource import DataSource
     from ._table_accessor import TableAccessor
     from ._table_set import TableSet
 
@@ -640,7 +640,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
             **kwargs,
         )
 
-    def server(
+    def server(  # noqa: PLR0912
         self,
         *,
         data_source: IntoFrame | sqlalchemy.Engine | ibis.Table | None = None,
@@ -729,6 +729,16 @@ class QueryChat(QueryChatBase[IntoFrameT]):
                     "table first with add_table()."
                 )
             check_table_name(resolved_table_name, data_source=data_source)
+            if (
+                isinstance(data_source, DataSource)
+                and data_source.table_name != resolved_table_name
+            ):
+                raise ValueError(
+                    f"data_source's own table name ('{data_source.table_name}') "
+                    f"does not match the given table_name ('{resolved_table_name}'). "
+                    "Pass a matching table_name, or omit it to use "
+                    f"'{data_source.table_name}'."
+                )
             session_source = normalize_data_source(data_source, resolved_table_name)
             try:
                 table_set = self._build_table_set(

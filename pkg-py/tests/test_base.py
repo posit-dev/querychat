@@ -463,6 +463,17 @@ class TestAddTablesIbis:
         assert len(multi_table_warns) == 1
 
 
+def test_add_table_rejects_data_source_name_mismatch(sample_df):
+    """Reject registering a DataSource under a name its connection doesn't have."""
+    qc = QueryChatBase()
+    mismatched = DataFrameSource(sample_df, "orders")
+
+    with pytest.raises(ValueError, match="does not match"):
+        qc.add_table(mismatched, "users")
+    mismatched.cleanup()
+    assert qc.table_names() == []
+
+
 def test_history_stored_verbatim_no_default_substitution():
     """
     QueryChatBase stores history exactly as given -- including None -- so callers

@@ -156,6 +156,26 @@ describe("build_query_executor()", {
   })
 })
 
+describe("group_db_type()", {
+  skip_if_not_installed("duckdb")
+
+  it("is DuckDB for multi-source family groups, even with sqlite members", {
+    skip_if_not_installed("RSQLite")
+    sqlite_src <- local_data_frame_source(
+      new_test_df(),
+      "test",
+      engine = "sqlite"
+    )
+    duckdb_src <- local_data_frame_source(new_users_df(), "users")
+
+    expect_equal(
+      group_db_type(list(test = sqlite_src, users = duckdb_src)),
+      "DuckDB"
+    )
+    expect_equal(group_db_type(list(test = sqlite_src)), "SQLite")
+  })
+})
+
 describe("check_source_compatibility()", {
   skip_if_not_installed("duckdb")
 

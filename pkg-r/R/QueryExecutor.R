@@ -249,6 +249,16 @@ is_duckdb_family_source <- function(x) {
   inherits(x, "DataFrameSource") || inherits(x, "PinSource")
 }
 
+# The db_type a group's executor will report. Multi-table
+# DataFrameSource/PinSource groups are served by a shared DuckDB connection
+# regardless of each source's own engine.
+group_db_type <- function(data_sources) {
+  if (length(data_sources) > 1 && is_duckdb_family_source(data_sources[[1]])) {
+    return("DuckDB")
+  }
+  data_sources[[1]]$get_db_type()
+}
+
 # Validates that a new source is compatible with existing sources.
 check_source_compatibility <- function(existing_sources, new_source, new_name) {
   if (length(existing_sources) == 0) {

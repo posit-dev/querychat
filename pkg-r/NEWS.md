@@ -29,7 +29,7 @@
 
 * **Editable SQL panel**: the SQL panel in `querychat_app()` is now a code editor — tweak the generated SQL and apply it with Ctrl/Cmd+Enter. (#265)
 
-* `PinSource`: chat with datasets pinned to a [pins](https://pins.rstudio.com/) board (parquet, CSV, JSON, RDS); the pin's title, description, and tags serve as the default data description. (#246)
+* `PinSource`: chat with datasets pinned to a [pins](https://pins.rstudio.com/) board (parquet, CSV, JSON, RDS); the pin's title, description, and tags serve as the default data description. Multiple pins (and pins mixed with data frames) work in one chat via a shared DuckDB connection. (#246, #312)
 
 * Deferred construction is more flexible: `table_name` is now optional in `QueryChat$new(NULL)`, and `$server()` gains a `table_name` parameter so the table can be named per session. (#305)
 

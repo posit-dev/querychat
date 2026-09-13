@@ -412,22 +412,118 @@ test_that("PinSource$cleanup() disconnects the connection it opened", {
   expect_false(DBI::dbIsValid(conn))
 })
 
-describe("PinSource multi-table registration", {
+describe("PinSource multi-table support", {
   skip_if_not_installed("pins")
   skip_if_not_installed("duckdb")
   skip_if_not_installed("nanoparquet")
 
-  it("rejects a second pin via check_source_compatibility", {
+  it("accepts a second pin via check_source_compatibility", {
     ps1 <- local_pin_source(name = "pin_a", type = "parquet")
     ps2 <- local_pin_source(name = "pin_b", type = "parquet")
 
-    expect_error(
-      check_source_compatibility(list(pin_a = ps1), ps2, "pin_b"),
-      "only one pin"
+    expect_no_error(
+      check_source_compatibility(list(pin_a = ps1), ps2, "pin_b")
     )
   })
 
-  it("QueryChat$add_table() rejects a second pin", {
+  it("queries across two pins through a shared DuckDB executor", {
+    board <- pins::board_temp()
+    suppressMessages(
+      pins::pin_write(
+        board,
+        data.frame(id = 1:3, x = c(10, 20, 30)),
+        "pin_a",
+        type = "parquet"
+      )
+    )
+    suppressMessages(
+      pins::pin_write(
+        board,
+        data.frame(id = 1:3, y = c("a", "b", "c")),
+        "pin_b",
+        type = "csv"
+      )
+    )
+
+    qc <- QueryChat$new(board, "pin_a")
+    withr::defer(qc$cleanup())
+    qc$add_table(board, "pin_b")
+
+    executor <- qc$.__enclos_env__$private$.table_set$executor()
+    expect_s3_class(executor, "DuckDBExecutor")
+
+    joined <- executor$execute_query(
+      "SELECT a.x, b.y FROM pin_a a JOIN pin_b b ON a.id = b.id ORDER BY a.id"
+    )
+    expect_equal(joined$x, c(10, 20, 30))
+    expect_equal(joined$y, c("a", "b", "c"))
+
+    # Per-table schema and validation work for both pins
+    schema <- executor$get_schema("pin_b", categorical_threshold = 20)
+    expect_match(schema, "Table: pin_b")
+    expect_no_error(
+      executor$test_query(
+        "SELECT * FROM pin_b",
+        "pin_b",
+        require_all_columns = TRUE
+      )
+    )
+  })
+
+  it("mixes pins and data frames in one executor", {
+    ps1 <- local_pin_source(name = "pin_a", type = "parquet")
+    df_source <- local_data_frame_source(new_test_df(), "test")
+
+    executor <- build_query_executor(list(pin_a = ps1, test = df_source))
+    withr::defer(executor$cleanup())
+
+    expect_s3_class(executor, "DuckDBExecutor")
+    result <- executor$execute_query(
+      "SELECT COUNT(*) AS n FROM pin_a CROSS JOIN test"
+    )
+    expect_equal(result$n, 10 * nrow(new_test_df()))
+  })
+
+  it("leaves pin connections open when the executor is cleaned up", {
+    ps1 <- local_pin_source(name = "pin_a", type = "parquet")
+    ps2 <- local_pin_source(name = "pin_b", type = "parquet")
+    executor <- build_query_executor(list(pin_a = ps1, pin_b = ps2))
+
+    # The shared connection is executor-owned; pins keep their own.
+    executor$cleanup()
+
+    expect_true(DBI::dbIsValid(ps1$conn))
+    expect_true(DBI::dbIsValid(ps2$conn))
+    expect_equal(nrow(ps2$execute_query("SELECT * FROM pin_b")), 10)
+  })
+
+  it("rejects adding a sqlite-engine pin to a multi-table group", {
+    skip_if_not_installed("RSQLite")
+    ps1 <- local_pin_source(name = "pin_a", type = "parquet")
+    ps_sqlite <- suppressWarnings(
+      local_pin_source(name = "pin_b", engine = "sqlite")
+    )
+
+    expect_error(
+      check_source_compatibility(list(pin_a = ps1), ps_sqlite, "pin_b"),
+      "engine = \"sqlite\""
+    )
+  })
+
+  it("rejects adding any table when an existing pin uses sqlite", {
+    skip_if_not_installed("RSQLite")
+    ps_sqlite <- suppressWarnings(
+      local_pin_source(name = "pin_a", engine = "sqlite")
+    )
+    df_source <- local_data_frame_source(new_test_df(), "test")
+
+    expect_error(
+      check_source_compatibility(list(pin_a = ps_sqlite), df_source, "test"),
+      "engine = \"sqlite\""
+    )
+  })
+
+  it("QueryChat$add_table() accepts a second pin", {
     board <- pins::board_temp()
     suppressMessages(
       pins::pin_write(board, mtcars[1:5, ], "pin_a", type = "parquet")
@@ -439,6 +535,6 @@ describe("PinSource multi-table registration", {
     qc <- QueryChat$new(board, "pin_a")
     withr::defer(qc$cleanup())
 
-    expect_error(qc$add_table(board, "pin_b"), "only one pin")
+    expect_no_error(qc$add_table(board, "pin_b"))
   })
 })

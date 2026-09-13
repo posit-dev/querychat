@@ -59,22 +59,20 @@ DuckDBExecutor <- R6::R6Class(
     table_columns = list()
   ),
   public = list(
-    initialize = function(dataframes) {
+    # `data_sources` is a named list of DataFrameSource and/or PinSource
+    # objects; each materializes its table into one shared connection, then
+    # the connection is locked down once.
+    initialize = function(data_sources) {
       check_installed("duckdb")
 
       private$conn <- DBI::dbConnect(duckdb::duckdb(), dbdir = ":memory:")
 
-      for (name in names(dataframes)) {
-        duckdb::duckdb_register(
-          private$conn,
-          name,
-          dataframes[[name]],
-          experimental = FALSE
-        )
+      for (name in names(data_sources)) {
+        data_sources[[name]]$register_into(private$conn, name)
       }
 
       # Cache column names per table before lockdown
-      for (name in names(dataframes)) {
+      for (name in names(data_sources)) {
         cols <- colnames(
           DBI::dbGetQuery(
             private$conn,
@@ -230,12 +228,19 @@ build_query_executor <- function(data_sources) {
 
   first_source <- data_sources[[1]]
 
-  if (inherits(first_source, "DataFrameSource")) {
-    dataframes <- lapply(data_sources, function(ds) ds$get_data())
-    return(DuckDBExecutor$new(dataframes))
+  if (
+    inherits(first_source, "DataFrameSource") ||
+      inherits(first_source, "PinSource")
+  ) {
+    return(DuckDBExecutor$new(data_sources))
   }
 
   DataSourceExecutor$new(data_sources)
+}
+
+# DataFrameSources and PinSources can share a DuckDBExecutor connection.
+is_duckdb_family_source <- function(x) {
+  inherits(x, "DataFrameSource") || inherits(x, "PinSource")
 }
 
 # Validates that a new source is compatible with existing sources.
@@ -246,25 +251,42 @@ check_source_compatibility <- function(existing_sources, new_source, new_name) {
 
   first_source <- existing_sources[[1]]
 
+  if (
+    is_duckdb_family_source(new_source) && is_duckdb_family_source(first_source)
+  ) {
+    # Pins materialized into SQLite can't live in a DuckDB executor, so
+    # multi-table groups containing sqlite-engine pins are rejected.
+    for (existing_name in names(existing_sources)) {
+      src <- existing_sources[[existing_name]]
+      if (inherits(src, "PinSource") && identical(src$engine, "sqlite")) {
+        cli::cli_abort(
+          c(
+            "Cannot add table {.val {new_name}}: pin {.val {existing_name}} uses {.code engine = \"sqlite\"}, which can't join the shared DuckDB connection used for multi-table chats.",
+            "i" = "Recreate pin {.val {existing_name}} with {.code engine = \"duckdb\"} to combine it with other tables."
+          )
+        )
+      }
+    }
+    if (
+      inherits(new_source, "PinSource") &&
+        identical(new_source$engine, "sqlite")
+    ) {
+      cli::cli_abort(
+        c(
+          "Cannot add pin {.val {new_name}} with {.code engine = \"sqlite\"}: multi-table chats are served by a shared DuckDB connection, which SQLite pins can't join.",
+          "i" = "Use {.code engine = \"duckdb\"} to combine pins with other tables."
+        )
+      )
+    }
+    return(invisible(NULL))
+  }
+
   if (!identical(class(new_source), class(first_source))) {
     cli::cli_abort(
       c(
         "Cannot add {.cls {class(new_source)[1]}} table {.val {new_name}}: all tables must be the same type.",
-        "i" = "Existing tables use {.cls {class(first_source)[1]}}."
-      )
-    )
-  }
-
-  # Reached only when the existing sources are also PinSources: a second pin
-  # would validate here but fail at query time, since each pin queries
-  # through its own private connection and DataSourceExecutor delegates all
-  # queries to the first one.
-  if (inherits(new_source, "PinSource")) {
-    cli::cli_abort(
-      c(
-        "Cannot add pin {.val {new_name}}: only one pin table is supported per chat.",
-        "i" = "Each pin queries through its own connection, so only the first pin's table would be queryable.",
-        "i" = "To combine a pin with other tables, register them in a shared DuckDB connection and pass that instead."
+        "i" = "Existing tables use {.cls {class(first_source)[1]}}.",
+        "i" = "Pins and data frames may be combined with each other, but not with database-backed sources."
       )
     )
   }

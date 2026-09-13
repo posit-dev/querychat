@@ -45,6 +45,7 @@ df_sqlite$cleanup()
 \subsection{Public methods}{
   \itemize{
     \item \href{#method-DataFrameSource-initialize}{\code{DataFrameSource$new()}}
+    \item \href{#method-DataFrameSource-register_into}{\code{DataFrameSource$register_into()}}
     \item \href{#method-DataFrameSource-cleanup}{\code{DataFrameSource$cleanup()}}
     \item \href{#method-DataFrameSource-clone}{\code{DataFrameSource$clone()}}
   }
@@ -91,6 +92,33 @@ engine from duckdb or RSQLite (in that order).}
   }
   \subsection{Returns}{
     A new DataFrameSource object
+  }
+}
+
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-DataFrameSource-register_into"></a>}}
+\if{latex}{\out{\hypertarget{method-DataFrameSource-register_into}{}}}
+\subsection{\code{DataFrameSource$register_into()}}{
+  Register this data frame in a shared DuckDB connection.
+
+Internal hook for joining a shared \code{DuckDBExecutor}. The caller owns
+\code{con} and locks it down once all tables are registered.
+  \subsection{Usage}{
+    \if{html}{\out{<div class="r">}}
+    \preformatted{DataFrameSource$register_into(con, table_name = self$table_name)}
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Arguments}{
+    \if{html}{\out{<div class="arguments">}}
+    \describe{
+      \item{\code{con}}{A DuckDB DBI connection, owned by the caller.}
+      \item{\code{table_name}}{Name for the table in \code{con}. Defaults to the source's
+own table name.}
+    }
+    \if{html}{\out{</div>}}
+  }
+  \subsection{Returns}{
+    \code{NULL} (invisibly)
   }
 }
 

@@ -35,14 +35,16 @@ describe("DuckDBExecutor", {
   skip_if_not_installed("duckdb")
 
   it("registers multiple data frames for cross-table JOINs", {
-    users <- new_users_df()
     scores <- data.frame(
       id = 1:5,
       score = c(90, 85, 92, 78, 88),
       stringsAsFactors = FALSE
     )
-    dataframes <- list(users = users, scores = scores)
-    executor <- DuckDBExecutor$new(dataframes)
+    sources <- list(
+      users = local_data_frame_source(new_users_df(), "users"),
+      scores = local_data_frame_source(scores, "scores")
+    )
+    executor <- DuckDBExecutor$new(sources)
     withr::defer(executor$cleanup())
 
     result <- executor$execute_query(
@@ -55,9 +57,8 @@ describe("DuckDBExecutor", {
   })
 
   it("enforces require_all_columns per table in test_query()", {
-    users <- new_users_df()
-    dataframes <- list(users = users)
-    executor <- DuckDBExecutor$new(dataframes)
+    sources <- list(users = local_data_frame_source(new_users_df(), "users"))
+    executor <- DuckDBExecutor$new(sources)
     withr::defer(executor$cleanup())
 
     # Query that drops a column should fail with require_all_columns = TRUE
@@ -81,9 +82,8 @@ describe("DuckDBExecutor", {
   })
 
   it("locks down the connection (DDL like CREATE TABLE should fail)", {
-    users <- new_users_df()
-    dataframes <- list(users = users)
-    executor <- DuckDBExecutor$new(dataframes)
+    sources <- list(users = local_data_frame_source(new_users_df(), "users"))
+    executor <- DuckDBExecutor$new(sources)
     withr::defer(executor$cleanup())
 
     expect_error(
@@ -92,14 +92,16 @@ describe("DuckDBExecutor", {
   })
 
   it("returns correct get_db_type()", {
-    executor <- DuckDBExecutor$new(list(users = new_users_df()))
+    sources <- list(users = local_data_frame_source(new_users_df(), "users"))
+    executor <- DuckDBExecutor$new(sources)
     withr::defer(executor$cleanup())
 
     expect_equal(executor$get_db_type(), "DuckDB")
   })
 
   it("gets schema for a named table", {
-    executor <- DuckDBExecutor$new(list(users = new_users_df()))
+    sources <- list(users = local_data_frame_source(new_users_df(), "users"))
+    executor <- DuckDBExecutor$new(sources)
     withr::defer(executor$cleanup())
 
     schema <- executor$get_schema("users", categorical_threshold = 20)

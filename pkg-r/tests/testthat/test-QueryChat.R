@@ -1430,7 +1430,7 @@ describe("QueryChat table changes after a session has started", {
 
     qc$add_table(new_test_df(), "users", replace = TRUE)
 
-    expect_false(DBI::dbIsValid(old_source$.__enclos_env__$private$conn))
+    expect_false(DBI::dbIsValid(old_source$conn))
   })
 
   it("does not mark sessions as started when $server() fails", {

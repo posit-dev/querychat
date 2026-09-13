@@ -28,7 +28,7 @@ start_server_session <- function(qc, ..., env = parent.frame()) {
 }
 
 source_conn_valid <- function(source) {
-  DBI::dbIsValid(source$.__enclos_env__$private$conn)
+  DBI::dbIsValid(source$conn)
 }
 
 describe("QueryChat$server(data_source = ) session isolation", {

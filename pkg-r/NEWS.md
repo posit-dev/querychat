@@ -69,6 +69,10 @@
 
 * Adding a *new* table with `$add_table()`/`$add_tables()` after a session has started now warns instead of erroring; running sessions keep their tables and new sessions see the addition. Replacing or removing an existing table after a session has started still errors.
 
+* Registering a second pins table now fails at `$add_table()` time with a clear error instead of failing at query time: each pin queries through its own connection, so cross-pin queries can't run. To combine a pin with other tables, register them in a shared DuckDB connection and pass that instead.
+
+* `$add_table()`/`$add_tables()` now reject database tables that use a different DBI connection than the existing tables, matching the Python package. Mixed connections used to validate but then fail at query time, since all queries execute against one shared connection.
+
 # querychat 0.3.0
 
 ## New features

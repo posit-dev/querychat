@@ -27,7 +27,7 @@ DBISource <- R6::R6Class(
   "DBISource",
   inherit = DataSource,
   private = list(
-    conn = NULL
+    .conn = NULL
   ),
   public = list(
     #' @description
@@ -66,7 +66,7 @@ DBISource <- R6::R6Class(
         )
       }
 
-      private$conn <- conn
+      private$.conn <- conn
       self$table_name <- table_name
 
       # Store original column names for validation
@@ -86,15 +86,15 @@ DBISource <- R6::R6Class(
     #' @return A string identifying the database type
     get_db_type = function() {
       # Special handling for known database types
-      if (inherits(private$conn, "duckdb_connection")) {
+      if (inherits(private$.conn, "duckdb_connection")) {
         return("DuckDB")
       }
-      if (inherits(private$conn, "SQLiteConnection")) {
+      if (inherits(private$.conn, "SQLiteConnection")) {
         return("SQLite")
       }
 
       # Default to 'POSIX' if dbms name not found
-      conn_info <- DBI::dbGetInfo(private$conn)
+      conn_info <- DBI::dbGetInfo(private$.conn)
       dbms_name <- getElement(conn_info, "dbms.name") %||% "POSIX"
 
       # Remove ' SQL', if exists (SQL is already in the prompt)
@@ -110,7 +110,7 @@ DBISource <- R6::R6Class(
     get_schema = function(categorical_threshold = 20, table_spec = NULL) {
       check_number_whole(categorical_threshold, min = 1)
       get_schema_impl(
-        private$conn,
+        private$.conn,
         self$table_name,
         categorical_threshold,
         table_spec = table_spec
@@ -123,14 +123,14 @@ DBISource <- R6::R6Class(
     ) {
       check_number_whole(categorical_threshold, min = 1)
       details <- build_column_details_impl(
-        private$conn,
+        private$.conn,
         self$table_name,
         categorical_threshold,
         table_spec = table_spec
       )
       list(
         text = format_schema_from_details(
-          as.character(DBI::dbQuoteIdentifier(private$conn, self$table_name)),
+          as.character(DBI::dbQuoteIdentifier(private$.conn, self$table_name)),
           details
         ),
         columns = details
@@ -141,10 +141,10 @@ DBISource <- R6::R6Class(
     #' Get information about semantic views (if any) for the system prompt.
     #' @return A string with semantic view information, or empty string if none
     get_semantic_views_description = function() {
-      if (!is_snowflake_connection(private$conn)) {
+      if (!is_snowflake_connection(private$.conn)) {
         return("")
       }
-      views <- discover_semantic_views_impl(private$conn)
+      views <- discover_semantic_views_impl(private$.conn)
       if (length(views) == 0) {
         return("")
       }
@@ -161,12 +161,12 @@ DBISource <- R6::R6Class(
       if (is.null(query) || !nzchar(query)) {
         query <- paste0(
           "SELECT * FROM ",
-          DBI::dbQuoteIdentifier(private$conn, self$table_name)
+          DBI::dbQuoteIdentifier(private$.conn, self$table_name)
         )
       }
 
       check_query(query)
-      DBI::dbGetQuery(private$conn, query)
+      DBI::dbGetQuery(private$.conn, query)
     },
 
     #' @description
@@ -181,7 +181,7 @@ DBISource <- R6::R6Class(
       check_bool(require_all_columns)
       check_query(query)
 
-      rs <- DBI::dbSendQuery(private$conn, query)
+      rs <- DBI::dbSendQuery(private$.conn, query)
       df <- DBI::dbFetch(rs, n = 1)
       DBI::dbClearResult(rs)
 
@@ -219,6 +219,15 @@ DBISource <- R6::R6Class(
     #' @return `NULL` (invisibly)
     cleanup = function() {
       invisible(NULL)
+    }
+  ),
+  active = list(
+    #' @field conn The DBI connection backing this source (read-only).
+    conn = function(value) {
+      if (!missing(value)) {
+        cli::cli_abort("{.field conn} is read-only.")
+      }
+      private$.conn
     }
   )
 )

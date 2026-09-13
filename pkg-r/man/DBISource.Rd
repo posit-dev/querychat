@@ -31,6 +31,13 @@ DBI::dbDisconnect(con)
 \section{Super class}{
 \code{\link[querychat:DataSource]{DataSource}} -> \code{DBISource}
 }
+\section{Active bindings}{
+  \if{html}{\out{<div class="r6-active-bindings">}}
+  \describe{
+    \item{\code{conn}}{The DBI connection backing this source (read-only).}
+  }
+  \if{html}{\out{</div>}}
+}
 \section{Methods}{
 \subsection{Public methods}{
   \itemize{

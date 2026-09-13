@@ -185,11 +185,11 @@ PinSource <- R6::R6Class(
     #'
     #' @return `NULL` (invisibly)
     cleanup = function() {
-      if (!is.null(private$conn) && DBI::dbIsValid(private$conn)) {
-        if (inherits(private$conn, "duckdb_connection")) {
-          DBI::dbDisconnect(private$conn, shutdown = TRUE)
+      if (!is.null(private$.conn) && DBI::dbIsValid(private$.conn)) {
+        if (inherits(private$.conn, "duckdb_connection")) {
+          DBI::dbDisconnect(private$.conn, shutdown = TRUE)
         } else {
-          DBI::dbDisconnect(private$conn)
+          DBI::dbDisconnect(private$.conn)
         }
       }
       invisible(NULL)

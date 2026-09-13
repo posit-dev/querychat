@@ -1376,6 +1376,41 @@ describe("QueryChat$add_tables()", {
     multi_table_warns <- warns[grepl("Multiple tables", warns)]
     expect_length(multi_table_warns, 1L)
   })
+
+  it("failed $add_tables() after a session started does not warn about the late change", {
+    skip_if_no_dataframe_engine()
+    conn <- local_multi_table_conn()
+    qc <- local_querychat(new_users_df(), "users", greeting = "hi")
+    qc$.__enclos_env__$private$.sessions_started <- TRUE
+
+    # Mixing DBI sources with the existing data-frame source fails validation;
+    # a change that never took effect must not warn about sessions missing it.
+    warns <- character(0)
+    withCallingHandlers(
+      expect_error(qc$add_tables(conn), "same type"),
+      warning = function(w) {
+        warns <<- c(warns, conditionMessage(w))
+        invokeRestart("muffleWarning")
+      }
+    )
+    expect_false(any(grepl("after a session has started", warns)))
+    expect_equal(qc$table_names(), "users")
+  })
+
+  it("rejected destructive $add_tables() after a session started leaves the instance untouched", {
+    conn <- local_multi_table_conn()
+    qc <- QueryChat$new(NULL, "placeholder", greeting = "Test")
+    suppressWarnings(qc$add_tables(conn))
+    old_set <- qc$.__enclos_env__$private$.table_set
+    qc$.__enclos_env__$private$.sessions_started <- TRUE
+
+    expect_error(
+      qc$add_tables(conn, tables = "orders", replace = TRUE),
+      "replace or remove"
+    )
+    expect_identical(qc$.__enclos_env__$private$.table_set, old_set)
+    expect_setequal(qc$table_names(), c("orders", "customers"))
+  })
 })
 
 describe("QueryChat table changes after a session has started", {

@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Adding a *new* table with `add_table()`/`add_tables()` after a session has started now warns instead of raising; running sessions keep their tables and new sessions see the addition. Replacing or removing an existing table after a session has started still raises.
 
+* A rejected or failed `add_table()`/`add_tables()` call (e.g. an incompatible source type) after a session has started no longer warns about the late change or otherwise affects the instance, since the change never took effect. (#311)
+
 * `cleanup()` no longer closes a spec-resolved `.server(client=...)` override while its session is still running; it is closed when the session ends.
 
 * Registering a second pins table with `add_table()` now raises a clear error at registration time instead of failing at query time: each pin queries through its own DuckDB connection, so only the first pin's table would be queryable. To combine a pin with other tables, register them in a shared DuckDB connection and pass that instead.

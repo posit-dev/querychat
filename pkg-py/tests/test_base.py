@@ -516,6 +516,45 @@ class TestLateConfigurationChanges:
             qc.add_table(sample_df, "users", replace=True)
         assert qc._superseded_table_sets == []
 
+    def test_failed_add_table_after_sessions_started_does_not_warn(
+        self, sample_df, multi_table_engine
+    ):
+        qc = QueryChatBase(sample_df, "users")
+        qc._sessions_started = True
+
+        # Mixing a SQLAlchemy source with the existing DataFrame source fails
+        # validation; a change that never took effect must not warn about it.
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            with pytest.raises(ValueError, match="same type"):
+                qc.add_table(multi_table_engine, "orders")
+        assert not any("after a session has started" in str(x.message) for x in w)
+        assert qc.table_names() == ["users"]
+
+    def test_rejected_replace_after_sessions_started_leaves_set_untouched(
+        self, sample_df
+    ):
+        qc = QueryChatBase(sample_df, "users")
+        old_set = qc._table_set
+        qc._sessions_started = True
+
+        with pytest.raises(RuntimeError, match="replace or remove"):
+            qc.add_table(sample_df, "users", replace=True)
+        assert qc._table_set is old_set
+
+    def test_failed_add_tables_after_sessions_started_does_not_warn(
+        self, sample_df, multi_table_engine
+    ):
+        qc = QueryChatBase(sample_df, "users")
+        qc._sessions_started = True
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            with pytest.raises(ValueError, match="same type"):
+                qc.add_tables(multi_table_engine)
+        assert not any("after a session has started" in str(x.message) for x in w)
+        assert qc.table_names() == ["users"]
+
     def test_remove_after_sessions_started_raises(self, sample_df):
         qc = QueryChatBase(sample_df, "users")
         qc.add_table(sample_df, "other")

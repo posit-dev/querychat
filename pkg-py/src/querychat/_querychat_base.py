@@ -484,11 +484,9 @@ class QueryChatBase(Generic[IntoFrameT]):
         exists = table_name in self._data_sources
         if exists and not replace:
             raise ValueError(f"Table '{table_name}' already exists")
-        self._check_late_change("add_table", destructive=exists)
 
         normalized = normalize_data_source(data_source, table_name)
         try:
-            self._warn_if_prompt_rebuilt_with_history()
             merged = dict(self._data_sources)
             merged[table_name] = normalized
             new_set = self._build_table_set(merged)
@@ -497,6 +495,17 @@ class QueryChatBase(Generic[IntoFrameT]):
                 warn_on_failure(normalized.cleanup, "data source")
             raise
 
+        # Only after the change is known to be valid do we check whether it's
+        # too late to apply it, so a rejected/failed add_table() doesn't warn.
+        try:
+            self._check_late_change("add_table", destructive=exists)
+        except Exception:
+            warn_on_failure(new_set.cleanup_executor, "query executor")
+            if normalized is not data_source:
+                warn_on_failure(normalized.cleanup, "data source")
+            raise
+
+        self._warn_if_prompt_rebuilt_with_history()
         old_source = self._data_sources.get(table_name)
         replaced = (
             [old_source]
@@ -595,7 +604,6 @@ class QueryChatBase(Generic[IntoFrameT]):
         existing = [name for name in tables if name in self._data_sources]
         if existing and not replace:
             raise ValueError(f"Table '{existing[0]}' already exists")
-        self._check_late_change("add_tables", destructive=bool(existing))
 
         if isinstance(include_in_greeting, bool):
             greeting_names = list(tables) if include_in_greeting else []
@@ -610,11 +618,26 @@ class QueryChatBase(Generic[IntoFrameT]):
             )
 
         normalized = {name: normalized_builder(name) for name in tables}
-        self._warn_if_prompt_rebuilt_with_history()
         merged = dict(self._data_sources)
         merged.update(normalized)
-        new_set = self._build_table_set(merged)
+        try:
+            new_set = self._build_table_set(merged)
+        except Exception:
+            for source in normalized.values():
+                warn_on_failure(source.cleanup, "data source")
+            raise
 
+        # Only after the change is known to be valid do we check whether it's
+        # too late to apply it, so a rejected/failed add_tables() doesn't warn.
+        try:
+            self._check_late_change("add_tables", destructive=bool(existing))
+        except Exception:
+            warn_on_failure(new_set.cleanup_executor, "query executor")
+            for source in normalized.values():
+                warn_on_failure(source.cleanup, "data source")
+            raise
+
+        self._warn_if_prompt_rebuilt_with_history()
         replaced = [
             old
             for name in tables

@@ -69,6 +69,8 @@
 
 * Adding a *new* table with `$add_table()`/`$add_tables()` after a session has started now warns instead of erroring; running sessions keep their tables and new sessions see the addition. Replacing or removing an existing table after a session has started still errors.
 
+* A rejected or failed `$add_table()`/`$add_tables()` call (e.g. an incompatible source type) after a session has started no longer warns about the late change or otherwise affects the instance, since the change never took effect. (#311)
+
 
 # querychat 0.3.0
 

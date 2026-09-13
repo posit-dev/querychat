@@ -653,10 +653,6 @@ QueryChat <- R6::R6Class(
           "Table {.val {existing[[1]]}} already exists. Use {.code replace = TRUE} to replace."
         )
       }
-      private$check_late_change(
-        "add_tables",
-        destructive = length(existing) > 0
-      )
 
       if (
         !rlang::is_bool(include_in_greeting) &&
@@ -678,6 +674,11 @@ QueryChat <- R6::R6Class(
         lapply(tables, function(tbl) normalize_data_source(conn, tbl)),
         tables
       )
+      cleanup_normalized <- function() {
+        for (source in normalized) {
+          warn_on_cleanup_failure(source$cleanup(), "data source")
+        }
+      }
       next_sources <- current
       for (table_name in tables) {
         next_sources[[table_name]] <- normalized[[table_name]]
@@ -688,9 +689,30 @@ QueryChat <- R6::R6Class(
       } else {
         pending_description$description
       }
-      new_set <- private$build_table_set(
-        next_sources,
-        data_description = candidate_description
+      new_set <- tryCatch(
+        private$build_table_set(
+          next_sources,
+          data_description = candidate_description
+        ),
+        error = function(e) {
+          cleanup_normalized()
+          stop(e)
+        }
+      )
+
+      # Only after the change is known to be valid do we check whether it's
+      # too late to apply it, so a rejected/failed add_tables() doesn't warn,
+      # and doesn't commit the data description either.
+      tryCatch(
+        private$check_late_change(
+          "add_tables",
+          destructive = length(existing) > 0
+        ),
+        error = function(e) {
+          warn_on_cleanup_failure(new_set$cleanup_executor(), "query executor")
+          cleanup_normalized()
+          stop(e)
+        }
       )
       private$commit_data_description(pending_description)
 

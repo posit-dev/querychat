@@ -5,25 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.9.0] - 2026-09-13
 
 ### New features
 
-* Multiple pins (and pins mixed with data frames) are now supported in one chat: pin and data-frame tables are materialized into a shared DuckDB connection, so the LLM can join and filter across them. Each pin still keeps its own private connection for standalone use. (#312)
+* One chat can now use **multiple pins, or pins mixed with data frames**: the tables are combined behind the scenes so the LLM can join and filter across all of them. (#312)
+
+### Breaking changes
+
+* **Safer multi-user apps:** `.server(data_source=)` now applies to that user's session only, instead of modifying the shared `QueryChat` instance. Concurrent sessions (e.g. per-user database connections on Posit Connect) no longer interfere with each other's data or greetings, and each session's data source is cleaned up when it ends. (#300, #302, #303, #304, #308)
+
+* **Simpler cleanup rule:** `cleanup()` now closes only what querychat itself created. If you pass your own SQLAlchemy engine, `cleanup()` no longer disposes it — dispose it yourself on shutdown. Connections querychat creates for you (data frames, pins, default chat clients) are still closed automatically.
 
 ### Changes
 
-* `.server(data_source=)` no longer modifies the `QueryChat` instance. The table is registered for that session only: the instance's tables, greeting tables, and system prompt are unchanged, a same-named instance table is shadowed for that session, and the session's data source is cleaned up when the session ends. This removes the concurrent-session edge cases that `0.8.0` patched around (#300, #302, #303, #304, #308).
-
-* `cleanup()` follows one rule: querychat closes only what it created. `SQLAlchemySource.cleanup()` no longer disposes your engine; dispose it yourself on shutdown. `DataFrameSource`/`PinSource` DuckDB connections and querychat-created chat clients are still closed.
-
 * Adding a *new* table with `add_table()`/`add_tables()` after a session has started now warns instead of raising; running sessions keep their tables and new sessions see the addition. Replacing or removing an existing table after a session has started still raises.
 
-* A rejected or failed `add_table()`/`add_tables()` call (e.g. an incompatible source type) after a session has started no longer warns about the late change or otherwise affects the instance, since the change never took effect. (#311)
+* Calling `cleanup()` while a session is running no longer closes that session's `.server(client=...)` chat client; it is closed when the session ends.
 
-* `add_table()` and `server(data_source=, table_name=)` now reject a `DataSource` whose own `table_name` differs from the registration name, matching R — previously the table was stored under an alias its underlying connection didn't have, so generated queries failed.
+### Bug fixes
 
-* `cleanup()` no longer closes a spec-resolved `.server(client=...)` override while its session is still running; it is closed when the session ends.
+* `add_table()` and `server(data_source=, table_name=)` now reject a `DataSource` whose own `table_name` doesn't match the registration name, instead of failing later with confusing query errors.
+
+* A rejected `add_table()`/`add_tables()` call after a session has started no longer warns about a late change that never took effect. (#311)
 
 ## [0.8.0] - 2026-09-12
 

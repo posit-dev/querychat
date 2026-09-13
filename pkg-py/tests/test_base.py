@@ -362,6 +362,13 @@ class TestAddTables:
         qc.add_tables(multi_table_engine, ["orders"], replace=True)
         assert "orders" in qc.table_names()
 
+    def test_replace_preserves_table_order(self, multi_table_engine):
+        """Replacing a non-last table keeps its original registration order."""
+        qc = QueryChatBase()
+        qc.add_tables(multi_table_engine, ["orders", "customers"])
+        qc.add_tables(multi_table_engine, ["orders"], replace=True)
+        assert qc.table_names() == ["orders", "customers"]
+
     def test_non_engine_raises_type_error(self, sample_df):
         qc = QueryChatBase()
         with pytest.raises(TypeError, match=r"sqlalchemy\.Engine or ibis SQLBackend"):

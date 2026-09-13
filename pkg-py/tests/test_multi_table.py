@@ -222,6 +222,13 @@ class TestAddTable:
         with pytest.raises(RuntimeError, match="replace or remove"):
             qc.add_table(orders_df, "orders", replace=True)
 
+    def test_add_table_replace_preserves_position(self, orders_df, customers_df):
+        """Replacing a non-last table keeps its original registration order."""
+        qc = QueryChat(orders_df, "orders", greeting="Hello!")
+        qc.add_table(customers_df, "customers")
+        qc.add_table(orders_df, "orders", replace=True)
+        assert qc.table_names() == ["orders", "customers"]
+
 
 class TestRemoveTable:
     """Tests for remove_table() method."""

@@ -218,8 +218,7 @@ class QueryChatBase(Generic[IntoFrameT]):
                 )
             self._superseded_table_sets.append(old_set)
             return
-        with contextlib.suppress(Exception):
-            old_set.cleanup_executor()
+        warn_on_failure(old_set.cleanup_executor, "query executor")
         for source in replaced:
             source.cleanup()
 
@@ -486,10 +485,8 @@ class QueryChatBase(Generic[IntoFrameT]):
         normalized = normalize_data_source(data_source, table_name)
         try:
             self._warn_if_prompt_rebuilt_with_history()
-            merged = {
-                **{k: v for k, v in self._data_sources.items() if k != table_name},
-                table_name: normalized,
-            }
+            merged = dict(self._data_sources)
+            merged[table_name] = normalized
             new_set = self._build_table_set(merged)
         except Exception:
             if normalized is not data_source:
@@ -610,10 +607,8 @@ class QueryChatBase(Generic[IntoFrameT]):
 
         normalized = {name: normalized_builder(name) for name in tables}
         self._warn_if_prompt_rebuilt_with_history()
-        merged = {
-            **{k: v for k, v in self._data_sources.items() if k not in normalized},
-            **normalized,
-        }
+        merged = dict(self._data_sources)
+        merged.update(normalized)
         new_set = self._build_table_set(merged)
 
         replaced = [

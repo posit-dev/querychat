@@ -1,4 +1,4 @@
-# querychat (development version)
+# querychat 0.4.0
 
 ## New features
 

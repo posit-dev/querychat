@@ -28,6 +28,8 @@ or [`dplyr::sql()`](https://dplyr.tidyverse.org/reference/sql.html).
 
 - [`TblSqlSource$get_schema()`](#method-TblSqlSource-get_schema)
 
+- [`TblSqlSource$get_schema_result()`](#method-TblSqlSource-get_schema_result)
+
 - [`TblSqlSource$execute_query()`](#method-TblSqlSource-execute_query)
 
 - [`TblSqlSource$test_query()`](#method-TblSqlSource-test_query)
@@ -42,6 +44,7 @@ or [`dplyr::sql()`](https://dplyr.tidyverse.org/reference/sql.html).
 
 Inherited methods
 
+- [`DataSource$get_data_description()`](https://posit-dev.github.io/querychat/reference/DataSource.html#method-get_data_description)
 - [`DBISource$get_semantic_views_description()`](https://posit-dev.github.io/querychat/reference/DBISource.html#method-get_semantic_views_description)
 
 ------------------------------------------------------------------------
@@ -94,7 +97,7 @@ Get schema information about the table
 
 #### Usage
 
-    TblSqlSource$get_schema(categorical_threshold = 20)
+    TblSqlSource$get_schema(categorical_threshold = 20, table_spec = NULL)
 
 #### Arguments
 
@@ -106,6 +109,14 @@ Get schema information about the table
 #### Returns
 
 A string containing schema information formatted for LLM prompts
+
+------------------------------------------------------------------------
+
+### `TblSqlSource$get_schema_result()`
+
+#### Usage
+
+    TblSqlSource$get_schema_result(categorical_threshold = 20, table_spec = NULL)
 
 ------------------------------------------------------------------------
 
@@ -192,7 +203,7 @@ containing the original, unfiltered data
 
 ### `TblSqlSource$cleanup()`
 
-Clean up resources (close connections, etc.)
+No-op: the connection behind the `tbl_sql` is owned by the caller.
 
 #### Usage
 
@@ -200,7 +211,7 @@ Clean up resources (close connections, etc.)
 
 #### Returns
 
-NULL (invisibly)
+`NULL` (invisibly)
 
 ------------------------------------------------------------------------
 
@@ -222,6 +233,14 @@ The objects of this class are cloneable with this method.
 
 ``` r
 con <- DBI::dbConnect(duckdb::duckdb())
+#> duckdb keeps downloaded extensions and secrets in a temporary directory:
+#> ℹ /tmp/RtmpZdCyHx/duckdb
+#> This is removed when the R session ends.
+#> • Extensions are re-downloaded each session.
+#> • Secrets are lost.
+#> ℹ Run duckdb(shared_home = TRUE) (or create ~/.duckdb) to keep them (suitable for most users).
+#> ℹ Run duckdb(shared_home = FALSE) to accept the temporary directory (and silence this message).
+#> ℹ See ?duckdb_storage for details and alternatives.
 DBI::dbWriteTable(con, "mtcars", mtcars)
 
 mtcars_source <- TblSqlSource$new(dplyr::tbl(con, "mtcars"))
@@ -232,8 +251,8 @@ result <- mtcars_source$execute_query("SELECT * FROM mtcars WHERE cyl > 4")
 
 # Note, the result is not the *full* data frame, but a lazy SQL tibble
 result
-#> # Source:   SQL [?? x 11]
-#> # Database: DuckDB 1.5.2 [unknown@Linux 6.17.0-1015-azure:R 4.6.0/:memory:]
+#> # A query:  ?? x 11
+#> # Database: DuckDB 1.5.5 [unknown@Linux 6.17.0-1022-azure:R 4.6.1/:memory:]
 #>      mpg   cyl  disp    hp  drat    wt  qsec    vs    am  gear  carb
 #>    <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl>
 #>  1  21       6  160    110  3.9   2.62  16.5     0     1     4     4
@@ -250,8 +269,8 @@ result
 
 # You can chain this result into a dplyr pipeline
 dplyr::count(result, cyl, gear)
-#> # Source:   SQL [?? x 3]
-#> # Database: DuckDB 1.5.2 [unknown@Linux 6.17.0-1015-azure:R 4.6.0/:memory:]
+#> # A query:  ?? x 3
+#> # Database: DuckDB 1.5.5 [unknown@Linux 6.17.0-1022-azure:R 4.6.1/:memory:]
 #>     cyl  gear     n
 #>   <dbl> <dbl> <dbl>
 #> 1     6     5     1
@@ -277,6 +296,7 @@ dplyr::collect(result)
 #> 10  17.3     8  276.   180  3.07  3.73  17.6     0     0     3     3
 #> # ℹ 11 more rows
 
-# Finally, clean up when done with the database (closes the DB connection)
+# cleanup() is a no-op: you own `con`, so disconnect it yourself when done
 mtcars_source$cleanup()
+DBI::dbDisconnect(con, shutdown = TRUE)
 ```

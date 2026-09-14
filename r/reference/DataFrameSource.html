@@ -12,7 +12,7 @@ for SQL query execution."><meta property="og:image" content="https://posit-dev.g
 
     <a class="navbar-brand me-2" href="../index.html">querychat</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.3.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.4.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -49,7 +49,7 @@ for SQL query execution."><meta property="og:image" content="https://posit-dev.g
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.png" class="logo" alt=""><h1>Data Frame Source</h1>
-      <small class="dont-index">Source: <a href="https://github.com/posit-dev/querychat/blob/r/v0.3.0/R/DataFrameSource.R" class="external-link"><code>R/DataFrameSource.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/posit-dev/querychat/blob/r/v0.4.0/R/DataFrameSource.R" class="external-link"><code>R/DataFrameSource.R</code></a></small>
       <div class="d-none name"><code>DataFrameSource.Rd</code></div>
     </div>
 
@@ -81,12 +81,15 @@ DataFrameSource instances. At least one of these packages must be installed.</p>
 <div class="section">
 <h3 id="public-methods">Public methods<a class="anchor" aria-label="anchor" href="#public-methods"></a></h3>
 <p></p><ul><li><p><a href="#method-DataFrameSource-initialize"><code>DataFrameSource$new()</code></a></p></li>
+<li><p><a href="#method-DataFrameSource-register_into"><code>DataFrameSource$register_into()</code></a></p></li>
+<li><p><a href="#method-DataFrameSource-cleanup"><code>DataFrameSource$cleanup()</code></a></p></li>
 <li><p><a href="#method-DataFrameSource-clone"><code>DataFrameSource$clone()</code></a></p></li>
-</ul></div><p><details><summary>Inherited methods</summary><ul><li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="cleanup"><a href="DBISource.html#method-cleanup"><code>DBISource$cleanup()</code></a></span></li>
+</ul></div><p><details><summary>Inherited methods</summary><ul><li><span class="pkg-link" data-pkg="querychat" data-topic="DataSource" data-id="get_data_description"><a href="DataSource.html#method-get_data_description"><code>DataSource$get_data_description()</code></a></span></li>
   <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="execute_query"><a href="DBISource.html#method-execute_query"><code>DBISource$execute_query()</code></a></span></li>
   <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_data"><a href="DBISource.html#method-get_data"><code>DBISource$get_data()</code></a></span></li>
   <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_db_type"><a href="DBISource.html#method-get_db_type"><code>DBISource$get_db_type()</code></a></span></li>
   <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_schema"><a href="DBISource.html#method-get_schema"><code>DBISource$get_schema()</code></a></span></li>
+  <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_schema_result"><a href="DBISource.html#method-get_schema_result"><code>DBISource$get_schema_result()</code></a></span></li>
   <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="get_semantic_views_description"><a href="DBISource.html#method-get_semantic_views_description"><code>DBISource$get_semantic_views_description()</code></a></span></li>
   <li><span class="pkg-link" data-pkg="querychat" data-topic="DBISource" data-id="test_query"><a href="DBISource.html#method-test_query"><code>DBISource$test_query()</code></a></span></li>
 </ul></details></p><hr><a id="method-DataFrameSource-initialize"></a><div class="section">
@@ -123,13 +126,50 @@ engine from duckdb or RSQLite (in that order).</p></dd>
 
 </div>
 
+<p></p><hr><a id="method-DataFrameSource-register_into"></a><div class="section">
+<h3 id="dataframesource-register-into-"><code>DataFrameSource$register_into()</code><a class="anchor" aria-label="anchor" href="#dataframesource-register-into-"></a></h3>
+<p>Register this data frame in a shared DuckDB connection.</p>
+<p>Internal hook for joining a shared <code>DuckDBExecutor</code>. The caller owns
+<code>con</code> and locks it down once all tables are registered.</p><div class="section">
+<h4 id="usage-1">Usage<a class="anchor" aria-label="anchor" href="#usage-1"></a></h4>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">DataFrameSource</span><span class="op">$</span><span class="fu">register_into</span><span class="op">(</span><span class="va">con</span>, table_name <span class="op">=</span> <span class="va">self</span><span class="op">$</span><span class="va">table_name</span><span class="op">)</span></span></code></pre></div><p></p></div>
+</div><p></p><div class="section">
+<h4 id="arguments-1">Arguments<a class="anchor" aria-label="anchor" href="#arguments-1"></a></h4>
+<p></p><div class="arguments"><dl><dt><code>con</code></dt>
+<dd><p>A DuckDB DBI connection, owned by the caller.</p></dd>
+
+      <dt><code>table_name</code></dt>
+<dd><p>Name for the table in <code>con</code>. Defaults to the source's
+own table name.</p></dd>
+
+
+</dl><p></p></div>
+</div><p></p><div class="section">
+<h4 id="returns-1">Returns<a class="anchor" aria-label="anchor" href="#returns-1"></a></h4>
+<p><code>NULL</code> (invisibly)</p>
+</div>
+
+</div>
+
+<p></p><hr><a id="method-DataFrameSource-cleanup"></a><div class="section">
+<h3 id="dataframesource-cleanup-"><code>DataFrameSource$cleanup()</code><a class="anchor" aria-label="anchor" href="#dataframesource-cleanup-"></a></h3>
+<p>Disconnect from the database and shut down the DuckDB instance if used.</p><div class="section">
+<h4 id="usage-2">Usage<a class="anchor" aria-label="anchor" href="#usage-2"></a></h4>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">DataFrameSource</span><span class="op">$</span><span class="fu">cleanup</span><span class="op">(</span><span class="op">)</span></span></code></pre></div><p></p></div>
+</div><p></p><div class="section">
+<h4 id="returns-2">Returns<a class="anchor" aria-label="anchor" href="#returns-2"></a></h4>
+<p>NULL (invisibly)</p>
+</div>
+
+</div>
+
 <p></p><hr><a id="method-DataFrameSource-clone"></a><div class="section">
 <h3 id="dataframesource-clone-"><code>DataFrameSource$clone()</code><a class="anchor" aria-label="anchor" href="#dataframesource-clone-"></a></h3>
 <p>The objects of this class are cloneable with this method.</p><div class="section">
-<h4 id="usage-1">Usage<a class="anchor" aria-label="anchor" href="#usage-1"></a></h4>
+<h4 id="usage-3">Usage<a class="anchor" aria-label="anchor" href="#usage-3"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">DataFrameSource</span><span class="op">$</span><span class="fu">clone</span><span class="op">(</span>deep <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div><p></p><div class="section">
-<h4 id="arguments-1">Arguments<a class="anchor" aria-label="anchor" href="#arguments-1"></a></h4>
+<h4 id="arguments-2">Arguments<a class="anchor" aria-label="anchor" href="#arguments-2"></a></h4>
 <p></p><div class="arguments"><dl><dt><code>deep</code></dt>
 <dd><p>Whether to make a deep clone.</p></dd>
 
@@ -146,6 +186,14 @@ engine from duckdb or RSQLite (in that order).</p></dd>
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Create a data frame source (uses first available: duckdb or sqlite)</span></span></span>
 <span class="r-in"><span><span class="va">df_source</span> <span class="op">&lt;-</span> <span class="va">DataFrameSource</span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">mtcars</span>, <span class="st">"mtcars"</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> duckdb keeps downloaded extensions and secrets in a temporary directory:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">ℹ</span> /tmp/RtmpZdCyHx/duckdb</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> This is removed when the R session ends.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Extensions are re-downloaded each session.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Secrets are lost.</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">ℹ</span> Run duckdb(shared_home = TRUE) (or create ~/.duckdb) to keep them (suitable for most users).</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">ℹ</span> Run duckdb(shared_home = FALSE) to accept the temporary directory (and silence this message).</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">ℹ</span> See ?duckdb_storage for details and alternatives.</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Get database type</span></span></span>
 <span class="r-in"><span><span class="va">df_source</span><span class="op">$</span><span class="fu">get_db_type</span><span class="op">(</span><span class="op">)</span>  <span class="co"># Returns "DuckDB" or "SQLite"</span></span></span>
@@ -171,7 +219,7 @@ engine from duckdb or RSQLite (in that order).</p></dd>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

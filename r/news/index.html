@@ -10,7 +10,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">querychat</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.3.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.4.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -47,11 +47,63 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.png" class="logo" alt=""><h1>Changelog</h1>
-      <small>Source: <a href="https://github.com/posit-dev/querychat/blob/r/v0.3.0/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
+      <small>Source: <a href="https://github.com/posit-dev/querychat/blob/r/v0.4.0/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.3.0" id="querychat-030">querychat 0.3.0<a class="anchor" aria-label="anchor" href="#querychat-030"></a></h2>
+<h2 class="pkg-version" data-toc-text="0.4.0" id="querychat-040">querychat 0.4.0<a class="anchor" aria-label="anchor" href="#querychat-040"></a></h2><p class="text-muted">CRAN release: 2026-09-13</p>
+<div class="section level3">
+<h3 id="new-features-0-4-0">New features<a class="anchor" aria-label="anchor" href="#new-features-0-4-0"></a></h3>
+<ul><li>
+<p><strong>Multiple related tables</strong>: register additional tables with <code>$add_table()</code> (or every table from a DBI connection at once with <code>$add_tables()</code>), and the LLM can reason across them — joins, cross-table filters, aggregations. Per-table reactive state (<code>$df()</code>, <code>$sql()</code>, <code>$title()</code>) is available via <code>qc_vals$table("name")</code> on the list returned by <code>$server()</code>. (<a href="https://github.com/posit-dev/querychat/issues/195" class="external-link">#195</a>)</p>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/QueryChat.html">QueryChat</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">orders_df</span>, <span class="st">"orders"</span><span class="op">)</span></span>
+<span><span class="va">qc</span><span class="op">$</span><span class="fu">add_table</span><span class="op">(</span><span class="va">customers_df</span>, <span class="st">"customers"</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">qc_vals</span> <span class="op">&lt;-</span> <span class="va">qc</span><span class="op">$</span><span class="fu">server</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">qc_vals</span><span class="op">$</span><span class="fu">table</span><span class="op">(</span><span class="st">"orders"</span><span class="op">)</span><span class="op">$</span><span class="fu">df</span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+</li>
+<li><p><strong><code>data_dict</code></strong>: annotate tables and columns with plain-English descriptions from a YAML file (following the <a href="https://data-dict.tidyverse.org/" class="external-link">data-dict</a> spec). This is now the preferred way to give the LLM context about your data, especially with multiple tables — no extra prompting required. (<a href="https://github.com/posit-dev/querychat/issues/195" class="external-link">#195</a>)</p></li>
+<li>
+<p><strong>Chat-first apps</strong>: <code><a href="../reference/querychat-convenience.html">querychat_app()</a></code> (and <code>QueryChat$app()</code>) now put the chat front and center — the SQL editor and data table live in a drawer that opens automatically when the LLM runs a query. The new <code>$page()</code> method brings the same full-window layout to your own apps:</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/QueryChat.html">QueryChat</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">penguins</span><span class="op">)</span></span>
+<span><span class="va">ui</span> <span class="op">&lt;-</span> <span class="va">qc</span><span class="op">$</span><span class="fu">page</span><span class="op">(</span><span class="st">"Penguins Explorer"</span><span class="op">)</span></span></code></pre></div>
+</li>
+<li><p><strong><code>/handoff</code> slash command</strong>: turn selected query and visualization results from a chat session into a downloadable Quarto dashboard or Shiny app, with AI-assisted revision and bundled data.</p></li>
+<li><p><strong>Persistent conversation history</strong>: chats now survive page reloads and browser sessions by default. For a shareable URL or full Shiny bookmark instead, pass <code>history = shinychat::history_options(restore_mode = "url")</code> or <code>"bookmark"</code>. Disable with <code>history = FALSE</code>.</p></li>
+<li><p><strong>File attachments</strong> are now enabled by default: users can attach images, PDFs, and text files to their messages. Disable with <code>allow_attachments = FALSE</code>. (<a href="https://github.com/posit-dev/querychat/issues/253" class="external-link">#253</a>)</p></li>
+<li><p><strong>Editable SQL panel</strong>: the SQL panel in <code><a href="../reference/querychat-convenience.html">querychat_app()</a></code> is now a code editor — tweak the generated SQL and apply it with Ctrl/Cmd+Enter. (<a href="https://github.com/posit-dev/querychat/issues/265" class="external-link">#265</a>)</p></li>
+<li><p><code>PinSource</code>: chat with datasets pinned to a <a href="https://pins.rstudio.com/" class="external-link">pins</a> board (parquet, CSV, JSON, RDS); the pin’s title, description, and tags serve as the default data description. Multiple pins (and pins mixed with data frames) work in one chat via a shared DuckDB connection. (<a href="https://github.com/posit-dev/querychat/issues/246" class="external-link">#246</a>, <a href="https://github.com/posit-dev/querychat/issues/312" class="external-link">#312</a>)</p></li>
+<li><p>Deferred construction is more flexible: <code>table_name</code> is now optional in <code>QueryChat$new(NULL)</code>, and <code>$server()</code> gains a <code>table_name</code> parameter so the table can be named per session. (<a href="https://github.com/posit-dev/querychat/issues/305" class="external-link">#305</a>)</p></li>
+</ul></div>
+<div class="section level3">
+<h3 id="breaking-changes-0-4-0">Breaking changes<a class="anchor" aria-label="anchor" href="#breaking-changes-0-4-0"></a></h3>
+<ul><li><p>The <code>$data_source</code> property has been removed. Use <code>qc$table("name")$data_source</code> to read a table’s data source, and <code>qc$add_table(df, "name", replace = TRUE)</code> to replace it. (<a href="https://github.com/posit-dev/querychat/issues/195" class="external-link">#195</a>)</p></li>
+<li><p><code>$app()</code>/<code>$app_obj()</code>’s <code>bookmark_store</code> parameter has been removed; pass <code>history = shinychat::history_options(restore_mode = "bookmark")</code> for equivalent behavior (existing <code>$app()</code> callers get this default automatically). Note the storage mechanism changed: server-side bookmark storage is now required rather than encoding state in the URL, so deployments that relied on <code>$app()</code> being fully stateless should pass <code>history = FALSE</code>.</p></li>
+<li><p><strong>querychat no longer disconnects a database connection you gave it.</strong> <code>$cleanup()</code> now closes only what querychat itself created: <code>DBISource$cleanup()</code> and <code>TblSqlSource$cleanup()</code> no longer disconnect a caller-supplied connection, and neither does the automatic <code>$cleanup()</code> that runs when a Shiny session/app stops (<code>cleanup = NA</code>, the default). If you relied on that, disconnect yourself on shutdown, e.g. <code>shiny::onStop(function() DBI::dbDisconnect(con))</code>. Connections querychat creates for you (for data frames and pins) are still closed automatically.</p></li>
+</ul></div>
+<div class="section level3">
+<h3 id="deprecated-0-4-0">Deprecated<a class="anchor" aria-label="anchor" href="#deprecated-0-4-0"></a></h3>
+<ul><li>
+<code>$server()</code>’s <code>enable_bookmarking</code> parameter is deprecated in favor of <code>history</code>.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="improvements-0-4-0">Improvements<a class="anchor" aria-label="anchor" href="#improvements-0-4-0"></a></h3>
+<ul><li><p>The <code>"visualize"</code> tool is now included in the default toolset. If the suggested ggsql package is not installed, the tool is dropped with a warning instead of erroring.</p></li>
+<li><p>Chat greetings render instantly when provided, and generated greetings are now schema-aware — they describe the data at hand — and are preserved across bookmark/restore. Opt additional tables into the greeting with <code>include_in_greeting = TRUE</code> on <code>$add_table()</code>/<code>$add_tables()</code>. (<a href="https://github.com/posit-dev/querychat/issues/249" class="external-link">#249</a>, <a href="https://github.com/posit-dev/querychat/issues/261" class="external-link">#261</a>)</p></li>
+<li><p>The system prompt no longer embeds the full schema upfront; the LLM fetches per-table schema on demand, skipping columns already described by a <code>data_dict</code>. (<a href="https://github.com/posit-dev/querychat/issues/195" class="external-link">#195</a>)</p></li>
+<li><p>Special characters like <code>&lt;</code>, <code>&gt;</code>, and <code>&amp;</code> in <code>data_description</code> and <code>extra_instructions</code> are no longer HTML-escaped in the system prompt. (<a href="https://github.com/posit-dev/querychat/issues/258" class="external-link">#258</a>)</p></li>
+<li><p>The close button in <code>$app()</code> is now hidden in deployed (non-interactive) contexts, where <code><a href="https://rdrr.io/pkg/shiny/man/stopApp.html" class="external-link">stopApp()</a></code> would crash the session for other users. (<a href="https://github.com/posit-dev/querychat/issues/259" class="external-link">#259</a>)</p></li>
+</ul></div>
+<div class="section level3">
+<h3 id="bug-fixes-0-4-0">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-4-0"></a></h3>
+<ul><li><p>Query results are now expanded in the chat only when the user asks to see the raw table, instead of far more often than intended. (<a href="https://github.com/posit-dev/querychat/issues/295" class="external-link">#295</a>)</p></li>
+<li><p><code>$server(data_source = )</code> now registers the table for that session only, instead of modifying the shared <code>QueryChat</code> instance. Concurrent sessions (e.g. per-user database connections on Posit Connect) no longer clobber each other’s data source or greeting, and any connection querychat created for the session is cleaned up when the session ends. (<a href="https://github.com/posit-dev/querychat/issues/300" class="external-link">#300</a>, <a href="https://github.com/posit-dev/querychat/issues/306" class="external-link">#306</a>)</p></li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.3.0" id="querychat-030">querychat 0.3.0<a class="anchor" aria-label="anchor" href="#querychat-030"></a></h2><p class="text-muted">CRAN release: 2026-06-01</p>
 <div class="section level3">
 <h3 id="new-features-0-3-0">New features<a class="anchor" aria-label="anchor" href="#new-features-0-3-0"></a></h3>
 <ul><li><p>Added a new <code>"visualize"</code> tool that lets querychat render interactive charts inline in the chat. When enabled (via <code>tools = c("filter", "query", "visualize")</code>), the LLM can answer questions with charts by writing ggsql (SQL with a <code>VISUALISE</code> clause) instead of only tables. Charts can be expanded to fullscreen and their underlying query inspected. Requires the <code>ggsql</code> package and <code>bslib &gt;= 0.11.0</code>. (<a href="https://github.com/posit-dev/querychat/issues/224" class="external-link">#224</a>)</p></li>
@@ -119,7 +171,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

@@ -1,0 +1,246 @@
+# Pin Source
+
+A DataSource implementation that reads data from a
+[pins](https://pins.rstudio.com/) board. When the `"duckdb"` engine is
+used and the pin type is one DuckDB can read natively (parquet, CSV,
+JSON), the data is loaded directly from the cached pin files into DuckDB
+without deserializing into R. For other pin types (e.g. RDS), or when
+the `"sqlite"` engine is used, the data is deserialized via `pin_read()`
+and must produce a data frame (or tibble), which is then registered with
+the chosen engine just like
+[DataFrameSource](https://posit-dev.github.io/querychat/reference/DataFrameSource.md).
+
+When loaded into DuckDB, the connection's external file access is locked
+down so that LLM-generated SQL cannot reach the filesystem.
+
+Multiple pins (and pins mixed with data frames) can be combined in one
+chat: every table is materialized into a shared DuckDB connection, so
+the LLM can join and filter across them. Pins using `engine = "sqlite"`
+can't join multi-table chats.
+
+If the pin has a title, description, or tags,
+[QueryChat](https://posit-dev.github.io/querychat/reference/QueryChat.md)
+uses them as the default `data_description`, which you can override.
+
+## Lazy queries with pins
+
+`PinSource` materializes the full dataset into DuckDB. For large parquet
+pins where you want lazy query execution, read the pin files yourself
+and pass a `tbl_sql` to
+[`querychat()`](https://posit-dev.github.io/querychat/reference/querychat-convenience.md)
+instead:
+
+    paths <- pins::pin_download(board, "my_pin")
+    con <- DBI::dbConnect(duckdb::duckdb())
+    DBI::dbExecute(
+      con,
+      sprintf("CREATE VIEW my_pin AS SELECT * FROM read_parquet('%s')", paths[1])
+    )
+    qc <- querychat(dplyr::tbl(con, "my_pin"))
+
+The pin files are still downloaded to a local cache — `pin_download()`
+always fetches them. But rather than loading everything into memory,
+DuckDB reads the parquet file lazily through dbplyr.
+
+This approach skips the security lockdown that `PinSource` applies, so
+LLM-generated SQL can access files on the local system.
+
+## Super classes
+
+[`DataSource`](https://posit-dev.github.io/querychat/reference/DataSource.md)
+-\>
+[`DBISource`](https://posit-dev.github.io/querychat/reference/DBISource.md)
+-\> `PinSource`
+
+## Active bindings
+
+- `engine`:
+
+  The database engine backing this pin (`"duckdb"` or `"sqlite"`,
+  read-only).
+
+## Methods
+
+### Public methods
+
+- [`PinSource$new()`](#method-PinSource-initialize)
+
+- [`PinSource$register_into()`](#method-PinSource-register_into)
+
+- [`PinSource$get_data_description()`](#method-PinSource-get_data_description)
+
+- [`PinSource$cleanup()`](#method-PinSource-cleanup)
+
+- [`PinSource$clone()`](#method-PinSource-clone)
+
+Inherited methods
+
+- [`DBISource$execute_query()`](https://posit-dev.github.io/querychat/reference/DBISource.html#method-execute_query)
+- [`DBISource$get_data()`](https://posit-dev.github.io/querychat/reference/DBISource.html#method-get_data)
+- [`DBISource$get_db_type()`](https://posit-dev.github.io/querychat/reference/DBISource.html#method-get_db_type)
+- [`DBISource$get_schema()`](https://posit-dev.github.io/querychat/reference/DBISource.html#method-get_schema)
+- [`DBISource$get_schema_result()`](https://posit-dev.github.io/querychat/reference/DBISource.html#method-get_schema_result)
+- [`DBISource$get_semantic_views_description()`](https://posit-dev.github.io/querychat/reference/DBISource.html#method-get_semantic_views_description)
+- [`DBISource$test_query()`](https://posit-dev.github.io/querychat/reference/DBISource.html#method-test_query)
+
+------------------------------------------------------------------------
+
+### `PinSource$new()`
+
+Create a new PinSource
+
+#### Usage
+
+    PinSource$new(
+      board,
+      name,
+      ...,
+      table_name = name,
+      version = NULL,
+      engine = getOption("querychat.DataFrameSource.engine", NULL)
+    )
+
+#### Arguments
+
+- `board`:
+
+  A pins board object (e.g. from
+  [`pins::board_folder()`](https://pins.rstudio.com/reference/board_folder.html)
+  or
+  [`pins::board_connect()`](https://pins.rstudio.com/reference/board_connect.html)).
+
+- `name`:
+
+  Name of the pin to read.
+
+- `...`:
+
+  Not used; included for extensibility.
+
+- `table_name`:
+
+  Name to use for the table in SQL queries. Defaults to the pin name.
+
+- `version`:
+
+  Pin version to read. If `NULL` (default), reads the latest version.
+
+- `engine`:
+
+  Database engine to use: `"duckdb"` or `"sqlite"`. Set the global
+  option `querychat.DataFrameSource.engine` to specify the default
+  engine. If `NULL` (default), uses the first available engine from
+  duckdb or RSQLite (in that order). Parquet, CSV, and JSON pins are
+  read most efficiently with the `"duckdb"` engine; with `"sqlite"` they
+  are deserialized via `pin_read()` instead.
+
+#### Returns
+
+A new PinSource object
+
+------------------------------------------------------------------------
+
+### `PinSource$register_into()`
+
+Materialize this pin into a shared DuckDB connection.
+
+Internal hook for joining a shared `DuckDBExecutor`. The caller owns
+`con` and locks it down once all tables are materialized.
+
+#### Usage
+
+    PinSource$register_into(con, table_name = self$table_name)
+
+#### Arguments
+
+- `con`:
+
+  A DuckDB DBI connection, owned by the caller.
+
+- `table_name`:
+
+  Name for the table in `con`. Defaults to the pin's own table name.
+
+#### Returns
+
+`NULL` (invisibly)
+
+------------------------------------------------------------------------
+
+### `PinSource$get_data_description()`
+
+Get a human-readable description of the pin for use in the system
+prompt.
+
+#### Usage
+
+    PinSource$get_data_description()
+
+#### Returns
+
+A string with the pin title, description, and tags, or an empty string
+if none are set.
+
+------------------------------------------------------------------------
+
+### `PinSource$cleanup()`
+
+Disconnect the DuckDB or SQLite connection this PinSource opened, and
+shut down the DuckDB instance if used.
+
+Unlike
+[DBISource](https://posit-dev.github.io/querychat/reference/DBISource.md)'s
+`cleanup()`, this isn't a no-op: PinSource always opens its own
+connection (never a caller-supplied one), so it owns it.
+
+#### Usage
+
+    PinSource$cleanup()
+
+#### Returns
+
+`NULL` (invisibly)
+
+------------------------------------------------------------------------
+
+### `PinSource$clone()`
+
+The objects of this class are cloneable with this method.
+
+#### Usage
+
+    PinSource$clone(deep = FALSE)
+
+#### Arguments
+
+- `deep`:
+
+  Whether to make a deep clone.
+
+## Examples
+
+``` r
+if (rlang::is_installed(c("pins", "duckdb"))) {
+  # Create a temporary board and pin some data
+  board <- pins::board_temp()
+  pins::pin_write(board, mtcars, "mtcars", type = "parquet")
+
+  # Create a PinSource
+  ps <- PinSource$new(board, "mtcars")
+
+  # Query the pinned data
+  ps$execute_query("SELECT * FROM mtcars WHERE mpg > 25")
+
+  ps$cleanup()
+}
+#> Creating new version '20260914T214756Z-c0340'
+#> Writing to pin 'mtcars'
+#> duckdb keeps downloaded extensions and secrets in a temporary directory:
+#> ℹ /tmp/RtmpZdCyHx/duckdb
+#> This is removed when the R session ends.
+#> • Extensions are re-downloaded each session.
+#> • Secrets are lost.
+#> ℹ Run duckdb(shared_home = TRUE) (or create ~/.duckdb) to keep them (suitable for most users).
+#> ℹ Run duckdb(shared_home = FALSE) to accept the temporary directory (and silence this message).
+#> ℹ See ?duckdb_storage for details and alternatives.
+```

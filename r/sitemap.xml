@@ -16,7 +16,9 @@
 <url><loc>https://posit-dev.github.io/querychat/reference/DBISource.html</loc></url>
 <url><loc>https://posit-dev.github.io/querychat/reference/DataFrameSource.html</loc></url>
 <url><loc>https://posit-dev.github.io/querychat/reference/DataSource.html</loc></url>
+<url><loc>https://posit-dev.github.io/querychat/reference/PinSource.html</loc></url>
 <url><loc>https://posit-dev.github.io/querychat/reference/QueryChat.html</loc></url>
+<url><loc>https://posit-dev.github.io/querychat/reference/TableAccessor.html</loc></url>
 <url><loc>https://posit-dev.github.io/querychat/reference/TblSqlSource.html</loc></url>
 <url><loc>https://posit-dev.github.io/querychat/reference/deprecated.html</loc></url>
 <url><loc>https://posit-dev.github.io/querychat/reference/execute_ggsql.html</loc></url>
@@ -25,5 +27,6 @@
 <url><loc>https://posit-dev.github.io/querychat/reference/index.html</loc></url>
 <url><loc>https://posit-dev.github.io/querychat/reference/querychat-convenience.html</loc></url>
 <url><loc>https://posit-dev.github.io/querychat/reference/querychat-package.html</loc></url>
+<url><loc>https://posit-dev.github.io/querychat/reference/read_data_dict.html</loc></url>
 </urlset>
 

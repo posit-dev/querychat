@@ -14,7 +14,7 @@ execution against a single table in the database."><meta property="og:image" con
 
     <a class="navbar-brand me-2" href="../index.html">querychat</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.3.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.4.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -51,7 +51,7 @@ execution against a single table in the database."><meta property="og:image" con
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.png" class="logo" alt=""><h1>DBI Source</h1>
-      <small class="dont-index">Source: <a href="https://github.com/posit-dev/querychat/blob/r/v0.3.0/R/DBISource.R" class="external-link"><code>R/DBISource.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/posit-dev/querychat/blob/r/v0.4.0/R/DBISource.R" class="external-link"><code>R/DBISource.R</code></a></small>
       <div class="d-none name"><code>DBISource.Rd</code></div>
     </div>
 
@@ -67,6 +67,14 @@ execution against a single table in the database.</p>
     <p><code><a href="DataSource.html">DataSource</a></code> -&gt; <code>DBISource</code></p>
     </div>
     <div class="section level2">
+    <h2 id="active-bindings">Active bindings<a class="anchor" aria-label="anchor" href="#active-bindings"></a></h2>
+    <p></p><div class="r6-active-bindings"><dl><dt><code>conn</code></dt>
+<dd><p>The DBI connection backing this source (read-only).</p></dd>
+
+
+</dl><p></p></div>
+    </div>
+    <div class="section level2">
     <h2 id="methods">Methods<a class="anchor" aria-label="anchor" href="#methods"></a></h2>
 
 <div class="section">
@@ -74,13 +82,15 @@ execution against a single table in the database.</p>
 <p></p><ul><li><p><a href="#method-DBISource-initialize"><code>DBISource$new()</code></a></p></li>
 <li><p><a href="#method-DBISource-get_db_type"><code>DBISource$get_db_type()</code></a></p></li>
 <li><p><a href="#method-DBISource-get_schema"><code>DBISource$get_schema()</code></a></p></li>
+<li><p><a href="#method-DBISource-get_schema_result"><code>DBISource$get_schema_result()</code></a></p></li>
 <li><p><a href="#method-DBISource-get_semantic_views_description"><code>DBISource$get_semantic_views_description()</code></a></p></li>
 <li><p><a href="#method-DBISource-execute_query"><code>DBISource$execute_query()</code></a></p></li>
 <li><p><a href="#method-DBISource-test_query"><code>DBISource$test_query()</code></a></p></li>
 <li><p><a href="#method-DBISource-get_data"><code>DBISource$get_data()</code></a></p></li>
 <li><p><a href="#method-DBISource-cleanup"><code>DBISource$cleanup()</code></a></p></li>
 <li><p><a href="#method-DBISource-clone"><code>DBISource$clone()</code></a></p></li>
-</ul></div><p></p><hr><a id="method-DBISource-initialize"></a><div class="section">
+</ul></div><p><details open><summary>Inherited methods</summary><ul><li><span class="pkg-link" data-pkg="querychat" data-topic="DataSource" data-id="get_data_description"><a href="DataSource.html#method-get_data_description"><code>DataSource$get_data_description()</code></a></span></li>
+</ul></details></p><hr><a id="method-DBISource-initialize"></a><div class="section">
 <h3 id="dbisource-new-"><code>DBISource$new()</code><a class="anchor" aria-label="anchor" href="#dbisource-new-"></a></h3>
 <p>Create a new DBISource</p><div class="section">
 <h4 id="usage">Usage<a class="anchor" aria-label="anchor" href="#usage"></a></h4>
@@ -119,7 +129,7 @@ string or a <code><a href="https://dbi.r-dbi.org/reference/Id.html" class="exter
 <h3 id="dbisource-get-schema-"><code>DBISource$get_schema()</code><a class="anchor" aria-label="anchor" href="#dbisource-get-schema-"></a></h3>
 <p>Get schema information for the database table</p><div class="section">
 <h4 id="usage-2">Usage<a class="anchor" aria-label="anchor" href="#usage-2"></a></h4>
-<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">DBISource</span><span class="op">$</span><span class="fu">get_schema</span><span class="op">(</span>categorical_threshold <span class="op">=</span> <span class="fl">20</span><span class="op">)</span></span></code></pre></div><p></p></div>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">DBISource</span><span class="op">$</span><span class="fu">get_schema</span><span class="op">(</span>categorical_threshold <span class="op">=</span> <span class="fl">20</span>, table_spec <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div><p></p><div class="section">
 <h4 id="arguments-1">Arguments<a class="anchor" aria-label="anchor" href="#arguments-1"></a></h4>
 <p></p><div class="arguments"><dl><dt><code>categorical_threshold</code></dt>
@@ -135,10 +145,19 @@ column to be considered categorical (default: 20)</p></dd>
 
 </div>
 
+<p></p><hr><a id="method-DBISource-get_schema_result"></a><div class="section">
+<h3 id="dbisource-get-schema-result-"><code>DBISource$get_schema_result()</code><a class="anchor" aria-label="anchor" href="#dbisource-get-schema-result-"></a></h3>
+<p></p><div class="section">
+<h4 id="usage-3">Usage<a class="anchor" aria-label="anchor" href="#usage-3"></a></h4>
+<p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">DBISource</span><span class="op">$</span><span class="fu">get_schema_result</span><span class="op">(</span>categorical_threshold <span class="op">=</span> <span class="fl">20</span>, table_spec <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div><p></p></div>
+</div>
+
+</div>
+
 <p></p><hr><a id="method-DBISource-get_semantic_views_description"></a><div class="section">
 <h3 id="dbisource-get-semantic-views-description-"><code>DBISource$get_semantic_views_description()</code><a class="anchor" aria-label="anchor" href="#dbisource-get-semantic-views-description-"></a></h3>
 <p>Get information about semantic views (if any) for the system prompt.</p><div class="section">
-<h4 id="usage-3">Usage<a class="anchor" aria-label="anchor" href="#usage-3"></a></h4>
+<h4 id="usage-4">Usage<a class="anchor" aria-label="anchor" href="#usage-4"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">DBISource</span><span class="op">$</span><span class="fu">get_semantic_views_description</span><span class="op">(</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div><p></p><div class="section">
 <h4 id="returns-3">Returns<a class="anchor" aria-label="anchor" href="#returns-3"></a></h4>
@@ -150,7 +169,7 @@ column to be considered categorical (default: 20)</p></dd>
 <p></p><hr><a id="method-DBISource-execute_query"></a><div class="section">
 <h3 id="dbisource-execute-query-"><code>DBISource$execute_query()</code><a class="anchor" aria-label="anchor" href="#dbisource-execute-query-"></a></h3>
 <p>Execute a SQL query</p><div class="section">
-<h4 id="usage-4">Usage<a class="anchor" aria-label="anchor" href="#usage-4"></a></h4>
+<h4 id="usage-5">Usage<a class="anchor" aria-label="anchor" href="#usage-5"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">DBISource</span><span class="op">$</span><span class="fu">execute_query</span><span class="op">(</span><span class="va">query</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div><p></p><div class="section">
 <h4 id="arguments-2">Arguments<a class="anchor" aria-label="anchor" href="#arguments-2"></a></h4>
@@ -169,7 +188,7 @@ column to be considered categorical (default: 20)</p></dd>
 <p></p><hr><a id="method-DBISource-test_query"></a><div class="section">
 <h3 id="dbisource-test-query-"><code>DBISource$test_query()</code><a class="anchor" aria-label="anchor" href="#dbisource-test-query-"></a></h3>
 <p>Test a SQL query by fetching only one row</p><div class="section">
-<h4 id="usage-5">Usage<a class="anchor" aria-label="anchor" href="#usage-5"></a></h4>
+<h4 id="usage-6">Usage<a class="anchor" aria-label="anchor" href="#usage-6"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">DBISource</span><span class="op">$</span><span class="fu">test_query</span><span class="op">(</span><span class="va">query</span>, require_all_columns <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div><p></p><div class="section">
 <h4 id="arguments-3">Arguments<a class="anchor" aria-label="anchor" href="#arguments-3"></a></h4>
@@ -192,7 +211,7 @@ all original table columns (default: <code>FALSE</code>)</p></dd>
 <p></p><hr><a id="method-DBISource-get_data"></a><div class="section">
 <h3 id="dbisource-get-data-"><code>DBISource$get_data()</code><a class="anchor" aria-label="anchor" href="#dbisource-get-data-"></a></h3>
 <p>Get all data from the table</p><div class="section">
-<h4 id="usage-6">Usage<a class="anchor" aria-label="anchor" href="#usage-6"></a></h4>
+<h4 id="usage-7">Usage<a class="anchor" aria-label="anchor" href="#usage-7"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">DBISource</span><span class="op">$</span><span class="fu">get_data</span><span class="op">(</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div><p></p><div class="section">
 <h4 id="returns-6">Returns<a class="anchor" aria-label="anchor" href="#returns-6"></a></h4>
@@ -203,12 +222,13 @@ all original table columns (default: <code>FALSE</code>)</p></dd>
 
 <p></p><hr><a id="method-DBISource-cleanup"></a><div class="section">
 <h3 id="dbisource-cleanup-"><code>DBISource$cleanup()</code><a class="anchor" aria-label="anchor" href="#dbisource-cleanup-"></a></h3>
-<p>Disconnect from the database</p><div class="section">
-<h4 id="usage-7">Usage<a class="anchor" aria-label="anchor" href="#usage-7"></a></h4>
+<p>No-op: the DBI connection is owned by the caller. Disconnect it
+yourself with <code><a href="https://dbi.r-dbi.org/reference/dbDisconnect.html" class="external-link">DBI::dbDisconnect()</a></code> when your application shuts down.</p><div class="section">
+<h4 id="usage-8">Usage<a class="anchor" aria-label="anchor" href="#usage-8"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">DBISource</span><span class="op">$</span><span class="fu">cleanup</span><span class="op">(</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div><p></p><div class="section">
 <h4 id="returns-7">Returns<a class="anchor" aria-label="anchor" href="#returns-7"></a></h4>
-<p>NULL (invisibly)</p>
+<p><code>NULL</code> (invisibly)</p>
 </div>
 
 </div>
@@ -216,7 +236,7 @@ all original table columns (default: <code>FALSE</code>)</p></dd>
 <p></p><hr><a id="method-DBISource-clone"></a><div class="section">
 <h3 id="dbisource-clone-"><code>DBISource$clone()</code><a class="anchor" aria-label="anchor" href="#dbisource-clone-"></a></h3>
 <p>The objects of this class are cloneable with this method.</p><div class="section">
-<h4 id="usage-8">Usage<a class="anchor" aria-label="anchor" href="#usage-8"></a></h4>
+<h4 id="usage-9">Usage<a class="anchor" aria-label="anchor" href="#usage-9"></a></h4>
 <p></p><div class="r"><div class="sourceCode"><pre><code><span><span class="va">DBISource</span><span class="op">$</span><span class="fu">clone</span><span class="op">(</span>deep <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div><p></p></div>
 </div><p></p><div class="section">
 <h4 id="arguments-4">Arguments<a class="anchor" aria-label="anchor" href="#arguments-4"></a></h4>
@@ -248,9 +268,9 @@ all original table columns (default: <code>FALSE</code>)</p></dd>
 <span class="r-in"><span><span class="co"># Execute a query</span></span></span>
 <span class="r-in"><span><span class="va">result</span> <span class="op">&lt;-</span> <span class="va">db_source</span><span class="op">$</span><span class="fu">execute_query</span><span class="op">(</span><span class="st">"SELECT * FROM mtcars WHERE mpg &gt; 25"</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Note: cleanup() will disconnect the connection</span></span></span>
-<span class="r-in"><span><span class="co"># If you want to keep the connection open, don't call cleanup()</span></span></span>
+<span class="r-in"><span><span class="co"># cleanup() is a no-op: you own `con`, so disconnect it yourself</span></span></span>
 <span class="r-in"><span><span class="va">db_source</span><span class="op">$</span><span class="fu">cleanup</span><span class="op">(</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">DBI</span><span class="fu">::</span><span class="fu"><a href="https://dbi.r-dbi.org/reference/dbDisconnect.html" class="external-link">dbDisconnect</a></span><span class="op">(</span><span class="va">con</span><span class="op">)</span></span></span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
@@ -262,7 +282,7 @@ all original table columns (default: <code>FALSE</code>)</p></dd>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

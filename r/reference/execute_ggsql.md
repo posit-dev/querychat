@@ -1,20 +1,20 @@
-# Execute a pre-validated ggsql query against a DataSource
+# Execute a pre-validated ggsql query against an executor
 
-Executes the SQL portion through a DataSource (preserving database
+Executes the SQL portion through an executor (preserving database
 pushdown), then feeds the result into a ggsql DuckDB reader to produce a
 Spec.
 
 ## Usage
 
 ``` r
-execute_ggsql(data_source, validated)
+execute_ggsql(executor, validated)
 ```
 
 ## Arguments
 
-- data_source:
+- executor:
 
-  A querychat DataSource R6 object.
+  A querychat QueryExecutor R6 object.
 
 - validated:
 

@@ -31,15 +31,20 @@ be installed.
 
 - [`DataFrameSource$new()`](#method-DataFrameSource-initialize)
 
+- [`DataFrameSource$register_into()`](#method-DataFrameSource-register_into)
+
+- [`DataFrameSource$cleanup()`](#method-DataFrameSource-cleanup)
+
 - [`DataFrameSource$clone()`](#method-DataFrameSource-clone)
 
 Inherited methods
 
-- [`DBISource$cleanup()`](https://posit-dev.github.io/querychat/reference/DBISource.html#method-cleanup)
+- [`DataSource$get_data_description()`](https://posit-dev.github.io/querychat/reference/DataSource.html#method-get_data_description)
 - [`DBISource$execute_query()`](https://posit-dev.github.io/querychat/reference/DBISource.html#method-execute_query)
 - [`DBISource$get_data()`](https://posit-dev.github.io/querychat/reference/DBISource.html#method-get_data)
 - [`DBISource$get_db_type()`](https://posit-dev.github.io/querychat/reference/DBISource.html#method-get_db_type)
 - [`DBISource$get_schema()`](https://posit-dev.github.io/querychat/reference/DBISource.html#method-get_schema)
+- [`DBISource$get_schema_result()`](https://posit-dev.github.io/querychat/reference/DBISource.html#method-get_schema_result)
 - [`DBISource$get_semantic_views_description()`](https://posit-dev.github.io/querychat/reference/DBISource.html#method-get_semantic_views_description)
 - [`DBISource$test_query()`](https://posit-dev.github.io/querychat/reference/DBISource.html#method-test_query)
 
@@ -81,6 +86,47 @@ A new DataFrameSource object
 
 ------------------------------------------------------------------------
 
+### `DataFrameSource$register_into()`
+
+Register this data frame in a shared DuckDB connection.
+
+Internal hook for joining a shared `DuckDBExecutor`. The caller owns
+`con` and locks it down once all tables are registered.
+
+#### Usage
+
+    DataFrameSource$register_into(con, table_name = self$table_name)
+
+#### Arguments
+
+- `con`:
+
+  A DuckDB DBI connection, owned by the caller.
+
+- `table_name`:
+
+  Name for the table in `con`. Defaults to the source's own table name.
+
+#### Returns
+
+`NULL` (invisibly)
+
+------------------------------------------------------------------------
+
+### `DataFrameSource$cleanup()`
+
+Disconnect from the database and shut down the DuckDB instance if used.
+
+#### Usage
+
+    DataFrameSource$cleanup()
+
+#### Returns
+
+NULL (invisibly)
+
+------------------------------------------------------------------------
+
 ### `DataFrameSource$clone()`
 
 The objects of this class are cloneable with this method.
@@ -100,6 +146,14 @@ The objects of this class are cloneable with this method.
 ``` r
 # Create a data frame source (uses first available: duckdb or sqlite)
 df_source <- DataFrameSource$new(mtcars, "mtcars")
+#> duckdb keeps downloaded extensions and secrets in a temporary directory:
+#> ℹ /tmp/RtmpZdCyHx/duckdb
+#> This is removed when the R session ends.
+#> • Extensions are re-downloaded each session.
+#> • Secrets are lost.
+#> ℹ Run duckdb(shared_home = TRUE) (or create ~/.duckdb) to keep them (suitable for most users).
+#> ℹ Run duckdb(shared_home = FALSE) to accept the temporary directory (and silence this message).
+#> ℹ See ?duckdb_storage for details and alternatives.
 
 # Get database type
 df_source$get_db_type()  # Returns "DuckDB" or "SQLite"

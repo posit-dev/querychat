@@ -54,20 +54,19 @@ the reference page for the relevant model provider (e.g.,
 [`chat_anthropic()`](https://ellmer.tidyverse.org/reference/chat_anthropic.html))
 to learn more on how to set up credentials.
 
-**GitHub model marketplace**
+**Free trial options**
 
-If you are already setup with GitHub credentials, [GitHub model
-marketplace](https://github.com/marketplace/models) provides a free and
-easy way to get started. See
-[here](https://ellmer.tidyverse.org/reference/chat_github.html) for more
-details on how to get setup.
+If you don’t want to spend any money to get started,
+[`chat_posit()`](https://ellmer.tidyverse.org/reference/chat_posit.html)
+provides free trial access to a curated set of models through the [Posit
+AI](https://posit.ai) gateway.
 
 ``` r
 
 library(ellmer)
 
-# Just works if GITHUB_TOKEN is set in your environment
-client <- chat_github(model = "gpt-4.1")
+# Prompts you to log in via OAuth the first time; tokens are then cached
+client <- chat_posit()
 ```
 
 In general, most providers will prefer credentials stored as environment

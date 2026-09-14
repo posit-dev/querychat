@@ -21,11 +21,15 @@ or
 
 - [`DataSource$get_schema()`](#method-DataSource-get_schema)
 
+- [`DataSource$get_schema_result()`](#method-DataSource-get_schema_result)
+
 - [`DataSource$execute_query()`](#method-DataSource-execute_query)
 
 - [`DataSource$test_query()`](#method-DataSource-test_query)
 
 - [`DataSource$get_data()`](#method-DataSource-get_data)
+
+- [`DataSource$get_data_description()`](#method-DataSource-get_data_description)
 
 - [`DataSource$cleanup()`](#method-DataSource-cleanup)
 
@@ -53,7 +57,7 @@ Get schema information about the table
 
 #### Usage
 
-    DataSource$get_schema(categorical_threshold = 20)
+    DataSource$get_schema(categorical_threshold = 20, table_spec = NULL)
 
 #### Arguments
 
@@ -65,6 +69,14 @@ Get schema information about the table
 #### Returns
 
 A string containing schema information formatted for LLM prompts
+
+------------------------------------------------------------------------
+
+### `DataSource$get_schema_result()`
+
+#### Usage
+
+    DataSource$get_schema_result(categorical_threshold = 20, table_spec = NULL)
 
 ------------------------------------------------------------------------
 
@@ -127,9 +139,30 @@ A data frame containing all data from the table
 
 ------------------------------------------------------------------------
 
+### `DataSource$get_data_description()`
+
+Get a human-readable data description for the system prompt.
+
+Subclasses may override this to provide metadata-derived descriptions
+(e.g., pin title/description). The default returns an empty string.
+
+#### Usage
+
+    DataSource$get_data_description()
+
+#### Returns
+
+A string, or empty string if no description is available.
+
+------------------------------------------------------------------------
+
 ### `DataSource$cleanup()`
 
-Clean up resources (close connections, etc.)
+Release resources this data source created. Only resources querychat
+opened itself are closed (for example the in-memory DuckDB connection a
+[DataFrameSource](https://posit-dev.github.io/querychat/reference/DataFrameSource.md)
+creates). Connections passed in by the caller are never closed; their
+lifecycle stays with the caller.
 
 #### Usage
 

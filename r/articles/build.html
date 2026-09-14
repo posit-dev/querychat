@@ -32,7 +32,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">querychat</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.3.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.4.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -84,7 +84,7 @@
       <img src="../logo.png" class="logo" alt=""><h1>Build an App</h1>
             
       
-      <small class="dont-index">Source: <a href="https://github.com/posit-dev/querychat/blob/r/v0.3.0/vignettes/build.Rmd" class="external-link"><code>vignettes/build.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/posit-dev/querychat/blob/r/v0.4.0/vignettes/build.Rmd" class="external-link"><code>vignettes/build.Rmd</code></a></small>
       <div class="d-none name"><code>build.Rmd</code></div>
     </div>
 
@@ -95,44 +95,32 @@ exploring data, building bespoke Shiny apps with querychat unlocks the
 full power of integrating natural language data exploration with custom
 visualizations, layouts, and interactivity. This guide shows you how to
 integrate querychat into your own Shiny applications and leverage its
-reactive data outputs to create rich, interactive dashboards.</p>
-<p>querychat is a particularly good fit for Shiny apps that have:</p>
-<ol style="list-style-type: decimal">
-<li>
-<strong>A single data source</strong> (or a set of related tables
-that can be joined)</li>
-<li>
-<strong>Multiple filters</strong> that let users slice and explore
-the data in different ways</li>
-<li>
-<strong>Several visualizations and outputs</strong> that all depend
-on the same filtered data</li>
-</ol>
-<p>In these apps, querychat can replace or augment your filtering UI by
-allowing users to describe what they want to see in natural language.
-Instead of building complex filter controls, users can simply ask
-questions like “show me customers from California who spent over $1000
-last quarter” and querychat will generate the appropriate SQL query.</p>
+reactive data outputs to create rich, interactive experiences.</p>
+<p>querychat lets users ask questions of their data in plain language —
+filtering, sorting, summarizing, joining across tables, and creating
+visualizations — all without needing to write SQL or navigate complex
+filter UIs. You can use it as the primary exploration interface in a
+standalone app, or embed it alongside curated views in an existing
+dashboard to let users go deeper than the views you designed.</p>
 <p>This is especially valuable when:</p>
 <ul>
 <li>Your data has many columns and building a UI for all possible
 filters would be overwhelming</li>
 <li>Users want to explore ad-hoc combinations of filters that you didn’t
 anticipate</li>
-<li>You want to make data exploration more accessible to users who
-aren’t comfortable with traditional filtering UIs</li>
+<li>You have multiple related tables that users may want to query and
+join</li>
+<li>You want to make data exploration more accessible to non-technical
+users</li>
 </ul>
-<p>If you have an existing app with a reactive data frame that flows
-through multiple outputs, querychat can be a natural addition to provide
-an alternative way to filter that data.</p>
 <div class="section level2">
 <h2 id="starter-template">Starter template<a class="anchor" aria-label="anchor" href="#starter-template"></a>
 </h2>
 <p>Integrating querychat into a Shiny app requires just three steps:</p>
 <ol style="list-style-type: decimal">
 <li>Initialize a <code>QueryChat</code> instance with your data</li>
-<li>Add the UI component (either <code>$sidebar()</code> or
-<code>$ui()</code>)</li>
+<li>Add the UI component (<code>$page()</code>, <code>$sidebar()</code>,
+or <code>$ui()</code>)</li>
 <li>Use reactive values like <code>$df()</code>, <code>$sql()</code>,
 and <code>$title()</code> to build outputs that respond to user
 queries</li>
@@ -183,13 +171,69 @@ return value to access reactive data.</p>
 </div>
 </div>
 <div class="section level2">
+<h2 id="chat-first-page">Chat-first page<a class="anchor" aria-label="anchor" href="#chat-first-page"></a>
+</h2>
+<p>The starter template above uses <code>$sidebar()</code> to embed the
+chat alongside your data views. When the chat is the primary way users
+interact with your app, use <code>$page()</code> instead to give it the
+full browser window. It wraps <a href="https://posit-dev.github.io/shinychat/r/reference/page_chat.html" class="external-link">shinychat::page_chat()</a>,
+which provides a persistent chat with conversation history, plus
+optional navigation pages, sidebars, and a drawer. Reactive data views
+(driven by <code>$df()</code>, <code>$sql()</code>,
+<code>$title()</code>) work well as secondary pages via
+<code><a href="https://posit-dev.github.io/shinychat/r/reference/chat_nav_panel.html" class="external-link">shinychat::chat_nav_panel()</a></code>:</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://shiny.posit.co/" class="external-link">shiny</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rstudio.github.io/bslib/" class="external-link">bslib</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://posit-dev.github.io/querychat/r/">querychat</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/rstudio/DT" class="external-link">DT</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://allisonhorst.github.io/palmerpenguins/" class="external-link">palmerpenguins</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/QueryChat.html">QueryChat</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">penguins</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">ui</span> <span class="op">&lt;-</span> <span class="va">qc</span><span class="op">$</span><span class="fu">page</span><span class="op">(</span></span>
+<span>  <span class="st">"Penguins Explorer"</span>,</span>
+<span>  pages_navbar <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    <span class="fu">shinychat</span><span class="fu">::</span><span class="fu"><a href="https://posit-dev.github.io/shinychat/r/reference/chat_nav_panel.html" class="external-link">chat_nav_panel</a></span><span class="op">(</span></span>
+<span>      <span class="st">"Data"</span>,</span>
+<span>      <span class="fu"><a href="https://rstudio.github.io/bslib/reference/card.html" class="external-link">card</a></span><span class="op">(</span></span>
+<span>        <span class="fu"><a href="https://rstudio.github.io/bslib/reference/card_body.html" class="external-link">card_header</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/shiny/man/textOutput.html" class="external-link">textOutput</a></span><span class="op">(</span><span class="st">"title"</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>        <span class="fu"><a href="https://rdrr.io/pkg/shiny/man/renderDataTable.html" class="external-link">dataTableOutput</a></span><span class="op">(</span><span class="st">"table"</span><span class="op">)</span>,</span>
+<span>        fill <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>      <span class="op">)</span>,</span>
+<span>      value <span class="op">=</span> <span class="st">"data"</span>,</span>
+<span>      sidebar <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>      content_width <span class="op">=</span> <span class="st">"100%"</span></span>
+<span>    <span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">server</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">input</span>, <span class="va">output</span>, <span class="va">session</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">qc_vals</span> <span class="op">&lt;-</span> <span class="va">qc</span><span class="op">$</span><span class="fu">server</span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span>  <span class="va">output</span><span class="op">$</span><span class="va">table</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/shiny/man/renderDataTable.html" class="external-link">renderDataTable</a></span><span class="op">(</span><span class="op">{</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/pkg/DT/man/datatable.html" class="external-link">datatable</a></span><span class="op">(</span><span class="va">qc_vals</span><span class="op">$</span><span class="fu">df</span><span class="op">(</span><span class="op">)</span>, fillContainer <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span>  <span class="op">}</span><span class="op">)</span></span>
+<span></span>
+<span>  <span class="va">output</span><span class="op">$</span><span class="va">title</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/shiny/man/renderPrint.html" class="external-link">renderText</a></span><span class="op">(</span><span class="op">{</span></span>
+<span>    <span class="va">qc_vals</span><span class="op">$</span><span class="fu">title</span><span class="op">(</span><span class="op">)</span> <span class="op"><a href="https://rdrr.io/r/base/Control.html" class="external-link">%||%</a></span> <span class="st">"Penguins Dataset"</span></span>
+<span>  <span class="op">}</span><span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/pkg/shiny/man/shinyApp.html" class="external-link">shinyApp</a></span><span class="op">(</span><span class="va">ui</span>, <span class="va">server</span><span class="op">)</span></span></code></pre></div>
+<p>Since <code>$page()</code> owns the entire page layout, don’t wrap it
+in another page container (e.g., <code><a href="https://rstudio.github.io/bslib/reference/page_sidebar.html" class="external-link">page_sidebar()</a></code>). If you
+need the chat embedded alongside other content in a custom layout, use
+<code>$sidebar()</code> or <code>$ui()</code> instead.</p>
+</div>
+<div class="section level2">
 <h2 id="deferred-data-sources">Deferred data sources<a class="anchor" aria-label="anchor" href="#deferred-data-sources"></a>
 </h2>
 <p>Some data sources, like database connections or reactive
 calculations, may need to be created within an active Shiny session. To
 help support this, <code>QueryChat</code> allows you to initialize
 without a data source and provide it later, like this:</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://shiny.posit.co/" class="external-link">shiny</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rstudio.github.io/bslib/" class="external-link">bslib</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://posit-dev.github.io/querychat/r/">querychat</a></span><span class="op">)</span></span>
@@ -213,6 +257,12 @@ without a data source and provide it later, like this:</p>
 <span><span class="op">}</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/pkg/shiny/man/shinyApp.html" class="external-link">shinyApp</a></span><span class="op">(</span><span class="va">ui</span>, <span class="va">server</span><span class="op">)</span></span></code></pre></div>
+<p>A data source passed to <code>$server()</code> belongs to that
+session: other sessions never see it, it does not change the tables
+registered on the <code>QueryChat</code> object, and querychat cleans up
+any connection it created for it when the session ends. Connections you
+open yourself are yours to close; <code>session$onSessionEnded()</code>
+is a good place.</p>
 <p>If your chat client also depends on session-scoped credentials, you
 can defer that too by passing it to <code>qc$server(client = ...)</code>
 alongside the <code>data_source</code>.</p>
@@ -231,7 +281,7 @@ your app:</p>
 <p>The <code>$df()</code> method returns the current filtered and/or
 sorted data frame. This updates whenever the user prompts a filtering or
 sorting operation through the chat interface (see <a href="tools.html#data-updating">Data updating</a> for details).</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">qc_vals</span> <span class="op">&lt;-</span> <span class="va">qc</span><span class="op">$</span><span class="fu">server</span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">output</span><span class="op">$</span><span class="va">table</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/shiny/man/renderDataTable.html" class="external-link">renderDataTable</a></span><span class="op">(</span><span class="op">{</span></span>
@@ -249,7 +299,7 @@ it will re-render.</p>
 <p>The <code>$sql()</code> method returns the current SQL query as a
 string. This is useful for displaying the query to users for
 transparency and reproducibility:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">qc_vals</span> <span class="op">&lt;-</span> <span class="va">qc</span><span class="op">$</span><span class="fu">server</span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">output</span><span class="op">$</span><span class="va">current_query</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/shiny/man/renderPrint.html" class="external-link">renderText</a></span><span class="op">(</span><span class="op">{</span></span>
@@ -266,7 +316,7 @@ filtering</a> below).</p>
 current filter, provided by the LLM when it generates a query. For
 example, if a user asks to “show Adelie penguins”, the title might be
 “Adelie penguins”.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">qc_vals</span> <span class="op">&lt;-</span> <span class="va">qc</span><span class="op">$</span><span class="fu">server</span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">output</span><span class="op">$</span><span class="va">card_title</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/shiny/man/renderPrint.html" class="external-link">renderText</a></span><span class="op">(</span><span class="op">{</span></span>
@@ -288,7 +338,7 @@ designed for this – it returns the chat component without additional
 layout wrappers.</p>
 <p>For example, you might want to create some additional controls to <a href="#programmatic-filtering">reset filters</a> alongside the chat
 UI:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://posit-dev.github.io/querychat/r/">querychat</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://allisonhorst.github.io/palmerpenguins/" class="external-link">palmerpenguins</a></span><span class="op">)</span></span>
 <span></span>
@@ -319,7 +369,7 @@ straightforward to create rich data views that depend on QueryChat data.
 Here’s an example of an app showing both the filtered data and a bar
 chart depending on that same data:</p>
 <details><summary><code>app.R </code>
-</summary><div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+</summary><div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://shiny.posit.co/" class="external-link">shiny</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rstudio.github.io/bslib/" class="external-link">bslib</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://posit-dev.github.io/querychat/r/">querychat</a></span><span class="op">)</span></span>
@@ -361,7 +411,7 @@ chart depending on that same data:</p>
 might incorporate other Shiny components like value boxes to summarize
 key statistics about the filtered data.</p>
 <details><summary><code>app.R </code>
-</summary><div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+</summary><div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://shiny.posit.co/" class="external-link">shiny</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rstudio.github.io/bslib/" class="external-link">bslib</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/rstudio/DT" class="external-link">DT</a></span><span class="op">)</span></span>
@@ -498,7 +548,7 @@ active filters and returns the data table to its original state. You can
 do this by setting both the SQL query and title to their default values.
 This way you don’t have to rely on both the user and LLM to send the
 right prompt.</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ui</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rstudio.github.io/bslib/reference/page_sidebar.html" class="external-link">page_sidebar</a></span><span class="op">(</span></span>
 <span>  sidebar <span class="op">=</span> <span class="fu"><a href="https://rstudio.github.io/bslib/reference/sidebar.html" class="external-link">sidebar</a></span><span class="op">(</span></span>
 <span>    <span class="va">qc</span><span class="op">$</span><span class="fu">ui</span><span class="op">(</span><span class="op">)</span>,</span>
@@ -529,24 +579,98 @@ data”.</p>
 <div class="section level2">
 <h2 id="multiple-tables">Multiple tables<a class="anchor" aria-label="anchor" href="#multiple-tables"></a>
 </h2>
-<p>Currently, you have two options for exploring multiple tables in
-querychat:</p>
-<ol style="list-style-type: decimal">
-<li>Join the tables into a single table before passing to querychat</li>
-<li>Use multiple querychat instances in the same app</li>
-</ol>
-<p>The first option makes it possible to chat with multiple tables
-inside a single chat interface, whereas the second option requires a
-separate chat interface for each table.</p>
-<div class="section level3 alert alert-info">
-<h3 id="multiple-filtered-tables">Multiple filtered tables<a class="anchor" aria-label="anchor" href="#multiple-filtered-tables"></a>
+<p>querychat can work with multiple related tables in a single chat
+interface, letting users query across tables, join data, and filter any
+table independently. Register additional tables with
+<code>$add_table()</code> after creating the <code>QueryChat</code>
+instance, then access per-table state through the <code>$table()</code>
+method.</p>
+<div class="section level3">
+<h3 id="registering-tables">Registering tables<a class="anchor" aria-label="anchor" href="#registering-tables"></a>
 </h3>
-<p>We do intend on supporting multiple filtered tables in a future
-release – if you’re interested in this feature, please upvote <a href="https://github.com/posit-dev/querychat/issues/6" class="external-link">the relevant
-issue</a></p>
+<p>Pass the first table when creating <code>QueryChat</code>, then call
+<code>$add_table()</code> for each additional table:</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://posit-dev.github.io/querychat/r/">querychat</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/QueryChat.html">QueryChat</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">orders</span>, <span class="st">"orders"</span><span class="op">)</span></span>
+<span><span class="va">qc</span><span class="op">$</span><span class="fu">add_table</span><span class="op">(</span><span class="va">customers</span>, <span class="st">"customers"</span><span class="op">)</span></span>
+<span><span class="va">qc</span><span class="op">$</span><span class="fu">add_table</span><span class="op">(</span><span class="va">products</span>, <span class="st">"products"</span><span class="op">)</span></span></code></pre></div>
+<p>If your data lives in a DBI connection, use
+<code>$add_tables()</code> to register all tables in a single call:</p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dbi.r-dbi.org" class="external-link">DBI</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">con</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://dbi.r-dbi.org/reference/dbConnect.html" class="external-link">dbConnect</a></span><span class="op">(</span><span class="fu">RSQLite</span><span class="fu">::</span><span class="fu"><a href="https://rsqlite.r-dbi.org/reference/SQLite.html" class="external-link">SQLite</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"store.db"</span><span class="op">)</span></span>
+<span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/QueryChat.html">QueryChat</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="va">qc</span><span class="op">$</span><span class="fu">add_tables</span><span class="op">(</span><span class="va">con</span><span class="op">)</span>                            <span class="co"># all tables</span></span>
+<span><span class="va">qc</span><span class="op">$</span><span class="fu">add_tables</span><span class="op">(</span><span class="va">con</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"orders"</span>, <span class="st">"customers"</span><span class="op">)</span><span class="op">)</span>  <span class="co"># specific subset</span></span></code></pre></div>
+<p>The LLM can query any registered table and write joins across them.
+You can inspect which tables are registered with
+<code>qc$table_names()</code>.</p>
 </div>
+<div class="section level3">
+<h3 id="per-table-reactive-access">Per-table reactive access<a class="anchor" aria-label="anchor" href="#per-table-reactive-access"></a>
+</h3>
+<p>When working with multiple tables, access filtered data and SQL for
+each table individually using <code>$table()</code>:</p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">server</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">input</span>, <span class="va">output</span>, <span class="va">session</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">qc_vals</span> <span class="op">&lt;-</span> <span class="va">qc</span><span class="op">$</span><span class="fu">server</span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span>  <span class="va">output</span><span class="op">$</span><span class="va">orders_table</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/shiny/man/renderDataTable.html" class="external-link">renderDataTable</a></span><span class="op">(</span><span class="op">{</span></span>
+<span>    <span class="va">qc_vals</span><span class="op">$</span><span class="fu">table</span><span class="op">(</span><span class="st">"orders"</span><span class="op">)</span><span class="op">$</span><span class="fu">df</span><span class="op">(</span><span class="op">)</span></span>
+<span>  <span class="op">}</span><span class="op">)</span></span>
+<span></span>
+<span>  <span class="va">output</span><span class="op">$</span><span class="va">orders_sql</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/shiny/man/renderPrint.html" class="external-link">renderText</a></span><span class="op">(</span><span class="op">{</span></span>
+<span>    <span class="va">qc_vals</span><span class="op">$</span><span class="fu">table</span><span class="op">(</span><span class="st">"orders"</span><span class="op">)</span><span class="op">$</span><span class="fu">sql</span><span class="op">(</span><span class="op">)</span></span>
+<span>  <span class="op">}</span><span class="op">)</span></span>
+<span></span>
+<span>  <span class="va">output</span><span class="op">$</span><span class="va">customers_table</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/shiny/man/renderDataTable.html" class="external-link">renderDataTable</a></span><span class="op">(</span><span class="op">{</span></span>
+<span>    <span class="va">qc_vals</span><span class="op">$</span><span class="fu">table</span><span class="op">(</span><span class="st">"customers"</span><span class="op">)</span><span class="op">$</span><span class="fu">df</span><span class="op">(</span><span class="op">)</span></span>
+<span>  <span class="op">}</span><span class="op">)</span></span>
+<span><span class="op">}</span></span></code></pre></div>
+<p>Each table has its own <code>$df()</code>, <code>$sql()</code>, and
+<code>$title()</code> reactives that update independently when the user
+filters that specific table.</p>
+</div>
+<div class="section level3">
+<h3 id="tracking-the-active-table">Tracking the active table<a class="anchor" aria-label="anchor" href="#tracking-the-active-table"></a>
+</h3>
+<p>Use <code>$current_table()</code> to find out which table the LLM
+most recently queried. This is useful for auto-switching a tabbed UI to
+the relevant table:</p>
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/pkg/shiny/man/observe.html" class="external-link">observe</a></span><span class="op">(</span><span class="op">{</span></span>
+<span>  <span class="va">tbl</span> <span class="op">&lt;-</span> <span class="va">qc_vals</span><span class="op">$</span><span class="fu">current_table</span><span class="op">(</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/pkg/shiny/man/req.html" class="external-link">req</a></span><span class="op">(</span><span class="va">tbl</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rstudio.github.io/bslib/reference/nav_select.html" class="external-link">nav_select</a></span><span class="op">(</span><span class="st">"table_tabs"</span>, selected <span class="op">=</span> <span class="va">tbl</span><span class="op">)</span></span>
+<span><span class="op">}</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="data-dictionary">Data dictionary<a class="anchor" aria-label="anchor" href="#data-dictionary"></a>
+</h3>
+<p>When working with multiple related tables, providing a <a href="context.html#data-dictionary">data dictionary</a> is strongly
+recommended. It tells the LLM how tables relate to each other, which
+columns are keys, and what domain terms mean — all of which help it
+write accurate joins and queries.</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="va"><a href="../reference/QueryChat.html">QueryChat</a></span><span class="op">$</span><span class="fu">new</span><span class="op">(</span></span>
+<span>  <span class="va">orders</span>, <span class="st">"orders"</span>,</span>
+<span>  data_dict <span class="op">=</span> <span class="st">"data-dict.yaml"</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">qc</span><span class="op">$</span><span class="fu">add_table</span><span class="op">(</span><span class="va">customers</span>, <span class="st">"customers"</span><span class="op">)</span></span></code></pre></div>
+<p>See <a href="context.html#data-dictionary">Provide context</a> for
+the full data dictionary format.</p>
+</div>
+<div class="section level3">
+<h3 id="separate-chat-interfaces">Separate chat interfaces<a class="anchor" aria-label="anchor" href="#separate-chat-interfaces"></a>
+</h3>
+<p>If your tables are truly independent (not related), you may prefer
+separate <code>QueryChat</code> instances, each with its own chat
+interface:</p>
 <details><summary><code>app.R </code>
-</summary><div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+</summary><div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://shiny.posit.co/" class="external-link">shiny</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rstudio.github.io/bslib/" class="external-link">bslib</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://allisonhorst.github.io/palmerpenguins/" class="external-link">palmerpenguins</a></span><span class="op">)</span></span>
@@ -596,6 +720,7 @@ issue</a></p>
 <span><span class="fu"><a href="https://rdrr.io/pkg/shiny/man/shinyApp.html" class="external-link">shinyApp</a></span><span class="op">(</span><span class="va">ui</span>, <span class="va">server</span><span class="op">)</span></span></code></pre></div>
 </details>
 </div>
+</div>
 <div class="section level2">
 <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a>
 </h2>
@@ -622,7 +747,7 @@ under the hood</li>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>

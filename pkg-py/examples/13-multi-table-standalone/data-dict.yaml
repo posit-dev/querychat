@@ -1,0 +1,178 @@
+version: "0.1.0"
+
+tables:
+  diamonds:
+    description: >
+      Loose diamond inventory. One row per diamond, graded on the 4 Cs
+      (carat, cut, color, clarity) and certified by an independent lab.
+    columns:
+      - name: id
+        type: number(id)
+        constraints: [primary_key]
+        description: Unique diamond identifier.
+      - name: shape
+        type: enum
+        values: [Round, Princess, Cushion, Oval, Emerald, Radiant, Asscher, Marquise, Pear, Heart]
+        description: Cut shape of the diamond.
+      - name: carat
+        type: number(quantity)
+        units: carat
+        description: Weight of the diamond.
+      - name: cut
+        type: enum
+        values: [Super Ideal, Ideal, Very Good, Good]
+        description: Cut quality grade -- how well the diamond's facets interact with light.
+      - name: color
+        type: enum
+        values: [D, E, F, G, H, I, J]
+        description: Color grade on the standard D (colorless) to J (faint color) scale.
+      - name: clarity
+        type: enum
+        values: [FL, IF, VVS1, VVS2, VS1, VS2, SI1, SI2]
+        description: >
+          Clarity grade, from FL (flawless) to SI2 (slight inclusions visible
+          under magnification).
+      - name: certified_by
+        type: enum
+        values: [GIA, IGI, AGS]
+        description: Independent grading lab that certified the diamond.
+      - name: price
+        type: number(currency)
+        units: USD
+        description: Price of the loose diamond.
+
+  settings:
+    description: Ring mountings that a diamond can be set into. One row per setting.
+    columns:
+      - name: id
+        type: number(id)
+        constraints: [primary_key]
+        description: Unique setting identifier.
+      - name: style
+        type: enum
+        values: [Solitaire, Halo, Pave, Three-Stone, Vintage, Bezel]
+        description: Setting style.
+      - name: metal
+        type: enum
+        values: [Platinum, 18K White Gold, 18K Yellow Gold, 18K Rose Gold, Palladium]
+        description: Metal the setting is made of.
+      - name: band_width_mm
+        type: number(quantity)
+        units: mm
+        description: Width of the ring band.
+      - name: base_price
+        type: number(currency)
+        units: USD
+        description: Price of the setting alone, without a diamond.
+
+  customers:
+    description: One row per customer.
+    columns:
+      - name: id
+        type: number(id)
+        constraints: [primary_key]
+        description: Unique customer identifier.
+      - name: name
+        type: string
+        description: Customer's full name.
+      - name: state
+        type: string
+        description: US state abbreviation of the customer's shipping address.
+      - name: join_date
+        type: date
+        description: Date the customer created their account.
+      - name: acquisition_channel
+        type: enum
+        values: [Organic Search, Paid Social, Referral, Email, Direct, Showroom Walk-in]
+        description: How the customer first found the retailer.
+
+  orders:
+    description: One row per order.
+    columns:
+      - name: id
+        type: number(id)
+        constraints: [primary_key]
+        description: Unique order identifier.
+      - name: customer_id
+        type: number(id)
+        constraints: [foreign_key]
+        description: Customer who placed the order. Joins to customers.id.
+      - name: order_date
+        type: date
+        description: Date the order was placed.
+      - name: status
+        type: enum
+        values: [Delivered, Shipped, Processing, Returned]
+        description: Current fulfillment status of the order.
+      - name: channel
+        type: enum
+        values: [Online, Showroom]
+        description: Where the order was placed.
+
+  order_items:
+    description: >
+      Line items within an order. One row per item purchased. An item's
+      diamond_id and setting_id are populated according to its item_type:
+      "Engagement Ring" has both, "Loose Diamond" has only diamond_id,
+      "Wedding Band" has only setting_id, and "Earrings"/"Necklace" have
+      neither -- their price is not decomposed into components.
+    columns:
+      - name: id
+        type: number(id)
+        constraints: [primary_key]
+        description: Unique order item identifier.
+      - name: order_id
+        type: number(id)
+        constraints: [foreign_key]
+        description: Order this item belongs to. Joins to orders.id.
+      - name: item_type
+        type: enum
+        values: [Engagement Ring, Loose Diamond, Wedding Band, Earrings, Necklace]
+        description: Kind of item purchased.
+      - name: diamond_id
+        type: number(id)
+        constraints: [foreign_key]
+        description: >
+          Diamond included in this item, if any. Joins to diamonds.id. Null
+          unless item_type is "Engagement Ring" or "Loose Diamond".
+      - name: setting_id
+        type: number(id)
+        constraints: [foreign_key]
+        description: >
+          Setting included in this item, if any. Joins to settings.id. Null
+          unless item_type is "Engagement Ring" or "Wedding Band".
+      - name: price
+        type: number(currency)
+        units: USD
+        description: Price of this line item.
+
+relationships:
+  - description: Each order belongs to one customer.
+    cardinality: many-to-one
+    join: orders.customer_id = customers.id
+  - description: Each order has one or more line items.
+    cardinality: one-to-many
+    join: orders.id = order_items.order_id
+  - description: An order item may include one diamond (Engagement Ring or Loose Diamond).
+    cardinality: many-to-one
+    join: order_items.diamond_id = diamonds.id
+  - description: An order item may include one setting (Engagement Ring or Wedding Band).
+    cardinality: many-to-one
+    join: order_items.setting_id = settings.id
+
+glossary:
+  4 Cs: The standard diamond grading criteria -- carat (weight), cut, color, and clarity.
+  carat: Unit of diamond weight; 1 carat = 200 milligrams. Larger carat generally means higher price.
+  cut: >
+    How well a diamond's facets interact with light, independent of its
+    shape. Graded Super Ideal > Ideal > Very Good > Good in this dataset.
+  color: >
+    Diamond color grade from D (colorless, most valuable) to J (faint color,
+    least valuable) in this dataset.
+  clarity: >
+    Presence of internal/external flaws, from FL (flawless) down to SI2
+    (inclusions visible under 10x magnification).
+  setting: >
+    The metal mounting that holds a diamond, e.g. a ring band. Sold
+    separately as-is, or combined with a diamond into an Engagement Ring
+    order item.

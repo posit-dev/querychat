@@ -7,6 +7,7 @@ README.html
 test-results/
 shiny_bookmarks/
 python-package/examples/titanic.db
+pkg-py/examples/13-multi-table-standalone/data/
 .quarto
 *.db
 

@@ -1,6 +1,6 @@
 # /// script
 # dependencies = [
-#     "querychat[pandas]",
+#     "querychat[pandas,viz]",
 #     "anthropic",
 #     "pyarrow",
 # ]

@@ -1,5 +1,5 @@
 # /// script
-# dependencies = ["pandas", "pyarrow"]
+# dependencies = ["polars"]
 # ///
 """Generate (or load cached) synthetic data for a fine-jewelry retailer demo.
 
@@ -18,28 +18,28 @@ import shutil
 from datetime import date, timedelta
 from pathlib import Path
 
-import pandas as pd
+import polars as pl
 
 SEED = 42
 TODAY = date(2026, 9, 1)
 TABLE_NAMES = ["diamonds", "settings", "customers", "orders", "order_items"]
 
 
-def load_tables(data_dir: Path) -> dict[str, pd.DataFrame]:
+def load_tables(data_dir: Path) -> dict[str, pl.DataFrame]:
     """Return the 5 demo tables, generating and caching them on first call."""
     paths = {name: data_dir / f"{name}.parquet" for name in TABLE_NAMES}
 
     if all(path.exists() for path in paths.values()):
-        return {name: pd.read_parquet(path) for name, path in paths.items()}
+        return {name: pl.read_parquet(path) for name, path in paths.items()}
 
     tables = generate_tables()
     data_dir.mkdir(parents=True, exist_ok=True)
     for name, table in tables.items():
-        table.to_parquet(paths[name], index=False)
+        table.write_parquet(paths[name])
     return tables
 
 
-def generate_tables() -> dict[str, pd.DataFrame]:
+def generate_tables() -> dict[str, pl.DataFrame]:
     rng = random.Random(SEED)
     diamonds = generate_diamonds(rng)
     settings = generate_settings(rng)
@@ -55,7 +55,7 @@ def generate_tables() -> dict[str, pd.DataFrame]:
     }
 
 
-def generate_diamonds(rng: random.Random, n: int = 400) -> pd.DataFrame:
+def generate_diamonds(rng: random.Random, n: int = 400) -> pl.DataFrame:
     shapes = [
         "Round", "Princess", "Cushion", "Oval", "Emerald",
         "Radiant", "Asscher", "Marquise", "Pear", "Heart",
@@ -100,10 +100,10 @@ def generate_diamonds(rng: random.Random, n: int = 400) -> pd.DataFrame:
                 "price": price,
             }
         )
-    return pd.DataFrame(rows)
+    return pl.DataFrame(rows)
 
 
-def generate_settings(rng: random.Random, n: int = 50) -> pd.DataFrame:
+def generate_settings(rng: random.Random, n: int = 50) -> pl.DataFrame:
     styles = ["Solitaire", "Halo", "Pave", "Three-Stone", "Vintage", "Bezel"]
     style_multiplier = {
         "Solitaire": 1.0, "Halo": 1.4, "Pave": 1.3,
@@ -129,10 +129,10 @@ def generate_settings(rng: random.Random, n: int = 50) -> pd.DataFrame:
                 "base_price": base_price,
             }
         )
-    return pd.DataFrame(rows)
+    return pl.DataFrame(rows)
 
 
-def generate_customers(rng: random.Random, n: int = 200) -> pd.DataFrame:
+def generate_customers(rng: random.Random, n: int = 200) -> pl.DataFrame:
     first_names = [
         "Olivia", "Liam", "Emma", "Noah", "Ava", "Ethan", "Sophia", "Mason",
         "Isabella", "James", "Mia", "Benjamin", "Charlotte", "Lucas", "Amelia",
@@ -164,15 +164,15 @@ def generate_customers(rng: random.Random, n: int = 200) -> pd.DataFrame:
                 "acquisition_channel": rng.choice(channels),
             }
         )
-    return pd.DataFrame(rows)
+    return pl.DataFrame(rows)
 
 
-def generate_orders(rng: random.Random, customers: pd.DataFrame, n: int = 350) -> pd.DataFrame:
+def generate_orders(rng: random.Random, customers: pl.DataFrame, n: int = 350) -> pl.DataFrame:
     statuses = ["Delivered", "Shipped", "Processing", "Returned"]
     status_weights = [70, 15, 10, 5]
     channels = ["Online", "Showroom"]
     join_date_by_customer = dict(zip(customers["id"], customers["join_date"]))
-    customer_ids = customers["id"].tolist()
+    customer_ids = customers["id"].to_list()
 
     rows = []
     for i in range(1, n + 1):
@@ -189,21 +189,21 @@ def generate_orders(rng: random.Random, customers: pd.DataFrame, n: int = 350) -
                 "channel": rng.choice(channels),
             }
         )
-    return pd.DataFrame(rows)
+    return pl.DataFrame(rows)
 
 
 def generate_order_items(
     rng: random.Random,
-    orders: pd.DataFrame,
-    diamonds: pd.DataFrame,
-    settings: pd.DataFrame,
+    orders: pl.DataFrame,
+    diamonds: pl.DataFrame,
+    settings: pl.DataFrame,
     n: int = 450,
-) -> pd.DataFrame:
+) -> pl.DataFrame:
     item_types = ["Engagement Ring", "Loose Diamond", "Wedding Band", "Earrings", "Necklace"]
     item_type_weights = [35, 15, 20, 15, 15]
-    order_ids = orders["id"].tolist()
-    diamond_ids = diamonds["id"].tolist()
-    setting_ids = settings["id"].tolist()
+    order_ids = orders["id"].to_list()
+    diamond_ids = diamonds["id"].to_list()
+    setting_ids = settings["id"].to_list()
     price_by_diamond = dict(zip(diamonds["id"], diamonds["price"]))
     price_by_setting = dict(zip(settings["id"], settings["base_price"]))
 
@@ -238,10 +238,7 @@ def generate_order_items(
                 "price": price,
             }
         )
-    df = pd.DataFrame(rows)
-    df["diamond_id"] = df["diamond_id"].astype("Int64")
-    df["setting_id"] = df["setting_id"].astype("Int64")
-    return df
+    return pl.DataFrame(rows)
 
 
 if __name__ == "__main__":

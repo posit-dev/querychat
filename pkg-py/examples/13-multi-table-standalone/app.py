@@ -1,8 +1,7 @@
 # /// script
 # dependencies = [
-#     "querychat[pandas,viz]",
+#     "querychat[polars,viz]",
 #     "anthropic",
-#     "pyarrow",
 # ]
 # ///
 """Multi-table querychat demo: a synthetic fine-jewelry retailer.

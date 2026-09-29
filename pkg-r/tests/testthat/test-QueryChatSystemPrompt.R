@@ -125,6 +125,8 @@ describe("QueryChatSystemPrompt$new()", {
 })
 
 describe("QueryChatSystemPrompt$render()", {
+  skip_if_no_dataframe_engine()
+
   it("renders handoff guidance only when available", {
     df <- new_test_df()
     ds <- DataFrameSource$new(df, "test_table")
@@ -268,6 +270,8 @@ describe("QueryChatSystemPrompt$render()", {
   })
 
   it("includes db_type in rendered output", {
+    skip_if_not_installed("duckdb")
+
     df <- new_test_df()
     ds <- DataFrameSource$new(df, "test_table")
     withr::defer(ds$cleanup())
@@ -370,6 +374,8 @@ describe("QueryChatSystemPrompt$render()", {
   })
 
   it("detects DuckDB correctly", {
+    skip_if_not_installed("duckdb")
+
     df <- new_test_df()
     ds <- DataFrameSource$new(df, "test_table")
     withr::defer(ds$cleanup())
@@ -405,6 +411,8 @@ describe("QueryChatSystemPrompt$render()", {
 })
 
 describe("QueryChatSystemPrompt with full prompt.md template", {
+  skip_if_no_dataframe_engine()
+
   it("renders full template with data_description", {
     df <- new_test_df(3)
     ds <- DataFrameSource$new(df, "test_table")
@@ -428,6 +436,8 @@ describe("QueryChatSystemPrompt with full prompt.md template", {
   })
 
   it("includes DuckDB-specific content for DuckDB sources", {
+    skip_if_not_installed("duckdb")
+
     df <- new_test_df()
     ds <- DataFrameSource$new(df, "test_table")
     withr::defer(ds$cleanup())

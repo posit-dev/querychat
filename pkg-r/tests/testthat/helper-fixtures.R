@@ -76,11 +76,33 @@ local_sqlite_connection <- function(
   list(conn = conn, path = temp_db)
 }
 
-# Skip test if no DataFrameSource engine is available
-skip_if_no_dataframe_engine <- function() {
-  if (!rlang::is_installed("duckdb") && !rlang::is_installed("RSQLite")) {
-    skip("Neither duckdb nor RSQLite is installed")
+# Skip test if no DataFrameSource engine is available.
+#
+# When `engine` is NULL, skip only if neither duckdb nor RSQLite is installed
+# (mirroring how DataFrameSource resolves a default engine). When a specific
+# engine is requested, skip unless that engine's package is installed, so
+# tests never silently fall back to a different engine (e.g. SQLite) and then
+# fail their DuckDB-specific expectations.
+skip_if_no_dataframe_engine <- function(engine = NULL) {
+  if (is.null(engine)) {
+    engine <- getOption("querychat.DataFrameSource.engine", NULL)
   }
+
+  if (is.null(engine)) {
+    if (!rlang::is_installed("duckdb") && !rlang::is_installed("RSQLite")) {
+      skip("Neither duckdb nor RSQLite is installed")
+    }
+    return(invisible())
+  }
+
+  engine <- tolower(engine)
+  if (engine == "duckdb") {
+    skip_if_not_installed("duckdb")
+  } else if (engine == "sqlite") {
+    skip_if_not_installed("RSQLite")
+  }
+
+  invisible()
 }
 
 # Create a DataFrameSource with automatic cleanup
@@ -90,6 +112,7 @@ local_data_frame_source <- function(
   engine = "duckdb",
   env = parent.frame()
 ) {
+  skip_if_no_dataframe_engine(engine)
   df_source <- DataFrameSource$new(data, table_name, engine = engine)
   withr::defer(df_source$cleanup(), envir = env)
   df_source
@@ -119,6 +142,7 @@ local_recording_data_frame_source <- function(
   engine = "duckdb",
   env = parent.frame()
 ) {
+  skip_if_no_dataframe_engine(engine)
   state <- new.env(parent = emptyenv())
   state$get_data_calls <- 0L
   state$get_data_error <- NULL
@@ -339,6 +363,11 @@ local_querychat <- function(
   ...,
   env = parent.frame()
 ) {
+  # Plain data frames are wrapped in a DataFrameSource using the default
+  # engine, which requires duckdb or RSQLite to be installed.
+  if (is.data.frame(data_source)) {
+    skip_if_no_dataframe_engine()
+  }
   qc <- QueryChat$new(data_source, table_name, ...)
   withr::defer(qc$cleanup(), envir = env)
   qc

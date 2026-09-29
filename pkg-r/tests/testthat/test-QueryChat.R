@@ -222,6 +222,8 @@ describe("QueryChat integration with DBISource", {
 })
 
 describe("QueryChat$cleanup()", {
+  skip_if_no_dataframe_engine()
+
   it("cleans up data source resources", {
     test_df <- new_test_df()
     qc <- QueryChat$new(test_df, greeting = "Test")
@@ -235,6 +237,8 @@ describe("QueryChat$cleanup()", {
 })
 
 describe("QueryChat$system_prompt", {
+  skip_if_no_dataframe_engine()
+
   it("returns the system prompt from the client", {
     test_df <- new_test_df()
     qc <- QueryChat$new(test_df, greeting = "Test")
@@ -328,6 +332,8 @@ describe("QueryChat$data_source", {
 })
 
 describe("QueryChat$client()", {
+  skip_if_no_dataframe_engine()
+
   it("uses default tools when tools = NA", {
     qc <- QueryChat$new(
       new_test_df(),
@@ -678,6 +684,8 @@ describe("QueryChat$client()", {
 })
 
 test_that("QueryChat$generate_greeting() generates a greeting using the LLM client", {
+  skip_if_no_dataframe_engine()
+
   client <- mock_ellmer_chat_client(
     public = list(
       chat = function(message, ...) {
@@ -698,6 +706,7 @@ test_that("QueryChat$generate_greeting() generates a greeting using the LLM clie
 })
 
 test_that("QueryChat$server() errors when called outside Shiny context", {
+  skip_if_no_dataframe_engine()
   withr::local_envvar(OPENAI_API_KEY = "boop")
 
   test_df <- new_test_df()
@@ -710,6 +719,8 @@ test_that("QueryChat$server() errors when called outside Shiny context", {
 })
 
 test_that("QueryChat$new() validates history and stores it verbatim", {
+  skip_if_no_dataframe_engine()
+
   test_df <- new_test_df()
 
   qc_default <- QueryChat$new(test_df, greeting = "Test")
@@ -835,6 +846,8 @@ test_that("QueryChat$app_obj() infers Shiny bookmarking from history's restore_m
 })
 
 describe("QueryChat internal client handoff availability", {
+  skip_if_no_dataframe_engine()
+
   local_mocked_r6_class(
     QueryChat,
     public = list(
@@ -914,6 +927,8 @@ describe("querychat()", {
 })
 
 describe("QueryChat$console()", {
+  skip_if_no_dataframe_engine()
+
   local_mocked_r6_class(
     QueryChat,
     public = list(
@@ -1086,6 +1101,8 @@ test_that("querychat_app() only cleans up data frame sources on exit", {
 })
 
 describe("QueryChat$server() client override", {
+  skip_if_no_dataframe_engine()
+
   it("accepts a client parameter", {
     withr::local_envvar(OPENAI_API_KEY = "boop")
     test_df <- new_test_df()

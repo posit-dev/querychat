@@ -234,7 +234,7 @@ The objects of this class are cloneable with this method.
 ``` r
 con <- DBI::dbConnect(duckdb::duckdb())
 #> duckdb keeps downloaded extensions and secrets in a temporary directory:
-#> ℹ /tmp/RtmpZdCyHx/duckdb
+#> ℹ /tmp/RtmpcQXY6r/duckdb
 #> This is removed when the R session ends.
 #> • Extensions are re-downloaded each session.
 #> • Secrets are lost.
@@ -252,7 +252,7 @@ result <- mtcars_source$execute_query("SELECT * FROM mtcars WHERE cyl > 4")
 # Note, the result is not the *full* data frame, but a lazy SQL tibble
 result
 #> # A query:  ?? x 11
-#> # Database: DuckDB 1.5.5 [unknown@Linux 6.17.0-1022-azure:R 4.6.1/:memory:]
+#> # Database: DuckDB 1.5.6 [unknown@Linux 6.17.0-1022-azure:R 4.6.1/:memory:]
 #>      mpg   cyl  disp    hp  drat    wt  qsec    vs    am  gear  carb
 #>    <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl> <dbl>
 #>  1  21       6  160    110  3.9   2.62  16.5     0     1     4     4
@@ -270,11 +270,11 @@ result
 # You can chain this result into a dplyr pipeline
 dplyr::count(result, cyl, gear)
 #> # A query:  ?? x 3
-#> # Database: DuckDB 1.5.5 [unknown@Linux 6.17.0-1022-azure:R 4.6.1/:memory:]
+#> # Database: DuckDB 1.5.6 [unknown@Linux 6.17.0-1022-azure:R 4.6.1/:memory:]
 #>     cyl  gear     n
 #>   <dbl> <dbl> <dbl>
-#> 1     6     5     1
-#> 2     6     3     2
+#> 1     6     3     2
+#> 2     6     5     1
 #> 3     8     5     2
 #> 4     6     4     4
 #> 5     8     3    12

@@ -758,7 +758,7 @@ The objects of this class are cloneable with this method.
 # Basic usage with a data frame
 qc <- QueryChat$new(mtcars)
 #> duckdb keeps downloaded extensions and secrets in a temporary directory:
-#> ℹ /tmp/RtmpZdCyHx/duckdb
+#> ℹ /tmp/RtmpcQXY6r/duckdb
 #> This is removed when the R session ends.
 #> • Extensions are re-downloaded each session.
 #> • Secrets are lost.
@@ -773,7 +773,7 @@ app <- qc$app()
 greeting <- "Welcome! Ask me about the mtcars dataset."
 qc <- QueryChat$new(mtcars, greeting = greeting)
 #> duckdb keeps downloaded extensions and secrets in a temporary directory:
-#> ℹ /tmp/RtmpZdCyHx/duckdb
+#> ℹ /tmp/RtmpcQXY6r/duckdb
 #> This is removed when the R session ends.
 #> • Extensions are re-downloaded each session.
 #> • Secrets are lost.
@@ -784,7 +784,7 @@ qc <- QueryChat$new(mtcars, greeting = greeting)
 # With a specific LLM provider
 qc <- QueryChat$new(mtcars, client = "anthropic/claude-sonnet-4-5")
 #> duckdb keeps downloaded extensions and secrets in a temporary directory:
-#> ℹ /tmp/RtmpZdCyHx/duckdb
+#> ℹ /tmp/RtmpcQXY6r/duckdb
 #> This is removed when the R session ends.
 #> • Extensions are re-downloaded each session.
 #> • Secrets are lost.
@@ -808,7 +808,7 @@ qc <- QueryChat$new(
   data_description = "Motor Trend car road tests dataset"
 )
 #> duckdb keeps downloaded extensions and secrets in a temporary directory:
-#> ℹ /tmp/RtmpZdCyHx/duckdb
+#> ℹ /tmp/RtmpcQXY6r/duckdb
 #> This is removed when the R session ends.
 #> • Extensions are re-downloaded each session.
 #> • Secrets are lost.

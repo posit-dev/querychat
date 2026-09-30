@@ -1,5 +1,15 @@
 # Changelog
 
+## querychat 0.4.1
+
+### Bug fixes
+
+- Tests no longer fail on systems where Suggests packages like duckdb or
+  RSQLite aren’t installed (as on some CRAN check flavors): test
+  fixtures now skip when a required database engine is missing instead
+  of erroring or silently falling back to a different engine.
+  ([\#317](https://github.com/posit-dev/querychat/issues/317))
+
 ## querychat 0.4.0
 
 CRAN release: 2026-09-13

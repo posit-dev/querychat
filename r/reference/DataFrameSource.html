@@ -12,7 +12,7 @@ for SQL query execution."><meta property="og:image" content="https://posit-dev.g
 
     <a class="navbar-brand me-2" href="../index.html">querychat</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.4.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.4.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -49,7 +49,7 @@ for SQL query execution."><meta property="og:image" content="https://posit-dev.g
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.png" class="logo" alt=""><h1>Data Frame Source</h1>
-      <small class="dont-index">Source: <a href="https://github.com/posit-dev/querychat/blob/r/v0.4.0/R/DataFrameSource.R" class="external-link"><code>R/DataFrameSource.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/posit-dev/querychat/blob/r/v0.4.1/R/DataFrameSource.R" class="external-link"><code>R/DataFrameSource.R</code></a></small>
       <div class="d-none name"><code>DataFrameSource.Rd</code></div>
     </div>
 
@@ -187,7 +187,7 @@ own table name.</p></dd>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Create a data frame source (uses first available: duckdb or sqlite)</span></span></span>
 <span class="r-in"><span><span class="va">df_source</span> <span class="op">&lt;-</span> <span class="va">DataFrameSource</span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">mtcars</span>, <span class="st">"mtcars"</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> duckdb keeps downloaded extensions and secrets in a temporary directory:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">ℹ</span> /tmp/RtmpZdCyHx/duckdb</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">ℹ</span> /tmp/RtmpcQXY6r/duckdb</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> This is removed when the R session ends.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Extensions are re-downloaded each session.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Secrets are lost.</span>

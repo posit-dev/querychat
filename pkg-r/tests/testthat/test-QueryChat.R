@@ -508,6 +508,8 @@ describe("QueryChat$client()", {
   })
 
   it("drops the visualize tool with a warning when ggsql is missing", {
+    # Earlier tests may have already emitted this once-per-session warning.
+    withr::local_options(rlib_warning_verbosity = "verbose")
     local_mocked_bindings(
       is_installed = function(...) FALSE,
       .package = "rlang"

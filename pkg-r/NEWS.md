@@ -1,5 +1,9 @@
 # querychat (development version)
 
+## Bug fixes
+
+* JSON pins now fall back to `pins::pin_read()` when DuckDB's JSON extension cannot be installed or loaded, including on builds that disable extension loading. Native DuckDB JSON reading is retained when the extension is available.
+
 # querychat 0.4.1
 
 ## Bug fixes

@@ -7,7 +7,9 @@ import pytest
 
 pins = pytest.importorskip("pins")
 
-from querychat._pin_source import PinSource  # noqa: E402
+from querychat._datasource import DataFrameSource  # noqa: E402
+from querychat._pin_source import PinSource, duckdb_try_load_json  # noqa: E402
+from querychat._query_executor import DuckDBExecutor  # noqa: E402
 
 
 @pytest.fixture
@@ -79,6 +81,221 @@ class TestPinSourceLazyPath:
         assert isinstance(result, nw.DataFrame)
         assert list(result.columns) == ["name"]
         assert len(result) == 2
+
+
+class TestJsonExtensionFallback:
+    """JSON pins fall back to pin_read() when DuckDB's JSON extension is unavailable."""
+
+    @pytest.fixture
+    def json_df(self):
+        # Include a NA value to exercise round-tripping through pandas
+        return pd.DataFrame(
+            {
+                "id": [1, 2, 3, 4],
+                "value": [1.5, None, 2.25, -4.0],
+            }
+        )
+
+    def test_falls_back_to_pin_read_when_extension_unavailable(
+        self, board, json_df, monkeypatch
+    ):
+        board.pin_write(json_df, "json_data", type="json")
+        monkeypatch.setattr(
+            "querychat._pin_source.duckdb_try_load_json", lambda conn: False
+        )
+        ps = PinSource(board, "json_data")
+        try:
+            result = ps.get_data().sort("id")
+            assert isinstance(result, nw.DataFrame)
+            assert result["id"].to_list() == [1, 2, 3, 4]
+            assert result["value"].to_list()[0] == 1.5
+        finally:
+            ps.cleanup()
+
+    def test_falls_back_when_extension_install_fails(self, board, json_df, monkeypatch):
+        # Simulate a driver that raises on INSTALL/LOAD by making the helper
+        # report the extension as unavailable.
+        board.pin_write(json_df, "json_data", type="json")
+        monkeypatch.setattr(
+            "querychat._pin_source.duckdb_try_load_json", lambda conn: False
+        )
+        ps = PinSource(board, "json_data")
+        try:
+            result = ps.get_data()
+            assert len(result) == 4
+        finally:
+            ps.cleanup()
+
+    def test_rejects_json_pin_that_is_not_a_dataframe(self, board, monkeypatch):
+        board.pin_write({"x": [1, 2, 3]}, "json_obj", type="json")
+        monkeypatch.setattr(
+            "querychat._pin_source.duckdb_try_load_json", lambda conn: False
+        )
+        with pytest.raises(TypeError, match="not a DataFrame"):
+            PinSource(board, "json_obj")
+
+    def test_native_json_reading_when_extension_available(self, board, json_df):
+        conn = duckdb.connect()
+        try:
+            json_state = conn.execute(
+                "SELECT installed, loaded FROM duckdb_extensions() "
+                "WHERE extension_name = 'json'"
+            ).fetchone()
+            # Don't install extensions in tests.
+            if not (json_state[0] or json_state[1]):
+                pytest.skip("JSON extension is not installed")
+            if not duckdb_try_load_json(conn):
+                pytest.skip("JSON extension cannot be loaded in this environment")
+        finally:
+            conn.close()
+
+        board.pin_write(json_df, "json_data", type="json")
+
+        def fail_pin_read(*args, **kwargs):
+            raise AssertionError("Native JSON reading must not call pin_read()")
+
+        original_pin_read = board.pin_read
+        board.pin_read = fail_pin_read
+        try:
+            ps = PinSource(board, "json_data")
+        finally:
+            board.pin_read = original_pin_read
+        try:
+            result = ps.get_data()
+            assert isinstance(result, nw.DataFrame)
+            assert len(result) == 4
+        finally:
+            ps.cleanup()
+
+    def test_shared_executor_falls_back_to_pin_read(self, board, json_df, monkeypatch):
+        board.pin_write(json_df, "json_data", type="json")
+        monkeypatch.setattr(
+            "querychat._pin_source.duckdb_try_load_json", lambda conn: False
+        )
+        other = pd.DataFrame({"id": [1, 2, 3, 4], "label": ["a", "b", "c", "d"]})
+        executor = DuckDBExecutor(
+            {
+                "json_data": PinSource(board, "json_data"),
+                "other": DataFrameSource(nw.from_native(other), "other"),
+            }
+        )
+        try:
+            result = executor.execute_query(
+                "SELECT j.value, o.label FROM json_data j "
+                "JOIN other o USING (id) ORDER BY j.id"
+            )
+            assert len(result) == 4
+        finally:
+            executor.cleanup()
+
+
+class FakeFetchResult:
+    def __init__(self, row):
+        self._row = row
+
+    def fetchone(self):
+        return self._row
+
+
+class FakeConn:
+    """Stand-in for a DuckDB connection that records executed statements."""
+
+    _NO_SETTING = object()
+
+    def __init__(self, installed, loaded, *, allow_extensions=_NO_SETTING, fail=None):
+        self.installed = installed
+        self.loaded = loaded
+        self.allow_extensions = allow_extensions
+        self.fail = fail or set()
+        self.statements: list[str] = []
+
+    def execute(self, sql, *args):
+        self.statements.append(sql)
+        if "duckdb_extensions()" in sql:
+            return FakeFetchResult((self.installed, self.loaded))
+        if "current_setting('allow_extensions')" in sql:
+            if self.allow_extensions is self._NO_SETTING:
+                raise duckdb.Error("unrecognized configuration parameter")
+            return FakeFetchResult((self.allow_extensions,))
+        if sql in self.fail:
+            raise duckdb.Error(f"{sql} failed")
+        return FakeFetchResult(None)
+
+
+class TestDuckdbTryLoadJson:
+    def test_uses_already_loaded_extension(self):
+        conn = FakeConn(installed=True, loaded=True, allow_extensions=False)
+        assert duckdb_try_load_json(conn) is True
+        # No INSTALL/LOAD (or policy check) when the extension is already loaded
+        assert len(conn.statements) == 1
+        assert "duckdb_extensions()" in conn.statements[0]
+
+    def test_only_loads_when_installed(self):
+        conn = FakeConn(installed=True, loaded=False, allow_extensions=True)
+        assert duckdb_try_load_json(conn) is True
+        assert conn.statements[-1] == "LOAD json"
+        assert "INSTALL json" not in conn.statements
+
+    def test_installs_and_loads_when_unavailable(self):
+        conn = FakeConn(installed=False, loaded=False, allow_extensions=True)
+        assert duckdb_try_load_json(conn) is True
+        assert conn.statements[-2:] == ["INSTALL json", "LOAD json"]
+
+    def test_returns_false_when_driver_disallows_extensions(self):
+        conn = FakeConn(installed=False, loaded=False, allow_extensions=False)
+        assert duckdb_try_load_json(conn) is False
+        assert "INSTALL json" not in conn.statements
+        assert "LOAD json" not in conn.statements
+
+    def test_returns_false_when_install_fails(self):
+        conn = FakeConn(
+            installed=False,
+            loaded=False,
+            allow_extensions=True,
+            fail={"INSTALL json"},
+        )
+        assert duckdb_try_load_json(conn) is False
+        assert conn.statements[-1] == "INSTALL json"
+        assert "LOAD json" not in conn.statements
+
+    def test_returns_false_when_load_fails(self):
+        conn = FakeConn(
+            installed=True,
+            loaded=False,
+            allow_extensions=True,
+            fail={"LOAD json"},
+        )
+        assert duckdb_try_load_json(conn) is False
+        assert conn.statements[-1] == "LOAD json"
+
+    def test_unknown_allow_extensions_setting_falls_through_to_install_load(self):
+        conn = FakeConn(
+            installed=False, loaded=False, allow_extensions=FakeConn._NO_SETTING
+        )
+        assert duckdb_try_load_json(conn) is True
+        assert conn.statements[-2:] == ["INSTALL json", "LOAD json"]
+
+    def test_metadata_query_errors_propagate(self):
+        conn = FakeConn(installed=True, loaded=True, allow_extensions=True)
+        conn.execute = lambda sql, *args: (_ for _ in ()).throw(
+            duckdb.Error("duckdb_extensions() metadata query failed")
+        )
+        with pytest.raises(duckdb.Error, match="metadata query failed"):
+            duckdb_try_load_json(conn)
+
+    def test_real_connection_with_loaded_extension(self):
+        conn = duckdb.connect()
+        try:
+            json_state = conn.execute(
+                "SELECT installed, loaded FROM duckdb_extensions() "
+                "WHERE extension_name = 'json'"
+            ).fetchone()
+            if not (json_state[0] or json_state[1]):
+                pytest.skip("JSON extension is not installed")
+            if not duckdb_try_load_json(conn):
+                pytest.skip("JSON extension cannot be loaded in this environment")
+        finally:
+            conn.close()
 
 
 class TestPinSourceSchema:

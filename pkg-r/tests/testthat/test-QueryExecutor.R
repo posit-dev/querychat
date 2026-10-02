@@ -228,3 +228,170 @@ describe("check_source_compatibility()", {
     )
   })
 })
+
+describe("duckdb_try_load_json()", {
+  skip_if_not_installed("duckdb")
+
+  # Extension commands are mocked below, so enabling the driver's policy is
+  # safe even on builds where loading a real extension could crash R.
+  withr::local_options(duckdb.allow_extensions = TRUE)
+  con <- DBI::dbConnect(duckdb::duckdb())
+  withr::defer(DBI::dbDisconnect(con, shutdown = TRUE))
+
+  it("uses already-loaded JSON even when the driver disallows extensions", {
+    withr::local_options(duckdb.allow_extensions = FALSE)
+    locked <- DBI::dbConnect(duckdb::duckdb())
+    withr::defer(DBI::dbDisconnect(locked, shutdown = TRUE))
+    # Older drivers ignore the option and stay unrestricted; nothing to test.
+    skip_if_not("allow_extensions" %in% methods::slotNames(locked@driver))
+
+    statements <- character(0)
+    local_mocked_bindings(
+      dbGetQuery = function(con, statement, ...) {
+        statements <<- c(statements, statement)
+        data.frame(installed = TRUE, loaded = TRUE)
+      },
+      dbExecute = function(con, statement, ...) {
+        stop("no statement should run when the extension is already loaded")
+      },
+      .package = "DBI"
+    )
+
+    expect_true(duckdb_try_load_json(locked))
+    expect_equal(length(statements), 1L)
+    expect_match(statements, "duckdb_extensions", fixed = TRUE)
+    expect_match(statements, "extension_name = 'json'", fixed = TRUE)
+  })
+
+  it("only runs LOAD json when the extension is installed but not loaded", {
+    executed <- character(0)
+    local_mocked_bindings(
+      dbGetQuery = function(con, statement, ...) {
+        data.frame(installed = TRUE, loaded = FALSE)
+      },
+      dbExecute = function(con, statement, ...) {
+        executed <<- c(executed, statement)
+        0L
+      },
+      .package = "DBI"
+    )
+
+    expect_true(duckdb_try_load_json(con))
+    expect_equal(executed, "LOAD json")
+  })
+
+  it("installs and loads JSON when the extension is unavailable", {
+    executed <- character(0)
+    local_mocked_bindings(
+      dbGetQuery = function(con, statement, ...) {
+        data.frame(installed = FALSE, loaded = FALSE)
+      },
+      dbExecute = function(con, statement, ...) {
+        executed <<- c(executed, statement)
+        0L
+      },
+      .package = "DBI"
+    )
+
+    expect_true(duckdb_try_load_json(con))
+    expect_equal(executed, c("INSTALL json", "LOAD json"))
+  })
+
+  it("returns FALSE without executing statements when the driver disallows extensions", {
+    withr::local_options(duckdb.allow_extensions = FALSE)
+    locked <- DBI::dbConnect(duckdb::duckdb())
+    withr::defer(DBI::dbDisconnect(locked, shutdown = TRUE))
+    # Older drivers ignore the option and stay unrestricted; nothing to test.
+    skip_if_not("allow_extensions" %in% methods::slotNames(locked@driver))
+
+    executed <- character(0)
+    local_mocked_bindings(
+      dbGetQuery = function(con, statement, ...) {
+        data.frame(installed = FALSE, loaded = FALSE)
+      },
+      dbExecute = function(con, statement, ...) {
+        executed <<- c(executed, statement)
+        0L
+      },
+      .package = "DBI"
+    )
+
+    expect_false(duckdb_try_load_json(locked))
+    expect_equal(executed, character(0))
+  })
+
+  it("returns FALSE when INSTALL json fails, without attempting LOAD", {
+    executed <- character(0)
+    local_mocked_bindings(
+      dbGetQuery = function(con, statement, ...) {
+        data.frame(installed = FALSE, loaded = FALSE)
+      },
+      dbExecute = function(con, statement, ...) {
+        executed <<- c(executed, statement)
+        if (identical(statement, "INSTALL json")) {
+          stop("INSTALL json failed")
+        }
+        0L
+      },
+      .package = "DBI"
+    )
+
+    expect_false(duckdb_try_load_json(con))
+    expect_equal(executed, "INSTALL json")
+  })
+
+  it("returns FALSE when LOAD json fails", {
+    executed <- character(0)
+    local_mocked_bindings(
+      dbGetQuery = function(con, statement, ...) {
+        data.frame(installed = TRUE, loaded = FALSE)
+      },
+      dbExecute = function(con, statement, ...) {
+        executed <<- c(executed, statement)
+        stop("LOAD json failed")
+      },
+      .package = "DBI"
+    )
+
+    expect_false(duckdb_try_load_json(con))
+    expect_equal(executed, "LOAD json")
+  })
+
+  it("propagates metadata query errors instead of reporting the extension unavailable", {
+    local_mocked_bindings(
+      dbGetQuery = function(con, statement, ...) {
+        stop("duckdb_extensions() metadata query failed")
+      },
+      dbExecute = function(con, statement, ...) {
+        stop("no statement should run after a metadata query failure")
+      },
+      .package = "DBI"
+    )
+
+    expect_error(duckdb_try_load_json(con), "metadata query failed")
+  })
+
+  it("installs and loads JSON when the driver predates the policy slot", {
+    withr::local_options(duckdb.allow_extensions = FALSE)
+    locked <- DBI::dbConnect(duckdb::duckdb())
+    withr::defer(DBI::dbDisconnect(locked, shutdown = TRUE))
+    executed <- character(0)
+    local_mocked_bindings(
+      slotNames = function(object) character(),
+      .package = "methods"
+    )
+    local_mocked_bindings(
+      dbGetQuery = function(con, statement, ...) {
+        data.frame(installed = FALSE, loaded = FALSE)
+      },
+      dbExecute = function(con, statement, ...) {
+        executed <<- c(executed, statement)
+        0L
+      },
+      .package = "DBI"
+    )
+
+    expect_true(duckdb_try_load_json(locked))
+    expect_equal(executed, c("INSTALL json", "LOAD json"))
+  })
+})

@@ -210,7 +210,7 @@ def visualize_impl(
                     "\n".join(error["message"] for error in validated.errors())
                 )
 
-            spec = execute_ggsql(executor, validated)
+            spec = execute_ggsql(executor, ggsql)
 
             raw_chart = VegaLiteWriter().render_chart(spec)
             altair_widget = AltairWidget(copy.deepcopy(raw_chart))

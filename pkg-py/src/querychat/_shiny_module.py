@@ -513,8 +513,8 @@ def restore_viz_widgets(
         widget_id = entry["widget_id"]
         ggsql_str = entry["ggsql"]
         try:
-            validated = validate(ggsql_str)
-            spec = execute_ggsql(executor, validated)
+            validate(ggsql_str)  # early syntax check; errors skip the entry
+            spec = execute_ggsql(executor, ggsql_str)
             altair_widget = AltairWidget.from_ggsql(spec, widget_id=widget_id)
             register_widget(widget_id, altair_widget.widget)
             restored.append(entry)

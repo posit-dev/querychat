@@ -146,6 +146,30 @@ def test_main_prompt_render_includes_ggsql_reference(data_source):
     assert "{{> ggsql-syntax}}" not in prompt
 
 
+def test_main_prompt_render_includes_spatial_reference_with_maps(data_source):
+    system_prompt = QueryChatSystemPrompt(
+        prompt_template=PROMPTS_DIR / "prompt.md",
+        data_source=data_source,
+    )
+
+    prompt = system_prompt.render({"update", "query", "visualize", "maps"})
+
+    assert "<ggsql-spatial-reference>" in prompt
+    assert "ggsql:world" in prompt
+
+
+def test_main_prompt_render_omits_spatial_reference_without_maps(data_source):
+    system_prompt = QueryChatSystemPrompt(
+        prompt_template=PROMPTS_DIR / "prompt.md",
+        data_source=data_source,
+    )
+
+    prompt = system_prompt.render({"update", "query", "visualize"})
+
+    assert "<ggsql-spatial-reference>" not in prompt
+    assert "ggsql:world" not in prompt
+
+
 @pytest.fixture
 def sample_df():
     return pl.DataFrame(

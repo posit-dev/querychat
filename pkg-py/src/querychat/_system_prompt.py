@@ -212,6 +212,7 @@ class QueryChatSystemPrompt:
             "has_tool_update": "update" in tools if tools else False,
             "has_tool_query": "query" in tools if tools else False,
             "has_tool_visualize": has_viz_tool(tools),
+            "has_tool_maps": tools is not None and "maps" in tools,
             "include_query_guidelines": len(tools or ()) > 0,
             "multi_table": len(self._data_sources) > 1,
             "handoff_available": handoff_available,

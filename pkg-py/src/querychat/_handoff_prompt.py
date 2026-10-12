@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import chevron
 from pydantic import BaseModel, Field, create_model, field_validator
@@ -116,12 +116,12 @@ def handoff_result_model(
 ) -> type[HandoffResult]:
     # Static typing cannot express Literal values created from runtime names.
     table_name_type = Literal[tuple(table_names)]  # type: ignore[valid-type]
-    referenced_tables = (
+    referenced_tables: tuple[Any, Any] = (
         list[table_name_type],  # type: ignore[valid-type]
         Field(description="Registered table names used by the handoff source."),
     )
     language_type = Literal[tuple(languages)]  # type: ignore[valid-type]
-    language = (
+    language: tuple[Any, Any] = (
         language_type,  # type: ignore[valid-type]
         Field(description="Programming language used by the handoff."),
     )

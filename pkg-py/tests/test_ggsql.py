@@ -291,3 +291,103 @@ class TestCachingBehavior:
         execute_ggsql(caching_reader(ds), query)
         execute_ggsql(caching_reader(ds), query)
         assert calls == 2
+
+
+class TestRestoreVizWidgets:
+    """Bookmark restore executes through a CachingReader (PR #321 follow-up).
+
+    Regression guard: an earlier draft passed the executor itself to
+    execute_ggsql(), so every widget silently failed to restore (the
+    AttributeError was swallowed by restore_viz_widgets' except Exception).
+    """
+
+    @pytest.fixture
+    def register_spy(self, monkeypatch):
+        """Stub out the two places restore_viz_widgets needs a Shiny session."""
+        import ipywidgets
+        import shinywidgets
+
+        registered = []
+        monkeypatch.setattr(
+            shinywidgets,
+            "register_widget",
+            lambda widget_id, widget: registered.append(widget_id),
+        )
+        # shinywidgets hooks ipywidgets construction (Widget.on_widget_constructed)
+        # and requires an active session; unhook so widgets build session-free.
+        monkeypatch.setattr(ipywidgets.Widget, "_widget_construction_callback", None)
+        return registered
+
+    @pytest.mark.ggsql
+    def test_restores_and_registers_widgets(self, register_spy):
+        from querychat._shiny_module import restore_viz_widgets
+
+        nw_df = nw.from_native(pl.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]}))
+        ds = DataFrameSource(nw_df, "test_data")
+        entries = [
+            {
+                "widget_id": "w1",
+                "ggsql": "SELECT * FROM test_data VISUALISE x, y DRAW point",
+            },
+            {
+                "widget_id": "w2",
+                "ggsql": "SELECT * FROM test_data WHERE x > 1 VISUALISE x, y DRAW point",
+            },
+        ]
+
+        restored = restore_viz_widgets(ds, entries)
+
+        assert [e["widget_id"] for e in restored] == ["w1", "w2"]
+        assert register_spy == ["w1", "w2"]
+
+    @pytest.mark.ggsql
+    def test_shared_base_reads_are_memoized(self, monkeypatch, register_spy):
+        """One reader per restore pass: identical queries share one source read."""
+        from querychat._shiny_module import restore_viz_widgets
+
+        nw_df = nw.from_native(pl.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]}))
+        ds = DataFrameSource(nw_df, "test_data")
+
+        calls = 0
+        original = ds.execute_query
+
+        def counting(query):
+            nonlocal calls
+            calls += 1
+            return original(query)
+
+        monkeypatch.setattr(ds, "execute_query", counting)
+
+        query = "SELECT * FROM test_data VISUALISE x, y DRAW point"
+        entries = [
+            {"widget_id": "w1", "ggsql": query},
+            {"widget_id": "w2", "ggsql": query},
+        ]
+
+        restored = restore_viz_widgets(ds, entries)
+
+        assert len(restored) == 2
+        assert calls == 1
+
+    @pytest.mark.ggsql
+    def test_invalid_entries_are_skipped_with_warning(self, register_spy):
+        from querychat._shiny_module import restore_viz_widgets
+
+        nw_df = nw.from_native(pl.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]}))
+        ds = DataFrameSource(nw_df, "test_data")
+        entries = [
+            {
+                "widget_id": "bad",
+                "ggsql": "SELECT * FROM nope VISUALISE x, y DRAW point",
+            },
+            {
+                "widget_id": "good",
+                "ggsql": "SELECT * FROM test_data VISUALISE x, y DRAW point",
+            },
+        ]
+
+        with pytest.warns(UserWarning, match="Failed to restore"):
+            restored = restore_viz_widgets(ds, entries)
+
+        assert [e["widget_id"] for e in restored] == ["good"]
+        assert register_spy == ["good"]

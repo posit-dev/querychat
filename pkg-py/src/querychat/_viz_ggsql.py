@@ -53,6 +53,20 @@ def caching_reader(executor: QueryExecutor) -> ggsql.CachingReader:
     module-level reader keeps its executor (and cache) alive for the life of
     the process.
 
+    .. note::
+
+        Memoized reads assume the underlying data doesn't change: an
+        identical query within the cache TTL (5 minutes by default) is
+        served from the cache rather than re-read from the source. If the
+        data can change mid-session — e.g. update queries are enabled
+        (``QUERYCHAT_ENABLE_UPDATE_QUERIES=true``), or a live database is
+        written to by another process — charts may lag those changes by up
+        to the TTL. Mutations made through querychat's query tool do not
+        invalidate the memo. Tune or disable the cache via the
+        ``GGSQL_CACHE_TTL``, ``GGSQL_CACHE_MAX_BYTES``, and
+        ``GGSQL_CACHE_DISABLED`` environment variables (read when each
+        reader is created).
+
     Parameters
     ----------
     executor

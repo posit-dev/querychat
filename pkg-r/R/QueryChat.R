@@ -420,7 +420,7 @@ QueryChat <- R6::R6Class(
       check_history(history)
       arg_match(
         tools,
-        values = c("filter", "update", "query", "visualize"),
+        values = c("filter", "update", "query", "visualize", "maps", "default"),
         multiple = TRUE
       )
       tools <- normalize_tools(tools)
@@ -816,7 +816,7 @@ QueryChat <- R6::R6Class(
       if (!is_na(tools) && !is.null(tools)) {
         tools <- arg_match(
           tools,
-          values = c("filter", "update", "query", "visualize"),
+          values = c("filter", "update", "query", "visualize", "maps", "default"),
           multiple = TRUE
         )
         tools <- normalize_tools(tools)
@@ -1646,8 +1646,20 @@ normalize_tools <- function(tools) {
   if (is.null(tools)) {
     return(NULL)
   }
+  # Expand the "default" sentinel to the default tool set.
+  if ("default" %in% tools) {
+    tools <- union(c("filter", "query", "visualize"), setdiff(tools, "default"))
+  }
   tools[tools == "filter"] <- "update"
-  unique(tools)
+  tools <- unique(tools)
+  # "maps" is a capability modifier of the visualize tool.
+  if ("maps" %in% tools && !"visualize" %in% tools) {
+    cli::cli_abort(c(
+      'The "maps" capability requires the "visualize" tool.',
+      "i" = 'Use `tools = c("default", "maps")` or add "visualize".'
+    ))
+  }
+  tools
 }
 
 check_viz_deps <- function(tools) {
@@ -1664,7 +1676,7 @@ check_viz_deps <- function(tools) {
     .frequency = "once",
     .frequency_id = "querychat_viz_ggsql_missing"
   )
-  setdiff(tools, "visualize")
+  setdiff(tools, c("visualize", "maps"))
 }
 
 # Runs one teardown step, warning instead of erroring so the rest still runs.

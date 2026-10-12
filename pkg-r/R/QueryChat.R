@@ -816,7 +816,14 @@ QueryChat <- R6::R6Class(
       if (!is_na(tools) && !is.null(tools)) {
         tools <- arg_match(
           tools,
-          values = c("filter", "update", "query", "visualize", "maps", "default"),
+          values = c(
+            "filter",
+            "update",
+            "query",
+            "visualize",
+            "maps",
+            "default"
+          ),
           multiple = TRUE
         )
         tools <- normalize_tools(tools)

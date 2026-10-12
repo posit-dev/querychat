@@ -47,7 +47,7 @@ Suggests:
     dplyr,
     DT,
     duckdb,
-    ggsql,
+    ggsql (>= 0.5.2),
     knitr,
     later,
     nanoparquet,

@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import importlib.metadata
 import importlib.util
 
 from htmltools import HTMLDependency, tags
 
 from .__version import __version__
+
+MIN_GGSQL_VERSION = (0, 5, 2)
 
 
 def has_viz_tool(tools: set[str] | None) -> bool:
@@ -16,10 +19,28 @@ def has_viz_tool(tools: set[str] | None) -> bool:
 
 def has_viz_deps() -> bool:
     """Check whether visualization dependencies (ggsql, altair, shinywidgets, vl-convert-python) are installed."""
-    return all(
-        importlib.util.find_spec(pkg) is not None
+    if any(
+        importlib.util.find_spec(pkg) is None
         for pkg in ("ggsql", "altair", "shinywidgets", "vl_convert")
-    )
+    ):
+        return False
+    return ggsql_version() >= MIN_GGSQL_VERSION
+
+
+def ggsql_version() -> tuple[int, ...]:
+    """Installed ggsql version as a comparable tuple (e.g. ``(0, 5, 2)``)."""
+    raw = importlib.metadata.version("ggsql")
+    parts: list[int] = []
+    for piece in raw.split("."):
+        num = ""
+        for ch in piece:
+            if not ch.isdigit():
+                break
+            num += ch
+        if not num:
+            break
+        parts.append(int(num))
+    return tuple(parts)
 
 
 PRELOAD_WIDGET_ID = "__querychat_preload_viz__"

@@ -1,5 +1,7 @@
 # querychat (development version)
 
+* New opt-in `"maps"` capability: pass `tools = c("default", "maps")` to let the LLM draw choropleths (via the builtin `ggsql:world` dataset) and point maps through ggsql's spatial support. The `"default"` tools entry expands to the default tool set, so extra capabilities no longer require restating every tool.
+
 # querychat 0.4.1
 
 ## Bug fixes

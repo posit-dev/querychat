@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- New opt-in `"maps"` capability: pass `tools=("default", "maps")` to let the LLM draw choropleths (via the builtin `ggsql:world` dataset) and point maps through ggsql's spatial support. The `"default"` tools entry expands to the default tool set, so extra capabilities no longer require restating every tool.
+
 ## [0.9.0] - 2026-09-13
 
 ### New features

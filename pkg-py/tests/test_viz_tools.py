@@ -446,3 +446,36 @@ class TestRenderChartToPng:
         result = render_chart_to_png(chart)
         assert isinstance(result, bytes)
         assert result[:8] == b"\x89PNG\r\n\x1a\n"
+
+
+class TestMapsPrewarmWiring:
+    @pytest.mark.ggsql
+    def test_prewarms_spatial_once_when_maps_enabled(self, data_source, monkeypatch):
+        import querychat._viz_tools as viz_tools
+
+        calls = []
+        monkeypatch.setattr(
+            viz_tools, "prewarm_spatial", lambda reader: calls.append(reader) or True
+        )
+        tool = tool_visualize(data_source, lambda _: None, maps=True)
+        tool.func(
+            ggsql="SELECT x, y FROM test_data VISUALISE x, y DRAW point", title="t1"
+        )
+        tool.func(
+            ggsql="SELECT x, y FROM test_data VISUALISE x, y DRAW point", title="t2"
+        )
+        assert len(calls) == 1
+
+    @pytest.mark.ggsql
+    def test_no_prewarm_when_maps_disabled(self, data_source, monkeypatch):
+        import querychat._viz_tools as viz_tools
+
+        calls = []
+        monkeypatch.setattr(
+            viz_tools, "prewarm_spatial", lambda reader: calls.append(reader) or True
+        )
+        tool = tool_visualize(data_source, lambda _: None)
+        tool.func(
+            ggsql="SELECT x, y FROM test_data VISUALISE x, y DRAW point", title="t1"
+        )
+        assert calls == []

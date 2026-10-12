@@ -312,7 +312,12 @@ class QueryChatBase(Generic[IntoFrameT]):
         if "visualize" in resolved_tools:
             viz_fn = visualize or (lambda _: None)
             chat.register_tool(
-                tool_visualize(executor, viz_fn, multi_table=multi_table)
+                tool_visualize(
+                    executor,
+                    viz_fn,
+                    multi_table=multi_table,
+                    maps="maps" in resolved_tools,
+                )
             )
 
         return chat

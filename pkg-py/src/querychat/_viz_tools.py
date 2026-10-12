@@ -22,7 +22,7 @@ from ._icons import bs_icon
 from ._tool_names import TOOL_VISUALIZE
 from ._utils import querychat_tool_starts_open, read_prompt_template, truncate_error
 from ._viz_altair_widget import AltairWidget, fit_chart_to_container
-from ._viz_ggsql import caching_reader, execute_ggsql
+from ._viz_ggsql import caching_reader, execute_ggsql, prewarm_spatial
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -62,6 +62,7 @@ def tool_visualize(
     update_fn: Callable[[VisualizeData], None],
     *,
     multi_table: bool = False,
+    maps: bool = False,
 ) -> Tool:
     """
     Create a tool that executes a ggsql query and renders the visualization.
@@ -74,6 +75,9 @@ def tool_visualize(
         Callback function to call with VisualizeData when visualization succeeds
     multi_table
         Whether multiple tables are registered.
+    maps
+        Whether the maps capability is enabled (pre-warms the DuckDB
+        spatial extension when the viz reader is first created).
 
     Returns
     -------
@@ -81,7 +85,7 @@ def tool_visualize(
         A tool that can be registered with chatlas
 
     """
-    impl = visualize_impl(executor, update_fn)
+    impl = visualize_impl(executor, update_fn, maps=maps)
     impl.__doc__ = read_prompt_template(
         "tool-visualize.md",
         db_type=executor.get_db_type(),
@@ -186,6 +190,8 @@ def warn_viz_url_bookmarking() -> bool:
 def visualize_impl(
     executor: QueryExecutor,
     update_fn: Callable[[VisualizeData], None],
+    *,
+    maps: bool = False,
 ) -> Callable[[str, str], ContentToolResult]:
     """Create the visualize implementation function."""
     from ggsql import VegaLiteWriter, validate
@@ -219,6 +225,8 @@ def visualize_impl(
 
             if reader is None:
                 reader = caching_reader(executor)
+                if maps:
+                    prewarm_spatial(reader)
             spec = execute_ggsql(reader, ggsql)
 
             raw_chart = VegaLiteWriter().render_chart(spec)

@@ -58,7 +58,7 @@ if TYPE_CHECKING:
     from ._data_dict import DataDict
     from ._viz_tools import VisualizeData
 
-TOOL_GROUPS = Literal["filter", "update", "query", "visualize"]
+TOOL_GROUPS = Literal["filter", "update", "query", "visualize", "maps", "default"]
 DEFAULT_TOOLS: tuple[TOOL_GROUPS, ...] = ("filter", "query", "visualize")
 TABLE_NAME_PATTERN = r"^[a-zA-Z][a-zA-Z0-9_]*$"
 
@@ -826,6 +826,17 @@ def normalize_tools(
         resolved = set(tools)
     if resolved is not None:
         resolved = {"update" if t == "filter" else t for t in resolved}
+        # Expand the "default" sentinel to the caller's default tool set.
+        if "default" in resolved:
+            resolved.discard("default")
+            resolved |= set(default) if default is not None else set()
+            resolved = {"update" if t == "filter" else t for t in resolved}
+        # "maps" is a capability modifier of the visualize tool.
+        if "maps" in resolved and "visualize" not in resolved:
+            raise ValueError(
+                'The "maps" capability requires the "visualize" tool. '
+                'Use tools=("default", "maps") or add "visualize".'
+            )
     if not check_deps:
         return resolved
     if resolved is not None and has_viz_tool(resolved) and not has_viz_deps():
@@ -836,6 +847,7 @@ def normalize_tools(
             stacklevel=2,
         )
         resolved.discard("visualize")
+        resolved.discard("maps")
     return resolved
 
 

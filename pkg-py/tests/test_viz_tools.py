@@ -58,6 +58,52 @@ class TestVizDependencyCheck:
         assert result == {"visualize"}
 
 
+class TestMapsToolModifier:
+    def test_default_sentinel_expands(self):
+        """The "default" entry expands to the default tool set."""
+        from querychat._querychat_base import DEFAULT_TOOLS, normalize_tools
+
+        resolved = normalize_tools(
+            ("default", "maps"), default=DEFAULT_TOOLS, check_deps=False
+        )
+        assert "visualize" in resolved
+        assert "query" in resolved
+        assert "maps" in resolved
+        assert "default" not in resolved
+
+    def test_default_sentinel_alone(self):
+        """tools="default" alone resolves to the default tool set."""
+        from querychat._querychat_base import DEFAULT_TOOLS, normalize_tools
+
+        resolved = normalize_tools("default", default=DEFAULT_TOOLS, check_deps=False)
+        assert "visualize" in resolved and "query" in resolved
+
+    def test_maps_requires_visualize(self):
+        """"maps" without "visualize" is a hard error."""
+        from querychat._querychat_base import DEFAULT_TOOLS, normalize_tools
+
+        with pytest.raises(ValueError, match="maps.*visualize"):
+            normalize_tools(("query", "maps"), default=DEFAULT_TOOLS, check_deps=False)
+
+    def test_maps_dropped_with_visualize_when_deps_missing(self, monkeypatch):
+        """When viz deps are missing, maps is dropped alongside visualize."""
+        real_find_spec = importlib.util.find_spec
+
+        def mock_find_spec(name, *args, **kwargs):
+            if name == "ggsql":
+                return None
+            return real_find_spec(name, *args, **kwargs)
+
+        monkeypatch.setattr(importlib.util, "find_spec", mock_find_spec)
+
+        from querychat._querychat_base import DEFAULT_TOOLS, normalize_tools
+
+        with pytest.warns(UserWarning, match="pip install querychat\\[viz\\]"):
+            resolved = normalize_tools(("default", "maps"), default=DEFAULT_TOOLS)
+        assert "visualize" not in resolved
+        assert "maps" not in resolved
+
+
 def test_ggsql_syntax_reference_uses_range_not_errorbar():
     syntax = (PROMPTS_DIR / "ggsql-syntax.md").read_text()
     assert "`range`" in syntax

@@ -40,6 +40,8 @@ VISUALISE date AS x, revenue AS y
 DRAW line
 ```
 
+`VISUALISE FROM` takes exactly one **bare** source — an alias (`FROM tbl AS t`), a join, or a comma-separated list of tables is a parse error. To combine tables, join them in the SELECT clause and visualise the result.
+
 ### Mapping Styles
 
 | Style | Syntax | Use When |
@@ -79,9 +81,11 @@ DRAW geom_type
 - `arrow` draws arrows between two points. Requires `x`, `y`, `xend`, `yend` aesthetics.
 - `rule` draws full-span reference lines. Map a value to `y` for a horizontal line or `x` for a vertical line. Optionally map `slope` to create diagonal reference lines: `y = a + slope * x` (when `y` is mapped) or `x = a + slope * y` (when `x` is mapped).
 - `rect` draws rectangles. Pick 2 per axis from center (`x`/`y`), min (`xmin`/`ymin`), max (`xmax`/`ymax`), `width`, `height`. Or just map center (defaults to width/height of 1).
-- `range` displays interval marks. Requires `x`, `ymin`, `ymax` for vertical intervals, or `y`, `xmin`, `xmax` for horizontal intervals. Use it for confidence intervals, lollipops, and candlestick-style ranges. Setting `width => null` hides the hinges.
+- `range` displays interval marks. Requires `x`, `ymin`, `ymax` for vertical intervals, or `y`, `xmin`, `xmax` for horizontal intervals. Use it for confidence intervals, lollipops, and candlestick-style ranges. The `hinge` setting controls the width of the endpoint caps in points (default 10); set `hinge => null` to hide the hinges.
 - `segment` draws arbitrary connections between two points and requires `x`, `y`, `xend`, and `yend`.
 - `line` and `path` support continuously varying `linewidth`, `stroke`, and `opacity` aesthetics within groups.
+- Use `SETTING position => 'jitter'` on `point` layers to spread overlapping points along a discrete axis (strip-plot style). Jitter settings: `width` (0–1, default 0.4), `distribution` (`'uniform'` default, `'normal'`, `'density'`, `'intensity'`), and `side` (`'both'` default; a one-sided value pairs with a half-violin or half-boxplot on the same band).
+- Identity-stat layers (`point`, `line`, `area`, `bar`, `ribbon`, `range`, `segment`, `arrow`, `rule`, `text`) accept an `aggregate` setting that collapses each group (defined by `PARTITION BY` plus all discrete mappings) to one row, replacing every numeric mapping with its aggregated value — summarising in the layer instead of writing a `GROUP BY`. Takes `'<func>'` (applies to every numeric mapping; e.g. `count`, `sum`, `min`, `max`, `mean`, `median`) or `'<aes>:<func>'` to target one aesthetic. Example: `VISUALISE species AS x, bill_length AS y FROM penguins` + `DRAW bar SETTING aggregate => 'mean'` draws the mean bill length per species.
 
 **Aesthetics (MAPPING):**
 
@@ -147,13 +151,15 @@ Some layers compute statistics. Use REMAPPING to access computed values:
 | `smooth` | `intensity` | `intensity AS y` |
 | `boxplot` | `value`, `type` | `value AS y` |
 
-`boxplot` displays box-and-whisker plots. Settings: `outliers` (`true` default — show outlier points), `coef` (`1.5` default — whisker fence coefficient), `width` (`0.9` default — box width, 0–1).
+`boxplot` displays box-and-whisker plots. Settings: `outliers` (`true` default — show outlier points), `coef` (`1.5` default — whisker fence coefficient), `width` (`0.9` default — box width, 0–1), `hinge` (whisker-cap width in points, default `null` = no caps), `side` (`'both'` default; `'left'`/`'bottom'` or `'right'`/`'top'` for a half-boxplot that pairs with a half-violin or one-sided jitter on the same band).
 
 `smooth` fits a trendline to data. Settings: `method` (`'nw'` or `'nadaraya-watson'` default kernel regression, `'ols'` for OLS linear, `'tls'` for total least squares). NW-only settings: `bandwidth` (numeric), `adjust` (multiplier, default 1), `kernel` (`'gaussian'` default, `'epanechnikov'`, `'triangular'`, `'rectangular'`, `'uniform'`, `'biweight'`, `'quartic'`, `'cosine'`).
 
 `density` computes a KDE from a continuous `x`. Settings: `bandwidth` (numeric), `adjust` (multiplier, default 1), `kernel` (`'gaussian'` default, `'epanechnikov'`, `'triangular'`, `'rectangular'`, `'uniform'`, `'biweight'`, `'quartic'`, `'cosine'`). Use `REMAPPING intensity AS y` to show unnormalized density that reflects group size differences. Use `SETTING position => 'stack'` for stacked densities.
 
 `violin` displays mirrored KDE curves for groups. Requires both `x` (categorical) and `y` (continuous). Accepts the same bandwidth/adjust/kernel settings as density. Use `REMAPPING intensity AS offset` to reflect group size differences. Additional settings: `side` (`'both'` default, `'left'`/`'bottom'`, `'right'`/`'top'` — for half-violin/ridgeline plots), `width` (any value > 0; values > 1 enable ridgeline-style overlapping).
+
+`boxplot`, `violin`, and `range` may omit the categorical aesthetic (e.g. `DRAW boxplot MAPPING salary AS y`) to summarise all rows as a single mark.
 
 **Examples:**
 
@@ -297,6 +303,7 @@ PROJECT TO polar SETTING start => -90, end => 90  -- half-circle gauge
 - `start` — starting angle in degrees (0 = 12 o'clock, 90 = 3 o'clock)
 - `end` — ending angle in degrees (default: start + 360; use for partial arcs/gauges)
 - `inner` — inner radius as proportion 0–1 (0 = full pie, 0.5 = donut with 50% hole)
+- `radar` — `true` displays discrete-angle data as a radar plot
 - `clip` — clip out-of-bounds data (default `true`)
 
 **Axis flipping:** To create horizontal bar charts or flip axes, use `PROJECT y, x TO cartesian`. This maps anything on `y` to the horizontal axis and `x` to the vertical axis.
@@ -452,7 +459,7 @@ DRAW text MAPPING n AS label SETTING offset => (0, -11), fill => 'white'
 ```sql
 SELECT ROUND(bill_dep) AS bill_dep, COUNT(*) AS n FROM penguins GROUP BY 1
 VISUALISE bill_dep AS x, n AS y
-DRAW range MAPPING 0 AS ymin, n AS ymax SETTING width => null
+DRAW range MAPPING 0 AS ymin, n AS ymax SETTING hinge => null
 DRAW point
 ```
 
@@ -551,3 +558,10 @@ PROJECT TO polar SETTING inner => 0.5
    DRAW bar MAPPING category AS x, subcategory AS fill SETTING position => 'dodge'              -- side-by-side
    DRAW bar MAPPING category AS x, subcategory AS fill SETTING position => 'stack', total => 1  -- proportional
    ```
+
+## Vega-Lite rendering
+
+querychat draws all charts with ggsql's **Vega-Lite** writer, not its native SVG/PDF writers. Writer-dependent behavior to know:
+
+- **Label text renders literally**: markdown such as `**bold**` or `` `code` `` would appear verbatim in the chart — keep label text plain.
+- **The `minor_breaks` scale setting is ignored** — no minor gridlines are drawn.

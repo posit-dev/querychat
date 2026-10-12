@@ -22,7 +22,12 @@ from ._icons import bs_icon
 from ._tool_names import TOOL_VISUALIZE
 from ._utils import querychat_tool_starts_open, read_prompt_template, truncate_error
 from ._viz_altair_widget import AltairWidget, fit_chart_to_container
-from ._viz_ggsql import caching_reader, execute_ggsql, prewarm_spatial
+from ._viz_ggsql import (
+    caching_reader,
+    execute_ggsql,
+    prewarm_spatial,
+    translate_spatial_error,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -201,13 +206,14 @@ def visualize_impl(
     # the reader's cache is freed when the client is dropped. Created lazily
     # so clients that never visualize don't pay for an idle DuckDB instance.
     reader = None
+    maps_available = maps
 
     def visualize(
         ggsql: str,
         title: str,
     ) -> ContentToolResult:
         """Execute a ggsql query and render the visualization."""
-        nonlocal reader
+        nonlocal reader, maps_available
         markdown = f"```sql\n{ggsql}\n```"
 
         try:
@@ -225,8 +231,8 @@ def visualize_impl(
 
             if reader is None:
                 reader = caching_reader(executor)
-                if maps:
-                    prewarm_spatial(reader)
+                if maps_available:
+                    maps_available = prewarm_spatial(reader)
             spec = execute_ggsql(reader, ggsql)
 
             raw_chart = VegaLiteWriter().render_chart(spec)
@@ -252,7 +258,15 @@ def visualize_impl(
             )
 
         except Exception as e:
-            error_msg = truncate_error(str(e))
+            maps_state = (
+                "enabled"
+                if maps_available
+                else ("setup_failed" if maps else "disabled")
+            )
+            translated = translate_spatial_error(e, maps_state=maps_state)
+            error_msg = (
+                translated if translated is not None else truncate_error(str(e))
+            )
             markdown += f"\n\n> Error: {error_msg}"
             return ContentToolResult(value=markdown, error=Exception(error_msg))
 

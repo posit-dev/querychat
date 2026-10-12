@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from ._utils import to_polars
 
@@ -109,6 +109,37 @@ def prewarm_spatial(reader: ggsql.CachingReader) -> bool:
         )
         return False
     return True
+
+
+def translate_spatial_error(
+    error: Exception, *, maps_state: Literal["enabled", "disabled", "setup_failed"]
+) -> str | None:
+    """
+    Translate ggsql's spatial-extension failure into actionable guidance.
+
+    Returns the translated message, or ``None`` when the error is not a
+    spatial setup failure (or maps are fully enabled, making the message
+    moot). ``maps_state`` is ``"enabled"`` when the pre-warm succeeded,
+    ``"setup_failed"`` when it ran but failed, and ``"disabled"`` when the
+    session never opted into maps.
+    """
+    msg = str(error).lower()
+    if maps_state == "enabled" or "spatial" not in msg or "extension" not in msg:
+        return None
+    if maps_state == "setup_failed":
+        return (
+            "This query requires map/spatial support, but spatial extension "
+            "setup failed earlier in this session (see the warning shown at "
+            "setup time, likely a failed extension download). Do not retry "
+            "with DRAW spatial, PROJECT TO <map>, or ggsql:world; suggest a "
+            "non-map visualization instead."
+        )
+    return (
+        "This query requires map/spatial support, which is not enabled in "
+        "this session. Do not retry with DRAW spatial, PROJECT TO <map>, or "
+        "ggsql:world; suggest a non-map visualization instead. The app "
+        'developer can enable maps with tools=("default", "maps").'
+    )
 
 
 def execute_ggsql(reader: ggsql.CachingReader, query: str) -> ggsql.Spec:

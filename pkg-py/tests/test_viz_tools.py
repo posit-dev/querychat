@@ -479,3 +479,50 @@ class TestMapsPrewarmWiring:
             ggsql="SELECT x, y FROM test_data VISUALISE x, y DRAW point", title="t1"
         )
         assert calls == []
+
+
+class TestTranslateSpatialError:
+    SPATIAL_ERR = Exception(
+        'IO Error: Extension "/home/u/.duckdb/extensions/v1.5.2/linux_amd64/'
+        'spatial.duckdb_extension" not found'
+    )
+
+    def test_disabled_message_points_to_tools(self):
+        from querychat._viz_ggsql import translate_spatial_error
+
+        msg = translate_spatial_error(self.SPATIAL_ERR, maps_state="disabled")
+        assert msg is not None
+        assert "maps" in msg
+        assert 'tools=("default", "maps")' in msg
+
+    def test_setup_failed_message(self):
+        from querychat._viz_ggsql import translate_spatial_error
+
+        msg = translate_spatial_error(self.SPATIAL_ERR, maps_state="setup_failed")
+        assert msg is not None
+        assert "setup failed" in msg
+
+    def test_enabled_or_nonspatial_returns_none(self):
+        from querychat._viz_ggsql import translate_spatial_error
+
+        assert translate_spatial_error(self.SPATIAL_ERR, maps_state="enabled") is None
+        assert (
+            translate_spatial_error(Exception("boom"), maps_state="disabled") is None
+        )
+
+    @pytest.mark.ggsql
+    def test_tool_translates_spatial_error_when_maps_disabled(
+        self, data_source, monkeypatch
+    ):
+        import querychat._viz_tools as viz_tools
+
+        def boom(reader, query):
+            raise Exception(self.SPATIAL_ERR)
+
+        monkeypatch.setattr(viz_tools, "execute_ggsql", boom)
+        tool = tool_visualize(data_source, lambda _: None)
+        result = tool.func(
+            ggsql="SELECT x, y FROM test_data VISUALISE x, y DRAW point", title="t"
+        )
+        assert result.error is not None
+        assert 'tools=("default", "maps")' in str(result.error)

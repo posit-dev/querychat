@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import weakref
 from typing import TYPE_CHECKING
 
 from ._utils import to_polars
@@ -42,33 +41,44 @@ class ExecutorReader:
         pass
 
 
-# One CachingReader per executor: the memo only pays off across viz calls
-# within a chat session, so the reader (and its cache) must outlive any
-# single execute_ggsql() call. Weak keys let finished sessions' executors —
-# and their caches — be garbage collected.
-_readers: weakref.WeakKeyDictionary = weakref.WeakKeyDictionary()
+def caching_reader(executor: QueryExecutor) -> ggsql.CachingReader:
+    """
+    Create a ``ggsql.CachingReader`` serving base reads through ``executor``.
 
+    The reader owns a private in-memory cache that memoizes source reads, so
+    its lifetime should match the span over which repeated reads pay off:
+    create one per chat client and reuse it across viz calls. When the client
+    is dropped, the reader (and its cache) is freed with it. Callers own the
+    reader — there is deliberately no shared registry here, since a
+    module-level reader keeps its executor (and cache) alive for the life of
+    the process.
 
-def _caching_reader(executor: QueryExecutor) -> ggsql.CachingReader:
+    Parameters
+    ----------
+    executor
+        The querychat QueryExecutor (or bare DataSource) to read through.
+
+    Returns
+    -------
+    ggsql.CachingReader
+        A caching reader wrapping the executor.
+
+    """
     from ggsql import CachingReader
 
-    reader = _readers.get(executor)
-    if reader is None:
-        reader = CachingReader(ExecutorReader(executor))
-        _readers[executor] = reader
-    return reader
+    return CachingReader(ExecutorReader(executor))
 
 
-def execute_ggsql(executor: QueryExecutor, query: str) -> ggsql.Spec:
+def execute_ggsql(reader: ggsql.CachingReader, query: str) -> ggsql.Spec:
     """
-    Execute a ggsql query against an executor, returning a Spec.
+    Execute a ggsql query through a caching reader, returning a Spec.
 
-    The whole query (SQL + VISUALISE) executes through a
-    ``ggsql.CachingReader`` wrapping the executor: base reads go to the
-    executor (preserving database pushdown) and are memoized for the cache
-    TTL, while ggsql-generated derived tables live in the reader's private
-    in-memory cache. Layer-level sources (``DRAW ... FROM <table>``) work
-    because every layer source is staged through that cache.
+    The whole query (SQL + VISUALISE) executes through the reader: base reads
+    go to the underlying executor (preserving database pushdown) and are
+    memoized for the cache TTL, while ggsql-generated derived tables live in
+    the reader's private in-memory cache. Layer-level sources (``DRAW ...
+    FROM <table>``) work because every layer source is staged through that
+    cache.
 
     Callers that want validation feedback should run ``ggsql.validate()``
     first themselves; the raw query string is what gets executed (a
@@ -77,8 +87,9 @@ def execute_ggsql(executor: QueryExecutor, query: str) -> ggsql.Spec:
 
     Parameters
     ----------
-    executor
-        The querychat QueryExecutor (or bare DataSource) to read through.
+    reader
+        A ``ggsql.CachingReader`` from ``caching_reader()``. Reuse one reader
+        across related viz calls so memoized base reads are shared.
     query
         The full ggsql query string (SQL + VISUALISE).
 
@@ -88,4 +99,4 @@ def execute_ggsql(executor: QueryExecutor, query: str) -> ggsql.Spec:
         The writer-independent plot specification.
 
     """
-    return _caching_reader(executor).execute(query)
+    return reader.execute(query)

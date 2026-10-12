@@ -34,11 +34,11 @@ class ExecutorReader:
         """Run a base read through the executor, as a pyarrow Table."""
         return to_polars(self._executor.execute_query(sql)).to_arrow()
 
-    def register(self, name, table, replace) -> None:  # noqa: ARG002
+    def register(self, name, table, replace) -> None:
         # Writes belong to CachingReader's cache, never the primary.
         pass
 
-    def unregister(self, name) -> None:  # noqa: ARG002
+    def unregister(self, name) -> None:
         pass
 
 

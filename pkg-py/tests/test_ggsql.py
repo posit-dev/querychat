@@ -294,7 +294,8 @@ class TestCachingBehavior:
 
 
 class TestRestoreVizWidgets:
-    """Bookmark restore executes through a CachingReader (PR #321 follow-up).
+    """
+    Bookmark restore executes through a CachingReader (PR #321 follow-up).
 
     Regression guard: an earlier draft passed the executor itself to
     execute_ggsql(), so every widget silently failed to restore (the
@@ -414,7 +415,7 @@ class TestPrewarmSpatial:
 
         class FailReader:
             def execute(self, query):
-                raise Exception(
+                raise RuntimeError(
                     "IO Error: Extension spatial.duckdb_extension not found"
                 )
 

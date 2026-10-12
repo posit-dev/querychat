@@ -76,13 +76,14 @@ class TestMapsToolModifier:
         from querychat._querychat_base import DEFAULT_TOOLS, normalize_tools
 
         resolved = normalize_tools("default", default=DEFAULT_TOOLS, check_deps=False)
-        assert "visualize" in resolved and "query" in resolved
+        assert "visualize" in resolved
+        assert "query" in resolved
 
     def test_maps_requires_visualize(self):
         """"maps" without "visualize" is a hard error."""
         from querychat._querychat_base import DEFAULT_TOOLS, normalize_tools
 
-        with pytest.raises(ValueError, match="maps.*visualize"):
+        with pytest.raises(ValueError, match=r"maps.*visualize"):
             normalize_tools(("query", "maps"), default=DEFAULT_TOOLS, check_deps=False)
 
     def test_maps_dropped_with_visualize_when_deps_missing(self, monkeypatch):
@@ -517,7 +518,7 @@ class TestTranslateSpatialError:
         import querychat._viz_tools as viz_tools
 
         def boom(reader, query):
-            raise Exception(self.SPATIAL_ERR)
+            raise RuntimeError(str(self.SPATIAL_ERR))
 
         monkeypatch.setattr(viz_tools, "execute_ggsql", boom)
         tool = tool_visualize(data_source, lambda _: None)

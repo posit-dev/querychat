@@ -6,48 +6,7 @@ import polars as pl
 import pytest
 from querychat._datasource import DataFrameSource
 from querychat._viz_altair_widget import AltairWidget
-from querychat._viz_ggsql import (
-    execute_ggsql,
-    extract_visualise_table,
-    has_layer_level_source,
-)
-
-
-class TestExtractVisualiseTable:
-    """Tests for extract_visualise_table() parsing."""
-
-    def test_bare_identifier(self):
-        assert (
-            extract_visualise_table("VISUALISE x, y FROM mytable DRAW point")
-            == "mytable"
-        )
-
-    def test_quoted_identifier(self):
-        assert (
-            extract_visualise_table('VISUALISE x FROM "my table" DRAW point')
-            == '"my table"'
-        )
-
-    def test_no_from_returns_none(self):
-        assert extract_visualise_table("VISUALISE x, y DRAW point") is None
-
-    def test_ignores_draw_level_from(self):
-        visual = "VISUALISE x, y DRAW bar MAPPING z AS fill FROM summary"
-        assert extract_visualise_table(visual) is None
-
-
-class TestHasLayerLevelSource:
-    def test_detects_draw_level_from(self):
-        visual = "VISUALISE x, y DRAW bar MAPPING z AS fill FROM summary"
-        assert has_layer_level_source(visual)
-
-    def test_ignores_visualise_from(self):
-        visual = "VISUALISE x, y FROM sales DRAW point MAPPING z AS color"
-        assert not has_layer_level_source(visual)
-
-    def test_ignores_scale_from(self):
-        visual = "VISUALISE x, y DRAW point MAPPING z AS color SCALE x FROM [0, 10]"
-        assert not has_layer_level_source(visual)
+from querychat._viz_ggsql import execute_ggsql
 
 
 class TestGgsqlValidate:
@@ -209,46 +168,8 @@ class TestExecuteGgsql:
         spec = execute_ggsql(ds, ggsql.validate(query))
         assert "VISUALISE" in spec.visual()
 
-    def test_passes_original_column_names_through_to_ggsql(self, monkeypatch):
-        nw_df = nw.from_native(
-            pl.DataFrame(
-                {
-                    "ROOM_TYPE": ["Entire home", "Private room"],
-                    "listings": [10, 20],
-                }
-            )
-        )
-        ds = DataFrameSource(nw_df, "upper_table")
-        validated = type(
-            "Validated",
-            (),
-            {
-                "sql": lambda self: "SELECT ROOM_TYPE, listings FROM upper_table",
-                "visual": lambda self: (
-                    "VISUALISE ROOM_TYPE AS x, listings AS y DRAW bar"
-                ),
-            },
-        )()
-        captured_columns = None
-
-        class FakeReader:
-            def register(self, name, df):
-                nonlocal captured_columns
-                captured_columns = list(df.columns)
-
-            def execute(self, query):
-                return type("Spec", (), {"visual": lambda self: query})()
-
-        import ggsql
-
-        monkeypatch.setattr(ggsql, "DuckDBReader", lambda *_args: FakeReader())
-
-        spec = execute_ggsql(ds, validated)
-        assert "VISUALISE" in spec.visual()
-        assert captured_columns == ["ROOM_TYPE", "listings"]
-
     @pytest.mark.ggsql
-    def test_rejects_layer_level_from_sources_with_clear_error(self):
+    def test_supports_layer_level_from_sources(self):
         nw_df = nw.from_native(
             pl.DataFrame(
                 {
@@ -272,11 +193,12 @@ class TestExecuteGgsql:
         DRAW bar MAPPING region AS x, total AS y FROM summary
         """
 
-        with pytest.raises(
-            ValueError,
-            match="Layer-specific sources are not currently supported",
-        ):
-            execute_ggsql(ds, ggsql.validate(query))
+        # Previously raised "Layer-specific sources are not currently
+        # supported"; CachingReader stages each layer source through its
+        # cache, so the query now runs end to end.
+        spec = execute_ggsql(ds, ggsql.validate(query))
+        assert spec is not None
+        assert "VISUALISE" in spec.visual()
 
     @pytest.mark.ggsql
     def test_supports_single_relation_raw_plus_summary_overlay(self):
@@ -323,3 +245,27 @@ class TestExecuteGgsql:
         spec = execute_ggsql(ds, ggsql.validate(query))
         assert spec.metadata()["rows"] == 4
         assert "VISUALISE" in spec.visual()
+
+
+class TestCachingBehavior:
+    """CachingReader shares memoized source reads across viz executions."""
+
+    @pytest.mark.ggsql
+    def test_identical_queries_share_source_reads(self, monkeypatch):
+        nw_df = nw.from_native(pl.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]}))
+        ds = DataFrameSource(nw_df, "test_data")
+
+        calls = 0
+        original = ds.execute_query
+
+        def counting(query):
+            nonlocal calls
+            calls += 1
+            return original(query)
+
+        monkeypatch.setattr(ds, "execute_query", counting)
+
+        query = "SELECT * FROM test_data VISUALISE x, y DRAW point"
+        execute_ggsql(ds, ggsql.validate(query))
+        execute_ggsql(ds, ggsql.validate(query))
+        assert calls == 1

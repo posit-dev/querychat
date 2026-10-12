@@ -535,6 +535,21 @@ describe("viz prompt conditionals", {
     expect_no_match(rendered, "ROOM_TYPE", fixed = TRUE)
   })
 
+  it("includes ggsql spatial reference only with maps tool", {
+    ds <- local_data_frame_source(new_test_df())
+    sp <- QueryChatSystemPrompt$new(
+      prompt_template = default_prompt(),
+      data_sources = list(test_table = ds)
+    )
+    rendered_maps <- sp$render(tools = c("visualize", "maps"))
+    expect_match(rendered_maps, "ggsql-spatial-reference", fixed = TRUE)
+    expect_match(rendered_maps, "ggsql:world", fixed = TRUE)
+
+    rendered_plain <- sp$render(tools = c("visualize"))
+    expect_no_match(rendered_plain, "ggsql-spatial-reference", fixed = TRUE)
+    expect_no_match(rendered_plain, "ggsql:world", fixed = TRUE)
+  })
+
   it("includes collapsed guidance when both query and visualize active", {
     ds <- local_data_frame_source(new_test_df())
     sp <- QueryChatSystemPrompt$new(

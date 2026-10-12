@@ -166,6 +166,7 @@ QueryChatSystemPrompt <- R6::R6Class(
         has_tool_update = if ("update" %in% tools) "true",
         has_tool_query = if ("query" %in% tools) "true",
         has_tool_visualize = if ("visualize" %in% tools) "true",
+        has_tool_maps = if ("maps" %in% tools) "true",
         include_query_guidelines = if (length(tools) > 0) "true",
         handoff_available = handoff_available,
         multi_table = length(self$data_sources) > 1
@@ -180,6 +181,17 @@ QueryChatSystemPrompt <- R6::R6Class(
       if (nzchar(syntax_path)) {
         partials[["ggsql-syntax"]] <- paste(
           readLines(syntax_path),
+          collapse = "\n"
+        )
+      }
+      spatial_path <- system.file(
+        "prompts",
+        "ggsql-spatial.md",
+        package = "querychat"
+      )
+      if (nzchar(spatial_path)) {
+        partials[["ggsql-spatial"]] <- paste(
+          readLines(spatial_path),
           collapse = "\n"
         )
       }

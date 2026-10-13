@@ -22,7 +22,7 @@ from ._icons import bs_icon
 from ._tool_names import TOOL_VISUALIZE
 from ._utils import querychat_tool_starts_open, read_prompt_template, truncate_error
 from ._viz_altair_widget import AltairWidget, fit_chart_to_container
-from ._viz_ggsql import execute_ggsql
+from ._viz_ggsql import caching_reader, execute_ggsql
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -190,11 +190,18 @@ def visualize_impl(
     """Create the visualize implementation function."""
     from ggsql import VegaLiteWriter, validate
 
+    # One CachingReader per chat client (this closure is created once per
+    # client): the memo only pays off across viz calls within a session, and
+    # the reader's cache is freed when the client is dropped. Created lazily
+    # so clients that never visualize don't pay for an idle DuckDB instance.
+    reader = None
+
     def visualize(
         ggsql: str,
         title: str,
     ) -> ContentToolResult:
         """Execute a ggsql query and render the visualization."""
+        nonlocal reader
         markdown = f"```sql\n{ggsql}\n```"
 
         try:
@@ -210,7 +217,9 @@ def visualize_impl(
                     "\n".join(error["message"] for error in validated.errors())
                 )
 
-            spec = execute_ggsql(executor, validated)
+            if reader is None:
+                reader = caching_reader(executor)
+            spec = execute_ggsql(reader, ggsql)
 
             raw_chart = VegaLiteWriter().render_chart(spec)
             altair_widget = AltairWidget(copy.deepcopy(raw_chart))

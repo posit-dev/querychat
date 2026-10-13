@@ -2,98 +2,98 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://posit-dev.github.io/querychat/py/greet.html</loc>
-    <lastmod>2026-10-13T16:36:08.992Z</lastmod>
+    <lastmod>2026-10-13T19:28:05.548Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/data-sources.html</loc>
-    <lastmod>2026-10-13T16:36:08.992Z</lastmod>
+    <lastmod>2026-10-13T19:28:05.548Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/build-dash.html</loc>
-    <lastmod>2026-10-13T16:36:08.992Z</lastmod>
+    <lastmod>2026-10-13T19:28:05.548Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/build-streamlit.html</loc>
-    <lastmod>2026-10-13T16:36:08.992Z</lastmod>
+    <lastmod>2026-10-13T19:28:05.548Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/reference/tools.tool_visualize.html</loc>
-    <lastmod>2026-10-13T16:36:47.906Z</lastmod>
+    <lastmod>2026-10-13T19:28:41.137Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/reference/QueryChat.html</loc>
-    <lastmod>2026-10-13T16:36:47.860Z</lastmod>
+    <lastmod>2026-10-13T19:28:41.071Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/reference/tools.tool_query.html</loc>
-    <lastmod>2026-10-13T16:36:47.902Z</lastmod>
+    <lastmod>2026-10-13T19:28:41.132Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/reference/types.ServerValues.html</loc>
-    <lastmod>2026-10-13T16:36:47.882Z</lastmod>
+    <lastmod>2026-10-13T19:28:41.103Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/reference/express.QueryChat.html</loc>
-    <lastmod>2026-10-13T16:36:47.879Z</lastmod>
+    <lastmod>2026-10-13T19:28:41.099Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/reference/tools.tool_update_dashboard.html</loc>
-    <lastmod>2026-10-13T16:36:47.904Z</lastmod>
+    <lastmod>2026-10-13T19:28:41.133Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/visualize.html</loc>
-    <lastmod>2026-10-13T16:36:09.006Z</lastmod>
+    <lastmod>2026-10-13T19:28:05.565Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/index.html</loc>
-    <lastmod>2026-10-13T16:36:09.006Z</lastmod>
+    <lastmod>2026-10-13T19:28:05.565Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/CHANGELOG.html</loc>
-    <lastmod>2026-10-13T16:36:51.034Z</lastmod>
+    <lastmod>2026-10-13T19:28:43.411Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/models.html</loc>
-    <lastmod>2026-10-13T16:36:09.006Z</lastmod>
+    <lastmod>2026-10-13T19:28:05.565Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/tools.html</loc>
-    <lastmod>2026-10-13T16:36:09.006Z</lastmod>
+    <lastmod>2026-10-13T19:28:05.565Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/reference/tools.tool_reset_dashboard.html</loc>
-    <lastmod>2026-10-13T16:36:47.905Z</lastmod>
+    <lastmod>2026-10-13T19:28:41.135Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/reference/index.html</loc>
-    <lastmod>2026-10-13T16:36:47.833Z</lastmod>
+    <lastmod>2026-10-13T19:28:41.031Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/reference/types.SQLAlchemySource.html</loc>
-    <lastmod>2026-10-13T16:36:47.901Z</lastmod>
+    <lastmod>2026-10-13T19:28:41.130Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/reference/types.DataFrameSource.html</loc>
-    <lastmod>2026-10-13T16:36:47.895Z</lastmod>
+    <lastmod>2026-10-13T19:28:41.122Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/reference/types.DataSource.html</loc>
-    <lastmod>2026-10-13T16:36:47.889Z</lastmod>
+    <lastmod>2026-10-13T19:28:41.113Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/build-intro.html</loc>
-    <lastmod>2026-10-13T16:36:08.992Z</lastmod>
+    <lastmod>2026-10-13T19:28:05.548Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/context.html</loc>
-    <lastmod>2026-10-13T16:36:08.992Z</lastmod>
+    <lastmod>2026-10-13T19:28:05.548Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/build.html</loc>
-    <lastmod>2026-10-13T16:36:08.992Z</lastmod>
+    <lastmod>2026-10-13T19:28:05.548Z</lastmod>
   </url>
   <url>
     <loc>https://posit-dev.github.io/querychat/py/build-gradio.html</loc>
-    <lastmod>2026-10-13T16:36:08.992Z</lastmod>
+    <lastmod>2026-10-13T19:28:05.548Z</lastmod>
   </url>
 </urlset>

@@ -304,7 +304,10 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <li><a href="#custom-apps" id="toc-custom-apps" class="nav-link" data-scroll-target="#custom-apps">Custom apps</a></li>
   <li><a href="#what-you-can-ask-for" id="toc-what-you-can-ask-for" class="nav-link" data-scroll-target="#what-you-can-ask-for">What you can ask for</a></li>
   <li><a href="#chart-controls" id="toc-chart-controls" class="nav-link" data-scroll-target="#chart-controls">Chart controls</a></li>
-  <li><a href="#how-it-works" id="toc-how-it-works" class="nav-link" data-scroll-target="#how-it-works">How it works</a></li>
+  <li><a href="#how-it-works" id="toc-how-it-works" class="nav-link" data-scroll-target="#how-it-works">How it works</a>
+  <ul class="collapse">
+  <li><a href="#caching" id="toc-caching" class="nav-link" data-scroll-target="#caching">Caching</a></li>
+  </ul></li>
   <li><a href="#see-also" id="toc-see-also" class="nav-link" data-scroll-target="#see-also">See also</a></li>
   </ul>
 <div class="toc-actions"><ul><li><a href="https://github.com/posit-dev/querychat/issues/new" class="toc-action"><i class="bi bi-github"></i>Report an issue</a></li><li><a href="https://github.com/posit-dev/querychat/edit/main/pkg-py/docs/visualize.qmd" class="toc-action"><i class="bi empty"></i>Edit this page</a></li></ul></div></nav>
@@ -432,7 +435,44 @@ Tip
 <li><strong>The chart appears inline</strong> — the chart is streamed back into the conversation as an interactive widget.</li>
 </ol>
 <p>Note that visualization queries are independent of any active dashboard filter set by the <code>update</code> tool. They always run against the full dataset.</p>
+<section id="caching" class="level3">
+<h3 class="anchored" data-anchor-id="caching">Caching</h3>
+<p>To keep iterative chart refinement fast, querychat memoizes the data portion of visualization queries: when the LLM issues identical SQL within 5 minutes (for example, when only the visual encoding changes), the cached result is reused instead of re-reading your data source. Each chat session has its own cache, bounded at 512 MiB, which is freed when the session ends.</p>
+<p>This assumes the data doesn’t change mid-session. If it can — for example, update queries are enabled (<code>QUERYCHAT_ENABLE_UPDATE_QUERIES=true</code>), or another process writes to the database — charts may lag those changes by up to the TTL below.</p>
+<p>Tune or disable the cache with environment variables (set before the app starts):</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Variable</th>
+<th>Default</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>GGSQL_CACHE_TTL</code></td>
+<td><code>300</code></td>
+<td>Seconds a cached result is treated as fresh</td>
+</tr>
+<tr class="even">
+<td><code>GGSQL_CACHE_MAX_BYTES</code></td>
+<td><code>512mb</code></td>
+<td>Per-session memory budget before least-recently-used eviction</td>
+</tr>
+<tr class="odd">
+<td><code>GGSQL_CACHE_DISABLED</code></td>
+<td>unset</td>
+<td>Set to any non-empty value except <code>0</code> to always re-read the source</td>
+</tr>
+</tbody>
+</table>
 <p>Learn more about the ggsql grammar at <a href="https://ggsql.org/">ggsql.org</a>.</p>
+</section>
 </section>
 <section id="see-also" class="level2">
 <h2 class="anchored" data-anchor-id="see-also">See also</h2>

@@ -1654,13 +1654,13 @@ check_viz_deps <- function(tools) {
   if (
     is.null(tools) ||
       !"visualize" %in% tools ||
-      rlang::is_installed("ggsql", version = "0.5.2")
+      rlang::is_installed("ggsql", version = "0.5.2.9000")
   ) {
     return(tools)
   }
   rlang::warn(
     c(
-      'The "visualize" tool requires {.pkg ggsql} 0.5.2 or later.',
+      'The "visualize" tool requires {.pkg ggsql} 0.5.2.9000 or later.',
       "i" = 'Install it with `install.packages("ggsql")`; continuing without the "visualize" tool.'
     ),
     .frequency = "once",

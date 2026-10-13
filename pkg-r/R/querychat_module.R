@@ -354,20 +354,22 @@ restore_record_list <- function(x) {
 }
 
 restore_viz_widgets <- function(executor, saved_widgets, session) {
-  if (!rlang::is_installed("ggsql")) {
+  if (!rlang::is_installed("ggsql", version = "0.5.2.9000")) {
     warning(
-      "ggsql is not installed; skipping restoration of visualization widgets.",
+      "ggsql >= 0.5.2.9000 is not installed; skipping restoration of visualization widgets.",
       call. = FALSE
     )
     return(list())
   }
 
   restored <- list()
+  # One caching reader shared across restored widgets: identical base reads
+  # across widgets are served from the reader's memoized cache.
+  reader <- viz_caching_reader(executor)
   for (entry in saved_widgets) {
     tryCatch(
       {
-        validated <- ggsql::ggsql_validate(entry$ggsql)
-        spec <- execute_ggsql(executor, validated)
+        spec <- ggsql::ggsql_execute(reader, entry$ggsql)
         session$output[[entry$widget_id]] <- ggsql::renderGgsql(spec)
         restored <- c(restored, list(entry))
       },

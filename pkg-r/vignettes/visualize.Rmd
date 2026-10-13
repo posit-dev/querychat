@@ -137,12 +137,28 @@ Each chart has controls in its footer:
 ## How it works
 
 1. **The LLM generates a ggsql query** — a SQL-like grammar that describes both data transformation and visual encoding in a single statement.
-2. **The SQL is executed** — querychat runs the data portion of the query against your data source locally.
-3. **The VISUALISE clause is rendered** — the result is passed to a ggsql reader, which produces an interactive chart.
+2. **The query executes through a caching reader** — base reads run against your data source (preserving database pushdown) and are memoized, while ggsql-generated derived tables live in a private in-memory cache. This also means layers can draw from other relations in the query (`DRAW ... FROM <table>`), such as a summary line from a CTE over raw points from the final SELECT.
+3. **The VISUALISE clause is rendered** — the reader produces an interactive chart specification.
 4. **The chart appears inline** — the chart is rendered in the conversation as an interactive widget.
 
 Note that visualization queries are independent of any active dashboard filter set by the `update` tool.
 They always run against the full dataset.
+
+### Caching
+
+To keep iterative chart refinement fast, querychat memoizes the data portion of visualization queries: when the LLM issues identical SQL within 5 minutes (for example, when only the visual encoding changes), the cached result is reused instead of re-reading your data source.
+Each chat session has its own cache, bounded at 512 MiB, which is freed when the session ends.
+
+This assumes the data doesn't change mid-session.
+If it can — for example, update queries are enabled (`QUERYCHAT_ENABLE_UPDATE_QUERIES=true`), or another process writes to the database — charts may lag those changes by up to the TTL below.
+
+Tune or disable the cache with environment variables (set before the app starts):
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `GGSQL_CACHE_TTL` | `300` | Seconds a cached result is treated as fresh |
+| `GGSQL_CACHE_MAX_BYTES` | `512mb` | Per-session memory budget before least-recently-used eviction |
+| `GGSQL_CACHE_DISABLED` | unset | Set to any non-empty value except `0` to always re-read the source |
 
 Learn more about the ggsql grammar at [ggsql.org](https://ggsql.org/).
 

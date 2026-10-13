@@ -2,21 +2,25 @@
 % Please edit documentation in R/querychat_viz.R
 \name{execute_ggsql}
 \alias{execute_ggsql}
-\title{Execute a pre-validated ggsql query against an executor}
+\title{Execute a ggsql query through a caching reader}
 \usage{
-execute_ggsql(executor, validated)
+execute_ggsql(reader, query)
 }
 \arguments{
-\item{executor}{A querychat QueryExecutor R6 object.}
+\item{reader}{A \code{ggsql::Reader} from \code{viz_caching_reader()}. Reuse one
+reader across related viz calls so memoized base reads are shared.}
 
-\item{validated}{A pre-validated ggsql query (from \code{ggsql::ggsql_validate()}).
-Must be a list with \verb{$sql} and \verb{$visual} fields.}
+\item{query}{The full ggsql query string (SQL + VISUALISE).}
 }
 \value{
 A \code{ggsql::Spec} R6 object (the writer-independent plot specification).
 }
 \description{
-Executes the SQL portion through an executor (preserving database pushdown),
-then feeds the result into a ggsql DuckDB reader to produce a Spec.
+The whole query (SQL + VISUALISE) executes through the reader: base reads
+go to the underlying executor (preserving database pushdown) and are
+memoized for the cache TTL, while ggsql-generated derived tables live in
+the reader's private in-memory cache. Layer-level sources (`DRAW ... FROM\if{html}{\out{
+<table>`) work because every layer source is staged through that cache.
+}}
 }
 \keyword{internal}

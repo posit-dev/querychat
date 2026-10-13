@@ -363,11 +363,13 @@ restore_viz_widgets <- function(executor, saved_widgets, session) {
   }
 
   restored <- list()
+  # One caching reader shared across restored widgets: identical base reads
+  # across widgets are served from the reader's memoized cache.
+  reader <- viz_caching_reader(executor)
   for (entry in saved_widgets) {
     tryCatch(
       {
-        validated <- ggsql::ggsql_validate(entry$ggsql)
-        spec <- execute_ggsql(executor, validated)
+        spec <- execute_ggsql(reader, entry$ggsql)
         session$output[[entry$widget_id]] <- ggsql::renderGgsql(spec)
         restored <- c(restored, list(entry))
       },

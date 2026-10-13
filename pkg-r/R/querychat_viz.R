@@ -38,9 +38,39 @@ tool_visualize_impl <- function(executor, session, update_fn) {
   force(session)
   force(update_fn)
 
+  # One caching reader per chat client (this closure is created once per
+  # client): memoized base reads are shared across viz calls in the session,
+  # and the reader's cache is freed when the client is dropped. Created
+  # lazily so clients that never visualize don't pay for an idle cache.
+  reader <- NULL
+
   function(ggsql, title) {
-    visualize_result(executor, session, update_fn, ggsql, title)
+    if (is.null(reader)) {
+      reader <<- viz_caching_reader(executor)
+    }
+    visualize_result(reader, session, update_fn, ggsql, title)
   }
+}
+
+# A ggsql caching reader serving base reads through a querychat executor.
+# Writes are never forwarded to the executor: ggsql's CachingReader routes
+# them to its own in-memory cache, so only `execute_sql` is bridged.
+viz_caching_reader <- function(executor) {
+  rlang::check_installed(
+    "ggsql",
+    version = "0.5.2.9000",
+    reason = "for visualization support (ggsql::caching_reader)."
+  )
+  ggsql::caching_reader(
+    primary = function(sql) {
+      df <- executor$execute_query(sql)
+      if (inherits(df, "tbl_sql")) {
+        # Materialize the query for ggsql, {dplyr} guaranteed by TblSqlSource
+        df <- dplyr::collect(df)
+      }
+      df
+    }
+  )
 }
 
 random_hex <- function(n_bytes = 8) {
@@ -51,13 +81,17 @@ random_hex <- function(n_bytes = 8) {
 }
 
 visualize_result <- function(
-  executor,
+  reader,
   session,
   update_fn,
   ggsql_str,
   title
 ) {
-  rlang::check_installed("ggsql", reason = "for visualization support.")
+  rlang::check_installed(
+    "ggsql",
+    version = "0.5.2.9000",
+    reason = "for visualization support (ggsql::caching_reader)."
+  )
 
   validated <- ggsql::ggsql_validate(ggsql_str)
   has_visual <- ggsql::ggsql_has_visual(validated)
@@ -72,7 +106,7 @@ visualize_result <- function(
     rlang::abort(collapse_validation_errors(validated))
   }
 
-  spec <- execute_ggsql(executor, validated)
+  spec <- execute_ggsql(reader, ggsql_str)
 
   widget_id <- paste0("querychat_viz_", random_hex())
 
@@ -312,116 +346,26 @@ render_viz_tool_description <- function(db_type, has_tool_query = FALSE) {
   )
 }
 
-#' Execute a pre-validated ggsql query against an executor
+#' Execute a ggsql query through a caching reader
 #'
-#' Executes the SQL portion through an executor (preserving database pushdown),
-#' then feeds the result into a ggsql DuckDB reader to produce a Spec.
+#' The whole query (SQL + VISUALISE) executes through the reader: base reads
+#' go to the underlying executor (preserving database pushdown) and are
+#' memoized for the cache TTL, while ggsql-generated derived tables live in
+#' the reader's private in-memory cache. Layer-level sources (`DRAW ... FROM
+#' <table>`) work because every layer source is staged through that cache.
 #'
-#' @param executor A querychat QueryExecutor R6 object.
-#' @param validated A pre-validated ggsql query (from `ggsql::ggsql_validate()`).
-#'   Must be a list with `$sql` and `$visual` fields.
+#' @param reader A `ggsql::Reader` from `viz_caching_reader()`. Reuse one
+#'   reader across related viz calls so memoized base reads are shared.
+#' @param query The full ggsql query string (SQL + VISUALISE).
 #'
 #' @return A `ggsql::Spec` R6 object (the writer-independent plot specification).
 #'
 #' @keywords internal
-execute_ggsql <- function(executor, validated) {
-  rlang::check_installed("ggsql", reason = "for visualization support.")
-
-  visual <- validated$visual
-
-  if (has_layer_level_source(visual)) {
-    cli::cli_abort(
-      "Layer-specific sources are not currently supported in querychat visual queries. Rewrite the query so that all layers come from the final SQL result."
-    )
-  }
-
-  df <- executor$execute_query(validated$sql)
-
-  if (inherits(df, "tbl_sql")) {
-    # Materialize the query for ggsql, {dplyr} guaranteed by TblSqlSource
-    df <- dplyr::collect(df)
-  }
-
-  reader <- ggsql::duckdb_reader()
-  table <- extract_visualise_table(visual)
-
-  if (!is.null(table)) {
-    # VISUALISE [mappings] FROM <table> — register data under the
-    # referenced table name and execute the visual part directly.
-    name <- if (startsWith(table, '"') && endsWith(table, '"')) {
-      substr(table, 2, nchar(table) - 1)
-    } else {
-      table
-    }
-    ggsql::ggsql_register(reader, df, name)
-    ggsql::ggsql_execute(reader, visual)
-  } else {
-    # SELECT ... VISUALISE — no FROM in VISUALISE clause, so register
-    # under a synthetic name and prepend a SELECT.
-    ggsql::ggsql_register(reader, df, "_data")
-    ggsql::ggsql_execute(reader, paste("SELECT * FROM _data", visual))
-  }
-}
-
-#' Extract the table name from a VISUALISE clause's FROM, if present
-#'
-#' Looks only in the portion of the visual string before the first DRAW keyword,
-#' so FROM clauses inside DRAW (e.g., MAPPING x FROM other) are ignored.
-#'
-#' @param visual A ggsql VISUALISE string.
-#' @return The table name string (possibly quoted), or `NULL` if not present.
-#'
-#' @keywords internal
-extract_visualise_table <- function(visual) {
-  draw_pos <- regexpr("\\bDRAW\\b", visual, ignore.case = TRUE, perl = TRUE)
-  vis_clause <- if (draw_pos > 0) substr(visual, 1, draw_pos - 1L) else visual
-  m <- regmatches(
-    vis_clause,
-    regexpr(
-      '\\bFROM\\s+("[^"]+?"|\\S+)',
-      vis_clause,
-      ignore.case = TRUE,
-      perl = TRUE
-    )
+execute_ggsql <- function(reader, query) {
+  rlang::check_installed(
+    "ggsql",
+    version = "0.5.2.9000",
+    reason = "for visualization support (ggsql::caching_reader)."
   )
-  if (length(m) == 0 || !nzchar(m)) {
-    return(NULL)
-  }
-  sub("^(?i)FROM\\s+", "", m, perl = TRUE)
-}
-
-#' Detect whether a VISUALISE string has a layer-level FROM source
-#'
-#' Returns `TRUE` when a DRAW clause defines its own `FROM <source>` via a
-#' MAPPING sub-clause. Querychat replays VISUALISE against a single local
-#' relation, so layer-specific sources cannot be preserved reliably.
-#'
-#' @param visual A ggsql VISUALISE string.
-#' @return `TRUE` if any DRAW clause contains a MAPPING ... FROM source.
-#'
-#' @keywords internal
-has_layer_level_source <- function(visual) {
-  # Split at clause boundaries (DRAW, SCALE, etc.) using a lookbehind for
-  # whitespace rather than \b, which can split mid-word in R's PCRE engine.
-  clauses <- strsplit(
-    visual,
-    "(?i)(?<=\\s)(?=DRAW|SCALE|PROJECT|FACET|PLACE|LABEL|THEME)",
-    perl = TRUE
-  )[[1]]
-  for (clause in clauses) {
-    if (!grepl("^\\s*DRAW\\b", clause, ignore.case = TRUE, perl = TRUE)) {
-      next
-    }
-    if (
-      grepl(
-        "\\bMAPPING\\b[\\s\\S]*?\\bFROM\\s+(\"[^\"]+?\"|\\S+)",
-        clause,
-        ignore.case = TRUE,
-        perl = TRUE
-      )
-    ) {
-      return(TRUE)
-    }
-  }
-  FALSE
+  ggsql::ggsql_execute(reader, query)
 }

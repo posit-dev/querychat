@@ -8,8 +8,10 @@ A DataSource implementation that reads data from a
 \href{https://pins.rstudio.com/}{pins} board. When the \code{"duckdb"} engine is used
 and the pin type is one DuckDB can read natively (parquet, CSV, JSON), the
 data is loaded directly from the cached pin files into DuckDB without
-deserializing into R. For other pin types (e.g. RDS), or when the \code{"sqlite"}
-engine is used, the data is deserialized via \code{pin_read()} and must produce
+deserializing into R. JSON pins use this path when DuckDB's JSON extension
+is loaded or can be installed and loaded; otherwise, they are deserialized
+via \code{pin_read()}. For other pin types (e.g. RDS), or when the \code{"sqlite"}
+engine is used, the data is also deserialized via \code{pin_read()} and must produce
 a data frame (or tibble), which is then registered with the chosen engine
 just like \link{DataFrameSource}.
 
@@ -129,7 +131,8 @@ global option \code{querychat.DataFrameSource.engine} to specify the default
 engine. If \code{NULL} (default), uses the first available engine from
 duckdb or RSQLite (in that order). Parquet, CSV, and JSON pins are read
 most efficiently with the \code{"duckdb"} engine; with \code{"sqlite"} they are
-deserialized via \code{pin_read()} instead.}
+deserialized via \code{pin_read()} instead. JSON pins also use \code{pin_read()}
+if DuckDB's JSON extension cannot be installed or loaded.}
     }
     \if{html}{\out{</div>}}
   }

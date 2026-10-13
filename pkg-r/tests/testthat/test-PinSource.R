@@ -73,16 +73,153 @@ describe("PinSource$new() — lazy path (csv)", {
   })
 })
 
-describe("PinSource$new() — lazy path (json)", {
+describe("PinSource$new() — JSON pins", {
   skip_if_not_installed("pins")
   skip_if_not_installed("duckdb")
+  withr::local_options(querychat.DataFrameSource.engine = "duckdb")
 
-  it("reads json pin via DuckDB file reader", {
-    ps <- local_pin_source(name = "json_data", type = "json")
+  data <- new_mixed_types_df()
+  data$value <- c(1.5, NA_real_, 2.25, 0, -4)
 
-    result <- ps$get_data()
-    expect_s3_class(result, "data.frame")
-    expect_equal(nrow(result), 10)
+  it("reads JSON pins through R when the extension is unavailable", {
+    local_mocked_bindings(duckdb_try_load_json = function(con) FALSE)
+    ps <- local_pin_source(data = data, name = "json_data", type = "json")
+
+    expect_equal(ps$get_data(), data)
+    expect_equal(ps$engine, "duckdb")
+  })
+
+  it("falls back to R when JSON extension installation fails", {
+    withr::local_options(duckdb.allow_extensions = TRUE)
+    db_get_query <- DBI::dbGetQuery
+    db_execute <- DBI::dbExecute
+    local_mocked_bindings(
+      dbGetQuery = function(conn, statement, ...) {
+        if (grepl("duckdb_extensions()", statement, fixed = TRUE)) {
+          return(data.frame(installed = FALSE, loaded = FALSE))
+        }
+        db_get_query(conn, statement, ...)
+      },
+      dbExecute = function(conn, statement, ...) {
+        if (grepl("^(INSTALL|LOAD) ", statement)) {
+          stop("JSON extension download failed")
+        }
+        db_execute(conn, statement, ...)
+      },
+      .package = "DBI"
+    )
+    ps <- local_pin_source(data = data, name = "json_data", type = "json")
+
+    expect_equal(ps$get_data(), data)
+  })
+
+  it("reads JSON pins and locks down access when extensions are disabled", {
+    withr::local_options(duckdb.allow_extensions = FALSE)
+    con <- DBI::dbConnect(duckdb::duckdb())
+    withr::defer(DBI::dbDisconnect(con, shutdown = TRUE))
+    skip_if_not("allow_extensions" %in% methods::slotNames(con@driver))
+
+    ps <- local_pin_source(data = data, name = "json_data", type = "json")
+    path <- withr::local_tempfile(fileext = ".csv")
+    utils::write.csv(data, path, row.names = FALSE)
+
+    expect_equal(ps$get_data(), data)
+    expect_error(
+      ps$execute_query(sprintf(
+        "SELECT * FROM read_csv_auto(%s)",
+        DBI::dbQuoteLiteral(ps$conn, path)
+      )),
+      "disabled"
+    )
+  })
+
+  it("uses native JSON reading when the extension is already installed", {
+    con <- DBI::dbConnect(duckdb::duckdb())
+    withr::defer(DBI::dbDisconnect(con, shutdown = TRUE))
+    json <- DBI::dbGetQuery(
+      con,
+      "SELECT installed, loaded FROM duckdb_extensions() WHERE extension_name = 'json'"
+    )
+    skip_if_not(isTRUE(json$installed) || isTRUE(json$loaded))
+    # Do not install extensions or override a restricted driver in tests.
+    skip_if_not(duckdb_try_load_json(con))
+    local_mocked_bindings(
+      pin_read = function(...) {
+        stop("Native JSON reading must not deserialize in R")
+      },
+      .package = "pins"
+    )
+    ps <- local_pin_source(data = data, name = "json_data", type = "json")
+
+    expect_equal(ps$get_data(), data)
+  })
+
+  it("rejects JSON pins that do not deserialize to a data frame", {
+    local_mocked_bindings(duckdb_try_load_json = function(con) FALSE)
+
+    expect_error(
+      local_pin_source(data = list(x = 1), name = "json_data", type = "json"),
+      "not a data frame"
+    )
+  })
+
+  it("propagates native JSON materialization errors instead of falling back", {
+    local_mocked_bindings(duckdb_try_load_json = function(con) TRUE)
+    db_execute <- DBI::dbExecute
+    local_mocked_bindings(
+      dbExecute = function(conn, statement, ...) {
+        if (grepl("read_json_auto", statement, fixed = TRUE)) {
+          stop("JSON materialization failed")
+        }
+        db_execute(conn, statement, ...)
+      },
+      .package = "DBI"
+    )
+    local_mocked_bindings(
+      pin_read = function(...) stop("Unexpected JSON fallback"),
+      .package = "pins"
+    )
+
+    expect_error(
+      local_pin_source(data = data, name = "json_data", type = "json"),
+      "JSON materialization failed"
+    )
+  })
+
+  it("uses the snapshotted JSON version in a locked-down shared executor", {
+    withr::local_options(duckdb.allow_extensions = FALSE)
+    local_mocked_bindings(duckdb_try_load_json = function(con) FALSE)
+    board <- pins::board_temp(versioned = TRUE)
+    suppressMessages(pins::pin_write(board, data, "json_data", type = "json"))
+    ps <- PinSource$new(board, "json_data", engine = "duckdb")
+    withr::defer(ps$cleanup())
+    suppressMessages(
+      pins::pin_write(board, data[1, ], "json_data", type = "json")
+    )
+    users <- local_data_frame_source(new_users_df(), "users")
+    executor <- build_query_executor(list(json_data = ps, users = users))
+    withr::defer(executor$cleanup())
+    path <- withr::local_tempfile(fileext = ".csv")
+    utils::write.csv(data, path, row.names = FALSE)
+
+    result <- executor$execute_query(
+      "SELECT j.id, j.active, u.age FROM json_data j JOIN users u ON j.id = u.id ORDER BY j.id"
+    )
+    expect_equal(
+      result,
+      data.frame(
+        id = 1:5,
+        active = c(TRUE, FALSE, TRUE, TRUE, FALSE),
+        age = c(25, 30, 35, 28, 32)
+      )
+    )
+    expect_error(
+      executor$execute_query(sprintf(
+        "SELECT * FROM read_csv_auto(%s)",
+        DBI::dbQuoteLiteral(ps$conn, path)
+      )),
+      "disabled"
+    )
   })
 })
 

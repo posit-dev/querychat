@@ -67,6 +67,44 @@ def _convert_result(result: duckdb.DuckDBPyConnection) -> nw.DataFrame:
     return nw.from_native(result.df())
 
 
+def duckdb_try_load_json(conn: duckdb.DuckDBPyConnection) -> bool:
+    """
+    Load DuckDB's JSON extension, returning ``False`` when unavailable.
+
+    Only extension preparation errors trigger the JSON pin fallback; errors
+    from reading the extension metadata must still propagate.
+    """
+    row = conn.execute(
+        "SELECT installed, loaded FROM duckdb_extensions() "
+        "WHERE extension_name = 'json'"
+    ).fetchone()
+    if row is None:
+        # The JSON extension is not a known extension in this DuckDB build.
+        return False
+    installed, loaded = bool(row[0]), bool(row[1])
+    if loaded:
+        return True
+
+    # Some DuckDB clients expose an allow_extensions policy that forbids
+    # extension loading. The Python client doesn't currently expose the
+    # setting, so check for it defensively; unknown settings are ignored and
+    # we defer to INSTALL/LOAD below.
+    try:
+        setting = conn.execute("SELECT current_setting('allow_extensions')").fetchone()
+        if setting is not None and not setting[0]:
+            return False
+    except duckdb.Error:
+        pass
+
+    try:
+        if not installed:
+            conn.execute("INSTALL json")
+        conn.execute("LOAD json")
+    except duckdb.Error:
+        return False
+    return True
+
+
 def stage_frame_as_table(
     conn: duckdb.DuckDBPyConnection, frame: Any, table_name: str
 ) -> None:
@@ -87,8 +125,11 @@ class PinSource(DataSource[nw.DataFrame]):
     DataSource backed by a pin from a pins board.
 
     For parquet, CSV, JSON, and arrow pins, the cached files go straight into
-    DuckDB (or through polars for arrow) without Python deserialization. Other
-    pin types go through ``pin_read()`` first.
+    DuckDB (or through polars for arrow) without Python deserialization. JSON
+    pins use this path when DuckDB's JSON extension is loaded or can be
+    installed and loaded; otherwise they are deserialized via ``pin_read()``
+    and must produce a pandas DataFrame. Other pin types also go through
+    ``pin_read()`` first.
 
     After loading, DuckDB's external file access is locked down so that
     LLM-generated SQL cannot reach the filesystem.
@@ -189,9 +230,23 @@ class PinSource(DataSource[nw.DataFrame]):
                     "requires a single-file pin (as created by pin_write())."
                 )
             reader_fn = DUCKDB_READER_FN[pin_type]
-            if pin_type == "json":
-                conn.execute("INSTALL json")
-                conn.execute("LOAD json")
+            if pin_type == "json" and not duckdb_try_load_json(conn):
+                # The JSON extension is unavailable (restricted driver, no
+                # network, failed install), so deserialize via pin_read() and
+                # register the data frame like other non-file pin types.
+                import pandas as pd
+
+                data = board.pin_read(name, version=version)
+                # pins serializes DataFrame JSON pins as a list of records
+                if isinstance(data, list):
+                    data = pd.DataFrame(data)
+                if not isinstance(data, pd.DataFrame):
+                    raise TypeError(
+                        f"Pin '{name}' contains {type(data).__name__}, not a DataFrame. "
+                        "PinSource requires the pin to contain a pandas DataFrame."
+                    )
+                stage_frame_as_table(conn, data, table_name)
+                return
             conn.execute(
                 f"CREATE TABLE {quote_identifier(table_name)} AS "
                 f"SELECT * FROM {reader_fn}(?)",

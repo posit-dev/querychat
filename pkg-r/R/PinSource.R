@@ -5,8 +5,10 @@
 #' [pins](https://pins.rstudio.com/) board. When the `"duckdb"` engine is used
 #' and the pin type is one DuckDB can read natively (parquet, CSV, JSON), the
 #' data is loaded directly from the cached pin files into DuckDB without
-#' deserializing into R. For other pin types (e.g. RDS), or when the `"sqlite"`
-#' engine is used, the data is deserialized via `pin_read()` and must produce
+#' deserializing into R. JSON pins use this path when DuckDB's JSON extension
+#' is loaded or can be installed and loaded; otherwise, they are deserialized
+#' via `pin_read()`. For other pin types (e.g. RDS), or when the `"sqlite"`
+#' engine is used, the data is also deserialized via `pin_read()` and must produce
 #' a data frame (or tibble), which is then registered with the chosen engine
 #' just like [DataFrameSource].
 #'
@@ -80,7 +82,8 @@ PinSource <- R6::R6Class(
     #'   engine. If `NULL` (default), uses the first available engine from
     #'   duckdb or RSQLite (in that order). Parquet, CSV, and JSON pins are read
     #'   most efficiently with the `"duckdb"` engine; with `"sqlite"` they are
-    #'   deserialized via `pin_read()` instead.
+    #'   deserialized via `pin_read()` instead. JSON pins also use `pin_read()`
+    #'   if DuckDB's JSON extension cannot be installed or loaded.
     #'
     #' @return A new PinSource object
     initialize = function(
@@ -256,8 +259,9 @@ PinSource <- R6::R6Class(
     .name = NULL,
     .version = NULL,
     .engine = NULL,
-    # Materialize a parquet/CSV/JSON pin as a real table in `con` via DuckDB's
-    # native file readers. Does not lock the connection down; the caller owns
+    # Materialize a parquet/CSV/JSON pin in `con` via DuckDB's native file
+    # readers, falling back to R for JSON if its extension is unavailable.
+    # Does not lock the connection down; the caller owns
     # `con` and decides when (or whether) to call duckdb_lock_down().
     materialize_duckdb_file = function(con, table_name) {
       pin_type <- private$.pin_meta$type
@@ -277,9 +281,19 @@ PinSource <- R6::R6Class(
         csv = "read_csv_auto",
         json = "read_json_auto"
       )
-      if (pin_type == "json") {
-        DBI::dbExecute(con, "INSTALL json")
-        DBI::dbExecute(con, "LOAD json")
+      if (pin_type == "json" && !duckdb_try_load_json(con)) {
+        data <- pins::pin_read(
+          private$.board,
+          private$.name,
+          version = private$.version
+        )
+        if (!is.data.frame(data)) {
+          cli::cli_abort(
+            "Pin {.val {private$.name}} contains {.obj_type_friendly {data}}, not a data frame."
+          )
+        }
+        duckdb::duckdb_register(con, table_name, data, experimental = FALSE)
+        return(invisible(NULL))
       }
       quoted_path <- DBI::dbQuoteLiteral(con, paths[[1]])
       sql <- sprintf(

@@ -49,7 +49,7 @@ def _patch_deps(monkeypatch):
     mock_altair_widget.widget_id = "querychat_viz_test1234"
     mock_altair_widget.is_compound = False
 
-    monkeypatch.setattr("querychat._viz_ggsql.execute_ggsql", lambda _ds, _q: mock_spec)
+    monkeypatch.setattr("ggsql.CachingReader.execute", lambda _self, _q: mock_spec)
     monkeypatch.setattr(
         "querychat._viz_altair_widget.AltairWidget.from_ggsql",
         staticmethod(lambda _spec: mock_altair_widget),

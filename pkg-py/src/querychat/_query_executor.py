@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, TypeAlias, Union, cast
 
 import duckdb
 import narwhals.stable.v1 as nw
+from narwhals.typing import IntoFrame
 
 from ._datasource import (
     ColumnMeta,
@@ -22,15 +23,30 @@ from ._utils import check_query
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
+    import ibis
+
     from ._datasource import DataFrameSource, DataSource, PolarsLazySource
     from ._pin_source import PinSource
+
+
+QueryResult: TypeAlias = Union[IntoFrame, "ibis.Table"]
+"""
+Result of ``QueryExecutor.execute_query()``.
+
+Any narwhals-compatible frame (``IntoFrame`` is narwhals' open-ended
+union of frame protocols, which grows as narwhals adds backends, so
+third-party executors are covered without changes here), plus lazy ibis
+tables. Consumers should normalize results with ``as_narwhals()``, which
+accepts every one of these (materializing lazy ibis tables via
+``.execute()``), rather than assume a fixed set of concrete types.
+"""
 
 
 class QueryExecutor(ABC):
     """Thin abstraction that tools use for query execution and validation."""
 
     @abstractmethod
-    def execute_query(self, query: str) -> Any: ...
+    def execute_query(self, query: str) -> QueryResult: ...
 
     @abstractmethod
     def test_query(
@@ -107,7 +123,7 @@ class DuckDBExecutor(QueryExecutor):
             self._conn.close()
             raise
 
-    def execute_query(self, query: str) -> Any:
+    def execute_query(self, query: str):
         check_query(query)
         result = self._conn.execute(query)
         return self._convert_result(result)
@@ -170,7 +186,7 @@ class PolarsSQLExecutor(QueryExecutor):
         for name, source in sources.items():
             self._table_columns[name] = list(source.get_data().collect_schema().keys())
 
-    def execute_query(self, query: str) -> Any:
+    def execute_query(self, query: str):
         check_query(query)
         return self._ctx.execute(query)
 
@@ -216,7 +232,7 @@ class DataSourceExecutor(QueryExecutor):
         self._data_sources = data_sources
         self._primary = next(iter(data_sources.values()))
 
-    def execute_query(self, query: str) -> Any:
+    def execute_query(self, query: str):
         return self._primary.execute_query(query)
 
     def test_query(

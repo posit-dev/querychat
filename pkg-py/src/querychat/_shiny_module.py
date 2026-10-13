@@ -3,7 +3,7 @@ from __future__ import annotations
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Generic, TypedDict, Union
+from typing import TYPE_CHECKING, Any, Generic, TypedDict, Union, cast
 
 import chatlas
 import shinychat
@@ -17,7 +17,7 @@ from ._handoff_server import handoff_server
 from ._querychat_core import warn_multi_table_flat_accessor
 from ._table_accessor import TableAccessor
 from ._viz_altair_widget import AltairWidget
-from ._viz_ggsql import execute_ggsql
+from ._viz_ggsql import ExecutorReader
 from ._viz_utils import has_viz_tool, preload_viz_deps_server, preload_viz_deps_ui
 
 if TYPE_CHECKING:
@@ -266,7 +266,10 @@ def mod_server(
         def filtered_df() -> IntoFrameT:
             query = table_sql.get()
             if query:
-                return exec.execute_query(query)
+                # The executor is built from this source, so its result
+                # backend matches the source's IntoFrameT (QueryResult is
+                # the wider union across all source types).
+                return cast("IntoFrameT", exec.execute_query(query))
             return source.get_data()
 
         return TableState(sql=table_sql, title=table_title, df=filtered_df)
@@ -504,17 +507,23 @@ def restore_viz_widgets(
     saved_widgets: list[VizWidgetEntry],
 ) -> list[VizWidgetEntry]:
     """Re-execute ggsql queries, register widgets, and return restored entries."""
-    from ggsql import validate
+    from ggsql import CachingReader, validate
     from shinywidgets import register_widget
 
     restored: list[VizWidgetEntry] = []
+    if not saved_widgets:
+        return restored
+
+    # One reader for the whole restore pass: restored widgets often share a
+    # base read, so the memo avoids re-executing it for each entry.
+    reader = CachingReader(ExecutorReader(executor))
 
     for entry in saved_widgets:
         widget_id = entry["widget_id"]
         ggsql_str = entry["ggsql"]
         try:
-            validated = validate(ggsql_str)
-            spec = execute_ggsql(executor, validated)
+            validate(ggsql_str)  # early syntax check; errors skip the entry
+            spec = reader.execute(ggsql_str)
             altair_widget = AltairWidget.from_ggsql(spec, widget_id=widget_id)
             register_widget(widget_id, altair_widget.widget)
             restored.append(entry)

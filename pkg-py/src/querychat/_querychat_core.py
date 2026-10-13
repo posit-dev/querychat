@@ -33,10 +33,8 @@ GREETING_PROMPT: str = (
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Iterator
 
-    from narwhals.stable.v1.typing import IntoFrame
-
     from ._datasource import DataSource
-    from ._query_executor import QueryExecutor
+    from ._query_executor import QueryExecutor, QueryResult
 
 
 ClientFactory = Callable[
@@ -210,7 +208,7 @@ class AppState:
             return self.data_sources[self.active_table]
         return next(iter(self.data_sources.values()))
 
-    def get_current_data(self) -> IntoFrame:
+    def get_current_data(self) -> QueryResult:
         """Get current data, falling back to default if query fails."""
         data_source = self.get_active_data_source()
         if self.sql:

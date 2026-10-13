@@ -2124,3 +2124,27 @@ describe("QueryChat$ui()", {
     expect_true(grepl("querychat-extras", html, fixed = TRUE))
   })
 })
+
+test_that("normalize_tools expands the default sentinel", {
+  expect_equal(
+    sort(normalize_tools(c("default", "maps"))),
+    sort(c("update", "query", "visualize", "maps"))
+  )
+  expect_equal(
+    sort(normalize_tools("default")),
+    sort(c("update", "query", "visualize"))
+  )
+})
+
+test_that("normalize_tools errors when maps lacks visualize", {
+  expect_error(normalize_tools(c("query", "maps")), "maps.*visualize")
+})
+
+test_that("check_viz_deps drops maps alongside visualize", {
+  skip_if(rlang::is_installed("ggsql"), "ggsql is installed")
+  suppressWarnings(
+    resolved <- check_viz_deps(c("update", "query", "visualize", "maps"))
+  )
+  expect_false("visualize" %in% resolved)
+  expect_false("maps" %in% resolved)
+})

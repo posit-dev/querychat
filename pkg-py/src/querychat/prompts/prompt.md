@@ -196,6 +196,12 @@ Match the chart type to what the user is trying to understand:
 <ggsql-syntax-reference>
 {{> ggsql-syntax}}
 </ggsql-syntax-reference>
+{{#has_tool_maps}}
+
+<ggsql-spatial-reference>
+{{> ggsql-spatial}}
+</ggsql-spatial-reference>
+{{/has_tool_maps}}
 {{#has_tool_query}}
 
 **Avoid redundant expanded results.** If you run a preparatory query before visualizing, or if both a table and chart would show the same data, always pass `collapsed=true` on the query so the user sees the chart prominently, not a duplicate table above it. The user can still expand the table if they want the exact values.

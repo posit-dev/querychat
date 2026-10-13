@@ -58,6 +58,53 @@ class TestVizDependencyCheck:
         assert result == {"visualize"}
 
 
+class TestMapsToolModifier:
+    def test_default_sentinel_expands(self):
+        """The "default" entry expands to the default tool set."""
+        from querychat._querychat_base import DEFAULT_TOOLS, normalize_tools
+
+        resolved = normalize_tools(
+            ("default", "maps"), default=DEFAULT_TOOLS, check_deps=False
+        )
+        assert "visualize" in resolved
+        assert "query" in resolved
+        assert "maps" in resolved
+        assert "default" not in resolved
+
+    def test_default_sentinel_alone(self):
+        """tools="default" alone resolves to the default tool set."""
+        from querychat._querychat_base import DEFAULT_TOOLS, normalize_tools
+
+        resolved = normalize_tools("default", default=DEFAULT_TOOLS, check_deps=False)
+        assert "visualize" in resolved
+        assert "query" in resolved
+
+    def test_maps_requires_visualize(self):
+        """"maps" without "visualize" is a hard error."""
+        from querychat._querychat_base import DEFAULT_TOOLS, normalize_tools
+
+        with pytest.raises(ValueError, match=r"maps.*visualize"):
+            normalize_tools(("query", "maps"), default=DEFAULT_TOOLS, check_deps=False)
+
+    def test_maps_dropped_with_visualize_when_deps_missing(self, monkeypatch):
+        """When viz deps are missing, maps is dropped alongside visualize."""
+        real_find_spec = importlib.util.find_spec
+
+        def mock_find_spec(name, *args, **kwargs):
+            if name == "ggsql":
+                return None
+            return real_find_spec(name, *args, **kwargs)
+
+        monkeypatch.setattr(importlib.util, "find_spec", mock_find_spec)
+
+        from querychat._querychat_base import DEFAULT_TOOLS, normalize_tools
+
+        with pytest.warns(UserWarning, match="pip install querychat\\[viz\\]"):
+            resolved = normalize_tools(("default", "maps"), default=DEFAULT_TOOLS)
+        assert "visualize" not in resolved
+        assert "maps" not in resolved
+
+
 def test_ggsql_syntax_reference_uses_range_not_errorbar():
     syntax = (PROMPTS_DIR / "ggsql-syntax.md").read_text()
     assert "`range`" in syntax
@@ -98,6 +145,30 @@ def test_main_prompt_render_includes_ggsql_reference(data_source):
     assert "Column casing in VISUALISE" not in prompt
     assert "ROOM_TYPE" not in prompt
     assert "{{> ggsql-syntax}}" not in prompt
+
+
+def test_main_prompt_render_includes_spatial_reference_with_maps(data_source):
+    system_prompt = QueryChatSystemPrompt(
+        prompt_template=PROMPTS_DIR / "prompt.md",
+        data_source=data_source,
+    )
+
+    prompt = system_prompt.render({"update", "query", "visualize", "maps"})
+
+    assert "<ggsql-spatial-reference>" in prompt
+    assert "ggsql:world" in prompt
+
+
+def test_main_prompt_render_omits_spatial_reference_without_maps(data_source):
+    system_prompt = QueryChatSystemPrompt(
+        prompt_template=PROMPTS_DIR / "prompt.md",
+        data_source=data_source,
+    )
+
+    prompt = system_prompt.render({"update", "query", "visualize"})
+
+    assert "<ggsql-spatial-reference>" not in prompt
+    assert "ggsql:world" not in prompt
 
 
 @pytest.fixture
@@ -376,3 +447,83 @@ class TestRenderChartToPng:
         result = render_chart_to_png(chart)
         assert isinstance(result, bytes)
         assert result[:8] == b"\x89PNG\r\n\x1a\n"
+
+
+class TestMapsPrewarmWiring:
+    @pytest.mark.ggsql
+    def test_prewarms_spatial_once_when_maps_enabled(self, data_source, monkeypatch):
+        import querychat._viz_tools as viz_tools
+
+        calls = []
+        monkeypatch.setattr(
+            viz_tools, "prewarm_spatial", lambda reader: calls.append(reader) or True
+        )
+        tool = tool_visualize(data_source, lambda _: None, maps=True)
+        tool.func(
+            ggsql="SELECT x, y FROM test_data VISUALISE x, y DRAW point", title="t1"
+        )
+        tool.func(
+            ggsql="SELECT x, y FROM test_data VISUALISE x, y DRAW point", title="t2"
+        )
+        assert len(calls) == 1
+
+    @pytest.mark.ggsql
+    def test_no_prewarm_when_maps_disabled(self, data_source, monkeypatch):
+        import querychat._viz_tools as viz_tools
+
+        calls = []
+        monkeypatch.setattr(
+            viz_tools, "prewarm_spatial", lambda reader: calls.append(reader) or True
+        )
+        tool = tool_visualize(data_source, lambda _: None)
+        tool.func(
+            ggsql="SELECT x, y FROM test_data VISUALISE x, y DRAW point", title="t1"
+        )
+        assert calls == []
+
+
+class TestTranslateSpatialError:
+    SPATIAL_ERR = Exception(
+        'IO Error: Extension "/home/u/.duckdb/extensions/v1.5.2/linux_amd64/'
+        'spatial.duckdb_extension" not found'
+    )
+
+    def test_disabled_message_points_to_tools(self):
+        from querychat._viz_ggsql import translate_spatial_error
+
+        msg = translate_spatial_error(self.SPATIAL_ERR, maps_state="disabled")
+        assert msg is not None
+        assert "maps" in msg
+        assert 'tools=("default", "maps")' in msg
+
+    def test_setup_failed_message(self):
+        from querychat._viz_ggsql import translate_spatial_error
+
+        msg = translate_spatial_error(self.SPATIAL_ERR, maps_state="setup_failed")
+        assert msg is not None
+        assert "setup failed" in msg
+
+    def test_enabled_or_nonspatial_returns_none(self):
+        from querychat._viz_ggsql import translate_spatial_error
+
+        assert translate_spatial_error(self.SPATIAL_ERR, maps_state="enabled") is None
+        assert (
+            translate_spatial_error(Exception("boom"), maps_state="disabled") is None
+        )
+
+    @pytest.mark.ggsql
+    def test_tool_translates_spatial_error_when_maps_disabled(
+        self, data_source, monkeypatch
+    ):
+        err = str(self.SPATIAL_ERR)
+
+        def boom(reader, query):
+            raise RuntimeError(err)
+
+        monkeypatch.setattr("ggsql.CachingReader.execute", boom)
+        tool = tool_visualize(data_source, lambda _: None)
+        result = tool.func(
+            ggsql="SELECT x, y FROM test_data VISUALISE x, y DRAW point", title="t"
+        )
+        assert result.error is not None
+        assert 'tools=("default", "maps")' in str(result.error)

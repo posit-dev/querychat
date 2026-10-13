@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from ._utils import as_narwhals
 
 if TYPE_CHECKING:
+    import ggsql
     import pyarrow as pa
 
     from ._datasource import DataSource
@@ -57,3 +58,61 @@ class ExecutorReader:
             "write to the primary reader, which is a no-op by design.",
             stacklevel=2,
         )
+
+
+SPATIAL_SMOKE_QUERY = (
+    "INSTALL spatial; LOAD spatial; "
+    "VISUALISE FROM ggsql:world DRAW spatial FILTER iso_a3 = 'FRA'"
+)
+
+
+def prewarm_spatial(reader: ggsql.CachingReader) -> bool:
+    """
+    Install and load the DuckDB spatial extension for the reader's cache.
+
+    The first ``INSTALL`` downloads the extension binary (network required);
+    afterwards it is cached on disk and this is cheap. Returns ``True`` when
+    spatial support is ready. On failure, warns and returns ``False`` so the
+    caller can treat the ``"maps"`` capability as unavailable.
+    """
+    try:
+        reader.execute(SPATIAL_SMOKE_QUERY)
+    except Exception as e:
+        warnings.warn(
+            "The 'maps' capability could not be enabled (spatial extension "
+            f"setup failed: {e}). Continuing without maps.",
+            stacklevel=2,
+        )
+        return False
+    return True
+
+
+def translate_spatial_error(
+    error: Exception, *, maps_state: Literal["enabled", "disabled", "setup_failed"]
+) -> str | None:
+    """
+    Translate ggsql's spatial-extension failure into actionable guidance.
+
+    Returns the translated message, or ``None`` when the error is not a
+    spatial setup failure (or maps are fully enabled, making the message
+    moot). ``maps_state`` is ``"enabled"`` when the pre-warm succeeded,
+    ``"setup_failed"`` when it ran but failed, and ``"disabled"`` when the
+    session never opted into maps.
+    """
+    msg = str(error).lower()
+    if maps_state == "enabled" or "spatial" not in msg or "extension" not in msg:
+        return None
+    if maps_state == "setup_failed":
+        return (
+            "This query requires map/spatial support, but spatial extension "
+            "setup failed earlier in this session (see the warning shown at "
+            "setup time, likely a failed extension download). Do not retry "
+            "with DRAW spatial, PROJECT TO <map>, or ggsql:world; suggest a "
+            "non-map visualization instead."
+        )
+    return (
+        "This query requires map/spatial support, which is not enabled in "
+        "this session. Do not retry with DRAW spatial, PROJECT TO <map>, or "
+        "ggsql:world; suggest a non-map visualization instead. The app "
+        'developer can enable maps with tools=("default", "maps").'
+    )

@@ -505,3 +505,32 @@ class TestRestoreVizWidgets:
 
         assert [e["widget_id"] for e in restored] == ["good"]
         assert register_spy == ["good"]
+
+
+class TestPrewarmSpatial:
+    def test_success_runs_setup_query(self):
+        from querychat._viz_ggsql import prewarm_spatial
+
+        calls = []
+
+        class FakeReader:
+            def execute(self, query):
+                calls.append(query)
+                return object()
+
+        assert prewarm_spatial(FakeReader()) is True
+        assert len(calls) == 1
+        assert "INSTALL spatial" in calls[0]
+        assert "LOAD spatial" in calls[0]
+
+    def test_failure_warns_and_returns_false(self):
+        from querychat._viz_ggsql import prewarm_spatial
+
+        class FailReader:
+            def execute(self, query):
+                raise RuntimeError(
+                    "IO Error: Extension spatial.duckdb_extension not found"
+                )
+
+        with pytest.warns(UserWarning, match="maps"):
+            assert prewarm_spatial(FailReader()) is False

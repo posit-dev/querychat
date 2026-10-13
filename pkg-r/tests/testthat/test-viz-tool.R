@@ -1,6 +1,6 @@
 describe("tool_visualize_dashboard()", {
   skip_if_no_dataframe_engine()
-  skip_if_not_installed("ggsql")
+  skip_if_not_installed("ggsql", minimum_version = "0.5.2.9000")
 
   it("creates a tool with correct name", {
     ds <- local_data_frame_source(new_test_df())
@@ -464,7 +464,7 @@ describe("build_viz_footer()", {
 
 describe("visualization tool display", {
   skip_if_no_dataframe_engine()
-  skip_if_not_installed("ggsql")
+  skip_if_not_installed("ggsql", minimum_version = "0.5.2.9000")
 
   it("requests Shiny Chat's framed open style", {
     ds <- local_data_frame_source(new_test_df())

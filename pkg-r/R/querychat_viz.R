@@ -61,7 +61,11 @@ viz_caching_reader <- function(executor) {
     version = "0.5.2.9000",
     reason = "for visualization support (ggsql::caching_reader)."
   )
-  ggsql::caching_reader(
+  # Indirect lookup: caching_reader() doesn't exist in ggsql <= 0.5.2, so a
+  # static ggsql::caching_reader reference trips R CMD check's "missing or
+  # unexported object" warning when an older ggsql is installed.
+  caching_reader <- getExportedValue("ggsql", "caching_reader")
+  caching_reader(
     primary = function(sql) {
       df <- executor$execute_query(sql)
       if (inherits(df, "tbl_sql")) {

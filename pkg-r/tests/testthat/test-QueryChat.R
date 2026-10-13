@@ -441,7 +441,7 @@ describe("QueryChat$client()", {
   })
 
   it("registers visualize tool when tools include 'visualize'", {
-    skip_if_not_installed("ggsql")
+    skip_if_not_installed("ggsql", minimum_version = "0.5.2.9000")
     session <- structure(
       list(
         output = list(),
@@ -467,7 +467,7 @@ describe("QueryChat$client()", {
   })
 
   it("registers visualize tool without a session", {
-    skip_if_not_installed("ggsql")
+    skip_if_not_installed("ggsql", minimum_version = "0.5.2.9000")
 
     qc <- QueryChat$new(
       new_test_df(),
@@ -482,7 +482,7 @@ describe("QueryChat$client()", {
   })
 
   it("registers only visualize tool when tools = 'visualize'", {
-    skip_if_not_installed("ggsql")
+    skip_if_not_installed("ggsql", minimum_version = "0.5.2.9000")
     session <- structure(
       list(
         output = list(),

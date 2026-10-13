@@ -354,9 +354,9 @@ restore_record_list <- function(x) {
 }
 
 restore_viz_widgets <- function(executor, saved_widgets, session) {
-  if (!rlang::is_installed("ggsql")) {
+  if (!rlang::is_installed("ggsql", version = "0.5.2.9000")) {
     warning(
-      "ggsql is not installed; skipping restoration of visualization widgets.",
+      "ggsql >= 0.5.2.9000 is not installed; skipping restoration of visualization widgets.",
       call. = FALSE
     )
     return(list())

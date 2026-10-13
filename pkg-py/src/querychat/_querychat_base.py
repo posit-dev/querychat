@@ -830,8 +830,8 @@ def normalize_tools(
         return resolved
     if resolved is not None and has_viz_tool(resolved) and not has_viz_deps():
         warnings.warn(
-            "Visualization tools require ggsql, altair, shinywidgets, and "
-            "vl-convert-python. Install them with: pip install querychat[viz]. "
+            "Visualization tools require ggsql>=0.5.2, altair, shinywidgets, "
+            "and vl-convert-python. Install them with: pip install querychat[viz]. "
             "Continuing without the 'visualize' tool.",
             stacklevel=2,
         )

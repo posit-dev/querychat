@@ -62,7 +62,7 @@ gradio = ["gradio>=6.0"]
 dash = ["dash-ag-grid>=31.0", "dash[async]>=3.1", "dash-bootstrap-components>=2.0", "pandas"]
 # Visualization with ggsql
 viz = [
-    "ggsql>=0.3.2",
+    "ggsql>=0.5.2",
     "altair>=6.0",
     "shinywidgets>=0.8.0",
     "vl-convert-python>=1.9.0",
@@ -117,7 +117,7 @@ dev = [
     "ibis-framework[duckdb]>=9.0.0",
     # see note on the `ibis` extra above
     "sqlglot<30.18.0",
-    "ggsql>=0.3.2",
+    "ggsql>=0.5.2",
     "altair>=6.0",
     "shinywidgets>=0.8.0",
     "vl-convert-python>=1.9.0",

@@ -1652,13 +1652,15 @@ normalize_tools <- function(tools) {
 
 check_viz_deps <- function(tools) {
   if (
-    is.null(tools) || !"visualize" %in% tools || rlang::is_installed("ggsql")
+    is.null(tools) ||
+      !"visualize" %in% tools ||
+      rlang::is_installed("ggsql", version = "0.5.2")
   ) {
     return(tools)
   }
   rlang::warn(
     c(
-      'The "visualize" tool requires the {.pkg ggsql} package.',
+      'The "visualize" tool requires {.pkg ggsql} 0.5.2 or later.',
       "i" = 'Install it with `install.packages("ggsql")`; continuing without the "visualize" tool.'
     ),
     .frequency = "once",

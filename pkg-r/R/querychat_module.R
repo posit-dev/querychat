@@ -369,7 +369,7 @@ restore_viz_widgets <- function(executor, saved_widgets, session) {
   for (entry in saved_widgets) {
     tryCatch(
       {
-        spec <- execute_ggsql(reader, entry$ggsql)
+        spec <- ggsql::ggsql_execute(reader, entry$ggsql)
         session$output[[entry$widget_id]] <- ggsql::renderGgsql(spec)
         restored <- c(restored, list(entry))
       },

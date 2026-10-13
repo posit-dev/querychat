@@ -110,7 +110,7 @@ visualize_result <- function(
     rlang::abort(collapse_validation_errors(validated))
   }
 
-  spec <- execute_ggsql(reader, ggsql_str)
+  spec <- ggsql::ggsql_execute(reader, ggsql_str)
 
   widget_id <- paste0("querychat_viz_", random_hex())
 
@@ -348,28 +348,4 @@ render_viz_tool_description <- function(db_type, has_tool_query = FALSE) {
       has_tool_query = if (isTRUE(has_tool_query)) "true"
     )
   )
-}
-
-#' Execute a ggsql query through a caching reader
-#'
-#' The whole query (SQL + VISUALISE) executes through the reader: base reads
-#' go to the underlying executor (preserving database pushdown) and are
-#' memoized for the cache TTL, while ggsql-generated derived tables live in
-#' the reader's private in-memory cache. Layer-level sources (`DRAW ... FROM
-#' <table>`) work because every layer source is staged through that cache.
-#'
-#' @param reader A `ggsql::Reader` from `viz_caching_reader()`. Reuse one
-#'   reader across related viz calls so memoized base reads are shared.
-#' @param query The full ggsql query string (SQL + VISUALISE).
-#'
-#' @return A `ggsql::Spec` R6 object (the writer-independent plot specification).
-#'
-#' @keywords internal
-execute_ggsql <- function(reader, query) {
-  rlang::check_installed(
-    "ggsql",
-    version = "0.5.2.9000",
-    reason = "for visualization support (ggsql::caching_reader)."
-  )
-  ggsql::ggsql_execute(reader, query)
 }

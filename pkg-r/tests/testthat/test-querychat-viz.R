@@ -1,11 +1,11 @@
-describe("execute_ggsql()", {
+describe("ggsql execution through a caching reader", {
   skip_if_no_dataframe_engine()
   skip_if_not_installed("ggsql", minimum_version = "0.5.2.9000")
 
   it("executes a basic ggsql query", {
     ds <- local_data_frame_source(new_test_df())
     reader <- viz_caching_reader(ds)
-    spec <- execute_ggsql(
+    spec <- ggsql::ggsql_execute(
       reader,
       "SELECT * FROM test_table VISUALISE value AS x DRAW histogram"
     )
@@ -19,7 +19,7 @@ describe("execute_ggsql()", {
     )
     ds <- local_data_frame_source(df, table_name = "upper_table")
     reader <- viz_caching_reader(ds)
-    spec <- execute_ggsql(
+    spec <- ggsql::ggsql_execute(
       reader,
       paste(
         "SELECT ROOM_TYPE, listings FROM upper_table",
@@ -32,7 +32,7 @@ describe("execute_ggsql()", {
   it("supports FROM before VISUALISE", {
     ds <- local_data_frame_source(new_test_df())
     reader <- viz_caching_reader(ds)
-    spec <- execute_ggsql(
+    spec <- ggsql::ggsql_execute(
       reader,
       "FROM test_table VISUALISE value AS x DRAW histogram"
     )
@@ -45,7 +45,7 @@ describe("execute_ggsql()", {
     # private cache, so the query now runs end to end.
     ds <- local_data_frame_source(new_test_df())
     reader <- viz_caching_reader(ds)
-    spec <- execute_ggsql(
+    spec <- ggsql::ggsql_execute(
       reader,
       "VISUALISE value AS x DRAW histogram MAPPING value AS x FROM test_table"
     )
@@ -76,7 +76,7 @@ describe("execute_ggsql()", {
     DRAW point MAPPING category AS color FILTER layer_type = 'raw'
     DRAW line MAPPING category AS color FILTER layer_type = 'summary'
     "
-    spec <- execute_ggsql(reader, query)
+    spec <- ggsql::ggsql_execute(reader, query)
     expect_s3_class(spec, "Spec")
     expect_equal(ggsql::ggsql_metadata(spec)$rows, 4)
   })
@@ -103,8 +103,8 @@ describe("viz caching behavior", {
     reader <- viz_caching_reader(executor)
 
     query <- "SELECT * FROM test_table VISUALISE value AS x DRAW point"
-    execute_ggsql(reader, query)
-    execute_ggsql(reader, query)
+    ggsql::ggsql_execute(reader, query)
+    ggsql::ggsql_execute(reader, query)
     expect_equal(executor$calls, 1L)
   })
 
@@ -115,8 +115,8 @@ describe("viz caching behavior", {
     executor <- counting_executor(ds)
 
     query <- "SELECT * FROM test_table VISUALISE value AS x DRAW point"
-    execute_ggsql(viz_caching_reader(executor), query)
-    execute_ggsql(viz_caching_reader(executor), query)
+    ggsql::ggsql_execute(viz_caching_reader(executor), query)
+    ggsql::ggsql_execute(viz_caching_reader(executor), query)
     expect_equal(executor$calls, 2L)
   })
 })

@@ -166,18 +166,22 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
   <ul>
   <li><a href="#changelog" id="toc-changelog" class="nav-link active" data-scroll-target="#changelog">Changelog</a>
   <ul class="collapse">
+  <li><a href="#unreleased" id="toc-unreleased" class="nav-link" data-scroll-target="#unreleased">Unreleased</a>
+  <ul class="collapse">
+  <li><a href="#bug-fixes" id="toc-bug-fixes" class="nav-link" data-scroll-target="#bug-fixes">Bug fixes</a></li>
+  </ul></li>
   <li><a href="#section" id="toc-section" class="nav-link" data-scroll-target="#section">[0.9.0] - 2026-09-13</a>
   <ul class="collapse">
   <li><a href="#new-features" id="toc-new-features" class="nav-link" data-scroll-target="#new-features">New features</a></li>
   <li><a href="#breaking-changes" id="toc-breaking-changes" class="nav-link" data-scroll-target="#breaking-changes">Breaking changes</a></li>
   <li><a href="#changes" id="toc-changes" class="nav-link" data-scroll-target="#changes">Changes</a></li>
-  <li><a href="#bug-fixes" id="toc-bug-fixes" class="nav-link" data-scroll-target="#bug-fixes">Bug fixes</a></li>
+  <li><a href="#bug-fixes-1" id="toc-bug-fixes-1" class="nav-link" data-scroll-target="#bug-fixes-1">Bug fixes</a></li>
   </ul></li>
   <li><a href="#section-1" id="toc-section-1" class="nav-link" data-scroll-target="#section-1">[0.8.0] - 2026-09-12</a>
   <ul class="collapse">
   <li><a href="#new-features-1" id="toc-new-features-1" class="nav-link" data-scroll-target="#new-features-1">New features</a></li>
   <li><a href="#changes-1" id="toc-changes-1" class="nav-link" data-scroll-target="#changes-1">Changes</a></li>
-  <li><a href="#bug-fixes-1" id="toc-bug-fixes-1" class="nav-link" data-scroll-target="#bug-fixes-1">Bug fixes</a></li>
+  <li><a href="#bug-fixes-2" id="toc-bug-fixes-2" class="nav-link" data-scroll-target="#bug-fixes-2">Bug fixes</a></li>
   </ul></li>
   <li><a href="#section-2" id="toc-section-2" class="nav-link" data-scroll-target="#section-2">[0.7.0] - 2026-07-10</a>
   <ul class="collapse">
@@ -236,6 +240,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <h1>Changelog</h1>
 <p>All notable changes to this project will be documented in this file.</p>
 <p>The format is based on <a href="https://keepachangelog.com/en/1.1.0/">Keep a Changelog</a>, and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
+<section id="unreleased" class="level2">
+<h2 class="anchored" data-anchor-id="unreleased">Unreleased</h2>
+<section id="bug-fixes" class="level3">
+<h3 class="anchored" data-anchor-id="bug-fixes">Bug fixes</h3>
+<ul>
+<li>JSON pins now fall back to <code>pin_read()</code> when DuckDB’s JSON extension cannot be installed or loaded, including on builds that disable extension loading. Native DuckDB JSON reading is retained when the extension is available.</li>
+</ul>
+</section>
+</section>
 <section id="section" class="level2">
 <h2 class="anchored" data-anchor-id="section">[0.9.0] - 2026-09-13</h2>
 <section id="new-features" class="level3">
@@ -258,8 +271,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li><p>Calling <code>cleanup()</code> while a session is running no longer closes that session’s <code>.server(client=...)</code> chat client; it is closed when the session ends.</p></li>
 </ul>
 </section>
-<section id="bug-fixes" class="level3">
-<h3 class="anchored" data-anchor-id="bug-fixes">Bug fixes</h3>
+<section id="bug-fixes-1" class="level3">
+<h3 class="anchored" data-anchor-id="bug-fixes-1">Bug fixes</h3>
 <ul>
 <li><p><code>add_table()</code> and <code>server(data_source=, table_name=)</code> now reject a <code>DataSource</code> whose own <code>table_name</code> doesn’t match the registration name, instead of failing later with confusing query errors.</p></li>
 <li><p>A rejected <code>add_table()</code>/<code>add_tables()</code> call after a session has started no longer warns about a late change that never took effect. (#311)</p></li>
@@ -290,8 +303,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <li>The <code>"visualize"</code> tool is now enabled by default (<code>tools=("filter", "query", "visualize")</code>). If the <code>viz</code> extra isn’t installed, the tool is skipped with a warning instead of raising an <code>ImportError</code>.</li>
 </ul>
 </section>
-<section id="bug-fixes-1" class="level3">
-<h3 class="anchored" data-anchor-id="bug-fixes-1">Bug fixes</h3>
+<section id="bug-fixes-2" class="level3">
+<h3 class="anchored" data-anchor-id="bug-fixes-2">Bug fixes</h3>
 <ul>
 <li><p><code>server(data_source=)</code> now cleans up the data source it replaces on the first call — when no other session can still be using it — matching the long-standing <code>add_table(replace=True)</code> behavior; only subsequent sessions’ registrations leave cleanup to the source’s creator. (#300)</p></li>
 <li><p>Fixed a phantom scrollbar that could let containers holding the chat (e.g.&nbsp;a bslib sidebar created with <code>qc.sidebar()</code>) scroll past the chat’s bottom edge.</p></li>

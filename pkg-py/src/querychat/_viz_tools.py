@@ -22,7 +22,7 @@ from ._icons import bs_icon
 from ._tool_names import TOOL_VISUALIZE
 from ._utils import querychat_tool_starts_open, read_prompt_template, truncate_error
 from ._viz_altair_widget import AltairWidget, fit_chart_to_container
-from ._viz_ggsql import caching_reader, execute_ggsql
+from ._viz_ggsql import ExecutorReader
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -188,7 +188,7 @@ def visualize_impl(
     update_fn: Callable[[VisualizeData], None],
 ) -> Callable[[str, str], ContentToolResult]:
     """Create the visualize implementation function."""
-    from ggsql import VegaLiteWriter, validate
+    from ggsql import CachingReader, VegaLiteWriter, validate
 
     # One CachingReader per chat client (this closure is created once per
     # client): the memo only pays off across viz calls within a session, and
@@ -218,8 +218,8 @@ def visualize_impl(
                 )
 
             if reader is None:
-                reader = caching_reader(executor)
-            spec = execute_ggsql(reader, ggsql)
+                reader = CachingReader(ExecutorReader(executor))
+            spec = reader.execute(ggsql)
 
             raw_chart = VegaLiteWriter().render_chart(spec)
             altair_widget = AltairWidget(copy.deepcopy(raw_chart))

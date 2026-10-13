@@ -17,7 +17,7 @@ from ._handoff_server import handoff_server
 from ._querychat_core import warn_multi_table_flat_accessor
 from ._table_accessor import TableAccessor
 from ._viz_altair_widget import AltairWidget
-from ._viz_ggsql import caching_reader, execute_ggsql
+from ._viz_ggsql import ExecutorReader
 from ._viz_utils import has_viz_tool, preload_viz_deps_server, preload_viz_deps_ui
 
 if TYPE_CHECKING:
@@ -507,7 +507,7 @@ def restore_viz_widgets(
     saved_widgets: list[VizWidgetEntry],
 ) -> list[VizWidgetEntry]:
     """Re-execute ggsql queries, register widgets, and return restored entries."""
-    from ggsql import validate
+    from ggsql import CachingReader, validate
     from shinywidgets import register_widget
 
     restored: list[VizWidgetEntry] = []
@@ -516,14 +516,14 @@ def restore_viz_widgets(
 
     # One reader for the whole restore pass: restored widgets often share a
     # base read, so the memo avoids re-executing it for each entry.
-    reader = caching_reader(executor)
+    reader = CachingReader(ExecutorReader(executor))
 
     for entry in saved_widgets:
         widget_id = entry["widget_id"]
         ggsql_str = entry["ggsql"]
         try:
             validate(ggsql_str)  # early syntax check; errors skip the entry
-            spec = execute_ggsql(reader, ggsql_str)
+            spec = reader.execute(ggsql_str)
             altair_widget = AltairWidget.from_ggsql(spec, widget_id=widget_id)
             register_widget(widget_id, altair_widget.widget)
             restored.append(entry)

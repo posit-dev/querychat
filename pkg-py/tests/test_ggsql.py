@@ -18,7 +18,12 @@ from querychat._query_executor import (
     PolarsSQLExecutor,
 )
 from querychat._viz_altair_widget import AltairWidget
-from querychat._viz_ggsql import ExecutorReader, caching_reader, execute_ggsql
+from querychat._viz_ggsql import ExecutorReader
+
+
+def make_reader(source) -> ggsql.CachingReader:
+    """Create a CachingReader over an ExecutorReader, as the viz tool does."""
+    return ggsql.CachingReader(ExecutorReader(source))
 
 
 class TestGgsqlValidate:
@@ -117,7 +122,7 @@ class TestExecuteGgsql:
         nw_df = nw.from_native(pl.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]}))
         ds = DataFrameSource(nw_df, "test_data")
         query = "SELECT * FROM test_data VISUALISE x, y DRAW point"
-        spec = execute_ggsql(caching_reader(ds), query)
+        spec = make_reader(ds).execute(query)
         altair_widget = AltairWidget.from_ggsql(spec)
         result = altair_widget.widget.chart.to_dict()
         assert "$schema" in result
@@ -129,7 +134,7 @@ class TestExecuteGgsql:
         )
         ds = DataFrameSource(nw_df, "test_data")
         query = "SELECT * FROM test_data WHERE x > 2 VISUALISE x, y DRAW point"
-        spec = execute_ggsql(caching_reader(ds), query)
+        spec = make_reader(ds).execute(query)
         assert spec.metadata()["rows"] == 3
 
     @pytest.mark.ggsql
@@ -137,7 +142,7 @@ class TestExecuteGgsql:
         nw_df = nw.from_native(pl.DataFrame({"x": [1, 2], "y": [3, 4]}))
         ds = DataFrameSource(nw_df, "test_data")
         query = "SELECT * FROM test_data VISUALISE x, y DRAW point"
-        spec = execute_ggsql(caching_reader(ds), query)
+        spec = make_reader(ds).execute(query)
         assert "VISUALISE" in spec.visual()
 
     @pytest.mark.ggsql
@@ -145,7 +150,7 @@ class TestExecuteGgsql:
         nw_df = nw.from_native(pl.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]}))
         ds = DataFrameSource(nw_df, "test_data")
         query = "VISUALISE x, y FROM test_data DRAW point"
-        spec = execute_ggsql(caching_reader(ds), query)
+        spec = make_reader(ds).execute(query)
         assert spec.metadata()["rows"] == 3
         assert "VISUALISE" in spec.visual()
 
@@ -156,7 +161,7 @@ class TestExecuteGgsql:
         nw_df = nw.from_native(pd.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]}))
         ds = DataFrameSource(nw_df, "test_data")
         query = "SELECT * FROM test_data VISUALISE x, y DRAW point"
-        spec = execute_ggsql(caching_reader(ds), query)
+        spec = make_reader(ds).execute(query)
         altair_widget = AltairWidget.from_ggsql(spec)
         result = altair_widget.widget.chart.to_dict()
         assert "$schema" in result
@@ -177,7 +182,7 @@ class TestExecuteGgsql:
             "VISUALISE ROOM_TYPE AS x, listings AS y "
             "DRAW bar"
         )
-        spec = execute_ggsql(caching_reader(ds), query)
+        spec = make_reader(ds).execute(query)
         assert "VISUALISE" in spec.visual()
 
     @pytest.mark.ggsql
@@ -208,7 +213,7 @@ class TestExecuteGgsql:
         # Previously raised "Layer-specific sources are not currently
         # supported"; CachingReader stages each layer source through its
         # cache, so the query now runs end to end.
-        spec = execute_ggsql(caching_reader(ds), query)
+        spec = make_reader(ds).execute(query)
         assert spec is not None
         assert "VISUALISE" in spec.visual()
 
@@ -254,7 +259,7 @@ class TestExecuteGgsql:
         DRAW line MAPPING category AS color FILTER layer_type = 'summary'
         """
 
-        spec = execute_ggsql(caching_reader(ds), query)
+        spec = make_reader(ds).execute(query)
         assert spec.metadata()["rows"] == 4
         assert "VISUALISE" in spec.visual()
 
@@ -374,9 +379,9 @@ class TestCachingBehavior:
         monkeypatch.setattr(ds, "execute_query", counting)
 
         query = "SELECT * FROM test_data VISUALISE x, y DRAW point"
-        reader = caching_reader(ds)
-        execute_ggsql(reader, query)
-        execute_ggsql(reader, query)
+        reader = make_reader(ds)
+        reader.execute(query)
+        reader.execute(query)
         assert calls == 1
 
     @pytest.mark.ggsql
@@ -396,8 +401,8 @@ class TestCachingBehavior:
         monkeypatch.setattr(ds, "execute_query", counting)
 
         query = "SELECT * FROM test_data VISUALISE x, y DRAW point"
-        execute_ggsql(caching_reader(ds), query)
-        execute_ggsql(caching_reader(ds), query)
+        make_reader(ds).execute(query)
+        make_reader(ds).execute(query)
         assert calls == 2
 
 
@@ -405,8 +410,8 @@ class TestRestoreVizWidgets:
     """
     Bookmark restore executes through a CachingReader (PR #321 follow-up).
 
-    Regression guard: an earlier draft passed the executor itself to
-    execute_ggsql(), so every widget silently failed to restore (the
+    Regression guard: an earlier draft passed the executor itself where a
+    reader was expected, so every widget silently failed to restore (the
     AttributeError was swallowed by restore_viz_widgets' except Exception).
     """
 

@@ -8,7 +8,7 @@ import os
 import re
 import warnings
 from pathlib import Path
-from typing import TYPE_CHECKING, Generic, Literal, Optional
+from typing import TYPE_CHECKING, Generic, Literal, Optional, cast
 
 import chatlas
 import narwhals.stable.v1 as nw
@@ -885,7 +885,13 @@ class StateDictQueryChat(QueryChatBase[IntoFrameT]):
     ) -> IntoFrameT:
         if sql:
             with contextlib.suppress(Exception):
-                return self._require_query_executor("df").execute_query(sql)
+                # The executor is built from this source, so its result
+                # backend matches the source's IntoFrameT (QueryResult is
+                # the wider union across all source types).
+                return cast(
+                    "IntoFrameT",
+                    self._require_query_executor("df").execute_query(sql),
+                )
         return data_source.get_data()
 
     def df(self, state: AppStateDict | None, *, table: str | None = None) -> IntoFrameT:

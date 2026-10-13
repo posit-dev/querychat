@@ -3,7 +3,7 @@ from __future__ import annotations
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Generic, TypedDict, Union
+from typing import TYPE_CHECKING, Any, Generic, TypedDict, Union, cast
 
 import chatlas
 import shinychat
@@ -266,7 +266,10 @@ def mod_server(
         def filtered_df() -> IntoFrameT:
             query = table_sql.get()
             if query:
-                return exec.execute_query(query)
+                # The executor is built from this source, so its result
+                # backend matches the source's IntoFrameT (QueryResult is
+                # the wider union across all source types).
+                return cast("IntoFrameT", exec.execute_query(query))
             return source.get_data()
 
         return TableState(sql=table_sql, title=table_title, df=filtered_df)
@@ -508,6 +511,8 @@ def restore_viz_widgets(
     from shinywidgets import register_widget
 
     restored: list[VizWidgetEntry] = []
+    if not saved_widgets:
+        return restored
 
     # One reader for the whole restore pass: restored widgets often share a
     # base read, so the memo avoids re-executing it for each entry.

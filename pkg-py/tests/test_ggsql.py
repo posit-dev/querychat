@@ -2,11 +2,23 @@
 
 import ggsql
 import narwhals.stable.v1 as nw
+import pandas as pd
 import polars as pl
+import pyarrow as pa
 import pytest
-from querychat._datasource import DataFrameSource
+from querychat._datasource import (
+    DataFrameSource,
+    IbisSource,
+    PolarsLazySource,
+    SQLAlchemySource,
+)
+from querychat._query_executor import (
+    DataSourceExecutor,
+    DuckDBExecutor,
+    PolarsSQLExecutor,
+)
 from querychat._viz_altair_widget import AltairWidget
-from querychat._viz_ggsql import caching_reader, execute_ggsql
+from querychat._viz_ggsql import ExecutorReader, caching_reader, execute_ggsql
 
 
 class TestGgsqlValidate:
@@ -245,6 +257,102 @@ class TestExecuteGgsql:
         spec = execute_ggsql(caching_reader(ds), query)
         assert spec.metadata()["rows"] == 4
         assert "VISUALISE" in spec.visual()
+
+
+class TestExecutorReaderResultTypes:
+    """
+    ExecutorReader.execute_sql normalizes every execute_query() result type
+    (the QueryResult union) to a pyarrow Table, without requiring polars.
+    """
+
+    @staticmethod
+    def check(executor):
+        tbl = ExecutorReader(executor).execute_sql("SELECT x, y FROM t")
+        assert isinstance(tbl, pa.Table)
+        assert tbl.schema.names == ["x", "y"]
+        assert tbl.num_rows == 2
+
+    @pytest.fixture(
+        params=[
+            pd.DataFrame({"x": [1, 2], "y": [3, 4]}),
+            pl.DataFrame({"x": [1, 2], "y": [3, 4]}),
+            pa.table({"x": [1, 2], "y": [3, 4]}),
+        ],
+        ids=["pandas", "polars", "pyarrow"],
+    )
+    def frame(self, request):
+        return request.param
+
+    def test_dataframe_source_backends(self, frame):
+        self.check(DataFrameSource(nw.from_native(frame), "t"))
+
+    def test_duckdb_executor_backends(self, frame):
+        source = DataFrameSource(nw.from_native(frame), "t")
+        self.check(DuckDBExecutor({"t": source}))
+
+    def test_polars_lazy_source(self):
+        lf = nw.from_native(pl.LazyFrame({"x": [1, 2], "y": [3, 4]}))
+        self.check(PolarsLazySource(lf, "t"))
+
+    def test_polars_sql_executor(self):
+        lf = nw.from_native(pl.LazyFrame({"x": [1, 2], "y": [3, 4]}))
+        self.check(PolarsSQLExecutor({"t": PolarsLazySource(lf, "t")}))
+
+    def test_sqlalchemy_source(self):
+        sqlalchemy = pytest.importorskip("sqlalchemy")
+        eng = sqlalchemy.create_engine("sqlite://")
+        pd.DataFrame({"x": [1, 2], "y": [3, 4]}).to_sql("t", eng, index=False)
+        self.check(SQLAlchemySource(eng, "t"))
+
+    def test_ibis_source(self):
+        ibis = pytest.importorskip("ibis")
+        con = ibis.duckdb.connect()
+        con.create_table("t", pd.DataFrame({"x": [1, 2], "y": [3, 4]}))
+        self.check(IbisSource(con.table("t"), "t"))
+
+    def test_datasource_executor_delegation(self):
+        sqlalchemy = pytest.importorskip("sqlalchemy")
+        eng = sqlalchemy.create_engine("sqlite://")
+        pd.DataFrame({"x": [1, 2], "y": [3, 4]}).to_sql("t", eng, index=False)
+        self.check(DataSourceExecutor({"t": SQLAlchemySource(eng, "t")}))
+
+    def test_register_unregister_warn(self):
+        # register/unregister are no-ops by design (CachingReader owns all
+        # writes); they warn loudly in case a future ggsql routes writes
+        # to the primary reader, which would otherwise silently drop them.
+        ds = DataFrameSource(nw.from_native(pl.DataFrame({"x": [1]})), "t")
+        reader = ExecutorReader(ds)
+        with pytest.warns(UserWarning, match="no-op by design"):
+            reader.register("t", None, replace=False)
+        with pytest.warns(UserWarning, match="no-op by design"):
+            reader.unregister("t")
+
+    def test_empty_result(self):
+        ds = DataFrameSource(nw.from_native(pl.DataFrame({"x": [1, 2]})), "t")
+        tbl = ExecutorReader(ds).execute_sql("SELECT * FROM t WHERE x > 100")
+        assert isinstance(tbl, pa.Table)
+        assert tbl.num_rows == 0
+
+    def test_null_column(self):
+        ds = DataFrameSource(nw.from_native(pl.DataFrame({"x": [1, 2]})), "t")
+        tbl = ExecutorReader(ds).execute_sql("SELECT NULL AS n FROM t")
+        assert tbl.schema.names == ["n"]
+        assert tbl.num_rows == 2
+
+    def test_duplicate_column_names_raise(self):
+        # Known limitation (pre-existing): narwhals requires unique column
+        # names, so a JOIN with overlapping names through a DBAPI-backed
+        # source fails conversion regardless of the arrow/polars cast.
+        # (DuckDB-family sources auto-mangle duplicates to x, x_1, so this
+        # only bites SQLAlchemy/Ibis-style sources.)
+        import sqlalchemy
+
+        eng = sqlalchemy.create_engine("sqlite://")
+        pd.DataFrame({"id": [1, 2], "v": [10, 20]}).to_sql("a", eng, index=False)
+        pd.DataFrame({"id": [1, 2], "w": [30, 40]}).to_sql("b", eng, index=False)
+        src = SQLAlchemySource(eng, "a")
+        with pytest.raises(Exception, match=r"[Uu]nique column names"):
+            ExecutorReader(src).execute_sql("SELECT * FROM a JOIN b ON a.id = b.id")
 
 
 class TestCachingBehavior:

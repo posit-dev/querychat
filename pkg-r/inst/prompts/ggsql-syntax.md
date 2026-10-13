@@ -335,14 +335,14 @@ SCALE panel FROM ('Biscoe', 'Dream')
 
 ### LABEL Clause
 
-Use LABEL for axis labels, subtitles, and captions. Do NOT use `LABEL title => ...` — the tool's `title` parameter handles chart titles. Set a label to `null` to suppress it.
+Use LABEL for axis labels and subtitles. Do NOT use `LABEL title => ...` — the tool's `title` parameter handles chart titles. Set a label to `null` to suppress it.
 
-Available labels: any aesthetic name (`x`, `y`, `fill`, `color`, etc.), `subtitle`, `caption`.
+Available labels: any aesthetic name (`x`, `y`, `fill`, `color`, etc.) and `subtitle`. (ggsql also has a `caption` label, but it is ignored under Vega-Lite rendering — see below.)
 
 ```sql
 LABEL x => 'X Axis Label', y => 'Y Axis Label'
 LABEL x => null                                   -- suppress x-axis label
-LABEL subtitle => 'Q4 2024 data', caption => 'Source: internal database'
+LABEL subtitle => 'Q4 2024 data — Source: internal database'
 ```
 
 ## Complete Examples
@@ -565,3 +565,4 @@ querychat draws all charts with ggsql's **Vega-Lite** writer, not its native SVG
 
 - **Label text renders literally**: markdown such as `**bold**` or `` `code` `` would appear verbatim in the chart — keep label text plain.
 - **The `minor_breaks` scale setting is ignored** — no minor gridlines are drawn.
+- **`LABEL caption` is ignored** — captions have no Vega-Lite equivalent and never appear in the chart. Put source attributions or footnotes in the `subtitle` instead.

@@ -147,7 +147,7 @@ The objects of this class are cloneable with this method.
 # Create a data frame source (uses first available: duckdb or sqlite)
 df_source <- DataFrameSource$new(mtcars, "mtcars")
 #> duckdb keeps downloaded extensions and secrets in a temporary directory:
-#> ℹ /tmp/Rtmp7ycu3t/duckdb
+#> ℹ /tmp/Rtmpapax6n/duckdb
 #> This is removed when the R session ends.
 #> • Extensions are re-downloaded each session.
 #> • Secrets are lost.

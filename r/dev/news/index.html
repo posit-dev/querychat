@@ -10,7 +10,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">querychat</a>
 
-    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.3.0.9000</small>
+    <small class="nav-text text-danger me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="In-development version">0.4.1.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -53,7 +53,21 @@
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="development version" id="querychat-development-version">querychat (development version)<a class="anchor" aria-label="anchor" href="#querychat-development-version"></a></h2>
 <div class="section level3">
-<h3 id="new-features-development-version">New features<a class="anchor" aria-label="anchor" href="#new-features-development-version"></a></h3>
+<h3 id="bug-fixes-development-version">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-development-version"></a></h3>
+<ul><li>JSON pins now fall back to <code><a href="https://pins.rstudio.com/reference/pin_read.html" class="external-link">pins::pin_read()</a></code> when DuckDB’s JSON extension cannot be installed or loaded, including on builds that disable extension loading. Native DuckDB JSON reading is retained when the extension is available.</li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.4.1" id="querychat-041">querychat 0.4.1<a class="anchor" aria-label="anchor" href="#querychat-041"></a></h2><p class="text-muted">CRAN release: 2026-09-30</p>
+<div class="section level3">
+<h3 id="bug-fixes-0-4-1">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-4-1"></a></h3>
+<ul><li>Tests no longer fail on systems where Suggests packages like duckdb or RSQLite aren’t installed (as on some CRAN check flavors): test fixtures now skip when a required database engine is missing instead of erroring or silently falling back to a different engine. (<a href="https://github.com/posit-dev/querychat/issues/317" class="external-link">#317</a>)</li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.4.0" id="querychat-040">querychat 0.4.0<a class="anchor" aria-label="anchor" href="#querychat-040"></a></h2><p class="text-muted">CRAN release: 2026-09-13</p>
+<div class="section level3">
+<h3 id="new-features-0-4-0">New features<a class="anchor" aria-label="anchor" href="#new-features-0-4-0"></a></h3>
 <ul><li>
 <p><strong>Multiple related tables</strong>: register additional tables with <code>$add_table()</code> (or every table from a DBI connection at once with <code>$add_tables()</code>), and the LLM can reason across them — joins, cross-table filters, aggregations. Per-table reactive state (<code>$df()</code>, <code>$sql()</code>, <code>$title()</code>) is available via <code>qc_vals$table("name")</code> on the list returned by <code>$server()</code>. (<a href="https://github.com/posit-dev/querychat/issues/195" class="external-link">#195</a>)</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
@@ -78,17 +92,18 @@
 <li><p>Deferred construction is more flexible: <code>table_name</code> is now optional in <code>QueryChat$new(NULL)</code>, and <code>$server()</code> gains a <code>table_name</code> parameter so the table can be named per session. (<a href="https://github.com/posit-dev/querychat/issues/305" class="external-link">#305</a>)</p></li>
 </ul></div>
 <div class="section level3">
-<h3 id="breaking-changes-development-version">Breaking changes<a class="anchor" aria-label="anchor" href="#breaking-changes-development-version"></a></h3>
+<h3 id="breaking-changes-0-4-0">Breaking changes<a class="anchor" aria-label="anchor" href="#breaking-changes-0-4-0"></a></h3>
 <ul><li><p>The <code>$data_source</code> property has been removed. Use <code>qc$table("name")$data_source</code> to read a table’s data source, and <code>qc$add_table(df, "name", replace = TRUE)</code> to replace it. (<a href="https://github.com/posit-dev/querychat/issues/195" class="external-link">#195</a>)</p></li>
 <li><p><code>$app()</code>/<code>$app_obj()</code>’s <code>bookmark_store</code> parameter has been removed; pass <code>history = shinychat::history_options(restore_mode = "bookmark")</code> for equivalent behavior (existing <code>$app()</code> callers get this default automatically). Note the storage mechanism changed: server-side bookmark storage is now required rather than encoding state in the URL, so deployments that relied on <code>$app()</code> being fully stateless should pass <code>history = FALSE</code>.</p></li>
+<li><p><strong>querychat no longer disconnects a database connection you gave it.</strong> <code>$cleanup()</code> now closes only what querychat itself created: <code>DBISource$cleanup()</code> and <code>TblSqlSource$cleanup()</code> no longer disconnect a caller-supplied connection, and neither does the automatic <code>$cleanup()</code> that runs when a Shiny session/app stops (<code>cleanup = NA</code>, the default). If you relied on that, disconnect yourself on shutdown, e.g. <code>shiny::onStop(function() DBI::dbDisconnect(con))</code>. Connections querychat creates for you (for data frames and pins) are still closed automatically.</p></li>
 </ul></div>
 <div class="section level3">
-<h3 id="deprecated-development-version">Deprecated<a class="anchor" aria-label="anchor" href="#deprecated-development-version"></a></h3>
+<h3 id="deprecated-0-4-0">Deprecated<a class="anchor" aria-label="anchor" href="#deprecated-0-4-0"></a></h3>
 <ul><li>
 <code>$server()</code>’s <code>enable_bookmarking</code> parameter is deprecated in favor of <code>history</code>.</li>
 </ul></div>
 <div class="section level3">
-<h3 id="improvements-development-version">Improvements<a class="anchor" aria-label="anchor" href="#improvements-development-version"></a></h3>
+<h3 id="improvements-0-4-0">Improvements<a class="anchor" aria-label="anchor" href="#improvements-0-4-0"></a></h3>
 <ul><li><p>The <code>"visualize"</code> tool is now included in the default toolset. If the suggested ggsql package is not installed, the tool is dropped with a warning instead of erroring.</p></li>
 <li><p>Chat greetings render instantly when provided, and generated greetings are now schema-aware — they describe the data at hand — and are preserved across bookmark/restore. Opt additional tables into the greeting with <code>include_in_greeting = TRUE</code> on <code>$add_table()</code>/<code>$add_tables()</code>. (<a href="https://github.com/posit-dev/querychat/issues/249" class="external-link">#249</a>, <a href="https://github.com/posit-dev/querychat/issues/261" class="external-link">#261</a>)</p></li>
 <li><p>The system prompt no longer embeds the full schema upfront; the LLM fetches per-table schema on demand, skipping columns already described by a <code>data_dict</code>. (<a href="https://github.com/posit-dev/querychat/issues/195" class="external-link">#195</a>)</p></li>
@@ -96,15 +111,9 @@
 <li><p>The close button in <code>$app()</code> is now hidden in deployed (non-interactive) contexts, where <code><a href="https://rdrr.io/pkg/shiny/man/stopApp.html" class="external-link">stopApp()</a></code> would crash the session for other users. (<a href="https://github.com/posit-dev/querychat/issues/259" class="external-link">#259</a>)</p></li>
 </ul></div>
 <div class="section level3">
-<h3 id="bug-fixes-development-version">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-development-version"></a></h3>
+<h3 id="bug-fixes-0-4-0">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-4-0"></a></h3>
 <ul><li><p>Query results are now expanded in the chat only when the user asks to see the raw table, instead of far more often than intended. (<a href="https://github.com/posit-dev/querychat/issues/295" class="external-link">#295</a>)</p></li>
-<li><p>Fixed a module-namespace desync when a table was registered between <code>$ui()</code> and <code>$server()</code> (e.g. via <code>$server(data_source = )</code>). (<a href="https://github.com/posit-dev/querychat/issues/305" class="external-link">#305</a>)</p></li>
-<li><p><code>$server(data_source = )</code> no longer modifies the <code>QueryChat</code> instance. The table is registered for that session only: the instance’s tables, greeting tables, and system prompt are unchanged, a same-named instance table is shadowed for that session, and any connection querychat created for it is cleaned up when the session ends. A second session’s <code>$server(data_source = )</code> call therefore no longer errors with “Cannot add tables after server initialization.” (<a href="https://github.com/posit-dev/querychat/issues/300" class="external-link">#300</a>, <a href="https://github.com/posit-dev/querychat/issues/306" class="external-link">#306</a>)</p></li>
-<li><p><code>$cleanup()</code> follows one rule: querychat closes only what it created. <code>DBISource$cleanup()</code> and <code>TblSqlSource$cleanup()</code> no longer disconnect your connection; disconnect it yourself on shutdown. <code>DataFrameSource</code>/<code>PinSource</code> DuckDB connections are still closed.</p></li>
-<li><p>The automatic <code>$cleanup()</code> registered when <code>QueryChat</code> is created while a Shiny app is running (<code>cleanup = NA</code>, the default) no longer disconnects caller-supplied DBI connections when the session or app stops, for the same reason. If you relied on that to close a connection you passed to <code>QueryChat$new()</code>, register your own <code>shiny::onStop(function() DBI::dbDisconnect(con))</code> (or disconnect when the session ends). Data frames are unaffected: the in-memory DuckDB connection querychat creates for them is still closed automatically.</p></li>
-<li><p>Adding a <em>new</em> table with <code>$add_table()</code>/<code>$add_tables()</code> after a session has started now warns instead of erroring; running sessions keep their tables and new sessions see the addition. Replacing or removing an existing table after a session has started still errors.</p></li>
-<li><p>A rejected or failed <code>$add_table()</code>/<code>$add_tables()</code> call (e.g. an incompatible source type) after a session has started no longer warns about the late change or otherwise affects the instance, since the change never took effect. (<a href="https://github.com/posit-dev/querychat/issues/311" class="external-link">#311</a>)</p></li>
-<li><p>A failed <code>QueryChat$new()</code> (e.g. an unreadable <code>prompt_template</code>) no longer leaks the data source connection querychat created while normalizing its input; the source is cleaned up before the error propagates. Caller-supplied <code>DataSource</code> objects remain the caller’s responsibility.</p></li>
+<li><p><code>$server(data_source = )</code> now registers the table for that session only, instead of modifying the shared <code>QueryChat</code> instance. Concurrent sessions (e.g. per-user database connections on Posit Connect) no longer clobber each other’s data source or greeting, and any connection querychat created for the session is cleaned up when the session ends. (<a href="https://github.com/posit-dev/querychat/issues/300" class="external-link">#300</a>, <a href="https://github.com/posit-dev/querychat/issues/306" class="external-link">#306</a>)</p></li>
 </ul></div>
 </div>
     <div class="section level2">

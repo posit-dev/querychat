@@ -2,6 +2,30 @@
 
 ## querychat (development version)
 
+### Bug fixes
+
+- JSON pins now fall back to
+  [`pins::pin_read()`](https://pins.rstudio.com/reference/pin_read.html)
+  when DuckDB’s JSON extension cannot be installed or loaded, including
+  on builds that disable extension loading. Native DuckDB JSON reading
+  is retained when the extension is available.
+
+## querychat 0.4.1
+
+CRAN release: 2026-09-30
+
+### Bug fixes
+
+- Tests no longer fail on systems where Suggests packages like duckdb or
+  RSQLite aren’t installed (as on some CRAN check flavors): test
+  fixtures now skip when a required database engine is missing instead
+  of erroring or silently falling back to a different engine.
+  ([\#317](https://github.com/posit-dev/querychat/issues/317))
+
+## querychat 0.4.0
+
+CRAN release: 2026-09-13
+
 ### New features
 
 - **Multiple related tables**: register additional tables with
@@ -90,6 +114,17 @@
   URL, so deployments that relied on `$app()` being fully stateless
   should pass `history = FALSE`.
 
+- **querychat no longer disconnects a database connection you gave it.**
+  `$cleanup()` now closes only what querychat itself created:
+  `DBISource$cleanup()` and `TblSqlSource$cleanup()` no longer
+  disconnect a caller-supplied connection, and neither does the
+  automatic `$cleanup()` that runs when a Shiny session/app stops
+  (`cleanup = NA`, the default). If you relied on that, disconnect
+  yourself on shutdown,
+  e.g. `shiny::onStop(function() DBI::dbDisconnect(con))`. Connections
+  querychat creates for you (for data frames and pins) are still closed
+  automatically.
+
 ### Deprecated
 
 - `$server()`’s `enable_bookmarking` parameter is deprecated in favor of
@@ -130,50 +165,14 @@
   see the raw table, instead of far more often than intended.
   ([\#295](https://github.com/posit-dev/querychat/issues/295))
 
-- Fixed a module-namespace desync when a table was registered between
-  `$ui()` and `$server()` (e.g. via `$server(data_source = )`).
-  ([\#305](https://github.com/posit-dev/querychat/issues/305))
-
-- `$server(data_source = )` no longer modifies the `QueryChat` instance.
-  The table is registered for that session only: the instance’s tables,
-  greeting tables, and system prompt are unchanged, a same-named
-  instance table is shadowed for that session, and any connection
-  querychat created for it is cleaned up when the session ends. A second
-  session’s `$server(data_source = )` call therefore no longer errors
-  with “Cannot add tables after server initialization.”
+- `$server(data_source = )` now registers the table for that session
+  only, instead of modifying the shared `QueryChat` instance. Concurrent
+  sessions (e.g. per-user database connections on Posit Connect) no
+  longer clobber each other’s data source or greeting, and any
+  connection querychat created for the session is cleaned up when the
+  session ends.
   ([\#300](https://github.com/posit-dev/querychat/issues/300),
   [\#306](https://github.com/posit-dev/querychat/issues/306))
-
-- `$cleanup()` follows one rule: querychat closes only what it created.
-  `DBISource$cleanup()` and `TblSqlSource$cleanup()` no longer
-  disconnect your connection; disconnect it yourself on shutdown.
-  `DataFrameSource`/`PinSource` DuckDB connections are still closed.
-
-- The automatic `$cleanup()` registered when `QueryChat` is created
-  while a Shiny app is running (`cleanup = NA`, the default) no longer
-  disconnects caller-supplied DBI connections when the session or app
-  stops, for the same reason. If you relied on that to close a
-  connection you passed to `QueryChat$new()`, register your own
-  `shiny::onStop(function() DBI::dbDisconnect(con))` (or disconnect when
-  the session ends). Data frames are unaffected: the in-memory DuckDB
-  connection querychat creates for them is still closed automatically.
-
-- Adding a *new* table with `$add_table()`/`$add_tables()` after a
-  session has started now warns instead of erroring; running sessions
-  keep their tables and new sessions see the addition. Replacing or
-  removing an existing table after a session has started still errors.
-
-- A rejected or failed `$add_table()`/`$add_tables()` call (e.g. an
-  incompatible source type) after a session has started no longer warns
-  about the late change or otherwise affects the instance, since the
-  change never took effect.
-  ([\#311](https://github.com/posit-dev/querychat/issues/311))
-
-- A failed `QueryChat$new()` (e.g. an unreadable `prompt_template`) no
-  longer leaks the data source connection querychat created while
-  normalizing its input; the source is cleaned up before the error
-  propagates. Caller-supplied `DataSource` objects remain the caller’s
-  responsibility.
 
 ## querychat 0.3.0
 

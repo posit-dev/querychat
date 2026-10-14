@@ -22,7 +22,11 @@ from ._icons import bs_icon
 from ._tool_names import TOOL_VISUALIZE
 from ._utils import querychat_tool_starts_open, read_prompt_template, truncate_error
 from ._viz_altair_widget import AltairWidget, fit_chart_to_container
-from ._viz_ggsql import ExecutorReader, prewarm_spatial, translate_spatial_error
+from ._viz_ggsql import (
+    ExecutorReader,
+    prewarm_compute_surface,
+    translate_spatial_error,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -227,7 +231,7 @@ def visualize_impl(
             if reader is None:
                 reader = CachingReader(ExecutorReader(executor))
                 if maps_available:
-                    maps_available = prewarm_spatial(reader)
+                    maps_available = prewarm_compute_surface(reader)
             spec = reader.execute(ggsql)
 
             raw_chart = VegaLiteWriter().render_chart(spec)

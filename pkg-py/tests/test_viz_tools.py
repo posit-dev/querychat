@@ -456,7 +456,9 @@ class TestMapsPrewarmWiring:
 
         calls = []
         monkeypatch.setattr(
-            viz_tools, "prewarm_spatial", lambda reader: calls.append(reader) or True
+            viz_tools,
+            "prewarm_compute_surface",
+            lambda reader: calls.append(reader) or True,
         )
         tool = tool_visualize(data_source, lambda _: None, maps=True)
         tool.func(
@@ -473,7 +475,9 @@ class TestMapsPrewarmWiring:
 
         calls = []
         monkeypatch.setattr(
-            viz_tools, "prewarm_spatial", lambda reader: calls.append(reader) or True
+            viz_tools,
+            "prewarm_compute_surface",
+            lambda reader: calls.append(reader) or True,
         )
         tool = tool_visualize(data_source, lambda _: None)
         tool.func(

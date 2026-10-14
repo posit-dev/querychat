@@ -60,22 +60,27 @@ class ExecutorReader:
         )
 
 
-SPATIAL_SMOKE_QUERY = (
-    "INSTALL spatial; LOAD spatial; "
-    "VISUALISE FROM ggsql:world DRAW spatial FILTER iso_a3 = 'FRA'"
-)
+SPATIAL_SMOKE_QUERY = "VISUALISE FROM ggsql:world DRAW spatial FILTER iso_a3 = 'FRA'"
 
 
 def prewarm_spatial(reader: ggsql.CachingReader) -> bool:
     """
     Install and load the DuckDB spatial extension for the reader's cache.
 
-    The first ``INSTALL`` downloads the extension binary (network required);
-    afterwards it is cached on disk and this is cheap. Returns ``True`` when
-    spatial support is ready. On failure, warns and returns ``False`` so the
-    caller can treat the ``"maps"`` capability as unavailable.
+    Spatial SQL runs on the CachingReader's private in-memory DuckDB (the
+    "compute surface"), never on the user's data source, so the extension
+    must be installed there — routing ``INSTALL spatial`` through the
+    primary reader would hit the user's (typically locked-down) connection
+    and fail. The first ``INSTALL`` downloads the extension binary (network
+    required); afterwards it is cached on disk and this is cheap. The smoke
+    query then exercises the full spatial path (extension load, builtin
+    ``ggsql:world`` registration, spatial layer execution). Returns ``True``
+    when spatial support is ready. On failure, warns and returns ``False``
+    so the caller can treat the ``"maps"`` capability as unavailable.
     """
     try:
+        reader.execute_sql_cached("INSTALL spatial")
+        reader.execute_sql_cached("LOAD spatial")
         reader.execute(SPATIAL_SMOKE_QUERY)
     except Exception as e:
         warnings.warn(

@@ -509,24 +509,35 @@ class TestRestoreVizWidgets:
 
 class TestPrewarmSpatial:
     def test_success_runs_setup_query(self):
-        from querychat._viz_ggsql import prewarm_spatial
+        from querychat._viz_ggsql import SPATIAL_SMOKE_QUERY, prewarm_spatial
 
-        calls = []
+        cached_calls = []
+        execute_calls = []
 
         class FakeReader:
+            def execute_sql_cached(self, sql):
+                cached_calls.append(sql)
+                return object()
+
             def execute(self, query):
-                calls.append(query)
+                execute_calls.append(query)
                 return object()
 
         assert prewarm_spatial(FakeReader()) is True
-        assert len(calls) == 1
-        assert "INSTALL spatial" in calls[0]
-        assert "LOAD spatial" in calls[0]
+        # The extension is installed/loaded on the cache (compute) connection,
+        # never on the user's data source.
+        assert cached_calls == ["INSTALL spatial", "LOAD spatial"]
+        assert execute_calls == [SPATIAL_SMOKE_QUERY]
 
     def test_failure_warns_and_returns_false(self):
         from querychat._viz_ggsql import prewarm_spatial
 
         class FailReader:
+            def execute_sql_cached(self, sql):
+                raise RuntimeError(
+                    "IO Error: Extension spatial.duckdb_extension not found"
+                )
+
             def execute(self, query):
                 raise RuntimeError(
                     "IO Error: Extension spatial.duckdb_extension not found"

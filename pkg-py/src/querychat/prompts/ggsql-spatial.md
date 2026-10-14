@@ -29,6 +29,8 @@ DRAW point MAPPING lon, lat, passengers AS size
 PROJECT TO natural
 ```
 
+**Always put `lon`/`lat`/`size` mappings on the `DRAW point` layer, never in the global `VISUALISE` mappings.** Global mappings are inherited by every layer, and the `spatial` background layer only accepts `geometry`/`fill`/`stroke`/`opacity` — a global `lon`/`lat`/`size` mapping fails with "Layer 'spatial' does not support the `lat`, `size`, `lon` mappings". If you see that error, move the point aesthetics out of `VISUALISE` and onto `DRAW point MAPPING ...`.
+
 ### Projections
 
 `PROJECT TO <name>` sets the map projection. Useful named projections: `geographic` (unprojected lon/lat), `mercator`, `natural` (Natural Earth), `robinson`, `equal_earth`, `orthographic`, `albers` (US-centric). Set the view center with `SETTING origin => (lon, lat)`, e.g. `PROJECT TO orthographic SETTING origin => (-98, 39)` for a US globe. For anything else, use `PROJECT TO crs SETTING target => 'EPSG:XXXX'` or a proj string. `SCALE lon`/`SCALE lat` limits transfer to the projection.

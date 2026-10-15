@@ -294,7 +294,9 @@ build_column_details_impl <- function(
         c("integer", "numeric", "double", "Date", "POSIXct", "POSIXt")
     ) {
       numeric_columns <- c(numeric_columns, col)
-      if (is.null(spec[["range"]])) {
+      # Spec `range` and `values` both replace live min/max stats, so skip
+      # the aggregates (a wasted scan on remote tables) when either is set.
+      if (is.null(spec[["range"]]) && is.null(spec[["values"]])) {
         select_parts <- c(
           select_parts,
           paste0(

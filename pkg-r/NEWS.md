@@ -2,7 +2,7 @@
 
 ## New features
 
-* Data dictionaries now surface more of the [data-dict spec](https://data-dict.tidyverse.org/spec.html) to the LLM: table-level assertion `constraints`, column `label`/`time_zone`/`examples` (capped at 5), value-to-label maps (as a `Labels:` annotation, keeping category values clean for SQL), and relationship `aliases`/`conflicts`. Columns marked `display: restricted` are annotated in the LLM's schema and hidden from the user-facing schema card. (#316 follow-up)
+* Data dictionaries now support more of the [data-dict spec](https://data-dict.tidyverse.org/spec.html): table-level assertion `constraints`, column `label`, `time_zone`, and `examples`, and relationship `aliases`/`conflicts`. Labels from value-to-label maps are shown to the LLM alongside the raw values, so it can interpret codes without writing them into SQL incorrectly. Columns marked `display: restricted` are hidden from the schema card shown to users (the LLM still sees them, marked as restricted). (#316 follow-up)
 
 ## Bug fixes
 

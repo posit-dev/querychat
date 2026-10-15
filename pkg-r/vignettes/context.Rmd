@@ -100,6 +100,8 @@ glossary:
 Each entry under `tables` describes one table. Its `name` must match the table name you pass to `QueryChat$new()` or `$add_table()`.
 
 - **`description`**: What this table represents (one sentence is usually enough).
+- **`label`**: Optional display title, shown alongside the table in the schema view.
+- **`constraints`**: Optional table-level assertions (e.g. `- assert: end_date >= start_date`), conveyed to the LLM when it fetches the table's schema.
 - **`columns`**: A list of column annotations. Each column can have:
   - `name`: Column name (must match the actual column)
   - `type`: Semantic type hint — `string`, `number`, `number(id)`, `number(quantity)`, `date`, `enum`
@@ -107,6 +109,9 @@ Each entry under `tables` describes one table. Its `name` must match the table n
   - `description`: What this column means in plain English
   - `values`: For `enum` columns, the possible values — a list, or a value-to-label map (e.g. `{M: Male, F: Female}`)
   - `range`: Optional `[min, max]` bounds (either end may be `null` for an open range). Replaces live min/max queries for the column
+  - `label` / `time_zone`: Optional display title, and time zone for `datetime` columns — both shown in the schema view
+  - `examples`: Optional sample values (up to 5 are shown)
+  - `display`: Set to `restricted` for columns that shouldn't appear in user-facing output. The LLM still sees the column (marked as restricted) and can query it, but it's hidden from the schema card shown to users
 
 Columns listed in the data dictionary are excluded from the auto-generated schema (since your description supersedes the auto-detected metadata). Columns not listed are still auto-detected as usual.
 
@@ -117,6 +122,8 @@ The `relationships` section tells the LLM how to join tables. Each entry has:
 - `description`: A plain-English description of the relationship
 - `cardinality`: `one-to-one`, `one-to-many`, or `many-to-one`
 - `join`: The join condition (e.g., `orders.customer_id = customers.id`)
+- `aliases`: For self-joins, a map of the alias each side joins under to the table it refers to (e.g. `{mother: otters, pup: otters}`)
+- `conflicts`: Column names that appear on both sides of the join with different meanings
 
 #### Glossary
 

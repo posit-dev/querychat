@@ -521,6 +521,7 @@ describe("tool_get_schema()", {
     df <- data.frame(
       id = 1:5,
       category = c("A", "B", "A", "B", "A"),
+      code = c(1L, 2L, 1L, 2L, 1L),
       ssn = c("x", "y", "z", "w", "v"),
       stringsAsFactors = FALSE
     )
@@ -546,6 +547,10 @@ describe("tool_get_schema()", {
           values = list(A = "Alpha", B = "Beta")
         ),
         list(
+          name = "code",
+          values = list("1" = "Low", "2" = "High")
+        ),
+        list(
           name = "ssn",
           display = "restricted",
           examples = list("000-00-0000")
@@ -564,6 +569,9 @@ describe("tool_get_schema()", {
     expect_match(text, "Time zone: UTC", fixed = TRUE)
     expect_match(text, "Categorical values: 'A', 'B'", fixed = TRUE)
     expect_match(text, "Labels: A=Alpha, B=Beta", fixed = TRUE)
+    # Spec values apply to numeric-coded columns too (not just text)
+    expect_match(text, "Categorical values: '1', '2'", fixed = TRUE)
+    expect_match(text, "Labels: 1=Low, 2=High", fixed = TRUE)
     expect_match(text, "… (2 more)", fixed = TRUE)
     expect_match(
       text,

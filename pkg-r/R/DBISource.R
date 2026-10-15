@@ -406,7 +406,9 @@ build_column_details_impl <- function(
         rng <- unname(spec[["range"]])
         min_val <- as.character(rng[1][[1]] %||% "?")
         max_val <- as.character(rng[2][[1]] %||% "?")
-      } else {
+        # Spec `values` replace live stats for this column (handled below),
+        # so only query stats when neither `range` nor `values` is given.
+      } else if (is.null(spec[["values"]])) {
         min_key <- paste0(col, "__min")
         max_key <- paste0(col, "__max")
         if (
@@ -420,20 +422,21 @@ build_column_details_impl <- function(
           max_val <- as.character(column_stats[[max_key]])
         }
       }
-    } else if (col %in% text_columns) {
-      if (!is.null(spec[["values"]])) {
-        vals <- spec[["values"]]
-        # Map form (value -> label): values are the names, labels the values
-        if (!is.null(names(vals))) {
-          value_labels <- as.list(as.character(vals))
-          names(value_labels) <- names(vals)
-          vals <- as.list(names(vals))
-        }
-        categories <- as.list(as.character(vals))
-      } else if (col %in% names(categorical_values)) {
-        vals <- categorical_values[[col]]
-        if (length(vals) > 0) categories <- as.list(as.character(vals))
+    }
+    # Spec `values` replace categorical inference for any column kind (a
+    # numeric code can have labeled values just like a text column can).
+    if (!is.null(spec[["values"]])) {
+      vals <- spec[["values"]]
+      # Map form (value -> label): values are the names, labels the values
+      if (!is.null(names(vals))) {
+        value_labels <- as.list(as.character(vals))
+        names(value_labels) <- names(vals)
+        vals <- as.list(names(vals))
       }
+      categories <- as.list(as.character(vals))
+    } else if (col %in% text_columns && col %in% names(categorical_values)) {
+      vals <- categorical_values[[col]]
+      if (length(vals) > 0) categories <- as.list(as.character(vals))
     }
 
     list(

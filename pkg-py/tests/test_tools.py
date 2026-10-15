@@ -360,3 +360,13 @@ def test_get_schema_includes_table_constraints() -> None:
     result = tool.func(table_name="orders")
     assert "Table constraints:" in result.value
     assert "- amount >= 0 (Non-negative)" in result.value
+def test_schema_card_shows_open_ended_range() -> None:
+    from querychat.tools import _schema_table
+
+    cols = [
+        ColumnMeta(name="a", sql_type="INTEGER", kind="numeric", min_val=0),
+        ColumnMeta(name="b", sql_type="INTEGER", kind="numeric", max_val=100),
+    ]
+    html = str(_schema_table(cols))
+    assert "0 to ?" in html
+    assert "? to 100" in html

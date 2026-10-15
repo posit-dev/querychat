@@ -619,3 +619,11 @@ def test_format_schema_new_annotations() -> None:
     assert "  Examples: W, R, W, R, W … (2 more)" in text
     assert "[restricted: do not display in user-facing output]" in text
     assert "  Time zone: America/Chicago" in text
+def test_format_schema_open_ended_range() -> None:
+    cols = [
+        ColumnMeta(name="a", sql_type="INTEGER", kind="numeric", min_val=0),
+        ColumnMeta(name="b", sql_type="INTEGER", kind="numeric", max_val=100),
+    ]
+    text = format_schema("t", cols)
+    assert "  Range: 0 to ?" in text
+    assert "  Range: ? to 100" in text

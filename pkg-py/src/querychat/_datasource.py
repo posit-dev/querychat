@@ -100,12 +100,13 @@ def format_schema(table_name: str, columns: list[ColumnMeta]) -> str:
             lines.append(f"  Description: {col.description}")
         if col.constraints:
             lines.append(f"  Constraints: {', '.join(col.constraints)}")
-        if (
-            col.kind in ("numeric", "date")
-            and col.min_val is not None
-            and col.max_val is not None
+        if col.kind in ("numeric", "date") and (
+            col.min_val is not None or col.max_val is not None
         ):
-            lines.append(f"  Range: {col.min_val} to {col.max_val}")
+            # Open-ended bounds (allowed by the data-dict spec) render as '?'
+            lo = col.min_val if col.min_val is not None else "?"
+            hi = col.max_val if col.max_val is not None else "?"
+            lines.append(f"  Range: {lo} to {hi}")
         elif col.categories:
             cats = ", ".join(f"'{v}'" for v in col.categories)
             lines.append(f"  Categorical values: {cats}")

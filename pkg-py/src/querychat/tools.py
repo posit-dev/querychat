@@ -147,12 +147,13 @@ def _schema_table(columns: list[ColumnMeta]) -> Tag:
             )
 
         range_values = ""
-        if (
-            column.kind in ("numeric", "date")
-            and column.min_val is not None
-            and column.max_val is not None
+        if column.kind in ("numeric", "date") and (
+            column.min_val is not None or column.max_val is not None
         ):
-            range_values = f"{column.min_val} to {column.max_val}"
+            # Open-ended bounds (allowed by the data-dict spec) render as '?'
+            lo = column.min_val if column.min_val is not None else "?"
+            hi = column.max_val if column.max_val is not None else "?"
+            range_values = f"{lo} to {hi}"
         elif column.categories:
             range_values = ", ".join(f"'{value}'" for value in column.categories)
 

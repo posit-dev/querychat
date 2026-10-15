@@ -1,7 +1,7 @@
-version: "0.2.0"
+$version: "0.1.0"
 
 tables:
-  foods:
+  - name: foods
     description: >
       One row per USDA Foundation Food item. Nutrient values are not stored here —
       see food_nutrients. All nutrient amounts in food_nutrients are per 100g of the food.
@@ -21,7 +21,7 @@ tables:
         type: date
         description: Date the food record was published by USDA.
 
-  food_categories:
+  - name: food_categories
     description: Lookup table of USDA food categories. One row per category.
     columns:
       - name: id
@@ -35,7 +35,7 @@ tables:
         type: string
         description: Human-readable category name (e.g., "Vegetables and Vegetable Products").
 
-  nutrients:
+  - name: nutrients
     description: >
       Registry of the 12 key nutritional compounds tracked in this dataset.
       One row per nutrient type. See the glossary for the full list of nutrient IDs.
@@ -54,7 +54,7 @@ tables:
         values: [G, KCAL, MG]
         description: Unit of measurement. G = grams, KCAL = kilocalories, MG = milligrams.
 
-  food_nutrients:
+  - name: food_nutrients
     description: >
       Nutrient content per 100g of food. One row per food–nutrient combination.
       Only the 12 key nutrients are included (see nutrients table and glossary).
@@ -76,7 +76,7 @@ tables:
           nutrients.unit_name. May be null if the nutrient was not measured
           for this food.
 
-  food_portions:
+  - name: food_portions
     description: >
       Common serving sizes for foods. One row per portion definition.
       A single food may have multiple portions (e.g., "1 cup" and "1 oz").
@@ -107,7 +107,7 @@ tables:
           Optional preparation note for the portion (e.g., "chopped", "drained",
           "cooked"). Null when no modifier applies.
 
-  measure_units:
+  - name: measure_units
     description: >
       Lookup table of measurement unit names used in food_portions.
       Only units that appear in food_portions are included (~32 of the 123 total).

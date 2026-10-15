@@ -197,10 +197,15 @@ _LEGACY_TABLES_MESSAGE = """\
 This data dictionary uses an outdated format: `tables` must be a list of
 tables, each with a `name` field — not a mapping of name to definition.
 
-    # before                # after
-    tables:                 tables:
-      orders:                - name: orders
-        columns: [...]            columns: [...]
+    # before
+    tables:
+      orders:
+        columns: [...]
+
+    # after
+    tables:
+      - name: orders
+        columns: [...]
 
 Also changed in the current spec: column `range` is a two-element list
 [min, max], and `values` may be a value-to-label map ({M: Male, F: Female}).

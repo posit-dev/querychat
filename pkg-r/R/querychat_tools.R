@@ -358,6 +358,12 @@ querychat_tool_result <- function(
 }
 
 schema_table <- function(columns) {
+  # Restricted columns are LLM-visible (annotated in the schema text) but
+  # hidden from user-facing output per the data-dict spec.
+  columns <- Filter(
+    function(column) !identical(column$display, "restricted"),
+    columns
+  )
   headers <- c(
     "Column",
     "Type",

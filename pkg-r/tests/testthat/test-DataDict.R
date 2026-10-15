@@ -226,6 +226,27 @@ describe("data_dict_to_prompt_list()", {
     expect_false("glossary" %in% names(result))
   })
 
+  it("passes through table label and relationship aliases/conflicts", {
+    dd <- list(
+      tables = list(
+        list(name = "orders", description = "Orders", label = "Orders title")
+      ),
+      relationships = list(
+        list(
+          join = "mother.otter_no = pup.pup_number",
+          cardinality = "one-to-many",
+          aliases = list(mother = "otters", pup = "otters"),
+          conflicts = list("description")
+        )
+      )
+    )
+    result <- data_dict_to_prompt_list(dd)
+    expect_equal(result[["tables"]][["orders"]][["label"]], "Orders title")
+    rel <- result[["relationships"]][[1]]
+    expect_equal(rel[["aliases"]], list(mother = "otters", pup = "otters"))
+    expect_equal(rel[["conflicts"]], list("description"))
+  })
+
   it("includes table entry as NULL when table has no description", {
     dd <- list(tables = list(list(name = "no_desc")))
     result <- data_dict_to_prompt_list(dd)

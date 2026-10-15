@@ -130,7 +130,8 @@ TblSqlSource <- R6::R6Class(
       list(
         text = format_schema_from_details(
           as.character(DBI::dbQuoteIdentifier(private$.conn, self$table_name)),
-          details
+          details,
+          table_spec = table_spec
         ),
         columns = details
       )

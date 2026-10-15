@@ -1,38 +1,63 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 if TYPE_CHECKING:
     from ._datasource import ColumnMeta
     from ._query_executor import QueryExecutor
 
 
-class ColumnRange(BaseModel):
-    """Inclusive numeric range for a column, used instead of live min/max queries."""
+class ConstraintAssertion(BaseModel):
+    """
+    A column constraint expressed as a boolean expression.
 
-    min: Any = None
-    max: Any = None
+    In the data-dict spec, entries in a column's ``constraints`` list are either
+    barewords (``primary_key``, ``foreign_key``, ``required``, ``unique``) or
+    assertion objects with an ``assert`` expression.
+
+    Parameters
+    ----------
+    assert_
+        The boolean expression (e.g. ``"amount >= 0"``). Populated from the
+        YAML key ``assert``.
+    language
+        The language ``assert`` is written in (``sql``, ``r``, or ``python``).
+    description
+        Human-readable explanation of the assertion.
+
+    """
+
+    assert_: str = Field(alias="assert")
+    language: Literal["sql", "r", "python"] | None = None
+    description: str | None = None
+
+    def __str__(self) -> str:
+        if self.description:
+            return f"{self.assert_} ({self.description})"
+        return self.assert_
 
 
 class ColumnSpec(BaseModel):
     """
     Per-column metadata entry in a :class:`DataDict`.
 
-    All fields are optional. Only ``name`` is required, and is used to match
-    this spec against columns returned by the data source.
+    Follows the column format of the `data-dict spec
+    <https://data-dict.tidyverse.org/spec.html>`_. Only ``name`` is required;
+    it is used to match this spec against columns returned by the data source.
 
     Parameters
     ----------
     name
         Column name as it appears in the data source.
     type
-        Human-readable type override (e.g. ``"date"``, ``"currency"``). When
+        Type override (e.g. ``"date"``, ``"number(quantity)"``). When
         supplied, this replaces the inferred SQL type in the LLM schema view.
     constraints
-        Free-text constraints conveyed to the LLM (e.g. ``"non-negative"``).
+        Bareword constraints (``primary_key``, ``required``, ...) and/or
+        :class:`ConstraintAssertion` objects, conveyed to the LLM.
     description
         Short description forwarded verbatim to the LLM's schema view.
     details
@@ -41,12 +66,14 @@ class ColumnSpec(BaseModel):
     units
         Unit label (e.g. ``"kg"``, ``"USD"``), included in the schema view.
     values
-        Exhaustive list of valid values. Replaces categorical inference for
-        this column — querychat will not query the data source for distinct
-        values when this is set.
+        Valid values for the column, either a list (``[M, F, U]``) or a
+        value-to-label map (``{M: Male, F: Female}``). Replaces categorical
+        inference for this column — querychat will not query the data source
+        for distinct values when this is set. For the map form, the values
+        (keys) are used.
     range
-        Inclusive min/max bounds. Replaces live min/max statistics queries
-        when set.
+        Inclusive ``[min, max]`` bounds; either end may be ``None`` for an
+        open range. Replaces live min/max statistics queries when set.
     examples
         Representative sample values shown to the LLM as context.
 
@@ -54,13 +81,22 @@ class ColumnSpec(BaseModel):
 
     name: str
     type: str | None = None
-    constraints: list[str] = []
+    constraints: list[str | ConstraintAssertion] = []
     description: str | None = None
     details: str | None = None
     units: str | None = None
-    values: list[Any] | None = None
-    range: ColumnRange | None = None
+    values: list[Any] | dict[str, str] | None = None
+    range: list[Any] | None = None
     examples: list[Any] | None = None
+
+    @field_validator("range")
+    @classmethod
+    def _range_is_two_elements(cls, v: list[Any] | None) -> list[Any] | None:
+        if v is not None and len(v) != 2:  # noqa: PLR2004
+            raise ValueError(
+                "range must be a two-element list [min, max]; use null for an open end"
+            )
+        return v
 
 
 class TableSpec(BaseModel):
@@ -69,6 +105,8 @@ class TableSpec(BaseModel):
 
     Parameters
     ----------
+    name
+        Table name. Must match a table registered with ``QueryChat``.
     description
         Short description of the table, forwarded to the LLM's schema view.
     details
@@ -80,6 +118,7 @@ class TableSpec(BaseModel):
 
     """
 
+    name: str
     description: str | None = None
     details: str | None = None
     columns: list[ColumnSpec] = []
@@ -105,13 +144,31 @@ class RelationshipSpec(BaseModel):
     join: str
 
 
+_LEGACY_TABLES_MESSAGE = """\
+This data dictionary uses an outdated format: `tables` must be a list of
+tables, each with a `name` field — not a mapping of name to definition.
+
+    # before                # after
+    tables:                 tables:
+      orders:                - name: orders
+        columns: [...]            columns: [...]
+
+Also changed in the current spec: column `range` is a two-element list
+[min, max], and `values` may be a value-to-label map ({M: Male, F: Female}).
+
+Run `data-dict validate-spec <file>` to check the file against the spec:
+https://data-dict.tidyverse.org/spec.html
+"""
+
+
 class DataDict(BaseModel):
     """
     A data dictionary providing rich per-table and per-column metadata.
 
     Pass a ``DataDict`` to ``QueryChat`` (or load one from YAML via
     :meth:`from_yaml`) to give the LLM better context about your data without
-    querying the data source for statistics at startup.
+    querying the data source for statistics at startup. Files must follow the
+    current `data-dict spec <https://data-dict.tidyverse.org/spec.html>`_.
 
     For columns listed in a ``DataDict``:
 
@@ -132,9 +189,8 @@ class DataDict(BaseModel):
         One-line summary of the domain, shown alongside ``name`` in the
         system prompt.
     tables
-        Per-table metadata, keyed by table name. Each value is a
-        :class:`TableSpec` with optional description and column specs.
-        Table names must match those registered with ``QueryChat``.
+        Per-table metadata. Each :class:`TableSpec` has a required ``name``
+        that must match a table registered with ``QueryChat``.
     relationships
         Cross-table relationship declarations. Useful context for multi-table
         apps where the LLM needs to know how tables join.
@@ -149,22 +205,34 @@ class DataDict(BaseModel):
     ```python
     from querychat import QueryChat, DataDict
 
-    qc = QueryChat(df, "sales", data_dict=DataDict.from_yaml("data_dict.yaml"))
+    qc = QueryChat(df, "sales", data_dict=DataDict.from_yaml("data-dict.yaml"))
     ```
 
     Or pass a path directly and let QueryChat load it:
 
     ```python
-    qc = QueryChat(df, "sales", data_dict="data_dict.yaml")
+    qc = QueryChat(df, "sales", data_dict="data-dict.yaml")
     ```
 
     """
 
     name: str | None = None
     description: str | None = None
-    tables: dict[str, TableSpec] = {}
+    tables: list[TableSpec] = []
     relationships: list[RelationshipSpec] = []
     glossary: dict[str, str] = {}
+
+    @model_validator(mode="before")
+    @classmethod
+    def _reject_legacy_tables(cls, data: Any) -> Any:
+        if isinstance(data, dict) and isinstance(data.get("tables"), dict):
+            # ValueError (not TypeError) so pydantic wraps it in ValidationError
+            raise ValueError(_LEGACY_TABLES_MESSAGE)  # noqa: TRY004
+        return data
+
+    def get_table(self, table_name: str) -> TableSpec | None:
+        """Return the :class:`TableSpec` for ``table_name``, or ``None``."""
+        return next((t for t in self.tables if t.name == table_name), None)
 
     def to_prompt_dict(self) -> dict[str, Any]:
         """Return a filtered dict for the system prompt (excludes per-column details)."""
@@ -175,8 +243,8 @@ class DataDict(BaseModel):
             result["description"] = self.description
         if self.tables:
             result["tables"] = {
-                name: ({"description": spec.description} if spec.description else None)
-                for name, spec in self.tables.items()
+                t.name: ({"description": t.description} if t.description else None)
+                for t in self.tables
             }
         if self.relationships:
             result["relationships"] = [
@@ -197,7 +265,7 @@ class DataDict(BaseModel):
         metas: list[ColumnMeta] = executor.get_column_metas(table_name)
 
         # Build lookup from data_dict for this table
-        table_spec = self.tables.get(table_name)
+        table_spec = self.get_table(table_name)
         documented: dict[str, ColumnSpec] = (
             {col.name: col for col in table_spec.columns} if table_spec else {}
         )
@@ -209,16 +277,21 @@ class DataDict(BaseModel):
                 if spec.type is not None:
                     meta.sql_type = spec.type
                 if spec.range is not None:
-                    meta.min_val = spec.range.min
-                    meta.max_val = spec.range.max
+                    meta.min_val = spec.range[0]
+                    meta.max_val = spec.range[1]
                 if spec.values is not None:
-                    meta.categories = [str(v) for v in spec.values]
+                    vals = (
+                        list(spec.values)
+                        if isinstance(spec.values, dict)
+                        else spec.values
+                    )
+                    meta.categories = [str(v) for v in vals]
                 if spec.description is not None:
                     meta.description = spec.description
                 if spec.units is not None:
                     meta.units = spec.units
                 if spec.constraints:
-                    meta.constraints = list(spec.constraints)
+                    meta.constraints = [str(c) for c in spec.constraints]
             else:
                 undocumented.append(meta)
 

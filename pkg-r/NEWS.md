@@ -2,6 +2,8 @@
 
 ## Bug fixes
 
+* Data dictionaries now follow the current [data-dict spec](https://data-dict.tidyverse.org/spec.html): `tables` must be a list of tables each with a `name` field (previously a mapping of name to definition), column `range` is a two-element `[min, max]` list, and `values` may be a value-to-label map. Update older dictionary files accordingly; `data-dict validate-spec` (from the data-dict CLI) checks a file against the spec. (#316)
+
 * JSON pins now fall back to `pins::pin_read()` when DuckDB's JSON extension cannot be installed or loaded, including on builds that disable extension loading. Native DuckDB JSON reading is retained when the extension is available.
 
 * Fixed SQL code blocks (the visualization footer's "Show Query" editor and the data drawer's SQL editor) rendering illegibly in dark mode — light syntax-highlighted text on a forced light background. The code panel background now adapts to the app's color mode. (#329)

@@ -61,7 +61,7 @@ def _get_schema_impl(
             error = f"Table '{table_name}' not found. Available: {available}"
             return ContentToolResult(value=error, error=Exception(error))
 
-        dd = next((d for d in data_dicts if table_name in d.tables), None)
+        dd = next((d for d in data_dicts if d.get_table(table_name) is not None), None)
         if dd is not None:
             columns = dd.get_table_schema(table_name, executor, categorical_threshold)
         else:

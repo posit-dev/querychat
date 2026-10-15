@@ -325,12 +325,12 @@ def test_greeting_prompt_omits_dicts_for_excluded_tables(sqlite_engine, tmp_path
     orders_yaml = tmp_path / "orders.yaml"
     orders_yaml.write_text(
         "name: orders_dict\ndescription: ORDERS_DICT_DESC\n"
-        "tables:\n  orders:\n    description: Orders info\n"
+        "tables:\n  - name: orders\n    description: Orders info\n"
     )
     customers_yaml = tmp_path / "customers.yaml"
     customers_yaml.write_text(
         "name: customers_dict\ndescription: CUSTOMERS_DICT_DESC\n"
-        "tables:\n  customers:\n    description: Customers info\n"
+        "tables:\n  - name: customers\n    description: Customers info\n"
     )
 
     qc = QueryChat(data_dict=[str(orders_yaml), str(customers_yaml)])
@@ -353,7 +353,7 @@ def test_greeting_prompt_keeps_global_dict_desc_drops_global_fields(
     orders_yaml = tmp_path / "orders.yaml"
     orders_yaml.write_text(
         "name: orders_dict\ndescription: ORDERS_DICT_DESC\n"
-        "tables:\n  orders:\n    description: Orders info\n"
+        "tables:\n  - name: orders\n    description: Orders info\n"
         "relationships:\n  - join: orders.id = customers.id\n    description: REL_DESC\n"
     )
 

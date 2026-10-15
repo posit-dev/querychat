@@ -70,7 +70,7 @@ def test_system_prompt_includes_table_description() -> None:
     df = nw.from_native(pl.DataFrame({"x": [1]}))
     source = DataFrameSource(df, "orders")
     dd = DataDict(
-        tables={"orders": TableSpec(description="Order records.")},
+        tables=[TableSpec(name="orders", description="Order records.")],
     )
     sp = _make_system_prompt({"orders": source}, data_dicts=[dd])
     rendered = sp.render({"query"})
@@ -81,7 +81,7 @@ def test_system_prompt_includes_glossary() -> None:
     df = nw.from_native(pl.DataFrame({"x": [1]}))
     source = DataFrameSource(df, "orders")
     dd = DataDict(
-        tables={"orders": TableSpec(columns=[])},
+        tables=[TableSpec(name="orders")],
         glossary={"churn": "No orders in 90 days."},
     )
     sp = _make_system_prompt({"orders": source}, data_dicts=[dd])
@@ -94,7 +94,7 @@ def test_system_prompt_includes_relationships() -> None:
     df = nw.from_native(pl.DataFrame({"x": [1]}))
     source = DataFrameSource(df, "orders")
     dd = DataDict(
-        tables={"orders": TableSpec(columns=[])},
+        tables=[TableSpec(name="orders")],
         relationships=[
             RelationshipSpec(
                 join="orders.customer_id = customers.id",
@@ -442,7 +442,9 @@ class TestDataDictYamlRendering:
         assert "<data-dict" not in rendered
 
     def test_single_dict_renders_xml_tag_with_name(self) -> None:
-        dd = DataDict(name="sales", tables={"orders": TableSpec(description="Orders.")})
+        dd = DataDict(
+            name="sales", tables=[TableSpec(name="orders", description="Orders.")]
+        )
         sp = _make_system_prompt(
             {"orders": self._make_source("orders")}, data_dicts=[dd]
         )
@@ -451,7 +453,7 @@ class TestDataDictYamlRendering:
         assert "Orders." in rendered
 
     def test_xml_tag_includes_description_attribute(self) -> None:
-        dd = DataDict(name="sales", description="Sales domain data", tables={})
+        dd = DataDict(name="sales", description="Sales domain data", tables=[])
         sp = _make_system_prompt(
             {"orders": self._make_source("orders")}, data_dicts=[dd]
         )
@@ -459,7 +461,7 @@ class TestDataDictYamlRendering:
         assert 'description="Sales domain data"' in rendered
 
     def test_xml_tag_omits_description_when_absent(self) -> None:
-        dd = DataDict(name="sales", tables={})
+        dd = DataDict(name="sales", tables=[])
         sp = _make_system_prompt(
             {"orders": self._make_source("orders")}, data_dicts=[dd]
         )
@@ -467,7 +469,7 @@ class TestDataDictYamlRendering:
         assert "description=" not in rendered
 
     def test_yaml_body_excludes_name_and_description(self) -> None:
-        dd = DataDict(name="sales", description="Sales domain data", tables={})
+        dd = DataDict(name="sales", description="Sales domain data", tables=[])
         sp = _make_system_prompt(
             {"orders": self._make_source("orders")}, data_dicts=[dd]
         )
@@ -479,7 +481,7 @@ class TestDataDictYamlRendering:
     def test_yaml_body_includes_tables_relationships_glossary(self) -> None:
         dd = DataDict(
             name="sales",
-            tables={"orders": TableSpec(description="Order records.")},
+            tables=[TableSpec(name="orders", description="Order records.")],
             relationships=[RelationshipSpec(join="orders.customer_id = customers.id")],
             glossary={"churn": "No orders in 90 days."},
         )
@@ -492,9 +494,11 @@ class TestDataDictYamlRendering:
         assert "Order records." in rendered
 
     def test_multiple_dicts_render_sibling_xml_tags(self) -> None:
-        dd1 = DataDict(name="sales", tables={"orders": TableSpec(description="Orders")})
+        dd1 = DataDict(
+            name="sales", tables=[TableSpec(name="orders", description="Orders")]
+        )
         dd2 = DataDict(
-            name="catalog", tables={"products": TableSpec(description="Products")}
+            name="catalog", tables=[TableSpec(name="products", description="Products")]
         )
         sp = _make_system_prompt(
             {

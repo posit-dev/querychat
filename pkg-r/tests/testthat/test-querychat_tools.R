@@ -521,17 +521,18 @@ describe("tool_get_schema()", {
     df_source <- local_data_frame_source(new_test_df())
     executor <- local_executor(df_source)
     table_spec <- list(
+      name = "test_table",
       columns = list(
         list(
           name = "id",
           description = "Primary key",
           units = "rows",
           constraints = c("positive", "required"),
-          range = list(min = 1, max = 5)
+          range = list(1, 5)
         )
       )
     )
-    data_dicts <- list(list(tables = list(test_table = table_spec)))
+    data_dicts <- list(list(tables = list(table_spec)))
     expected <- executor$get_schema_result(
       "test_table",
       20,

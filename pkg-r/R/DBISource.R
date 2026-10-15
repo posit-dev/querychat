@@ -372,15 +372,29 @@ build_column_details_impl <- function(
     max_val <- NA_character_
     categories <- list()
     constraints <- if (length(spec[["constraints"]]) > 0) {
-      as.list(spec[["constraints"]])
+      lapply(spec[["constraints"]], function(c) {
+        if (is.list(c)) {
+          # Assertion object: {assert, language?, description?}
+          txt <- c[["assert"]] %||% ""
+          if (!is.null(c[["description"]])) {
+            txt <- paste0(txt, " (", c[["description"]], ")")
+          }
+          txt
+        } else {
+          as.character(c)
+        }
+      })
     } else {
       list()
     }
 
     if (col %in% numeric_columns) {
       if (!is.null(spec[["range"]])) {
-        min_val <- as.character(spec[["range"]][["min"]] %||% "?")
-        max_val <- as.character(spec[["range"]][["max"]] %||% "?")
+        # Spec form: two-element list [min, max]; either end may be null.
+        # (`[` indexing pads short lists with NULL instead of erroring.)
+        rng <- unname(spec[["range"]])
+        min_val <- as.character(rng[1][[1]] %||% "?")
+        max_val <- as.character(rng[2][[1]] %||% "?")
       } else {
         min_key <- paste0(col, "__min")
         max_key <- paste0(col, "__max")
@@ -397,7 +411,12 @@ build_column_details_impl <- function(
       }
     } else if (col %in% text_columns) {
       if (!is.null(spec[["values"]])) {
-        categories <- as.list(as.character(spec[["values"]]))
+        vals <- spec[["values"]]
+        # Map form (value -> label): the values are the names
+        if (!is.null(names(vals))) {
+          vals <- as.list(names(vals))
+        }
+        categories <- as.list(as.character(vals))
       } else if (col %in% names(categorical_values)) {
         vals <- categorical_values[[col]]
         if (length(vals) > 0) categories <- as.list(as.character(vals))

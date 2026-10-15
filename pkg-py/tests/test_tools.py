@@ -8,7 +8,7 @@ import pandas as pd
 import polars as pl
 import pytest
 from htmltools import Tag
-from querychat._data_dict import ColumnRange, ColumnSpec, DataDict, TableSpec
+from querychat._data_dict import ColumnSpec, DataDict, TableSpec
 from querychat._datasource import ColumnMeta, DataFrameSource
 from querychat._query_executor import DataSourceExecutor
 from querychat._utils import querychat_tool_starts_open
@@ -193,23 +193,24 @@ def _make_executor_and_table(
 
 def test_get_schema_tool_preserves_metadata_for_model_and_display() -> None:
     dd = DataDict(
-        tables={
-            "orders": TableSpec(
+        tables=[
+            TableSpec(
+                name="orders",
                 columns=[
                     ColumnSpec(
                         name="amount",
                         description="Gross <amount> & tax",
                         units="USD",
                         constraints=[">= 0", "required"],
-                        range=ColumnRange(min=0, max=100),
+                        range=[0, 100],
                     ),
                     ColumnSpec(
                         name="status",
                         values=["pending", "shipped & paid"],
                     ),
-                ]
+                ],
             )
-        },
+        ],
     )
     df = pl.DataFrame(
         {
@@ -248,8 +249,7 @@ def test_get_schema_tool_preserves_metadata_for_model_and_display() -> None:
         "Constraints",
     )
     header_positions = [
-        rendered.index(f'<th scope="col">{header}</th>')
-        for header in expected_headers
+        rendered.index(f'<th scope="col">{header}</th>') for header in expected_headers
     ]
     amount_cell_positions = [
         rendered.index(content)

@@ -24,6 +24,27 @@ read_data_dict <- function(path) {
   dd
 }
 
+#' Key a data dict's table list by table name.
+#'
+#' In the data-dict spec, `tables` is a list of table entries each with a
+#' `name` field. Returns a named list mapping table name to table entry, for
+#' lookup-style access. Entries without a `name` are skipped.
+#'
+#' @param dd A data dict list (from [read_data_dict()]).
+#' @return A named list of table entries.
+#' @noRd
+dd_tables_by_name <- function(dd) {
+  tables <- dd[["tables"]] %||% list()
+  out <- list()
+  for (tbl in tables) {
+    nm <- tbl[["name"]]
+    if (!is.null(nm) && nzchar(nm)) {
+      out[[nm]] <- tbl
+    }
+  }
+  out
+}
+
 #' Convert a data dict list to a filtered list for system prompt rendering.
 #'
 #' Keeps table descriptions (for LLM context), strips per-column details.
@@ -41,8 +62,9 @@ data_dict_to_prompt_list <- function(dd) {
   if (!is.null(dd[["description"]])) {
     result[["description"]] <- dd[["description"]]
   }
-  if (length(dd[["tables"]]) > 0) {
-    result[["tables"]] <- lapply(dd[["tables"]], function(ts) {
+  tables <- dd_tables_by_name(dd)
+  if (length(tables) > 0) {
+    result[["tables"]] <- lapply(tables, function(ts) {
       if (is.null(ts[["description"]])) {
         NULL
       } else {

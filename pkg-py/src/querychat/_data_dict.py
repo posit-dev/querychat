@@ -305,18 +305,25 @@ class DataDict(BaseModel):
                     meta.min_val = spec.range[0]
                     meta.max_val = spec.range[1]
                 if spec.values is not None:
-                    vals = (
-                        list(spec.values)
-                        if isinstance(spec.values, dict)
-                        else spec.values
-                    )
-                    meta.categories = [str(v) for v in vals]
+                    if isinstance(spec.values, dict):
+                        meta.categories = [str(k) for k in spec.values]
+                        meta.value_labels = dict(spec.values)
+                    else:
+                        meta.categories = [str(v) for v in spec.values]
                 if spec.description is not None:
                     meta.description = spec.description
                 if spec.units is not None:
                     meta.units = spec.units
                 if spec.constraints:
                     meta.constraints = [str(c) for c in spec.constraints]
+                if spec.label is not None:
+                    meta.label = spec.label
+                if spec.time_zone is not None:
+                    meta.time_zone = spec.time_zone
+                if spec.display is not None:
+                    meta.display = spec.display
+                if spec.examples is not None and spec.display != "restricted":
+                    meta.examples = [str(e) for e in spec.examples]
             else:
                 undocumented.append(meta)
 

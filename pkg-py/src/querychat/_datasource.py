@@ -60,6 +60,21 @@ class ColumnMeta:
     constraints: list[str] = field(default_factory=list)
     """Free-text constraints (e.g. 'non-negative')."""
 
+    examples: list[str] = field(default_factory=list)
+    """Sample values from the data dictionary (withheld when restricted)."""
+
+    value_labels: dict[str, str] | None = None
+    """Optional value -> label map from map-form `values` in the data dictionary."""
+
+    display: str | None = None
+    """Set to 'restricted' for columns not intended for user-facing output."""
+
+    label: str | None = None
+    """Display title from the data dictionary."""
+
+    time_zone: str | None = None
+    """Time zone for datetime columns, from the data dictionary."""
+
 
 def format_schema(table_name: str, columns: list[ColumnMeta]) -> str:
     """Format column metadata into schema string."""

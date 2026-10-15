@@ -367,3 +367,49 @@ relationships:
     rel = dd.relationships[0]
     assert rel.aliases == {"mother": "otters", "pup": "otters"}
     assert rel.conflicts == ["description"]
+
+
+def test_get_table_schema_new_column_fields() -> None:
+    dd = DataDict(
+        tables=[
+            TableSpec(
+                name="orders",
+                columns=[
+                    ColumnSpec(
+                        name="status",
+                        label="Order status",
+                        values={"W": "Web", "R": "Retail"},
+                        examples=["W", "R"],
+                    ),
+                    ColumnSpec(
+                        name="ssn",
+                        display="restricted",
+                        examples=["000-00-0000"],
+                    ),
+                    ColumnSpec(name="created_at", time_zone="America/Chicago"),
+                ],
+            )
+        ],
+    )
+    df = pl.DataFrame(
+        {
+            "status": ["W", "R"],
+            "ssn": ["x", "y"],
+            "created_at": [1, 2],
+        }
+    )
+    executor = _make_executor(df, "orders")
+    cols = dd.get_table_schema("orders", executor, categorical_threshold=10)
+    col_map = {c.name: c for c in cols}
+
+    status = col_map["status"]
+    assert status.label == "Order status"
+    assert status.categories == ["W", "R"]
+    assert status.value_labels == {"W": "Web", "R": "Retail"}
+    assert status.examples == ["W", "R"]
+
+    ssn = col_map["ssn"]
+    assert ssn.display == "restricted"
+    assert ssn.examples == []  # withheld on restricted columns
+
+    assert col_map["created_at"].time_zone == "America/Chicago"

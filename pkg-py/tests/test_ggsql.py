@@ -519,8 +519,6 @@ class TestPrewarmIcu:
                 return object()
 
         assert prewarm_icu(FakeReader()) is None
-        # Extensions are installed/loaded on the cache (compute) connection,
-        # never on the user's data source.
         assert cached_calls == ["INSTALL icu", "LOAD icu"]
 
     def test_icu_failure_warns_and_continues(self):

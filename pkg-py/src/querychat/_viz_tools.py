@@ -17,10 +17,14 @@ from shinychat.types import ToolResultDisplay
 
 from shiny import ui
 
-from .__version import __version__
 from ._icons import bs_icon
 from ._tool_names import TOOL_VISUALIZE
-from ._utils import querychat_tool_starts_open, read_prompt_template, truncate_error
+from ._utils import (
+    dep_version,
+    querychat_tool_starts_open,
+    read_prompt_template,
+    truncate_error,
+)
 from ._viz_altair_widget import AltairWidget, fit_chart_to_container
 from ._viz_ggsql import (
     ExecutorReader,
@@ -82,7 +86,7 @@ def tool_visualize(
         Whether multiple tables are registered.
     maps
         Whether the maps capability is enabled (pre-warms the DuckDB
-        spatial extension when the viz reader is first created).
+        spatial extension on the viz reader).
 
     Returns
     -------
@@ -259,11 +263,9 @@ def visualize_impl(
             )
 
         except Exception as e:
-            # Maps requested but prewarm failed: translate spatial setup
-            # errors into "stop trying maps" guidance. (Maps disabled is
-            # covered by the system prompt's maps-disabled note; maps
-            # enabled-and-working means a spatial error is a real bug worth
-            # seeing raw.)
+            # Only the setup-failed state needs translation: maps-disabled
+            # is covered by the prompt's maps-disabled note, and a spatial
+            # error with maps working is a real bug worth seeing raw.
             translated = (
                 translate_spatial_error(e) if (maps and not maps_available) else None
             )
@@ -301,7 +303,7 @@ def viz_dep() -> HTMLDependency:
     """HTMLDependency for viz-specific CSS and JS assets."""
     return HTMLDependency(
         "querychat-viz",
-        __version__,
+        dep_version(),
         source={
             "package": "querychat",
             "subdir": "static",

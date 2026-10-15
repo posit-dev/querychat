@@ -64,27 +64,25 @@ SPATIAL_SMOKE_QUERY = "VISUALISE FROM ggsql:world DRAW spatial FILTER iso_a3 = '
 
 
 def install_extension(reader: ggsql.CachingReader, name: str) -> None:
-    """Install and load a DuckDB extension on the reader's cache connection."""
+    """
+    Install and load a DuckDB extension on the reader's cache connection.
+
+    All ggsql-generated derived SQL runs on the cache connection, never on
+    the user's (typically locked-down) data source, so extensions must be
+    installed here. The first ``INSTALL`` downloads the binary (network
+    required); afterwards it is cached on disk.
+    """
     reader.execute_sql_cached(f"INSTALL {name}")
     reader.execute_sql_cached(f"LOAD {name}")
 
 
 def prewarm_icu(reader: ggsql.CachingReader) -> None:
     """
-    Set up the DuckDB ICU extension on the reader's cache connection.
+    Set up the DuckDB ICU extension (time zones, locale-aware collations).
 
-    All ggsql-generated derived SQL runs on the cache connection, never on
-    the user's data source, so any DuckDB extension that SQL may depend on
-    must be installed there — routing ``INSTALL`` through the primary
-    reader would hit the user's (typically locked-down) connection and
-    fail. The first ``INSTALL`` downloads the extension binary (network
-    required); afterwards it is cached on disk and loading costs
-    milliseconds.
-
-    ICU provides time zone support (e.g. interval arithmetic on
-    TIMESTAMPTZ) and locale-aware collations. DuckDB's CLI and Python
-    client load ICU by default, so SQL written against "DuckDB" — by
-    users or LLMs — assumes it. Failure is non-fatal: warns and continues.
+    DuckDB's CLI and Python client load ICU by default, so SQL written
+    against "DuckDB" — by users or LLMs — assumes it. Failure is
+    non-fatal: warns and continues.
     """
     try:
         install_extension(reader, "icu")
@@ -100,14 +98,12 @@ def prewarm_icu(reader: ggsql.CachingReader) -> None:
 
 def prewarm_spatial(reader: ggsql.CachingReader) -> bool:
     """
-    Set up the DuckDB spatial extension on the reader's cache connection.
+    Set up the DuckDB spatial extension for the ``"maps"`` capability.
 
-    Required for the ``"maps"`` capability. A smoke query exercises the
-    full spatial path (extension load, builtin ``ggsql:world``
-    registration, spatial layer execution). Failure warns and returns
-    ``False`` so the caller can treat ``"maps"`` as unavailable.
-
-    Returns ``True`` when spatial support is ready.
+    The smoke query exercises the full spatial path (extension load,
+    builtin ``ggsql:world`` registration, spatial layer execution).
+    Failure warns and returns ``False`` so the caller can treat ``"maps"``
+    as unavailable.
     """
     try:
         install_extension(reader, "spatial")

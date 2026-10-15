@@ -318,3 +318,52 @@ def test_to_prompt_dict_includes_glossary() -> None:
     dd = DataDict(glossary={"ARR": "Annual Recurring Revenue"})
     d = dd.to_prompt_dict()
     assert d["glossary"]["ARR"] == "Annual Recurring Revenue"
+
+
+def test_new_field_parsing(tmp_path: Path) -> None:
+    yaml_content = """\
+tables:
+  - name: orders
+    label: Orders
+    constraints:
+      - assert: end_date >= start_date
+        description: Valid date range
+      - primary_key
+    columns:
+      - name: status
+        type: enum
+        label: Order status
+        values: {W: Web, R: Retail}
+      - name: ssn
+        type: string
+        display: restricted
+      - name: created_at
+        type: datetime
+        time_zone: America/Chicago
+relationships:
+  - join: mother.otter_no = pup.pup_number
+    cardinality: one-to-many
+    aliases: {mother: otters, pup: otters}
+    conflicts: [description]
+"""
+    f = tmp_path / "spec.yaml"
+    f.write_text(yaml_content)
+    dd = DataDict.from_yaml(f)
+
+    t = dd.tables[0]
+    assert t.label == "Orders"
+    assert len(t.constraints) == 2
+    table_constraint = t.constraints[0]
+    assert not isinstance(table_constraint, str)
+    assert table_constraint.assert_ == "end_date >= start_date"
+    assert table_constraint.description == "Valid date range"
+    assert t.constraints[1] == "primary_key"
+
+    status, ssn, created_at = t.columns
+    assert status.label == "Order status"
+    assert ssn.display == "restricted"
+    assert created_at.time_zone == "America/Chicago"
+
+    rel = dd.relationships[0]
+    assert rel.aliases == {"mother": "otters", "pup": "otters"}
+    assert rel.conflicts == ["description"]

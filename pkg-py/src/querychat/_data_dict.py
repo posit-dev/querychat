@@ -76,6 +76,13 @@ class ColumnSpec(BaseModel):
         open range. Replaces live min/max statistics queries when set.
     examples
         Representative sample values shown to the LLM as context.
+    label
+        Display title for the column.
+    time_zone
+        Time zone for ``datetime`` columns, shown in the schema view.
+    display
+        When ``"restricted"``, the column is flagged as not for user-facing
+        output.
 
     """
 
@@ -88,6 +95,9 @@ class ColumnSpec(BaseModel):
     values: list[Any] | dict[str, str] | None = None
     range: list[Any] | None = None
     examples: list[Any] | None = None
+    label: str | None = None
+    time_zone: str | None = None
+    display: Literal["restricted"] | None = None
 
     @field_validator("range")
     @classmethod
@@ -115,6 +125,11 @@ class TableSpec(BaseModel):
     columns
         Per-column specifications. Columns not listed here are documented
         using live statistics inferred from the data.
+    label
+        Display title for the table.
+    constraints
+        Table-level assertions conveyed to the LLM in the ``get_schema``
+        response.
 
     """
 
@@ -122,6 +137,8 @@ class TableSpec(BaseModel):
     description: str | None = None
     details: str | None = None
     columns: list[ColumnSpec] = []
+    label: str | None = None
+    constraints: list[str | ConstraintAssertion] = []
 
 
 class RelationshipSpec(BaseModel):
@@ -136,12 +153,20 @@ class RelationshipSpec(BaseModel):
         Cardinality string (e.g. ``"one-to-many"``).
     join
         SQL JOIN clause or expression that links the tables.
+    aliases
+        Alias-to-table map naming the role each join side plays (required
+        for self-joins).
+    conflicts
+        Column names that appear on both sides of the join with different
+        meanings.
 
     """
 
     description: str | None = None
     cardinality: str | None = None
     join: str
+    aliases: dict[str, str] | None = None
+    conflicts: list[str] | None = None
 
 
 _LEGACY_TABLES_MESSAGE = """\

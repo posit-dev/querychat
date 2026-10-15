@@ -168,7 +168,43 @@ def test_main_prompt_render_omits_spatial_reference_without_maps(data_source):
     prompt = system_prompt.render({"update", "query", "visualize"})
 
     assert "<ggsql-spatial-reference>" not in prompt
-    assert "ggsql:world" not in prompt
+
+
+def test_main_prompt_render_shows_maps_disabled_note_without_maps(data_source):
+    system_prompt = QueryChatSystemPrompt(
+        prompt_template=PROMPTS_DIR / "prompt.md",
+        data_source=data_source,
+    )
+
+    prompt = system_prompt.render({"update", "query", "visualize"})
+
+    assert "not enabled" in prompt
+    assert 'tools=("default", "maps")' in prompt
+    # The note must not leak the spatial syntax reference
+    assert "<ggsql-spatial-reference>" not in prompt
+
+
+def test_main_prompt_render_hides_maps_disabled_note_with_maps(data_source):
+    system_prompt = QueryChatSystemPrompt(
+        prompt_template=PROMPTS_DIR / "prompt.md",
+        data_source=data_source,
+    )
+
+    prompt = system_prompt.render({"update", "query", "visualize", "maps"})
+
+    assert "<ggsql-spatial-reference>" in prompt
+    assert "Map visualizations" not in prompt
+
+
+def test_main_prompt_render_hides_maps_disabled_note_without_visualize(data_source):
+    system_prompt = QueryChatSystemPrompt(
+        prompt_template=PROMPTS_DIR / "prompt.md",
+        data_source=data_source,
+    )
+
+    prompt = system_prompt.render({"update", "query"})
+
+    assert "Map visualizations" not in prompt
 
 
 @pytest.fixture

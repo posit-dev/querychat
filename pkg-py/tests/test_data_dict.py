@@ -433,3 +433,33 @@ def test_to_prompt_dict_new_pass_throughs() -> None:
     assert d["tables"]["orders"]["label"] == "Orders title"
     assert d["relationships"][0]["aliases"] == {"mother": "otters", "pup": "otters"}
     assert d["relationships"][0]["conflicts"] == ["description"]
+
+
+def test_constraint_assertion_constructible_by_name_and_round_trips() -> None:
+    from querychat._data_dict import ConstraintAssertion
+
+    ca = ConstraintAssertion(assert_="amount >= 0", description="Non-negative")
+    assert ca.assert_ == "amount >= 0"
+    dd = DataDict(
+        tables=[
+            TableSpec(
+                name="orders",
+                columns=[ColumnSpec(name="amount", constraints=[ca])],
+            )
+        ],
+    )
+    dd2 = DataDict.model_validate(dd.model_dump())
+    constraint = dd2.tables[0].columns[0].constraints[0]
+    assert not isinstance(constraint, str)
+    assert constraint.assert_ == "amount >= 0"
+    assert constraint.description == "Non-negative"
+
+
+def test_values_map_accepts_numeric_keys(tmp_path: Path) -> None:
+    f = tmp_path / "spec.yaml"
+    f.write_text(
+        "tables:\n  - name: orders\n    columns:\n"
+        "      - name: arm\n        values: {0: Control, 1: Treatment}\n"
+    )
+    dd = DataDict.from_yaml(f)
+    assert dd.tables[0].columns[0].values == {"0": "Control", "1": "Treatment"}

@@ -586,6 +586,49 @@ describe("tool_get_schema()", {
     expect_false(grepl("ssn", card_html))
   })
 
+  it("renders spec range, value keys, and assertion constraints", {
+    df <- data.frame(
+      id = 1:5,
+      score = 1:5,
+      grp = c("A", "B", "A", "B", "A"),
+      stringsAsFactors = FALSE
+    )
+    df_source <- local_data_frame_source(df)
+    executor <- local_executor(df_source)
+    table_spec <- list(
+      name = "test_table",
+      columns = list(
+        list(name = "id", range = list(1, NULL)),
+        list(name = "score", range = list(NULL, 5)),
+        list(
+          name = "grp",
+          values = list(A = "Alpha", B = "Beta"),
+          constraints = list(
+            list(assert = "grp <> ''", description = "Non-empty"),
+            "required"
+          )
+        )
+      )
+    )
+    schema_result <- executor$get_schema_result(
+      "test_table",
+      20,
+      table_spec = table_spec
+    )
+    text <- schema_result$text
+
+    # Open-ended ranges keep their known bound
+    expect_match(text, "Range: 1 to ?", fixed = TRUE)
+    expect_match(text, "Range: ? to 5", fixed = TRUE)
+    # Map-form values keep the values (keys) as categories; labels are
+    # rendered separately as a `Labels:` annotation
+    expect_match(text, "Categorical values: 'A', 'B'", fixed = TRUE)
+    expect_match(text, "Labels: A=Alpha, B=Beta", fixed = TRUE)
+    # Assertion objects render as 'assert (description)' alongside barewords
+    expect_match(text, "grp <> '' (Non-empty)", fixed = TRUE)
+    expect_match(text, "required", fixed = TRUE)
+  })
+
   it("returns schema text with a native rich display", {
     df_source <- local_data_frame_source(new_test_df())
     executor <- local_executor(df_source)

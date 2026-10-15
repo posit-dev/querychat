@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 if TYPE_CHECKING:
     from ._datasource import ColumnMeta
@@ -29,6 +29,10 @@ class ConstraintAssertion(BaseModel):
         Human-readable explanation of the assertion.
 
     """
+
+    # populate_by_name allows construction with `assert_=` and round-trips
+    # through model_dump() (which emits the field name, not the YAML alias)
+    model_config = ConfigDict(populate_by_name=True)
 
     assert_: str = Field(alias="assert")
     language: Literal["sql", "r", "python"] | None = None
@@ -98,6 +102,15 @@ class ColumnSpec(BaseModel):
     label: str | None = None
     time_zone: str | None = None
     display: Literal["restricted"] | None = None
+
+    @field_validator("values", mode="before")
+    @classmethod
+    def _values_map_keys_are_strings(cls, v: Any) -> Any:
+        # YAML parses numeric map keys (e.g. {0: Control, 1: Treatment}) as
+        # ints; the spec allows them, so coerce keys to strings.
+        if isinstance(v, dict):
+            return {str(k): val for k, val in v.items()}
+        return v
 
     @field_validator("range")
     @classmethod

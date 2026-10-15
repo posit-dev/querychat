@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * **Faster iterative visualization, and support for layer-level data sources.** Visualization queries now execute as a whole through `ggsql.CachingReader`: the underlying SQL runs against your data source once and the result is memoized for the chat session, so re-rendering a chart with a different encoding no longer re-queries the source (a win for remote databases especially). Visualization layers can also draw from other relations in the query — e.g. raw points from the final `SELECT` with a summary line from a CTE — via `DRAW ... MAPPING ... FROM <source>`. Caching can be tuned or disabled with the `GGSQL_CACHE_TTL`, `GGSQL_CACHE_MAX_BYTES`, and `GGSQL_CACHE_DISABLED` environment variables. (#321)
 
+* New opt-in `"maps"` capability: pass `tools=("default", "maps")` to let the LLM draw choropleths (via the builtin `ggsql:world` dataset) and point maps through ggsql's spatial support. The `"default"` tools entry expands to the default tool set, so extra capabilities no longer require restating every tool. (#323)
+
 ### Bug fixes
 
 * JSON pins now fall back to `pin_read()` when DuckDB's JSON extension cannot be installed or loaded, including on builds that disable extension loading. Native DuckDB JSON reading is retained when the extension is available.
@@ -59,6 +61,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ```python
   qc = QueryChat(None, table_name="my_table")
 
+
   def server(input, output, session):
       qc.server(data_source=conn.table("my_table"), client=chat_client)
   ```
@@ -87,8 +90,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   # Or, register all tables from a SQLAlchemy engine or Ibis backend at once:
   qc = QueryChat()
-  qc.add_tables(engine)       # SQLAlchemy engine
-  qc.add_tables(ibis_backend) # Ibis backend
+  qc.add_tables(engine)  # SQLAlchemy engine
+  qc.add_tables(ibis_backend)  # Ibis backend
 
   qc_vals = qc.server()
   qc_vals.table("orders").df()

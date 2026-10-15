@@ -22,7 +22,12 @@ from ._icons import bs_icon
 from ._tool_names import TOOL_VISUALIZE
 from ._utils import querychat_tool_starts_open, read_prompt_template, truncate_error
 from ._viz_altair_widget import AltairWidget, fit_chart_to_container
-from ._viz_ggsql import ExecutorReader
+from ._viz_ggsql import (
+    ExecutorReader,
+    prewarm_icu,
+    prewarm_spatial,
+    translate_spatial_error,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -62,6 +67,7 @@ def tool_visualize(
     update_fn: Callable[[VisualizeData], None],
     *,
     multi_table: bool = False,
+    maps: bool = False,
 ) -> Tool:
     """
     Create a tool that executes a ggsql query and renders the visualization.
@@ -74,6 +80,9 @@ def tool_visualize(
         Callback function to call with VisualizeData when visualization succeeds
     multi_table
         Whether multiple tables are registered.
+    maps
+        Whether the maps capability is enabled (pre-warms the DuckDB
+        spatial extension on the viz reader).
 
     Returns
     -------
@@ -81,7 +90,7 @@ def tool_visualize(
         A tool that can be registered with chatlas
 
     """
-    impl = visualize_impl(executor, update_fn)
+    impl = visualize_impl(executor, update_fn, maps=maps)
     impl.__doc__ = read_prompt_template(
         "tool-visualize.md",
         db_type=executor.get_db_type(),
@@ -186,6 +195,8 @@ def warn_viz_url_bookmarking() -> bool:
 def visualize_impl(
     executor: QueryExecutor,
     update_fn: Callable[[VisualizeData], None],
+    *,
+    maps: bool = False,
 ) -> Callable[[str, str], ContentToolResult]:
     """Create the visualize implementation function."""
     from ggsql import CachingReader, VegaLiteWriter, validate
@@ -195,13 +206,14 @@ def visualize_impl(
     # the reader's cache is freed when the client is dropped. Created lazily
     # so clients that never visualize don't pay for an idle DuckDB instance.
     reader = None
+    maps_available = maps
 
     def visualize(
         ggsql: str,
         title: str,
     ) -> ContentToolResult:
         """Execute a ggsql query and render the visualization."""
-        nonlocal reader
+        nonlocal reader, maps_available
         markdown = f"```sql\n{ggsql}\n```"
 
         try:
@@ -219,6 +231,9 @@ def visualize_impl(
 
             if reader is None:
                 reader = CachingReader(ExecutorReader(executor))
+                prewarm_icu(reader)
+                if maps_available:
+                    maps_available = prewarm_spatial(reader)
             spec = reader.execute(ggsql)
 
             raw_chart = VegaLiteWriter().render_chart(spec)
@@ -244,7 +259,13 @@ def visualize_impl(
             )
 
         except Exception as e:
-            error_msg = truncate_error(str(e))
+            # Only the setup-failed state needs translation: maps-disabled
+            # is covered by the prompt's maps-disabled note, and a spatial
+            # error with maps working is a real bug worth seeing raw.
+            translated = (
+                translate_spatial_error(e) if (maps and not maps_available) else None
+            )
+            error_msg = translated if translated is not None else truncate_error(str(e))
             markdown += f"\n\n> Error: {error_msg}"
             return ContentToolResult(value=markdown, error=Exception(error_msg))
 

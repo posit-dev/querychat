@@ -259,15 +259,15 @@ def visualize_impl(
             )
 
         except Exception as e:
-            maps_state = (
-                "enabled"
-                if maps_available
-                else ("setup_failed" if maps else "disabled")
+            # Maps requested but prewarm failed: translate spatial setup
+            # errors into "stop trying maps" guidance. (Maps disabled is
+            # covered by the system prompt's maps-disabled note; maps
+            # enabled-and-working means a spatial error is a real bug worth
+            # seeing raw.)
+            translated = (
+                translate_spatial_error(e) if (maps and not maps_available) else None
             )
-            translated = translate_spatial_error(e, maps_state=maps_state)
-            error_msg = (
-                translated if translated is not None else truncate_error(str(e))
-            )
+            error_msg = translated if translated is not None else truncate_error(str(e))
             markdown += f"\n\n> Error: {error_msg}"
             return ContentToolResult(value=markdown, error=Exception(error_msg))
 

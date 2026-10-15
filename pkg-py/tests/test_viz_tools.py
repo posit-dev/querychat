@@ -502,46 +502,70 @@ class TestMapsPrewarmWiring:
 
 class TestTranslateSpatialError:
     SPATIAL_ERR = Exception(
-        'IO Error: Extension "/home/u/.duckdb/extensions/v1.5.2/linux_amd64/'
+        'IO Error: Extension "/home/u/.duckdb/extensions/v1.5.5/linux_amd64/'
         'spatial.duckdb_extension" not found'
     )
+    ST_FUNC_ERR = Exception(
+        "Catalog Error: Scalar Function with name st_within does not exist!"
+    )
 
-    def test_disabled_message_points_to_tools(self):
+    def test_extension_error_message(self):
         from querychat._viz_ggsql import translate_spatial_error
 
-        msg = translate_spatial_error(self.SPATIAL_ERR, maps_state="disabled")
-        assert msg is not None
-        assert "maps" in msg
-        assert 'tools=("default", "maps")' in msg
-
-    def test_setup_failed_message(self):
-        from querychat._viz_ggsql import translate_spatial_error
-
-        msg = translate_spatial_error(self.SPATIAL_ERR, maps_state="setup_failed")
+        msg = translate_spatial_error(self.SPATIAL_ERR)
         assert msg is not None
         assert "setup failed" in msg
 
-    def test_enabled_or_nonspatial_returns_none(self):
+    def test_st_function_error_message(self):
+        # A failed LOAD followed by an st_* call surfaces as a catalog
+        # error, not an extension error — same recovery guidance applies.
         from querychat._viz_ggsql import translate_spatial_error
 
-        assert translate_spatial_error(self.SPATIAL_ERR, maps_state="enabled") is None
-        assert (
-            translate_spatial_error(Exception("boom"), maps_state="disabled") is None
-        )
+        msg = translate_spatial_error(self.ST_FUNC_ERR)
+        assert msg is not None
+        assert "setup failed" in msg
+
+    def test_nonspatial_returns_none(self):
+        from querychat._viz_ggsql import translate_spatial_error
+
+        assert translate_spatial_error(Exception("boom")) is None
 
     @pytest.mark.ggsql
-    def test_tool_translates_spatial_error_when_maps_disabled(
+    def test_tool_translates_spatial_error_after_setup_failure(
         self, data_source, monkeypatch
     ):
-        err = str(self.SPATIAL_ERR)
+        import querychat._viz_tools as viz_tools
 
-        def boom(reader, query):
-            raise RuntimeError(err)
+        monkeypatch.setattr(viz_tools, "prewarm_icu", lambda reader: None)
+        monkeypatch.setattr(viz_tools, "prewarm_spatial", lambda reader: False)
+        monkeypatch.setattr(
+            "ggsql.CachingReader.execute",
+            lambda reader, query: (_ for _ in ()).throw(
+                RuntimeError(str(self.SPATIAL_ERR))
+            ),
+        )
+        tool = tool_visualize(data_source, lambda _: None, maps=True)
+        result = tool.func(
+            ggsql="SELECT x, y FROM test_data VISUALISE x, y DRAW point", title="t"
+        )
+        assert result.error is not None
+        assert "setup failed" in str(result.error)
 
-        monkeypatch.setattr("ggsql.CachingReader.execute", boom)
+    @pytest.mark.ggsql
+    def test_tool_does_not_translate_when_maps_disabled(
+        self, data_source, monkeypatch
+    ):
+        # With maps disabled, the system prompt tells the LLM not to
+        # attempt spatial features; a raw error is the acceptable backstop.
+        monkeypatch.setattr(
+            "ggsql.CachingReader.execute",
+            lambda reader, query: (_ for _ in ()).throw(
+                RuntimeError(str(self.SPATIAL_ERR))
+            ),
+        )
         tool = tool_visualize(data_source, lambda _: None)
         result = tool.func(
             ggsql="SELECT x, y FROM test_data VISUALISE x, y DRAW point", title="t"
         )
         assert result.error is not None
-        assert 'tools=("default", "maps")' in str(result.error)
+        assert "setup failed" not in str(result.error)

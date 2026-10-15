@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -112,12 +113,22 @@ class ColumnSpec(BaseModel):
             return {str(k): val for k, val in v.items()}
         return v
 
+    @field_validator("range", mode="before")
+    @classmethod
+    def _range_open_bound_sentinels(cls, v: Any) -> Any:
+        # The spec's open-bound sentinels (-.inf/.inf) parse as float
+        # infinities; normalize them to None for an open end.
+        if isinstance(v, list):
+            return [None if isinstance(x, float) and math.isinf(x) else x for x in v]
+        return v
+
     @field_validator("range")
     @classmethod
     def _range_is_two_elements(cls, v: list[Any] | None) -> list[Any] | None:
         if v is not None and len(v) != 2:  # noqa: PLR2004
             raise ValueError(
-                "range must be a two-element list [min, max]; use null for an open end"
+                "range must be a two-element list [min, max]; "
+                "use null (or the spec's -.inf/.inf sentinels) for an open end"
             )
         return v
 

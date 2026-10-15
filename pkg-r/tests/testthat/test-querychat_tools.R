@@ -599,7 +599,8 @@ describe("tool_get_schema()", {
       name = "test_table",
       columns = list(
         list(name = "id", range = list(1, NULL)),
-        list(name = "score", range = list(NULL, 5)),
+        # The spec's -.inf/.inf sentinels also mean an open bound
+        list(name = "score", range = list(-Inf, 5)),
         list(
           name = "grp",
           values = list(A = "Alpha", B = "Beta"),

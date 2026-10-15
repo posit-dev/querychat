@@ -92,7 +92,7 @@ Each entry under `tables` describes one table. Its `name` must match the table n
   - `constraints`: Optional list — barewords like `primary_key`/`foreign_key`, or assertion objects (`assert` with an optional `language` and `description`)
   - `description`: What this column means in plain English
   - `values`: For `enum` columns, the possible values — a list, or a value-to-label map (e.g. `{M: Male, F: Female}`)
-  - `range`: Optional `[min, max]` bounds (either end may be `null` for an open range). Replaces live min/max queries for the column
+  - `range`: Optional `[min, max]` bounds. Either end may be left open with the `-.inf`/`.inf` sentinels (or `null`) — if you leave a bound open, describe the range in prose in the column's `description`. Replaces live min/max queries for the column
   - `label` / `time_zone`: Optional display title, and time zone for `datetime` columns — both shown in the schema view
   - `examples`: Optional sample values (up to 5 are shown)
   - `display`: Set to `restricted` for columns that shouldn't appear in user-facing output. The LLM still sees the column (marked as restricted) and can query it, but it's hidden from the schema card shown to users

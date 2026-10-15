@@ -183,7 +183,8 @@
 }
 
 .querychat-query-section bslib-code-editor .prism-code-editor {
-  background-color: var(--bs-light, #f8f8f8);
+  /* Mode-aware inset panel (a fixed color breaks dark-mode syntax themes) */
+  background-color: var(--bs-tertiary-bg, #f8f8f8);
   max-height: 200px;
   overflow-y: auto;
 }

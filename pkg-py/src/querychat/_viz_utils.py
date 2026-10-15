@@ -17,11 +17,6 @@ def has_viz_tool(tools: set[str] | None) -> bool:
     return tools is not None and "visualize" in tools
 
 
-def has_maps_tool(tools: set[str] | None) -> bool:
-    """Check if the maps capability is among the configured tools."""
-    return tools is not None and "maps" in tools
-
-
 def has_viz_deps() -> bool:
     """Check whether visualization dependencies (ggsql, altair, shinywidgets, vl-convert-python) are installed."""
     if any(

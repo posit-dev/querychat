@@ -1,5 +1,9 @@
 # querychat (development version)
 
+## New features
+
+* Data dictionaries now surface more of the [data-dict spec](https://data-dict.tidyverse.org/spec.html) to the LLM: table-level assertion `constraints`, column `label`/`time_zone`/`examples` (capped at 5), value-to-label maps (as a `Labels:` annotation, keeping category values clean for SQL), and relationship `aliases`/`conflicts`. Columns marked `display: restricted` are annotated in the LLM's schema and hidden from the user-facing schema card. (#316 follow-up)
+
 ## Bug fixes
 
 * Data dictionaries now follow the current [data-dict spec](https://data-dict.tidyverse.org/spec.html): `tables` must be a list of tables each with a `name` field (previously a mapping of name to definition), column `range` is a two-element `[min, max]` list, and `values` may be a value-to-label map. Update older dictionary files accordingly; `data-dict validate-spec` (from the data-dict CLI) checks a file against the spec. (#316)

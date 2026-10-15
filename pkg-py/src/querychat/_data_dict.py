@@ -5,6 +5,7 @@ import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
+from packaging.version import InvalidVersion, Version
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 if TYPE_CHECKING:
@@ -190,37 +191,24 @@ Run `data-dict validate-spec <file>` to check the file against the spec:
 https://data-dict.tidyverse.org/spec.html
 """
 
+# The first data-dict spec version ever released. A `$version` below this
+# is not a real spec version.
+_FIRST_SPEC_VERSION = Version("0.1.0")
+
 # The newest data-dict spec version this version of querychat fully
 # understands. Files declaring a newer `$version` are still read, on a
 # best-effort basis (unknown fields are ignored), with a warning. Bump this
 # opportunistically to keep the warning calibrated — it is not a hard gate.
-_KNOWN_SPEC_VERSION = (0, 1, 0)
-
-
-def _parse_spec_version(value: Any) -> tuple[int, int, int] | None:
-    """
-    Parse a `$version` value into a (major, minor, patch) tuple.
-
-    Returns ``None`` when ``value`` is not a recognizable version string.
-    Short forms are zero-padded, so ``"0.1"`` parses as ``(0, 1, 0)``.
-    """
-    if isinstance(value, bool) or not isinstance(value, (str, int, float)):
-        return None
-    parts = str(value).split(".")
-    if len(parts) > 3 or not all(p.isdigit() for p in parts):  # noqa: PLR2004
-        return None
-    nums = [int(p) for p in parts]
-    # Zero-pad short forms, so "0.1" parses as (0, 1, 0)
-    nums.extend([0] * (3 - len(nums)))
-    return (nums[0], nums[1], nums[2])
+_KNOWN_SPEC_VERSION = Version("0.1.0")
 
 
 def _check_spec_version(version: Any) -> None:
     if version is None:
         # `$version:` with no value means the same as omitting it
         return
-    parsed = _parse_spec_version(version)
-    if parsed is None:
+    try:
+        parsed = Version(str(version))
+    except InvalidVersion:
         warnings.warn(
             f"This data dictionary has an invalid `$version`: {version!r}. "
             'Expected a version like "0.1.0"; see '
@@ -228,7 +216,7 @@ def _check_spec_version(version: Any) -> None:
             stacklevel=3,
         )
         return
-    if parsed < (0, 1, 0):
+    if parsed < _FIRST_SPEC_VERSION:
         warnings.warn(
             f'This data dictionary declares `$version: "{version}"`, which '
             "predates the first data-dict spec version (0.1.0). See "
@@ -237,14 +225,14 @@ def _check_spec_version(version: Any) -> None:
         )
         return
     if parsed > _KNOWN_SPEC_VERSION:
-        known = ".".join(str(p) for p in _KNOWN_SPEC_VERSION)
         warnings.warn(
             f'This data dictionary declares `$version: "{version}"`, which is '
             "newer than the newest data-dict spec version this version of "
-            f"querychat fully understands ({known}). The file is read on a "
-            "best-effort basis — spec fields querychat doesn't know about are "
-            "ignored. If anything looks off, upgrade querychat, or check the "
-            "file against the spec with `data-dict validate-spec <file>`: "
+            f"querychat fully understands ({_KNOWN_SPEC_VERSION}). The file is "
+            "read on a best-effort basis — spec fields querychat doesn't know "
+            "about are ignored. If anything looks off, upgrade querychat, or "
+            "check the file against the spec with "
+            "`data-dict validate-spec <file>`: "
             "https://data-dict.tidyverse.org/spec.html",
             stacklevel=3,
         )

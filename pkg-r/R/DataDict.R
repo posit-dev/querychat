@@ -26,6 +26,10 @@ read_data_dict <- function(path) {
   dd
 }
 
+# The first data-dict spec version ever released. A `$version` below this
+# is not a real spec version.
+.dd_first_spec_version <- numeric_version("0.1.0")
+
 # The newest data-dict spec version this version of querychat fully
 # understands. Files declaring a newer `$version` are still read, on a
 # best-effort basis (unknown fields are ignored), with a warning. Bump this
@@ -59,7 +63,7 @@ dd_check_spec_compat <- function(dd) {
         "i" = "The file is read on a best-effort basis — spec fields querychat doesn't know about are ignored.",
         "i" = "If anything looks off, consider upgrading {.pkg querychat} or running {.code data-dict validate-spec <file>}."
       ))
-    } else if (v < .dd_known_spec_version) {
+    } else if (v < .dd_first_spec_version) {
       cli::cli_warn(c(
         "!" = "Data dictionary declares {.field $version} {.val {version}}, which predates the first data-dict spec version (0.1.0).",
         "i" = "See {.url https://data-dict.tidyverse.org/spec.html}."

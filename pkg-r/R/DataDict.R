@@ -65,11 +65,10 @@ data_dict_to_prompt_list <- function(dd) {
   tables <- dd_tables_by_name(dd)
   if (length(tables) > 0) {
     result[["tables"]] <- lapply(tables, function(ts) {
-      if (is.null(ts[["description"]])) {
-        NULL
-      } else {
-        list(description = ts[["description"]])
-      }
+      entry <- compact(
+        list(description = ts[["description"]], label = ts[["label"]])
+      )
+      if (length(entry) == 0) NULL else entry
     })
   }
   if (length(dd[["relationships"]]) > 0) {
@@ -78,7 +77,9 @@ data_dict_to_prompt_list <- function(dd) {
         list(
           join = rs[["join"]],
           description = rs[["description"]],
-          cardinality = rs[["cardinality"]]
+          cardinality = rs[["cardinality"]],
+          aliases = rs[["aliases"]],
+          conflicts = rs[["conflicts"]]
         )
       )
     })

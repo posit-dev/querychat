@@ -451,14 +451,20 @@ class TestRenderChartToPng:
 
 class TestMapsPrewarmWiring:
     @pytest.mark.ggsql
-    def test_prewarms_spatial_once_when_maps_enabled(self, data_source, monkeypatch):
+    def test_prewarms_icu_and_spatial_once_when_maps_enabled(
+        self, data_source, monkeypatch
+    ):
         import querychat._viz_tools as viz_tools
 
-        calls = []
+        icu_calls = []
+        spatial_calls = []
+        monkeypatch.setattr(
+            viz_tools, "prewarm_icu", lambda reader: icu_calls.append(reader)
+        )
         monkeypatch.setattr(
             viz_tools,
-            "prewarm_compute_surface",
-            lambda reader: calls.append(reader) or True,
+            "prewarm_spatial",
+            lambda reader: spatial_calls.append(reader) or True,
         )
         tool = tool_visualize(data_source, lambda _: None, maps=True)
         tool.func(
@@ -467,23 +473,31 @@ class TestMapsPrewarmWiring:
         tool.func(
             ggsql="SELECT x, y FROM test_data VISUALISE x, y DRAW point", title="t2"
         )
-        assert len(calls) == 1
+        assert len(icu_calls) == 1
+        assert len(spatial_calls) == 1
 
     @pytest.mark.ggsql
-    def test_no_prewarm_when_maps_disabled(self, data_source, monkeypatch):
+    def test_prewarms_icu_but_not_spatial_when_maps_disabled(
+        self, data_source, monkeypatch
+    ):
         import querychat._viz_tools as viz_tools
 
-        calls = []
+        icu_calls = []
+        spatial_calls = []
+        monkeypatch.setattr(
+            viz_tools, "prewarm_icu", lambda reader: icu_calls.append(reader)
+        )
         monkeypatch.setattr(
             viz_tools,
-            "prewarm_compute_surface",
-            lambda reader: calls.append(reader) or True,
+            "prewarm_spatial",
+            lambda reader: spatial_calls.append(reader) or True,
         )
         tool = tool_visualize(data_source, lambda _: None)
         tool.func(
             ggsql="SELECT x, y FROM test_data VISUALISE x, y DRAW point", title="t1"
         )
-        assert calls == []
+        assert len(icu_calls) == 1
+        assert spatial_calls == []
 
 
 class TestTranslateSpatialError:

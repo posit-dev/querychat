@@ -24,7 +24,8 @@ from ._utils import querychat_tool_starts_open, read_prompt_template, truncate_e
 from ._viz_altair_widget import AltairWidget, fit_chart_to_container
 from ._viz_ggsql import (
     ExecutorReader,
-    prewarm_compute_surface,
+    prewarm_icu,
+    prewarm_spatial,
     translate_spatial_error,
 )
 
@@ -230,8 +231,9 @@ def visualize_impl(
 
             if reader is None:
                 reader = CachingReader(ExecutorReader(executor))
+                prewarm_icu(reader)
                 if maps_available:
-                    maps_available = prewarm_compute_surface(reader)
+                    maps_available = prewarm_spatial(reader)
             spec = reader.execute(ggsql)
 
             raw_chart = VegaLiteWriter().render_chart(spec)

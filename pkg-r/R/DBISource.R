@@ -525,9 +525,10 @@ format_schema_from_details <- function(
       line <- paste(line, paste0("  Labels: ", labels_str), sep = "\n")
     }
     if (length(col$examples) > 0) {
-      shown <- head(col$examples, 5)
+      shown <- col$examples[seq_len(min(5L, length(col$examples)))]
       more <- if (length(col$examples) > 5) {
-        paste0(" … (", length(col$examples) - 5, " more)")
+        # (\u2026 is an ellipsis; R sources must stay ASCII for R CMD check)
+        paste0(" \u2026 (", length(col$examples) - 5, " more)")
       } else {
         ""
       }

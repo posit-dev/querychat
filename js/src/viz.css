@@ -183,7 +183,10 @@
 }
 
 .querychat-query-section bslib-code-editor .prism-code-editor {
-  background-color: var(--bs-light, #f8f8f8);
+  /* No background override: the active prism theme sets --editor__bg
+     (github-light/github-dark) to match the app's color mode. Forcing a
+     fixed light background here rendered dark-mode (light) syntax text
+     on a light background. */
   max-height: 200px;
   overflow-y: auto;
 }

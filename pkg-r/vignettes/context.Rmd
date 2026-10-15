@@ -103,9 +103,10 @@ Each entry under `tables` describes one table. Its `name` must match the table n
 - **`columns`**: A list of column annotations. Each column can have:
   - `name`: Column name (must match the actual column)
   - `type`: Semantic type hint — `string`, `number`, `number(id)`, `number(quantity)`, `date`, `enum`
-  - `constraints`: Optional list — `primary_key`, `foreign_key`
+  - `constraints`: Optional list — barewords like `primary_key`/`foreign_key`, or assertion objects (`assert` with an optional `language` and `description`)
   - `description`: What this column means in plain English
-  - `values`: For `enum` columns, the list of possible values
+  - `values`: For `enum` columns, the possible values — a list, or a value-to-label map (e.g. `{M: Male, F: Female}`)
+  - `range`: Optional `[min, max]` bounds (either end may be `null` for an open range). Replaces live min/max queries for the column
 
 Columns listed in the data dictionary are excluded from the auto-generated schema (since your description supersedes the auto-detected metadata). Columns not listed are still auto-detected as usual.
 

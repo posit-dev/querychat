@@ -17,14 +17,10 @@ from shinychat.types import ToolResultDisplay
 
 from shiny import ui
 
+from .__version import __version__
 from ._icons import bs_icon
 from ._tool_names import TOOL_VISUALIZE
-from ._utils import (
-    dep_version,
-    querychat_tool_starts_open,
-    read_prompt_template,
-    truncate_error,
-)
+from ._utils import querychat_tool_starts_open, read_prompt_template, truncate_error
 from ._viz_altair_widget import AltairWidget, fit_chart_to_container
 from ._viz_ggsql import (
     ExecutorReader,
@@ -303,7 +299,7 @@ def viz_dep() -> HTMLDependency:
     """HTMLDependency for viz-specific CSS and JS assets."""
     return HTMLDependency(
         "querychat-viz",
-        dep_version(),
+        __version__,
         source={
             "package": "querychat",
             "subdir": "static",

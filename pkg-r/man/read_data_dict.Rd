@@ -19,4 +19,9 @@ returned as a plain list and can be passed directly to \link{QueryChat} via the
 \code{data_dict} argument.
 
 If \code{name} is absent from the YAML file, it defaults to the file stem.
+
+Files written for older formats (a mapping-form \code{tables}, table entries
+without a \code{name}, or a \verb{$version} that is invalid or predates the first
+spec version) fail with a descriptive error. Files declaring a newer spec
+\verb{$version} warn and are read on a best-effort basis.
 }

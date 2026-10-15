@@ -8,6 +8,11 @@
 #'
 #' If `name` is absent from the YAML file, it defaults to the file stem.
 #'
+#' Files written for older formats (a mapping-form `tables`, table entries
+#' without a `name`, or a `$version` that is invalid or predates the first
+#' spec version) fail with a descriptive error. Files declaring a newer spec
+#' `$version` warn and are read on a best-effort basis.
+#'
 #' @param path Path to the YAML file.
 #'
 #' @return A named list with the structure of the YAML file.
@@ -36,12 +41,12 @@ read_data_dict <- function(path) {
 # opportunistically to keep the warning calibrated — it is not a hard gate.
 .dd_known_spec_version <- numeric_version("0.1.0")
 
-#' Warn about data-dict spec compatibility problems.
+#' Check a data dict for spec compatibility problems.
 #'
-#' pkg-r intentionally does not fully validate data dictionaries, but a few
-#' problems are worth surfacing because they otherwise fail silently: a
-#' `$version` newer than the spec version querychat understands, `tables` in
-#' the legacy mapping format, and table entries without a `name`.
+#' Old or malformed files fail hard — there is a clear migration path, and
+#' reading on would silently produce a degraded dictionary. Files declaring
+#' a newer spec `$version` are only warned about: they may use purely
+#' additive features, so they are read on a best-effort basis.
 #'
 #' @param dd A data dict list (from [yaml::read_yaml()]).
 #' @noRd
@@ -52,21 +57,18 @@ dd_check_spec_compat <- function(dd) {
       numeric_version(as.character(version)),
       error = function(e) NULL
     )
-    if (is.null(v)) {
-      cli::cli_warn(c(
-        "!" = "Data dictionary has an invalid {.field $version}: {.val {version}}.",
-        "i" = "Expected a version like {.val 0.1.0}; see {.url https://data-dict.tidyverse.org/spec.html}."
+    if (is.null(v) || v < .dd_first_spec_version) {
+      cli::cli_abort(c(
+        "Data dictionary declares {.field $version} {.val {version}}, which is not a data-dict spec version this version of {.pkg querychat} can read.",
+        "i" = "The first spec version is {.val {as.character(.dd_first_spec_version)}}; update the file to the current spec ({.url https://data-dict.tidyverse.org/spec.html}).",
+        "i" = "{.code data-dict validate-spec <file>} checks a file against the spec."
       ))
-    } else if (v > .dd_known_spec_version) {
+    }
+    if (v > .dd_known_spec_version) {
       cli::cli_warn(c(
         "!" = "Data dictionary declares {.field $version} {.val {version}}, which is newer than the newest data-dict spec version this version of {.pkg querychat} fully understands ({.val {as.character(.dd_known_spec_version)}}).",
         "i" = "The file is read on a best-effort basis — spec fields querychat doesn't know about are ignored.",
         "i" = "If anything looks off, consider upgrading {.pkg querychat} or running {.code data-dict validate-spec <file>}."
-      ))
-    } else if (v < .dd_first_spec_version) {
-      cli::cli_warn(c(
-        "!" = "Data dictionary declares {.field $version} {.val {version}}, which predates the first data-dict spec version (0.1.0).",
-        "i" = "See {.url https://data-dict.tidyverse.org/spec.html}."
       ))
     }
   }
@@ -78,12 +80,11 @@ dd_check_spec_compat <- function(dd) {
 
   table_names <- names(tables)
   if (!is.null(table_names) && any(nzchar(table_names))) {
-    cli::cli_warn(c(
-      "!" = "Data dictionary {.field tables} uses an outdated format and will be ignored.",
+    cli::cli_abort(c(
+      "Data dictionary {.field tables} uses an outdated format.",
       "i" = "{.field tables} must be a list of tables, each with a {.field name} field — not a mapping of name to definition.",
       "i" = "Update the file to the current spec ({.url https://data-dict.tidyverse.org/spec.html}); {.code data-dict validate-spec <file>} checks a file against the spec."
     ))
-    return(invisible(dd))
   }
 
   unnamed <- vapply(
@@ -95,8 +96,8 @@ dd_check_spec_compat <- function(dd) {
     logical(1)
   )
   if (any(unnamed)) {
-    cli::cli_warn(c(
-      "!" = "{sum(unnamed)} table entr{?y/ies} in the data dictionary ha{?s/ve} no {.field name} and will be ignored.",
+    cli::cli_abort(c(
+      "{sum(unnamed)} table entr{?y/ies} in the data dictionary ha{?s/ve} no {.field name}.",
       "i" = "Each entry in {.field tables} needs a {.field name}; see {.url https://data-dict.tidyverse.org/spec.html}."
     ))
   }

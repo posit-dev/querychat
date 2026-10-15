@@ -89,15 +89,15 @@ def test_newer_spec_version_warns_but_is_read(tmp_path: Path) -> None:
     assert dd.tables == []
 
 
-def test_spec_version_predating_first_spec_warns() -> None:
-    with pytest.warns(UserWarning, match="predates the first"):
+def test_spec_version_predating_first_spec_errors() -> None:
+    with pytest.raises(ValidationError, match="not a data-dict spec version"):
         DataDict.model_validate({"$version": "0.0.9"})
 
 
-def test_invalid_spec_version_warns(tmp_path: Path) -> None:
+def test_invalid_spec_version_errors(tmp_path: Path) -> None:
     f = tmp_path / "spec.yaml"
     f.write_text('$version: "not-a-version"\n')
-    with pytest.warns(UserWarning, match=r"invalid `\$version`"):
+    with pytest.raises(ValidationError, match="not a data-dict spec version"):
         DataDict.from_yaml(f)
 
 

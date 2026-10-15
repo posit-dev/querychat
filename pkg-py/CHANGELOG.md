@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Breaking changes
+
+* `DataDict` now follows the current [data-dict spec](https://data-dict.tidyverse.org/spec.html): `tables` is a list of tables each with a `name` field (previously a mapping of name to definition), column `range` is a two-element `[min, max]` list, `values` may be a value-to-label map, and `constraints` may include assertion objects. Files written in the older mapping format fail with a descriptive error explaining how to update. Files declaring a `$version` newer than the spec version querychat understands are still read on a best-effort basis (unknown fields are ignored), with a warning. (#316)
+
 ### New features
 
 * Data dictionaries now support more of the data-dict spec: table-level assertion `constraints`, column `label`, `time_zone`, and `examples`, and relationship `aliases`/`conflicts`. Labels from value-to-label maps are shown to the LLM alongside the raw values, so it can interpret codes without writing them into SQL incorrectly. Columns marked `display: restricted` are hidden from the schema card shown to users (the LLM still sees them, marked as restricted). (#316 follow-up)
@@ -14,8 +18,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * **Faster iterative visualization, and support for layer-level data sources.** Visualization queries now execute as a whole through `ggsql.CachingReader`: the underlying SQL runs against your data source once and the result is memoized for the chat session, so re-rendering a chart with a different encoding no longer re-queries the source (a win for remote databases especially). Visualization layers can also draw from other relations in the query — e.g. raw points from the final `SELECT` with a summary line from a CTE — via `DRAW ... MAPPING ... FROM <source>`. Caching can be tuned or disabled with the `GGSQL_CACHE_TTL`, `GGSQL_CACHE_MAX_BYTES`, and `GGSQL_CACHE_DISABLED` environment variables. (#321)
 
 ### Bug fixes
-
-* `DataDict` now follows the current [data-dict spec](https://data-dict.tidyverse.org/spec.html): `tables` is a list of tables each with a `name` field (previously a mapping of name to definition), column `range` is a two-element `[min, max]` list, `values` may be a value-to-label map, and `constraints` may include assertion objects. Files written in the older mapping format fail with a descriptive error explaining how to update. (#316)
 
 * JSON pins now fall back to `pin_read()` when DuckDB's JSON extension cannot be installed or loaded, including on builds that disable extension loading. Native DuckDB JSON reading is retained when the extension is available.
 

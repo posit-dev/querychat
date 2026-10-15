@@ -184,10 +184,12 @@
 }
 
 .querychat-query-section bslib-code-editor .prism-code-editor {
-  /* No background override: the active prism theme sets --editor__bg
-     (github-light/github-dark) to match the app's color mode. Forcing a
-     fixed light background here rendered dark-mode (light) syntax text
-     on a light background. */
+  /* Mode-aware inset panel: --bs-tertiary-bg is a subtle off-card gray in
+     both color modes (Bootstrap 5.3), preserving the original design's
+     light-mode panel without forcing a fixed light background (which made
+     dark-mode's light syntax text illegible on a light background).
+     The fallback matches the original --bs-light value. */
+  background-color: var(--bs-tertiary-bg, #f8f8f8);
   max-height: 200px;
   overflow-y: auto;
 }

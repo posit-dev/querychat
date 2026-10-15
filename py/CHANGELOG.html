@@ -252,7 +252,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="bug-fixes" class="level3">
 <h3 class="anchored" data-anchor-id="bug-fixes">Bug fixes</h3>
 <ul>
-<li>JSON pins now fall back to <code>pin_read()</code> when DuckDB’s JSON extension cannot be installed or loaded, including on builds that disable extension loading. Native DuckDB JSON reading is retained when the extension is available.</li>
+<li><p>JSON pins now fall back to <code>pin_read()</code> when DuckDB’s JSON extension cannot be installed or loaded, including on builds that disable extension loading. Native DuckDB JSON reading is retained when the extension is available.</p></li>
+<li><p>Fixed SQL code blocks (the visualization footer’s “Show Query” editor and the data drawer’s SQL editor) rendering illegibly in dark mode — light syntax-highlighted text on a forced light background. The code panel background now adapts to the app’s color mode. (#329)</p></li>
 </ul>
 </section>
 </section>

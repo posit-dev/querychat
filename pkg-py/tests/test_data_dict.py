@@ -1,3 +1,4 @@
+import warnings
 from pathlib import Path
 
 import narwhals.stable.v1 as nw
@@ -78,6 +79,40 @@ def test_from_yaml_legacy_dict_tables_error(tmp_path: Path) -> None:
     f.write_text("tables:\n  orders:\n    columns: []\n")
     with pytest.raises(ValidationError, match="outdated format"):
         DataDict.from_yaml(f)
+
+
+def test_newer_spec_version_warns_but_is_read(tmp_path: Path) -> None:
+    f = tmp_path / "spec.yaml"
+    f.write_text('$version: "0.2.0"\ntables: []\n')
+    with pytest.warns(UserWarning, match="best-effort basis"):
+        dd = DataDict.from_yaml(f)
+    assert dd.tables == []
+
+
+def test_spec_version_predating_first_spec_warns() -> None:
+    with pytest.warns(UserWarning, match="predates the first"):
+        DataDict.model_validate({"$version": "0.0.9"})
+
+
+def test_invalid_spec_version_warns(tmp_path: Path) -> None:
+    f = tmp_path / "spec.yaml"
+    f.write_text('$version: "not-a-version"\n')
+    with pytest.warns(UserWarning, match=r"invalid `\$version`"):
+        DataDict.from_yaml(f)
+
+
+def test_known_spec_version_ok(tmp_path: Path) -> None:
+    f = tmp_path / "spec.yaml"
+    f.write_text('$version: "0.1.0"\ntables: []\n')
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        assert DataDict.from_yaml(f).tables == []
+
+    # Short forms are zero-padded ("0.1" == "0.1.0")
+    f.write_text('$version: "0.1"\ntables: []\n')
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        assert DataDict.from_yaml(f).tables == []
 
 
 def test_table_requires_name(tmp_path: Path) -> None:

@@ -96,6 +96,56 @@ describe("dd_tables_by_name()", {
     dd <- list(tables = list(list(description = "No name")))
     expect_equal(dd_tables_by_name(dd), list())
   })
+
+  it("keeps the first entry on duplicate names", {
+    dd <- list(
+      tables = list(
+        list(name = "orders", description = "First"),
+        list(name = "orders", description = "Second")
+      )
+    )
+    tables <- dd_tables_by_name(dd)
+    expect_equal(tables[["orders"]][["description"]], "First")
+  })
+})
+
+describe("dd_check_spec_compat()", {
+  it("accepts the supported $version without warning", {
+    yaml_file <- withr::local_tempfile(fileext = ".yaml")
+    writeLines('$version: "0.1.0"', yaml_file)
+    expect_no_warning(read_data_dict(yaml_file))
+  })
+
+  it("warns when $version is newer, but still reads the file", {
+    yaml_file <- withr::local_tempfile(fileext = ".yaml")
+    writeLines('$version: "99.0.0"', yaml_file)
+    expect_warning(dd <- read_data_dict(yaml_file), "best-effort basis")
+    expect_equal(dd[["$version"]], "99.0.0")
+  })
+
+  it("warns when $version predates the first spec version", {
+    yaml_file <- withr::local_tempfile(fileext = ".yaml")
+    writeLines('$version: "0.0.9"', yaml_file)
+    expect_warning(read_data_dict(yaml_file), "predates the first")
+  })
+
+  it("warns when $version is invalid", {
+    yaml_file <- withr::local_tempfile(fileext = ".yaml")
+    writeLines('$version: "not-a-version"', yaml_file)
+    expect_warning(read_data_dict(yaml_file), "invalid")
+  })
+
+  it("warns when tables uses the legacy mapping format", {
+    yaml_file <- withr::local_tempfile(fileext = ".yaml")
+    writeLines(c("tables:", "  orders:", "    columns: []"), yaml_file)
+    expect_warning(read_data_dict(yaml_file), "outdated format")
+  })
+
+  it("warns when a table entry has no name", {
+    yaml_file <- withr::local_tempfile(fileext = ".yaml")
+    writeLines(c("tables:", "  - description: No name"), yaml_file)
+    expect_warning(read_data_dict(yaml_file), "will be ignored")
+  })
 })
 
 describe("data_dict_to_prompt_list()", {

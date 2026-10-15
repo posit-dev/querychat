@@ -100,7 +100,7 @@ glossary:
 Each entry under `tables` describes one table. Its `name` must match the table name you pass to `QueryChat$new()` or `$add_table()`.
 
 - **`description`**: What this table represents (one sentence is usually enough).
-- **`label`**: Optional display title, shown alongside the table in the schema view.
+- **`label`**: Optional display title for the table, included in the LLM's context.
 - **`constraints`**: Optional table-level assertions (e.g. `- assert: end_date >= start_date`), conveyed to the LLM when it fetches the table's schema.
 - **`columns`**: A list of column annotations. Each column can have:
   - `name`: Column name (must match the actual column)

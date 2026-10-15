@@ -216,6 +216,9 @@ def _parse_spec_version(value: Any) -> tuple[int, int, int] | None:
 
 
 def _check_spec_version(version: Any) -> None:
+    if version is None:
+        # `$version:` with no value means the same as omitting it
+        return
     parsed = _parse_spec_version(version)
     if parsed is None:
         warnings.warn(

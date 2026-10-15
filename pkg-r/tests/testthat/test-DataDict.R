@@ -116,6 +116,12 @@ describe("dd_check_spec_compat()", {
     expect_no_warning(read_data_dict(yaml_file))
   })
 
+  it("treats a null $version as absent", {
+    yaml_file <- withr::local_tempfile(fileext = ".yaml")
+    writeLines(c("$version:", "tables: []"), yaml_file)
+    expect_no_warning(read_data_dict(yaml_file))
+  })
+
   it("warns when $version is newer, but still reads the file", {
     yaml_file <- withr::local_tempfile(fileext = ".yaml")
     writeLines('$version: "99.0.0"', yaml_file)

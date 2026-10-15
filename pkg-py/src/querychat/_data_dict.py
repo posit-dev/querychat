@@ -268,7 +268,17 @@ class DataDict(BaseModel):
             result["description"] = self.description
         if self.tables:
             result["tables"] = {
-                t.name: ({"description": t.description} if t.description else None)
+                t.name: (
+                    {
+                        k: v
+                        for k, v in {
+                            "description": t.description,
+                            "label": t.label,
+                        }.items()
+                        if v is not None
+                    }
+                    or None
+                )
                 for t in self.tables
             }
         if self.relationships:
@@ -299,31 +309,7 @@ class DataDict(BaseModel):
         for meta in metas:
             spec = documented.get(meta.name)
             if spec is not None:
-                if spec.type is not None:
-                    meta.sql_type = spec.type
-                if spec.range is not None:
-                    meta.min_val = spec.range[0]
-                    meta.max_val = spec.range[1]
-                if spec.values is not None:
-                    if isinstance(spec.values, dict):
-                        meta.categories = [str(k) for k in spec.values]
-                        meta.value_labels = dict(spec.values)
-                    else:
-                        meta.categories = [str(v) for v in spec.values]
-                if spec.description is not None:
-                    meta.description = spec.description
-                if spec.units is not None:
-                    meta.units = spec.units
-                if spec.constraints:
-                    meta.constraints = [str(c) for c in spec.constraints]
-                if spec.label is not None:
-                    meta.label = spec.label
-                if spec.time_zone is not None:
-                    meta.time_zone = spec.time_zone
-                if spec.display is not None:
-                    meta.display = spec.display
-                if spec.examples is not None and spec.display != "restricted":
-                    meta.examples = [str(e) for e in spec.examples]
+                _apply_column_spec(meta, spec)
             else:
                 undocumented.append(meta)
 
@@ -354,3 +340,32 @@ class DataDict(BaseModel):
         if dd.name is None:
             dd = dd.model_copy(update={"name": path.stem})
         return dd
+
+
+def _apply_column_spec(meta: ColumnMeta, spec: ColumnSpec) -> None:
+    """Overlay a :class:`ColumnSpec` onto a live :class:`ColumnMeta`."""
+    if spec.type is not None:
+        meta.sql_type = spec.type
+    if spec.range is not None:
+        meta.min_val = spec.range[0]
+        meta.max_val = spec.range[1]
+    if spec.values is not None:
+        if isinstance(spec.values, dict):
+            meta.categories = [str(k) for k in spec.values]
+            meta.value_labels = dict(spec.values)
+        else:
+            meta.categories = [str(v) for v in spec.values]
+    if spec.description is not None:
+        meta.description = spec.description
+    if spec.units is not None:
+        meta.units = spec.units
+    if spec.constraints:
+        meta.constraints = [str(c) for c in spec.constraints]
+    if spec.label is not None:
+        meta.label = spec.label
+    if spec.time_zone is not None:
+        meta.time_zone = spec.time_zone
+    if spec.display is not None:
+        meta.display = spec.display
+    if spec.examples is not None and spec.display != "restricted":
+        meta.examples = [str(e) for e in spec.examples]

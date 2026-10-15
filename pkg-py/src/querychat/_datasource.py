@@ -76,6 +76,10 @@ class ColumnMeta:
     """Time zone for datetime columns, from the data dictionary."""
 
 
+MAX_SCHEMA_EXAMPLES = 5
+"""Maximum number of data-dict example values shown per column in schema text."""
+
+
 def format_schema(table_name: str, columns: list[ColumnMeta]) -> str:
     """Format column metadata into schema string."""
     lines = [f"Table: {table_name}", "Columns:"]
@@ -109,10 +113,10 @@ def format_schema(table_name: str, columns: list[ColumnMeta]) -> str:
             labels = ", ".join(f"{k}={v}" for k, v in col.value_labels.items())
             lines.append(f"  Labels: {labels}")
         if col.examples:
-            shown = col.examples[:5]
+            shown = col.examples[:MAX_SCHEMA_EXAMPLES]
             more = (
-                f" … ({len(col.examples) - 5} more)"
-                if len(col.examples) > 5
+                f" … ({len(col.examples) - MAX_SCHEMA_EXAMPLES} more)"
+                if len(col.examples) > MAX_SCHEMA_EXAMPLES
                 else ""
             )
             lines.append(f"  Examples: {', '.join(shown)}{more}")

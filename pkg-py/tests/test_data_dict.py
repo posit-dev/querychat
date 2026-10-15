@@ -413,3 +413,23 @@ def test_get_table_schema_new_column_fields() -> None:
     assert ssn.examples == []  # withheld on restricted columns
 
     assert col_map["created_at"].time_zone == "America/Chicago"
+
+
+def test_to_prompt_dict_new_pass_throughs() -> None:
+    from querychat._data_dict import RelationshipSpec
+
+    dd = DataDict(
+        tables=[TableSpec(name="orders", description="Orders", label="Orders title")],
+        relationships=[
+            RelationshipSpec(
+                join="mother.otter_no = pup.pup_number",
+                cardinality="one-to-many",
+                aliases={"mother": "otters", "pup": "otters"},
+                conflicts=["description"],
+            )
+        ],
+    )
+    d = dd.to_prompt_dict()
+    assert d["tables"]["orders"]["label"] == "Orders title"
+    assert d["relationships"][0]["aliases"] == {"mother": "otters", "pup": "otters"}
+    assert d["relationships"][0]["conflicts"] == ["description"]

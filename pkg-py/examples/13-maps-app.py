@@ -1,4 +1,4 @@
-# QueryChat maps capability demo using Shiny Express.
+# QueryChat maps capability demo — chat-forward, using Shiny Express.
 #
 # Two real-world tables are registered:
 #
@@ -13,7 +13,6 @@
 #
 # - "Map the earthquakes from the past month, sized by magnitude"
 # - "Draw a choropleth of GDP by country"
-# - "Show a globe of earthquake epicenters"
 #
 # Usage:
 #     cd pkg-py
@@ -22,6 +21,7 @@
 import pandas as pd
 from querychat.express import QueryChat
 from shiny.express import render, ui
+from shinychat import chat_nav_panel
 
 # Real-time USGS feed: all magnitude 2.5+ earthquakes, past 30 days
 earthquakes = pd.read_csv(
@@ -45,25 +45,43 @@ Maps are enabled! Try asking:
 
 * <span class='suggestion'>Map the earthquakes from the past month, sized by magnitude</span>
 * <span class='suggestion'>Draw a choropleth of GDP by country</span>
-* <span class='suggestion'>Map earthquakes in the Pacific on an orthographic globe</span>
 """
 
+# 1. Provide data sources to QueryChat, with the opt-in "maps" capability
 qc = QueryChat(earthquakes, "earthquakes", greeting=greeting, tools=("default", "maps"))
 qc.add_table(gdp, "gdp")
-qc.sidebar()
 
-with ui.navset_card_underline():
-    with ui.nav_panel("Earthquakes"):
+# 2. Hold the reactive data views for the secondary pages (qc.page() owns the
+#    entire page, so outputs can't live at the top level)
+with ui.hold() as earthquakes_view, ui.card(fill=True):
 
-        @render.data_frame
-        def earthquakes_table():
-            return qc.table("earthquakes").df()
+    @render.data_frame
+    def earthquakes_table():
+        return qc.table("earthquakes").df()
 
-    with ui.nav_panel("GDP"):
+with ui.hold() as gdp_view, ui.card(fill=True):
 
-        @render.data_frame
-        def gdp_table():
-            return qc.table("gdp").df()
+    @render.data_frame
+    def gdp_table():
+        return qc.table("gdp").df()
 
-
-ui.page_opts(title="QueryChat Maps Demo", fillable=True)
+# 3. Create a chat-first page (the chat owns the full window)
+qc.page(
+    "QueryChat Maps Demo",
+    pages_navbar=[
+        chat_nav_panel(
+            "Earthquakes",
+            earthquakes_view,
+            value="earthquakes",
+            sidebar=False,
+            content_width="100%",
+        ),
+        chat_nav_panel(
+            "GDP",
+            gdp_view,
+            value="gdp",
+            sidebar=False,
+            content_width="100%",
+        ),
+    ],
+)

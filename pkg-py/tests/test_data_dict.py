@@ -348,3 +348,15 @@ def test_values_map_accepts_numeric_keys(tmp_path: Path) -> None:
     )
     dd = DataDict.from_yaml(f)
     assert dd.tables[0].columns[0].values == {"0": "Control", "1": "Treatment"}
+
+
+def test_range_infinity_sentinels_mean_open(tmp_path: Path) -> None:
+    f = tmp_path / "spec.yaml"
+    f.write_text(
+        "tables:\n  - name: orders\n    columns:\n"
+        "      - name: amount\n        range: [0, .inf]\n"
+        "      - name: score\n        range: [-.inf, 100]\n"
+    )
+    dd = DataDict.from_yaml(f)
+    assert dd.tables[0].columns[0].range == [0, None]
+    assert dd.tables[0].columns[1].range == [None, 100]

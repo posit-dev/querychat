@@ -390,11 +390,20 @@ build_column_details_impl <- function(
 
     if (col %in% numeric_columns) {
       if (!is.null(spec[["range"]])) {
-        # Spec form: two-element list [min, max]; either end may be null.
+        # Spec form: two-element list [min, max]. Either end may be open:
+        # null, or the spec's -.inf/.inf sentinels (which parse as -Inf/Inf).
         # (`[` indexing pads short lists with NULL instead of erroring.)
         rng <- unname(spec[["range"]])
-        min_val <- as.character(rng[1][[1]] %||% "?")
-        max_val <- as.character(rng[2][[1]] %||% "?")
+        lo <- rng[1][[1]]
+        hi <- rng[2][[1]]
+        if (is.numeric(lo) && is.infinite(lo)) {
+          lo <- NULL
+        }
+        if (is.numeric(hi) && is.infinite(hi)) {
+          hi <- NULL
+        }
+        min_val <- as.character(lo %||% "?")
+        max_val <- as.character(hi %||% "?")
       } else {
         min_key <- paste0(col, "__min")
         max_key <- paste0(col, "__max")

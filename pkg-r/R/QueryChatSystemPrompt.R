@@ -85,8 +85,9 @@ QueryChatSystemPrompt <- R6::R6Class(
         # (table-less) dict carrying a dict-level description.
         self$data_dicts <- Filter(
           function(dd) {
-            length(intersect(names(dd$tables), resolved)) > 0 ||
-              (length(dd$tables) == 0 && !is.null(dd$description))
+            tbl_names <- names(dd_tables_by_name(dd))
+            length(intersect(tbl_names, resolved)) > 0 ||
+              (length(tbl_names) == 0 && !is.null(dd$description))
           },
           self$data_dicts
         )
@@ -217,7 +218,10 @@ QueryChatSystemPrompt <- R6::R6Class(
         d$name <- NULL
         d$description <- NULL
 
-        claimed <- intersect(names(self$data_sources), names(dd$tables))
+        claimed <- intersect(
+          names(self$data_sources),
+          names(dd_tables_by_name(dd))
+        )
         all_claimed <- c(all_claimed, claimed)
         if (!is.null(d$tables)) {
           d$tables <- d$tables[names(d$tables) %in% names(self$data_sources)]

@@ -31,6 +31,7 @@ dependencies = [
     "great-tables>=0.16.0",
     "pyyaml",
     "nbformat>=5.10.4",
+    "packaging",
 ]
 classifiers = [
     "Programming Language :: Python",

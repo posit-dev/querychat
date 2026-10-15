@@ -45,14 +45,14 @@ qc$add_table(customers, "customers")
 
 ### Format
 
-A data dictionary has three top-level sections: `tables`, `relationships`, and `glossary`.
+The file format is defined by the [data-dict spec](https://data-dict.tidyverse.org/spec.html). A data dictionary has three top-level sections: `tables` (a list of tables, each with a `name`), `relationships`, and `glossary`. The optional `$version` field declares the spec version the file conforms to. A `$version` that is invalid or predates the first spec version fails with a descriptive error; a file declaring a version newer than querychat understands warns at load time but is still read on a best-effort basis.
 
 ```yaml
 # data-dict.yaml
-version: "0.2.0"
+$version: "0.1.0"
 
 tables:
-  orders:
+  - name: orders
     description: One row per customer order.
     columns:
       - name: order_id
@@ -71,7 +71,7 @@ tables:
         values: [pending, shipped, delivered, cancelled]
         description: Current order status.
 
-  customers:
+  - name: customers
     description: One row per customer.
     columns:
       - name: id
@@ -97,15 +97,16 @@ glossary:
 
 #### Tables
 
-Each entry under `tables` describes one table. The key must match the table name you pass to `QueryChat$new()` or `$add_table()`.
+Each entry under `tables` describes one table. Its `name` must match the table name you pass to `QueryChat$new()` or `$add_table()`.
 
 - **`description`**: What this table represents (one sentence is usually enough).
 - **`columns`**: A list of column annotations. Each column can have:
   - `name`: Column name (must match the actual column)
   - `type`: Semantic type hint — `string`, `number`, `number(id)`, `number(quantity)`, `date`, `enum`
-  - `constraints`: Optional list — `primary_key`, `foreign_key`
+  - `constraints`: Optional list — barewords like `primary_key`/`foreign_key`, or assertion objects (`assert` with an optional `language` and `description`)
   - `description`: What this column means in plain English
-  - `values`: For `enum` columns, the list of possible values
+  - `values`: For `enum` columns, the possible values — a list, or a value-to-label map (e.g. `{M: Male, F: Female}`)
+  - `range`: Optional `[min, max]` bounds. Either end may be left open with the `-.inf`/`.inf` sentinels (or `null`) — if you leave a bound open, describe the range in prose in the column's `description`. Replaces live min/max queries for the column
 
 Columns listed in the data dictionary are excluded from the auto-generated schema (since your description supersedes the auto-detected metadata). Columns not listed are still auto-detected as usual.
 

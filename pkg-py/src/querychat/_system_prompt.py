@@ -50,7 +50,7 @@ class QueryChatSystemPrompt:
             self._data_dicts = [
                 dd
                 for dd in self._data_dicts
-                if any(n in resolved for n in dd.tables)
+                if any(t.name in resolved for t in dd.tables)
                 or (not dd.tables and dd.description)
             ]
             update: dict[str, object] = {}
@@ -119,7 +119,7 @@ class QueryChatSystemPrompt:
             d.pop("name", None)
             d.pop("description", None)
 
-            claimed = {n for n in self._data_sources if n in dd.tables}
+            claimed = {t.name for t in dd.tables if t.name in self._data_sources}
             all_claimed.update(claimed)
             if "tables" in d:
                 d["tables"] = {

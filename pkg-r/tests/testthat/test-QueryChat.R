@@ -1783,7 +1783,7 @@ describe("QueryChatGreeter", {
         "name: orders_dict",
         "description: ORDERS_DICT_DESC",
         "tables:",
-        "  orders:",
+        "  - name: orders",
         "    description: Orders info"
       ),
       orders_yaml
@@ -1794,7 +1794,7 @@ describe("QueryChatGreeter", {
         "name: customers_dict",
         "description: CUSTOMERS_DICT_DESC",
         "tables:",
-        "  customers:",
+        "  - name: customers",
         "    description: Customers info"
       ),
       customers_yaml
@@ -1831,7 +1831,7 @@ describe("QueryChatGreeter", {
         "name: orders_dict",
         "description: ORDERS_DICT_DESC",
         "tables:",
-        "  orders:",
+        "  - name: orders",
         "    description: Orders info",
         "relationships:",
         "  - join: orders.id = customers.id",

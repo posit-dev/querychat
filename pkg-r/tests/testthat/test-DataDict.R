@@ -3,10 +3,11 @@ describe("read_data_dict()", {
     yaml_file <- withr::local_tempfile(fileext = ".yaml")
     writeLines(
       c(
+        "$version: \"0.1.0\"",
         "name: test",
         "description: Test domain",
         "tables:",
-        "  orders:",
+        "  - name: orders",
         "    description: Orders table",
         "    columns:",
         "      - name: id",
@@ -26,10 +27,11 @@ describe("read_data_dict()", {
     expect_true(is.list(dd))
     expect_equal(dd[["name"]], "test")
     expect_equal(dd[["description"]], "Test domain")
-    expect_true(is.list(dd[["tables"]][["orders"]]))
-    expect_equal(dd[["tables"]][["orders"]][["description"]], "Orders table")
-    expect_length(dd[["tables"]][["orders"]][["columns"]], 1)
-    expect_equal(dd[["tables"]][["orders"]][["columns"]][[1]][["name"]], "id")
+    orders <- dd[["tables"]][[1]]
+    expect_equal(orders[["name"]], "orders")
+    expect_equal(orders[["description"]], "Orders table")
+    expect_length(orders[["columns"]], 1)
+    expect_equal(orders[["columns"]][[1]][["name"]], "id")
     expect_length(dd[["relationships"]], 1)
     expect_equal(
       dd[["relationships"]][[1]][["join"]],
@@ -51,12 +53,10 @@ describe("read_data_dict()", {
     writeLines(
       c(
         "tables:",
-        "  products:",
+        "  - name: products",
         "    columns:",
         "      - name: price",
-        "        range:",
-        "          min: 0",
-        "          max: 999",
+        "        range: [0, 999]",
         "      - name: category",
         "        values: [A, B, C]"
       ),
@@ -64,13 +64,93 @@ describe("read_data_dict()", {
     )
 
     dd <- read_data_dict(yaml_file)
-    cols <- dd[["tables"]][["products"]][["columns"]]
+    cols <- dd[["tables"]][[1]][["columns"]]
     price_col <- cols[[1]]
     cat_col <- cols[[2]]
 
-    expect_equal(price_col[["range"]][["min"]], 0)
-    expect_equal(price_col[["range"]][["max"]], 999)
+    expect_equal(price_col[["range"]][[1]], 0)
+    expect_equal(price_col[["range"]][[2]], 999)
     expect_equal(cat_col[["values"]], c("A", "B", "C"))
+  })
+})
+
+describe("dd_tables_by_name()", {
+  it("keys the table list by name", {
+    dd <- list(
+      tables = list(
+        list(name = "orders", description = "Orders"),
+        list(name = "customers", description = "Customers")
+      )
+    )
+    tables <- dd_tables_by_name(dd)
+    expect_equal(names(tables), c("orders", "customers"))
+    expect_equal(tables[["orders"]][["description"]], "Orders")
+  })
+
+  it("returns an empty list when there are no tables", {
+    expect_equal(dd_tables_by_name(list()), list())
+    expect_equal(dd_tables_by_name(list(tables = list())), list())
+  })
+
+  it("skips table entries without a name", {
+    dd <- list(tables = list(list(description = "No name")))
+    expect_equal(dd_tables_by_name(dd), list())
+  })
+
+  it("keeps the first entry on duplicate names", {
+    dd <- list(
+      tables = list(
+        list(name = "orders", description = "First"),
+        list(name = "orders", description = "Second")
+      )
+    )
+    tables <- dd_tables_by_name(dd)
+    expect_equal(tables[["orders"]][["description"]], "First")
+  })
+})
+
+describe("dd_check_spec_compat()", {
+  it("accepts the supported $version without warning", {
+    yaml_file <- withr::local_tempfile(fileext = ".yaml")
+    writeLines('$version: "0.1.0"', yaml_file)
+    expect_no_warning(read_data_dict(yaml_file))
+  })
+
+  it("treats a null $version as absent", {
+    yaml_file <- withr::local_tempfile(fileext = ".yaml")
+    writeLines(c("$version:", "tables: []"), yaml_file)
+    expect_no_warning(read_data_dict(yaml_file))
+  })
+
+  it("warns when $version is newer, but still reads the file", {
+    yaml_file <- withr::local_tempfile(fileext = ".yaml")
+    writeLines('$version: "99.0.0"', yaml_file)
+    expect_warning(dd <- read_data_dict(yaml_file), "best-effort basis")
+    expect_equal(dd[["$version"]], "99.0.0")
+  })
+
+  it("errors when $version predates the first spec version", {
+    yaml_file <- withr::local_tempfile(fileext = ".yaml")
+    writeLines('$version: "0.0.9"', yaml_file)
+    expect_error(read_data_dict(yaml_file), "can read")
+  })
+
+  it("errors when $version is invalid", {
+    yaml_file <- withr::local_tempfile(fileext = ".yaml")
+    writeLines('$version: "not-a-version"', yaml_file)
+    expect_error(read_data_dict(yaml_file), "can read")
+  })
+
+  it("errors when tables uses the legacy mapping format", {
+    yaml_file <- withr::local_tempfile(fileext = ".yaml")
+    writeLines(c("tables:", "  orders:", "    columns: []"), yaml_file)
+    expect_error(read_data_dict(yaml_file), "outdated format")
+  })
+
+  it("errors when a table entry has no name", {
+    yaml_file <- withr::local_tempfile(fileext = ".yaml")
+    writeLines(c("tables:", "  - description: No name"), yaml_file)
+    expect_error(read_data_dict(yaml_file), "has no")
   })
 })
 
@@ -92,7 +172,8 @@ describe("data_dict_to_prompt_list()", {
   it("includes table descriptions but strips column details", {
     dd <- list(
       tables = list(
-        orders = list(
+        list(
+          name = "orders",
           description = "Orders table",
           details = "Long details that should not appear",
           columns = list(
@@ -146,7 +227,7 @@ describe("data_dict_to_prompt_list()", {
   })
 
   it("includes table entry as NULL when table has no description", {
-    dd <- list(tables = list(no_desc = list()))
+    dd <- list(tables = list(list(name = "no_desc")))
     result <- data_dict_to_prompt_list(dd)
     expect_true("tables" %in% names(result))
     expect_null(result[["tables"]][["no_desc"]])

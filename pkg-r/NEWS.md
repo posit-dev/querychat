@@ -1,5 +1,9 @@
 # querychat (development version)
 
+## Breaking changes
+
+* Data dictionaries now follow the current [data-dict spec](https://data-dict.tidyverse.org/spec.html): `tables` must be a list of tables each with a `name` field (previously a mapping of name to definition), column `range` is a two-element `[min, max]` list, and `values` may be a value-to-label map. Update older dictionary files accordingly; `data-dict validate-spec` (from the data-dict CLI) checks a file against the spec. Files in the older mapping format, or with a `$version` that is invalid or predates the first spec version, fail with a descriptive error; files declaring a newer `$version` warn at load time but are still read on a best-effort basis. (#316)
+
 ## Bug fixes
 
 * JSON pins now fall back to `pins::pin_read()` when DuckDB's JSON extension cannot be installed or loaded, including on builds that disable extension loading. Native DuckDB JSON reading is retained when the extension is available.

@@ -68,6 +68,11 @@ def _get_schema_impl(
             columns = executor.get_column_details(table_name, categorical_threshold)
 
         schema_text = format_schema(table_name, columns)
+        if dd is not None:
+            tspec = dd.get_table(table_name)
+            if tspec is not None and tspec.constraints:
+                rendered = "\n".join(f"- {c}" for c in tspec.constraints)
+                schema_text += f"\n\nTable constraints:\n{rendered}"
         return GetSchemaResult(
             value=schema_text,
             table_name=table_name,
@@ -127,6 +132,9 @@ def tool_get_schema(
 
 
 def _schema_table(columns: list[ColumnMeta]) -> Tag:
+    # Restricted columns are LLM-visible (annotated in the schema text) but
+    # hidden from user-facing output per the data-dict spec.
+    columns = [c for c in columns if c.display != "restricted"]
     headers = ("Column", "Type", "Range / Values", "Description", "Constraints")
     rows: list[Tag] = []
 

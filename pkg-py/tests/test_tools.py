@@ -329,3 +329,34 @@ def test_get_schema_tool_uses_singular_column_preview() -> None:
     result = tool.func(table_name="orders")
 
     assert result.extra["display"].value_preview == "1 column"
+
+
+def test_schema_card_hides_restricted_columns() -> None:
+    from querychat.tools import _schema_table
+
+    cols = [
+        ColumnMeta(name="id", sql_type="INTEGER", kind="numeric"),
+        ColumnMeta(
+            name="ssn", sql_type="STRING", kind="text", display="restricted"
+        ),
+    ]
+    html = str(_schema_table(cols))
+    assert "id" in html
+    assert "ssn" not in html
+
+
+def test_get_schema_includes_table_constraints() -> None:
+    df = pl.DataFrame({"amount": [1, 2]})
+    executor, table_names = _make_executor_and_table(df, "orders")
+    dd = DataDict(
+        tables=[
+            TableSpec(
+                name="orders",
+                constraints=[{"assert": "amount >= 0", "description": "Non-negative"}],
+            )
+        ],
+    )
+    tool = tool_get_schema([dd], executor, table_names, categorical_threshold=10)
+    result = tool.func(table_name="orders")
+    assert "Table constraints:" in result.value
+    assert "- amount >= 0 (Non-negative)" in result.value

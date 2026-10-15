@@ -86,6 +86,12 @@ def format_schema(table_name: str, columns: list[ColumnMeta]) -> str:
             header += f" [{col.units}]"
         lines.append(header)
 
+        if col.display == "restricted":
+            lines.append("  [restricted: do not display in user-facing output]")
+        if col.label:
+            lines.append(f"  Label: {col.label}")
+        if col.time_zone:
+            lines.append(f"  Time zone: {col.time_zone}")
         if col.description:
             lines.append(f"  Description: {col.description}")
         if col.constraints:
@@ -99,6 +105,17 @@ def format_schema(table_name: str, columns: list[ColumnMeta]) -> str:
         elif col.categories:
             cats = ", ".join(f"'{v}'" for v in col.categories)
             lines.append(f"  Categorical values: {cats}")
+        if col.value_labels:
+            labels = ", ".join(f"{k}={v}" for k, v in col.value_labels.items())
+            lines.append(f"  Labels: {labels}")
+        if col.examples:
+            shown = col.examples[:5]
+            more = (
+                f" … ({len(col.examples) - 5} more)"
+                if len(col.examples) > 5
+                else ""
+            )
+            lines.append(f"  Examples: {', '.join(shown)}{more}")
 
     return "\n".join(lines)
 

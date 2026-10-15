@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Breaking changes
 
-* `DataDict` now follows the current [data-dict spec](https://data-dict.tidyverse.org/spec.html): `tables` is a list of tables each with a `name` field (previously a mapping of name to definition), column `range` is a two-element `[min, max]` list, `values` may be a value-to-label map, and `constraints` may include assertion objects. Files written in the older mapping format fail with a descriptive error explaining how to update. Files declaring a `$version` newer than the spec version querychat understands are still read on a best-effort basis (unknown fields are ignored), with a warning. (#316)
+* `DataDict` now follows the current [data-dict spec](https://data-dict.tidyverse.org/spec.html): `tables` is a list of tables each with a `name` field (previously a mapping of name to definition), column `range` is a two-element `[min, max]` list, `values` may be a value-to-label map, and `constraints` may include assertion objects. Files written in the older mapping format, or with a `$version` that is invalid or predates the first spec version, fail with a descriptive error explaining how to update. Files declaring a `$version` newer than the spec version querychat understands are still read on a best-effort basis (unknown fields are ignored), with a warning. (#316)
 
 ### New features
 

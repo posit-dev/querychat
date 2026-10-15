@@ -209,21 +209,19 @@ def _check_spec_version(version: Any) -> None:
     try:
         parsed = Version(str(version))
     except InvalidVersion:
-        warnings.warn(
-            f"This data dictionary has an invalid `$version`: {version!r}. "
-            'Expected a version like "0.1.0"; see '
-            "https://data-dict.tidyverse.org/spec.html",
-            stacklevel=3,
+        parsed = None
+    # Old or unreadable files fail hard: we can't establish they're readable,
+    # and there is a clear migration path (unlike newer files, which may only
+    # use additive features and are read on a best-effort basis below)
+    if parsed is None or parsed < _FIRST_SPEC_VERSION:
+        raise ValueError(
+            f"This data dictionary declares `$version: {version!r}`, which is "
+            "not a data-dict spec version this version of querychat can read "
+            f"(the first spec version is {_FIRST_SPEC_VERSION}). Update the "
+            "file to the current spec — `data-dict validate-spec <file>` "
+            "checks a file against the spec: "
+            "https://data-dict.tidyverse.org/spec.html"
         )
-        return
-    if parsed < _FIRST_SPEC_VERSION:
-        warnings.warn(
-            f'This data dictionary declares `$version: "{version}"`, which '
-            "predates the first data-dict spec version (0.1.0). See "
-            "https://data-dict.tidyverse.org/spec.html",
-            stacklevel=3,
-        )
-        return
     if parsed > _KNOWN_SPEC_VERSION:
         warnings.warn(
             f'This data dictionary declares `$version: "{version}"`, which is '

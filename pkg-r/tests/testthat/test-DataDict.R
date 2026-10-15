@@ -129,28 +129,28 @@ describe("dd_check_spec_compat()", {
     expect_equal(dd[["$version"]], "99.0.0")
   })
 
-  it("warns when $version predates the first spec version", {
+  it("errors when $version predates the first spec version", {
     yaml_file <- withr::local_tempfile(fileext = ".yaml")
     writeLines('$version: "0.0.9"', yaml_file)
-    expect_warning(read_data_dict(yaml_file), "predates the first")
+    expect_error(read_data_dict(yaml_file), "can read")
   })
 
-  it("warns when $version is invalid", {
+  it("errors when $version is invalid", {
     yaml_file <- withr::local_tempfile(fileext = ".yaml")
     writeLines('$version: "not-a-version"', yaml_file)
-    expect_warning(read_data_dict(yaml_file), "invalid")
+    expect_error(read_data_dict(yaml_file), "can read")
   })
 
-  it("warns when tables uses the legacy mapping format", {
+  it("errors when tables uses the legacy mapping format", {
     yaml_file <- withr::local_tempfile(fileext = ".yaml")
     writeLines(c("tables:", "  orders:", "    columns: []"), yaml_file)
-    expect_warning(read_data_dict(yaml_file), "outdated format")
+    expect_error(read_data_dict(yaml_file), "outdated format")
   })
 
-  it("warns when a table entry has no name", {
+  it("errors when a table entry has no name", {
     yaml_file <- withr::local_tempfile(fileext = ".yaml")
     writeLines(c("tables:", "  - description: No name"), yaml_file)
-    expect_warning(read_data_dict(yaml_file), "will be ignored")
+    expect_error(read_data_dict(yaml_file), "has no")
   })
 })
 

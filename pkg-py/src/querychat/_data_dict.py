@@ -333,7 +333,7 @@ class DataDict(BaseModel):
         for meta in metas:
             spec = documented.get(meta.name)
             if spec is not None:
-                _apply_column_spec(meta, spec)
+                apply_column_spec(meta, spec)
             else:
                 undocumented.append(meta)
 
@@ -366,7 +366,7 @@ class DataDict(BaseModel):
         return dd
 
 
-def _apply_column_spec(meta: ColumnMeta, spec: ColumnSpec) -> None:
+def apply_column_spec(meta: ColumnMeta, spec: ColumnSpec) -> None:
     """Overlay a :class:`ColumnSpec` onto a live :class:`ColumnMeta`."""
     if spec.type is not None:
         meta.sql_type = spec.type

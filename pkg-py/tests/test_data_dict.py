@@ -101,6 +101,14 @@ def test_invalid_spec_version_warns(tmp_path: Path) -> None:
         DataDict.from_yaml(f)
 
 
+def test_null_spec_version_means_absent(tmp_path: Path) -> None:
+    f = tmp_path / "spec.yaml"
+    f.write_text("$version:\ntables: []\n")
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        assert DataDict.from_yaml(f).tables == []
+
+
 def test_known_spec_version_ok(tmp_path: Path) -> None:
     f = tmp_path / "spec.yaml"
     f.write_text('$version: "0.1.0"\ntables: []\n')

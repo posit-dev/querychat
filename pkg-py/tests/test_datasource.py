@@ -584,3 +584,13 @@ def test_sqlalchemy_cleanup_does_not_dispose_caller_owned_engine(
 
     dispose.assert_not_called()
     assert len(source.get_data()) > 0
+
+
+def test_format_schema_open_ended_range() -> None:
+    cols = [
+        ColumnMeta(name="a", sql_type="INTEGER", kind="numeric", min_val=0),
+        ColumnMeta(name="b", sql_type="INTEGER", kind="numeric", max_val=100),
+    ]
+    text = format_schema("t", cols)
+    assert "  Range: 0 to ?" in text
+    assert "  Range: ? to 100" in text

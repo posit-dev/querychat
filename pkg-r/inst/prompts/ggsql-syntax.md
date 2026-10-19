@@ -513,34 +513,15 @@ PROJECT TO polar SETTING inner => 0.5
     VISUALISE FROM titanic
     DRAW bar MAPPING class AS x
     ```
-3. **In querychat, all layers must come from the final SQL result**: Do not use layer-specific `FROM source` inside `DRAW ... MAPPING ...` clauses. If you need raw data and a summary in one chart, put both into one final relation and distinguish layers with a column such as `layer_type`:
+3. **Layers can draw from other relations in the query**: Attach `FROM <source>` to a layer's `MAPPING` to combine different granularities in one chart — e.g. raw points from the final SELECT with a summary line from a CTE. The `FROM` belongs to `MAPPING` (a bare `DRAW line FROM t` is a parse error). Explicit layer mappings resolve against the layer's source; aesthetics the layer doesn't map are inherited from VISUALISE:
     ```sql
-    WITH raw AS (
-      SELECT
-        date,
-        amount,
-        region,
-        'raw' AS layer_type
-      FROM sales
-    ),
-    summary AS (
-      SELECT
-        date,
-        AVG(amount) AS amount,
-        region,
-        'summary' AS layer_type
-      FROM sales
-      GROUP BY date, region
-    ),
-    combined AS (
-      SELECT * FROM raw
-      UNION ALL
-      SELECT * FROM summary
+    WITH summary AS (
+      SELECT date, AVG(amount) AS amount FROM sales GROUP BY date
     )
-    SELECT * FROM combined
+    SELECT date, amount FROM sales
     VISUALISE date AS x, amount AS y
-    DRAW point MAPPING region AS color FILTER layer_type = 'raw'
-    DRAW line MAPPING region AS color FILTER layer_type = 'summary'
+    DRAW point SETTING opacity => 0.3
+    DRAW line MAPPING date AS x, amount AS y FROM summary
     ```
 4. **String values use single quotes**: In SETTING, LABEL, and RENAMING clauses, always use single quotes for string values. Double quotes cause parse errors.
 5. **Statistical layers**: When using `histogram`, `bar` (without y), `density`, `smooth`, `violin`, or `boxplot`, the layer computes statistics. Use REMAPPING to access `density`, `intensity`, `proportion`, etc.

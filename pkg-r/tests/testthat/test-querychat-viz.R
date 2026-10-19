@@ -1,66 +1,14 @@
-describe("extract_visualise_table()", {
-  it("extracts bare identifier", {
-    expect_equal(
-      extract_visualise_table(
-        "VISUALISE x AS x, y AS y FROM my_table DRAW point"
-      ),
-      "my_table"
-    )
-  })
-
-  it("extracts quoted identifier", {
-    expect_equal(
-      extract_visualise_table('VISUALISE x AS x FROM "My Table" DRAW point'),
-      '"My Table"'
-    )
-  })
-
-  it("returns NULL when no FROM in VISUALISE", {
-    expect_null(extract_visualise_table("VISUALISE x AS x, y AS y DRAW point"))
-  })
-
-  it("ignores FROM inside DRAW clause", {
-    visual <- "VISUALISE x AS x FROM data DRAW point MAPPING x FROM other"
-    expect_equal(extract_visualise_table(visual), "data")
-  })
-})
-
-describe("has_layer_level_source()", {
-  it("detects DRAW-level FROM source", {
-    expect_true(
-      has_layer_level_source(
-        "VISUALISE x AS x DRAW point MAPPING x FROM my_table"
-      )
-    )
-  })
-
-  it("ignores VISUALISE-level FROM", {
-    expect_false(
-      has_layer_level_source(
-        "VISUALISE x AS x FROM my_table DRAW point"
-      )
-    )
-  })
-
-  it("ignores SCALE FROM", {
-    expect_false(
-      has_layer_level_source(
-        "VISUALISE x AS x DRAW bar SCALE fill FROM 'red'"
-      )
-    )
-  })
-})
-
-describe("execute_ggsql()", {
+describe("ggsql execution through a caching reader", {
   skip_if_no_dataframe_engine()
-  skip_if_not_installed("ggsql")
+  skip_if_not_installed("ggsql", minimum_version = "0.5.2.9000")
 
   it("executes a basic ggsql query", {
     ds <- local_data_frame_source(new_test_df())
-    validated <- ggsql::ggsql_validate(
+    reader <- viz_caching_reader(ds)
+    spec <- ggsql::ggsql_execute(
+      reader,
       "SELECT * FROM test_table VISUALISE value AS x DRAW histogram"
     )
-    spec <- execute_ggsql(ds, validated)
     expect_s3_class(spec, "Spec")
   })
 
@@ -70,72 +18,105 @@ describe("execute_ggsql()", {
       listings = c(10, 20)
     )
     ds <- local_data_frame_source(df, table_name = "upper_table")
-    validated <- ggsql::ggsql_validate(
+    reader <- viz_caching_reader(ds)
+    spec <- ggsql::ggsql_execute(
+      reader,
       paste(
         "SELECT ROOM_TYPE, listings FROM upper_table",
         "VISUALISE ROOM_TYPE AS x, listings AS y DRAW bar"
       )
     )
-    spec <- execute_ggsql(ds, validated)
     expect_s3_class(spec, "Spec")
-  })
-
-  it("passes original column names through to ggsql", {
-    df <- data.frame(
-      ROOM_TYPE = c("Entire home", "Private room"),
-      listings = c(10, 20)
-    )
-    ds <- local_data_frame_source(df, table_name = "upper_table")
-    validated <- list(
-      sql = "SELECT ROOM_TYPE, listings FROM upper_table",
-      visual = "VISUALISE ROOM_TYPE AS x, listings AS y DRAW bar"
-    )
-    captured_names <- NULL
-
-    local_mocked_bindings(
-      duckdb_reader = function(...) "reader",
-      ggsql_register = function(reader, df, name) {
-        captured_names <<- names(df)
-        invisible(NULL)
-      },
-      ggsql_execute = function(reader, query) {
-        structure(list(), class = "Spec")
-      },
-      .package = "ggsql"
-    )
-
-    spec <- execute_ggsql(ds, validated)
-    expect_s3_class(spec, "Spec")
-    expect_equal(captured_names, c("ROOM_TYPE", "listings"))
   })
 
   it("supports FROM before VISUALISE", {
     ds <- local_data_frame_source(new_test_df())
-    validated <- ggsql::ggsql_validate(
+    reader <- viz_caching_reader(ds)
+    spec <- ggsql::ggsql_execute(
+      reader,
       "FROM test_table VISUALISE value AS x DRAW histogram"
     )
-    expect_true(validated$valid)
-    expect_true(validated$has_visual)
-    expect_equal(validated$sql, "SELECT * FROM test_table")
-    expect_equal(validated$visual, "VISUALISE value AS x DRAW histogram")
-
-    spec <- execute_ggsql(ds, validated)
     expect_s3_class(spec, "Spec")
   })
 
-  it("rejects layer-level FROM sources", {
+  it("supports layer-level FROM sources", {
+    # Previously rejected with "Layer-specific sources are not currently
+    # supported"; the caching reader stages each layer source through its
+    # private cache, so the query now runs end to end.
     ds <- local_data_frame_source(new_test_df())
-    # This is a synthetic test — construct a validated object whose
-    # visual has a layer-level source
-    expect_error(
-      {
-        validated <- list(
-          sql = "SELECT * FROM test_table",
-          visual = "VISUALISE value AS x DRAW point MAPPING x FROM other_table"
-        )
-        execute_ggsql(ds, validated)
-      },
-      "Layer-specific sources"
+    reader <- viz_caching_reader(ds)
+    spec <- ggsql::ggsql_execute(
+      reader,
+      "VISUALISE value AS x DRAW histogram MAPPING value AS x FROM test_table"
     )
+    expect_s3_class(spec, "Spec")
+  })
+
+  it("supports single-relation raw + summary overlay", {
+    df <- data.frame(
+      x = c(1, 1, 2, 2),
+      y = c(10, 20, 30, 40),
+      category = c("a", "b", "a", "b")
+    )
+    ds <- local_data_frame_source(df, table_name = "sales")
+    reader <- viz_caching_reader(ds)
+    query <- "
+    WITH raw AS (
+        SELECT x, y, category, 'raw' AS layer_type FROM sales
+    ),
+    summary AS (
+        SELECT x, AVG(y) AS y, category, 'summary' AS layer_type
+        FROM sales GROUP BY x, category
+    ),
+    combined AS (
+        SELECT * FROM raw UNION ALL SELECT * FROM summary
+    )
+    SELECT * FROM combined
+    VISUALISE x AS x, y AS y
+    DRAW point MAPPING category AS color FILTER layer_type = 'raw'
+    DRAW line MAPPING category AS color FILTER layer_type = 'summary'
+    "
+    spec <- ggsql::ggsql_execute(reader, query)
+    expect_s3_class(spec, "Spec")
+    expect_equal(ggsql::ggsql_metadata(spec)$rows, 4)
+  })
+})
+
+describe("viz caching behavior", {
+  skip_if_no_dataframe_engine()
+  skip_if_not_installed("ggsql", minimum_version = "0.5.2.9000")
+
+  # Wraps a DataFrameSource, counting base reads that reach it.
+  counting_executor <- function(ds) {
+    env <- new.env(parent = emptyenv())
+    env$calls <- 0L
+    env$execute_query <- function(sql) {
+      env$calls <- env$calls + 1L
+      ds$execute_query(sql)
+    }
+    env
+  }
+
+  it("identical queries share memoized source reads through one reader", {
+    ds <- local_data_frame_source(new_test_df())
+    executor <- counting_executor(ds)
+    reader <- viz_caching_reader(executor)
+
+    query <- "SELECT * FROM test_table VISUALISE value AS x DRAW point"
+    ggsql::ggsql_execute(reader, query)
+    ggsql::ggsql_execute(reader, query)
+    expect_equal(executor$calls, 1L)
+  })
+
+  it("independent readers do not share memoized reads", {
+    # Guards against reintroducing an implicit shared registry: readers own
+    # their caches, so two readers over one source each re-read it.
+    ds <- local_data_frame_source(new_test_df())
+    executor <- counting_executor(ds)
+
+    query <- "SELECT * FROM test_table VISUALISE value AS x DRAW point"
+    ggsql::ggsql_execute(viz_caching_reader(executor), query)
+    ggsql::ggsql_execute(viz_caching_reader(executor), query)
+    expect_equal(executor$calls, 2L)
   })
 })

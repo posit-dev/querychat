@@ -1,6 +1,6 @@
 describe("tool_visualize_dashboard()", {
   skip_if_no_dataframe_engine()
-  skip_if_not_installed("ggsql")
+  skip_if_not_installed("ggsql", minimum_version = "0.5.2.9000")
 
   it("creates a tool with correct name", {
     ds <- local_data_frame_source(new_test_df())
@@ -156,7 +156,6 @@ describe("tool_visualize_dashboard()", {
     )
 
     local_mocked_bindings(
-      execute_ggsql = function(...) structure(list(), class = "ggsql_spec"),
       build_viz_footer = function(...) htmltools::tagList(),
       .package = "querychat"
     )
@@ -165,6 +164,7 @@ describe("tool_visualize_dashboard()", {
         structure(list(valid = TRUE), class = "ggsql_validated")
       },
       ggsql_has_visual = function(...) TRUE,
+      ggsql_execute = function(...) structure(list(), class = "ggsql_spec"),
       renderGgsql = function(...) shiny::renderText("ok"),
       ggsqlOutput = function(id) htmltools::div(id = id),
       ggsql_save = function(...) rlang::abort("V8 is not installed"),
@@ -264,14 +264,11 @@ describe("tool_visualize_dashboard()", {
     local_mocked_bindings(
       ggsql_validate = function(...) validated,
       ggsql_has_visual = function(...) TRUE,
-      .package = "ggsql"
-    )
-    local_mocked_bindings(
-      execute_ggsql = function(...) {
+      ggsql_execute = function(...) {
         executed <<- TRUE
-        rlang::abort("execute_ggsql should not be called")
+        rlang::abort("ggsql_execute should not be called")
       },
-      .package = "querychat"
+      .package = "ggsql"
     )
 
     tool <- tool_visualize_dashboard(
@@ -464,7 +461,7 @@ describe("build_viz_footer()", {
 
 describe("visualization tool display", {
   skip_if_no_dataframe_engine()
-  skip_if_not_installed("ggsql")
+  skip_if_not_installed("ggsql", minimum_version = "0.5.2.9000")
 
   it("requests Shiny Chat's framed open style", {
     ds <- local_data_frame_source(new_test_df())
@@ -477,7 +474,6 @@ describe("visualization tool display", {
     )
 
     local_mocked_bindings(
-      execute_ggsql = function(...) structure(list(), class = "ggsql_spec"),
       build_viz_footer = function(...) htmltools::tagList(),
       .package = "querychat"
     )
@@ -486,6 +482,7 @@ describe("visualization tool display", {
         structure(list(valid = TRUE), class = "ggsql_validated")
       },
       ggsql_has_visual = function(...) TRUE,
+      ggsql_execute = function(...) structure(list(), class = "ggsql_spec"),
       renderGgsql = function(...) shiny::renderText("ok"),
       ggsqlOutput = function(id) htmltools::div(id = id),
       ggsql_save = function(...) rlang::abort("V8 is not installed"),

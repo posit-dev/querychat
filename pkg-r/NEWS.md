@@ -1,5 +1,9 @@
 # querychat (development version)
 
+## New features
+
+* The `"visualize"` tool now executes ggsql queries end to end through a caching reader (`ggsql::caching_reader()`): identical base reads across chart refinements are memoized (a session of refinements over one shared base read costs 1 source read instead of N), and queries with layer-level sources (`DRAW ... FROM <table>`) are now supported instead of rejected. Requires ggsql >= 0.5.2.9000; see the caching section of `vignette("visualize")` for tuning knobs and the staleness caveat.
+
 ## Bug fixes
 
 * JSON pins now fall back to `pins::pin_read()` when DuckDB's JSON extension cannot be installed or loaded, including on builds that disable extension loading. Native DuckDB JSON reading is retained when the extension is available.

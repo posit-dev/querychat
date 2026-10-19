@@ -38,12 +38,12 @@ read_data_dict <- function(path) {
 # The newest data-dict spec version this version of querychat fully
 # understands. Files declaring a newer `$version` are still read, on a
 # best-effort basis (unknown fields are ignored), with a warning. Bump this
-# opportunistically to keep the warning calibrated — it is not a hard gate.
+# opportunistically to keep the warning calibrated -- it is not a hard gate.
 .dd_known_spec_version <- numeric_version("0.1.0")
 
 #' Check a data dict for spec compatibility problems.
 #'
-#' Old or malformed files fail hard — there is a clear migration path, and
+#' Old or malformed files fail hard -- there is a clear migration path, and
 #' reading on would silently produce a degraded dictionary. Files declaring
 #' a newer spec `$version` are only warned about: they may use purely
 #' additive features, so they are read on a best-effort basis.
@@ -67,7 +67,7 @@ dd_check_spec_compat <- function(dd) {
     if (v > .dd_known_spec_version) {
       cli::cli_warn(c(
         "!" = "Data dictionary declares {.field $version} {.val {version}}, which is newer than the newest data-dict spec version this version of {.pkg querychat} fully understands ({.val {as.character(.dd_known_spec_version)}}).",
-        "i" = "The file is read on a best-effort basis — spec fields querychat doesn't know about are ignored.",
+        "i" = "The file is read on a best-effort basis \u2014 spec fields querychat doesn't know about are ignored.",
         "i" = "If anything looks off, consider upgrading {.pkg querychat} or running {.code data-dict validate-spec <file>}."
       ))
     }
@@ -82,7 +82,7 @@ dd_check_spec_compat <- function(dd) {
   if (!is.null(table_names) && any(nzchar(table_names))) {
     cli::cli_abort(c(
       "Data dictionary {.field tables} uses an outdated format.",
-      "i" = "{.field tables} must be a list of tables, each with a {.field name} field — not a mapping of name to definition.",
+      "i" = "{.field tables} must be a list of tables, each with a {.field name} field \u2014 not a mapping of name to definition.",
       "i" = "Update the file to the current spec ({.url https://data-dict.tidyverse.org/spec.html}); {.code data-dict validate-spec <file>} checks a file against the spec."
     ))
   }

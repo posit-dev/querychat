@@ -131,7 +131,8 @@ DBISource <- R6::R6Class(
       list(
         text = format_schema_from_details(
           as.character(DBI::dbQuoteIdentifier(private$.conn, self$table_name)),
-          details
+          details,
+          table_spec = table_spec
         ),
         columns = details
       )
@@ -232,6 +233,26 @@ DBISource <- R6::R6Class(
   )
 )
 
+# Render spec `constraints` entries (barewords and assertion objects) to text.
+format_constraint_entries <- function(constraints) {
+  vapply(
+    constraints,
+    function(c) {
+      if (is.list(c)) {
+        # Assertion object: {assert, language?, description?}
+        txt <- c[["assert"]] %||% ""
+        if (!is.null(c[["description"]])) {
+          txt <- paste0(txt, " (", c[["description"]], ")")
+        }
+        txt
+      } else {
+        as.character(c)
+      }
+    },
+    character(1)
+  )
+}
+
 # Returns a list of named lists (one per column) with all schema metadata.
 # Used by both format_schema_from_details() (LLM text) and JSON serialization (UI).
 build_column_details_impl <- function(
@@ -273,7 +294,9 @@ build_column_details_impl <- function(
         c("integer", "numeric", "double", "Date", "POSIXct", "POSIXt")
     ) {
       numeric_columns <- c(numeric_columns, col)
-      if (is.null(spec[["range"]])) {
+      # Spec `range` and `values` both replace live min/max stats, so skip
+      # the aggregates (a wasted scan on remote tables) when either is set.
+      if (is.null(spec[["range"]]) && is.null(spec[["values"]])) {
         select_parts <- c(
           select_parts,
           paste0(
@@ -371,19 +394,9 @@ build_column_details_impl <- function(
     min_val <- NA_character_
     max_val <- NA_character_
     categories <- list()
+    value_labels <- NULL
     constraints <- if (length(spec[["constraints"]]) > 0) {
-      lapply(spec[["constraints"]], function(c) {
-        if (is.list(c)) {
-          # Assertion object: {assert, language?, description?}
-          txt <- c[["assert"]] %||% ""
-          if (!is.null(c[["description"]])) {
-            txt <- paste0(txt, " (", c[["description"]], ")")
-          }
-          txt
-        } else {
-          as.character(c)
-        }
-      })
+      as.list(format_constraint_entries(spec[["constraints"]]))
     } else {
       list()
     }
@@ -404,7 +417,9 @@ build_column_details_impl <- function(
         }
         min_val <- as.character(lo %||% "?")
         max_val <- as.character(hi %||% "?")
-      } else {
+        # Spec `values` replace live stats for this column (handled below),
+        # so only query stats when neither `range` nor `values` is given.
+      } else if (is.null(spec[["values"]])) {
         min_key <- paste0(col, "__min")
         max_key <- paste0(col, "__max")
         if (
@@ -418,18 +433,21 @@ build_column_details_impl <- function(
           max_val <- as.character(column_stats[[max_key]])
         }
       }
-    } else if (col %in% text_columns) {
-      if (!is.null(spec[["values"]])) {
-        vals <- spec[["values"]]
-        # Map form (value -> label): the values are the names
-        if (!is.null(names(vals))) {
-          vals <- as.list(names(vals))
-        }
-        categories <- as.list(as.character(vals))
-      } else if (col %in% names(categorical_values)) {
-        vals <- categorical_values[[col]]
-        if (length(vals) > 0) categories <- as.list(as.character(vals))
+    }
+    # Spec `values` replace categorical inference for any column kind (a
+    # numeric code can have labeled values just like a text column can).
+    if (!is.null(spec[["values"]])) {
+      vals <- spec[["values"]]
+      # Map form (value -> label): values are the names, labels the values
+      if (!is.null(names(vals))) {
+        value_labels <- as.list(as.character(vals))
+        names(value_labels) <- names(vals)
+        vals <- as.list(names(vals))
       }
+      categories <- as.list(as.character(vals))
+    } else if (col %in% text_columns && col %in% names(categorical_values)) {
+      vals <- categorical_values[[col]]
+      if (length(vals) > 0) categories <- as.list(as.character(vals))
     }
 
     list(
@@ -437,6 +455,18 @@ build_column_details_impl <- function(
       sql_type = sql_type,
       units = spec[["units"]] %||% NA_character_,
       description = spec[["description"]] %||% NA_character_,
+      label = spec[["label"]] %||% NA_character_,
+      time_zone = spec[["time_zone"]] %||% NA_character_,
+      display = spec[["display"]] %||% NA_character_,
+      examples = if (
+        !is.null(spec[["examples"]]) &&
+          !identical(spec[["display"]], "restricted")
+      ) {
+        as.list(as.character(spec[["examples"]]))
+      } else {
+        list()
+      },
+      value_labels = value_labels,
       min_val = min_val,
       max_val = max_val,
       categories = categories,
@@ -445,13 +475,31 @@ build_column_details_impl <- function(
   })
 }
 
-# Format a list of column details (from build_column_details_impl) into LLM schema text.
-format_schema_from_details <- function(table_name_display, details) {
+# Format a list of column details (from build_column_details_impl) into LLM
+# schema text. When `table_spec` is given, table-level constraints are appended.
+format_schema_from_details <- function(
+  table_name_display,
+  details,
+  table_spec = NULL
+) {
   schema_lines <- c(paste("Table:", table_name_display), "Columns:")
   for (col in details) {
     line <- paste0("- ", col$name, " (", col$sql_type, ")")
     if (!is.na(col$units)) {
       line <- paste0(line, " [", col$units, "]")
+    }
+    if (!is.na(col$display) && identical(col$display, "restricted")) {
+      line <- paste(
+        line,
+        "  [restricted: do not display in user-facing output]",
+        sep = "\n"
+      )
+    }
+    if (!is.na(col$label)) {
+      line <- paste(line, paste0("  Label: ", col$label), sep = "\n")
+    }
+    if (!is.na(col$time_zone)) {
+      line <- paste(line, paste0("  Time zone: ", col$time_zone), sep = "\n")
     }
     if (!is.na(col$description)) {
       line <- paste(
@@ -481,9 +529,41 @@ format_schema_from_details <- function(table_name_display, details) {
         sep = "\n"
       )
     }
+    if (length(col$value_labels) > 0) {
+      labels_str <- paste0(
+        names(col$value_labels),
+        "=",
+        as.character(col$value_labels),
+        collapse = ", "
+      )
+      line <- paste(line, paste0("  Labels: ", labels_str), sep = "\n")
+    }
+    if (length(col$examples) > 0) {
+      shown <- col$examples[seq_len(min(5L, length(col$examples)))]
+      more <- if (length(col$examples) > 5) {
+        # (\u2026 is an ellipsis; R sources must stay ASCII for R CMD check)
+        paste0(" \u2026 (", length(col$examples) - 5, " more)")
+      } else {
+        ""
+      }
+      line <- paste(
+        line,
+        paste0("  Examples: ", paste(shown, collapse = ", "), more),
+        sep = "\n"
+      )
+    }
     schema_lines <- c(schema_lines, line)
   }
-  paste(schema_lines, collapse = "\n")
+  text <- paste(schema_lines, collapse = "\n")
+  if (length(table_spec[["constraints"]]) > 0) {
+    rendered <- format_constraint_entries(table_spec[["constraints"]])
+    text <- paste0(
+      text,
+      "\n\nTable constraints:\n",
+      paste0("- ", rendered, collapse = "\n")
+    )
+  }
+  text
 }
 
 get_schema_impl <- function(
@@ -505,7 +585,8 @@ get_schema_impl <- function(
   )
   format_schema_from_details(
     as.character(DBI::dbQuoteIdentifier(conn, table_name)),
-    details
+    details,
+    table_spec = table_spec
   )
 }
 

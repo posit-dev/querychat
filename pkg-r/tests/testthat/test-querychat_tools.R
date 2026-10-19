@@ -517,6 +517,75 @@ describe("tool_update_dashboard_impl()", {
 describe("tool_get_schema()", {
   skip_if_no_dataframe_engine()
 
+  it("renders new dict fields and hides restricted columns from the card", {
+    df <- data.frame(
+      id = 1:5,
+      category = c("A", "B", "A", "B", "A"),
+      code = c(1L, 2L, 1L, 2L, 1L),
+      ssn = c("x", "y", "z", "w", "v"),
+      stringsAsFactors = FALSE
+    )
+    df_source <- local_data_frame_source(df)
+    executor <- local_executor(df_source)
+    table_spec <- list(
+      name = "test_table",
+      constraints = list(
+        list(assert = "id >= 0", description = "Non-negative id")
+      ),
+      columns = list(
+        list(
+          name = "id",
+          description = "Primary key",
+          label = "Identifier",
+          time_zone = "UTC",
+          constraints = c("positive", "required"),
+          range = list(1, 5),
+          examples = as.list(1:7)
+        ),
+        list(
+          name = "category",
+          values = list(A = "Alpha", B = "Beta")
+        ),
+        list(
+          name = "code",
+          values = list("1" = "Low", "2" = "High")
+        ),
+        list(
+          name = "ssn",
+          display = "restricted",
+          examples = list("000-00-0000")
+        )
+      )
+    )
+    data_dicts <- list(list(tables = list(table_spec)))
+    schema_result <- executor$get_schema_result(
+      "test_table",
+      20,
+      table_spec = table_spec
+    )
+    text <- schema_result$text
+
+    expect_match(text, "Label: Identifier", fixed = TRUE)
+    expect_match(text, "Time zone: UTC", fixed = TRUE)
+    expect_match(text, "Categorical values: 'A', 'B'", fixed = TRUE)
+    expect_match(text, "Labels: A=Alpha, B=Beta", fixed = TRUE)
+    # Spec values apply to numeric-coded columns too (not just text)
+    expect_match(text, "Categorical values: '1', '2'", fixed = TRUE)
+    expect_match(text, "Labels: 1=Low, 2=High", fixed = TRUE)
+    expect_match(text, "… (2 more)", fixed = TRUE)
+    expect_match(
+      text,
+      "[restricted: do not display in user-facing output]",
+      fixed = TRUE
+    )
+    expect_match(text, "Table constraints:", fixed = TRUE)
+    expect_match(text, "- id >= 0 (Non-negative id)", fixed = TRUE)
+
+    # Restricted column is hidden from the user-facing card
+    card_html <- as.character(schema_table(schema_result$columns))
+    expect_false(grepl("ssn", card_html))
+  })
+
   it("renders spec range, value keys, and assertion constraints", {
     df <- data.frame(
       id = 1:5,
@@ -552,9 +621,10 @@ describe("tool_get_schema()", {
     # Open-ended ranges keep their known bound
     expect_match(text, "Range: 1 to ?", fixed = TRUE)
     expect_match(text, "Range: ? to 5", fixed = TRUE)
-    # Map-form values render the values (keys), not the labels
+    # Map-form values keep the values (keys) as categories; labels are
+    # rendered separately as a `Labels:` annotation
     expect_match(text, "Categorical values: 'A', 'B'", fixed = TRUE)
-    expect_false(grepl("Alpha", text, fixed = TRUE))
+    expect_match(text, "Labels: A=Alpha, B=Beta", fixed = TRUE)
     # Assertion objects render as 'assert (description)' alongside barewords
     expect_match(text, "grp <> '' (Non-empty)", fixed = TRUE)
     expect_match(text, "required", fixed = TRUE)

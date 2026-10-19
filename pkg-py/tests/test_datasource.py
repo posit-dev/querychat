@@ -586,6 +586,39 @@ def test_sqlalchemy_cleanup_does_not_dispose_caller_owned_engine(
     assert len(source.get_data()) > 0
 
 
+def test_format_schema_new_annotations() -> None:
+    cols = [
+        ColumnMeta(
+            name="status",
+            sql_type="STRING",
+            kind="text",
+            categories=["W", "R"],
+            value_labels={"W": "Web", "R": "Retail"},
+            label="Order status",
+            examples=["W", "R", "W", "R", "W", "R", "W"],
+        ),
+        ColumnMeta(
+            name="ssn",
+            sql_type="STRING",
+            kind="text",
+            display="restricted",
+        ),
+        ColumnMeta(
+            name="created_at",
+            sql_type="TIMESTAMP",
+            kind="date",
+            time_zone="America/Chicago",
+        ),
+    ]
+    text = format_schema("orders", cols)
+
+    assert "  Label: Order status" in text
+    assert "  Categorical values: 'W', 'R'" in text
+    assert "  Labels: W=Web, R=Retail" in text
+    # examples capped at 5
+    assert "  Examples: W, R, W, R, W … (2 more)" in text
+    assert "[restricted: do not display in user-facing output]" in text
+    assert "  Time zone: America/Chicago" in text
 def test_format_schema_open_ended_range() -> None:
     cols = [
         ColumnMeta(name="a", sql_type="INTEGER", kind="numeric", min_val=0),

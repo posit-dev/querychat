@@ -83,6 +83,13 @@ class ColumnSpec(BaseModel):
         open range. Replaces live min/max statistics queries when set.
     examples
         Representative sample values shown to the LLM as context.
+    label
+        Display title for the column.
+    time_zone
+        Time zone for ``datetime`` columns, shown in the schema view.
+    display
+        When ``"restricted"``, the column is flagged as not for user-facing
+        output.
 
     """
 
@@ -95,6 +102,9 @@ class ColumnSpec(BaseModel):
     values: list[Any] | dict[str, str] | None = None
     range: list[Any] | None = None
     examples: list[Any] | None = None
+    label: str | None = None
+    time_zone: str | None = None
+    display: Literal["restricted"] | None = None
 
     @field_validator("values", mode="before")
     @classmethod
@@ -141,6 +151,11 @@ class TableSpec(BaseModel):
     columns
         Per-column specifications. Columns not listed here are documented
         using live statistics inferred from the data.
+    label
+        Display title for the table.
+    constraints
+        Table-level assertions conveyed to the LLM in the ``get_schema``
+        response.
 
     """
 
@@ -148,6 +163,8 @@ class TableSpec(BaseModel):
     description: str | None = None
     details: str | None = None
     columns: list[ColumnSpec] = []
+    label: str | None = None
+    constraints: list[str | ConstraintAssertion] = []
 
 
 class RelationshipSpec(BaseModel):
@@ -162,12 +179,20 @@ class RelationshipSpec(BaseModel):
         Cardinality string (e.g. ``"one-to-many"``).
     join
         SQL JOIN clause or expression that links the tables.
+    aliases
+        Alias-to-table map naming the role each join side plays (required
+        for self-joins).
+    conflicts
+        Column names that appear on both sides of the join with different
+        meanings.
 
     """
 
     description: str | None = None
     cardinality: str | None = None
     join: str
+    aliases: dict[str, str] | None = None
+    conflicts: list[str] | None = None
 
 
 _LEGACY_TABLES_MESSAGE = """\
@@ -325,7 +350,17 @@ class DataDict(BaseModel):
             result["description"] = self.description
         if self.tables:
             result["tables"] = {
-                t.name: ({"description": t.description} if t.description else None)
+                t.name: (
+                    {
+                        k: v
+                        for k, v in {
+                            "description": t.description,
+                            "label": t.label,
+                        }.items()
+                        if v is not None
+                    }
+                    or None
+                )
                 for t in self.tables
             }
         if self.relationships:
@@ -356,24 +391,7 @@ class DataDict(BaseModel):
         for meta in metas:
             spec = documented.get(meta.name)
             if spec is not None:
-                if spec.type is not None:
-                    meta.sql_type = spec.type
-                if spec.range is not None:
-                    meta.min_val = spec.range[0]
-                    meta.max_val = spec.range[1]
-                if spec.values is not None:
-                    vals = (
-                        list(spec.values)
-                        if isinstance(spec.values, dict)
-                        else spec.values
-                    )
-                    meta.categories = [str(v) for v in vals]
-                if spec.description is not None:
-                    meta.description = spec.description
-                if spec.units is not None:
-                    meta.units = spec.units
-                if spec.constraints:
-                    meta.constraints = [str(c) for c in spec.constraints]
+                apply_column_spec(meta, spec)
             else:
                 undocumented.append(meta)
 
@@ -404,3 +422,32 @@ class DataDict(BaseModel):
         if dd.name is None:
             dd = dd.model_copy(update={"name": path.stem})
         return dd
+
+
+def apply_column_spec(meta: ColumnMeta, spec: ColumnSpec) -> None:
+    """Overlay a :class:`ColumnSpec` onto a live :class:`ColumnMeta`."""
+    if spec.type is not None:
+        meta.sql_type = spec.type
+    if spec.range is not None:
+        meta.min_val = spec.range[0]
+        meta.max_val = spec.range[1]
+    if spec.values is not None:
+        if isinstance(spec.values, dict):
+            meta.categories = [str(k) for k in spec.values]
+            meta.value_labels = dict(spec.values)
+        else:
+            meta.categories = [str(v) for v in spec.values]
+    if spec.description is not None:
+        meta.description = spec.description
+    if spec.units is not None:
+        meta.units = spec.units
+    if spec.constraints:
+        meta.constraints = [str(c) for c in spec.constraints]
+    if spec.label is not None:
+        meta.label = spec.label
+    if spec.time_zone is not None:
+        meta.time_zone = spec.time_zone
+    if spec.display is not None:
+        meta.display = spec.display
+    if spec.examples is not None and spec.display != "restricted":
+        meta.examples = [str(e) for e in spec.examples]

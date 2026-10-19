@@ -282,27 +282,27 @@ class TestQueryChatBase:
 class TestDataDict:
     def test_data_dict_path_accepted(self, tmp_path: Path) -> None:
         f = tmp_path / "spec.yaml"
-        f.write_text('version: "0.1.0"\ntables:\n  t:\n    columns: []\n')
+        f.write_text('$version: "0.1.0"\ntables:\n  - name: t\n    columns: []\n')
         df = pl.DataFrame({"x": [1]})
         qc = QueryChat(df, table_name="t", data_dict=str(f))
         assert len(qc._data_dicts) == 1
-        assert "t" in qc._data_dicts[0].tables
+        assert qc._data_dicts[0].get_table("t") is not None
 
     def test_data_dict_instance_accepted(self) -> None:
-        dd = DataDict(tables={"t": TableSpec(columns=[])})
+        dd = DataDict(tables=[TableSpec(name="t")])
         df = pl.DataFrame({"x": [1]})
         qc = QueryChat(df, table_name="t", data_dict=dd)
         assert qc._data_dicts[0] is dd
 
     def test_data_dict_table_not_in_dict_is_allowed(self) -> None:
-        dd = DataDict(tables={"other": TableSpec(columns=[])})
+        dd = DataDict(tables=[TableSpec(name="other")])
         df = pl.DataFrame({"x": [1]})
         qc = QueryChat(df, table_name="t", data_dict=dd)
         assert "t" in qc._data_sources
 
     def test_add_table_not_in_data_dict_is_allowed(self) -> None:
         dd = DataDict(
-            tables={"t1": TableSpec(columns=[])},
+            tables=[TableSpec(name="t1")],
         )
         df = pl.DataFrame({"x": [1]})
         qc = QueryChat(df, table_name="t1", data_dict=dd)
@@ -575,9 +575,7 @@ class TestLateConfigurationChanges:
             qc.remove_table("other")
         assert qc.table_names() == ["users", "other"]
 
-    def test_add_tables_replace_after_sessions_started_raises(
-        self, multi_table_engine
-    ):
+    def test_add_tables_replace_after_sessions_started_raises(self, multi_table_engine):
         qc = QueryChatBase()
         qc.add_tables(multi_table_engine)
         qc._sessions_started = True

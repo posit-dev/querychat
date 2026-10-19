@@ -23,8 +23,9 @@ tool_get_schema <- function(
       }
       table_spec <- NULL
       for (dd in data_dicts) {
-        if (!is.null(dd[["tables"]][[table_name]])) {
-          table_spec <- dd[["tables"]][[table_name]]
+        tbl <- dd_tables_by_name(dd)[[table_name]]
+        if (!is.null(tbl)) {
+          table_spec <- tbl
           break
         }
       }

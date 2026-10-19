@@ -517,21 +517,65 @@ describe("tool_update_dashboard_impl()", {
 describe("tool_get_schema()", {
   skip_if_no_dataframe_engine()
 
+  it("renders spec range, value keys, and assertion constraints", {
+    df <- data.frame(
+      id = 1:5,
+      score = 1:5,
+      grp = c("A", "B", "A", "B", "A"),
+      stringsAsFactors = FALSE
+    )
+    df_source <- local_data_frame_source(df)
+    executor <- local_executor(df_source)
+    table_spec <- list(
+      name = "test_table",
+      columns = list(
+        list(name = "id", range = list(1, NULL)),
+        # The spec's -.inf/.inf sentinels also mean an open bound
+        list(name = "score", range = list(-Inf, 5)),
+        list(
+          name = "grp",
+          values = list(A = "Alpha", B = "Beta"),
+          constraints = list(
+            list(assert = "grp <> ''", description = "Non-empty"),
+            "required"
+          )
+        )
+      )
+    )
+    schema_result <- executor$get_schema_result(
+      "test_table",
+      20,
+      table_spec = table_spec
+    )
+    text <- schema_result$text
+
+    # Open-ended ranges keep their known bound
+    expect_match(text, "Range: 1 to ?", fixed = TRUE)
+    expect_match(text, "Range: ? to 5", fixed = TRUE)
+    # Map-form values render the values (keys), not the labels
+    expect_match(text, "Categorical values: 'A', 'B'", fixed = TRUE)
+    expect_false(grepl("Alpha", text, fixed = TRUE))
+    # Assertion objects render as 'assert (description)' alongside barewords
+    expect_match(text, "grp <> '' (Non-empty)", fixed = TRUE)
+    expect_match(text, "required", fixed = TRUE)
+  })
+
   it("returns schema text with a native rich display", {
     df_source <- local_data_frame_source(new_test_df())
     executor <- local_executor(df_source)
     table_spec <- list(
+      name = "test_table",
       columns = list(
         list(
           name = "id",
           description = "Primary key",
           units = "rows",
           constraints = c("positive", "required"),
-          range = list(min = 1, max = 5)
+          range = list(1, 5)
         )
       )
     )
-    data_dicts <- list(list(tables = list(test_table = table_spec)))
+    data_dicts <- list(list(tables = list(table_spec)))
     expected <- executor$get_schema_result(
       "test_table",
       20,

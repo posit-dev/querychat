@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
-* `QueryChat()` with a SQLAlchemy table no longer loses column ranges and categorical values for columns whose names need quoting (spaces, capital letters, reserved words, apostrophes). The statistics queries now quote column names, as the DuckDB-backed sources already did.
+* `QueryChat()` with a SQLAlchemy table no longer loses column ranges and categorical values for columns whose names need quoting (spaces, capital letters, reserved words, apostrophes). The statistics queries now quote column names, as the DuckDB-backed sources already did. (#332)
 
 * JSON pins now fall back to `pin_read()` when DuckDB's JSON extension cannot be installed or loaded, including on builds that disable extension loading. Native DuckDB JSON reading is retained when the extension is available.
 

@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
+* `QueryChat()` with a SQLAlchemy table no longer loses column ranges and categorical values for columns whose names need quoting (spaces, capital letters, reserved words, apostrophes). The statistics queries now quote column names, as the DuckDB-backed sources already did.
+
 * JSON pins now fall back to `pin_read()` when DuckDB's JSON extension cannot be installed or loaded, including on builds that disable extension loading. Native DuckDB JSON reading is retained when the extension is available.
 
 * Fixed SQL code blocks (the visualization footer's "Show Query" editor and the data drawer's SQL editor) rendering illegibly in dark mode — light syntax-highlighted text on a forced light background. The code panel background now adapts to the app's color mode. (#329)

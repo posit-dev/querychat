@@ -63,7 +63,7 @@ greeting <- "Welcome! Ask me about the mtcars dataset."
 qc <- QueryChat$new(mtcars, greeting = greeting)
 
 # With a specific LLM provider
-qc <- QueryChat$new(mtcars, client = "anthropic/claude-sonnet-4-5")
+qc <- QueryChat$new(mtcars, client = "anthropic/claude-sonnet-5-5")
 
 # Generate a greeting for reuse (requires internet/API access)
 \dontrun{

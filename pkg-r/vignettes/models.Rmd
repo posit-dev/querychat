@@ -28,7 +28,7 @@ library(ellmer)
 To use a particular model, pass a `"{provider}/{model}"` string to the `client` parameter, which gets passed along to `ellmer::chat()`:
 
 ```{r}
-qc <- querychat(penguins, client = "anthropic/claude-sonnet-4-5")
+qc <- querychat(penguins, client = "anthropic/claude-sonnet-5-5")
 qc$app()  # Launch the app
 ```
 
@@ -36,13 +36,13 @@ And, if you'd like to effectively set a new default model, you can use the `quer
 
 ```{r}
 # In your .Rprofile
-options(querychat.client = "anthropic/claude-sonnet-4-5")
+options(querychat.client = "anthropic/claude-sonnet-5-5")
 ```
 
 Note that it can also be useful to pass a full `Chat` object to the `client` parameter for more advanced use cases (e.g., custom parameters, tools, etc):
 
 ```{r}
-client <- chat_anthropic(model = "claude-sonnet-4-5")
+client <- chat_anthropic(model = "claude-sonnet-5-5")
 qc <- querychat(penguins, client = client)
 qc$app()  # Launch the app
 ```

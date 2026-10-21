@@ -115,7 +115,7 @@ class QueryChat(QueryChatBase[IntoFrameT]):
         A `chatlas.Chat` object or a string to be passed to
         `chatlas.ChatAuto()`'s `provider_model` parameter, describing the
         provider and model combination to use (e.g. `"openai/gpt-4.1"`,
-        "anthropic/claude-sonnet-4-5", "google/gemini-2.5-flash". etc).
+        "anthropic/claude-sonnet-5-5", "google/gemini-3.8-flash". etc).
 
         If `client` is not provided, querychat consults the
         `QUERYCHAT_CLIENT` environment variable. If that is not set, it
@@ -876,7 +876,7 @@ class QueryChatExpress(QueryChatBase[IntoFrameT]):
         A `chatlas.Chat` object or a string to be passed to
         `chatlas.ChatAuto()`'s `provider_model` parameter, describing the
         provider and model combination to use (e.g. `"openai/gpt-4.1"`,
-        "anthropic/claude-sonnet-4-5", "google/gemini-2.5-flash". etc).
+        "anthropic/claude-sonnet-5-5", "google/gemini-3.8-flash". etc).
 
         If `client` is not provided, querychat consults the
         `QUERYCHAT_CLIENT` environment variable. If that is not set, it

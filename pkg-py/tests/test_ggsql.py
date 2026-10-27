@@ -505,3 +505,66 @@ class TestRestoreVizWidgets:
 
         assert [e["widget_id"] for e in restored] == ["good"]
         assert register_spy == ["good"]
+
+
+class TestPrewarmIcu:
+    def test_installs_and_loads_icu(self):
+        from querychat._viz_ggsql import prewarm_icu
+
+        cached_calls = []
+
+        class FakeReader:
+            def execute_sql_cached(self, sql):
+                cached_calls.append(sql)
+                return object()
+
+        assert prewarm_icu(FakeReader()) is None
+        assert cached_calls == ["INSTALL icu", "LOAD icu"]
+
+    def test_icu_failure_warns_and_continues(self):
+        from querychat._viz_ggsql import prewarm_icu
+
+        class FailReader:
+            def execute_sql_cached(self, sql):
+                raise RuntimeError("IO Error: could not download extension")
+
+        with pytest.warns(UserWarning, match="ICU"):
+            assert prewarm_icu(FailReader()) is None
+
+
+class TestPrewarmSpatial:
+    def test_success_runs_smoke_query(self):
+        from querychat._viz_ggsql import SPATIAL_SMOKE_QUERY, prewarm_spatial
+
+        cached_calls = []
+        execute_calls = []
+
+        class FakeReader:
+            def execute_sql_cached(self, sql):
+                cached_calls.append(sql)
+                return object()
+
+            def execute(self, query):
+                execute_calls.append(query)
+                return object()
+
+        assert prewarm_spatial(FakeReader()) is True
+        assert cached_calls == ["INSTALL spatial", "LOAD spatial"]
+        assert execute_calls == [SPATIAL_SMOKE_QUERY]
+
+    def test_spatial_failure_warns_and_returns_false(self):
+        from querychat._viz_ggsql import prewarm_spatial
+
+        class FailReader:
+            def execute_sql_cached(self, sql):
+                raise RuntimeError(
+                    "IO Error: Extension spatial.duckdb_extension not found"
+                )
+
+            def execute(self, query):
+                raise RuntimeError(
+                    "IO Error: Extension spatial.duckdb_extension not found"
+                )
+
+        with pytest.warns(UserWarning, match="maps"):
+            assert prewarm_spatial(FailReader()) is False

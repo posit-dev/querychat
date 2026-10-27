@@ -114,6 +114,20 @@ Tune or disable the cache with environment variables (set before the app starts)
 
 Learn more about the ggsql grammar at [ggsql.org](https://ggsql.org/).
 
+## Maps
+
+querychat can draw choropleths and point maps through ggsql's spatial support.
+Maps are opt-in because enabling them downloads the DuckDB `spatial` extension (a one-time, cached download) the first time they are set up:
+
+```{.python}
+qc = QueryChat(titanic(), "titanic", tools=("default", "maps"))
+```
+
+The `"default"` entry expands to the default tool set, so you don't have to restate every tool to add maps.
+
+With maps enabled, the LLM can answer geographic questions: "map revenue by country" joins your data with the builtin `ggsql:world` country boundaries (on ISO codes or country names), and "map our store locations" draws lon/lat points over a world outline.
+If a map query is attempted while maps are not enabled, the tool explains how to enable them.
+
 ## See also
 
 - [Tools](tools.qmd) — Understand what querychat can do under the hood

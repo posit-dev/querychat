@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from ._utils import as_narwhals
 
 if TYPE_CHECKING:
+    import ggsql
     import pyarrow as pa
 
     from ._datasource import DataSource
@@ -57,3 +58,90 @@ class ExecutorReader:
             "write to the primary reader, which is a no-op by design.",
             stacklevel=2,
         )
+
+
+SPATIAL_SMOKE_QUERY = "VISUALISE FROM ggsql:world DRAW spatial FILTER iso_a3 = 'FRA'"
+
+
+def install_extension(reader: ggsql.CachingReader, name: str) -> None:
+    """
+    Install and load a DuckDB extension on the reader's cache connection.
+
+    All ggsql-generated derived SQL runs on the cache connection, never on
+    the user's (typically locked-down) data source, so extensions must be
+    installed here. The first ``INSTALL`` downloads the binary (network
+    required); afterwards it is cached on disk.
+    """
+    reader.execute_sql_cached(f"INSTALL {name}")
+    reader.execute_sql_cached(f"LOAD {name}")
+
+
+def prewarm_icu(reader: ggsql.CachingReader) -> None:
+    """
+    Set up the DuckDB ICU extension (time zones, locale-aware collations).
+
+    DuckDB's CLI and Python client load ICU by default, so SQL written
+    against "DuckDB" — by users or LLMs — assumes it. Failure is
+    non-fatal: warns and continues.
+    """
+    try:
+        install_extension(reader, "icu")
+    except Exception as e:
+        warnings.warn(
+            "Could not set up the DuckDB ICU extension on the visualization "
+            f"engine ({e}). Continuing without it: time zone operations "
+            "(e.g. interval arithmetic on timestamptz columns) and "
+            "locale-aware collations will be unavailable in visualizations.",
+            stacklevel=2,
+        )
+
+
+def prewarm_spatial(reader: ggsql.CachingReader) -> bool:
+    """
+    Set up the DuckDB spatial extension for the ``"maps"`` capability.
+
+    The smoke query exercises the full spatial path (extension load,
+    builtin ``ggsql:world`` registration, spatial layer execution).
+    Failure warns and returns ``False`` so the caller can treat ``"maps"``
+    as unavailable.
+    """
+    try:
+        install_extension(reader, "spatial")
+        reader.execute(SPATIAL_SMOKE_QUERY)
+    except Exception as e:
+        warnings.warn(
+            "The 'maps' capability could not be enabled (spatial extension "
+            f"setup failed: {e}). Continuing without maps.",
+            stacklevel=2,
+        )
+        return False
+    return True
+
+
+def translate_spatial_error(error: Exception) -> str | None:
+    """
+    Translate ggsql's spatial-extension failure into actionable guidance.
+
+    Only call this when maps was requested but spatial setup failed earlier
+    in the session (see ``prewarm_spatial``). Returns the translated
+    message, or ``None`` when the error is not a spatial setup failure.
+
+    Matches DuckDB error wording as of DuckDB 1.5.5 — both the
+    extension-not-found form and the catalog error from calling an
+    ``st_*`` function after a failed LOAD. If a DuckDB upgrade rewords
+    these errors, update the patterns and tests together.
+    """
+    msg = str(error).lower()
+    is_extension_missing = "spatial" in msg and "extension" in msg
+    is_st_function_missing = (
+        "scalar function" in msg and "st_" in msg and "does not exist" in msg
+    )
+    if not (is_extension_missing or is_st_function_missing):
+        return None
+    return (
+        "This query requires map/spatial support, but spatial extension "
+        "setup failed earlier in this session (see the warning shown at "
+        "setup time, likely a failed extension download). Do not retry "
+        "with DRAW spatial, PROJECT TO <map>, or ggsql:world; suggest a "
+        "non-map visualization instead."
+    )

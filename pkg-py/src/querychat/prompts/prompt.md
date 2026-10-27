@@ -196,6 +196,16 @@ Match the chart type to what the user is trying to understand:
 <ggsql-syntax-reference>
 {{> ggsql-syntax}}
 </ggsql-syntax-reference>
+{{#has_tool_maps}}
+
+<ggsql-spatial-reference>
+{{> ggsql-spatial}}
+</ggsql-spatial-reference>
+{{/has_tool_maps}}
+{{#maps_disabled}}
+
+**Map visualizations are available but not enabled.** querychat can draw choropleths and point maps, but the `maps` capability is opt-in and this session has not enabled it. Do NOT attempt `DRAW spatial`, `ggsql:world`, `ST_*` functions, or `PROJECT TO <map>` — they will fail. If the user asks for a map, explain that maps are an opt-in capability the app developer can enable with `tools=("default", "maps")`, and offer a fallback such as a scatter plot of longitude/latitude with `DRAW point`.
+{{/maps_disabled}}
 {{#has_tool_query}}
 
 **Avoid redundant expanded results.** If you run a preparatory query before visualizing, or if both a table and chart would show the same data, always pass `collapsed=true` on the query so the user sees the chart prominently, not a duplicate table above it. The user can still expand the table if they want the exact values.

@@ -441,7 +441,7 @@ describe("QueryChat$client()", {
   })
 
   it("registers visualize tool when tools include 'visualize'", {
-    skip_if_not_installed("ggsql")
+    skip_if_not_installed("ggsql", "0.5.2")
     session <- structure(
       list(
         output = list(),
@@ -467,7 +467,7 @@ describe("QueryChat$client()", {
   })
 
   it("registers visualize tool without a session", {
-    skip_if_not_installed("ggsql")
+    skip_if_not_installed("ggsql", "0.5.2")
 
     qc <- QueryChat$new(
       new_test_df(),
@@ -482,7 +482,7 @@ describe("QueryChat$client()", {
   })
 
   it("registers only visualize tool when tools = 'visualize'", {
-    skip_if_not_installed("ggsql")
+    skip_if_not_installed("ggsql", "0.5.2")
     session <- structure(
       list(
         output = list(),
@@ -524,6 +524,92 @@ describe("QueryChat$client()", {
     # Non-viz tool sets pass through untouched
     expect_equal(check_viz_deps(c("update", "query")), c("update", "query"))
     expect_null(check_viz_deps(NULL))
+  })
+
+  it("errors when the visualize tool is explicitly requested with ggsql too old", {
+    local_mocked_bindings(
+      check_installed = function(pkg, ..., version = NULL) {
+        rlang::abort(sprintf("%s >= %s is required", pkg, version))
+      },
+      .package = "rlang"
+    )
+
+    # Explicit tools in $new() are a hard version check
+    expect_error(
+      QueryChat$new(new_test_df(), "test_df", tools = c("query", "visualize")),
+      "ggsql >= 0.5.2 is required"
+    )
+  })
+
+  it("errors when $client() explicitly requests the visualize tool with ggsql too old", {
+    qc <- QueryChat$new(new_test_df(), "test_df")
+    withr::defer(qc$cleanup())
+
+    local_mocked_bindings(
+      check_installed = function(pkg, ..., version = NULL) {
+        rlang::abort(sprintf("%s >= %s is required", pkg, version))
+      },
+      .package = "rlang"
+    )
+
+    expect_error(
+      qc$client(tools = c("query", "visualize")),
+      "ggsql >= 0.5.2 is required"
+    )
+  })
+
+  it("drops the visualize tool from $new() without error when tools are defaulted and ggsql is too old", {
+    withr::local_options(rlib_warning_verbosity = "verbose")
+    real_is_installed <- get("is_installed", asNamespace("rlang"))
+    local_mocked_bindings(
+      is_installed = function(pkg, ..., version = NULL) {
+        if (identical(pkg, "ggsql")) {
+          FALSE
+        } else {
+          real_is_installed(pkg, version = version)
+        }
+      },
+      .package = "rlang"
+    )
+
+    expect_warning(
+      qc <- QueryChat$new(new_test_df(), "test_df"),
+      "ggsql"
+    )
+    withr::defer(qc$cleanup())
+
+    expect_false("visualize" %in% qc$tools)
+    client <- qc$client()
+    tool_names <- sapply(client$get_tools(), function(t) t@name)
+    expect_false("querychat_visualize" %in% tool_names)
+  })
+
+  it("registers the visualize tool when the explicit dependency check passes", {
+    # Runs regardless of the installed ggsql version: the version gate is
+    # mocked, so this exercises registration, not the version check.
+    local_mocked_bindings(
+      check_installed = function(pkg, ..., version = NULL) invisible(TRUE),
+      .package = "rlang"
+    )
+
+    session <- structure(
+      list(
+        output = list(),
+        ns = identity
+      ),
+      class = "MockShinySession"
+    )
+
+    qc <- QueryChat$new(
+      new_test_df(),
+      "test_df",
+      tools = c("query", "visualize")
+    )
+    withr::defer(qc$cleanup())
+
+    client <- qc$client(tools = c("query", "visualize"), session = session)
+    tool_names <- sapply(client$get_tools(), function(t) t@name)
+    expect_contains(tool_names, "querychat_visualize")
   })
 
   it("returns client with no tools when tools = NULL", {

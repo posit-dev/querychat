@@ -1,7 +1,7 @@
 # querychat <a href="https://posit-dev.github.io/querychat/r/"><img src="man/figures/logo.png" align="right" height="138" alt="querychat website" /></a>
 
 <!-- badges: start -->
-[![R-CMD-check](https://github.com/posit-dev/querychat/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/posit-dev/querychat/actions/workflows/R-CMD-check.yaml)
+[![R-CMD-check](https://github.com/posit-dev/querychat/actions/workflows/R-CMD-check.yml/badge.svg)](https://github.com/posit-dev/querychat/actions/workflows/R-CMD-check.yml)
 [![CRAN status](https://www.r-pkg.org/badges/version/querychat)](https://CRAN.R-project.org/package=querychat)
 [![querychat status badge](https://posit-dev.r-universe.dev/querychat/badges/version)](https://posit-dev.r-universe.dev/querychat)
 <!-- badges: end -->

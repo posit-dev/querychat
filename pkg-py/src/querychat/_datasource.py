@@ -665,15 +665,18 @@ class SQLAlchemySource(DataSource[nw.DataFrame]):
         categorical_threshold: int,
     ) -> None:
         """Add min/max/categories to column metadata using SQL queries."""
+        quote = self._engine.dialect.identifier_preparer.quote
+
         # Build aggregate expressions for stats query
         select_parts = []
         for col in columns:
+            quoted = quote(col.name)
             if col.kind in ("numeric", "date"):
-                select_parts.append(f"MIN({col.name}) as {col.name}__min")
-                select_parts.append(f"MAX({col.name}) as {col.name}__max")
+                select_parts.append(f"MIN({quoted}) as {quote(col.name + '__min')}")
+                select_parts.append(f"MAX({quoted}) as {quote(col.name + '__max')}")
             elif col.kind == "text":
                 select_parts.append(
-                    f"COUNT(DISTINCT {col.name}) as {col.name}__nunique"
+                    f"COUNT(DISTINCT {quoted}) as {quote(col.name + '__nunique')}"
                 )
 
         if not select_parts:
@@ -715,12 +718,16 @@ class SQLAlchemySource(DataSource[nw.DataFrame]):
 
     def _fetch_categorical_values(self, columns: list[ColumnMeta]) -> None:
         """Fetch unique values for categorical columns."""
-        union_parts = [
-            f"SELECT '{col.name}' as col_name, {col.name} as value "
-            f"FROM {self.table_name} WHERE {col.name} IS NOT NULL "
-            f"GROUP BY {col.name}"
-            for col in columns
-        ]
+        quote = self._engine.dialect.identifier_preparer.quote
+        union_parts = []
+        for col in columns:
+            quoted = quote(col.name)
+            literal = col.name.replace("'", "''")
+            union_parts.append(
+                f"SELECT '{literal}' as col_name, {quoted} as value "
+                f"FROM {self.table_name} WHERE {quoted} IS NOT NULL "
+                f"GROUP BY {quoted}"
+            )
 
         try:
             query = text(" UNION ALL ".join(union_parts))

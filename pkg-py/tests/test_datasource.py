@@ -584,3 +584,23 @@ def test_sqlalchemy_cleanup_does_not_dispose_caller_owned_engine(
 
     dispose.assert_not_called()
     assert len(source.get_data()) > 0
+
+
+def test_sqlalchemy_stats_for_columns_that_need_quoting():
+    """Column names with spaces, capitals or quotes still get stats."""
+    engine = create_engine("sqlite:///:memory:")
+    with engine.begin() as conn:
+        conn.execute(
+            text('CREATE TABLE t ("unit price" REAL, "Group" TEXT, "it\'s" TEXT)')
+        )
+        conn.execute(
+            text(
+                "INSERT INTO t VALUES (1.5, 'a', 'x'), (2.0, 'b', 'y'), (9.0, 'a', 'x')"
+            )
+        )
+
+    schema = SQLAlchemySource(engine, "t").get_schema(categorical_threshold=5)
+
+    assert "- unit price (FLOAT)\n  Range: 1.5 to 9.0" in schema
+    assert "Categorical values: 'a', 'b'" in schema
+    assert "Categorical values: 'x', 'y'" in schema

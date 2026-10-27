@@ -1,6 +1,32 @@
 # Changelog
 
+## querychat 0.4.2
+
+### Improvements
+
+- Explicitly requesting the `"visualize"` tool now requires ggsql 0.5.2
+  or later and raises an error asking you to upgrade if ggsql is missing
+  or out of date. When the visualize tool is only included by default
+  (i.e. you didn’t pass `tools`), an out-of-date ggsql install continues
+  to drop the tool with a warning.
+
+### Bug fixes
+
+- JSON pins now fall back to
+  [`pins::pin_read()`](https://pins.rstudio.com/reference/pin_read.html)
+  when DuckDB’s JSON extension cannot be installed or loaded, including
+  on builds that disable extension loading. Native DuckDB JSON reading
+  is retained when the extension is available.
+
+- Fixed SQL code blocks (the visualization footer’s “Show Query” editor
+  and the data drawer’s SQL editor) rendering illegibly in dark mode —
+  light syntax-highlighted text on a forced light background. The code
+  panel background now adapts to the app’s color mode.
+  ([\#329](https://github.com/posit-dev/querychat/issues/329))
+
 ## querychat 0.4.1
+
+CRAN release: 2026-09-30
 
 ### Bug fixes
 

@@ -4,10 +4,12 @@ A DataSource implementation that reads data from a
 [pins](https://pins.rstudio.com/) board. When the `"duckdb"` engine is
 used and the pin type is one DuckDB can read natively (parquet, CSV,
 JSON), the data is loaded directly from the cached pin files into DuckDB
-without deserializing into R. For other pin types (e.g. RDS), or when
-the `"sqlite"` engine is used, the data is deserialized via `pin_read()`
-and must produce a data frame (or tibble), which is then registered with
-the chosen engine just like
+without deserializing into R. JSON pins use this path when DuckDB's JSON
+extension is loaded or can be installed and loaded; otherwise, they are
+deserialized via `pin_read()`. For other pin types (e.g. RDS), or when
+the `"sqlite"` engine is used, the data is also deserialized via
+`pin_read()` and must produce a data frame (or tibble), which is then
+registered with the chosen engine just like
 [DataFrameSource](https://posit-dev.github.io/querychat/reference/DataFrameSource.md).
 
 When loaded into DuckDB, the connection's external file access is locked
@@ -132,7 +134,8 @@ Create a new PinSource
   engine. If `NULL` (default), uses the first available engine from
   duckdb or RSQLite (in that order). Parquet, CSV, and JSON pins are
   read most efficiently with the `"duckdb"` engine; with `"sqlite"` they
-  are deserialized via `pin_read()` instead.
+  are deserialized via `pin_read()` instead. JSON pins also use
+  `pin_read()` if DuckDB's JSON extension cannot be installed or loaded.
 
 #### Returns
 
@@ -233,10 +236,10 @@ if (rlang::is_installed(c("pins", "duckdb"))) {
 
   ps$cleanup()
 }
-#> Creating new version '20260930T163651Z-c0340'
+#> Creating new version '20261027T174153Z-c0340'
 #> Writing to pin 'mtcars'
 #> duckdb keeps downloaded extensions and secrets in a temporary directory:
-#> ℹ /tmp/RtmpcQXY6r/duckdb
+#> ℹ /tmp/RtmpBY70Sd/duckdb
 #> This is removed when the R session ends.
 #> • Extensions are re-downloaded each session.
 #> • Secrets are lost.

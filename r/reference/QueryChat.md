@@ -211,8 +211,12 @@ Create a new QueryChat object.
   `"filter"` includes the tools for filtering and resetting the
   dashboard, `"query"` includes the tool for executing SQL queries, and
   `"visualize"` includes the tool for rendering visualizations (requires
-  the ggsql package; if it is not installed, the tool is dropped with a
-  warning). The default is `c("filter", "query", "visualize")`. Use
+  the ggsql package, version 0.5.2 or later). The default is
+  `c("filter", "query", "visualize")`. Because the default silently
+  includes `"visualize"`, an out-of-date or missing ggsql install only
+  drops the tool with a warning. Explicitly requesting `"visualize"`, on
+  the other hand, is treated as a commitment: if ggsql 0.5.2+ isn't
+  installed, construction fails with an error asking you to upgrade. Use
   `tools = "filter"` when you only want the dashboard filtering tools,
   or when you want to disable the querying tool entirely to prevent the
   LLM from seeing any of the data in your dataset. The legacy name
@@ -411,8 +415,11 @@ data source.
   Which querychat tools to include in the chat client. `"filter"`
   includes the tools for filtering and resetting the dashboard and
   `"query"` includes the tool for executing SQL queries. By default,
-  when `tools = NA`, the values provided at initialization are used. The
-  legacy name `"update"` is still accepted as an alias for `"filter"`.
+  when `tools = NA`, the values provided at initialization are used.
+  Explicitly including `"visualize"` requires the ggsql package, version
+  0.5.2 or later, and raises an error asking you to upgrade if it's
+  missing or out of date. The legacy name `"update"` is still accepted
+  as an alias for `"filter"`.
 
 - `update_dashboard`:
 
@@ -758,7 +765,7 @@ The objects of this class are cloneable with this method.
 # Basic usage with a data frame
 qc <- QueryChat$new(mtcars)
 #> duckdb keeps downloaded extensions and secrets in a temporary directory:
-#> ℹ /tmp/RtmpcQXY6r/duckdb
+#> ℹ /tmp/RtmpBY70Sd/duckdb
 #> This is removed when the R session ends.
 #> • Extensions are re-downloaded each session.
 #> • Secrets are lost.
@@ -773,7 +780,7 @@ app <- qc$app()
 greeting <- "Welcome! Ask me about the mtcars dataset."
 qc <- QueryChat$new(mtcars, greeting = greeting)
 #> duckdb keeps downloaded extensions and secrets in a temporary directory:
-#> ℹ /tmp/RtmpcQXY6r/duckdb
+#> ℹ /tmp/RtmpBY70Sd/duckdb
 #> This is removed when the R session ends.
 #> • Extensions are re-downloaded each session.
 #> • Secrets are lost.
@@ -784,7 +791,7 @@ qc <- QueryChat$new(mtcars, greeting = greeting)
 # With a specific LLM provider
 qc <- QueryChat$new(mtcars, client = "anthropic/claude-sonnet-4-5")
 #> duckdb keeps downloaded extensions and secrets in a temporary directory:
-#> ℹ /tmp/RtmpcQXY6r/duckdb
+#> ℹ /tmp/RtmpBY70Sd/duckdb
 #> This is removed when the R session ends.
 #> • Extensions are re-downloaded each session.
 #> • Secrets are lost.
@@ -808,7 +815,7 @@ qc <- QueryChat$new(
   data_description = "Motor Trend car road tests dataset"
 )
 #> duckdb keeps downloaded extensions and secrets in a temporary directory:
-#> ℹ /tmp/RtmpcQXY6r/duckdb
+#> ℹ /tmp/RtmpBY70Sd/duckdb
 #> This is removed when the R session ends.
 #> • Extensions are re-downloaded each session.
 #> • Secrets are lost.

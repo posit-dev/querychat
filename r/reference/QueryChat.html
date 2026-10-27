@@ -38,7 +38,7 @@ values (use qc_vals$table("name") for multi-table access)
 
     <a class="navbar-brand me-2" href="../index.html">querychat</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.4.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">0.4.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -75,7 +75,7 @@ values (use qc_vals$table("name") for multi-table access)
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.png" class="logo" alt=""><h1>QueryChat: Interactive Data Querying with Natural Language</h1>
-      <small class="dont-index">Source: <a href="https://github.com/posit-dev/querychat/blob/r/v0.4.1/R/QueryChat.R" class="external-link"><code>R/QueryChat.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/posit-dev/querychat/blob/main/R/QueryChat.R" class="external-link"><code>R/QueryChat.R</code></a></small>
       <div class="d-none name"><code>QueryChat.Rd</code></div>
     </div>
 
@@ -258,9 +258,14 @@ Passed straight through to <code>shinychat::chat_server(history = )</code>.</p><
 default. <code>"filter"</code> includes the tools for filtering and resetting the
 dashboard, <code>"query"</code> includes the tool for executing SQL queries, and
 <code>"visualize"</code> includes the tool for rendering visualizations (requires
-the <span class="pkg">ggsql</span> package; if it is not installed, the tool is dropped
-with a warning). The default is <code>c("filter", "query", "visualize")</code>.
-Use <code>tools = "filter"</code> when you only want the dashboard filtering tools,
+the <span class="pkg">ggsql</span> package, version 0.5.2 or later). The default is
+<code>c("filter", "query", "visualize")</code>. Because the default silently
+includes <code>"visualize"</code>, an out-of-date or missing <span class="pkg">ggsql</span> install
+only drops the tool with a warning. Explicitly requesting
+<code>"visualize"</code>, on the other hand, is treated as a commitment: if
+<span class="pkg">ggsql</span> 0.5.2+ isn't installed, construction fails with an error
+asking you to upgrade. Use <code>tools = "filter"</code> when you only want the
+dashboard filtering tools,
 or when you want to disable the querying tool entirely to prevent the
 LLM from seeing any of the data in your dataset. The legacy name
 <code>"update"</code> is still accepted as an alias for <code>"filter"</code>.</p></dd>
@@ -438,7 +443,10 @@ data source.</p><div class="section">
 <code>"filter"</code> includes the tools for filtering and resetting the dashboard
 and <code>"query"</code> includes the tool for executing SQL queries. By default,
 when <code>tools = NA</code>, the values provided at initialization are used.
-The legacy name <code>"update"</code> is still accepted as an alias for <code>"filter"</code>.</p></dd>
+Explicitly including <code>"visualize"</code> requires the <span class="pkg">ggsql</span> package,
+version 0.5.2 or later, and raises an error asking you to upgrade if
+it's missing or out of date. The legacy name <code>"update"</code> is still
+accepted as an alias for <code>"filter"</code>.</p></dd>
 
       <dt><code>update_dashboard</code></dt>
 <dd><p>Optional function to call with the <code>query</code>,
@@ -753,7 +761,7 @@ or <code>NULL</code> before any query.</p>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Basic usage with a data frame</span></span></span>
 <span class="r-in"><span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="va">QueryChat</span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">mtcars</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> duckdb keeps downloaded extensions and secrets in a temporary directory:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">ℹ</span> /tmp/RtmpcQXY6r/duckdb</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">ℹ</span> /tmp/RtmpBY70Sd/duckdb</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> This is removed when the R session ends.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Extensions are re-downloaded each session.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Secrets are lost.</span>
@@ -768,7 +776,7 @@ or <code>NULL</code> before any query.</p>
 <span class="r-in"><span><span class="va">greeting</span> <span class="op">&lt;-</span> <span class="st">"Welcome! Ask me about the mtcars dataset."</span></span></span>
 <span class="r-in"><span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="va">QueryChat</span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">mtcars</span>, greeting <span class="op">=</span> <span class="va">greeting</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> duckdb keeps downloaded extensions and secrets in a temporary directory:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">ℹ</span> /tmp/RtmpcQXY6r/duckdb</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">ℹ</span> /tmp/RtmpBY70Sd/duckdb</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> This is removed when the R session ends.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Extensions are re-downloaded each session.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Secrets are lost.</span>
@@ -779,7 +787,7 @@ or <code>NULL</code> before any query.</p>
 <span class="r-in"><span><span class="co"># With a specific LLM provider</span></span></span>
 <span class="r-in"><span><span class="va">qc</span> <span class="op">&lt;-</span> <span class="va">QueryChat</span><span class="op">$</span><span class="fu">new</span><span class="op">(</span><span class="va">mtcars</span>, client <span class="op">=</span> <span class="st">"anthropic/claude-sonnet-4-5"</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> duckdb keeps downloaded extensions and secrets in a temporary directory:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">ℹ</span> /tmp/RtmpcQXY6r/duckdb</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">ℹ</span> /tmp/RtmpBY70Sd/duckdb</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> This is removed when the R session ends.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Extensions are re-downloaded each session.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Secrets are lost.</span>
@@ -803,7 +811,7 @@ or <code>NULL</code> before any query.</p>
 <span class="r-in"><span>  data_description <span class="op">=</span> <span class="st">"Motor Trend car road tests dataset"</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> duckdb keeps downloaded extensions and secrets in a temporary directory:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">ℹ</span> /tmp/RtmpcQXY6r/duckdb</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">ℹ</span> /tmp/RtmpBY70Sd/duckdb</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> This is removed when the R session ends.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Extensions are re-downloaded each session.</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">•</span> Secrets are lost.</span>

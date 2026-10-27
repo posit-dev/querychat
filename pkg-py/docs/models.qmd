@@ -15,14 +15,14 @@ from querychat.data import titanic
 qc = QueryChat(
     titanic(),
     "titanic",
-    client="anthropic/claude-sonnet-4-5"
+    client="anthropic/claude-sonnet-5-5"
 )
 ```
 
 And, if you'd like to effectively set a new default model, you can use the `QUERYCHAT_CLIENT` environment variable.
 
 ```shell
-export QUERYCHAT_CLIENT="anthropic/claude-sonnet-4-5"
+export QUERYCHAT_CLIENT="anthropic/claude-sonnet-5-5"
 ```
 
 Note that it can also be useful to pass a full `Chat` object to the `client` parameter for more advanced use cases (e.g., custom [parameters](https://posit-dev.github.io/chatlas/get-started/parameters.html), [tools](https://posit-dev.github.io/chatlas/get-started/tools.html), etc). It can also be useful for getting some [helpful autocomplete](https://posit-dev.github.io/chatlas/get-started/models.html#model-type-hints) of available models.
@@ -30,7 +30,7 @@ Note that it can also be useful to pass a full `Chat` object to the `client` par
 ```python
 from chatlas import ChatAnthropic
 
-client = ChatAnthropic(model="claude-sonnet-4-5")
+client = ChatAnthropic(model="claude-sonnet-5-5")
 ```
 
 ### Credentials

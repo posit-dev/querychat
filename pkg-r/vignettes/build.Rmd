@@ -254,7 +254,7 @@ library(DT)
 library(plotly)
 library(palmerpenguins)
 
-qc <- QueryChat$new(penguins, client = "claude/claude-sonnet-4-5")
+qc <- QueryChat$new(penguins, client = "claude/claude-sonnet-5-5")
 
 ui <- page_sidebar(
   sidebar = qc$sidebar(),

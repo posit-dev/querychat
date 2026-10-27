@@ -1,5 +1,9 @@
 # querychat 0.4.2
 
+## Improvements
+
+* Explicitly requesting the `"visualize"` tool now requires ggsql 0.5.2 or later and raises an error asking you to upgrade if ggsql is missing or out of date. When the visualize tool is only included by default (i.e. you didn't pass `tools`), an out-of-date ggsql install continues to drop the tool with a warning.
+
 ## Bug fixes
 
 * JSON pins now fall back to `pins::pin_read()` when DuckDB's JSON extension cannot be installed or loaded, including on builds that disable extension loading. Native DuckDB JSON reading is retained when the extension is available.
